@@ -2135,7 +2135,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1240"/>
       <source>Copy HTML</source>
-      <translation type="unfinished"/>
+      <translation>Copiar Html</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1244"/>
@@ -2150,7 +2150,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1252"/>
       <source>Search on %1</source>
-      <translation type="unfinished"/>
+      <translation>Buscar en %1</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1272"/>
@@ -2474,7 +2474,7 @@ encoding that is currently set {&quot;%1&quot;} for the game server.It may not u
       <location filename="../src/ctelnet.cpp" line="1359"/>
       <source>ERROR</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>ERROR</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1371"/>
