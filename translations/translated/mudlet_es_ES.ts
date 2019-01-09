@@ -1198,7 +1198,7 @@ this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="10792"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>Reproduciendo %1</translation>
     </message>
   </context>
   <context>
@@ -1426,7 +1426,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1542"/>
       <source>Start my own</source>
-      <translation type="unfinished"/>
+      <translation>Iniciar mi propio</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2010"/>
