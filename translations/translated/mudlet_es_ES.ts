@@ -3256,7 +3256,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1104"/>
       <source>Discord integration not available on this platform</source>
-      <translation type="unfinished"/>
+      <translation>Integración de discord no disponible en esta plataforma</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1110"/>
@@ -3339,7 +3339,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="372"/>
       <source>! Joining %1...</source>
-      <translation type="unfinished"/>
+      <translation>! Conectando %1...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="377"/>
@@ -3354,12 +3354,12 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="444"/>
       <source>[ERROR] Syntax: %1</source>
-      <translation type="unfinished"/>
+      <translation>[ERROR] Sintaxis: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="446"/>
       <source>[ERROR] Unknown command: %1</source>
-      <translation type="unfinished"/>
+      <translation>[ERROR] Comando desconocido: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="590"/>
@@ -3571,7 +3571,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1616"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Cargar mapa de Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1631"/>
@@ -3695,7 +3695,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2498"/>
       <source>Could not update themes: %1</source>
-      <translation type="unfinished"/>
+      <translation>No se pudo actualizar temas: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2501"/>
@@ -3822,31 +3822,31 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="2946"/>
       <source>Large icon</source>
       <comment>Discord Rich Presence large icon</comment>
-      <translation type="unfinished"/>
+      <translation>Ícono Grande</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2947"/>
       <source>Detail</source>
       <comment>Discord Rich Presence detail</comment>
-      <translation type="unfinished"/>
+      <translation>Detalle</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2949"/>
       <source>Small icon</source>
       <comment>Discord Rich Presence small icon</comment>
-      <translation type="unfinished"/>
+      <translation>Ícono pequeño</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2950"/>
       <source>State</source>
       <comment>Discord Rich Presence state</comment>
-      <translation type="unfinished"/>
+      <translation>Estado</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2952"/>
       <source>Party size</source>
       <comment>Discord Rich Presence party size</comment>
-      <translation type="unfinished"/>
+      <translation>Tamaño del grupo</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2953"/>
@@ -4641,7 +4641,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2123"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2128"/>
       <source>Command {Down}</source>
-      <translation type="unfinished"/>
+      <translation>Comando {Abajo}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1485"/>
@@ -4649,7 +4649,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2142"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2147"/>
       <source>Command {Up}</source>
-      <translation type="unfinished"/>
+      <translation>Comando {Arriba}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1514"/>
@@ -4918,7 +4918,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7826"/>
       <source>choose sound file</source>
-      <translation type="unfinished"/>
+      <translation>elegir archivo de sonido</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7826"/>
@@ -5180,7 +5180,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="108"/>
       <source>Toolbox</source>
-      <translation type="unfinished"/>
+      <translation>Caja de herramientas</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="122"/>
@@ -5470,7 +5470,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="143"/>
       <source>^</source>
-      <translation type="unfinished"/>
+      <translation>^</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="258"/>
