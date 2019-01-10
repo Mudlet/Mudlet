@@ -1431,12 +1431,12 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2010"/>
       <source>Map issues</source>
-      <translation type="unfinished"/>
+      <translation>Problemas de mapa</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2017"/>
       <source>Area issues</source>
-      <translation type="unfinished"/>
+      <translation>Problemas de área</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2025"/>
@@ -1446,7 +1446,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2034"/>
       <source>Room issues</source>
-      <translation type="unfinished"/>
+      <translation>Problemas de habitación</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2043"/>
