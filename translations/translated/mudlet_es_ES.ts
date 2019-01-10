@@ -1559,7 +1559,8 @@ in main console!</source>
       <location filename="../src/TMap.cpp" line="2363"/>
       <source>[ ERROR ] - Map download problem, failure in parsing destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] -Problema de descarga de mapa, fallo en el análisis del archivo de destino:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2368"/>
