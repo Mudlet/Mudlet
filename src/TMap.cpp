@@ -1031,10 +1031,10 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         saveVersion = 0;
     } else if (saveVersion > mMaxVersion) {
         saveVersion = mMaxVersion;
-         QString errMsg = tr("[ ERROR ] -  The format {%1} you are trying to save the map with is too new\n"
-                             "for this version of mudlet that only supports formats up to version {%2}.")
+         QString errMsg = tr("[ ERROR ] - The format {%1} you are trying to save the map with is too new\n"
+                             "for this version of Mudlet. Supported are only formats up to version {%2}.")
                                  .arg(QString::number(saveVersion), QString::number(mMaxVersion));
-        appendErrorMsg(errMsg);
+        appendErrorMsgWithNoLf(errMsg, false);
         postMessage(errMsg);
         return false;
     }
@@ -1059,15 +1059,8 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     }
 
     if (mSaveVersion != mDefaultVersion) {
-        QString message = tr("[ WARN ]  - Saving map in a format {%1} that is different than the one\n"
-                             "recommended {%2} bearing in mind the build status of the source\n"
-                             "code.  Development code versions may offer the chance to try\n"
-                             "experimental features needing a revised format that could be\n"
-                             "incompatible with existing release code versions.  Conversely\n"
-                             "a release version may allow you to downgrade to save a map in\n"
-                             "a format compatible with others using older versions of Mudlet\n"
-                             "however some features may be crippled or non-operational for\n"
-                             "this version of Mudlet.")
+        QString message = tr("[ WARN ]  - Saving map in a format {%1} different from the\n"
+                             "recommended format {%2} for this version of Mudlet.")
                                   .arg(mSaveVersion)
                                   .arg(mDefaultVersion);
         appendErrorMsgWithNoLf(message, false);
