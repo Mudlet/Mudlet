@@ -423,31 +423,21 @@ void dlgConnectionProfiles::slot_save_name()
 
 void dlgConnectionProfiles::slot_addProfile()
 {
+    writeProfileData();
+
+    QString newname = tr("new profile name");
+    auto pItem = new QListWidgetItem(newname);
+    if (!pItem) {
+        return;
+    }
+
     profile_name_entry->setReadOnly(false);
-    fillout_form();
     welcome_message->hide();
 
     requiredArea->show();
     informationalArea->show();
     optionalArea->show();
 
-    if (mCurrentQSettings) {
-        QListWidgetItem* pItem = profiles_tree_widget->currentItem();
-        if (pItem) {
-            QString profile = pItem->text();
-            writeProfileData(profile);
-        }
-    }
-
-    QString newname = tr("new profile name");
-
-    auto pItem = new QListWidgetItem(newname);
-    if (!pItem) {
-        return;
-    }
-
-    // Save the previously selected profile
-    mCurrentQSettings = getProfileSettings(newname);
 
     profiles_tree_widget->setSelectionMode(QAbstractItemView::SingleSelection);
     profiles_tree_widget->addItem(pItem);
@@ -460,7 +450,6 @@ void dlgConnectionProfiles::slot_addProfile()
     profiles_tree_widget->setCurrentItem(pItem);
     profiles_tree_widget->setItemSelected(pItem, true);
 
-    profile_name_entry->setText(newname);
     profile_name_entry->setFocus();
     profile_name_entry->selectAll();
     profile_name_entry->setReadOnly(false);
@@ -547,7 +536,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
 QPointer<QSettings> dlgConnectionProfiles::getProfileSettings(const QString& profile)
 {
-    return new QSettings(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, "profile.ini"), QSettings::IniFormat);
+    return new QSettings(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, QStringLiteral("profile.ini")), QSettings::IniFormat);
 }
 
 QString dlgConnectionProfiles::readProfileData(const QString& profile, const QString& item)
@@ -581,8 +570,12 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
 // Stores profile data in an INI file within the profile's home path.
 QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile)
 {
-    if (!mCurrentQSettings) {
+    if (!mCurrentQSettings && !profile.isEmpty()) {
         mCurrentQSettings = getProfileSettings(profile);
+    }
+
+    if (!mCurrentQSettings) {
+        return qMakePair(true, QString());
     }
 
     if (mCurrentQSettings) {
@@ -719,7 +712,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     // Save the previously selected profile's data before setting
     // mCurrentQSettings to the newly clicked profile's INI file.
     if (mCurrentQSettings) {
-        writeProfileData(profile_name);
+        writeProfileData();
     }
 
     // Set mCurrentQSettings to the currently selected profile's INI file.

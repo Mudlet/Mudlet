@@ -3942,7 +3942,7 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         // Otherwise, if configDir is set to a relative path, set
         // configPath to the directory "/config" within the
         // application directory path.
-        configPath = QCoreApplication::applicationDirPath() + "/config";
+        configPath = QStringLiteral("%1/config").arg(QCoreApplication::applicationDirPath());
     } else if (!configDir.isEmpty()) {
         // Otherwise, if the variable configDir is not empty, use it
         // as configPath.
@@ -3950,13 +3950,13 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
     } else {
         // Default to the .config directory in the user's home path if
         // all else fails.
-        configPath = QDir::homePath() + "/.config/mudlet";
+        configPath = QStringLiteral("%1/.config/mudlet").arg(QDir::homePath());
     }
 
     switch (mode) {
     case mainPath:
         // The root of all mudlet data for the user - does not end in a '/'
-        return QStringLiteral("%1").arg(configPath);
+        return configPath;
     case mainDataItemPath:
         // Takes one extra argument as a file (or directory) relating to
         // (profile independent) mudlet data - may end with a '/' if the extra

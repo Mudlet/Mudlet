@@ -2146,13 +2146,13 @@ void dlgProfilePreferences::slot_setConfigDir()
 {
     QString startDir;
     if (lineEdit_configDir->text().isEmpty() ||
-        lineEdit_configDir->text() == QString("%1/%2").arg(QDir::homePath(), ".config/mudlet")) {
+        lineEdit_configDir->text() == QStringLiteral("%1/.config/mudlet").arg(QDir::homePath())) {
         // Set the directory the QFileDialog starts in to the default
         // directory if the line edit is empty or equal to Mudlet's
         // default configuration directory
-        startDir = QDir::homePath() + "/.config";
+        startDir = QStringLiteral("%1/.config").arg(QDir::homePath());
     } else if (lineEdit_configDir->text() ==
-               QString("%1/%2").arg(QCoreApplication::applicationDirPath(), "config")) {
+               QStringLiteral("%1/config").arg(QCoreApplication::applicationDirPath())) {
         // Use the contents of the line edit if set to the path
         // relative to the application file
         startDir = lineEdit_configDir->text();
@@ -2165,19 +2165,18 @@ void dlgProfilePreferences::slot_setConfigDir()
 
     QString dir = QFileDialog::getExistingDirectory(this,
                                                     tr("Select a directory where your configuration will be stored"),
-                                                    startDir,
-                                                    QFileDialog::DontUseNativeDialog);
+                                                    startDir);
     if (!dir.isEmpty()) {
-        if (dir == QDir::homePath() + "/.config" || dir == QDir::homePath() + "/.config/mudlet") {
+        if (dir == QStringLiteral("%1/.config").arg(QDir::homePath()) || dir == QStringLiteral("/.config/mudlet").arg(QDir::homePath())) {
             // Clear mConfigDirPath if the directory selected is
             // Mudlet's default configuration directory
             mConfigDirPath.clear();
-            lineEdit_configDir->setText(QStringLiteral("%1/%2").arg(QDir::homePath(), ".config/mudlet"));
+            lineEdit_configDir->setText(QStringLiteral("%1/.config/mudlet").arg(QDir::homePath()));
         } else {
             // Set mConfigDirPath to a "mudlet-data" folder within the
             // selected directory
-            mConfigDirPath = QStringLiteral("%1/%2").arg(dir, "mudlet-data");
-            lineEdit_configDir->setText(QStringLiteral("%1/%2").arg(dir, "mudlet-data"));
+            mConfigDirPath = QStringLiteral("%1/mudlet-data").arg(dir);
+            lineEdit_configDir->setText(mConfigDirPath);
             lineEdit_configDir->setCursorPosition(lineEdit_configDir->text().length());
         }
     }
