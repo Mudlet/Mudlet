@@ -435,6 +435,29 @@ public:
     static int getServerEncoding(lua_State*);
     static int getServerEncodingsList(lua_State*);
     static int alert(lua_State* L);
+#ifdef QT_TEXTTOSPEECH_LIB
+	static int ttsSpeak(lua_State* L);
+	static int ttsSkip(lua_State* L);
+	static int ttsSetRate(lua_State* L);
+	static int ttsSetPitch(lua_State* L);
+	static int ttsSetVolume(lua_State* L);
+	static int ttsGetRate(lua_State* L);
+	static int ttsGetPitch(lua_State* L);
+	static int ttsGetVolume(lua_State* L);
+	static int ttsSetVoiceByName(lua_State* L);
+	static int ttsSetVoiceByIndex(lua_State* L);
+	static int ttsGetCurrentVoice(lua_State* L);
+	static int ttsGetVoices(lua_State* L);	
+	static int ttsQueue(lua_State* L);
+	static int ttsGetQueue(lua_State* L);
+	static int ttsPause(lua_State* L);
+	static int ttsResume(lua_State* L);
+	static int ttsClearQueue(lua_State* L);
+	static int ttsGetCurrentLine(lua_State* L);
+	static int ttsGetState(lua_State* L);
+	static void ttsBuild();
+	static void ttsStateChanged(QTextToSpeech::State state);
+#endif // QT_TEXTTOSPEECH_LIB
     static int tempPromptTrigger(lua_State*);
     static int permPromptTrigger(lua_State*);
     static int getColumnCount(lua_State*);
