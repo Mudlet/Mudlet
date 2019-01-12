@@ -302,6 +302,7 @@ private:
     void addTrigger(bool isFolder);
     void addAction(bool isFolder);
     void addKey(bool);
+    void timerEvent(QTimerEvent *event) override;
 
     void selectTriggerByID(int id);
     void selectTimerByID(int id);
@@ -450,9 +451,20 @@ private:
     QAction* mProfileSaveAction;
     QAction* mProfileSaveAsAction;
 
+    // tracks the duration of the "Save Profile As" action so
+    // autosave doesn't kick in
+    bool mSavingAs;
+
     // keeps track of the dialog reset being queued
     bool mCleanResetQueued;
     void runScheduledCleanReset();
+    void autoSave();
+
+    // profile autosave interval in minutes
+    int mAutosaveInterval;
+
+    // approximate max duration "Copy as image" can take in seconds
+    int mCopyAsImageMax;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017, 2019 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -33,7 +33,7 @@ EAction::EAction(QIcon& icon, QString& name) : QAction(icon, name, mudlet::self(
     setText(name);
     setObjectName(name);
     setIcon(icon);
-    connect(this, SIGNAL(triggered(bool)), this, SLOT(slot_execute(bool)));
+    connect(this, &QAction::triggered, this, &EAction::slot_execute);
 }
 
 void EAction::slot_execute(bool checked)

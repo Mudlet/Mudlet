@@ -204,7 +204,7 @@ function InstallPython() {
 }
 
 function InstallOpenssl() {
-  DownloadFile "https://indy.fulgan.com/SSL/openssl-1.0.2o-i386-win32.zip" "openssl-1.0.2o-i386-win32.zip"
+  DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.0.2o-win32.zip" "openssl-1.0.2o-i386-win32.zip"
   ExtractZip "openssl-1.0.2o-i386-win32.zip" "openssl-1.0.2o"
   Step "installing"
   exec "XCOPY" @("/S", "/I", "/Q", "openssl-1.0.2o", "$Env:MINGW_BASE_DIR\bin")
@@ -302,7 +302,7 @@ function InstallLibzip() {
   }
   Set-Location build
   Step "running cmake"
-  exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "..")
+  exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "-DENABLE_OPENSSL=OFF", "..")
   RunMake
   RunMakeInstall
   $Env:Path = $ShPath
@@ -360,6 +360,9 @@ function InstallLuaModules(){
   exec ".\luarocks" @("install", "lrexlib-pcre", "PCRE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"", "PCRE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
   Step "installing lua-utf8"
   exec ".\luarocks" @("install", "luautf8")
+  Step "installing lua-yajl"
+  $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin"
+  exec ".\luarocks" @("install", "lua-yajl", "YAJL_LIBDIR=`"$Env:MINGW_BASE_DIR\bin`"", "YAJL_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
 
   Step "installing luazip"
   Set-Location "$workingBaseDir"

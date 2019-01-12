@@ -37,10 +37,10 @@ public:
     dlgConnectionProfiles(QWidget* parent = nullptr);
     void fillout_form();
     QPointer<QSettings> getProfileSettings(const QString& profile);
-    QPair<bool, QString> writeProfileData(const QString& profile);
-    QString readProfileData(QString, QString);
-    void closeEvent(QCloseEvent* event) override;
+    QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile);
+    QString readProfileData(const QString& profile, const QString& item);
     void accept() override;
+    void closeEvent(QCloseEvent* event) override;
 
 signals:
     void signal_establish_connection(QString profile_name, int historyVersion);
@@ -49,6 +49,11 @@ public slots:
     void slot_update_name(QString);
     void slot_save_name();
     void slot_update_url(const QString &);
+    void slot_update_SSL_TSL_port(int state);
+    void slot_update_login(const QString &);
+    void slot_update_pass(const QString &);
+    void slot_update_website(const QString &);
+    void slot_update_description();
     void slot_update_port(const QString);
     void slot_deleteprofile_check(const QString);
 
@@ -57,6 +62,9 @@ public slots:
     void slot_deleteProfile();
     void slot_reallyDeleteProfile();
 
+    void slot_update_autologin(int state);
+    void slot_update_autoreconnect(int state);
+    void slot_update_discord_optin(int state);
     void slot_connectToServer();
     void slot_cancel();
     void slot_copy_profile();
@@ -64,11 +72,13 @@ public slots:
 private:
     void copyFolder(QString sourceFolder, QString destFolder);
     QString getDescription(const QString& hostUrl, quint16 port, const QString& profile_name);
+    bool validateConnect();
+    void updateDiscordStatus();
+    bool validateProfile();
 
     bool validName;
     bool validUrl;
     bool validPort;
-    bool validateConnect();
 
     QPointer<QSettings> mCurrentQSettings;
     QStringList mProfileList;
@@ -79,6 +89,7 @@ private:
     QPushButton* connect_button;
     QLineEdit* delete_profile_lineedit;
     QPushButton* delete_button;
+    QString mDiscordApplicationId;
 };
 
 #endif // MUDLET_DLGCONNECTIONPROFILES_H

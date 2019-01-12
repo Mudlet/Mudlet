@@ -112,10 +112,6 @@ TCommandLine::~TCommandLine()
     Hunspell_destroy(mpHunspell);
 }
 
-void TCommandLine::slot_textChanged(const QString& text)
-{
-}
-
 void TCommandLine::processNormalKey(QEvent* event)
 {
     QPlainTextEdit::event(event);
@@ -496,7 +492,7 @@ bool TCommandLine::event(QEvent* event)
 
                 // Only process as a Control-C if it is EXACTLY those two keys
                 // and no other AND there is a selection active in the TConsole
-                mpConsole->mUpperPane->copySelectionToClipboard();
+                mpConsole->mUpperPane->slot_copySelectionToClipboard();
                 ke->accept();
                 return true;
 
@@ -632,7 +628,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             for (int i = 0; i < mHunspellSuggestionNumber; i++) {
                 QAction* pA;
                 pA = popup->addAction(sl[i]);
-                connect(pA, SIGNAL(triggered()), this, SLOT(slot_popupMenu()));
+                connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
             }
             mpHunspellSuggestionList = sl;
             mPopupPosition = event->pos();
@@ -673,11 +669,6 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     adjustHeight();
 }
 
-void TCommandLine::slot_sendCommand(const char* pS)
-{
-    mpHost->sendRaw(QString(pS));
-}
-
 // TAB completion mode gets turned on by the tab key.
 // This mode tries to find suitable matches for the letters being typed by the user
 // in the output buffer of data being sent by the MUD. This helps the user
@@ -701,33 +692,32 @@ void TCommandLine::handleTabCompletion(bool direction)
     }
 
     QStringList bufferList = mpHost->mpConsole->buffer.getEndLines(amount);
-    QString buffer = bufferList.join(" ");
+    QString buffer = bufferList.join(QChar::Space);
 
-    buffer.replace(QChar(0x21af), "\n");
-    buffer.replace(QChar('\n'), " ");
+    buffer.replace(QChar(0x21af), QChar::LineFeed);
+    buffer.replace(QChar::LineFeed, QChar::Space);
 
-    QStringList wordList = buffer.split(QRegularExpression(QStringLiteral(R"(\b)")), QString::SkipEmptyParts);
+    QStringList wordList = buffer.split(QRegularExpression(QStringLiteral(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), QString::SkipEmptyParts);
     if (direction) {
         mTabCompletionCount++;
     } else {
         mTabCompletionCount--;
     }
     if (!wordList.empty()) {
-        if (mTabCompletionTyped.endsWith(" ")) {
+        if (mTabCompletionTyped.endsWith(QChar::Space)) {
             return;
         }
         QString lastWord;
-        QRegularExpression reg = QRegularExpression(QStringLiteral(R"(\b(\w+)$)"));
+        QRegularExpression reg = QRegularExpression(QStringLiteral(R"(\b(\w+)$)"), QRegularExpression::UseUnicodePropertiesOption);
         QRegularExpressionMatch match = reg.match(mTabCompletionTyped);
         int typePosition = match.capturedStart();
         if (reg.captureCount() >= 1) {
             lastWord = match.captured(1);
         } else {
-            lastWord = "";
+            lastWord = QString();
         }
 
-        QStringList filterList = wordList.filter(QRegularExpression(QStringLiteral("^") + lastWord + QStringLiteral(R"(\w+)"),
-                                                                    QRegularExpression::CaseInsensitiveOption));
+        QStringList filterList = wordList.filter(QRegularExpression(QStringLiteral(R"(^%1\w+)").arg(lastWord), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption));
         if (filterList.empty()) {
             return;
         }

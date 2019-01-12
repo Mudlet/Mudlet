@@ -22,14 +22,15 @@
 set(mudlet_RCCS mudlet.qrc)
 
 if(USE_FONTS)
-    set(mudlet_fonts_RCCS mudlet_fonts.qrc)
-    add_definitions(-DINCLUDE_FONTS)
+  set(mudlet_fonts_RCCS mudlet_fonts.qrc)
+  add_definitions(-DINCLUDE_FONTS)
 endif()
 
 set(mudlet_SRCS
     ActionUnit.cpp
     AliasUnit.cpp
     ctelnet.cpp
+    discord.cpp
     dlgAboutDialog.cpp
     dlgActionMainArea.cpp
     dlgAliasMainArea.cpp
@@ -101,32 +102,32 @@ set(mudlet_SRCS
 
 # This is for compiled UI files, not those used at runtime though the resource file.
 set(mudlet_UIS
-    ui/about_dialog.ui
-    ui/actions_main_area.ui
-    ui/aliases_main_area.ui
-    ui/color_trigger.ui
-    ui/composer.ui
-    ui/connection_profiles.ui
-    ui/dlgPackageExporter.ui
-    ui/irc.ui
-    ui/keybindings_main_area.ui
-    ui/main_window.ui
-    ui/mapper.ui
-    ui/notes_editor.ui
-    ui/profile_preferences.ui
-    ui/room_exits.ui
-    ui/scripts_main_area.ui
-    ui/source_editor_area.ui
-    ui/system_message_area.ui
-    ui/timers_main_area.ui
-    ui/triggers_main_area.ui
-    ui/trigger_editor.ui
-    ui/trigger_pattern_edit.ui
-    ui/vars_main_area.ui
-)
+  ui/about_dialog.ui
+  ui/actions_main_area.ui
+  ui/aliases_main_area.ui
+  ui/color_trigger.ui
+  ui/composer.ui
+  ui/connection_profiles.ui
+  ui/dlgPackageExporter.ui
+  ui/irc.ui
+  ui/keybindings_main_area.ui
+  ui/main_window.ui
+  ui/mapper.ui
+  ui/notes_editor.ui
+  ui/profile_preferences.ui
+  ui/room_exits.ui
+  ui/scripts_main_area.ui
+  ui/source_editor_area.ui
+  ui/system_message_area.ui
+  ui/timers_main_area.ui
+  ui/triggers_main_area.ui
+  ui/trigger_editor.ui
+  ui/trigger_pattern_edit.ui
+  ui/vars_main_area.ui)
 
 set(mudlet_MOC_HDRS
     ctelnet.h
+    discord.h
     dlgAboutDialog.h
     dlgActionMainArea.h
     dlgAliasMainArea.h
@@ -149,9 +150,9 @@ set(mudlet_MOC_HDRS
     dlgTriggersMainArea.h
     dlgVarsMainArea.h
     EAction.h
-    Host.h
     exitstreewidget.h
     glwidget.h
+    Host.h
     mudlet.h
     T2DMap.h
     TCommandLine.h
@@ -172,13 +173,14 @@ set(mudlet_MOC_HDRS
 set(mudlet_HDRS
     ActionUnit.h
     AliasUnit.h
+    discord.h
     FontManager.h
     HostManager.h
     ircmessageformatter.h
     KeyUnit.h
     LuaInterface.h
-    pre_guard.h
     post_guard.h
+    pre_guard.h
     ScriptUnit.h
     TAction.h
     TAlias.h
@@ -333,19 +335,28 @@ if((APPLE) AND (PKG_CONFIG_FOUND))
   endif()
 endif()
 
-find_package(Qt5 5.6 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools Widgets Concurrent)
+find_package(Qt5 5.7 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools Widgets Concurrent)
 
 # This is not present before Qt 5.7:
 find_package(Qt5 COMPONENTS Gamepad QUIET)
 
-if (Qt5Core_VERSION VERSION_LESS 5.6)
-  message(FATAL_ERROR "Mudlet requires Qt 5.6 or later")
+# This is not present before Qt 5.9:
+find_package(Qt5 COMPONENTS TextToSpeech QUIET)
+
+if (Qt5Core_VERSION VERSION_LESS 5.7)
+  message(FATAL_ERROR "Mudlet requires Qt 5.7 or later, yours is ${Qt5Core_VERSION}")
+elif(Qt5Core_VERSION VERSION_LESS 5.9)
+  # Qt Gamepad was a Technology Preview in 5.7
+  # Qt Gamepad was a Technology Preview 2 in 5.8
+  # Qt Speech (or at least the TTS part) was a Technology Preview in 5.8
+  message(WARNING "Qt version: ${Qt5Core_VERSION} - Gamepad and TextToSpeech may not be supported, as officially they requires 5.9 and 5.10 respectively")
+elif(Qt5Core_VERSION VERSION_LESS 5.10)
+  # Qt Speech (or at least the TTS part) was a Technology Preview 2 in 5.9, now supported on Mingw
+  # Qt Gamepad was officially released in 5.9
+  message(WARNING "Qt version: ${Qt5Core_VERSION} - TextToSpeech may not be supported, officially it requires 5.10")
 else()
-  if (Qt5Core_VERSION VERSION_LESS 5.7)
-    message(WARNING "Qt version: ${Qt5Core_VERSION} - no Gamepad support, it requires 5.7 at a minimum")
-  else()
-      message(STATUS "Qt version: ${Qt5Core_VERSION}")
-  endif()
+  # Qt Speech (or at least the TTS part) was officially release in 5.10
+  message(STATUS "Qt version: ${Qt5Core_VERSION}")
 endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
@@ -398,8 +409,8 @@ find_package(Boost 1.44 COMPONENTS graph)
 add_definitions(-DAPP_VERSION="${APP_VERSION}" -DAPP_BUILD="${APP_BUILD}" -DAPP_TARGET="${APP_TARGET}")
 
 if(UNIX)
-    set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
-    set(LCF_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua/lcf")
+  set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
+  set(LCF_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua/lcf")
 endif(UNIX)
 
 # Define a preprocessor symbol with the default fallback location from which
@@ -428,17 +439,23 @@ include_directories(
     ${PUGIXML_INCLUDE_DIR}
 )
 
+if(Qt5TextToSpeech_FOUND)
+  add_definitions(${Qt5TextToSpeech_DEFINITIONS})
+  include_directories(${Qt5TextToSpeech_INCLUDE_DIRS})
+  message(STATUS "Using TextToSpeech module")
+endif(Qt5TextToSpeech_FOUND)
+
 if(Qt5Gamepad_FOUND)
-    add_definitions(${Qt5Gamepad_DEFINITIONS})
-    include_directories(${Qt5Gamepad_INCLUDE_DIRS})
-    message(STATUS "Using Gamepad module")
+  add_definitions(${Qt5Gamepad_DEFINITIONS})
+  include_directories(${Qt5Gamepad_INCLUDE_DIRS})
+  message(STATUS "Using Gamepad module")
 endif(Qt5Gamepad_FOUND)
 
 # Need to use the plural variables as there can be more than ONE directory to specify:
 if(PC_ZIP_FOUND)
-    include_directories( ${PC_ZIP_INCLUDE_DIRS} )
+  include_directories( ${PC_ZIP_INCLUDE_DIRS} )
 else()
-    include_directories( ${ZIP_INCLUDE_DIRS} )
+  include_directories( ${ZIP_INCLUDE_DIRS} )
 endif()
 
 include_directories( ${ZLIB_INCLUDE_DIR} )
@@ -446,31 +463,29 @@ include_directories( ${ZLIB_INCLUDE_DIR} )
 QT5_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
 QT5_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
 if(USE_FONTS)
-    QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS} ${mudlet_fonts_RCCS})
+  QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS} ${mudlet_fonts_RCCS})
 else()
-    QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
+  QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
 endif()
 
 if(WIN32)
-    add_executable(mudlet WIN32
-        ${mudlet_SRCS}
-        ${mudlet_MOC_SRCS}
-        ${mudlet_RCC_SRCS}
-        ${mudlet_HDRS}
-        ${mudlet_UIS_H}
-        ${mudlet_MOC_HDRS}
-        ${mudlet_LUA_FILES}
-    )
+  add_executable(mudlet WIN32
+    ${mudlet_SRCS}
+    ${mudlet_MOC_SRCS}
+    ${mudlet_RCC_SRCS}
+    ${mudlet_HDRS}
+    ${mudlet_UIS_H}
+    ${mudlet_MOC_HDRS}
+    ${mudlet_LUA_FILES})
 else()
-    add_executable(mudlet
-        ${mudlet_SRCS}
-        ${mudlet_MOC_SRCS}
-        ${mudlet_RCC_SRCS}
-        ${mudlet_HDRS}
-        ${mudlet_UIS_H}
-        ${mudlet_MOC_HDRS}
-        ${mudlet_LUA_FILES}
-    )
+  add_executable(mudlet
+    ${mudlet_SRCS}
+    ${mudlet_MOC_SRCS}
+    ${mudlet_RCC_SRCS}
+    ${mudlet_HDRS}
+    ${mudlet_UIS_H}
+    ${mudlet_MOC_HDRS}
+    ${mudlet_LUA_FILES})
 endif()
 
 target_link_libraries(mudlet
@@ -489,36 +504,41 @@ target_link_libraries(mudlet
     ${ZLIB_LIBRARIES}
     ${PUGIXML_LIBRARIES}
     communi
-    lua_yajl
     edbee-lib
 )
 
+if(Qt5TextToSpeech_FOUND)
+  target_link_libraries(mudlet ${Qt5TextToSpeech_LIBRARIES})
+endif(Qt5TextToSpeech_FOUND)
+
 if(USE_UPDATER)
-    target_link_libraries(mudlet
-        dblsqd)
+  target_link_libraries(mudlet dblsqd)
 endif(USE_UPDATER)
 
 if(Qt5Gamepad_FOUND)
-    target_link_libraries(mudlet ${Qt5Gamepad_LIBRARIES})
+  target_link_libraries(mudlet ${Qt5Gamepad_LIBRARIES})
 endif(Qt5Gamepad_FOUND)
 
 if(PC_ZIP_FOUND)
-    target_link_libraries(mudlet ${PC_ZIP_LIBRARIES})
+  target_link_libraries(mudlet ${PC_ZIP_LIBRARIES})
 else()
-    target_link_libraries(mudlet ${ZIP_LIBRARIES})
+  target_link_libraries(mudlet ${ZIP_LIBRARIES})
+endif()
+
+if(WIN32)
+    target_link_libraries(mudlet ws2_32
+    )
 endif()
 
 if(APPLE)
-  target_link_libraries(mudlet
-          luazip
-  )
+  target_link_libraries(mudlet luazip)
 
   if(USE_UPDATER)
     target_link_libraries(mudlet
-          cocoa-qt-glue
-          "-framework Sparkle"
-          "-framework AppKit"
-          "-F${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
+      cocoa-qt-glue
+      "-framework Sparkle"
+      "-framework AppKit"
+      "-F${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
   endif(USE_UPDATER)
 endif()
 

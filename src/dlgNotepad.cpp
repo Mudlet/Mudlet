@@ -28,12 +28,24 @@
 #include <QDir>
 #include "post_guard.h"
 
-dlgNotepad::dlgNotepad(Host* pH) : mpHost(pH)
-
+dlgNotepad::dlgNotepad(Host* pH)
+: mpHost(pH)
 {
     setupUi(this);
+
+    if (mpHost) {
+        restore();
+    }
 }
 
+dlgNotepad::~dlgNotepad()
+{
+    // Safety step, just in case:
+    if (mpHost && mpHost->mpNotePad) {
+        save();
+        mpHost->mpNotePad = nullptr;
+    }
+}
 
 void dlgNotepad::save()
 {

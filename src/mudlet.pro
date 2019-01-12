@@ -34,20 +34,21 @@
 #                                                                          #
 ############################################################################
 
-lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 6)) {
-    error("Mudlet requires Qt 5.6 or later")
+lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 7)) {
+    error("Mudlet requires Qt 5.7 or later")
 }
 
 # Including IRC Library
 include(../3rdparty/communi/communi.pri)
 
-# Include lua_yajl (run time lua module needed)
-include(../3rdparty/lua_yajl/lua_yajl.pri)
-
 # Include luazip module (run time lua module - but not needed on Linux/Windows as
 # is available prebuilt for THOSE platforms!
 macx {
     include(../3rdparty/luazip/luazip.pri)
+}
+
+!build_pass{
+    include(../translations/translated/updateqm.pri)
 }
 
 # disable Qt adding -Wall for us, insert it ourselves so we can add -Wno-* after.
@@ -77,10 +78,17 @@ CONFIG += c++14
 msvc:QMAKE_CXXFLAGS += -MP
 
 # Mac specific flags.
-macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.11
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.12
 
 QT += network opengl uitools multimedia gui concurrent
-qtHaveModule(gamepad): QT += gamepad
+qtHaveModule(gamepad) {
+    QT += gamepad
+    message("Using Gamepad module")
+}
+qtHaveModule(texttospeech) {
+    QT += texttospeech
+    message("Using TextToSpeech module")
+}
 
 ############################# TEMPORARY TESTING PART ###########################
 # Tempory tests to determine what scope variables are correct, it seems that
@@ -139,7 +147,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.10.2
+VERSION = 3.16.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -175,8 +183,8 @@ DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 # To skip bundling Bitstream Vera Sans and Ubuntu Mono fonts with Mudlet,
 # set the environment WITH_FONTS variable to "NO"
 # ie: export WITH_UPDATER="NO" qmake
-# 
-# Note for Mudlet developers: as WITH_FONTS could be a number, a string, 
+#
+# Note for Mudlet developers: as WITH_FONTS could be a number, a string,
 # something else (or not even # exist) we need to be careful in checking it
 # exists before doing much else with it. Also as an environmental variable it
 # is tricky to handle unless we read it into a qmake variable first:
@@ -196,7 +204,7 @@ isEmpty( FONT_TEST ) | !equals(FONT_TEST, "NO" ) {
 ######################### Auto Updater setting detection #########,#############
 # To remove the built-in updater, set the environment WITH_UPDATER variable to "NO"
 # ie: export WITH_UPDATER="NO" qmake
-# 
+#
 # Note for Mudlet developers: as WITH_UPDATER could be a number, a string,
 # something else (or not even exist) we need to be careful in checking it exists
 # before doing much else with it. Also as an environmental variable it is tricky
@@ -214,7 +222,6 @@ linux|macx|win32 {
 }
 # else we are on another platform which the updater code will not support so
 # don't include it either
-
 
 ###################### Platform Specific Paths and related #####################
 # Specify default location for Lua files, in OS specific LUA_DEFAULT_DIR value
@@ -286,6 +293,7 @@ unix:!macx {
         -lglut \
         -lglu32 \
         -lpugixml \
+        -lWs2_32 \
         -L"$${MINGW_BASE_DIR}\\bin"
     INCLUDEPATH += \
                    "C:\\Libraries\\boost_1_67_0" \
@@ -338,6 +346,8 @@ unix {
 macx:LIBS += \
     -lz \
     -lzzip
+
+INCLUDEPATH += ../3rdparty/discord/rpc/include
 
 # Define a preprocessor symbol with the default fallback location from which
 # to load installed mudlet lua files. Set LUA_DEFAULT_DIR to a
@@ -453,6 +463,7 @@ SOURCES += \
     ActionUnit.cpp \
     AliasUnit.cpp \
     ctelnet.cpp \
+    discord.cpp \
     dlgAboutDialog.cpp \
     dlgActionMainArea.cpp \
     dlgAliasMainArea.cpp \
@@ -521,11 +532,11 @@ SOURCES += \
     XMLimport.cpp \
     wcwidth.cpp
 
-
 HEADERS += \
     ActionUnit.h \
     AliasUnit.h \
     ctelnet.h \
+    discord.h \
     dlgAboutDialog.h \
     dlgActionMainArea.h \
     dlgAliasMainArea.h \
@@ -626,7 +637,9 @@ FORMS += \
     ui/trigger_pattern_edit.ui \
     ui/vars_main_area.ui
 
-RESOURCES = mudlet.qrc
+RESOURCES = mudlet.qrc \
+            ../translations/translated/qm.qrc
+
 contains(DEFINES, INCLUDE_FONTS) {
     RESOURCES += mudlet_fonts.qrc
     !build_pass{
@@ -658,6 +671,8 @@ linux|macx|win32 {
         message("The Updater code is excluded as on-line updating is not available on this platform")
     }
 }
+
+TRANSLATIONS = $$files(../translations/translated/*.ts)
 
 # To use QtCreator as a Unix installer the generated Makefile must have the
 # following lists of files EXPLICITLY stated - IT DOESN'T WORK IF A WILD-CARD
@@ -694,6 +709,7 @@ LUA.files = \
     $${PWD}/mudlet-lua/lua/GMCP.lua \
     $${PWD}/mudlet-lua/lua/GUIUtils.lua \
     $${PWD}/mudlet-lua/lua/KeyCodes.lua \
+    $${PWD}/mudlet-lua/lua/TTSValues.lua \
     $${PWD}/mudlet-lua/lua/LuaGlobal.lua \
     $${PWD}/mudlet-lua/lua/Other.lua \
     $${PWD}/mudlet-lua/lua/StringUtils.lua \
@@ -1265,7 +1281,6 @@ unix:!macx {
         LUA_LCF_L5_WORKSHOP_FORMATS_LUA__TABLE_SAVE_INSTALL__NODE__HANDLERS \
         LUA_LCF_L3_WORKSHOP_FORMATS_LUA__TABLE__CODE \
         LUA_LCF_L4_WORKSHOP_FORMATS_LUA__TABLE__CODE_SAVE \
-        LUA_LCF_L4_WORKSHOP_FORMATS_SH \
         LUA_LCF_L3_WORKSHOP_FRONTEND_TEXT \
         LUA_LCF_L2_WORKSHOP_LUA \
         LUA_LCF_L3_WORKSHOP_LUA_CODE \
@@ -1290,7 +1305,7 @@ unix:!macx {
         LUA_LCF_L4_WORKSHOP_MECHS_TEXT__BLOCKS_TEXT \
         LUA_LCF_L2_WORKSHOP_NUMBER \
         LUA_LCF_L2_WORKSHOP_STRING \
-        LUA_LCF_L3_WORKSHOP_STRING_LINE \
+        LUA_LCF_L3_WORKSHOP_STRING_LINES \
         LUA_LCF_L2_WORKSHOP_STRUC \
         LUA_LCF_L2_WORKSHOP_SYSTEM \
         LUA_LCF_L2_WORKSHOP_TABLE \
@@ -1338,4 +1353,6 @@ DISTFILES += \
     ../mudlet.desktop \
     ../mudlet.png \
     ../mudlet.svg \
-    ../README.md
+    ../README.md \
+    ../translations/translated/CMakeLists.txt \
+    ../translations/translated/generate-translation-stats.lua

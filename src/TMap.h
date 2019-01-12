@@ -57,7 +57,7 @@ class TMapLabel
 public:
     TMapLabel()
     {
-        hilite = false;
+        highlight = false;
         showOnTop = false;
         noScaling = false;
     }
@@ -70,7 +70,7 @@ public:
     QColor fgColor;
     QColor bgColor;
     QPixmap pix;
-    bool hilite;
+    bool highlight;
     bool showOnTop;
     bool noScaling;
 };
@@ -108,7 +108,7 @@ public:
     bool gotoRoom(int);
     bool gotoRoom(int, int);
     void setView(float, float, float, float);
-    bool serialize(QDataStream&);
+    bool serialize(QDataStream&, int saveVersion = 0);
     bool restore(QString location, bool downloadIfNotFound = true);
     bool retrieveMapFileStats(QString, QString*, int*, int*, int*, int*);
     void initGraph();
@@ -130,7 +130,7 @@ public:
     void pushErrorMessagesToFile(QString, bool isACleanup = false);
 
     // Moved and revised from dlgMapper:
-    void downloadMap(const QString* remoteUrl = Q_NULLPTR, const QString* localFileName = Q_NULLPTR);
+    void downloadMap(const QString& remoteUrl = QString(), const QString& localFileName = QString());
 
     // Also uses readXmlMapFile(...) but for local files:
     bool importMap(QFile&, QString* errMsg = Q_NULLPTR);
@@ -148,6 +148,8 @@ public:
     // Show which rooms have which symbols:
     QHash<QString, QSet<int>> roomSymbolsHash();
 
+    void setMmpMapLocation(const QString &location);
+    QString getMmpMapLocation() const;
 
     TRoomDB* mpRoomDB;
     QMap<int, int> envColors;
@@ -223,6 +225,10 @@ public:
     qreal mMapSymbolFontFudgeFactor;
     // Disables font substitution if set:
     bool mIsOnlyMapSymbolFontToBeUsed;
+
+    // location of an MMP map provided by the game
+    QString mMmpMapLocation;
+
 
 
 public slots:

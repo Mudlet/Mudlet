@@ -59,6 +59,7 @@ public:
     static int DefaultHostPort;
     static QString DefaultNickName;
     static QStringList DefaultChannels;
+    static int DefaultMessageBufferLimit;
 
     static QString readIrcHostName(Host* pH);
     static int readIrcHostPort(Host* pH);
@@ -113,6 +114,7 @@ private:
     QString getMessageTarget(IrcMessage*, const QString&);
     static QString readAppDefaultIrcNick();
     static void writeAppDefaultIrcNick(const QString&);
+    void writeQSettings();
 
     void showEvent(QShowEvent* event) override;
 
@@ -137,6 +139,7 @@ private:
     QString mUserName;
     QString mRealName;
     QStringList mChannels;
+    int mMessageBufferLimit;
 };
 
 #endif // MUDLET_DLGIRC_H

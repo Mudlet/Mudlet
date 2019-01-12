@@ -28,6 +28,7 @@ fi
 echo "Compiling using ${PROCS} cores."
 if [ "${Q_OR_C_MAKE}" = "qmake" ]; then
   qmake ${SPEC} ../src/mudlet.pro
+  lupdate -verbose -recursive ../src -ts ../translations/mudlet.ts
 else
   cmake ..
 fi

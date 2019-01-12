@@ -1,23 +1,24 @@
 /***************************************************************************
-*   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
-*   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
-*   Copyright (C) 2015-2016 by Stephen Lyons - slysven@virginmedia.com    *
-*                                                                         *
-*   This program is free software; you can redistribute it and/or modify  *
-*   it under the terms of the GNU General Public License as published by  *
-*   the Free Software Foundation; either version 2 of the License, or     *
-*   (at your option) any later version.                                   *
-*                                                                         *
-*   This program is distributed in the hope that it will be useful,       *
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
-*   GNU General Public License for more details.                          *
-*                                                                         *
-*   You should have received a copy of the GNU General Public License     *
-*   along with this program; if not, write to the                         *
-*   Free Software Foundation, Inc.,                                       *
-*   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
-***************************************************************************/
+ *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
+ *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2015-2016, 2019 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
 
 
 #include "dlgMapper.h"
@@ -72,44 +73,41 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     mp2dMap->mShowRoomID = mpHost->mShowRoomID;
 
     panel->setVisible(mpHost->mShowPanel);
-    //searchList->setSelectionMode( QAbstractItemView::SingleSelection );
-    //connect(roomID, SIGNAL(returnPressed()), this, SLOT(goRoom()));
-    connect(bubbles, SIGNAL(clicked()), this, SLOT(slot_bubbles()));
-    connect(showInfo, SIGNAL(clicked()), this, SLOT(slot_info()));
-    connect(ortho, SIGNAL(pressed()), glWidget, SLOT(fullView()));
-    connect(singleLevel, SIGNAL(pressed()), glWidget, SLOT(singleView()));
-    connect(increaseTop, SIGNAL(pressed()), glWidget, SLOT(increaseTop()));
-    connect(increaseBottom, SIGNAL(pressed()), glWidget, SLOT(increaseBottom()));
-    connect(reduceTop, SIGNAL(pressed()), glWidget, SLOT(reduceTop()));
-    connect(reduceBottom, SIGNAL(pressed()), glWidget, SLOT(reduceBottom()));
-    //connect(searchList, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(choseRoom(QListWidgetItem*)));
-    connect(shiftZup, SIGNAL(pressed()), mp2dMap, SLOT(shiftZup()));
-    connect(shiftZdown, SIGNAL(pressed()), mp2dMap, SLOT(shiftZdown()));
-    connect(shiftLeft, SIGNAL(pressed()), mp2dMap, SLOT(shiftLeft()));
-    connect(shiftRight, SIGNAL(pressed()), mp2dMap, SLOT(shiftRight()));
-    connect(shiftUp, SIGNAL(pressed()), mp2dMap, SLOT(shiftUp()));
-    connect(shiftDown, SIGNAL(pressed()), mp2dMap, SLOT(shiftDown()));
+    connect(bubbles, &QAbstractButton::clicked, this, &dlgMapper::slot_bubbles);
+    connect(showInfo, &QAbstractButton::clicked, this, &dlgMapper::slot_info);
+    connect(ortho, &QAbstractButton::pressed, glWidget, &GLWidget::fullView);
+    connect(singleLevel, &QAbstractButton::pressed, glWidget, &GLWidget::singleView);
+    connect(increaseTop, &QAbstractButton::pressed, glWidget, &GLWidget::increaseTop);
+    connect(increaseBottom, &QAbstractButton::pressed, glWidget, &GLWidget::increaseBottom);
+    connect(reduceTop, &QAbstractButton::pressed, glWidget, &GLWidget::reduceTop);
+    connect(reduceBottom, &QAbstractButton::pressed, glWidget, &GLWidget::reduceBottom);
+    connect(shiftZup, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftZup);
+    connect(shiftZdown, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftZdown);
+    connect(shiftLeft, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftLeft);
+    connect(shiftRight, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftRight);
+    connect(shiftUp, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftUp);
+    connect(shiftDown, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftDown);
 
-    connect(shiftZup, SIGNAL(pressed()), glWidget, SLOT(shiftZup()));
-    connect(shiftZdown, SIGNAL(pressed()), glWidget, SLOT(shiftZdown()));
-    connect(shiftLeft, SIGNAL(pressed()), glWidget, SLOT(shiftLeft()));
-    connect(shiftRight, SIGNAL(pressed()), glWidget, SLOT(shiftRight()));
-    connect(shiftUp, SIGNAL(pressed()), glWidget, SLOT(shiftUp()));
-    connect(shiftDown, SIGNAL(pressed()), glWidget, SLOT(shiftDown()));
-    connect(showInfo, SIGNAL(clicked()), glWidget, SLOT(showInfo()));
-    connect(showArea, SIGNAL(activated(QString)), mp2dMap, SLOT(slot_switchArea(QString)));
-    connect(defaultView, SIGNAL(pressed()), glWidget, SLOT(defaultView()));
-    connect(dim2, SIGNAL(pressed()), this, SLOT(show2dView()));
-    connect(sideView, SIGNAL(pressed()), glWidget, SLOT(sideView()));
-    connect(topView, SIGNAL(pressed()), glWidget, SLOT(topView()));
-    connect(togglePanel, SIGNAL(pressed()), this, SLOT(slot_togglePanel()));
-    connect(lineSize, SIGNAL(valueChanged(int)), this, SLOT(slot_lineSize(int)));
-    connect(roomSize, SIGNAL(valueChanged(int)), this, SLOT(slot_roomSize(int)));
-    connect(scale, SIGNAL(valueChanged(int)), glWidget, SLOT(setScale(int)));
-    connect(xRot, SIGNAL(valueChanged(int)), glWidget, SLOT(setXRotation(int)));
-    connect(yRot, SIGNAL(valueChanged(int)), glWidget, SLOT(setYRotation(int)));
-    connect(zRot, SIGNAL(valueChanged(int)), glWidget, SLOT(setZRotation(int)));
-    connect(showRoomIDs, SIGNAL(stateChanged(int)), this, SLOT(slot_toggleShowRoomIDs(int)));
+    connect(shiftZup, &QAbstractButton::pressed, glWidget, &GLWidget::shiftZup);
+    connect(shiftZdown, &QAbstractButton::pressed, glWidget, &GLWidget::shiftZdown);
+    connect(shiftLeft, &QAbstractButton::pressed, glWidget, &GLWidget::shiftLeft);
+    connect(shiftRight, &QAbstractButton::pressed, glWidget, &GLWidget::shiftRight);
+    connect(shiftUp, &QAbstractButton::pressed, glWidget, &GLWidget::shiftUp);
+    connect(shiftDown, &QAbstractButton::pressed, glWidget, &GLWidget::shiftDown);
+    connect(showInfo, &QAbstractButton::clicked, glWidget, &GLWidget::showInfo);
+    connect(showArea, qOverload<const QString&>(&QComboBox::activated), mp2dMap, &T2DMap::slot_switchArea);
+    connect(defaultView, &QAbstractButton::pressed, glWidget, &GLWidget::defaultView);
+    connect(dim2, &QAbstractButton::pressed, this, &dlgMapper::show2dView);
+    connect(sideView, &QAbstractButton::pressed, glWidget, &GLWidget::sideView);
+    connect(topView, &QAbstractButton::pressed, glWidget, &GLWidget::topView);
+    connect(togglePanel, &QAbstractButton::pressed, this, &dlgMapper::slot_togglePanel);
+    connect(lineSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_lineSize);
+    connect(roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_roomSize);
+    connect(scale, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setScale);
+    connect(xRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setXRotation);
+    connect(yRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setYRotation);
+    connect(zRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setZRotation);
+    connect(showRoomIDs, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
     // Explicitly set the font otherwise it changes between the Application and
     // the default System one as the mapper is docked and undocked!
     QFont mapperFont = QFont(mpHost->mDisplayFont.family());

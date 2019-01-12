@@ -82,9 +82,16 @@ private:
     QTreeWidget* treeWidget;
     QPushButton* exportButton;
     QPushButton* closeButton;
+    QTreeWidgetItem* mpTriggers;
+    QTreeWidgetItem* mpAliases;
+    QTreeWidgetItem* mpTimers;
+    QTreeWidgetItem* mpScripts;
+    QTreeWidgetItem* mpKeys;
+    QTreeWidgetItem* mpButtons;
     QString tempDir;
     QString packageName;
     QString zipFile;
+    void showUploadNudge();
 };
 
 #endif // MUDLET_DLGPACKAGEEXPORTER_H
