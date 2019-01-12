@@ -37,7 +37,7 @@ public:
     dlgConnectionProfiles(QWidget* parent = nullptr);
     void fillout_form();
     QPointer<QSettings> getProfileSettings(const QString& profile);
-    QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile);
+    QPair<bool, QString> writeProfileData(const QString& profile);
     QString readProfileData(const QString& profile, const QString& item);
     void accept() override;
     void closeEvent(QCloseEvent* event) override;
@@ -50,10 +50,6 @@ public slots:
     void slot_save_name();
     void slot_update_url(const QString &);
     void slot_update_SSL_TSL_port(int state);
-    void slot_update_login(const QString &);
-    void slot_update_pass(const QString &);
-    void slot_update_website(const QString &);
-    void slot_update_description();
     void slot_update_port(const QString);
     void slot_deleteprofile_check(const QString);
 
@@ -62,7 +58,6 @@ public slots:
     void slot_deleteProfile();
     void slot_reallyDeleteProfile();
 
-    void slot_update_autologin(int state);
     void slot_update_autoreconnect(int state);
     void slot_update_discord_optin(int state);
     void slot_connectToServer();

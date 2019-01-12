@@ -2566,8 +2566,8 @@ void mudlet::readEarlySettings(const QSettings& settings)
     mInterfaceLanguage = settings.value("interfaceLanguage", QStringLiteral("en_US")).toString();
 }
 
+void mudlet::readLateSettings(const QSettings& settings)
 {
-    QSettings& settings = *getQSettings();
     QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
     QSize size = settings.value("size", QSize(750, 550)).toSize();
     // A sensible default has already been set up according to whether we are on
@@ -2587,7 +2587,8 @@ void mudlet::readEarlySettings(const QSettings& settings)
 
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mCompactInputLine = settings.value("compactInputLine", QVariant(false)).toBool();
-    mConfigDirIndex = settings.value("configDirIndex").toInt();
+
+
     resize(size);
     move(pos);
     if (settings.value("maximized", false).toBool()) {
@@ -2714,10 +2715,10 @@ void mudlet::writeSettings()
     settings->setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings->setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
     settings->setValue("compactInputLine", mCompactInputLine);
-    settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
-    settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
-    settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
-    settings.setValue("interfaceLanguage", mInterfaceLanguage);    
+    settings->setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
+    settings->setValue("enableFullScreenMode", mEnableFullScreenMode);
+    settings->setValue("copyAsImageTimeout", mCopyAsImageTimeout);
+    settings->setValue("interfaceLanguage", mInterfaceLanguage);
     settings->setValue("configDirIndex", mConfigDirIndex);
 }
 

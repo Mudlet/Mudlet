@@ -134,18 +134,11 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(host_name_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_update_url);
     connect(port_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_update_port);
     connect(port_ssl_tsl, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_SSL_TSL_port);
-    connect(autologin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_autologin);
     connect(auto_reconnect, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_autoreconnect);
-    connect(login_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_login);
-    connect(character_password_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_pass);
-    connect(mud_description_textedit, &QPlainTextEdit::textChanged, this, &dlgConnectionProfiles::slot_update_description);
     connect(profiles_tree_widget, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_item_clicked);
     connect(profiles_tree_widget, &QListWidget::itemDoubleClicked, this, &dlgConnectionProfiles::accept);
 
     connect(discord_optin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_discord_optin);
-
-    // website_entry atm is only a label
-    //connect(website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_update_website(const QString)));
 
     notificationArea->hide();
     notificationAreaIconLabelWarning->hide();
@@ -207,24 +200,6 @@ void dlgConnectionProfiles::closeEvent(QCloseEvent* event)
     event->accept();
 }
 
-void dlgConnectionProfiles::slot_update_pass(const QString &pass)
-{
-    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
-    if (pItem) {
-        QString profile = pItem->text();
-        writeProfileData(profile, QStringLiteral("password"), pass);
-    }
-}
-
-void dlgConnectionProfiles::slot_update_login(const QString &login)
-{
-    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
-    if (pItem) {
-        QString profile = pItem->text();
-        writeProfileData(profile, QStringLiteral("login"), login);
-    }
-}
-
 void dlgConnectionProfiles::slot_update_url(const QString& url)
 {
     if (url.isEmpty()) {
@@ -239,18 +214,7 @@ void dlgConnectionProfiles::slot_update_url(const QString& url)
             return;
         }
         QString profile = pItem->text();
-        writeProfileData(profile, QStringLiteral("url"), host_name_entry->text());
     }
-}
-
-void dlgConnectionProfiles::slot_update_autologin(int state)
-{
-    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
-    if (!pItem) {
-        return;
-    }
-    QString profile = pItem->text();
-    writeProfileData(profile, QStringLiteral("autologin"), QString::number(state));
 }
 
 void dlgConnectionProfiles::slot_update_autoreconnect(int state)
@@ -260,7 +224,6 @@ void dlgConnectionProfiles::slot_update_autoreconnect(int state)
         return;
     }
     QString profile = pItem->text();
-    writeProfileData(profile, QStringLiteral("autoreconnect"), QString::number(state));
 }
 
 // This gets called when the QCheckBox that it is connect-ed to gets it's
@@ -272,7 +235,6 @@ void dlgConnectionProfiles::slot_update_discord_optin(int state)
         return;
     }
     QString profile = pItem->text();
-    writeProfileData(profile, QStringLiteral("discordserveroptin"), QString::number(state));
 
     // in case the user is already connected, pull up stored GMCP data
     auto& hostManager = mudlet::self()->getHostManager();
@@ -308,7 +270,6 @@ void dlgConnectionProfiles::slot_update_port(const QString ignoreBlank)
             return;
         }
         QString profile = pItem->text();
-        writeProfileData(profile, QStringLiteral("port"), port);
     }
 }
 
@@ -320,7 +281,6 @@ void dlgConnectionProfiles::slot_update_SSL_TSL_port(int state)
             return;
         }
         QString profile = pItem->text();
-        writeProfileData(profile, QStringLiteral("ssl_tsl"), QString::number(state));
     }
 }
 
@@ -633,6 +593,9 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
         mCurrentQSettings->setValue(QStringLiteral("autologin"), autologin_checkBox->isChecked() ? 1 : 0);
         mCurrentQSettings->setValue(QStringLiteral("description"), mud_description_textedit->toPlainText());
         mCurrentQSettings->setValue(QStringLiteral("website"), website_entry->text());
+        mCurrentQSettings->setValue(QStringLiteral("autoreconnect"), auto_reconnect->isChecked() ? 1 : 0);
+        mCurrentQSettings->setValue(QStringLiteral("discordserveroptin"), discord_optin_checkBox->isChecked() ? 1 : 0);
+        mCurrentQSettings->setValue(QStringLiteral("ssl_tsl"), port_ssl_tsl->isChecked() ? 1 : 0);
     }
 
     if (mCurrentQSettings->status() == QSettings::NoError) {
