@@ -590,12 +590,12 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
         mCurrentQSettings->setValue(QStringLiteral("port"), port_entry->text().trimmed());
         mCurrentQSettings->setValue(QStringLiteral("login"), login_entry->text());
         mCurrentQSettings->setValue(QStringLiteral("password"), character_password_entry->text());
-        mCurrentQSettings->setValue(QStringLiteral("autologin"), autologin_checkBox->isChecked() ? 1 : 0);
+        mCurrentQSettings->setValue(QStringLiteral("autologin"), QString::number(autologin_checkBox->checkState()));
         mCurrentQSettings->setValue(QStringLiteral("description"), mud_description_textedit->toPlainText());
         mCurrentQSettings->setValue(QStringLiteral("website"), website_entry->text());
-        mCurrentQSettings->setValue(QStringLiteral("autoreconnect"), auto_reconnect->isChecked() ? 1 : 0);
-        mCurrentQSettings->setValue(QStringLiteral("discordserveroptin"), discord_optin_checkBox->isChecked() ? 1 : 0);
-        mCurrentQSettings->setValue(QStringLiteral("ssl_tsl"), port_ssl_tsl->isChecked() ? 1 : 0);
+        mCurrentQSettings->setValue(QStringLiteral("autoreconnect"), QString::number(auto_reconnect->checkState()));
+        mCurrentQSettings->setValue(QStringLiteral("discordserveroptin"), QString::number(discord_optin_checkBox->checkState()));
+        mCurrentQSettings->setValue(QStringLiteral("ssl_tsl"), QString::number(port_ssl_tsl->checkState()));
     }
 
     if (mCurrentQSettings->status() == QSettings::NoError) {

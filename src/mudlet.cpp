@@ -3937,8 +3937,6 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         configDir = mudlet::getConfig()->value(QStringLiteral("configPath")).toString();
     }
 
-    qDebug() << "Getting mudlet path from: " << configDir;
-
     QString configPath;
     if (configDir == QStringLiteral(".")) {
         // Otherwise, if configDir is set to a relative path, set
