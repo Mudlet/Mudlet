@@ -57,8 +57,7 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
   end
 
   if text then
-    self.front:echo(text)
-    self.back:echo(text)
+    self.text:echo(text)
   end
 end
 
@@ -79,6 +78,14 @@ end
 --- Sets the text on the gauge.
 -- @param text The text to set.
 function Geyser.Gauge:setText (text)
+  if text then
+    self.text:echo(text)
+  end
+end
+
+--- Sets the text on the gauge, overwrites inherited echo function.
+-- @param text The text to set.
+function Geyser.Gauge:echo (text)
   if text then
     self.text:echo(text)
   end

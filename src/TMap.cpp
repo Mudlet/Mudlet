@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -57,7 +57,7 @@ TMap::TMap(Host* pH)
 , mDefaultVersion(18)
 // maximum version of the map format that this Mudlet can understand and will
 // allow the user to load
-, mMaxVersion(19)
+, mMaxVersion(20)
 // minimum version this instance of Mudlet will allow the user to save maps in
 , mMinVersion(16)
 , mMapSymbolFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 12, QFont::Normal))
@@ -997,18 +997,18 @@ bool TMap::findPath(int from, int to)
             // happens - Slysven
             mWeightList.prepend( r.cost );
             switch( r.direction ) {  // TODO: Eventually this can instead drop in I18ned values set by country or user preference!
-            case DIR_NORTH:        mDirList.prepend( tr( "n", "This translation converts the direction that DIR_NORTH codes for to a direction string that the MUD server will accept!" ) );      break;
-            case DIR_NORTHEAST:    mDirList.prepend( tr( "ne", "This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the MUD server will accept!" ) ); break;
-            case DIR_EAST:         mDirList.prepend( tr( "e", "This translation converts the direction that DIR_EAST codes for to a direction string that the MUD server will accept!" ) );       break;
-            case DIR_SOUTHEAST:    mDirList.prepend( tr( "se", "This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the MUD server will accept!" ) ); break;
-            case DIR_SOUTH:        mDirList.prepend( tr( "s", "This translation converts the direction that DIR_SOUTH codes for to a direction string that the MUD server will accept!" ) );      break;
-            case DIR_SOUTHWEST:    mDirList.prepend( tr( "sw", "This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the MUD server will accept!" ) ); break;
-            case DIR_WEST:         mDirList.prepend( tr( "w", "This translation converts the direction that DIR_WEST codes for to a direction string that the MUD server will accept!" ) );       break;
-            case DIR_NORTHWEST:    mDirList.prepend( tr( "nw", "This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the MUD server will accept!" ) ); break;
-            case DIR_UP:           mDirList.prepend( tr( "up", "This translation converts the direction that DIR_UP codes for to a direction string that the MUD server will accept!" ) );        break;
-            case DIR_DOWN:         mDirList.prepend( tr( "down", "This translation converts the direction that DIR_DOWN codes for to a direction string that the MUD server will accept!" ) );    break;
-            case DIR_IN:           mDirList.prepend( tr( "in", "This translation converts the direction that DIR_IN codes for to a direction string that the MUD server will accept!" ) );        break;
-            case DIR_OUT:          mDirList.prepend( tr( "out", "This translation converts the direction that DIR_OUT codes for to a direction string that the MUD server will accept!" ) );      break;
+            case DIR_NORTH:        mDirList.prepend( tr( "n", "This translation converts the direction that DIR_NORTH codes for to a direction string that the game server will accept!" ) );      break;
+            case DIR_NORTHEAST:    mDirList.prepend( tr( "ne", "This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the game server will accept!" ) ); break;
+            case DIR_EAST:         mDirList.prepend( tr( "e", "This translation converts the direction that DIR_EAST codes for to a direction string that the game server will accept!" ) );       break;
+            case DIR_SOUTHEAST:    mDirList.prepend( tr( "se", "This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the game server will accept!" ) ); break;
+            case DIR_SOUTH:        mDirList.prepend( tr( "s", "This translation converts the direction that DIR_SOUTH codes for to a direction string that the game server will accept!" ) );      break;
+            case DIR_SOUTHWEST:    mDirList.prepend( tr( "sw", "This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the game server will accept!" ) ); break;
+            case DIR_WEST:         mDirList.prepend( tr( "w", "This translation converts the direction that DIR_WEST codes for to a direction string that the game server will accept!" ) );       break;
+            case DIR_NORTHWEST:    mDirList.prepend( tr( "nw", "This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the game server will accept!" ) ); break;
+            case DIR_UP:           mDirList.prepend( tr( "up", "This translation converts the direction that DIR_UP codes for to a direction string that the game server will accept!" ) );        break;
+            case DIR_DOWN:         mDirList.prepend( tr( "down", "This translation converts the direction that DIR_DOWN codes for to a direction string that the game server will accept!" ) );    break;
+            case DIR_IN:           mDirList.prepend( tr( "in", "This translation converts the direction that DIR_IN codes for to a direction string that the game server will accept!" ) );        break;
+            case DIR_OUT:          mDirList.prepend( tr( "out", "This translation converts the direction that DIR_OUT codes for to a direction string that the game server will accept!" ) );      break;
             case DIR_OTHER:        mDirList.prepend( r.specialExitName );  break;
             default:               qWarning() << "TMap::findPath(" << from << "," << to << ") WARN: found route between rooms (from id:" << previousRoomId << ", to id:" << currentRoomId << ") with an invalid DIR_xxxx code:" << r.direction << " - the path will not be valid!" ;
             }
@@ -1024,8 +1024,30 @@ bool TMap::findPath(int from, int to)
     return false;
 }
 
-bool TMap::serialize(QDataStream& ofs)
+bool TMap::serialize(QDataStream& ofs, int saveVersion)
 {
+    // clamp version values
+    if (saveVersion < 0) {
+        saveVersion = 0;
+    } else if (saveVersion > mMaxVersion) {
+        saveVersion = mMaxVersion;
+         QString errMsg = tr("[ ERROR ] -  The format {%1} you are trying to save the map with is too new\n"
+                             "for this version of mudlet that only supports formats up to version {%2}.")
+                                 .arg(QString::number(saveVersion), QString::number(mMaxVersion));
+        appendErrorMsg(errMsg);
+        postMessage(errMsg);
+        return false;
+    }
+
+    // if 0 we default to mDefaultVersion
+    if (saveVersion == 0) {
+        mSaveVersion = mDefaultVersion;
+    }
+    // else we use saveVersion
+    else  {
+        mSaveVersion = saveVersion;
+    }
+
     if (mSaveVersion != mVersion) {
         QString message = tr("[ ALERT ] - Saving map in a format {%1} that is different than the one it was\n"
                              "loaded as {%2}. This may be an issue if you want to share the resulting\n"
@@ -1038,14 +1060,14 @@ bool TMap::serialize(QDataStream& ofs)
 
     if (mSaveVersion != mDefaultVersion) {
         QString message = tr("[ WARN ]  - Saving map in a format {%1} that is different than the one\n"
-                             "recommended {%2} baring in mind the build status of the source\n"
+                             "recommended {%2} bearing in mind the build status of the source\n"
                              "code.  Development code versions may offer the chance to try\n"
                              "experimental features needing a revised format that could be\n"
                              "incompatible with existing release code versions.  Conversely\n"
                              "a release version may allow you to downgrade to save a map in\n"
-                             "a format compatible with others using older versions of MUDLET\n"
+                             "a format compatible with others using older versions of Mudlet\n"
                              "however some features may be crippled or non-operational for\n"
-                             "this version of MUDLET.")
+                             "this version of Mudlet.")
                                   .arg(mSaveVersion)
                                   .arg(mDefaultVersion);
         appendErrorMsgWithNoLf(message, false);
@@ -1066,7 +1088,7 @@ bool TMap::serialize(QDataStream& ofs)
         }
         ofs << mUserData;
         if (mSaveVersion >= 19) {
-            // Save the data directly in supported format versions
+            // Save the data directly in supported format versions (19 and above)
             ofs << mMapSymbolFont;
             ofs << mMapSymbolFontFudgeFactor;
             ofs << mIsOnlyMapSymbolFontToBeUsed;
@@ -1254,15 +1276,121 @@ bool TMap::serialize(QDataStream& ofs)
             ofs << oldCharacterCode;
         }
         ofs << pR->userData;
-        ofs << pR->customLines;
-        ofs << pR->customLinesArrow;
-        ofs << pR->customLinesColor;
-        ofs << pR->customLinesStyle;
+        if (mSaveVersion >= 20) {
+            // Before version 20 stored the style as an Latin1 string, the color
+            // as a QList<int> for the RGB components and used UPPER case for
+            // the NORMAL exit direction keys...
+            ofs << pR->customLines;
+            ofs << pR->customLinesArrow;
+            ofs << pR->customLinesColor;
+            ofs << pR->customLinesStyle;
+        } else {
+            QMap<QString, QList<QPointF>> oldLinesData;
+            QMapIterator<QString, QList<QPointF>> itCustomLine(pR->customLines);
+            while (itCustomLine.hasNext()) {
+                itCustomLine.next();
+                QString direction(itCustomLine.key());
+                if (direction == QLatin1String("n") || direction == QLatin1String("e") || direction == QLatin1String("s") || direction == QLatin1String("w") || direction == QLatin1String("up")
+                    || direction == QLatin1String("down")
+                    || direction == QLatin1String("ne")
+                    || direction == QLatin1String("se")
+                    || direction == QLatin1String("sw")
+                    || direction == QLatin1String("nw")
+                    || direction == QLatin1String("in")
+                    || direction == QLatin1String("out")) {
+                    oldLinesData.insert(itCustomLine.key().toUpper(), itCustomLine.value());
+                } else {
+                    oldLinesData.insert(itCustomLine.key(), itCustomLine.value());
+                }
+            }
+            ofs << oldLinesData;
+
+            QMap<QString, bool> oldLinesArrowData;
+            QMapIterator<QString, bool> itCustomLineArrow(pR->customLinesArrow);
+            while (itCustomLineArrow.hasNext()) {
+                itCustomLineArrow.next();
+                QString direction(itCustomLineArrow.key());
+                if (direction == QLatin1String("n") || direction == QLatin1String("e") || direction == QLatin1String("s") || direction == QLatin1String("w") || direction == QLatin1String("up")
+                    || direction == QLatin1String("down")
+                    || direction == QLatin1String("ne")
+                    || direction == QLatin1String("se")
+                    || direction == QLatin1String("sw")
+                    || direction == QLatin1String("nw")
+                    || direction == QLatin1String("in")
+                    || direction == QLatin1String("out")) {
+                    oldLinesArrowData.insert(itCustomLineArrow.key().toUpper(), itCustomLineArrow.value());
+                } else {
+                    oldLinesArrowData.insert(itCustomLineArrow.key(), itCustomLineArrow.value());
+                }
+            }
+            ofs << oldLinesArrowData;
+
+            QMap<QString, QList<int>> oldLinesColorData;
+            QMapIterator<QString, QColor> itCustomLineColor(pR->customLinesColor);
+            while (itCustomLine.hasNext()) {
+                itCustomLineColor.next();
+                QString direction(itCustomLineColor.key());
+                QList<int> colorComponents;
+                colorComponents << itCustomLineColor.value().red() << itCustomLineColor.value().green() << itCustomLineColor.value().blue();
+                if (direction == QLatin1String("n") || direction == QLatin1String("e") || direction == QLatin1String("s") || direction == QLatin1String("w") || direction == QLatin1String("up")
+                    || direction == QLatin1String("down")
+                    || direction == QLatin1String("ne")
+                    || direction == QLatin1String("se")
+                    || direction == QLatin1String("sw")
+                    || direction == QLatin1String("nw")
+                    || direction == QLatin1String("in")
+                    || direction == QLatin1String("out")) {
+                    oldLinesColorData.insert(itCustomLineColor.key().toUpper(), colorComponents);
+                } else {
+                    oldLinesColorData.insert(itCustomLineColor.key(), colorComponents);
+                }
+            }
+            ofs << oldLinesColorData;
+
+            QMap<QString, QString> oldLineStyleData;
+            QMapIterator<QString, Qt::PenStyle> itCustomLineStyle(pR->customLinesStyle);
+            while (itCustomLineStyle.hasNext()) {
+                itCustomLineStyle.next();
+                QString direction(itCustomLineStyle.key());
+                if (direction == QLatin1String("n") || direction == QLatin1String("e") || direction == QLatin1String("s") || direction == QLatin1String("w") || direction == QLatin1String("up")
+                    || direction == QLatin1String("down")
+                    || direction == QLatin1String("ne")
+                    || direction == QLatin1String("se")
+                    || direction == QLatin1String("sw")
+                    || direction == QLatin1String("nw")
+                    || direction == QLatin1String("in")
+                    || direction == QLatin1String("out")) {
+                    direction = direction.toUpper();
+                }
+                switch (itCustomLineStyle.value()) {
+                case Qt::DotLine:
+                    oldLineStyleData.insert(direction, QLatin1String("dot line"));
+                    break;
+                case Qt::DashLine:
+                    oldLineStyleData.insert(direction, QLatin1String("dash line"));
+                    break;
+                case Qt::DashDotLine:
+                    oldLineStyleData.insert(direction, QLatin1String("dash dot line"));
+                    break;
+                case Qt::DashDotDotLine:
+                    oldLineStyleData.insert(direction, QLatin1String("dash dot dot line"));
+                    break;
+                case Qt::SolidLine:
+                    [[clang::fallthrough]];
+                default:
+                    oldLineStyleData.insert(direction, QLatin1String("solid line"));
+                }
+            }
+            ofs << oldLineStyleData;
+        }
         ofs << pR->exitLocks;
         ofs << pR->exitStubs;
         ofs << pR->getExitWeights();
         ofs << pR->doors;
     }
+
+    // reset to default map version
+    mSaveVersion = mDefaultVersion;
     return true;
 }
 
@@ -1323,13 +1451,13 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             appendErrorMsgWithNoLf(infoMsg, false);
             postMessage(infoMsg);
             canRestore = false;
-            mSaveVersion = mVersion; // Make the save version the default one - unless the user intervenes
+            mSaveVersion = mDefaultVersion; // Make the save version the default one - unless the user intervenes
         } else {
             // Less than (but not less than 4) or equal to default version
             QString infoMsg = tr("[ INFO ]  - Reading map (format version:%1) file:\n\"%2\",\nplease wait...").arg(mVersion).arg(file.fileName());
             appendErrorMsg(tr(R"([ INFO ]  - Reading map (format version:%1) file: "%2".)").arg(mVersion).arg(file.fileName()), false);
             postMessage(infoMsg);
-            mSaveVersion = mVersion; // Make the save version the default one - unless the user intervenes
+            mSaveVersion = mDefaultVersion; // Make the save version the default one - unless the user intervenes
         }
 
         // As all but the room reading have version checks the fact that sub-4
@@ -1532,9 +1660,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
     if ((!canRestore || entries.empty()) && downloadIfNotFound) {
         QMessageBox msgBox;
 
-        if (mpHost->mUrl.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive) || mpHost->mUrl.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
-            || mpHost->mUrl.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
-            || mpHost->mUrl.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
+        if (!getMmpMapLocation().isEmpty()) {
             msgBox.setText(tr("No map found. Would you like to download the map or start your own?"));
             QPushButton* yesButton = msgBox.addButton(tr("Download the map"), QMessageBox::ActionRole);
             QPushButton* noButton = msgBox.addButton(tr("Start my own"), QMessageBox::ActionRole);
@@ -2069,7 +2195,7 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
     mIsFileViewingRecommended = false;
 }
 
-void TMap::downloadMap(const QString* remoteUrl, const QString* localFileName)
+void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 {
     Host* pHost = mpHost;
     if (!pHost) {
@@ -2088,11 +2214,14 @@ void TMap::downloadMap(const QString* remoteUrl, const QString* localFileName)
     // We have the mutex locked - MUST unlock it when done under ALL circumstances
     QUrl url;
 
-    if (!remoteUrl || remoteUrl->isEmpty()) {
-        // TODO: Provide a per profile means to specify a "user settable" default Url...
-        url = QUrl::fromUserInput(QStringLiteral("https://www.%1/maps/map.xml").arg(pHost->mUrl));
+    if (remoteUrl.isEmpty()) {
+        if (!getMmpMapLocation().isEmpty()) {
+            url = QUrl::fromUserInput(getMmpMapLocation());
+        } else {
+            url = QUrl::fromUserInput(QStringLiteral("https://www.%1/maps/map.xml").arg(pHost->mUrl));
+        }
     } else {
-        url = QUrl::fromUserInput(*remoteUrl);
+        url = QUrl::fromUserInput(remoteUrl);
     }
 
     if (!url.isValid()) {
@@ -2106,10 +2235,10 @@ void TMap::downloadMap(const QString* remoteUrl, const QString* localFileName)
         return;
     }
 
-    if (!localFileName || localFileName->isEmpty()) {
+    if (localFileName.isEmpty()) {
         mLocalMapFileName = mudlet::getMudletPath(mudlet::profileXmlMapPathFileName, pHost->getName());
     } else {
-        mLocalMapFileName = *localFileName;
+        mLocalMapFileName = localFileName;
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -2119,26 +2248,14 @@ void TMap::downloadMap(const QString* remoteUrl, const QString* localFileName)
     // placed this code here:
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
 
-#ifndef QT_NO_OPENSSL
+#ifndef QT_NO_SSL
     if (url.scheme() == QStringLiteral("https")) {
         QSslConfiguration config(QSslConfiguration::defaultConfiguration());
         request.setSslConfiguration(config);
     }
 #endif
 
-    // Unfortunately we do not seem to get a file size from the IRE servers so
-    // estimate it from current figures + 10% as of now (2016/10) - using previous
-    // 4M that was used before for other cases:
     mExpectedFileSize = 4000000;
-    if (url.toString().contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)) {
-        mExpectedFileSize = qRound(1.1f * 4706442);
-    } else if (url.toString().contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)) {
-        mExpectedFileSize = qRound(1.1f * 5695407);
-    } else if (url.toString().contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)) {
-        mExpectedFileSize = qRound(1.1f * 4997166);
-    } else if (url.toString().contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)) {
-        mExpectedFileSize = qRound(1.1f * 4842063);
-    }
 
     QString infoMsg = tr("[ INFO ]  - Map download initiated, please wait...");
     postMessage(infoMsg);
@@ -2157,9 +2274,9 @@ void TMap::downloadMap(const QString* remoteUrl, const QString* localFileName)
     mpProgressDialog->setMinimumDuration(0); // Normally waits for 4 seconds before showing
 
     connect(mpNetworkReply, &QNetworkReply::downloadProgress, this, &TMap::slot_setDownloadProgress);
-    // Not used:    connect(mpNetworkReply, SIGNAL( readyRead() ), this, SLOT( slot_readyRead() ) );
+    // Not used:    connect(mpNetworkReply, &QNetworkReply::readyRead, this, &TMap::slot_readyRead);
     connect(mpNetworkReply, qOverload<QNetworkReply::NetworkError>(&QNetworkReply::error), this, &TMap::slot_downloadError);
-    // Not used:    connect(mpNetworkReply, SIGNAL( sslErrors( QList<QSslError> ) ), this, SLOT( slot_sslErrors( QList<QSslError> ) ) );
+    // Not used:    connect(mpNetworkReply, &QNetworkReply::sslErrors, this, &TMap::slot_sslErrors);
     connect(mpProgressDialog, &QProgressDialog::canceled, this, &TMap::slot_downloadCancel);
 
     mpProgressDialog->show();
@@ -2416,4 +2533,16 @@ QHash<QString, QSet<int>> TMap::roomSymbolsHash()
         }
     }
     return results;
+}
+
+void TMap::setMmpMapLocation(const QString &location)
+{
+    mMmpMapLocation = location;
+
+    qDebug() << "MMP map registered at" << mMmpMapLocation;
+}
+
+QString TMap::getMmpMapLocation() const
+{
+    return mMmpMapLocation;
 }

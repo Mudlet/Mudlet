@@ -78,10 +78,10 @@ public:
     ~TLuaInterpreter();
     void setMSDPTable(QString& key, const QString& string_data);
     void parseJSON(QString& key, const QString& string_data, const QString& protocol);
-    void msdp2Lua(char* src, int srclen);
+    void msdp2Lua(const char*);
     void initLuaGlobals();
     void initIndenterGlobals();
-    bool call(const QString& function, const QString& mName);
+    bool call(const QString& function, const QString& mName, const bool muteDebugOutput = false);
     std::pair<bool, bool> callReturnBool(const QString& function, const QString& mName);
     bool callMulti(const QString& function, const QString& mName);
     std::pair<bool, bool> callMultiReturnBool(const QString& function, const QString& mName);
@@ -97,7 +97,7 @@ public:
     bool compileAndExecuteScript(const QString&);
     QString formatLuaCode(const QString &);
     void loadGlobal();
-    QString get_lua_string(const QString& stringName);
+    QString getLuaString(const QString& stringName);
     int check_for_mappingscript();
     void set_lua_string(const QString& varName, const QString& varValue);
     void set_lua_table(const QString& tableName, QStringList& variableList);
@@ -131,6 +131,7 @@ public:
 
     static int getCustomLines(lua_State*);
     static int addCustomLine(lua_State*);
+    static int removeCustomLine(lua_State*);
     static int noop(lua_State*);
     static int sendMSDP(lua_State*);
     static int auditAreas(lua_State*);
@@ -243,6 +244,7 @@ public:
     static int selectString(lua_State* L); // Was select but I think it clashes with the Lua command with that name
     static int getMainConsoleWidth(lua_State* L);
     static int selectSection(lua_State* L);
+    static int getSelection(lua_State* L);
     static int replace(lua_State* L);
     static int deselect(lua_State* L);
     static int getRoomExits(lua_State* L);
@@ -439,9 +441,34 @@ public:
     static int getRowCount(lua_State*);
     static int getOS(lua_State*);
     static int getAvailableFonts(lua_State* L);
+    static int setDiscordApplicationID(lua_State* L);
+    static int usingMudletsDiscordID(lua_State*);
+    static int setDiscordState(lua_State*);
+    static int setDiscordDetail(lua_State*);
+    static int setDiscordLargeIcon(lua_State*);
+    static int setDiscordLargeIconText(lua_State*);
+    static int setDiscordSmallIcon(lua_State*);
+    static int setDiscordSmallIconText(lua_State*);
+    static int setDiscordElapsedStartTime(lua_State*);
+    static int setDiscordRemainingEndTime(lua_State*);
+    static int setDiscordParty(lua_State*);
+    static int getDiscordState(lua_State*);
+    static int getDiscordDetail(lua_State*);
+    static int getDiscordLargeIcon(lua_State*);
+    static int getDiscordLargeIconText(lua_State*);
+    static int getDiscordSmallIcon(lua_State*);
+    static int getDiscordSmallIconText(lua_State*);
+    static int getDiscordTimeStamps(lua_State*);
+    static int getDiscordParty(lua_State*);
+    static int setDiscordGame(lua_State*);
+    static int getPlayerRoom(lua_State*);
+    static int getMapSelection(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
+
+
     static const QMap<Qt::MouseButton, QString> mMouseButtons;
     void freeLuaRegistryIndex(int index);
+    void encodingChanged(const QString&);
 
 public slots:
     void slot_replyFinished(QNetworkReply*);
@@ -449,16 +476,19 @@ public slots:
     void slotDeleteSender(int, QProcess::ExitStatus);
 
 private:
+    void logError(std::string& e, const QString&, const QString& function);
+    static int setLabelCallback(lua_State*, const QString& funcName);
+    bool validLuaCode(const QString &code);
+    QByteArray encodeBytes(const char*);
+    void setMatches(lua_State* L);
+    static std::pair<bool, QString> discordApiEnabled(lua_State* L, bool writeAccess = false);
+
     QNetworkAccessManager* mpFileDownloader;
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
     std::list<std::list<int>> mMultiCaptureGroupPosList;
-    void logError(std::string& e, const QString&, const QString& function);
-    static int setLabelCallback(lua_State*, const QString& funcName);
-    bool validLuaCode(const QString &code);
-    void setMatches(lua_State* L);
 
     QMap<QNetworkReply*, QString> downloadMap;
 

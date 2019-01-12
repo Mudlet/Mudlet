@@ -57,13 +57,24 @@ class TConsole : public QWidget
     Q_OBJECT
 
 public:
+    enum ConsoleTypeFlag {
+        UnknownType = 0x0, // Should not be encountered but left as a trap value
+        CentralDebugConsole = 0x1, // One of these for whole application
+        ErrorConsole = 0x2, // The bottom right corner of the Editor, one per profile
+        MainConsole = 0x4, // One per profile
+        SubConsole = 0x8, // Overlaid on top of MainConsole instance, should be uniquely named in pool of SubConsole/UserWindow/Buffers AND Labels
+        UserWindow = 0x10, // Floatable/Dockable console, should be uniquely named in pool of SubConsole/UserWindow/Buffers AND Labels
+        Buffer = 0x20 // Non-visible store for data that can be copied to/from other per profile TConsoles, should be uniquely named in pool of SubConsole/UserWindow/Buffers AND Labels
+    };
+
+    Q_DECLARE_FLAGS(ConsoleType, ConsoleTypeFlag)
+
     Q_DISABLE_COPY(TConsole)
-    TConsole(Host*, bool isDebugConsole, QWidget* parent = nullptr);
+    TConsole(Host*, ConsoleType type = UnknownType, QWidget* parent = nullptr);
     void reset();
     void resetMainConsole();
     void echoUserWindow(const QString&);
     Host* getHost();
-    TCommandLine* mpCommandLine;
     void replace(const QString&);
     void insertHTML(const QString&);
     void insertText(const QString&);
@@ -81,7 +92,6 @@ public:
     void closeEvent(QCloseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void pasteWindow(TBuffer);
-    void setUserWindow();
     QStringList getLines(int from, int to);
     int getLineNumber();
     int getLineCount();
@@ -108,6 +118,7 @@ public:
     void echo(const QString&);
     bool moveCursor(int x, int y);
     int select(const QString&, int numOfMatch = 1);
+    std::tuple<bool, QString, int, int> getSelection();
     void deselect();
     bool selectSection(int, int);
     void skipLine();
@@ -160,7 +171,7 @@ public:
     void _luaWrapLine(int);
     QString getCurrentLine();
     void selectCurrentLine();
-    bool saveMap(const QString&);
+    bool saveMap(const QString&, int saveVersion = 0);
     bool loadMap(const QString&);
     bool importMap(const QString&, QString* errMsg = Q_NULLPTR);
 
@@ -168,14 +179,17 @@ public:
     QSize getMainWindowSize() const;
 
     void toggleLogging(bool);
+    ConsoleType getType() const { return mType; }
+
 
     QPointer<Host> mpHost;
+    TCommandLine* mpCommandLine;
 
     TBuffer buffer;
     static const QString cmLuaLineVariable;
     TTextEdit* mUpperPane;
     TTextEdit* mLowerPane;
-    int currentFgColorProperty;
+
     QToolButton* emergencyStop;
     bool isUserScrollBack;
     QWidget* layer;
@@ -199,8 +213,6 @@ public:
     TChar mFormatSystemMessage;
 
     int mIndentCount;
-    bool mIsDebugConsole;
-    bool mIsSubConsole;
     std::map<std::string, TLabel*> mLabelMap;
     QFile mLogFile;
     QString mLogFileName;
@@ -241,7 +253,7 @@ public:
     QColor mSystemMessageBgColor;
     QColor mSystemMessageFgColor;
     bool mTriggerEngineMode;
-    bool mUserConsole;
+
     QPoint mUserCursor;
     bool mWindowIsHidden;
     int mWrapAt;
@@ -284,6 +296,10 @@ public slots:
 private:
     void refreshMiniConsole() const;
 
+
+    ConsoleType mType;
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
 
 #endif // MUDLET_TCONSOLE_H

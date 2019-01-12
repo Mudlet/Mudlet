@@ -39,7 +39,7 @@ class TArea
 {
     Q_DECLARE_TR_FUNCTIONS(TArea) // Needed so we can use tr() even though TArea is NOT derived from QObject
 
-    friend bool TMap::serialize(QDataStream&);
+    friend bool TMap::serialize(QDataStream&, int);
     friend bool TMap::restore(QString, bool);
     friend bool TMap::retrieveMapFileStats(QString, QString*, int*, int*, int*, int*);
 
