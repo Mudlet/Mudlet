@@ -4037,6 +4037,13 @@ void T2DMap::slot_setArea()
     QStringList::const_iterator constAreaIterator;
     sortedAreaList = mpMap->mpRoomDB->getAreaNamesMap().values();
 
+    while (it.hasNext()){
+        it.next();
+        if (it.key() > 0){
+            sortedAreaList += it.value().toLower();
+        }
+    }
+
     qSort(sortedAreaList.begin(), sortedAreaList.end());
 
 
@@ -4047,7 +4054,7 @@ void T2DMap::slot_setArea()
             it.next();
             //qDebug() << it.key() << ":" << it.value();
             int areaID = it.key();
-            if (areaID > 0 && (*constAreaIterator).constData() == it.value()) {
+            if (areaID > 0 && (*constAreaIterator).constData() == it.value().toLower()) {
                 arealist_combobox->addItem(QStringLiteral("%1 (%2)").arg(it.value(), QString::number(areaID)), QVariant(areaID));
                 break;
             }
