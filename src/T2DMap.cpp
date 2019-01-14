@@ -4032,14 +4032,36 @@ void T2DMap::slot_setArea()
         return;
     }
 
-    QMapIterator<int, QString> it(mpMap->mpRoomDB->getAreaNamesMap());
-    while (it.hasNext()) {
+    QMapIterator<int, QString> it = mpMap->mpRoomDB->getAreaNamesMap();
+    QStringList sortedAreaList;
+    QStringList::const_iterator constAreaIterator;
+    sortedAreaList = mpMap->mpRoomDB->getAreaNamesMap().values();
+
+    while (it.hasNext()){
         it.next();
-        int areaID = it.key();
-        if (areaID > 0) {
-            arealist_combobox->addItem(QStringLiteral("%1 (%2)").arg(it.value(), QString::number(areaID)), QVariant(areaID));
+        if (it.key() > 0){
+            sortedAreaList += it.value().toLower();
         }
     }
+
+    qSort(sortedAreaList.begin(), sortedAreaList.end());
+
+
+    for(constAreaIterator = sortedAreaList.constBegin(); constAreaIterator != sortedAreaList.constEnd(); ++constAreaIterator){
+        it.toFront();
+        while (it.hasNext()) {
+
+            it.next();
+            //qDebug() << it.key() << ":" << it.value();
+            int areaID = it.key();
+            if (areaID > 0 && (*constAreaIterator).constData() == it.value().toLower()) {
+                arealist_combobox->addItem(QStringLiteral("%1 (%2)").arg(it.value(), QString::number(areaID)), QVariant(areaID));
+                break;
+            }
+        }
+    }
+
+
 
     if (set_room_area_dialog->exec() == QDialog::Rejected) { // Don't proceed if "cancel" was pressed
         return;
