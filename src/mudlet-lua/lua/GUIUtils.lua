@@ -1476,3 +1476,17 @@ function prefix(what, func, fgc, bgc, window)
   func(window,what)
   resetFormat(window)
 end
+
+-- version of replace function that allows for color, by way of cinsertText
+function creplace(window, text)
+	if not text then text, window = window, nil end
+	window = window or "main"
+	local str, start, stop = getSelection(window)
+	if window ~= "main" then
+		replace(window, "")
+	else
+		replace("")
+	end
+	moveCursor(window, start, getLineNumber(window))
+	cinsertText(window, text)
+end
