@@ -1792,7 +1792,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     mIgnoreTag = false;
                     mSkip.clear();
                     ch = '&';
-                } else if (mSkip == "&quot;" && ch == ';') {
+                } else if (mSkip == "&quot" && ch == ';' ) {
                     mIgnoreTag = false;
                     mSkip.clear();
                     ch = '"';
