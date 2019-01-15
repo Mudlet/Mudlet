@@ -620,6 +620,16 @@ function Geyser.Label:addChild(cons, container)
   return me
 end
 
+--- Sets label to no longer intercept mouse events
+function Geyser.Label:enableClickthrough()
+  enableClickthrough(self.name)
+end
+
+--- Sets label to once again intercept mouse events
+function Geyser.Label:disableClickthrough()
+  disableClickthrough(self.name)
+end
+
 ---
 -- The table returned by @{setClickCallback}
 -- @field x The x coordinate of the click local to the label
