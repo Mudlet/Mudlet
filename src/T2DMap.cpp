@@ -4032,7 +4032,6 @@ void T2DMap::slot_setArea()
         return;
     }
 
-    QMapIterator<int, QString> it(mpMap->mpRoomDB->getAreaNamesMap());
     QStringList sortedAreaList;
     sortedAreaList = mpMap->mpRoomDB->getAreaNamesMap().values();
 
@@ -4042,7 +4041,7 @@ void T2DMap::slot_setArea()
     const QMap<int, QString>& areaNamesMap = mpMap->mpRoomDB->getAreaNamesMap();
     for (int i = 0, total = sortedAreaList.count(); i < total; ++i) {
         int areaId = areaNamesMap.key(sortedAreaList.at(i));
-        arealist_combobox->addItem(QStringLiteral("%1 (%2)").arg(sortedAreaList.at(i), QString::number(areaId)), QString::number(areaId));
+        arealist_combobox->addItem(QStringLiteral("%1 (%2)").arg(sortedAreaList.at(i), QString::number(areaId)));
     }
 
 
