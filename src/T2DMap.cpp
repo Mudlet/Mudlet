@@ -4034,15 +4034,7 @@ void T2DMap::slot_setArea()
 
     QMapIterator<int, QString> it(mpMap->mpRoomDB->getAreaNamesMap());
     QStringList sortedAreaList;
-    QStringList::const_iterator constAreaIterator;
     sortedAreaList = mpMap->mpRoomDB->getAreaNamesMap().values();
-
-    while (it.hasNext()){
-        it.next();
-        if (it.key() > 0){
-            sortedAreaList += it.value();
-        }
-    }
 
     std::sort(sortedAreaList.begin(), sortedAreaList.end());
 
