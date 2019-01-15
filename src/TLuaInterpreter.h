@@ -369,6 +369,8 @@ public:
     static int setConsoleBufferSize(lua_State*);
     static int enableScrollBar(lua_State*);
     static int disableScrollBar(lua_State*);
+    static int enableClickthrough(lua_State* L);
+    static int disableClickthrough(lua_State* L);
     static int startLogging(lua_State* L);
     static int calcFontWidth(int size);
     static int calcFontHeight(int size);

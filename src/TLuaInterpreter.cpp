@@ -2798,7 +2798,7 @@ int TLuaInterpreter::createLabel(lua_State* L)
         luaSendText = lua_tostring(L, 1);
     }
     int x, y, width, height;
-    bool fillBackground = false;
+    bool fillBackground, clickthrough = false;
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "createLabel: wrong argument type");
         lua_error(L);
@@ -2834,9 +2834,18 @@ int TLuaInterpreter::createLabel(lua_State* L)
     } else {
         fillBackground = lua_toboolean(L, 6);
     }
+    if (lua_gettop(L) > 6) {
+        if (!lua_isboolean(L, 7)) {
+            lua_pushstring(L, "createLabel: wrong argument type");
+            lua_error(L);
+            return 1;
+        } else {
+            clickthrough = lua_toboolean(L, 7);
+        }
+    }
     Host& host = getHostFromLua(L);
     QString name(luaSendText.c_str());
-    lua_pushboolean(L, mudlet::self()->createLabel(&host, name, x, y, width, height, fillBackground));
+    lua_pushboolean(L, mudlet::self()->createLabel(&host, name, x, y, width, height, fillBackground, clickthrough));
     return 1;
 }
 
@@ -2928,7 +2937,7 @@ int TLuaInterpreter::createButton(lua_State* L)
     Host& host = getHostFromLua(L);
     QString name(luaSendText.c_str());
     //TODO FIXME
-    mudlet::self()->createLabel(&host, name, x, y, width, height, fillBackground);
+    mudlet::self()->createLabel(&host, name, x, y, width, height, fillBackground, false);
     return 0;
 }
 
@@ -14355,6 +14364,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getPlayerRoom", TLuaInterpreter::getPlayerRoom);
     lua_register(pGlobalLua, "getSelection", TLuaInterpreter::getSelection);
     lua_register(pGlobalLua, "getMapSelection", TLuaInterpreter::getMapSelection);
+    lua_register(pGlobalLua, "enableClickthrough", TLuaInterpreter::enableClickthrough);
+    lua_register(pGlobalLua, "disableClickthrough", TLuaInterpreter::disableClickthrough);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     // prepend profile path to package.path and package.cpath
@@ -15194,4 +15205,44 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
     }
 
     return 1;
+}
+
+int TLuaInterpreter::enableClickthrough(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString windowName;
+    if (n == 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "enableClickthrough: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_error(L);
+            return 1;
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, 1));
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+
+    mudlet::self()->setClickthrough(&host, windowName, true);
+    return 0;
+}
+
+int TLuaInterpreter::disableClickthrough(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString windowName;
+    if (n == 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "disableClickthrough: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_error(L);
+            return 1;
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, 1));
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+
+    mudlet::self()->setClickthrough(&host, windowName, false);
+    return 0;
 }
