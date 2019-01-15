@@ -1556,17 +1556,19 @@ int TLuaInterpreter::getLineCount(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getColumnNumber
 int TLuaInterpreter::getColumnNumber(lua_State* L)
 {
+    QString windowName;
     Host& host = getHostFromLua(L);
     if (lua_isstring(L, 1)) {
         if (!lua_isstring(L, 1)){
-            lua_pushfstring(L, "getColumnNumber: bad argument #1 type (window name expected, got %s!)", luaL_typename(L, 1));
+            lua_pushfstring(L, "getColumnNumber: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         }
-        QString windowName = QString::fromUtf8(lua_tostring(L, 1));
+        windowName = QString::fromUtf8(lua_tostring(L, 1));
         lua_pushnumber(L, mudlet::self()->getColumnNumber(&host, windowName));
         return 1;
     } else {
-        lua_pushnumber(L, host.mpConsole->getColumnNumber());
+        windowName = "main";
+        lua_pushnumber(L, mudlet::self()->getColumnNumber(&host, windowName));
         return 1;
     }
     return 0;
@@ -10068,36 +10070,33 @@ int TLuaInterpreter::setFgColor(lua_State* L)
     int luaBlue;
     if (n > 3) {
         if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L, "setFgColor: bad argument #%d type (window name expected, got %s!)", s, luaL_typename(L, s));
-            lua_error(L);
-            return 1;
+            lua_pushfstring(L, "setFgColor: bad argument #%d type (window name as string expected, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
         } else {
             windowName = QString::fromUtf8(lua_tostring(L, s));
         }
     }
     if (!lua_isnumber(L, ++s)) {
         lua_pushfstring(L, "setFgColor: bad argument #%d type (red color as number expected, got %s!)", s, luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaRed = lua_tointeger(L, s);
         if (luaRed < 0 || luaRed >  255) {
             lua_pushnil(L);
             lua_pushfstring(L, "the color's red component value %d is outside of the valid range (0 to 255)", luaRed);
-            return 2;
+            return lua_error(L);
         }
     }
 
     if (!lua_isnumber(L, ++s)) {
         lua_pushfstring(L, "setFgColor: bad argument #%d type (green color as number expected, got %s!)", s, luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaGreen = lua_tointeger(L, s);
         if (luaGreen< 0 || luaGreen >  255) {
             lua_pushnil(L);
             lua_pushfstring(L, "the color's green component value %d is outside of the valid range (0 to 255)", luaGreen);
-            return 2;
+            return lua_error(L);
         }
     }
 
@@ -10110,16 +10109,16 @@ int TLuaInterpreter::setFgColor(lua_State* L)
         if (luaBlue < 0 || luaBlue >  255) {
             lua_pushnil(L);
             lua_pushfstring(L, "the color's blue component value %d is outside of the valid range (0 to 255)", luaBlue);
-            return 2;
+            return lua_error(L);
         }
     }
 
     Host& host = getHostFromLua(L);
-    if (n < 4) {
-        host.mpConsole->setFgColor(luaRed, luaGreen, luaBlue);
-    } else {
-        mudlet::self()->setFgColor(&host, windowName, luaRed, luaGreen, luaBlue);
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        windowName = "main";
     }
+
+    mudlet::self()->setFgColor(&host, windowName, luaRed, luaGreen, luaBlue);
     return 0;
 }
 
@@ -10134,58 +10133,54 @@ int TLuaInterpreter::setBgColor(lua_State* L)
     int luaBlue;
     if (n > 3) {
         if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L, "setBgColor: bad argument #%d type (window name expected, got %s!)", s, luaL_typename(L, s));
-            lua_error(L);
-            return 1;
+            lua_pushfstring(L, "setBgColor: bad argument #%d type (window name as string expected, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
         } else {
             windowName = QString::fromUtf8(lua_tostring(L, s));
         }
     }
     if (!lua_isnumber(L, ++s)) {
         lua_pushfstring(L, "setBgColor: bad argument #%d type (number expected, got %s!)", s, luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaRed = lua_tointeger(L, s);
         if (luaRed < 0 || luaRed >  255) {
             lua_pushnil(L);
             lua_pushfstring(L, "the color's red component value %d is outside of the valid range (0 to 255)", luaRed);
-            return 2;
+            return lua_error(L);
         }
     }
 
     if (!lua_isnumber(L, ++s)) {
         lua_pushfstring(L, "setBgColor: bad argument #%d type (number expected, got %s!)", s, luaL_typename(L, s));
         lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaGreen = lua_tointeger(L, s);
         if (luaGreen < 0 || luaGreen >  255) {
             lua_pushnil(L);
             lua_pushfstring(L, "the color's green component value %d is outside of the valid range (0 to 255)", luaGreen);
-            return 2;
+            return lua_error(L);
         }
     }
 
     if (!lua_isnumber(L, ++s)) {
         lua_pushfstring(L, "setBgColor: bad argument #%d type (number expected, got %s!)", s, luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         luaBlue = lua_tointeger(L, s);
         if (luaBlue < 0 || luaBlue >  255) {
             lua_pushnil(L);
             lua_pushfstring(L, "the color's blue component value %d is outside of the valid range (0 to 255)", luaBlue);
-            return 2;
+            return lua_error(L);
         }
     }
 
     Host& host = getHostFromLua(L);
-    if (n < 4) {
-        host.mpConsole->setBgColor(luaRed, luaGreen, luaBlue);
-    } else {
-        mudlet::self()->setBgColor(&host, windowName, luaRed, luaGreen, luaBlue);
+    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+        windowName = "main";
     }
+    mudlet::self()->setBgColor(&host, windowName, luaRed, luaGreen, luaBlue);
     return 0;
 }
 
@@ -10538,68 +10533,66 @@ int TLuaInterpreter::echoLink(lua_State* L)
     bool useCurrentFormatElseDefault = false;
     bool gotBool = false;
 
-    int s = 1;
+    int s = 0;
     int n = lua_gettop(L);
 
-    if (!lua_isstring(L, s)) {
-        lua_pushfstring(L, "echoLink: bad argument #%d type (string expected, got %s!)", s, luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+    if (!lua_isstring(L, ++s)) {
+            lua_pushfstring(L, "echoLink: bad argument #%d type (string expected, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
     } else {
         a1 = QString::fromUtf8(lua_tostring(L, s));
-        s++;
     }
     if (n > 1) {
-        if (!lua_isstring(L, s)) {
+        if (!lua_isstring(L, ++s)) {
             lua_pushfstring(L, "echoLink: bad argument #%d type (string expected, got %s!)", s, luaL_typename(L, s));
             lua_error(L);
             return 1;
         } else {
             a2 = QString::fromUtf8(lua_tostring(L, s));
-            s++;
         }
     }
     if (n > 2) {
-        if (!lua_isstring(L, s)) {
+        if (!lua_isstring(L, ++s)) {
             lua_pushfstring(L, "echoLink: bad argument #%d type (string expected, got %s!)", s, luaL_typename(L, s));
             lua_error(L);
             return 1;
         } else {
             a3 = QString::fromUtf8(lua_tostring(L, s));
-            s++;
         }
     }
     if (n > 3) {
-        if (lua_isstring(L, s)) {
+        if (lua_isstring(L, ++s)) {
             a4 = QString::fromUtf8(lua_tostring(L, s));
-            s++;
         } else if (lua_isboolean(L, s)) {
             gotBool = true;
             useCurrentFormatElseDefault = lua_toboolean(L, s);
-            s++;
+        } else {
+            lua_pushfstring(L, "echoLink: bad argument #%d type (optionally useCurrentFormatElseDefault boolean or hint as string, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
         }
     }
     if (n > 4) {
-        if (!lua_isboolean(L, s)) {
-            lua_pushfstring(L, "echoLink: bad argument #%d type (optionally boolean expected, got %s!)", s, luaL_typename(L, s));
-            lua_error(L);
-            return 1;
+        if (!lua_isboolean(L, ++s)) {
+            lua_pushfstring(L, "echoLink: bad argument #%d type (optionally useCurrentFormatElseDefault as boolean expected, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
         } else {
             useCurrentFormatElseDefault = lua_toboolean(L, s);
             gotBool = true;
-            s++;
         }
     }
+
     Host& host = getHostFromLua(L);
     QString text;
     QString windowName;
     QStringList function;
     QStringList hint;
+
     if (n == 3 || (n == 4 && gotBool)) {
+        windowName = "main";
         text = a1;
         function << a2;
         hint << a3;
-        host.mpConsole->echoLink(text, function, hint, useCurrentFormatElseDefault);
+        mudlet::self()->echoLink(&host, windowName, text, function, hint, useCurrentFormatElseDefault);
     } else {
         text = a2;
         function << a3;
