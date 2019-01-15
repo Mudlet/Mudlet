@@ -526,7 +526,10 @@ function Geyser.Label:new (cons, container)
   if me.onLeave then
     me:setOnLeave(me.onLeave, me.args)
   end
-
+  
+  -- Set clickthrough if included in constructor
+  if cons.clickthrough then me:enableClickthrough() end
+  
   --print("  New in " .. self.name .. " : " .. me.name)
   return me
 end
