@@ -4039,15 +4039,13 @@ void T2DMap::slot_setArea()
     sorter.setNumericMode(true);
     sorter.setCaseSensitivity(Qt::CaseInsensitive);
 
-    std::sort( sortedAreaList.begin(), sortedAreaList.end(), [&]( const QString& a, const QString& b ) {
-            return sorter.compare( a, b ) < 0;
-        } );
+    std::sort( sortedAreaList.begin(), sortedAreaList.end(), sorter);
 
 
     const QMap<int, QString>& areaNamesMap = mpMap->mpRoomDB->getAreaNamesMap();
     for (int i = 0, total = sortedAreaList.count(); i < total; ++i) {
         int areaId = areaNamesMap.key(sortedAreaList.at(i));
-        arealist_combobox->addItem(QStringLiteral("%1 (%2)").arg(sortedAreaList.at(i), QString::number(areaId)));
+        arealist_combobox->addItem(QStringLiteral("%1 (%2)").arg(sortedAreaList.at(i), QString::number(areaId)), QString::number(areaId));
     }
 
 
