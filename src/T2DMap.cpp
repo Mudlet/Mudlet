@@ -4037,7 +4037,7 @@ void T2DMap::slot_setArea()
 
     QCollator sorter;
     sorter.setNumericMode( true ); // Default is false
-    sorter.setCaseSensitivity( Qt::CaseInsensitive ); // Default is case sensitive
+    sorter.setCaseSensitivity(Qt::CaseInsensitive);
 
     std::sort( sortedAreaList.begin(), sortedAreaList.end(), [&]( const QString& a, const QString& b ) {
             return sorter.compare( a, b ) < 0;
