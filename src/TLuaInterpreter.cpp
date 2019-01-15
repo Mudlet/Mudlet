@@ -15217,7 +15217,7 @@ int TLuaInterpreter::enableClickthrough(lua_State* L)
             lua_error(L);
             return 1;
         } else {
-            windowName = lua_tostring(L, 1);
+            windowName = QString::fromUtf8(lua_tostring(L, 1));
         }
     }
 
@@ -15237,7 +15237,7 @@ int TLuaInterpreter::disableClickthrough(lua_State* L)
             lua_error(L);
             return 1;
         } else {
-            windowName = lua_tostring(L, 1);
+            windowName = QString::fromUtf8(lua_tostring(L, 1));
         }
     }
 
