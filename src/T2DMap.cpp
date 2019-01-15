@@ -4036,7 +4036,7 @@ void T2DMap::slot_setArea()
     sortedAreaList = mpMap->mpRoomDB->getAreaNamesMap().values();
 
     QCollator sorter;
-    sorter.setNumericMode( true ); // Default is false
+    sorter.setNumericMode(true);
     sorter.setCaseSensitivity(Qt::CaseInsensitive);
 
     std::sort( sortedAreaList.begin(), sortedAreaList.end(), [&]( const QString& a, const QString& b ) {
