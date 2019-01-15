@@ -103,6 +103,20 @@ function Geyser.Gauge:setStyleSheet(css, cssback, cssText)
   end
 end
 
+--- Sets the gauge to no longer intercept mouse events
+function Geyser.Gauge:enableClickthrough()
+    self.front:enableClickthrough()
+    self.back:enableClickthrough()
+    self.text:enableClickthrough()
+end
+
+--- Sets the gauge to once again intercept mouse events
+function Geyser.Gauge:disableClickthrough()
+    self.front:disableClickthrough()
+    self.back:disableClickthrough()
+    self.text:disableClickthrough()
+end
+
 -- Save a reference to our parent constructor
 Geyser.Gauge.parent = Geyser.Container
 
