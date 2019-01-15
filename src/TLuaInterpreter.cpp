@@ -6580,11 +6580,9 @@ int TLuaInterpreter::exists(lua_State* L)
         //Richard Moffitt: ugly hack. will fix it later for a pretty one-liner code...
         std::list<TScript*> scripts = host.getScriptUnit()->getScriptRootNodeList();
         for (auto script : scripts) {
-            if (!script->getScript().isEmpty()) {
-                cnt += (script->getName() == name);
+            cnt += (script->getName() == name);
             }
         }
-    }
     lua_pushnumber(L, cnt);
     return 1;
 }
