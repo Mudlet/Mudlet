@@ -6585,7 +6585,12 @@ int TLuaInterpreter::exists(lua_State* L)
         cnt += host.getAliasUnit()->mLookupTable.count(name);
     } else if (type == "keybind") {
         cnt += host.getKeyUnit()->mLookupTable.count(name);
-    }
+    } else if (type == "script") {
+        std::list<TScript*> scripts = host.getScriptUnit()->getScriptRootNodeList();
+        for (auto script : scripts) {
+            cnt += (script->getName() == name);
+            }
+        }
     lua_pushnumber(L, cnt);
     return 1;
 }
@@ -6642,6 +6647,13 @@ int TLuaInterpreter::isActive(lua_State* L)
                 cnt++;
             }
             it1++;
+        }
+    } else if (type.compare(QLatin1String("script"), Qt::CaseInsensitive) == 0) {
+        std::list<TScript*> scripts = host.getScriptUnit()->getScriptRootNodeList();
+        for (auto script : scripts) {
+            if (script->getName() == name && script->isActive()) {
+                ++cnt;
+            }
         }
     } else {
         lua_pushnil(L);
