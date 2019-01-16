@@ -1556,22 +1556,27 @@ int TLuaInterpreter::getLineCount(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getColumnNumber
 int TLuaInterpreter::getColumnNumber(lua_State* L)
 {
-    QString windowName;
+    QString windowName = QLatin1String("main");
     Host& host = getHostFromLua(L);
     if (lua_isstring(L, 1)) {
         if (!lua_isstring(L, 1)){
             lua_pushfstring(L, "getColumnNumber: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         }
-        windowName = QString::fromUtf8(lua_tostring(L, 1));
-        lua_pushnumber(L, mudlet::self()->getColumnNumber(&host, windowName));
+        int result = mudlet::self()->getColumnNumber(&host, windowName);
+        if (result == -1) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "window \"%s\" does not exist", windowName.toUtf8().constData());
+            return lua_error(L);
+        } else {
+            lua_pushnumber(L, result);
+            return 1;
+        }
         return 1;
     } else {
-        windowName = "main";
         lua_pushnumber(L, mudlet::self()->getColumnNumber(&host, windowName));
         return 1;
     }
-    return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getStopWatchTime
@@ -10064,7 +10069,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
 {
     int s = 0;
     int n = lua_gettop(L);
-    QString windowName;
+    QString windowName = QLatin1String("main");
     int luaRed;
     int luaGreen;
     int luaBlue;
@@ -10102,8 +10107,8 @@ int TLuaInterpreter::setFgColor(lua_State* L)
 
     if (!lua_isnumber(L, ++s)) {
         lua_pushfstring(L, "setFgColor: bad argument #%d type (blue color as number expected, got %s!)", s, luaL_typename(L, s));
-        lua_error(L);
-        return 1;
+
+        return lua_error(L);
     } else {
         luaBlue = lua_tointeger(L, s);
         if (luaBlue < 0 || luaBlue >  255) {
@@ -10127,7 +10132,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
 {
     int s = 0;
     int n = lua_gettop(L);
-    QString windowName;
+    QString windowName = QLatin1String("main");
     int luaRed;
     int luaGreen;
     int luaBlue;
@@ -10177,9 +10182,6 @@ int TLuaInterpreter::setBgColor(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        windowName = "main";
-    }
     mudlet::self()->setBgColor(&host, windowName, luaRed, luaGreen, luaBlue);
     return 0;
 }
@@ -10583,12 +10585,11 @@ int TLuaInterpreter::echoLink(lua_State* L)
 
     Host& host = getHostFromLua(L);
     QString text;
-    QString windowName;
+    QString windowName = QLatin1String("main");
     QStringList function;
     QStringList hint;
 
     if (n == 3 || (n == 4 && gotBool)) {
-        windowName = "main";
         text = a1;
         function << a2;
         hint << a3;
