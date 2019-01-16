@@ -6644,7 +6644,7 @@ int TLuaInterpreter::isActive(lua_State* L)
         std::list<TScript*> scripts = host.getScriptUnit()->getScriptRootNodeList();
         for (auto script : scripts) {
             if (script->getName() == name && script->isActive()) {
-                cnt ++;
+                ++cnt;
             }
         }
     } else {
