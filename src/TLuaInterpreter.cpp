@@ -10119,9 +10119,6 @@ int TLuaInterpreter::setFgColor(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        windowName = "main";
-    }
 
     mudlet::self()->setFgColor(&host, windowName, luaRed, luaGreen, luaBlue);
     return 0;
