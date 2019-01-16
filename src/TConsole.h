@@ -140,7 +140,8 @@ public:
     void moveCursorEnd();
     int getLastLineNumber();
     void refresh();
-    TLabel* createLabel(const QString& name, int x, int y, int width, int height, bool fillBackground);
+    TLabel*
+    createLabel(const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
     TConsole* createMiniConsole(const QString& name, int x, int y, int width, int height);
     bool createButton(const QString& name, int x, int y, int width, int height, bool fillBackground);
     bool raiseWindow(const QString& name);

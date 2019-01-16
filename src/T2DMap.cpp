@@ -4032,14 +4032,23 @@ void T2DMap::slot_setArea()
         return;
     }
 
-    QMapIterator<int, QString> it(mpMap->mpRoomDB->getAreaNamesMap());
-    while (it.hasNext()) {
-        it.next();
-        int areaID = it.key();
-        if (areaID > 0) {
-            arealist_combobox->addItem(QStringLiteral("%1 (%2)").arg(it.value(), QString::number(areaID)), QVariant(areaID));
-        }
+    QStringList sortedAreaList;
+    sortedAreaList = mpMap->mpRoomDB->getAreaNamesMap().values();
+
+    QCollator sorter;
+    sorter.setNumericMode(true);
+    sorter.setCaseSensitivity(Qt::CaseInsensitive);
+
+    std::sort( sortedAreaList.begin(), sortedAreaList.end(), sorter);
+
+
+    const QMap<int, QString>& areaNamesMap = mpMap->mpRoomDB->getAreaNamesMap();
+    for (int i = 0, total = sortedAreaList.count(); i < total; ++i) {
+        int areaId = areaNamesMap.key(sortedAreaList.at(i));
+        arealist_combobox->addItem(QStringLiteral("%1 (%2)").arg(sortedAreaList.at(i), QString::number(areaId)), QString::number(areaId));
     }
+
+
 
     if (set_room_area_dialog->exec() == QDialog::Rejected) { // Don't proceed if "cancel" was pressed
         return;
