@@ -10082,7 +10082,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
         }
     }
     if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "setFgColor: bad argument #%d type (red color as number expected, got %s!)", s, luaL_typename(L, s));
+        lua_pushfstring(L, "setFgColor: bad argument #%d type (red component value as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     } else {
         luaRed = lua_tointeger(L, s);
@@ -10094,7 +10094,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
     }
 
     if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "setFgColor: bad argument #%d type (green color as number expected, got %s!)", s, luaL_typename(L, s));
+        lua_pushfstring(L, "setFgColor: bad argument #%d type (green component value as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     } else {
         luaGreen = lua_tointeger(L, s);
@@ -10106,7 +10106,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
     }
 
     if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "setFgColor: bad argument #%d type (blue color as number expected, got %s!)", s, luaL_typename(L, s));
+        lua_pushfstring(L, "setFgColor: bad argument #%d type (blue component value as number expected, got %s!)", s, luaL_typename(L, s));
 
         return lua_error(L);
     } else {
@@ -10145,7 +10145,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
         }
     }
     if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "setBgColor: bad argument #%d type (number expected, got %s!)", s, luaL_typename(L, s));
+        lua_pushfstring(L, "setBgColor: bad argument #%d type (red component value as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     } else {
         luaRed = lua_tointeger(L, s);
@@ -10157,7 +10157,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
     }
 
     if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "setBgColor: bad argument #%d type (number expected, got %s!)", s, luaL_typename(L, s));
+        lua_pushfstring(L, "setBgColor: bad argument #%d type (green component value as number expected, got %s!)", s, luaL_typename(L, s));
         lua_error(L);
         return lua_error(L);
     } else {
@@ -10170,7 +10170,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
     }
 
     if (!lua_isnumber(L, ++s)) {
-        lua_pushfstring(L, "setBgColor: bad argument #%d type (number expected, got %s!)", s, luaL_typename(L, s));
+        lua_pushfstring(L, "setBgColor: bad argument #%d type (blue component value as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     } else {
         luaBlue = lua_tointeger(L, s);
