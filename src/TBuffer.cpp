@@ -1325,44 +1325,45 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
                         bool isOk = false;
                         QString code = QString(localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str());
-                        int dummy = code.toInt(&isOk);
-                        Q_UNUSED(dummy);
+                        int modeCode = code.toInt(&isOk);
                         if (isOk) {
                             // we really do not handle these well...
+                            // MXP line modes - comments are from http://www.zuggsoft.com/zmud/mxp.htm#MXP%20Line%20Tags
 
-                            // The wrong layout and odd code here (rather than
-                            // using a switch () with an integer) is to enable
-                            // the same code in this area as was previously use
-                            // so that the diff for the git commit is two
-                            // smaller chunks that are slightly easier to read.
-                            // clang-format off
+                            switch (modeCode) {
+                            case 7: // lock locked mode (MXP 0.4 or later) - set locked mode.  Mode remains in effect until changed.  Locked mode becomes the new default mode.
+                                [[clang::fallthrough]];
+                            case 2: // locked line (until next newline) no MXP or HTML commands are allowed in the line.  The line is not parsed for any tags at all.  This is useful for "verbatim" text output from the MUD.  When a newline is received from the MUD, the mode reverts back to the Default mode.
+                                mMXP = false;
+                                break;
 
-                    // MXP line modes
+                            case 6: // lock secure mode (MXP 0.4 or later) - set secure mode.  Mode remains in effect until changed.  Secure mode becomes the new default mode.
+                                [[clang::fallthrough]];
+                            case 1: // secure line (until next newline) all tags and commands in MXP are allowed within the line.  When a newline is received from the MUD, the mode reverts back to the Default mode.
+                                [[clang::fallthrough]];
+                            case 4: // temp secure mode (MXP 0.4 or later) - set secure mode for the next tag only.  Must be immediately followed by a < character to start a tag.  Remember to set secure mode when closing the tag also.
+                                mMXP = true;
+                                break;
 
-                    // locked mode
-                    if (code == "7" || code == "2") {
-                        mMXP = false;
-                    }
-                    // secure mode
-                    if (code == "1" || code == "6" || code == "4") {
-                        mMXP = true;
-                    }
-                    // reset
-                    if (code == "3") {
-                        closeT = 0;
-                        openT = 0;
-                        mAssemblingToken = false;
-                        currentToken.clear();
-                        mParsingVar = false;
-                    }
+                            case 3: //  reset (MXP 0.4 or later) - close all open tags.  Set mode to Open.  Set text color and properties to default.
+                                closeT = 0;
+                                openT = 0;
+                                mAssemblingToken = false;
+                                currentToken.clear();
+                                mParsingVar = false;
+                                break;
 
-                    // 0 and 5 are not even handled in current code
-                    if (code == "0" || code == "5" || code.toInt() > 7) {
-                        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
-                    }
+                            case 5: // lock open mode (MXP 0.4 or later) - set open mode.  Mode remains in effect until changed.  OPEN mode becomes the new default mode.
+                                [[clang::fallthrough]];
+                            case 0: // open line - only MXP commands in the "open" category are allowed.  When a newline is received from the MUD, the mode reverts back to the Default mode.  OPEN MODE starts as the Default mode until changes with one of the "lock mode" tags listed below.
+                                [[clang::fallthrough]];
+                            default:
+                                 if (modeCode <= 0 | modeCode == 5 | modeCode> 7) {
+                                   // 0 and 5 are not even handled in current code
+                                   qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
+                                 }
+                            }
 
-                    // clang-format on
-                    // Code above here is deliberately misaligned
                         } else {
                             // isOk is false here as toInt(...) failed
                             qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Non-numeric MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
@@ -1791,7 +1792,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     mIgnoreTag = false;
                     mSkip.clear();
                     ch = '&';
-                } else if (mSkip == "&quot;" && ch == ';') {
+                } else if (mSkip == "&quot" && ch == ';' ) {
                     mIgnoreTag = false;
                     mSkip.clear();
                     ch = '"';
