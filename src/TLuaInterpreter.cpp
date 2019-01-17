@@ -1567,7 +1567,7 @@ int TLuaInterpreter::getColumnNumber(lua_State* L)
         if (result == -1) {
             lua_pushnil(L);
             lua_pushfstring(L, "window \"%s\" does not exist", windowName.toUtf8().constData());
-            return lua_error(L);
+            return 2;
         } else {
             lua_pushnumber(L, result);
             return 1;
@@ -10089,7 +10089,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
         if (luaRed < 0 || luaRed >  255) {
             lua_pushnil(L);
             lua_pushfstring(L, "the color's red component value %d is outside of the valid range (0 to 255)", luaRed);
-            return lua_error(L);
+            return 2;
         }
     }
 
@@ -10101,7 +10101,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
         if (luaGreen< 0 || luaGreen >  255) {
             lua_pushnil(L);
             lua_pushfstring(L, "the color's green component value %d is outside of the valid range (0 to 255)", luaGreen);
-            return lua_error(L);
+            return 2;
         }
     }
 
@@ -10114,7 +10114,7 @@ int TLuaInterpreter::setFgColor(lua_State* L)
         if (luaBlue < 0 || luaBlue >  255) {
             lua_pushnil(L);
             lua_pushfstring(L, "the color's blue component value %d is outside of the valid range (0 to 255)", luaBlue);
-            return lua_error(L);
+            return 2;
         }
     }
 
@@ -10149,7 +10149,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
         if (luaRed < 0 || luaRed >  255) {
             lua_pushnil(L);
             lua_pushfstring(L, "the color's red component value %d is outside of the valid range (0 to 255)", luaRed);
-            return lua_error(L);
+            return 2;
         }
     }
 
@@ -10162,7 +10162,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
         if (luaGreen < 0 || luaGreen >  255) {
             lua_pushnil(L);
             lua_pushfstring(L, "the color's green component value %d is outside of the valid range (0 to 255)", luaGreen);
-            return lua_error(L);
+            return 2;
         }
     }
 
@@ -10174,7 +10174,7 @@ int TLuaInterpreter::setBgColor(lua_State* L)
         if (luaBlue < 0 || luaBlue >  255) {
             lua_pushnil(L);
             lua_pushfstring(L, "the color's blue component value %d is outside of the valid range (0 to 255)", luaBlue);
-            return lua_error(L);
+            return 2;
         }
     }
 
@@ -10544,8 +10544,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
     if (n > 1) {
         if (!lua_isstring(L, ++s)) {
             lua_pushfstring(L, "echoLink: bad argument #%d type (string expected, got %s!)", s, luaL_typename(L, s));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             a2 = QString::fromUtf8(lua_tostring(L, s));
         }
@@ -10553,8 +10552,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
     if (n > 2) {
         if (!lua_isstring(L, ++s)) {
             lua_pushfstring(L, "echoLink: bad argument #%d type (string expected, got %s!)", s, luaL_typename(L, s));
-            lua_error(L);
-            return 1;
+            return lua_error(L);
         } else {
             a3 = QString::fromUtf8(lua_tostring(L, s));
         }
