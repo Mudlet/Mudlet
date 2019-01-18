@@ -628,7 +628,8 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
 // a map of supported MXP elements and attributes
 const QMap<QString, QVector<QString>> TBuffer::mSupportedMxpElements = {
     {QStringLiteral("send"), {"href", "hint", "prompt"}},
-    {QStringLiteral("br"), {}}
+    {QStringLiteral("br"), {}},
+    {QStringLiteral("a"), {"href", "hint"}}
 };
 
 TChar::TChar()
@@ -789,6 +790,12 @@ TBuffer::TBuffer(Host* pH)
     _element.href = "";
     _element.hint = "";
     mMXP_Elements["SEND"] = _element;
+
+    TMxpElement _aURL;
+    _aURL.name = "A";
+    _aURL.href = "";
+    _aURL.hint = "";
+    mMXP_Elements["A"] = _aURL;
 
     // Validate the encoding tables in case there has been an edit which breaks
     // things:
@@ -1715,7 +1722,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         QStringList _tl = _t2.split('|');
                         for (int i = 0; i < _tl.size(); i++) {
                             _tl[i].replace("|", "");
-                            if (!_send_to_command_line) {
+                            if (_element.name == "A") {
+                                _tl[i] = "openUrl([[" + _tl[i] + "]])";
+                            }
+                            else if (!_send_to_command_line) {
                                 _tl[i] = "send([[" + _tl[i] + "]])";
                             } else {
                                 _tl[i] = "printCmdLine([[" + _tl[i] + "]])";
