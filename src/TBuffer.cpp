@@ -46,7 +46,7 @@
 // Define this to get qDebug() messages about the decoding of ANSI MXP sequences
 // although there is not much against this item at present {only an announcement
 // of the type (?) of an `\x1b[?z` received}:
-// #define DEBUG_MXP_PROCESSING
+//#define DEBUG_MXP_PROCESSING
 
 
 // These tables have been regenerated from examination of the Qt source code
@@ -732,7 +732,7 @@ TBuffer::TBuffer(Host* pH)
 , mWrapAt(99999999)
 , mWrapIndent(0)
 , mCursorY(0)
-, mMXP(false)
+, mMXP(true)
 , mAssemblingToken(false)
 , currentToken("")
 , openT(0)
@@ -1320,7 +1320,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 #if defined(DEBUG_MXP_PROCESSING)
                     qDebug().nospace().noquote() << "    Consider the MXP control sequence: \"" << localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str() << "\"";
 #endif
-                    if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
+                    if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF && mpHost->mServerMXPenabled) {
                         mGotCSI = false;
 
                         bool isOk = false;
