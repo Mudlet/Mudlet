@@ -1722,7 +1722,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         QStringList _tl = _t2.split('|');
                         for (int i = 0; i < _tl.size(); i++) {
                             _tl[i].replace("|", "");
-                            if (_element.name == "A"){
+                            if (_element.name == "A") {
                                 _tl[i] = "openUrl([[" + _tl[i] + "]])";
                             }
                             else if (!_send_to_command_line) {
