@@ -1492,3 +1492,34 @@ function prefix(what, func, fgc, bgc, window)
   func(window,what)
   resetFormat(window)
 end
+
+--- Moves the cursor in the given window up a specified number of lines
+--- @param windowName Optional name of the window to use the function on
+--- @param lines number of lines to move cursor
+function moveCursorUp(windowName, lines)
+  if not lines then lines, windowName = windowName, "main" end
+  if type(lines) ~= "number" then
+    error(string.format("moveCursorUp: bad argument #2 type (number of lines as number expected, got %s!",type(lines)), 2)
+  end
+  local curLine = getLineNumber(windowName)
+  if not curLine then
+    error("moveCursorUp: window does not exist", 2)
+  end
+  moveCursor(windowName, 0, math.max(curLine - lines, 0))
+end
+
+--- Moves the cursor in the given window down a specified number of lines
+--- @param windowName Optional name of the window to use the function on
+--- @param lines number of lines to move cursor
+function moveCursorDown(windowName, lines)
+  if not lines then lines, windowName = windowName, "main" end
+  if type(lines) ~= "number" then
+    error(string.format("moveCursorDown: bad argument #2 type (number of lines as number expected, got %s!",type(lines)), 2)
+  end
+  local curLine = getLineNumber(windowName)
+  if not curLine then
+    error("moveCursorDown: window does not exist", 2)
+  end
+  local maxLine = getLastLineNumber(windowName)
+  moveCursor(windowName, 0, math.min(curLine + lines, maxLine))
+end
