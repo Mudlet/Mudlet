@@ -1556,12 +1556,14 @@ int TLuaInterpreter::getLineCount(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getColumnNumber
 int TLuaInterpreter::getColumnNumber(lua_State* L)
 {
-    QString windowName = QLatin1String("main");
+    QString windowName;
     Host& host = getHostFromLua(L);
-    if (lua_isstring(L, 1)) {
-        if (!lua_isstring(L, 1)){
+    if (lua_gettop(L)) {
+        if (!lua_isstring(L, 1)) {
             lua_pushfstring(L, "getColumnNumber: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, 1));
         }
         int result = mudlet::self()->getColumnNumber(&host, windowName);
         if (result == -1) {
@@ -1572,9 +1574,8 @@ int TLuaInterpreter::getColumnNumber(lua_State* L)
             lua_pushnumber(L, result);
             return 1;
         }
-        return 1;
     } else {
-        lua_pushnumber(L, mudlet::self()->getColumnNumber(&host, windowName));
+        lua_pushnumber(L, host.mpConsole->getColumnNumber());
         return 1;
     }
 }
@@ -6598,9 +6599,9 @@ int TLuaInterpreter::exists(lua_State* L)
     } else if (type == "script") {
         std::list<TScript*> scripts = host.getScriptUnit()->getScriptRootNodeList();
         for (auto script : scripts) {
-            cnt += (script->getName() == name);
-            }
+          cnt += (script->getName() == name);
         }
+    }
     lua_pushnumber(L, cnt);
     return 1;
 }
@@ -10126,7 +10127,11 @@ int TLuaInterpreter::setFgColor(lua_State* L)
 
     Host& host = getHostFromLua(L);
 
-    mudlet::self()->setFgColor(&host, windowName, luaRed, luaGreen, luaBlue);
+    if (n < 4 || windowName.isEmpty() || windowName.compare(QLatin1String("main")) == 0 ) {
+        host.mpConsole->setFgColor(luaRed, luaGreen, luaBlue);
+    } else {
+        mudlet::self()->setFgColor(&host, windowName, luaRed, luaGreen, luaBlue);
+    }
     return 0;
 }
 
@@ -10185,7 +10190,11 @@ int TLuaInterpreter::setBgColor(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    mudlet::self()->setBgColor(&host, windowName, luaRed, luaGreen, luaBlue);
+    if (n < 4 || windowName.isEmpty() || windowName.compare(QLatin1String("main")) == 0 ) {
+        host.mpConsole->setBgColor(luaRed, luaGreen, luaBlue);
+    } else {
+        mudlet::self()->setBgColor(&host, windowName, luaRed, luaGreen, luaBlue);
+    }
     return 0;
 }
 
