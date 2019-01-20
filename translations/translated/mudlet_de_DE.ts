@@ -5280,7 +5280,14 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
 There are other inherited options that arise from the Qt Libraries which are
 less likely to be useful for normal use of this application:
 </source>
-      <translation type="unfinished"/>
+      <translation>Verwendung: %1 [OPTION...]
+       -h, --help      zeigt diese Meldung.
+       -v, --version   zeigt Versionsinformationen an.
+       -q, --quiet     kein Splashscreen beim Start.
+
+Es gibt andere Optionen, die aus den Qt-Bibliotheken übernommen wurden, die 
+wahrscheinlich weniger nützlich für die normale Verwendung dieser Anwendung sind:
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="222"/>
