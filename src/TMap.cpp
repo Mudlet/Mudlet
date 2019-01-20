@@ -1024,8 +1024,28 @@ bool TMap::findPath(int from, int to)
     return false;
 }
 
-bool TMap::serialize(QDataStream& ofs)
+bool TMap::serialize(QDataStream& ofs, int saveVersion)
 {
+    // clamp version values
+    if (saveVersion < 0) {
+        saveVersion = 0;
+    } else if (saveVersion > mMaxVersion) {
+        saveVersion = mMaxVersion;
+         QString errMsg = tr("[ ERROR ] - The format {%1} you are trying to save the map with is too new\n"
+                             "for this version of Mudlet. Supported are only formats up to version {%2}.")
+                                 .arg(QString::number(saveVersion), QString::number(mMaxVersion));
+        appendErrorMsgWithNoLf(errMsg, false);
+        postMessage(errMsg);
+        return false;
+    }
+
+    auto oldSaveVersion = mSaveVersion;
+
+    // if 0 we default to current version selected
+    if (saveVersion != 0) {
+        mSaveVersion = saveVersion;
+    }
+
     if (mSaveVersion != mVersion) {
         QString message = tr("[ ALERT ] - Saving map in a format {%1} that is different than the one it was\n"
                              "loaded as {%2}. This may be an issue if you want to share the resulting\n"
@@ -1037,15 +1057,8 @@ bool TMap::serialize(QDataStream& ofs)
     }
 
     if (mSaveVersion != mDefaultVersion) {
-        QString message = tr("[ WARN ]  - Saving map in a format {%1} that is different than the one\n"
-                             "recommended {%2} baring in mind the build status of the source\n"
-                             "code.  Development code versions may offer the chance to try\n"
-                             "experimental features needing a revised format that could be\n"
-                             "incompatible with existing release code versions.  Conversely\n"
-                             "a release version may allow you to downgrade to save a map in\n"
-                             "a format compatible with others using older versions of MUDLET\n"
-                             "however some features may be crippled or non-operational for\n"
-                             "this version of MUDLET.")
+        QString message = tr("[ WARN ]  - Saving map in a format {%1} different from the\n"
+                             "recommended format {%2} for this version of Mudlet.")
                                   .arg(mSaveVersion)
                                   .arg(mDefaultVersion);
         appendErrorMsgWithNoLf(message, false);
@@ -1366,6 +1379,9 @@ bool TMap::serialize(QDataStream& ofs)
         ofs << pR->getExitWeights();
         ofs << pR->doors;
     }
+
+    // reset to the old map version
+    mSaveVersion = oldSaveVersion;
     return true;
 }
 
@@ -1426,13 +1442,13 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             appendErrorMsgWithNoLf(infoMsg, false);
             postMessage(infoMsg);
             canRestore = false;
-            mSaveVersion = mVersion; // Make the save version the default one - unless the user intervenes
+            mSaveVersion = mDefaultVersion; // Make the save version the default one - unless the user intervenes
         } else {
             // Less than (but not less than 4) or equal to default version
             QString infoMsg = tr("[ INFO ]  - Reading map (format version:%1) file:\n\"%2\",\nplease wait...").arg(mVersion).arg(file.fileName());
             appendErrorMsg(tr(R"([ INFO ]  - Reading map (format version:%1) file: "%2".)").arg(mVersion).arg(file.fileName()), false);
             postMessage(infoMsg);
-            mSaveVersion = mVersion; // Make the save version the default one - unless the user intervenes
+            mSaveVersion = mDefaultVersion; // Make the save version the default one - unless the user intervenes
         }
 
         // As all but the room reading have version checks the fact that sub-4

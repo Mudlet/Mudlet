@@ -56,6 +56,7 @@ public:
     void mouseMoveEvent(QMouseEvent*) override;
     void leaveEvent(QEvent*) override;
     void enterEvent(QEvent*) override;
+    void setClickThrough(bool clickthrough);
 
     bool forwardEventToMapper(QEvent*);
 

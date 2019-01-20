@@ -60,6 +60,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mDisplayFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
 , mEnableGMCP(true)
 , mEnableMSDP(false)
+, mServerMXPenabled(false)
 , mFORCE_GA_OFF(false)
 , mFORCE_NO_COMPRESSION(false)
 , mFORCE_SAVE_ON_EXIT(false)

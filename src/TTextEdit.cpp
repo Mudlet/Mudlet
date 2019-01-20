@@ -647,8 +647,10 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
 
 void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 {
+    qreal dpr = devicePixelRatioF();
     QPixmap screenPixmap;
-    QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth, mScreenHeight * mFontHeight);
+    QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth * dpr, mScreenHeight * mFontHeight * dpr);
+    pixmap.setDevicePixelRatio(dpr);
     pixmap.fill(palette().base().color());
 
     QPainter p(&pixmap);
@@ -712,14 +714,14 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     if ((!noScroll) && (mScrollVector >= 0) && (mScrollVector <= mScreenHeight) && (!mForceUpdate)) {
         if (mScrollVector * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - mScrollVector) * mFontHeight > 0
             && (mScreenHeight - mScrollVector) * mFontHeight <= mScreenMap.height()) {
-            screenPixmap = mScreenMap.copy(0, mScrollVector * mFontHeight, mScreenWidth * mFontWidth, (mScreenHeight - mScrollVector) * mFontHeight);
+            screenPixmap = mScreenMap.copy(0, mScrollVector * mFontHeight * dpr, mScreenWidth * mFontWidth * dpr, (mScreenHeight - mScrollVector) * mFontHeight * dpr);
             p.drawPixmap(0, 0, screenPixmap);
             from = mScreenHeight - mScrollVector - 1;
         }
     } else if ((!noScroll) && (mScrollVector < 0 && mScrollVector >= ((-1) * mScreenHeight)) && (!mForceUpdate)) {
         if (abs(mScrollVector) * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - abs(mScrollVector)) * mFontHeight > 0
             && (mScreenHeight - abs(mScrollVector)) * mFontHeight <= mScreenMap.height()) {
-            screenPixmap = mScreenMap.copy(0, 0, mScreenWidth * mFontWidth, (mScreenHeight - abs(mScrollVector)) * mFontHeight);
+            screenPixmap = mScreenMap.copy(0, 0, mScreenWidth * mFontWidth * dpr, (mScreenHeight - abs(mScrollVector)) * mFontHeight * dpr);
             p.drawPixmap(0, abs(mScrollVector) * mFontHeight, screenPixmap);
             from = 0;
             y2 = abs(mScrollVector);

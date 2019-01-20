@@ -49,7 +49,10 @@
 #include "pre_guard.h"
 #include <QDesktopServices>
 #include <QFileDialog>
-#include <QRegularExpression>
+#include <QVector>
+#ifdef QT_TEXTTOSPEECH_LIB
+#include <QTextToSpeech>
+#endif // QT_TEXTTOSPEECH_LIB
 #include "post_guard.h"
 
 #include <limits>
@@ -84,6 +87,15 @@ int luaopen_yajl(lua_State*);
 }
 
 using namespace std;
+
+#ifdef QT_TEXTTOSPEECH_LIB
+QPointer<QTextToSpeech> speechUnit;
+QVector<QString> speechQueue;
+bool bSpeechBuilt;
+bool bSpeechQueueing;
+int speechState = QTextToSpeech::Ready;
+QString speechCurrent;
+#endif // QT_TEXTTOSPEECH_LIB
 
 TLuaInterpreter::TLuaInterpreter(Host* pH, int id) : mpHost(pH), mHostID(id), purgeTimer(this)
 {
@@ -1913,21 +1925,35 @@ int TLuaInterpreter::deleteLine(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#saveMap
 int TLuaInterpreter::saveMap(lua_State* L)
 {
-    string location = "";
-    if (lua_gettop(L) == 1) {
+    QString location;
+    int saveVersion = 0;
+
+    if (lua_gettop(L) > 0) {
         if (!lua_isstring(L, 1)) {
-            lua_pushstring(L, "saveMap: where do you want to save to?");
-            lua_error(L);
-            return 1;
+            lua_pushfstring(L,
+                            "saveMap: bad argument #1 type (save location path and file name "
+                            "as string expected, got %s!)",
+                            luaL_typename(L, 1));
+            return lua_error(L);
         } else {
-            location = lua_tostring(L, 1);
+            location = QString::fromUtf8(lua_tostring(L, 1));
+        }
+        if (lua_gettop(L) > 1) {
+            if (!lua_isnumber(L, 2)) {
+                lua_pushfstring(L,
+                                "saveMap: bad argument #2 type (map format version as "
+                                "integer expected, got %s!)",
+                                luaL_typename(L, 2));
+                return lua_error(L);
+            } else {
+                saveVersion = lua_tointeger(L, 2);
+            }
         }
     }
 
-    QString _location(location.c_str());
     Host& host = getHostFromLua(L);
 
-    bool error = host.mpConsole->saveMap(_location);
+    bool error = host.mpConsole->saveMap(location, saveVersion);
     lua_pushboolean(L, error);
     return 1;
 }
@@ -2772,7 +2798,7 @@ int TLuaInterpreter::createLabel(lua_State* L)
         luaSendText = lua_tostring(L, 1);
     }
     int x, y, width, height;
-    bool fillBackground = false;
+    bool fillBackground, clickthrough = false;
     if (!lua_isnumber(L, 2)) {
         lua_pushstring(L, "createLabel: wrong argument type");
         lua_error(L);
@@ -2808,9 +2834,18 @@ int TLuaInterpreter::createLabel(lua_State* L)
     } else {
         fillBackground = lua_toboolean(L, 6);
     }
+    if (lua_gettop(L) > 6) {
+        if (!lua_isboolean(L, 7)) {
+            lua_pushstring(L, "createLabel: wrong argument type");
+            lua_error(L);
+            return 1;
+        } else {
+            clickthrough = lua_toboolean(L, 7);
+        }
+    }
     Host& host = getHostFromLua(L);
     QString name(luaSendText.c_str());
-    lua_pushboolean(L, mudlet::self()->createLabel(&host, name, x, y, width, height, fillBackground));
+    lua_pushboolean(L, mudlet::self()->createLabel(&host, name, x, y, width, height, fillBackground, clickthrough));
     return 1;
 }
 
@@ -2902,7 +2937,7 @@ int TLuaInterpreter::createButton(lua_State* L)
     Host& host = getHostFromLua(L);
     QString name(luaSendText.c_str());
     //TODO FIXME
-    mudlet::self()->createLabel(&host, name, x, y, width, height, fillBackground);
+    mudlet::self()->createLabel(&host, name, x, y, width, height, fillBackground, false);
     return 0;
 }
 
@@ -5358,11 +5393,11 @@ int TLuaInterpreter::setPopup(lua_State* L)
         s++;
     }
     /* N/U:
-	   if( n >= s )
-	   {
-	    customFormat = lua_toboolean( L, s );
-	   }
-	 */
+       if( n >= s )
+       {
+        customFormat = lua_toboolean( L, s );
+       }
+     */
     Host& host = getHostFromLua(L);
     QString txt = a2.c_str();
     QString name = a1.c_str();
@@ -6550,7 +6585,12 @@ int TLuaInterpreter::exists(lua_State* L)
         cnt += host.getAliasUnit()->mLookupTable.count(name);
     } else if (type == "keybind") {
         cnt += host.getKeyUnit()->mLookupTable.count(name);
-    }
+    } else if (type == "script") {
+        std::list<TScript*> scripts = host.getScriptUnit()->getScriptRootNodeList();
+        for (auto script : scripts) {
+            cnt += (script->getName() == name);
+            }
+        }
     lua_pushnumber(L, cnt);
     return 1;
 }
@@ -6607,6 +6647,13 @@ int TLuaInterpreter::isActive(lua_State* L)
                 cnt++;
             }
             it1++;
+        }
+    } else if (type.compare(QLatin1String("script"), Qt::CaseInsensitive) == 0) {
+        std::list<TScript*> scripts = host.getScriptUnit()->getScriptRootNodeList();
+        for (auto script : scripts) {
+            if (script->getName() == name && script->isActive()) {
+                ++cnt;
+            }
         }
     } else {
         lua_pushnil(L);
@@ -11985,6 +12032,524 @@ int TLuaInterpreter::restartIrc(lua_State* L)
     return 1;
 }
 
+#ifdef QT_TEXTTOSPEECH_LIB
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSpeak
+int TLuaInterpreter::ttsSpeak(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "ttsSpeak: bad argument #%1 type (text to say as string expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    }
+
+    QString textToSay;
+    textToSay = QString::fromUtf8(lua_tostring(L, 1));
+
+    speechUnit->say(textToSay);
+    speechCurrent = textToSay;
+
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsBuild
+void TLuaInterpreter::ttsBuild()
+{
+    if (bSpeechBuilt) {
+        return;
+    }
+
+    speechUnit = new QTextToSpeech();
+
+    bSpeechBuilt = true;
+    bSpeechQueueing = false;
+
+    connect(speechUnit, &QTextToSpeech::stateChanged, &TLuaInterpreter::ttsStateChanged);
+
+
+    speechUnit->setVolume(1.0);
+    speechUnit->setRate(0.0);
+    speechUnit->setPitch(0.0);
+
+    return;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSkip
+int TLuaInterpreter::ttsSkip(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+
+    speechUnit->stop();
+
+    return 0;
+}
+
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetRate
+int TLuaInterpreter::ttsSetRate(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+
+    double rate;
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "ttsSetRate: bad argument #1 type (rate as number expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    } else {
+        rate = lua_tonumber(L, 1);
+    }
+
+    if (rate > 1.0) {
+        rate = 1.0;
+    }
+
+    if (rate < -1.0) {
+        rate = -1.0;
+    }
+
+    speechUnit->setRate(rate);
+
+    TEvent event;
+    event.mArgumentList.append(QLatin1String("ttsRateChanged"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(rate));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+
+    return 0;
+}
+
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetPitch
+int TLuaInterpreter::ttsSetPitch(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+
+    double pitch;
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "ttsSetPitch: bad argument #1 type (pitch as number expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    } else {
+        pitch = lua_tonumber(L, 1);
+    }
+
+    if (pitch > 1.0) {
+        pitch = 1.0;
+    }
+
+    if (pitch < -1.0) {
+        pitch = -1.0;
+    }
+
+    speechUnit->setPitch(pitch);
+
+    TEvent event;
+    event.mArgumentList.append(QLatin1String("ttsPitchChanged"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(pitch));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+
+    return 0;
+}
+
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetVolume
+int TLuaInterpreter::ttsSetVolume(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+
+    double volume;
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "ttsSetVolume: bad argument #1 type (volume as number expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    } else {
+        volume = lua_tonumber(L, 1);
+    }
+
+    if (volume > 1.0) {
+        volume = 1.0;
+    }
+
+    if (volume < 0.0) {
+        volume = 0.0;
+    }
+
+    speechUnit->setVolume(volume);
+
+    TEvent event;
+    event.mArgumentList.append(QLatin1String("ttsVolumeChanged"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(volume));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsGetVolume
+int TLuaInterpreter::ttsGetVolume(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+
+    lua_pushnumber(L, speechUnit->volume());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsGetRate
+int TLuaInterpreter::ttsGetRate(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+
+    lua_pushnumber(L, speechUnit->rate());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsGetPitch
+int TLuaInterpreter::ttsGetPitch(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+
+    lua_pushnumber(L, speechUnit->pitch());
+    return 1;
+}
+
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsGetVoices
+int TLuaInterpreter::ttsGetVoices(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+
+    QVector<QVoice> speechVoices = speechUnit->availableVoices();
+    int i = 0;
+    lua_newtable(L);
+    for (const QVoice& voice : speechVoices) {
+        lua_pushnumber(L, ++i);
+        lua_pushstring(L, voice.name().toUtf8().constData());
+        lua_settable(L, -3);
+    }
+
+    return 1;
+}
+
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsGetCurrentVoice
+int TLuaInterpreter::ttsGetCurrentVoice(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+
+    QString currentVoice = speechUnit->voice().name();
+    lua_pushstring(L, currentVoice.toUtf8().constData());
+    return 1;
+}
+
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetVoiceByName
+int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+
+    QString nextVoice;
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "ttsSetVoiceByName: bad argument #1 type (voice as string expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    } else {
+        nextVoice = QString(lua_tostring(L, 1));
+    }
+
+    QVector<QVoice> speechVoices = speechUnit->availableVoices();
+    foreach (const QVoice& voice, speechVoices) {
+        if (voice.name() == nextVoice) {
+            speechUnit->setVoice(voice);
+            lua_pushboolean(L, true);
+
+            TEvent event;
+            event.mArgumentList.append(QLatin1String("ttsVoiceChanged"));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            event.mArgumentList.append(voice.name());
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+
+            return 1;
+        }
+    }
+
+    lua_pushboolean(L, false);
+    return 1;
+}
+
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetVoiceByIndex
+int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+
+    int index;
+    if (!lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "ttsSetVoiceByIndex: bad argument #1 type (voice as index number expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    } else {
+        index = lua_tonumber(L, 1);
+    }
+
+    index--;
+
+    QVector<QVoice> speechVoices = speechUnit->availableVoices();
+    if (index < 0 || index >= speechVoices.size()) {
+        lua_pushboolean(L, false);
+        return 1;
+    }
+
+    speechUnit->setVoice(speechVoices.at(index));
+
+    TEvent event;
+    event.mArgumentList.append(QLatin1String("ttsVoiceChanged"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(speechVoices[index].name());
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsStateChanged
+void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
+{
+    if (state != speechState) {
+        speechState = state;
+        TEvent event;
+        switch (state) {
+        case QTextToSpeech::Paused:
+            event.mArgumentList.append(QLatin1String("ttsSpeechPaused"));
+            break;
+        case QTextToSpeech::Speaking:
+            event.mArgumentList.append(QLatin1String("ttsSpeechStarted"));
+            break;
+        case QTextToSpeech::BackendError:
+            event.mArgumentList.append(QLatin1String("ttsSpeechError"));
+            break;
+        case QTextToSpeech::Ready:
+            event.mArgumentList.append(QLatin1String("ttsSpeechReady"));
+            break;
+        }
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+        if (state == QTextToSpeech::Speaking) {
+            event.mArgumentList.append(speechCurrent);
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        }
+
+        mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+    }
+
+    if (state != QTextToSpeech::Ready || speechQueue.empty()) {
+        bSpeechQueueing = false;
+        return;
+    }
+
+    QString textToSay;
+    textToSay = speechQueue.takeFirst();
+
+    speechUnit->say(textToSay);
+    speechCurrent = textToSay;
+
+    return;
+}
+
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsQueue
+int TLuaInterpreter::ttsQueue(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "ttsQueueText: bad argument #1 type (input as string expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    }
+
+    QString inputText = lua_tostring(L, 1);
+    int index;
+
+    if (lua_gettop(L) > 1) {
+        if (!lua_isnumber(L, 2)) {
+            lua_pushfstring(L, "ttsQueueText: bad argument #2 type (index as number expected, got %s!)", luaL_typename(L, 1));
+            lua_error(L);
+            return 1;
+        }
+
+        index = lua_tonumber(L, 2);
+        index--;
+
+        if (index < 0) {
+            index = 0;
+        }
+
+        if (index > speechQueue.size()) {
+            index = speechQueue.size();
+        }
+    } else {
+        index = speechQueue.size();
+    }
+
+    speechQueue.insert(index, inputText);
+
+    TEvent event;
+    Host& host = getHostFromLua(L);
+    event.mArgumentList.append(QLatin1String("ttsSpeechQueued"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(inputText);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(index));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    host.raiseEvent(event);
+
+    if (speechQueue.size() == 1 && speechUnit->state() == QTextToSpeech::Ready && bSpeechQueueing == false) {
+        bSpeechQueueing = true;
+        TLuaInterpreter::ttsStateChanged(speechUnit->state());
+    }
+
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsGetQueue
+int TLuaInterpreter::ttsGetQueue(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+
+    if (lua_gettop(L) > 0) {
+        if (!lua_isnumber(L, 1)) {
+            lua_pushfstring(L, "ttsGetQueue: bad argument #1 type (index as number expected, got %s!)", luaL_typename(L, 1));
+            lua_error(L);
+            return 1;
+        }
+
+        int index = lua_tonumber(L, 1);
+        index--;
+
+        if (index < 0 || index > speechQueue.size()) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+
+        lua_pushstring(L, speechQueue.at(index).toLatin1().constData());
+        return 1;
+    }
+
+    lua_newtable(L);
+
+    for (int i = 0; i < speechQueue.size(); i++) {
+        lua_pushnumber(L, i + 1);
+        lua_pushstring(L, speechQueue.at(i).toUtf8().constData());
+        lua_settable(L, -3);
+    }
+
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsPause
+int TLuaInterpreter::ttsPause(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+
+    speechUnit->pause();
+
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsResume
+int TLuaInterpreter::ttsResume(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+
+    speechUnit->resume();
+
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsClearQueue
+int TLuaInterpreter::ttsClearQueue(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+
+    if (lua_gettop(L) > 0) {
+        if (!lua_isnumber(L, 1)) {
+            lua_pushfstring(L, "ttsClearQueue: bad argument #1 type (index as number expected, got %s!)", luaL_typename(L, 1));
+            lua_error(L);
+            return 1;
+        }
+
+        int index = lua_tonumber(L, 1);
+        index--;
+
+        if (index < 0 || index >= speechQueue.size()) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "index (%d) out of bounds for queue size %d", index + 1, speechQueue.size());
+            return 2;
+        }
+
+        speechQueue.remove(index);
+        return 0;
+    }
+
+    speechQueue.clear();
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsGetCurrentLine
+int TLuaInterpreter::ttsGetCurrentLine(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+
+    if (speechUnit->state() == QTextToSpeech::Ready) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "not speaking any text");
+        return 2;
+    } else if (speechUnit->state() == QTextToSpeech::BackendError) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "error with the backend");
+        return 2;
+    }
+
+    lua_pushstring(L, speechCurrent.toUtf8().constData());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsGetState
+int TLuaInterpreter::ttsGetState(lua_State* L)
+{
+    TLuaInterpreter::ttsBuild();
+
+    switch (speechUnit->state()) {
+    case QTextToSpeech::Ready:
+        lua_pushstring(L, "ttsSpeechReady");
+        break;
+    case QTextToSpeech::Paused:
+        lua_pushstring(L, "ttsSpeechPaused");
+        break;
+    case QTextToSpeech::Speaking:
+        lua_pushstring(L, "ttsSpeechStarted");
+        break;
+    case QTextToSpeech::BackendError:
+        lua_pushstring(L, "ttsSpeechError");
+        break;
+    default:
+        lua_pushstring(L, "ttsUnknownState");
+    }
+
+    return 1;
+}
+
+#endif // QT_TEXTTOSPEECH_LIB
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setServerEncoding
 int TLuaInterpreter::setServerEncoding(lua_State* L)
 {
@@ -12284,17 +12849,17 @@ void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::strin
 
     /*std::list< std::list<string> >::const_iterator mit = mMultiCaptureGroupList.begin();
 
-	   int k=1;
-	   for( ; mit!=mMultiCaptureGroupList.end(); mit++, k++ )
-	   {
-	    cout << "regex#"<<k<<" got:"<<endl;
-	    std::list<string>::const_iterator it = (*mit).begin();
-	    for( int i=1; it!=(*mit).end(); it++, i++ )
-	    {
-	        cout << i<<"#"<<"<"<<*it<<">"<<endl;
-	    }
-	    cout << "-----------------------------"<<endl;
-	   }*/
+       int k=1;
+       for( ; mit!=mMultiCaptureGroupList.end(); mit++, k++ )
+       {
+        cout << "regex#"<<k<<" got:"<<endl;
+        std::list<string>::const_iterator it = (*mit).begin();
+        for( int i=1; it!=(*mit).end(); it++, i++ )
+        {
+            cout << i<<"#"<<"<"<<*it<<">"<<endl;
+        }
+        cout << "-----------------------------"<<endl;
+       }*/
 }
 
 // No documentation available in wiki - internal function
@@ -12304,12 +12869,12 @@ void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList
     mCaptureGroupPosList = posList;
 
     /*std::list<string>::iterator it2 = mCaptureGroupList.begin();
-	   std::list<int>::iterator it1 = mCaptureGroupPosList.begin();
-	   int i=0;
-	   for( ; it1!=mCaptureGroupPosList.end(); it1++, it2++, i++ )
-	   {
-	    cout << "group#"<<i<<" begin="<<*it1<<" len="<<(*it2).size()<<"word="<<*it2<<endl;
-	   } */
+       std::list<int>::iterator it1 = mCaptureGroupPosList.begin();
+       int i=0;
+       for( ; it1!=mCaptureGroupPosList.end(); it1++, it2++, i++ )
+       {
+        cout << "group#"<<i<<" begin="<<*it1<<" len="<<(*it2).size()<<"word="<<*it2<<endl;
+       } */
 }
 
 // No documentation available in wiki - internal function
@@ -13757,6 +14322,27 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getProfileName", TLuaInterpreter::getProfileName);
     lua_register(pGlobalLua, "raiseGlobalEvent", TLuaInterpreter::raiseGlobalEvent);
     lua_register(pGlobalLua, "saveProfile", TLuaInterpreter::saveProfile);
+#ifdef QT_TEXTTOSPEECH_LIB
+    lua_register(pGlobalLua, "ttsSpeak", TLuaInterpreter::ttsSpeak);
+    lua_register(pGlobalLua, "ttsSkip", TLuaInterpreter::ttsSkip);
+    lua_register(pGlobalLua, "ttsSetRate", TLuaInterpreter::ttsSetRate);
+    lua_register(pGlobalLua, "ttsSetPitch", TLuaInterpreter::ttsSetPitch);
+    lua_register(pGlobalLua, "ttsSetVolume", TLuaInterpreter::ttsSetVolume);
+    lua_register(pGlobalLua, "ttsGetRate", TLuaInterpreter::ttsGetRate);
+    lua_register(pGlobalLua, "ttsGetPitch", TLuaInterpreter::ttsGetPitch);
+    lua_register(pGlobalLua, "ttsGetVolume", TLuaInterpreter::ttsGetVolume);
+    lua_register(pGlobalLua, "ttsSetVoiceByName", TLuaInterpreter::ttsSetVoiceByName);
+    lua_register(pGlobalLua, "ttsSetVoiceByIndex", TLuaInterpreter::ttsSetVoiceByIndex);
+    lua_register(pGlobalLua, "ttsGetCurrentVoice", TLuaInterpreter::ttsGetCurrentVoice);
+    lua_register(pGlobalLua, "ttsGetVoices", TLuaInterpreter::ttsGetVoices);
+    lua_register(pGlobalLua, "ttsQueue", TLuaInterpreter::ttsQueue);
+    lua_register(pGlobalLua, "ttsGetQueue", TLuaInterpreter::ttsGetQueue);
+    lua_register(pGlobalLua, "ttsPause", TLuaInterpreter::ttsPause);
+    lua_register(pGlobalLua, "ttsResume", TLuaInterpreter::ttsResume);
+    lua_register(pGlobalLua, "ttsClearQueue", TLuaInterpreter::ttsClearQueue);
+    lua_register(pGlobalLua, "ttsGetCurrentLine", TLuaInterpreter::ttsGetCurrentLine);
+    lua_register(pGlobalLua, "ttsGetState", TLuaInterpreter::ttsGetState);
+#endif // QT_TEXTTOSPEECH_LIB
     lua_register(pGlobalLua, "setServerEncoding", TLuaInterpreter::setServerEncoding);
     lua_register(pGlobalLua, "getServerEncoding", TLuaInterpreter::getServerEncoding);
     lua_register(pGlobalLua, "getServerEncodingsList", TLuaInterpreter::getServerEncodingsList);
@@ -13790,6 +14376,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getPlayerRoom", TLuaInterpreter::getPlayerRoom);
     lua_register(pGlobalLua, "getSelection", TLuaInterpreter::getSelection);
     lua_register(pGlobalLua, "getMapSelection", TLuaInterpreter::getMapSelection);
+    lua_register(pGlobalLua, "enableClickthrough", TLuaInterpreter::enableClickthrough);
+    lua_register(pGlobalLua, "disableClickthrough", TLuaInterpreter::disableClickthrough);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     // prepend profile path to package.path and package.cpath
@@ -14629,4 +15217,44 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
     }
 
     return 1;
+}
+
+int TLuaInterpreter::enableClickthrough(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString windowName;
+    if (n == 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "enableClickthrough: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_error(L);
+            return 1;
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, 1));
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+
+    mudlet::self()->setClickthrough(&host, windowName, true);
+    return 0;
+}
+
+int TLuaInterpreter::disableClickthrough(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString windowName;
+    if (n == 1) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "disableClickthrough: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+            lua_error(L);
+            return 1;
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, 1));
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+
+    mudlet::self()->setClickthrough(&host, windowName, false);
+    return 0;
 }

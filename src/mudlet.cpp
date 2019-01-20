@@ -1680,7 +1680,8 @@ bool mudlet::createMiniConsole(Host* pHost, const QString& name, int x, int y, i
     return false;
 }
 
-bool mudlet::createLabel(Host* pHost, const QString& name, int x, int y, int width, int height, bool fillBg)
+bool mudlet::createLabel(Host* pHost, const QString& name, int x, int y, int width, int height, bool fillBg,
+                         bool clickthrough)
 {
     if (!pHost) {
         return false;
@@ -1690,7 +1691,7 @@ bool mudlet::createLabel(Host* pHost, const QString& name, int x, int y, int wid
     }
     QMap<QString, TLabel*>& labelMap = mHostLabelMap[pHost];
     if (!labelMap.contains(name)) {
-        TLabel* pL = pHost->mpConsole->createLabel(name, x, y, width, height, fillBg);
+        TLabel* pL = pHost->mpConsole->createLabel(name, x, y, width, height, fillBg, clickthrough);
         if (pL) {
             labelMap[name] = pL;
             return true;
@@ -4118,4 +4119,15 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
 void mudlet::setInterfaceLanguage(const QString& languageCode)
 {
     mInterfaceLanguage = languageCode;
+}
+
+bool mudlet::setClickthrough(Host* pHost, const QString& name, bool clickthrough)
+{
+    const auto& labelMap = mHostLabelMap[pHost];
+    if (labelMap.contains(name)) {
+        labelMap[name]->setClickThrough(clickthrough);
+        return true;
+    }
+
+    return false;
 }

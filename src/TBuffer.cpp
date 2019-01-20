@@ -46,7 +46,7 @@
 // Define this to get qDebug() messages about the decoding of ANSI MXP sequences
 // although there is not much against this item at present {only an announcement
 // of the type (?) of an `\x1b[?z` received}:
-// #define DEBUG_MXP_PROCESSING
+//#define DEBUG_MXP_PROCESSING
 
 
 // These tables have been regenerated from examination of the Qt source code
@@ -628,7 +628,8 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
 // a map of supported MXP elements and attributes
 const QMap<QString, QVector<QString>> TBuffer::mSupportedMxpElements = {
     {QStringLiteral("send"), {"href", "hint", "prompt"}},
-    {QStringLiteral("br"), {}}
+    {QStringLiteral("br"), {}},
+    {QStringLiteral("a"), {"href", "hint"}}
 };
 
 TChar::TChar()
@@ -732,7 +733,7 @@ TBuffer::TBuffer(Host* pH)
 , mWrapAt(99999999)
 , mWrapIndent(0)
 , mCursorY(0)
-, mMXP(false)
+, mMXP(true)
 , mAssemblingToken(false)
 , currentToken("")
 , openT(0)
@@ -789,6 +790,12 @@ TBuffer::TBuffer(Host* pH)
     _element.href = "";
     _element.hint = "";
     mMXP_Elements["SEND"] = _element;
+
+    TMxpElement _aURL;
+    _aURL.name = "A";
+    _aURL.href = "";
+    _aURL.hint = "";
+    mMXP_Elements["A"] = _aURL;
 
     // Validate the encoding tables in case there has been an edit which breaks
     // things:
@@ -1320,49 +1327,50 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 #if defined(DEBUG_MXP_PROCESSING)
                     qDebug().nospace().noquote() << "    Consider the MXP control sequence: \"" << localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str() << "\"";
 #endif
-                    if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
+                    if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF && mpHost->mServerMXPenabled) {
                         mGotCSI = false;
 
                         bool isOk = false;
                         QString code = QString(localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str());
-                        int dummy = code.toInt(&isOk);
-                        Q_UNUSED(dummy);
+                        int modeCode = code.toInt(&isOk);
                         if (isOk) {
                             // we really do not handle these well...
+                            // MXP line modes - comments are from http://www.zuggsoft.com/zmud/mxp.htm#MXP%20Line%20Tags
 
-                            // The wrong layout and odd code here (rather than
-                            // using a switch () with an integer) is to enable
-                            // the same code in this area as was previously use
-                            // so that the diff for the git commit is two
-                            // smaller chunks that are slightly easier to read.
-                            // clang-format off
+                            switch (modeCode) {
+                            case 7: // lock locked mode (MXP 0.4 or later) - set locked mode.  Mode remains in effect until changed.  Locked mode becomes the new default mode.
+                                [[clang::fallthrough]];
+                            case 2: // locked line (until next newline) no MXP or HTML commands are allowed in the line.  The line is not parsed for any tags at all.  This is useful for "verbatim" text output from the MUD.  When a newline is received from the MUD, the mode reverts back to the Default mode.
+                                mMXP = false;
+                                break;
 
-                    // MXP line modes
+                            case 6: // lock secure mode (MXP 0.4 or later) - set secure mode.  Mode remains in effect until changed.  Secure mode becomes the new default mode.
+                                [[clang::fallthrough]];
+                            case 1: // secure line (until next newline) all tags and commands in MXP are allowed within the line.  When a newline is received from the MUD, the mode reverts back to the Default mode.
+                                [[clang::fallthrough]];
+                            case 4: // temp secure mode (MXP 0.4 or later) - set secure mode for the next tag only.  Must be immediately followed by a < character to start a tag.  Remember to set secure mode when closing the tag also.
+                                mMXP = true;
+                                break;
 
-                    // locked mode
-                    if (code == "7" || code == "2") {
-                        mMXP = false;
-                    }
-                    // secure mode
-                    if (code == "1" || code == "6" || code == "4") {
-                        mMXP = true;
-                    }
-                    // reset
-                    if (code == "3") {
-                        closeT = 0;
-                        openT = 0;
-                        mAssemblingToken = false;
-                        currentToken.clear();
-                        mParsingVar = false;
-                    }
+                            case 3: //  reset (MXP 0.4 or later) - close all open tags.  Set mode to Open.  Set text color and properties to default.
+                                closeT = 0;
+                                openT = 0;
+                                mAssemblingToken = false;
+                                currentToken.clear();
+                                mParsingVar = false;
+                                break;
 
-                    // 0 and 5 are not even handled in current code
-                    if (code == "0" || code == "5" || code.toInt() > 7) {
-                        qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
-                    }
+                            case 5: // lock open mode (MXP 0.4 or later) - set open mode.  Mode remains in effect until changed.  OPEN mode becomes the new default mode.
+                                [[clang::fallthrough]];
+                            case 0: // open line - only MXP commands in the "open" category are allowed.  When a newline is received from the MUD, the mode reverts back to the Default mode.  OPEN MODE starts as the Default mode until changes with one of the "lock mode" tags listed below.
+                                [[clang::fallthrough]];
+                            default:
+                                 if (modeCode <= 0 | modeCode == 5 | modeCode> 7) {
+                                   // 0 and 5 are not even handled in current code
+                                   qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
+                                 }
+                            }
 
-                    // clang-format on
-                    // Code above here is deliberately misaligned
                         } else {
                             // isOk is false here as toInt(...) failed
                             qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Non-numeric MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
@@ -1714,7 +1722,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         QStringList _tl = _t2.split('|');
                         for (int i = 0; i < _tl.size(); i++) {
                             _tl[i].replace("|", "");
-                            if (!_send_to_command_line) {
+                            if (_element.name == "A") {
+                                _tl[i] = "openUrl([[" + _tl[i] + "]])";
+                            }
+                            else if (!_send_to_command_line) {
                                 _tl[i] = "send([[" + _tl[i] + "]])";
                             } else {
                                 _tl[i] = "printCmdLine([[" + _tl[i] + "]])";
@@ -1791,7 +1802,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     mIgnoreTag = false;
                     mSkip.clear();
                     ch = '&';
-                } else if (mSkip == "&quot;" && ch == ';') {
+                } else if (mSkip == "&quot" && ch == ';' ) {
                     mIgnoreTag = false;
                     mSkip.clear();
                     ch = '"';

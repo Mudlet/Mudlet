@@ -124,12 +124,12 @@ endif()
 # something else or not even exist).
 set(FONT_TEST $ENV{WITH_FONTS})
 if(DEFINED FONT_TEST)
-    string(TOUPPER ${FONT_TEST} FONT_TEST)
+  string(TOUPPER ${FONT_TEST} FONT_TEST)
 else()
-    # Set the CMake variable to the default if it (as a result of WITH_FONTS not
-    # existing) has not been defined, without the if(DEFINED ...) string(...)
-    # errors out - and so may further tests on the variable...
-    set(FONT_TEST "YES")
+  # Set the CMake variable to the default if it (as a result of WITH_FONTS not
+  # existing) has not been defined, without the if(DEFINED ...) string(...)
+  # errors out - and so may further tests on the variable...
+  set(FONT_TEST "YES")
 endif()
 if(FONT_TEST STREQUAL "NO")
   option(USE_FONTS "Include Deja Vu and Ubuntu fonts in the executable" OFF)
@@ -214,10 +214,10 @@ endif()
 
 file(GLOB_RECURSE lua_files RELATIVE "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/lua/" "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/lua/*.lua")
 list(LENGTH lua_files lua_file_count)
-if(lua_file_count EQUAL 25)
+if(lua_file_count EQUAL 26)
   message(STATUS "Found Mudlet & Geyser lua files")
 else()
-  message(WARNING "Found ${lua_file_count} Mudlet & Geyser lua files but 25 were expected:")
+  message(WARNING "Found ${lua_file_count} Mudlet & Geyser lua files but 26 were expected:")
   foreach(lua_file ${lua_files})
     message(STATUS "    ${lua_file}")
   endforeach(lua_file)

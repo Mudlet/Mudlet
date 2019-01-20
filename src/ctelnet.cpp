@@ -356,14 +356,8 @@ void cTelnet::connectIt(const QString& address, int port)
     hostPort = port;
     QString server = tr("[ INFO ]  - Looking up the IP address of server:") + address + ":" + QString::number(port) + " ...";
     postMessage(server);
-#if QT_VERSION >= 0x050900
-    QHostInfo::lookupHost(address, this, &cTelnet::handle_socket_signal_hostFound);
-#else
-    // The ability to use the overloaded forms where a functor or
-    // pointerToMember is used as the signal receiver was only introduced in
-    // Qt 5.9.0 LTS:
+    // don't use a compile-time slot for this: https://bugreports.qt.io/browse/QTBUG-67646
     QHostInfo::lookupHost(address, this, SLOT(handle_socket_signal_hostFound(QHostInfo)));
-#endif
 }
 
 
@@ -393,8 +387,6 @@ void cTelnet::slot_send_pass()
 void cTelnet::handle_socket_signal_connected()
 {
     QString msg;
-
-    qDebug() << "MODE:" << socket.mode();
 
     reset();
     setKeepAlive(socket.socketDescriptor());
@@ -911,7 +903,7 @@ void cTelnet::processTelnetCommand(const string& command)
         if (option == OPT_MXP) {
             if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
                 sendTelnetOption(TN_DO, OPT_MXP);
-
+                mpHost->mServerMXPenabled = true;
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
                 break;
             }
@@ -1004,6 +996,7 @@ void cTelnet::processTelnetCommand(const string& command)
 
             if (option == OPT_MXP) {
                 // MXP got turned off
+                mpHost->mServerMXPenabled = false;
                 raiseProtocolEvent("sysProtocolDisabled", "MXP");
             }
 
@@ -2092,6 +2085,7 @@ void cTelnet::handle_socket_signal_readyRead()
         if (mNeedDecompression) {
             datalen = decompressBuffer(in_buffer, amount, out_buffer);
             buffer = out_buffer;
+            //qDebug() << "buffer:" << buffer;
         }
         buffer[datalen] = '\0';
         if (mpHost->mpConsole->mRecordReplay) {
