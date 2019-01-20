@@ -46,7 +46,7 @@
 // Define this to get qDebug() messages about the decoding of ANSI MXP sequences
 // although there is not much against this item at present {only an announcement
 // of the type (?) of an `\x1b[?z` received}:
-// #define DEBUG_MXP_PROCESSING
+//#define DEBUG_MXP_PROCESSING
 
 
 // These tables have been regenerated from examination of the Qt source code
@@ -628,7 +628,8 @@ const QMap<QString, QPair<QString, QVector<QChar>>> TBuffer::csmEncodingTable = 
 // a map of supported MXP elements and attributes
 const QMap<QString, QVector<QString>> TBuffer::mSupportedMxpElements = {
     {QStringLiteral("send"), {"href", "hint", "prompt"}},
-    {QStringLiteral("br"), {}}
+    {QStringLiteral("br"), {}},
+    {QStringLiteral("a"), {"href", "hint"}}
 };
 
 TChar::TChar()
@@ -732,7 +733,7 @@ TBuffer::TBuffer(Host* pH)
 , mWrapAt(99999999)
 , mWrapIndent(0)
 , mCursorY(0)
-, mMXP(false)
+, mMXP(true)
 , mAssemblingToken(false)
 , currentToken("")
 , openT(0)
@@ -789,6 +790,12 @@ TBuffer::TBuffer(Host* pH)
     _element.href = "";
     _element.hint = "";
     mMXP_Elements["SEND"] = _element;
+
+    TMxpElement _aURL;
+    _aURL.name = "A";
+    _aURL.href = "";
+    _aURL.hint = "";
+    mMXP_Elements["A"] = _aURL;
 
     // Validate the encoding tables in case there has been an edit which breaks
     // things:
@@ -1320,7 +1327,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 #if defined(DEBUG_MXP_PROCESSING)
                     qDebug().nospace().noquote() << "    Consider the MXP control sequence: \"" << localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str() << "\"";
 #endif
-                    if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
+                    if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF && mpHost->mServerMXPenabled) {
                         mGotCSI = false;
 
                         bool isOk = false;
@@ -1715,7 +1722,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         QStringList _tl = _t2.split('|');
                         for (int i = 0; i < _tl.size(); i++) {
                             _tl[i].replace("|", "");
-                            if (!_send_to_command_line) {
+                            if (_element.name == "A") {
+                                _tl[i] = "openUrl([[" + _tl[i] + "]])";
+                            }
+                            else if (!_send_to_command_line) {
                                 _tl[i] = "send([[" + _tl[i] + "]])";
                             } else {
                                 _tl[i] = "printCmdLine([[" + _tl[i] + "]])";
