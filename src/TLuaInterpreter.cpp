@@ -10549,16 +10549,26 @@ int TLuaInterpreter::echoLink(lua_State* L)
 
     int s = 0;
     int n = lua_gettop(L);
-
+    if (n > 3){
+        if (lua_isboolean(L, 4)) gotBool = true;
+    }
     if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L, "echoLink: bad argument #%d type (string expected, got %s!)", s, luaL_typename(L, s));
-            return lua_error(L);
+        if (n == 3 || n > 3 && n < 5 && gotBool) {
+            lua_pushfstring(L, "echoLink: bad argument #%d type (text as string expected, got %s!)", s, luaL_typename(L, s));
+        } else {
+            lua_pushfstring(L, "echoLink: bad argument #%d type (optionally window name as string expected, got %s!)", s, luaL_typename(L, s));
+        }
+        return lua_error(L);
     } else {
         a1 = QString::fromUtf8(lua_tostring(L, s));
     }
     if (n > 1) {
         if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L, "echoLink: bad argument #%d type (string expected, got %s!)", s, luaL_typename(L, s));
+            if (n == 3 || n > 3 && n < 5 && gotBool) {
+                lua_pushfstring(L, "echoLink: bad argument #%d type (command as string expected, got %s!)", s, luaL_typename(L, s));
+            } else {
+                lua_pushfstring(L, "echoLink: bad argument #%d type (text as string expected, got %s!)", s, luaL_typename(L, s));
+            }
             return lua_error(L);
         } else {
             a2 = QString::fromUtf8(lua_tostring(L, s));
@@ -10566,7 +10576,11 @@ int TLuaInterpreter::echoLink(lua_State* L)
     }
     if (n > 2) {
         if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L, "echoLink: bad argument #%d type (string expected, got %s!)", s, luaL_typename(L, s));
+            if (n == 3 || n > 3 && n < 5 && gotBool) {
+                lua_pushfstring(L, "echoLink: bad argument #%d type (hint as string expected, got %s!)", s, luaL_typename(L, s));
+            } else {
+                lua_pushfstring(L, "echoLink: bad argument #%d type (command as string expected, got %s!)", s, luaL_typename(L, s));
+            }
             return lua_error(L);
         } else {
             a3 = QString::fromUtf8(lua_tostring(L, s));
@@ -10579,7 +10593,11 @@ int TLuaInterpreter::echoLink(lua_State* L)
             gotBool = true;
             useCurrentFormatElseDefault = lua_toboolean(L, s);
         } else {
-            lua_pushfstring(L, "echoLink: bad argument #%d type (optionally useCurrentFormatElseDefault boolean or hint as string, got %s!)", s, luaL_typename(L, s));
+            if (gotBool) {
+                lua_pushfstring(L, "echoLink: bad argument #%d type (optionally useCurrentFormatElseDefault as boolean, got %s!)", s, luaL_typename(L, s));
+            } else {
+                lua_pushfstring(L, "echoLink: bad argument #%d type (hint as string, got %s!)", s, luaL_typename(L, s));
+            }
             return lua_error(L);
         }
     }
@@ -10595,7 +10613,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
 
     Host& host = getHostFromLua(L);
     QString text;
-    QString windowName = QLatin1String("main");
+    QString windowName;
     QStringList function;
     QStringList hint;
 
@@ -10603,15 +10621,18 @@ int TLuaInterpreter::echoLink(lua_State* L)
         text = a1;
         function << a2;
         hint << a3;
-        mudlet::self()->echoLink(&host, windowName, text, function, hint, useCurrentFormatElseDefault);
+        host.mpConsole->echoLink(text, function, hint, useCurrentFormatElseDefault);
     } else {
+        windowName = a1;
         text = a2;
         function << a3;
         hint << a4;
-        windowName = a1;
         mudlet::self()->echoLink(&host, windowName, text, function, hint, useCurrentFormatElseDefault);
     }
-
+    /*
+    qDebug() << "windowName:" << windowName << "/text: " << text
+             << "/function:" << function << "/hint:" << hint << "boolean:/" << useCurrentFormatElseDefault;
+    */
     return 0;
 }
 
