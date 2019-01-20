@@ -108,7 +108,7 @@ public:
     bool gotoRoom(int);
     bool gotoRoom(int, int);
     void setView(float, float, float, float);
-    bool serialize(QDataStream&);
+    bool serialize(QDataStream&, int saveVersion = 0);
     bool restore(QString location, bool downloadIfNotFound = true);
     bool retrieveMapFileStats(QString, QString*, int*, int*, int*, int*);
     void initGraph();
