@@ -222,6 +222,8 @@ mudlet::mudlet()
         // have to invert the sense because the attribute is a negative one:
         qApp->setAttribute(Qt::AA_DontShowIconsInMenus, (mShowIconsOnMenuCheckedState == Qt::Unchecked));
     }
+    
+    qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
 
     loadTranslators();
 
