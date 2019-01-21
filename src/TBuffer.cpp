@@ -1440,7 +1440,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
         // We are outside of a CSI or OSC sequence if we get to here:
 
-        if (mMXP) {
+        if (mMXP && mpHost->mServerMXPenabled) {
 
             // ignore < and > inside of parameter strings
             if (openT == 1) {
