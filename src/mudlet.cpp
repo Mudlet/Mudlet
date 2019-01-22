@@ -4160,3 +4160,26 @@ bool mudlet::setClickthrough(Host* pHost, const QString& name, bool clickthrough
 
     return false;
 }
+
+QPair<bool, QStringList> mudlet::getLines(Host* pHost, const QString& windowName, const int lineFrom, const int lineTo)
+{
+    if (!pHost) {
+        QStringList failMessage;
+        failMessage << QStringLiteral("internal error: the Host class pointer was a nullptr - please report").arg(windowName);
+        return qMakePair(false, failMessage);
+    }
+
+    if (windowName.isEmpty() || windowName == QLatin1String("main")) {
+        return qMakePair(true, pHost->mpConsole->getLines(lineFrom, lineTo));
+    }
+
+    QMap<QString, TConsole*>& dockWindowConsoleMap = mHostConsoleMap[pHost];
+    const auto window = dockWindowConsoleMap.constFind(windowName);
+    if (window != dockWindowConsoleMap.cend()) {
+        return qMakePair(true, window.value()->getLines(lineFrom, lineTo));
+    } else {
+        QStringList failMessage;
+        failMessage << QStringLiteral("mini console, user window or buffer \"%1\" not found").arg(windowName);
+        return qMakePair(false, failMessage);
+    }
+}

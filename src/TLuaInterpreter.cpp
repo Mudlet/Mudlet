@@ -944,31 +944,49 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLines
 int TLuaInterpreter::getLines(lua_State* L)
 {
-    int luaFrom;
-    if (!lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "getLines: bad argument #1 type (starting line to get as number expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    } else {
-        luaFrom = lua_tointeger(L, 1);
+    int n = lua_gettop(L);
+    int s = 0;
+    QString windowName = QLatin1String("main");
+    if (n > 2) {
+        if (!lua_isstring(L, ++s)) {
+            lua_pushfstring(L, "getLines: bad argument #%d type (mini console, user window or buffer name as string expected {may be omitted for the \"main\" console}, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
+        } else {
+            windowName = QString::fromUtf8(lua_tostring(L, s));
+        }
     }
 
-    int luaTo;
-    if (!lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "getLines: bad argument #2 type (end line to get as number expected, got %s!)", luaL_typename(L, 2));
+    int lineFrom;
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "getLines: bad argument #%d type (start line as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     } else {
-        luaTo = lua_tointeger(L, 2);
+        lineFrom = lua_tointeger(L, s);
+    }
+
+    int lineTo;
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "getLines: bad argument #%d type (end line as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    } else {
+        lineTo = lua_tointeger(L, s);
     }
     Host& host = getHostFromLua(L);
-    QStringList strList = host.mpConsole->getLines(luaFrom, luaTo);
-
-    lua_newtable(L);
-    for (int i = 0, total = strList.size(); i < total; ++i) {
-        lua_pushnumber(L, i + 1);
-        lua_pushstring(L, strList.at(i).toUtf8().constData());
-        lua_settable(L, -3);
+    QPair<bool, QStringList> result = mudlet::self()->getLines(&host, windowName, lineFrom, lineTo);
+    if (!result.first) {
+        // Only one QString in .second - the error message
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.at(0).toUtf8().constData());
+        return 2;
+    } else {
+        lua_newtable(L);
+        for (int i = 0, total = result.second.size(); i < total; ++i) {
+            lua_pushnumber(L, i + 1);
+            lua_pushstring(L, result.second.at(i).toUtf8().constData());
+            lua_settable(L, -3);
+        }
+        return 1;
     }
-    return 1;
 }
 
 
