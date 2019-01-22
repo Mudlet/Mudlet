@@ -233,6 +233,7 @@ public:
     QFont mDisplayFont;
     bool mEnableGMCP;
     bool mEnableMSDP;
+    bool mServerMXPenabled;
     QTextStream mErrorLogStream;
     QMap<QString, QList<TScript*>> mEventHandlerMap;
     bool mFORCE_GA_OFF;

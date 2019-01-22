@@ -363,7 +363,23 @@ function setGaugeText(gaugeName, gaugeText, r, g, b)
   gaugesTable[gaugeName].text = echoString
 end
 
+--- Set gauge to no longer intercept mouse events
+--- @param gaugeName
+function enableGaugeClickthrough(gaugeName)
+  assert(gaugesTable[gaugeName], "enableGaugeClickthrough: no such gauge exists.")
+  enableClickthrough(gaugeName .. "_back")
+  enableClickthrough(gaugeName .. "_front")
+  enableClickthrough(gaugeName .. "_text")
+end
 
+--- Set gauge to once again intercept mouse events
+--- @param gaugeName
+function disableGaugeClickthrough(gaugeName)
+  assert(gaugesTable[gaugeName], "disableGaugeClickthrough: no such gauge exists.")
+  disableClickthrough(gaugeName .. "_back")
+  disableClickthrough(gaugeName .. "_front")
+  disableClickthrough(gaugeName .. "_text")
+end
 
 --- Pads a hex number to ensure a minimum of 2 digits.
 ---

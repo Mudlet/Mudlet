@@ -81,6 +81,7 @@ cTelnet::cTelnet(Host* pH)
 , enableATCP(false)
 , enableGMCP(false)
 , enableChannel102(false)
+, mAutoReconnect(false)
 , loadingReplay(false)
 , mIsReplayRunFromLua(false)
 , mEncodingWarningIssued(false)
@@ -903,7 +904,7 @@ void cTelnet::processTelnetCommand(const string& command)
         if (option == OPT_MXP) {
             if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
                 sendTelnetOption(TN_DO, OPT_MXP);
-
+                mpHost->mServerMXPenabled = true;
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
                 break;
             }
@@ -996,6 +997,7 @@ void cTelnet::processTelnetCommand(const string& command)
 
             if (option == OPT_MXP) {
                 // MXP got turned off
+                mpHost->mServerMXPenabled = false;
                 raiseProtocolEvent("sysProtocolDisabled", "MXP");
             }
 
@@ -2084,6 +2086,7 @@ void cTelnet::handle_socket_signal_readyRead()
         if (mNeedDecompression) {
             datalen = decompressBuffer(in_buffer, amount, out_buffer);
             buffer = out_buffer;
+            //qDebug() << "buffer:" << buffer;
         }
         buffer[datalen] = '\0';
         if (mpHost->mpConsole->mRecordReplay) {

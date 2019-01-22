@@ -2350,6 +2350,10 @@ TConsole* TConsole::createMiniConsole(const QString& name, int x, int y, int wid
         pC->setFocusPolicy(Qt::NoFocus);
         pC->mUpperPane->setIsMiniConsole();
         pC->mLowerPane->setIsMiniConsole();
+        const auto& hostCommandLine = mpHost->mpConsole->mpCommandLine;
+        pC->setFocusProxy(hostCommandLine);
+        pC->mUpperPane->setFocusProxy(hostCommandLine);
+        pC->mLowerPane->setFocusProxy(hostCommandLine);
         pC->resize(width, height);
         pC->mOldX = x;
         pC->mOldY = y;
@@ -2364,7 +2368,7 @@ TConsole* TConsole::createMiniConsole(const QString& name, int x, int y, int wid
     }
 }
 
-TLabel* TConsole::createLabel(const QString& name, int x, int y, int width, int height, bool fillBackground)
+TLabel* TConsole::createLabel(const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
 {
     std::string key = name.toLatin1().data();
     if (mLabelMap.find(key) == mLabelMap.end()) {
@@ -2372,6 +2376,7 @@ TLabel* TConsole::createLabel(const QString& name, int x, int y, int width, int 
         mLabelMap[key] = pC;
         pC->setObjectName(name);
         pC->setAutoFillBackground(fillBackground);
+        pC->setClickThrough(clickThrough);
         pC->resize(width, height);
         pC->setContentsMargins(0, 0, 0, 0);
         pC->move(x, y);
