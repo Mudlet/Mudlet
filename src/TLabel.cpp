@@ -248,3 +248,8 @@ void TLabel::releaseParams(Host* pHost, TEvent& params) {
     }
 
 }
+
+void TLabel::setClickThrough(bool clickthrough)
+{
+    setAttribute(Qt::WA_TransparentForMouseEvents, clickthrough);
+}
