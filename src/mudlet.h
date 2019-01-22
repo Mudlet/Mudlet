@@ -358,6 +358,7 @@ public:
     void show_options_dialog(QString tab);
     void setInterfaceLanguage(const QString &languageCode);
     QList<QString> getAvailableTranslationCodes() const { return mTranslatorsMap.keys(); }
+    QPair<bool, QStringList> getLines(Host* pHost, const QString& windowName, const int lineFrom, const int lineTo);
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;

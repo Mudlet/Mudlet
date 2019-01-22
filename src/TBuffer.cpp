@@ -4040,8 +4040,9 @@ bool TBuffer::moveCursor(QPoint& where)
     return true;
 }
 
-QString badLineError = QString("ERROR: invalid line number");
-
+// Needed, at least, as a filler for missing lines past end of the lineBuffer
+// requested by lua function getLines(...):
+QString badLineError = QStringLiteral("ERROR: invalid line number");
 
 QString& TBuffer::line(int n)
 {
