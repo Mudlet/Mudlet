@@ -47,6 +47,7 @@ class dlgMapper;
 class Host;
 class TTextEdit;
 class TCommandLine;
+class TDockWidget;
 class TLabel;
 class TSplitter;
 class dlgNotepad;
@@ -214,7 +215,9 @@ public:
     TChar mFormatSystemMessage;
 
     int mIndentCount;
-    std::map<std::string, TLabel*> mLabelMap;
+    QMap<QString, TConsole*> mSubConsoleMap;
+    QMap<QString, TDockWidget*> mDockWidgetMap;
+    QMap<QString, TLabel*> mLabelMap;
     QFile mLogFile;
     QString mLogFileName;
     QTextStream mLogStream;
@@ -225,7 +228,6 @@ public:
     int mMainFrameTopHeight;
     int mOldX;
     int mOldY;
-
 
     TChar mFormatCurrent;
     QString mFormatSequenceRest;
@@ -248,8 +250,6 @@ public:
     QFile mReplayFile;
     QDataStream mReplayStream;
     TChar mStandardFormat;
-    QList<TConsole*> mSubConsoleList;
-    std::map<std::string, TConsole*> mSubConsoleMap;
 
     QColor mSystemMessageBgColor;
     QColor mSystemMessageFgColor;

@@ -50,7 +50,7 @@ class TTextEdit : public QWidget
 
 public:
     Q_DISABLE_COPY(TTextEdit)
-    TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isDebugConsole, bool isLowerPane);
+    TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isLowerPane);
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
     void drawForeground(QPainter&, const QRect&);
@@ -83,7 +83,6 @@ public:
     int bufferScrollDown(int lines);
 // Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b) { mBgColor = QColor(r, g, b); }
-    void setIsMiniConsole() { mIsMiniConsole = true; }
     void searchSelectionOnline();
     int getColumnCount();
     int getRowCount();
@@ -140,8 +139,6 @@ private:
     bool mHighlightingEnd;
     bool mInit_OK;
     bool mInversOn;
-    bool mIsDebugConsole;
-    bool mIsMiniConsole;
     // Each TConsole instance uses two instances of this class, one above the
     // other but they need to behave differently in some ways; this flag is set
     // or reset on creation and is used to adjust the behaviour depending on

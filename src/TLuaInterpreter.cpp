@@ -3713,7 +3713,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
     }
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        TConsole* pC = host.mpConsole;
+        auto pC = host.mpConsole;
         pC->mFormatCurrent.bgR = colorComponents.at(0);
         pC->mFormatCurrent.bgG = colorComponents.at(1);
         pC->mFormatCurrent.bgB = colorComponents.at(2);
@@ -7041,48 +7041,60 @@ int TLuaInterpreter::invokeFileDialog(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getTimestamp
 int TLuaInterpreter::getTimestamp(lua_State* L)
 {
-    int luaLine;
-    int args = lua_gettop(L);
-    int n = 1;
-    string name = "";
-    if (args < 1) {
-        return 0;
-    }
-    if (args == 2) {
-        if (lua_isstring(L, n)) {
-            name = lua_tostring(L, n);
-            n++;
+    int n = lua_gettop(L);
+    int s = 0;
+    QString name;
+    if (n > 1) {
+        if (!lua_isstring(L, ++s)) {
+            lua_pushfstring(L, "getTimestamp: bad argument #%d type (mini console, user window or buffer name as string expected {may be omitted for the \"main\" console}, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
+        } else {
+            name = QString::fromUtf8(lua_tostring(L, s));
+            if (name == QLatin1String("main")) {
+                // clear it so it is treated as the main console below
+                name.clear();
+            }
         }
     }
 
-    if (!lua_isnumber(L, n)) {
-        lua_pushstring(L, "getTimestamp: wrong argument type");
-        lua_error(L);
-        return 1;
+    qint64 luaLine;
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "getTimestamp: bad argument #%d type (line number as number expected, got %s!", s, luaL_typename(L, s));
+        return lua_error(L);
     } else {
         luaLine = lua_tointeger(L, n);
+        if (luaLine < 1) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "line number %d invalid, it should be greater than zero", luaLine);
+            return 2;
+        }
     }
+
     Host& host = getHostFromLua(L);
-    if (name.empty()) {
+    if (name.isEmpty()) {
         if (luaLine > 0 && luaLine < host.mpConsole->buffer.timeBuffer.size()) {
-            lua_pushstring(L, host.mpConsole->buffer.timeBuffer.at(luaLine).toLatin1().data());
+            // CHECK: Lua starts counting at 1 but we are indexing into a C/C++
+            // structure but the previous code did not accept a zero line number
+            lua_pushstring(L, host.mpConsole->buffer.timeBuffer.at(luaLine).toUtf8().constData());
         } else {
             lua_pushstring(L, "getTimestamp: invalid line number");
         }
         return 1;
-    }
-    QString _name = name.c_str();
-    QMap<QString, TConsole*>& dockWindowConsoleMap = mudlet::self()->mHostConsoleMap[&host];
-    if (dockWindowConsoleMap.contains(_name)) {
-        TConsole* pC = dockWindowConsoleMap[_name];
-        if (luaLine > 0 && luaLine < pC->buffer.timeBuffer.size()) {
-            lua_pushstring(L, pC->buffer.timeBuffer.at(luaLine).toLatin1().data());
+    } else {
+        auto pC = host.mpConsole->mSubConsoleMap.value(name);
+        if (pC) {
+            if (luaLine > 0 && luaLine < pC->buffer.timeBuffer.size()) {
+                lua_pushstring(L, pC->buffer.timeBuffer.at(luaLine).toUtf8().constData());
+            } else {
+                lua_pushstring(L, "getTimestamp: invalid line number");
+            }
+            return 1;
         } else {
-            lua_pushstring(L, "getTimestamp: invalid line number");
+            lua_pushnil(L);
+            lua_pushfstring(L, "mini console, user window or buffer \"%s\" not found", name.toUtf8().constData());
+            return 2;
         }
-        return 1;
     }
-    return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderColor
