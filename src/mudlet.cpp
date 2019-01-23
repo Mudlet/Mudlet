@@ -47,6 +47,7 @@
 #include "dlgPackageExporter.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
+#include "VarUnit.h"
 
 #include "pre_guard.h"
 #include <QtUiTools/quiloader.h>
@@ -3238,6 +3239,30 @@ void mudlet::processEventLoopHack_timerRun()
     pH->mpConsole->refresh();
 }
 
+void mudlet::hideMudletsVariables(Host* pHost)
+{
+    auto varUnit = pHost->getLuaInterface()->getVarUnit();
+
+    // remember which users' saved variables shouldn't be hidden
+    QVector<QString> unhideSavedVars;
+    for (const auto& variable : qAsConst(varUnit->savedVars)) {
+        if (!varUnit->isHidden(variable)) {
+            unhideSavedVars.append(variable);
+        }
+    }
+
+    // mark all currently loaded Lua variables as hidden
+    // this covers entirety of Mudlets API (good!) and but unfortunately
+    // user's saved variables as well
+    LuaInterface* lI = pHost->getLuaInterface();
+    lI->getVars(true);
+
+    // unhide user's saved variables
+    for (const auto& variable : qAsConst(unhideSavedVars)) {
+        varUnit->removeHidden(variable);
+    }
+}
+
 void mudlet::slot_connection_dlg_finished(const QString& profile, int historyVersion)
 {
     Host* pHost = getHostManager().getHost(profile);
@@ -3248,8 +3273,8 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, int historyVer
     addConsoleForNewHost(pHost);
     pHost->mBlockScriptCompile = false;
     pHost->mLuaInterpreter.loadGlobal();
-    LuaInterface* lI = pHost->getLuaInterface();
-    lI->getVars(true);
+    hideMudletsVariables(pHost);
+
     pHost->getScriptUnit()->compileAll();
     pHost->mIsProfileLoadingSequence = false;
 

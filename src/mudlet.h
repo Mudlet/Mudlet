@@ -215,6 +215,7 @@ public:
     int getColumnCount(Host* pHost, QString& name);
     int getRowCount(Host* pHost, QString& name);
     QStringList getAvailableFonts();
+    void hideMudletsVariables(Host *pHost);
 
     static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;
