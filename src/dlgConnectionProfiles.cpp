@@ -1651,8 +1651,7 @@ void dlgConnectionProfiles::slot_connectToServer()
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
     bool needsGenericPackagesInstall = false;
-    LuaInterface* lI = pHost->getLuaInterface();
-    lI->getVars(true);
+    mudlet::self()->hideMudletsVariables(pHost);
     if (!entries.isEmpty()) {
         QFile file(QStringLiteral("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString()));
         file.open(QFile::ReadOnly | QFile::Text);
