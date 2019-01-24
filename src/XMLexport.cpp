@@ -2,7 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
- *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -37,6 +37,7 @@
 
 #include "pre_guard.h"
 #include <QtConcurrent>
+#include <QFile>
 #include <fstream>
 #include <sstream>
 #include "post_guard.h"
@@ -129,62 +130,62 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
 
     auto triggerPackage = mudletPackage.append_child("TriggerPackage");
     //we go a level down for all these functions so as to not infinitely nest the module
-    for (auto it = pHost->mTriggerUnit.mTriggerRootNodeList.begin(); it != pHost->mTriggerUnit.mTriggerRootNodeList.end(); ++it) {
-        if (!(*it) || (*it)->mPackageName != moduleName) {
+    for (auto& it : pHost->mTriggerUnit.mTriggerRootNodeList) {
+        if (!it || it->mPackageName != moduleName) {
             continue;
         }
-        if (!(*it)->isTemporary() && (*it)->mModuleMember) {
-            writeTrigger(*it, triggerPackage);
+        if (!it->isTemporary() && it->mModuleMember) {
+            writeTrigger(it, triggerPackage);
         }
     }
 
     auto timerPackage = mudletPackage.append_child("TimerPackage");
-    for (auto it = pHost->mTimerUnit.mTimerRootNodeList.begin(); it != pHost->mTimerUnit.mTimerRootNodeList.end(); ++it) {
-        if (!(*it) || (*it)->mPackageName != moduleName) {
+    for (auto& it : pHost->mTimerUnit.mTimerRootNodeList) {
+        if (!it || it->mPackageName != moduleName) {
             continue;
         }
-        if (!(*it)->isTemporary() && (*it)->mModuleMember) {
-            writeTimer(*it, timerPackage);
+        if (!it->isTemporary() && it->mModuleMember) {
+            writeTimer(it, timerPackage);
         }
     }
 
     auto aliasPackage = mudletPackage.append_child("AliasPackage");
-    for (auto it = pHost->mAliasUnit.mAliasRootNodeList.begin(); it != pHost->mAliasUnit.mAliasRootNodeList.end(); ++it) {
-        if (!(*it) || (*it)->mPackageName != moduleName) {
+    for (auto& it : pHost->mAliasUnit.mAliasRootNodeList) {
+        if (!it || it->mPackageName != moduleName) {
             continue;
         }
-        if (!(*it)->isTemporary() && (*it)->mModuleMember) {
-            writeAlias(*it, aliasPackage);
+        if (!it->isTemporary() && it->mModuleMember) {
+            writeAlias(it, aliasPackage);
         }
     }
 
     auto actionPackage = mudletPackage.append_child("ActionPackage");
-    for (auto it = pHost->mActionUnit.mActionRootNodeList.begin(); it != pHost->mActionUnit.mActionRootNodeList.end(); ++it) {
-        if (!(*it) || (*it)->mPackageName != moduleName) {
+    for (auto& it : pHost->mActionUnit.mActionRootNodeList) {
+        if (!it || it->mPackageName != moduleName) {
             continue;
         }
-        if ((*it)->mModuleMember) {
-            writeAction(*it, actionPackage);
+        if (it->mModuleMember) {
+            writeAction(it, actionPackage);
         }
     }
 
     auto scriptPackage = mudletPackage.append_child("ScriptPackage");
-    for (auto it = pHost->mScriptUnit.mScriptRootNodeList.begin(); it != pHost->mScriptUnit.mScriptRootNodeList.end(); ++it) {
-        if (!(*it) || (*it)->mPackageName != moduleName) {
+    for (auto& it : pHost->mScriptUnit.mScriptRootNodeList) {
+        if (!it || it->mPackageName != moduleName) {
             continue;
         }
-        if ((*it)->mModuleMember) {
-            writeScript(*it, scriptPackage);
+        if (it->mModuleMember) {
+            writeScript(it, scriptPackage);
         }
     }
 
     auto keyPackage = mudletPackage.append_child("KeyPackage");
-    for (auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it) {
-        if (!(*it) || (*it)->mPackageName != moduleName) {
+    for (auto& it : pHost->mKeyUnit.mKeyRootNodeList) {
+        if (!it || it->mPackageName != moduleName) {
             continue;
         }
-        if (!(*it)->isTemporary() && (*it)->mModuleMember) {
-            writeKey(*it, keyPackage);
+        if (!it->isTemporary() && it->mModuleMember) {
+            writeKey(it, keyPackage);
         }
     }
 
@@ -215,26 +216,6 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
 }
 
 // credit: https://stackoverflow.com/a/29752943/72944
-void inline XMLexport::replaceAll(std::string& source, const char from, const std::string& to)
-{
-    std::string newString;
-    newString.reserve(source.length()); // avoids a few memory allocations
-
-    std::string::size_type lastPos = 0;
-    std::string::size_type findPos;
-
-    while (std::string::npos != (findPos = source.find(from, lastPos))) {
-        newString.append(source, lastPos, findPos - lastPos);
-        newString += to;
-        lastPos = findPos + 1;
-    }
-
-    // Care for the rest after last occurrence
-    newString += source.substr(lastPos);
-
-    source.swap(newString);
-}
-
 void inline XMLexport::replaceAll(std::string& source, const std::string& from, const std::string& to)
 {
     std::string newString;
@@ -262,13 +243,21 @@ void XMLexport::sanitizeForQxml(std::string& output)
 {
     QMap<std::string, std::string> replacements{
             {"&#1;", "\uFFFC\u2401"},   // SOH
+            {"&#01;", "\uFFFC\u2401"},   // SOH
             {"&#2;", "\uFFFC\u2402"},   // STX
+            {"&#02;", "\uFFFC\u2402"},   // STX
             {"&#3;", "\uFFFC\u2403"},   // ETX
+            {"&#03;", "\uFFFC\u2403"},   // ETX
             {"&#4;", "\uFFFC\u2404"},   // EOT
+            {"&#04;", "\uFFFC\u2404"},   // EOT
             {"&#5;", "\uFFFC\u2405"},   // ENQ
+            {"&#05;", "\uFFFC\u2405"},   // ENQ
             {"&#6;", "\uFFFC\u2406"},   // ACK
+            {"&#06;", "\uFFFC\u2406"},   // ACK
             {"&#7;", "\uFFFC\u2407"},   // BEL
+            {"&#07;", "\uFFFC\u2407"},   // BEL
             {"&#8;", "\uFFFC\u2408"},   // BS
+            {"&#08;", "\uFFFC\u2408"},   // BS
             {"&#11;", "\uFFFC\u240B"},  // VT
             {"&#12;", "\uFFFC\u240C"},  // FF
             {"&#14;", "\uFFFC\u240E"},  // SS
@@ -292,39 +281,75 @@ void XMLexport::sanitizeForQxml(std::string& output)
             {"&#127;", "\uFFFC\u2421"}, // DEL
     };
 
-    QMutableMapIterator<std::string, std::string> searching(replacements);
-    while (searching.hasNext()) {
-        if (output.find(searching.next().key()) == std::string::npos) {
-            searching.remove();
+    // Look for each replacement in data and if not present remove it from the
+    // list of things to replace
+    QMutableMapIterator<std::string, std::string> itReplacement(replacements);
+    while (itReplacement.hasNext()) {
+        itReplacement.next();
+        if (output.find(itReplacement.key()) == std::string::npos) {
+            itReplacement.remove();
         }
     }
 
-    QMapIterator<std::string, std::string> replacing(replacements);
-    while (replacing.hasNext()) {
-        replacing.next();
-        replaceAll(output, replacing.key(), replacing.value());
+    if (!replacements.isEmpty()) {
+        // There is at least one thing left in the QMap of replacements and we
+        // can use the same iterator if we reset it to the start of the
+        // remaining replacements:
+        itReplacement.toFront();
+        while (itReplacement.hasNext()) {
+            itReplacement.next();
+            replaceAll(output, itReplacement.key(), itReplacement.value());
+        }
     }
 }
 
 bool XMLexport::saveXml(const QString& fileName)
 {
-    std::stringstream saveStringStream(ios::out);
-    std::string output;
+    QFile file(fileName);
 
-    mExportDoc.save(saveStringStream);
-    output = saveStringStream.str();
-
-    sanitizeForQxml(output);
-
-    // only open the output file stream once we're ready to save
-    // this avoids a blank file in case serialisation crashed
-    std::ofstream saveFileStream(fileName.toUtf8().constData());
-    saveFileStream << output;
-
-    if (saveFileStream.bad()) {
+    if (!file.open(QFile::WriteOnly)) {
+        qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to open file, reason: " << file.errorString() << ".";
         return false;
     }
-    return true;
+
+    bool result = false;
+    if (!saveXmlFile(file)) {
+        if (file.error() != QFile::NoError) {
+            // Error reason was related to QFile:
+            qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to save package, reason: " << file.errorString() << ".";
+        } else {
+            // Error was due to failure in document preparation
+            qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to save package, reason: XML document preparation failure.";
+        }
+    }
+    file.close();
+    return result;
+}
+
+// This has been factored out to a separate method from saveXml(const QString&)
+// because there are situations where we have a QFile instance already and
+// just passing a filename and then creating another QFile instance on the
+// same file in the filesystem is less than optimum.
+// TODO: Refactor dlgTriggerEditor::slot_export() {at least} to call this method instead of saveXml(const QString&)
+bool XMLexport::saveXmlFile(QFile& file)
+{
+    std::stringstream saveStringStream(ios::out);
+    // Remember, the mExportDoc is the data in the form of a pugi::xml_document
+    // instance - the save method needs a stream that impliments the
+    // std::ostream interface into which it can push the data:
+    mExportDoc.save(saveStringStream);
+    // We need to do our own replacement of ASCII control characters that are
+    // not valid in XML verison 1.0 and that means we cannot use the pugixml
+    // file methods as it does that in a different way which is not helpful
+    // as we do not use that library for READING the XML files - so convert
+    // the data to a std::string :
+    std::string output(saveStringStream.str());
+    // Then do the control character replacement:
+    sanitizeForQxml(output);
+    // Now we can use Qt's file handling which does handle non-Latin1 named
+    // files - which MinGW's STL file handling (on Windows platform) does not:
+    file.write(output.data());
+    return file.error() == QFile::NoError;
 }
 
 QString XMLexport::saveXml()
@@ -346,7 +371,6 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     auto host = hostPackage.append_child("Host");
 
     host.append_attribute("autoClearCommandLineAfterSend") = pHost->mAutoClearCommandLineAfterSend ? "yes" : "no";
-    host.append_attribute("disableAutoCompletion") = pHost->mDisableAutoCompletion ? "yes" : "no";
     host.append_attribute("printCommand") = pHost->mPrintCommand ? "yes" : "no";
     host.append_attribute("USE_IRE_DRIVER_BUGFIX") = pHost->mUSE_IRE_DRIVER_BUGFIX ? "yes" : "no";
     host.append_attribute("mUSE_FORCE_LF_AFTER_PROMPT") = pHost->mUSE_FORCE_LF_AFTER_PROMPT ? "yes" : "no";
@@ -376,6 +400,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mAcceptServerGUI") = pHost->mAcceptServerGUI ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
     host.append_attribute("mFORCE_MXP_NEGOTIATION_OFF") = pHost->mFORCE_MXP_NEGOTIATION_OFF ? "yes" : "no";
+    host.append_attribute("enableTextAnalyzer") = pHost->mEnableTextAnalyzer ? "yes" : "no";
     host.append_attribute("mRoomSize") = QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mLineSize") = QString::number(pHost->mLineSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mBubbleMode") = pHost->mBubbleMode ? "yes" : "no";
@@ -387,6 +412,17 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mThemePreviewItemID") = QString::number(pHost->mThemePreviewItemID).toUtf8().constData();
     host.append_attribute("mThemePreviewType") = pHost->mThemePreviewType.toUtf8().constData();
     host.append_attribute("mSearchEngineName") = pHost->mSearchEngineName.toUtf8().constData();
+    host.append_attribute("mTimerSupressionInterval") = pHost->mTimerDebugOutputSuppressionInterval.toString(QLatin1String("HH:mm:ss.zzz")).toUtf8().constData();
+    host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";
+    host.append_attribute("mAutoReconnect") = pHost->mAutoReconnect ? "yes" : "no";
+    host.append_attribute("mSslIgnoreExpired") = pHost->mSslIgnoreExpired ? "yes" : "no";
+    host.append_attribute("mSslIgnoreSelfSigned") = pHost->mSslIgnoreSelfSigned ? "yes" : "no";
+    host.append_attribute("mSslIgnoreAll") = pHost->mSslIgnoreAll ? "yes" : "no";
+    host.append_attribute("mDiscordAccessFlags") = QString::number(pHost->mDiscordAccessFlags).toUtf8().constData();
+    host.append_attribute("mRequiredDiscordUserName") = pHost->mRequiredDiscordUserName.toUtf8().constData();
+    host.append_attribute("mRequiredDiscordUserDiscriminator") = pHost->mRequiredDiscordUserDiscriminator.toUtf8().constData();
+    host.append_attribute("mSGRCodeHasColSpaceId") = pHost->getHaveColorSpaceId() ? "yes" : "no";
+    host.append_attribute("mServerMayRedefineColors") = pHost->getMayRedefineColors() ? "yes" : "no";
 
     QString ignore;
     QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
@@ -423,7 +459,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
 
         host.append_child("url").text().set(pHost->mUrl.toUtf8().constData());
         host.append_child("serverPackageName").text().set(pHost->mServerGUI_Package_name.toUtf8().constData());
-        host.append_child("serverPackageVersion").text().set(QString::number(pHost->mServerGUI_Package_version).toUtf8().constData());
+        host.append_child("serverPackageVersion").text().set(pHost->mServerGUI_Package_version.toUtf8().constData());
         host.append_child("port").text().set(QString::number(pHost->mPort).toUtf8().constData());
         host.append_child("borderTopHeight").text().set(QString::number(pHost->mBorderTopHeight).toUtf8().constData());
         host.append_child("borderBottomHeight").text().set(QString::number(pHost->mBorderBottomHeight).toUtf8().constData());
@@ -527,45 +563,45 @@ void XMLexport::writeVariablePackage(Host* pHost, pugi::xml_node& mudletPackage)
 void XMLexport::writeKeyPackage(const Host* pHost, pugi::xml_node& mudletPackage, bool skipModuleMembers)
 {
     auto keyPackage = mudletPackage.append_child("KeyPackage");
-    for (auto it = pHost->mKeyUnit.mKeyRootNodeList.begin(); it != pHost->mKeyUnit.mKeyRootNodeList.end(); ++it) {
-        if (!(*it) || (*it)->isTemporary() || (skipModuleMembers && (*it)->mModuleMember)) {
+    for (auto it : pHost->mKeyUnit.mKeyRootNodeList) {
+        if (!it || it->isTemporary() || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
-        writeKey(*it, keyPackage);
+        writeKey(it, keyPackage);
     }
 }
 
 void XMLexport::writeScriptPackage(const Host* pHost, pugi::xml_node& mudletPackage, bool skipModuleMembers)
 {
     auto scriptPackage = mudletPackage.append_child("ScriptPackage");
-    for (auto it = pHost->mScriptUnit.mScriptRootNodeList.begin(); it != pHost->mScriptUnit.mScriptRootNodeList.end(); ++it) {
-        if (!(*it) || (skipModuleMembers && (*it)->mModuleMember)) {
+    for (auto it : pHost->mScriptUnit.mScriptRootNodeList) {
+        if (!it || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
-        writeScript(*it, scriptPackage);
+        writeScript(it, scriptPackage);
     }
 }
 
 void XMLexport::writeActionPackage(const Host* pHost, pugi::xml_node& mudletPackage, bool skipModuleMembers)
 {
     auto actionPackage = mudletPackage.append_child("ActionPackage");
-    for (auto it = pHost->mActionUnit.mActionRootNodeList.begin(); it != pHost->mActionUnit.mActionRootNodeList.end(); ++it) {
-        if (!(*it) || (skipModuleMembers && (*it)->mModuleMember)) {
+    for (auto it : pHost->mActionUnit.mActionRootNodeList) {
+        if (!it || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
-        writeAction(*it, actionPackage);
+        writeAction(it, actionPackage);
     }
 }
 
 void XMLexport::writeAliasPackage(const Host* pHost, pugi::xml_node& mudletPackage, bool skipModuleMembers)
 {
     auto aliasPackage = mudletPackage.append_child("AliasPackage");
-    for (auto it = pHost->mAliasUnit.mAliasRootNodeList.begin(); it != pHost->mAliasUnit.mAliasRootNodeList.end(); ++it) {
-        if (!(*it) || (skipModuleMembers && (*it)->mModuleMember)) {
+    for (auto it : pHost->mAliasUnit.mAliasRootNodeList) {
+        if (!it || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
-        if (!(*it)->isTemporary()) {
-            writeAlias(*it, aliasPackage);
+        if (!it->isTemporary()) {
+            writeAlias(it, aliasPackage);
         }
     }
 }
@@ -573,12 +609,12 @@ void XMLexport::writeAliasPackage(const Host* pHost, pugi::xml_node& mudletPacka
 void XMLexport::writeTimerPackage(const Host* pHost, pugi::xml_node& mudletPackage, bool skipModuleMembers)
 {
     auto timerPackage = mudletPackage.append_child("TimerPackage");
-    for (auto it = pHost->mTimerUnit.mTimerRootNodeList.begin(); it != pHost->mTimerUnit.mTimerRootNodeList.end(); ++it) {
-        if (!(*it) || (skipModuleMembers && (*it)->mModuleMember)) {
+    for (auto it : pHost->mTimerUnit.mTimerRootNodeList) {
+        if (!it || (skipModuleMembers && it->mModuleMember)) {
             continue;
         }
-        if (!(*it)->isTemporary()) {
-            writeTimer(*it, timerPackage);
+        if (!it->isTemporary()) {
+            writeTimer(it, timerPackage);
         }
     }
 }
@@ -586,12 +622,12 @@ void XMLexport::writeTimerPackage(const Host* pHost, pugi::xml_node& mudletPacka
 void XMLexport::writeTriggerPackage(const Host* pHost, pugi::xml_node& mudletPackage, bool ignoreModuleMembers)
 {
     auto triggerPackage = mudletPackage.append_child("TriggerPackage");
-    for (auto it = pHost->mTriggerUnit.mTriggerRootNodeList.begin(); it != pHost->mTriggerUnit.mTriggerRootNodeList.end(); ++it) {
-        if (!(*it) || (ignoreModuleMembers && (*it)->mModuleMember)) {
+    for (auto it : pHost->mTriggerUnit.mTriggerRootNodeList) {
+        if (!it || (ignoreModuleMembers && it->mModuleMember)) {
             continue;
         }
-        if (!(*it)->isTemporary()) {
-            writeTrigger(*it, triggerPackage);
+        if (!it->isTemporary()) {
+            writeTrigger(it, triggerPackage);
         }
     }
 }
@@ -622,7 +658,7 @@ void XMLexport::writeVariable(TVar* pVar, LuaInterface* pLuaInterface, VarUnit* 
     }
 }
 
-bool XMLexport::exportGenericPackage(const QString& exportFileName)
+bool XMLexport::exportProfile(const QString& exportFileName)
 {
     auto mudletPackage = writeXmlHeader();
 
@@ -635,6 +671,19 @@ bool XMLexport::exportGenericPackage(const QString& exportFileName)
 
         return true;
     }
+
+    return false;
+}
+
+bool XMLexport::exportPackage(const QString& exportFileName)
+{
+    auto mudletPackage = writeXmlHeader();
+
+    if (writeGenericPackage(mpHost, mudletPackage)) {
+        return saveXml(exportFileName);
+    }
+
+    return false;
 }
 
 bool XMLexport::writeGenericPackage(Host* pHost, pugi::xml_node& mudletPackage)
@@ -734,11 +783,7 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
             }
 
             auto regexCodePropertyList = trigger.append_child("regexCodePropertyList");
-#if QT_VERSION < QT_VERSION_CHECK(5, 7, 0)
-            for (int i : pT->mRegexCodePropertyList) {
-#else
             for (int i : qAsConst(pT->mRegexCodePropertyList)) {
-#endif
                 regexCodePropertyList.append_child("integer").text().set(QString::number(i).toUtf8().constData());
             }
         }

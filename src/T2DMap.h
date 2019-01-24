@@ -70,13 +70,14 @@ public:
     // mMultiSelectionHighlightRoomId and returns a (bool) on success or failure
     // to do so.
     bool getCenterSelection();
+    int getCenterSelectedRoomId() const { return mMultiSelectionHighlightRoomId; }
 
     void setRoomSize(double);
     void setExitSize(double);
-    void createLabel(QRectF labelRect);
+    void createLabel(QRectF labelRectangle);
     // Clears cache so new symbols are built at next paintEvent():
     void flushSymbolPixmapCache() {mSymbolPixmapCache.clear();}
-    void addSymbolToPixmapCache(QString, bool);
+    void addSymbolToPixmapCache(const QString, const bool);
 
 
     TMap* mpMap;
@@ -88,7 +89,7 @@ public:
     bool mPick;
     int mTarget;
     bool mStartSpeedWalk;
-    QMap<int, QPoint> mAreaExitList;
+    QMap<int, QPoint> mAreaExitsList;
 
     // string list: 0 is event name, 1 is menu it is under if it is
     QMap<QString, QStringList> mUserActions;
@@ -101,8 +102,8 @@ public:
     // room symbol, (for the non-grid map mode case what gets filled in is
     // multipled by rsize which is 1.0 to exactly fill space between adjacent
     // coordinates):
-    float mTX;
-    float mTY;
+    float mRoomWidth;
+    float mRoomHeight;
     int mChosenRoomColor;
     float xspan;
     float yspan;
@@ -123,8 +124,8 @@ public:
     int gzoom;
     double rSize;
     double eSize;
-    int mRID;
-    int mAID;
+    int mRoomID;
+    int mAreaID;
     int mOx;
     int mOy;
     int mOz;
@@ -135,15 +136,20 @@ public:
     int mCustomLinesRoomFrom;
     int mCustomLinesRoomTo;
     QString mCustomLinesRoomExit;
-    QComboBox* mpCurrentLineStyle;
-    QString mCurrentLineStyle;
-    QPushButton* mpCurrentLineColor;
+
+    // Pointers to controls that hold the settings
+    QPointer<QComboBox> mpCurrentLineStyle;
+    QPointer<QPushButton> mpCurrentLineColor;
+    QPointer<QCheckBox> mpCurrentLineArrow;
+
+    // Variables that hold the current or last used setting:
+    Qt::PenStyle mCurrentLineStyle;
     QColor mCurrentLineColor;
-    QCheckBox* mpCurrentLineArrow;
     bool mCurrentLineArrow;
+
     bool mBubbleMode;
     bool mMapperUseAntiAlias;
-    bool mLabelHilite;
+    bool mLabelHighlighted;
     bool mMoveLabel;
     int mCustomLineSelectedRoom;
     QString mCustomLineSelectedExit;
@@ -154,7 +160,6 @@ public:
     QString mHelpMsg;
 
 public slots:
-
     void slot_roomSelectionChanged();
     void slot_deleteCustomExitLine();
     void slot_moveLabel();
@@ -165,7 +170,7 @@ public slots:
     void slot_customLineColor();
     void shiftZup();
     void shiftZdown();
-    void slot_switchArea(QString);
+    void slot_switchArea(const QString&);
     void toggleShiftMode();
     void shiftUp();
     void shiftDown();
@@ -216,7 +221,8 @@ private:
     // modifications. {for slot_spread(),
     // slot_shrink(), slot_setUserData() - if ever
     // implemented, slot_setExits(),
-    // slot_movePosition(), etc.}
+    // slot_movePosition(), etc.} - previously have
+    // used -1 but is now reset to 0 if it is not valid.
     int mMultiSelectionHighlightRoomId;
 
     bool mIsSelectionSorting;
@@ -230,6 +236,13 @@ private:
     QCache<QString, QPixmap> mSymbolPixmapCache;
     ushort mSymbolFontSize;
     QFont mMapSymbolFont;
+
+    QPointer<QAction> mpCreateRoomAction;
+
+    std::pair<int, int> getMousePosition();
+
+private slots:
+    void slot_createRoom();
 };
 
 #endif // MUDLET_T2DMAP_H

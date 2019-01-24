@@ -44,8 +44,8 @@ TToolBar::TToolBar(TAction* pA, const QString& name, QWidget* pW)
     setWidget(mpWidget);
     setObjectName(QString("dockToolBar_%1").arg(name));
 
-    connect(this, SIGNAL(dockLocationChanged(Qt::DockWidgetArea)), this, SLOT(slot_dockLocationChanged(Qt::DockWidgetArea)));
-    connect(this, SIGNAL(topLevelChanged(bool)), this, SLOT(slot_topLevelChanged(bool)));
+    connect(this, &QDockWidget::dockLocationChanged, this, &TToolBar::slot_dockLocationChanged);
+    connect(this, &QDockWidget::topLevelChanged, this, &TToolBar::slot_topLevelChanged);
 
     if (!mpTAction->mUseCustomLayout) {
         mpLayout = new QGridLayout(mpWidget);
@@ -154,7 +154,7 @@ void TToolBar::addButton(TFlipButton* pB)
 
     // Was using pressed() signal but now we want to track the ACTUAL state of
     // the underlying QAbstractButton
-    connect(pB, SIGNAL(clicked(const bool)), this, SLOT(slot_pressed(const bool)));
+    connect(pB, &QAbstractButton::clicked, this, &TToolBar::slot_pressed);
 }
 
 void TToolBar::finalize()

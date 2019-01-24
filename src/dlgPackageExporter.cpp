@@ -60,6 +60,20 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
     ui->setupUi(this);
     treeWidget = ui->treeWidget;
 
+    mpTriggers = new QTreeWidgetItem({tr("Triggers")});
+    mpAliases = new QTreeWidgetItem({tr("Aliases")});
+    mpTimers = new QTreeWidgetItem({tr("Timers")});
+    mpScripts = new QTreeWidgetItem({tr("Scripts")});
+    mpKeys = new QTreeWidgetItem({tr("Keys")});
+    mpButtons = new QTreeWidgetItem({tr("Buttons")});
+
+    treeWidget->addTopLevelItem(mpTriggers);
+    treeWidget->addTopLevelItem(mpAliases);
+    treeWidget->addTopLevelItem(mpTimers);
+    treeWidget->addTopLevelItem(mpScripts);
+    treeWidget->addTopLevelItem(mpKeys);
+    treeWidget->addTopLevelItem(mpButtons);
+
     closeButton = ui->buttonBox->addButton(QDialogButtonBox::Close);
     exportButton = new QPushButton(tr("&Export"));
 
@@ -68,17 +82,17 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
     ui->textLabel1->hide();
 
     // reset zipFile and filePath from possible previous use
-    zipFile = filePath = "";
+    zipFile = filePath = QLatin1String("");
 
-    packageName = QInputDialog::getText(nullptr, "Package name", "Package name:");
+    packageName = QInputDialog::getText(nullptr, tr("Package name"), tr("Package name:"));
     if (packageName.isEmpty()) {
         return;
     }
-    QString packagePath = QFileDialog::getExistingDirectory(nullptr, "Where do you want to save the package?", "Where do you want to save the package?");
+    QString packagePath = QFileDialog::getExistingDirectory(nullptr, tr("Where do you want to save the package?"), tr("Where do you want to save the package?"));
     if (packagePath.isEmpty()) {
         return;
     }
-    packagePath.replace(R"(\)", "/");
+    packagePath.replace(QLatin1String(R"(\)"), QLatin1String("/"));
 
     tempDir = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("tmp/%1").arg(packageName));
     QDir packageDir = QDir(tempDir);
@@ -134,8 +148,7 @@ void dlgPackageExporter::slot_export_package()
 
     XMLexport writer(mpHost);
     //write trigs
-    QList<QTreeWidgetItem*> items = treeWidget->findItems(QStringLiteral("Triggers"), Qt::MatchExactly, 0);
-    QTreeWidgetItem* top = items.first();
+    QTreeWidgetItem* top = mpTriggers;
     QList<QTreeWidgetItem*> trigList;
     recurseTree(top, trigList);
     for (auto item : trigList) {
@@ -146,8 +159,7 @@ void dlgPackageExporter::slot_export_package()
             modTriggerMap.insert(item, triggerMap[item]);
         }
     }
-    items = treeWidget->findItems(QStringLiteral("Timers"), Qt::MatchExactly, 0);
-    top = items.first();
+    top = mpTimers;
     QList<QTreeWidgetItem*> timerList;
     recurseTree(top, timerList);
     for (auto item : timerList) {
@@ -158,11 +170,10 @@ void dlgPackageExporter::slot_export_package()
             modTimerMap.insert(item, timerMap[item]);
         }
     }
-    items = treeWidget->findItems(QStringLiteral("Aliases"), Qt::MatchExactly, 0);
-    top = items.first();
+    top = mpAliases;
     QList<QTreeWidgetItem*> aliasList;
     recurseTree(top, aliasList);
-    for (auto item : aliasList) {
+    for (auto item : qAsConst(aliasList)) {
         if (item->checkState(0) == Qt::Unchecked && aliasMap.contains(item)) {
             aliasMap[item]->exportItem = false;
         } else if (item->checkState(0) == Qt::Checked && aliasMap.contains(item) && aliasMap[item]->mModuleMasterFolder) {
@@ -170,11 +181,10 @@ void dlgPackageExporter::slot_export_package()
             modAliasMap.insert(item, aliasMap[item]);
         }
     }
-    items = treeWidget->findItems(QStringLiteral("Buttons"), Qt::MatchExactly, 0);
-    top = items.first();
+    top = mpButtons;
     QList<QTreeWidgetItem*> actionList;
     recurseTree(top, actionList);
-    for (auto item : actionList) {
+    for (auto item : qAsConst(actionList)) {
         if (item->checkState(0) == Qt::Unchecked && actionMap.contains(item)) {
             actionMap[item]->exportItem = false;
         } else if (item->checkState(0) == Qt::Checked && actionMap.contains(item) && actionMap[item]->mModuleMasterFolder) {
@@ -182,11 +192,10 @@ void dlgPackageExporter::slot_export_package()
             modActionMap.insert(item, actionMap[item]);
         }
     }
-    items = treeWidget->findItems(QStringLiteral("Scripts"), Qt::MatchExactly, 0);
-    top = items.first();
+    top = mpScripts;
     QList<QTreeWidgetItem*> scriptList;
     recurseTree(top, scriptList);
-    for (auto item : scriptList) {
+    for (auto item : qAsConst(scriptList)) {
         if (item->checkState(0) == Qt::Unchecked && scriptMap.contains(item)) {
             scriptMap[item]->exportItem = false;
         } else if (item->checkState(0) == Qt::Checked && scriptMap.contains(item) && scriptMap[item]->mModuleMasterFolder) {
@@ -194,11 +203,10 @@ void dlgPackageExporter::slot_export_package()
             modScriptMap.insert(item, scriptMap[item]);
         }
     }
-    items = treeWidget->findItems(QStringLiteral("Keys"), Qt::MatchExactly, 0);
-    top = items.first();
+    top = mpKeys;
     QList<QTreeWidgetItem*> keyList;
     recurseTree(top, keyList);
-    for (auto item : keyList) {
+    for (auto item : qAsConst(keyList)) {
         if (item->checkState(0) == Qt::Unchecked && keyMap.contains(item)) {
             keyMap[item]->exportItem = false;
         } else if (item->checkState(0) == Qt::Checked && keyMap.contains(item) && keyMap[item]->mModuleMasterFolder) {
@@ -207,11 +215,11 @@ void dlgPackageExporter::slot_export_package()
         }
     }
 
-    writer.exportGenericPackage(filePath);
+    writer.exportPackage(filePath);
 
     //now fix all the stuff we weren't exporting
     //trigger, timer, alias,action,script, keys
-    for (auto item : trigList) {
+    for (auto item : qAsConst(trigList)) {
         if (triggerMap.contains(item)) {
             triggerMap[item]->exportItem = true;
         }
@@ -219,7 +227,7 @@ void dlgPackageExporter::slot_export_package()
             modTriggerMap[item]->mModuleMasterFolder = true;
         }
     }
-    for (auto item : timerList) {
+    for (auto item : qAsConst(timerList)) {
         if (timerMap.contains(item)) {
             timerMap[item]->exportItem = true;
         }
@@ -227,7 +235,7 @@ void dlgPackageExporter::slot_export_package()
             modTimerMap[item]->mModuleMasterFolder = true;
         }
     }
-    for (auto item : actionList) {
+    for (auto item : qAsConst(actionList)) {
         if (actionMap.contains(item)) {
             actionMap[item]->exportItem = true;
         }
@@ -235,7 +243,7 @@ void dlgPackageExporter::slot_export_package()
             modActionMap[item]->mModuleMasterFolder = true;
         }
     }
-    for (auto item : scriptList) {
+    for (auto item : qAsConst(scriptList)) {
         if (scriptMap.contains(item)) {
             scriptMap[item]->exportItem = true;
         }
@@ -243,7 +251,7 @@ void dlgPackageExporter::slot_export_package()
             modScriptMap[item]->mModuleMasterFolder = true;
         }
     }
-    for (auto item : keyList) {
+    for (auto item : qAsConst(keyList)) {
         if (keyMap.contains(item)) {
             keyMap[item]->exportItem = true;
         }
@@ -251,7 +259,7 @@ void dlgPackageExporter::slot_export_package()
             modKeyMap[item]->mModuleMasterFolder = true;
         }
     }
-    for (auto item : aliasList) {
+    for (auto item : qAsConst(aliasList)) {
         if (aliasMap.contains(item)) {
             aliasMap[item]->exportItem = true;
         }
@@ -286,7 +294,7 @@ void dlgPackageExporter::slot_export_package()
             zip_error_to_str(buf, sizeof(buf), err, errno);
             //FIXME: report error to userqDebug()<<"zip source error"<<fullName<<fname<<buf;
         }
-        err = zip_add(archive, fname.toStdString().c_str(), s);
+        err = zip_file_add(archive, fname.toStdString().c_str(), s, ZIP_FL_OVERWRITE);
         if (err == -1) {
             int sep = 0;
             zip_error_get(archive, &err, &sep);
@@ -302,7 +310,16 @@ void dlgPackageExporter::slot_export_package()
         return;
     }
 
-    close();
+    showUploadNudge();
+
+}
+
+void dlgPackageExporter::showUploadNudge()
+{
+   ui->infoLabel->setText(R"(<a href="https://forums.mudlet.org/posting.php?mode=post&f=6">Upload package to Mudlet</a>)");
+   ui->infoLabel->setTextFormat(Qt::RichText);
+   ui->infoLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
+   ui->infoLabel->setOpenExternalLinks(true);
 }
 
 void dlgPackageExporter::slot_addFiles()
@@ -338,8 +355,7 @@ void dlgPackageExporter::listTriggers()
     TriggerUnit* tu = mpHost->getTriggerUnit();
     list<TTrigger*>::const_iterator it;
     std::list<TTrigger*> tList = tu->getTriggerRootNodeList();
-    QList<QTreeWidgetItem*> items = treeWidget->findItems(QString("Triggers"), Qt::MatchExactly, 0);
-    QTreeWidgetItem* top = items.first();
+    QTreeWidgetItem* top = mpTriggers;
     for (it = tList.begin(); it != tList.end(); it++) {
         TTrigger* pChild = *it;
         if (pChild->isTemporary()) {
@@ -384,8 +400,7 @@ void dlgPackageExporter::listAliases()
     AliasUnit* tu = mpHost->getAliasUnit();
     list<TAlias*>::const_iterator it;
     std::list<TAlias*> tList = tu->getAliasRootNodeList();
-    QList<QTreeWidgetItem*> items = treeWidget->findItems(QString("Aliases"), Qt::MatchExactly, 0);
-    QTreeWidgetItem* top = items.first();
+    QTreeWidgetItem* top = mpAliases;
     for (it = tList.begin(); it != tList.end(); it++) {
         TAlias* pChild = *it;
         if (pChild->isTemporary()) {
@@ -427,8 +442,7 @@ void dlgPackageExporter::listScripts()
     ScriptUnit* tu = mpHost->getScriptUnit();
     list<TScript*>::const_iterator it;
     std::list<TScript*> tList = tu->getScriptRootNodeList();
-    QList<QTreeWidgetItem*> items = treeWidget->findItems(QString("Scripts"), Qt::MatchExactly, 0);
-    QTreeWidgetItem* top = items.first();
+    QTreeWidgetItem* top = mpScripts;
     for (it = tList.begin(); it != tList.end(); it++) {
         TScript* pChild = *it;
         QStringList sl;
@@ -469,8 +483,7 @@ void dlgPackageExporter::listKeys()
     KeyUnit* tu = mpHost->getKeyUnit();
     list<TKey*>::const_iterator it;
     std::list<TKey*> tList = tu->getKeyRootNodeList();
-    QList<QTreeWidgetItem*> items = treeWidget->findItems(QString("Keys"), Qt::MatchExactly, 0);
-    QTreeWidgetItem* top = items.first();
+    QTreeWidgetItem* top = mpKeys;
     for (it = tList.begin(); it != tList.end(); it++) {
         TKey* pChild = *it;
         if (pChild->isTemporary())
@@ -511,8 +524,7 @@ void dlgPackageExporter::listActions()
     ActionUnit* tu = mpHost->getActionUnit();
     list<TAction*>::const_iterator it;
     std::list<TAction*> tList = tu->getActionRootNodeList();
-    QList<QTreeWidgetItem*> items = treeWidget->findItems(QString("Buttons"), Qt::MatchExactly, 0);
-    QTreeWidgetItem* top = items.first();
+    QTreeWidgetItem* top = mpButtons;
     for (it = tList.begin(); it != tList.end(); it++) {
         TAction* pChild = *it;
         QStringList sl;
@@ -554,8 +566,7 @@ void dlgPackageExporter::listTimers()
     TimerUnit* tu = mpHost->getTimerUnit();
     list<TTimer*>::const_iterator it;
     std::list<TTimer*> tList = tu->getTimerRootNodeList();
-    QList<QTreeWidgetItem*> items = treeWidget->findItems(QString("Timers"), Qt::MatchExactly, 0);
-    QTreeWidgetItem* top = items.first();
+    QTreeWidgetItem* top = mpTimers;
     for (it = tList.begin(); it != tList.end(); it++) {
         TTimer* pChild = *it;
         if (pChild->isTemporary()) {
