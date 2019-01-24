@@ -4360,6 +4360,7 @@ void dlgTriggerEditor::saveScript()
     pT->setScript(script);
 
     pT->compile();
+    mpHost->getTriggerUnit()->doCleanup();
     QIcon icon;
     if (pT->isFolder()) {
         if (!pT->mPackageName.isEmpty()) {
