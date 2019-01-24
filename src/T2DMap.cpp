@@ -4526,7 +4526,7 @@ void T2DMap::slot_setCustomLine()
     dialog->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_custom_exit.png")));
     mCustomLinesRoomFrom = mMultiSelectionHighlightRoomId;
     mCustomLinesRoomTo = 0;
-    mCustomLinesRoomExit = "";
+    mCustomLinesRoomExit.clear();
     auto* button = dialog->findChild<QPushButton*>("nw");
     auto* specialExits = dialog->findChild<QTreeWidget*>("specialExits");
     mpCurrentLineStyle = dialog->findChild<QComboBox*>("lineStyle");
@@ -4767,8 +4767,8 @@ void T2DMap::slot_cancelCustomLineDialog()
 
 void T2DMap::slot_setCustomLine2()
 {
-    auto* button = qobject_cast<QPushButton*>(sender());
-    if (!button) {
+    auto pButton = qobject_cast<QPushButton*>(sender());
+    if (!pButton) {
         if (mpCustomLinesDialog) {
             mpCustomLinesDialog->reject();
         } else {
@@ -4781,55 +4781,139 @@ void T2DMap::slot_setCustomLine2()
         }
         return;
     }
-    QString exit = button->text();
     mpCustomLinesDialog->hide(); // Hide but don't delete until done the custom line
-    mCustomLinesRoomExit = exit;
     mDialogLock = false;
     TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLinesRoomFrom);
     if (!room) {
         return;
     }
-    if (exit == QLatin1String("nw")) {
+    // The button texts are going to be subject to translation so we need to go
+    // for their addresses instead:
+    QString exitKey = QStringLiteral("nw");
+    bool isFound = false;
+    if (pButton == mpCustomLinesDialog->findChild<QPushButton*>(exitKey)) {
         mCustomLinesRoomTo = room->getNorthwest(); // mCustomLinesRoomTo - wasn't being set!
-    } else if (exit == QLatin1String("n")) {
-        mCustomLinesRoomTo = room->getNorth();
-    } else if (exit == QLatin1String("ne")) {
-        mCustomLinesRoomTo = room->getNortheast();
-    } else if (exit == QLatin1String("up")) {
-        mCustomLinesRoomTo = room->getUp();
-    } else if (exit == QLatin1String("w")) {
-        mCustomLinesRoomTo = room->getWest();
-    } else if (exit == QLatin1String("e")) {
-        mCustomLinesRoomTo = room->getEast();
-    } else if (exit == QLatin1String("down")) {
-        mCustomLinesRoomTo = room->getDown();
-    } else if (exit == QLatin1String("sw")) {
-        mCustomLinesRoomTo = room->getSouthwest();
-    } else if (exit == QLatin1String("s")) {
-        mCustomLinesRoomTo = room->getSouth();
-    } else if (exit == QLatin1String("se")) {
-        mCustomLinesRoomTo = room->getSoutheast();
-    } else if (exit == QLatin1String("in")) {
-        mCustomLinesRoomTo = room->getIn();
-    } else if (exit == QLatin1String("out")) {
-        mCustomLinesRoomTo = room->getOut();
-    } else {
-        qWarning(R"(T2DMap::slot_setCustomLine2(): unable to identify exit "%s"to use!)", qPrintable(exit));
+        mCustomLinesRoomExit = exitKey;
+        isFound = true;
+    }
+
+    if (!isFound) {
+        exitKey = QStringLiteral("nw");
+        if (pButton == mpCustomLinesDialog->findChild<QPushButton*>(exitKey)) {
+            mCustomLinesRoomTo = room->getNorth();
+            mCustomLinesRoomExit = exitKey;
+            isFound = true;
+        }
+    }
+
+    if (!isFound) {
+        exitKey = QStringLiteral("ne");
+        if (pButton == mpCustomLinesDialog->findChild<QPushButton*>(exitKey)) {
+            mCustomLinesRoomTo = room->getNortheast();
+            mCustomLinesRoomExit = exitKey;
+            isFound = true;
+        }
+    }
+
+    if (!isFound) {
+        exitKey = QStringLiteral("up");
+        if (pButton == mpCustomLinesDialog->findChild<QPushButton*>(exitKey)) {
+            mCustomLinesRoomTo = room->getUp();
+            mCustomLinesRoomExit = exitKey;
+            isFound = true;
+        }
+    }
+
+    if (!isFound) {
+        exitKey = QStringLiteral("w");
+        if (pButton == mpCustomLinesDialog->findChild<QPushButton*>(exitKey)) {
+            mCustomLinesRoomTo = room->getWest();
+            mCustomLinesRoomExit = exitKey;
+            isFound = true;
+        }
+    }
+
+    if (!isFound) {
+        exitKey = QStringLiteral("e");
+        if (pButton == mpCustomLinesDialog->findChild<QPushButton*>(exitKey)) {
+            mCustomLinesRoomTo = room->getEast();
+            mCustomLinesRoomExit = exitKey;
+            isFound = true;
+        }
+    }
+
+    if (!isFound) {
+        exitKey = QStringLiteral("down");
+        if (pButton == mpCustomLinesDialog->findChild<QPushButton*>(exitKey)) {
+            mCustomLinesRoomTo = room->getDown();
+            mCustomLinesRoomExit = exitKey;
+            isFound = true;
+        }
+    }
+
+    if (!isFound) {
+        exitKey = QStringLiteral("sw");
+        if (pButton == mpCustomLinesDialog->findChild<QPushButton*>(exitKey)) {
+            mCustomLinesRoomTo = room->getSouthwest();
+            mCustomLinesRoomExit = exitKey;
+            isFound = true;
+        }
+    }
+
+    if (!isFound) {
+        exitKey = QStringLiteral("s");
+        if (pButton == mpCustomLinesDialog->findChild<QPushButton*>(exitKey)) {
+            mCustomLinesRoomTo = room->getSouth();
+            mCustomLinesRoomExit = exitKey;
+            isFound = true;
+        }
+    }
+
+    if (!isFound) {
+        exitKey = QStringLiteral("se");
+        if (pButton == mpCustomLinesDialog->findChild<QPushButton*>(exitKey)) {
+            mCustomLinesRoomTo = room->getSoutheast();
+            mCustomLinesRoomExit = exitKey;
+            isFound = true;
+        }
+    }
+
+    if (!isFound) {
+        exitKey = QStringLiteral("in");
+        if (pButton == mpCustomLinesDialog->findChild<QPushButton*>(exitKey)) {
+            mCustomLinesRoomTo = room->getIn();
+            mCustomLinesRoomExit = exitKey;
+            isFound = true;
+        }
+    }
+
+    if (!isFound) {
+        exitKey = QStringLiteral("out");
+        if (pButton == mpCustomLinesDialog->findChild<QPushButton*>(exitKey)) {
+            mCustomLinesRoomTo = room->getOut();
+            mCustomLinesRoomExit = exitKey;
+            isFound = true;
+        }
+    }
+
+    if (!isFound) {
+        qWarning() << "T2DMap::slot_setCustomLine2() ERROR - unable to identify exit to use for the button with text:" << pButton->text() << "!)";
         return;
     }
+
     QList<QPointF> list;
-    room->customLines[exit] = list;
-    //    qDebug("T2DMap::slot_setCustomLine2() NORMAL EXIT: %s", qPrintable(exit));
-    room->customLinesColor[exit] = mCurrentLineColor;
+    room->customLines[exitKey] = list;
+    //    qDebug("T2DMap::slot_setCustomLine2() NORMAL EXIT: %s", qPrintable(exitKey));
+    room->customLinesColor[exitKey] = mCurrentLineColor;
     /*
      *    qDebug("   COLOR(r,g,b): %i,%i,%i",
      *            mCurrentLineColor.red(),
      *            mCurrentLineColor.green(),
      *            mCurrentLineColor.blue() );
      */
-    room->customLinesStyle[exit] = mCurrentLineStyle;
+    room->customLinesStyle[exitKey] = mCurrentLineStyle;
     //    qDebug("   LINE STYLE: %d", mCurrentLineStyle);
-    room->customLinesArrow[exit] = mCurrentLineArrow;
+    room->customLinesArrow[exitKey] = mCurrentLineArrow;
     //    qDebug("   ARROW: %s", mCurrentLineArrow ? "Yes" : "No");
 
     mHelpMsg = tr("Left-click to add point, right-click to undo/change/finish...", "2D Mapper big, bottom of screen help message");
