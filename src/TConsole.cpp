@@ -1882,7 +1882,7 @@ std::list<int> TConsole::getFgColor(std::string& buf)
         return pC->_getFgColor();
     }
 
-    return std::list<int>();
+    return {};
 }
 
 std::list<int> TConsole::getBgColor(std::string& buf)
@@ -1896,7 +1896,7 @@ std::list<int> TConsole::getBgColor(std::string& buf)
         return pC->_getBgColor();
     }
 
-    return std::list<int>();
+    return {};
 }
 
 void TConsole::luaWrapLine(std::string& buf, int line)
@@ -1964,7 +1964,7 @@ QString TConsole::getCurrentLine(std::string& buf)
     if (pC) {
         return pC->getCurrentLine();
     }
-    return QString("ERROR: mini console does not exist");
+    return QStringLiteral("ERROR: mini console does not exist");
 }
 
 int TConsole::getLastLineNumber()
