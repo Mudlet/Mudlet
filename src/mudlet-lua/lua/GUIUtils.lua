@@ -1482,7 +1482,7 @@ function moveCursorUp(window, lines, keep_horizontal)
   lines = tonumber(lines) or 1
   if not type(keep_horizontal) == "boolean" then keep_horizontal = false end
   local curLine = getLineNumber(window)
-  if not curLine then error("moveCursorUp: window does not exist", 2) end
+  if not curLine then return nil, "window does not exist" end
   local x = 0
   if keep_horizontal then x = getColumnNumber(window) end
   moveCursor(window, x, math.max(curLine - lines, 0))
@@ -1497,7 +1497,7 @@ function moveCursorDown(window, lines, keep_horizontal)
   lines = tonumber(lines) or 1
   if not type(keep_horizontal) == "boolean" then keep_horizontal = false end
   local curLine = getLineNumber(window)
-  if not curLine then error("moveCursorDown: window does not exist", 2) end
+  if not curLine then return nil, "window does not exist" end
   local x = 0
   if keep_horizontal then x = getColumnNumber(window) end
   moveCursor(window, x, math.min(curLine + lines, getLastLineNumber(window)))
