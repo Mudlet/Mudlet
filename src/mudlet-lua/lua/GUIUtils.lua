@@ -1495,22 +1495,30 @@ end
 
 --- Moves the cursor in the given window up a specified number of lines
 --- @param windowName Optional name of the window to use the function on
---- @param lines number of lines to move cursor
-function moveCursorUp(windowName, lines)
-  if type(window) ~= "string" then  lines, window = window, "main" end
+--- @param lines Number of lines to move cursor
+--- @param keep_horizontal Optional boolean to specify if horizontal position should be retained
+function moveCursorUp(window, lines, keep_horizontal)
+  if type(window) ~= "string" then lines, window, keep_horizontal = window, "main", lines end
   lines = tonumber(lines) or 1
+  if not type(keep_horizontal) == "boolean" then keep_horizontal = false end
   local curLine = getLineNumber(window)
   if not curLine then error("moveCursorUp: window does not exist", 2) end
-  moveCursor(window, 0, math.max(curLine - lines, 0))
+  local x = 0
+  if keep_horizontal then x = getColumnNumber(window) end
+  moveCursor(window, x, math.max(curLine - lines, 0))
 end
 
 --- Moves the cursor in the given window down a specified number of lines
 --- @param windowName Optional name of the window to use the function on
---- @param lines number of lines to move cursor
-function moveCursorDown(windowName, lines)
-  if type(window) ~= "string" then  lines, window = window, "main" end
+--- @param lines Number of lines to move cursor
+--- @param keep_horizontal Optional boolean to specify if horizontal position should be retained
+function moveCursorDown(window, lines, keep_horizontal)
+  if type(window) ~= "string" then lines, window, keep_horizontal = window, "main", lines end
   lines = tonumber(lines) or 1
+  if not type(keep_horizontal) == "boolean" then keep_horizontal = false end
   local curLine = getLineNumber(window)
   if not curLine then error("moveCursorDown: window does not exist", 2) end
-  moveCursor(window, 0, math.min(curLine + lines, getLastLineNumber(window)))
+  local x = 0
+  if keep_horizontal then x = getColumnNumber(window) end
+  moveCursor(window, x, math.min(curLine + lines, getLastLineNumber(window)))
 end
