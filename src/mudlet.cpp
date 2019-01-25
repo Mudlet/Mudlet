@@ -1628,6 +1628,10 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         pC->mpScrollBar->hide();
         pC->mUpperPane->setIsMiniConsole();
         pC->mLowerPane->setIsMiniConsole();
+        const auto& hostCommandLine = pHost->mpConsole->mpCommandLine;
+        pC->setFocusProxy(hostCommandLine);
+        pC->mUpperPane->setFocusProxy(hostCommandLine);
+        pC->mLowerPane->setFocusProxy(hostCommandLine);
         dockWindowConsoleMap[name] = pC;
         addDockWidget(Qt::RightDockWidgetArea, pD);
 
