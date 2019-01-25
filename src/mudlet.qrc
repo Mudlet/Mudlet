@@ -174,5 +174,6 @@
         <file>ui/package_manager.ui</file>
         <file>ui/package_manager_unpack.ui</file>
         <file>ui/set_room_area.ui</file>
+        <file>mudlet-lua/lua/generic-mapper/generic_mapper.xml</file>
     </qresource>
 </RCC>
