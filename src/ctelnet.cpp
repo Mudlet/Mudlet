@@ -929,7 +929,12 @@ void cTelnet::processTelnetCommand(const string& command)
                 //(according to telnet specification, option announcement may not be
                 //unless explicitly requested)
 
-                if ((option == OPT_STATUS) || (option == OPT_TERMINAL_TYPE) || (option == OPT_ECHO) || (option == OPT_NAWS)) {
+                if (option == OPT_ECHO) {
+                    sendTelnetOption(TN_DO, option);
+                    hisOptionState[idxOption] = true;
+                    mpHost->setRemoteEchoing(true);
+                    qDebug() << "Enabling Server ECHOing of our output - perhaps he want us to type a password?";
+                } else if ((option == OPT_STATUS) || (option == OPT_TERMINAL_TYPE) || (option == OPT_NAWS)) {
                     sendTelnetOption(TN_DO, option);
                     hisOptionState[idxOption] = true;
                 } else if ((option == OPT_COMPRESS) || (option == OPT_COMPRESS2)) {
@@ -1011,6 +1016,11 @@ void cTelnet::processTelnetCommand(const string& command)
             if (hisOptionState[idxOption] || (heAnnouncedState[idxOption])) {
                 sendTelnetOption(TN_DONT, option);
                 hisOptionState[idxOption] = false;
+
+                if (option == OPT_ECHO) {
+                    mpHost->setRemoteEchoing(false);
+                    qDebug() << "Server is stopping the ECHOing our output - so back to normal after, perhaps, sending a password...";
+                }
 
                 if (option == OPT_COMPRESS) {
                     mMCCP_version_1 = false;

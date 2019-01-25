@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -490,6 +490,40 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     connect(mpBufferSearchDown, &QAbstractButton::clicked, this, &TConsole::slot_searchBufferDown);
 
     if (mpCommandLine) {
+        mpPushButton_commandEcho = new QToolButton(this);
+        mpPushButton_commandEcho->setCheckable(true);
+        QIcon echoIcon;
+        echoIcon.addPixmap(QPixmap(QStringLiteral(":/icons/echo-grey.png")), QIcon::Normal, QIcon::Off);
+        if (mpHost->mIsRemoteEchoingActive) {
+            echoIcon.addPixmap(QPixmap(QStringLiteral(":/icons/warning.png")), QIcon::Normal, QIcon::On);
+            if (mpHost->mPrintCommand) {
+                mpPushButton_commandEcho->setToolTip(tr("<p>Echoing of <i>your input</i> is currently being done by the game server so it can control what gets shown on screen; this is often done whilst the remote end of a telnet link is waiting for a passord so that what you type can be hidden on your terminal.</p>"
+                                                        "<p><i>Unfortunately this also means that the output from commands that are processed locally and not sent to the server will also be hidden in this case.</i></p>",
+                                                        // Intentional comment to separate arguments
+                                                        "This text occurs in two separate places {TConsole and Host classes} ensure they have the same translation"));
+            }
+
+        } else {
+            echoIcon.addPixmap(QPixmap(QStringLiteral(":/icons/echo.png")), QIcon::Normal, QIcon::On);
+            if (mpHost->mPrintCommand) {
+                mpPushButton_commandEcho->setToolTip(tr("<p>Your input will be shown on the main screen above after you press enter.</p>",
+                                                        // Intentional comment to separate arguments
+                                                        "This text occurs in two separate places {TConsole and Host classes} ensure they have the same translation"));
+            }
+
+        }
+        mpPushButton_commandEcho->setIcon(echoIcon);
+        mpPushButton_commandEcho->setFocusPolicy(Qt::NoFocus);
+
+        if (mpHost->mPrintCommand) {
+            mpPushButton_commandEcho->setChecked(true);
+        } else {
+            mpPushButton_commandEcho->setToolTip(tr("<p>What you enter on this line will not currently be shown above after you press enter.</p>",
+                                                    // Intentional comment to separate arguments
+                                                    "This text occurs in two separate places {TConsole and Host classes} ensure they have the same translation"));
+        }
+        connect(mpPushButton_commandEcho, &QAbstractButton::toggled, mpHost, &Host::slot_toggleCommandEcho);
+        layoutLayer2->addWidget(mpPushButton_commandEcho);
         layoutLayer2->addWidget(mpCommandLine);
     }
 
@@ -577,7 +611,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         // non-null mudlet::self() - the connect(...) will produce a debug
         // message and not make THAT connection should it indeed be null but it
         // is not fatal...
-        // So, this SHOULD be the main profile mUpperPane - Slysven
         connect(mudlet::self(), &mudlet::signal_profileMapReloadRequested, this, &TConsole::slot_reloadMap, Qt::UniqueConnection);
         connect(this, &TConsole::signal_newDataAlert, mudlet::self(), &mudlet::slot_newDataOnHost, Qt::UniqueConnection);
         // For some odd reason the first seems to get connected twice - the

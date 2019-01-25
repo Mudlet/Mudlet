@@ -194,6 +194,8 @@ public:
     QToolButton* emergencyStop;
     bool isUserScrollBack;
     QWidget* layer;
+    // Only for the main console - control for echoing entered command to console
+    QPointer<QToolButton> mpPushButton_commandEcho;
     QWidget* layerCommandLine;
     QWidget* layerEdit;
     QColor mBgColor;

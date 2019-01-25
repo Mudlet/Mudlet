@@ -57,6 +57,8 @@
         <file>icons/document-save-as.png</file>
         <file>icons/document-save.png</file>
         <file>icons/dot-line.png</file>
+        <file>icons/echo.png</file>
+        <file>icons/echo-grey.png</file>
         <file>icons/edit-bomb.png</file>
         <file>icons/edit-clear-locationbar-rtl-green.png</file>
         <file>icons/edit-cut.png</file>

@@ -502,16 +502,6 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0" colspan="2">
-           <widget class="QCheckBox" name="show_sent_text_checkbox">
-            <property name="toolTip">
-             <string>Echo the text you send in the display box</string>
-            </property>
-            <property name="text">
-             <string>Show the text you sent</string>
-            </property>
-           </widget>
-          </item>
           <item row="1" column="2" colspan="2">
            <widget class="QCheckBox" name="checkBox_runAllKeyBindings">
             <property name="toolTip">
@@ -4879,7 +4869,6 @@
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>show_sent_text_checkbox</tabstop>
   <tabstop>command_separator_lineedit</tabstop>
  </tabstops>
  <resources>

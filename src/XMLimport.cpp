@@ -763,7 +763,7 @@ void XMLimport::readHostPackage()
 void XMLimport::readHostPackage(Host* pHost)
 {
     pHost->mAutoClearCommandLineAfterSend = (attributes().value("autoClearCommandLineAfterSend") == "yes");
-    pHost->mPrintCommand = (attributes().value("printCommand") == "yes");
+    pHost->slot_toggleCommandEcho(attributes().value("printCommand") != "no");
     pHost->set_USE_IRE_DRIVER_BUGFIX(attributes().value("USE_IRE_DRIVER_BUGFIX") == "yes");
     pHost->mUSE_FORCE_LF_AFTER_PROMPT = (attributes().value("mUSE_FORCE_LF_AFTER_PROMPT") == "yes");
     pHost->mUSE_UNIX_EOL = (attributes().value("mUSE_UNIX_EOL") == "yes");
