@@ -1473,7 +1473,37 @@ function prefix(what, func, fgc, bgc, window)
   resetFormat(window)
 end
 
--- version of replace function that allows for color, by way of cinsertText
+--- Moves the cursor in the given window up a specified number of lines
+--- @param windowName Optional name of the window to use the function on
+--- @param lines Number of lines to move cursor
+--- @param keep_horizontal Optional boolean to specify if horizontal position should be retained
+function moveCursorUp(window, lines, keep_horizontal)
+  if type(window) ~= "string" then lines, window, keep_horizontal = window, "main", lines end
+  lines = tonumber(lines) or 1
+  if not type(keep_horizontal) == "boolean" then keep_horizontal = false end
+  local curLine = getLineNumber(window)
+  if not curLine then return nil, "window does not exist" end
+  local x = 0
+  if keep_horizontal then x = getColumnNumber(window) end
+  moveCursor(window, x, math.max(curLine - lines, 0))
+end
+
+--- Moves the cursor in the given window down a specified number of lines
+--- @param windowName Optional name of the window to use the function on
+--- @param lines Number of lines to move cursor
+--- @param keep_horizontal Optional boolean to specify if horizontal position should be retained
+function moveCursorDown(window, lines, keep_horizontal)
+  if type(window) ~= "string" then lines, window, keep_horizontal = window, "main", lines end
+  lines = tonumber(lines) or 1
+  if not type(keep_horizontal) == "boolean" then keep_horizontal = false end
+  local curLine = getLineNumber(window)
+  if not curLine then return nil, "window does not exist" end
+  local x = 0
+  if keep_horizontal then x = getColumnNumber(window) end
+  moveCursor(window, x, math.min(curLine + lines, getLastLineNumber(window)))
+end
+  
+  -- version of replace function that allows for color, by way of cinsertText
 function creplace(window, text)
 	if not text then text, window = window, nil end
 	window = window or "main"
