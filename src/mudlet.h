@@ -212,6 +212,7 @@ public:
     int getColumnCount(Host* pHost, QString& name);
     int getRowCount(Host* pHost, QString& name);
     QStringList getAvailableFonts();
+    void hideMudletsVariables(Host *pHost);
 
     static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;
@@ -355,6 +356,7 @@ public:
     void show_options_dialog(QString tab);
     void setInterfaceLanguage(const QString &languageCode);
     QList<QString> getAvailableTranslationCodes() const { return mTranslatorsMap.keys(); }
+    QPair<bool, QStringList> getLines(Host* pHost, const QString& windowName, const int lineFrom, const int lineTo);
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;

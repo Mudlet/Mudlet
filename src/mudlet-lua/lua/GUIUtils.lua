@@ -901,9 +901,6 @@ if rex then
         str, cmd, hint, fmt = ...
       elseif n >= 4 and type(args[4]) == 'string' then
         win, str, cmd, hint, fmt = ...
-        if win == "main" then
-          win = nil
-        end
       else
         error 'Improper arguments, usage: ([window, ] string, command, hint)'
       end
@@ -916,59 +913,42 @@ if rex then
         str = args[1]
       end
     end
-
+    win = win or "main"
+    
     out = function(...)
       _G[func](...)
     end
 
-    if win then
-      reset = function()
-        resetFormat(win)
-      end
-    else
-      reset = function()
-        resetFormat()
-      end
-    end
-
     local t = _Echos.Process(str, style)
 
-    deselect()
-    reset()
+    deselect(win)
+    resetFormat(win)
     if not str then error(style:sub(1,1):lower() .. func .. ": bad argument #1, string expected, got nil",3) end
     for _, v in ipairs(t) do
       if type(v) == 'table' then
         if v.fg then
           local fr, fg, fb = unpack(v.fg)
-          if win then
-            setFgColor(win, fr, fg, fb) else setFgColor(fr, fg, fb)
-          end
+          setFgColor(win, fr, fg, fb)
         end
         if v.bg then
           local br, bg, bb = unpack(v.bg)
-          if win then
-            setBgColor(win, br, bg, bb) else setBgColor(br, bg, bb)
-          end
+          setBgColor(win, br, bg, bb)
         end
       elseif v == "\27reset" then
-        reset()
+        resetFormat(win)
       else
         if func == 'echo' or func == 'insertText' then
-          if win then
-            out(win, v) else out(v)
-          end
+          out(win, v)
           if func == 'insertText' then
-            moveCursor(win or "main", getColumnNumber() + string.len(v), getLineNumber())
+            moveCursor(win, getColumnNumber(win) + string.len(v), getLineNumber(win))
           end
         else
-          -- if win and fmt then setUnderline(win, true) elseif fmt then setUnderline(true) end -- not sure if underline is necessary unless asked for
-          if win then
-            out(win, v, cmd, hint, (fmt == true and true or false)) else out(v, cmd, hint, (fmt == true and true or false))
-          end
+          -- if fmt then setUnderline(win, true) end -- not sure if underline is necessary unless asked for
+          out(win, v, cmd, hint, (fmt == true and true or false))
         end
       end
     end
-    reset()
+    resetFormat(win)
   end
 
 
@@ -1491,4 +1471,48 @@ function prefix(what, func, fgc, bgc, window)
   if bgc then bg(window,bgc) end
   func(window,what)
   resetFormat(window)
+end
+
+--- Moves the cursor in the given window up a specified number of lines
+--- @param windowName Optional name of the window to use the function on
+--- @param lines Number of lines to move cursor
+--- @param keep_horizontal Optional boolean to specify if horizontal position should be retained
+function moveCursorUp(window, lines, keep_horizontal)
+  if type(window) ~= "string" then lines, window, keep_horizontal = window, "main", lines end
+  lines = tonumber(lines) or 1
+  if not type(keep_horizontal) == "boolean" then keep_horizontal = false end
+  local curLine = getLineNumber(window)
+  if not curLine then return nil, "window does not exist" end
+  local x = 0
+  if keep_horizontal then x = getColumnNumber(window) end
+  moveCursor(window, x, math.max(curLine - lines, 0))
+end
+
+--- Moves the cursor in the given window down a specified number of lines
+--- @param windowName Optional name of the window to use the function on
+--- @param lines Number of lines to move cursor
+--- @param keep_horizontal Optional boolean to specify if horizontal position should be retained
+function moveCursorDown(window, lines, keep_horizontal)
+  if type(window) ~= "string" then lines, window, keep_horizontal = window, "main", lines end
+  lines = tonumber(lines) or 1
+  if not type(keep_horizontal) == "boolean" then keep_horizontal = false end
+  local curLine = getLineNumber(window)
+  if not curLine then return nil, "window does not exist" end
+  local x = 0
+  if keep_horizontal then x = getColumnNumber(window) end
+  moveCursor(window, x, math.min(curLine + lines, getLastLineNumber(window)))
+end
+  
+  -- version of replace function that allows for color, by way of cinsertText
+function creplace(window, text)
+	if not text then text, window = window, nil end
+	window = window or "main"
+	local str, start, stop = getSelection(window)
+	if window ~= "main" then
+		replace(window, "")
+	else
+		replace("")
+	end
+	moveCursor(window, start, getLineNumber(window))
+	cinsertText(window, text)
 end
