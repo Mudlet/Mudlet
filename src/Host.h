@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -213,7 +213,6 @@ public:
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
-    void setRemoteEchoing(const bool);
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
@@ -266,11 +265,11 @@ public:
      * This is set when the Server is remote echoing what WE send to it,
      * it will have negotiated the ECHO suboption by sending a IAC WILL ECHO and
      * we have agreed to it with a IAC DO ECHO - in this state it is normal
-     * Telnet behaviour to NOT echo what we send - to prevent loops.  The
-     * rationale behind this is so that when we type passwords - WE do not echo
-     * what we type and rely on the other end to, but they do not, so as to hide
-     * them on our screen (and from logging!) - It should negate the effect of
-     * the above mPrintCommand being true...
+     * Telnet behaviour to NOT echo what we send - to prevent doubled lines.
+     * The rationale behind this is so that when we type passwords - WE do not
+     * echo what we type and rely on the other end to, but they do not, so as to
+     * hide them on our screen (and from logging!) - It should negate the effect
+     * of the above mPrintCommand being true...
      */
     bool mIsRemoteEchoingActive;
 
@@ -419,9 +418,6 @@ signals:
     void signal_changeIsAmbigousWidthGlyphsToBeWide(bool);
     void profileSaveStarted();
     void profileSaveFinished();
-
-public slots:
-    void slot_toggleCommandEcho(const bool);
 
 private slots:
     void slot_reloadModules();

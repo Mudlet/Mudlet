@@ -932,7 +932,7 @@ void cTelnet::processTelnetCommand(const string& command)
                 if (option == OPT_ECHO) {
                     sendTelnetOption(TN_DO, option);
                     hisOptionState[idxOption] = true;
-                    mpHost->setRemoteEchoing(true);
+                    mpHost->mIsRemoteEchoingActive = true;
                     qDebug() << "Enabling Server ECHOing of our output - perhaps he want us to type a password?";
                 } else if ((option == OPT_STATUS) || (option == OPT_TERMINAL_TYPE) || (option == OPT_NAWS)) {
                     sendTelnetOption(TN_DO, option);
@@ -1018,7 +1018,7 @@ void cTelnet::processTelnetCommand(const string& command)
                 hisOptionState[idxOption] = false;
 
                 if (option == OPT_ECHO) {
-                    mpHost->setRemoteEchoing(false);
+                    mpHost->mIsRemoteEchoingActive = false;
                     qDebug() << "Server is stopping the ECHOing our output - so back to normal after, perhaps, sending a password...";
                 }
 

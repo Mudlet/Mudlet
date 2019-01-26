@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -1588,70 +1588,5 @@ bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscri
         return false;
     } else {
         return true;
-    }
-}
-
-// When set active we must show this in the button on the command line:
-void Host::setRemoteEchoing(const bool active)
-{
-    if (mIsRemoteEchoingActive != active) {
-        mIsRemoteEchoingActive = active;
-        if (mpConsole->mpPushButton_commandEcho) {
-            QIcon echoIcon; // = mpConsole->mpPushButton_commandEcho->icon();
-            echoIcon.addPixmap(QPixmap(QStringLiteral(":/icons/echo-grey.png")), QIcon::Normal, QIcon::Off);
-            if (mIsRemoteEchoingActive) {
-                echoIcon.addPixmap(QPixmap(QStringLiteral(":/icons/dialog-warning.png")), QIcon::Normal, QIcon::On);
-                if (mPrintCommand) {
-                    mpConsole->mpPushButton_commandEcho->setToolTip(tr("<p>Echoing of <i>your input</i> is currently being done by the game server so it can control what gets shown on screen; this is often done whilst the remote end of a telnet link is waiting for a passord so that what you type can be hidden on your terminal.</p>"));
-                }
-            } else {
-                echoIcon.addPixmap(QPixmap(QStringLiteral(":/icons/echo.png")), QIcon::Normal, QIcon::On);
-                if (mPrintCommand) {
-                    mpConsole->mpPushButton_commandEcho->setToolTip(tr("<p>Your input will be shown on the main screen above.</p>"));
-                }
-            }
-            mpConsole->mpPushButton_commandEcho->setIcon(echoIcon);
-            if (!mPrintCommand) {
-                mpConsole->mpPushButton_commandEcho->setToolTip(tr("<p>What you enter on this line will not currently be shown above after you press enter.</p>"));
-            }
-        }
-    }
-}
-
-void Host::slot_toggleCommandEcho(const bool state)
-{
-    static bool testValue = false;
-    setRemoteEchoing(testValue);
-
-    if (mPrintCommand != state) {
-        mPrintCommand = state;
-    }
-
-    if (!mpConsole || !mpConsole->mpPushButton_commandEcho) {
-        return;
-    }
-
-    // Allows the control and state to be set at the same time without making
-    // unneeded changes:
-    if (mpConsole->mpPushButton_commandEcho->isChecked() != state) {
-        mpConsole->mpPushButton_commandEcho->setChecked(state);
-
-    }
-
-    if (state) {
-        if (mIsRemoteEchoingActive) {
-            mpConsole->mpPushButton_commandEcho->setToolTip(tr("<p>Echoing of <i>your input</i> is currently being done by the game server so it can control what gets shown on screen; this is often done whilst the remote end of a telnet link is waiting for a passord so that what you type can be hidden on your terminal.</p>"
-                                                               "<p><i>Unfortunately this also means that the output from commands that are processed locally and not sent to the server will also be hidden in this case.</i></p>",
-                                                               // Intentional comment to separate arguments
-                                                               "This text occurs in two separate places {TConsole and Host classes} ensure they have the same translation"));
-        } else {
-            mpConsole->mpPushButton_commandEcho->setToolTip(tr("<p>Your input will be shown on the main screen above after you press enter.</p>",
-                                                               // Intentional comment to separate arguments
-                                                               "This text occurs in two separate places {TConsole and Host classes} ensure they have the same translation"));
-        }
-    } else {
-        mpConsole->mpPushButton_commandEcho->setToolTip(tr("<p>What you enter on this line will not currently be shown above after you press enter.</p>",
-                                                           // Intentional comment to separate arguments
-                                                           "This text occurs in two separate places {TConsole and Host classes} ensure they have the same translation"));
     }
 }
