@@ -23,6 +23,7 @@
  ***************************************************************************/
 
 
+#include "mudlet.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
@@ -49,6 +50,7 @@ class dlgProfilePreferences : public QDialog, public Ui::profile_preferences
 public:
     Q_DISABLE_COPY(dlgProfilePreferences)
     dlgProfilePreferences(QWidget*, Host* pHost = nullptr);
+    void setTab(QString tab);
 
 public slots:
     // Fonts.
@@ -136,6 +138,16 @@ private slots:
     void slot_setMapSymbolFontStrategy(bool);
     void slot_changeShowMenuBar(int);
     void slot_changeShowToolBar(int);
+    void slot_changeEditorTextOptions(const QTextOption::Flags);
+    void slot_changeEnableFullScreenMode(const bool);
+    void slot_changeShowMapAuditErrors(const bool);
+    void slot_changeAutomaticUpdates(const bool);
+    void slot_setToolBarIconSize(const int);
+    void slot_setTreeWidgetIconSize(const int);
+    void slot_changeMenuBarVisibility(const mudlet::controlsVisibility);
+    void slot_changeToolBarVisibility(const mudlet::controlsVisibility);
+    void slot_changeShowIconsOnMenus(const Qt::CheckState);
+    void slot_changeGuiLanguage(const QString &language);
 
 private:
     void setColors();
@@ -157,6 +169,7 @@ private:
     void clearHostDetails();
     void disconnectHostRelatedControls();
     void generateMapGlyphDisplay();
+    void generateDiscordTooltips();
 
     int mFontSize;
     QPointer<Host> mpHost;

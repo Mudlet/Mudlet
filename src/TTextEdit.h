@@ -33,6 +33,7 @@
 #include <QPointer>
 #include <QTime>
 #include <QWidget>
+#include <chrono>
 #include "post_guard.h"
 
 #include <string>
@@ -51,14 +52,14 @@ class TTextEdit : public QWidget
 
 public:
     Q_DISABLE_COPY(TTextEdit)
-    TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isDebugConsole, bool isLowerPane);
+    TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isLowerPane);
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
     void drawForeground(QPainter&, const QRect&);
-    void drawBackground(QPainter&, const QRect&, const QColor&);
-    uint getGraphemeBaseCharacter(const QString& str);
-    void drawLine(QPainter &painter, int lineNumber, int rowOfScreen);
-    int drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &c, int column, TChar &style);
+    void drawBackground(QPainter&, const QRect&, const QColor&) const;
+    uint getGraphemeBaseCharacter(const QString& str) const;
+    void drawLine(QPainter& painter, int lineNumber, int rowOfScreen) const;
+    int drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &c, int column, TChar &style) const;
     void drawCharacters(QPainter&, const QRect&, QString&, const QColor&, const TChar::AttributeFlags);
     void showNewLines();
     void forceUpdate();
@@ -82,12 +83,12 @@ public:
     int bufferScrollDown(int lines);
 // Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b) { mBgColor = QColor(r, g, b); }
-    void setIsMiniConsole() { mIsMiniConsole = true; }
     void searchSelectionOnline();
     int getColumnCount();
     int getRowCount();
 
     QColor mBgColor;
+    // position of cursor, in characters, across the entire buffer
     int mCursorY;
     QFont mDisplayFont;
     QColor mFgColor;
@@ -116,22 +117,30 @@ public slots:
     void slot_popupMenu();
     void slot_copySelectionToClipboardHTML();
     void slot_searchSelectionOnline();
+    void slot_analyseSelection();
     void slot_changeIsAmbigousWidthGlyphsToBeWide(bool);
+
+private slots:
+    void slot_copySelectionToClipboardImage();
 
 private:
     void initDefaultSettings();
     QString getSelectedText(char newlineChar = '\n');
+    static QString htmlCenter(const QString&);
+    static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
+    static QString byteToLuaCodeOrChar(const char*);
+    std::pair<bool, int> drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;
 
     int mFontHeight;
     int mFontWidth;
     bool mForceUpdate;
-    bool mIsDebugConsole;
-    bool mIsMiniConsole;
+
     // Each TConsole instance uses two instances of this class, one above the
     // other but they need to behave differently in some ways; this flag is set
     // or reset on creation and is used to adjust the behaviour depending on
     // which one this instance is:
     const bool mIsLowerPane;
+    // last line offset rendered
     int mLastRenderBottom;
     bool mMouseTracking;
     bool mCtrlSelecting;
@@ -143,11 +152,15 @@ private:
     TConsole* mpConsole;
     QPointer<Host> mpHost;
     QScrollBar* mpScrollBar;
+    // screen height in characters
     int mScreenHeight;
+    // currently viewed screen area
     QPixmap mScreenMap;
     int mScreenWidth;
     QTime mLastClickTimer;
+    QPointer<QAction> mpContextMenuAnalyser;
     bool mWideAmbigousWidthGlyphs;
+    std::chrono::high_resolution_clock::time_point mCopyImageStartTime;
 };
 
 #endif // MUDLET_TTEXTEDIT_H

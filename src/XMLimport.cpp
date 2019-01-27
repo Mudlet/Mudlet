@@ -764,7 +764,6 @@ void XMLimport::readHostPackage()
 void XMLimport::readHostPackage(Host* pHost)
 {
     pHost->mAutoClearCommandLineAfterSend = (attributes().value("autoClearCommandLineAfterSend") == "yes");
-    pHost->mDisableAutoCompletion = (attributes().value("disableAutoCompletion") == "yes");
     pHost->mPrintCommand = (attributes().value("printCommand") == "yes");
     pHost->set_USE_IRE_DRIVER_BUGFIX(attributes().value("USE_IRE_DRIVER_BUGFIX") == "yes");
     pHost->mUSE_FORCE_LF_AFTER_PROMPT = (attributes().value("mUSE_FORCE_LF_AFTER_PROMPT") == "yes");
@@ -830,7 +829,42 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->mSearchEngineName = QString("Google");
     }
 
+    if (attributes().hasAttribute(QLatin1String("mTimerSupressionInterval"))) {
+        pHost->mTimerDebugOutputSuppressionInterval = QTime::fromString(attributes().value(QLatin1String("mTimerSupressionInterval")).toString(), QLatin1String("hh:mm:ss.zzz"));
+    } else {
+        pHost->mTimerDebugOutputSuppressionInterval = QTime();
+    }
+  
+    if (attributes().hasAttribute(QLatin1String("mDiscordAccessFlags"))) {
+        pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(attributes().value("mDiscordAccessFlags").toString().toInt());
+    }
+
+    if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserName"))) {
+        pHost->mRequiredDiscordUserName = attributes().value(QLatin1String("mRequiredDiscordUserName")).toString();
+    } else {
+        pHost->mRequiredDiscordUserName.clear();
+    }
+
+    if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserDiscriminator"))) {
+        pHost->mRequiredDiscordUserDiscriminator = attributes().value(QLatin1String("mRequiredDiscordUserDiscriminator")).toString();
+    } else {
+        pHost->mRequiredDiscordUserDiscriminator.clear();
+    }
+
+    if (attributes().hasAttribute(QLatin1String("mSGRCodeHasColSpaceId"))) {
+        pHost->setHaveColorSpaceId(attributes().value(QLatin1String("mSGRCodeHasColSpaceId")).toString() == QLatin1String("yes"));
+    } else {
+        pHost->setHaveColorSpaceId(false);
+    }
+
+    if (attributes().hasAttribute(QLatin1String("mServerMayRedefineColors"))) {
+        pHost->setMayRedefineColors(attributes().value(QLatin1String("mServerMayRedefineColors")).toString() == QLatin1String("yes"));
+    } else {
+        pHost->setMayRedefineColors(false);
+    }
+
     pHost->mFORCE_MXP_NEGOTIATION_OFF = (attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes");
+    pHost->mEnableTextAnalyzer = (attributes().value("enableTextAnalyzer") == "yes");
     pHost->mRoomSize = attributes().value("mRoomSize").toString().toDouble();
     if (qFuzzyCompare(1.0 + pHost->mRoomSize, 1.0)) {
         // The value is a float/double and the prior code using "== 0" is a BAD
@@ -849,6 +883,11 @@ void XMLimport::readHostPackage(Host* pHost)
     for (auto character : ignore) {
         pHost->mDoubleClickIgnore.insert(character);
     }
+    pHost->mSslTsl = (attributes().value("mSslTsl") == "yes");
+    pHost->mAutoReconnect = (attributes().value("mAutoReconnect") == "yes");
+    pHost->mSslIgnoreExpired = (attributes().value("mSslIgnoreExpired") == "yes");
+    pHost->mSslIgnoreSelfSigned = (attributes().value("mSslIgnoreSelfSigned") == "yes");
+    pHost->mSslIgnoreAll = (attributes().value("mSslIgnoreAll") == "yes");
 
     while (!atEnd()) {
         readNext();
@@ -880,7 +919,7 @@ void XMLimport::readHostPackage(Host* pHost)
             } else if (name() == "serverPackageName") {
                 pHost->mServerGUI_Package_name = readElementText();
             } else if (name() == "serverPackageVersion") {
-                pHost->mServerGUI_Package_version = readElementText().toInt();
+                pHost->mServerGUI_Package_version = readElementText();
             } else if (name() == "port") {
                 pHost->mPort = readElementText().toInt();
             } else if (name() == "borderTopHeight") {
@@ -1008,6 +1047,8 @@ void XMLimport::readHostPackage(Host* pHost)
             }
         }
     }
+
+
 }
 
 // returns the ID of the root imported trigger/group

@@ -44,6 +44,18 @@ bool VarUnit::isHidden(TVar* var)
     return hiddenByUser.contains(shortVarName(var).join("."));
 }
 
+
+bool VarUnit::isHidden(const QString& fullname)
+{
+    if (fullname == QLatin1String("_G")) { // we never hide global
+        return false;
+    }
+    if (hidden.contains(fullname)) {
+        return true;
+    }
+    return hiddenByUser.contains(fullname);
+}
+
 void VarUnit::addPointer(const void* p)
 {
     pointers.insert(p);
@@ -210,6 +222,13 @@ void VarUnit::removeHidden(TVar* var)
     hidden.remove(n);
     hiddenByUser.remove(n);
     var->hidden = false;
+}
+
+void VarUnit::removeHidden(const QString& name)
+{
+    hidden.remove(name);
+    hiddenByUser.remove(name);
+    // does not remove the reference from TVar, similar to addHidden()
 }
 
 void VarUnit::addSavedVar(TVar* var)

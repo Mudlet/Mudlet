@@ -35,7 +35,7 @@ public:
     dlgConnectionProfiles(QWidget* parent = nullptr);
     void fillout_form();
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
-    QString readProfileData(QString, QString);
+    QString readProfileData(const QString& profile, const QString& item);
     void accept() override;
 
 signals:
@@ -46,6 +46,7 @@ public slots:
     void slot_save_name();
     void slot_update_url(const QString &);
     void slot_update_port(QString);
+    void slot_update_SSL_TSL_port(int state);
     void slot_update_login(const QString &);
     void slot_update_pass(const QString &);
     void slot_update_website(const QString &);
@@ -58,6 +59,8 @@ public slots:
     void slot_reallyDeleteProfile();
 
     void slot_update_autologin(int state);
+    void slot_update_autoreconnect(int state);
+    void slot_update_discord_optin(int state);
     void slot_connectToServer();
     void slot_cancel();
     void slot_copy_profile();
@@ -65,11 +68,13 @@ public slots:
 private:
     void copyFolder(QString sourceFolder, QString destFolder);
     QString getDescription(const QString& hostUrl, quint16 port, const QString& profile_name);
+    bool validateConnect();
+    void updateDiscordStatus();
+    bool validateProfile();
 
     bool validName;
     bool validUrl;
     bool validPort;
-    bool validateConnect();
 
     QStringList mProfileList;
     QPalette mRegularPalette;
@@ -79,6 +84,7 @@ private:
     QPushButton* connect_button;
     QLineEdit* delete_profile_lineedit;
     QPushButton* delete_button;
+    QString mDiscordApplicationId;
 };
 
 #endif // MUDLET_DLGCONNECTIONPROFILES_H

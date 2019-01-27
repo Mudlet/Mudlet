@@ -1,7 +1,7 @@
 
 # Mudlet
 
-[![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/31fqq844br6g6i40/branch/development?svg=true)](https://ci.appveyor.com/project/Mudlet/mudlet/branch/development) [![GitHub Build Status](https://travis-ci.org/Mudlet/Mudlet.svg?branch=development)](https://travis-ci.org/Mudlet/Mudlet) [![GitHub stars](https://img.shields.io/github/stars/Mudlet/Mudlet.svg)](https://github.com/Mudlet/Mudlet/stargazers) [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Mudlet/Mudlet?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Discord](https://img.shields.io/badge/discord-join%20chat-7289DA.svg)](https://discord.gg/kuYvMQ9)
+[![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/31fqq844br6g6i40/branch/development?svg=true)](https://ci.appveyor.com/project/Mudlet/mudlet/branch/development) [![GitHub Build Status](https://travis-ci.org/Mudlet/Mudlet.svg?branch=development)](https://travis-ci.org/Mudlet/Mudlet) [![GitHub stars](https://img.shields.io/github/stars/Mudlet/Mudlet.svg)](https://github.com/Mudlet/Mudlet/stargazers) [![Discord](https://img.shields.io/badge/discord-join%20chat-7289DA.svg)](https://discord.gg/kuYvMQ9)
 
 Mudlet is a quality MUD client, designed to take mudding to a new level.
 

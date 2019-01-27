@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -32,6 +32,7 @@
 #include <pugixml.hpp>
 #include "post_guard.h"
 
+class QFile;
 class Host;
 class LuaInterface;
 class TAction;
@@ -107,9 +108,9 @@ private:
     void writeScriptPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
     void writeKeyPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
     void writeVariablePackage(Host* pHost, pugi::xml_node& mMudletPackage);
-    void inline replaceAll(std::string& source, char from, const std::string& to);
     void inline replaceAll(std::string& source, const std::string& from, const std::string& to);
-    bool saveXml(const QString& fileName);
+    bool saveXmlFile(QFile&);
+    bool saveXml(const QString&);
     pugi::xml_node writeXmlHeader();
     void sanitizeForQxml(std::string& output);
     QString saveXml();

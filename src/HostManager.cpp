@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016, 2018 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -128,9 +128,11 @@ void HostManager::postIrcMessage(QString a, QString b, QString c)
 // send out the events to the other hosts in a predictable and consistent order
 // and so that no one host gets an unfair advantage when emitting events. The
 // sending profile host does NOT get the event!
-void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event)
+// Note: Optional forceGlobal allows passing a null pointer as pHost, and will raise
+// an event for all profiles.
+void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event, const bool forceGlobal)
 {
-    if (!pHost) {
+    if (!pHost && !forceGlobal) {
         return;
     }
 

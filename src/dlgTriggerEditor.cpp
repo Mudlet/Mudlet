@@ -1,9 +1,9 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
- *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
+ *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -181,13 +181,14 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpSourceEditorArea->setSizePolicy(sizePolicy5);
     pVB1->addWidget(mpSourceEditorArea);
 
-    // And the new edbee widget - Go Buck!
+    // And the new edbee widget
     mpSourceEditorEdbee = mpSourceEditorArea->edbeeEditorWidget;
     mpSourceEditorEdbeeDocument = mpSourceEditorEdbee->textDocument();
 
     // Update the status bar on changes
     connect(mpSourceEditorEdbee->controller(), &edbee::TextEditorController::updateStatusTextSignal, this, &dlgTriggerEditor::slot_updateStatusBar);
     simplifyEdbeeStatusBarRegex = new QRegularExpression(R"(^(?:\[\*\] )?(.+?) \|)");
+    mpSourceEditorEdbee->controller()->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollNever);
 
     // Update the editor preferences
     connect(mudlet::self(), &mudlet::signal_editorTextOptionsChanged, this, &dlgTriggerEditor::slot_changeEditorTextOptions);
@@ -196,16 +197,46 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
 
+    auto* provider = new edbee::StringTextAutoCompleteProvider();
+    //QScopedPointer<edbee::StringTextAutoCompleteProvider> provider(new edbee::StringTextAutoCompleteProvider);
+
+    // Add lua functions and reserved lua terms to an AutoComplete provider
+    for(QString key : mudlet::mLuaFunctionNames.keys())
+    {
+        provider->add(key, 3, mudlet::mLuaFunctionNames.value(key).toString());
+    }
+
+    provider->add("and", 14);
+    provider->add("break", 14);
+    provider->add("else", 14);
+    provider->add("elseif", 14);
+    provider->add("end", 14);
+    provider->add("false", 14);
+    provider->add("for", 14);
+    provider->add("function", 14);
+    provider->add("goto", 14);
+    provider->add("local", 14);
+    provider->add("nil", 14);
+    provider->add("not", 14);
+    provider->add("repeat", 14);
+    provider->add("return", 14);
+    provider->add("then", 14);
+    provider->add("true", 14);
+    provider->add("until", 14);
+    provider->add("while", 14);
+
+    // Set the newly filled provider to be used by our Edbee instance
+    edbee::Edbee::instance()->autoCompleteProviderList()->setParentProvider(provider);
+
     mpSourceEditorEdbee->textEditorComponent()->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(mpSourceEditorEdbee->textEditorComponent(), &QWidget::customContextMenuRequested, this, &dlgTriggerEditor::slot_editorContextMenu);
 
     // option areas
 
     auto pHB2 = new QHBoxLayout(popupArea);
-    QSizePolicy sizePolicy2(QSizePolicy::Expanding, QSizePolicy::Maximum);
     popupArea->setMinimumSize(200, 60);
     pHB2->setSizeConstraint(QLayout::SetMaximumSize);
-    mpErrorConsole = new TConsole(mpHost, false, popupArea);
+    mpErrorConsole = new TConsole(mpHost, TConsole::ErrorConsole, popupArea);
     mpErrorConsole->setWrapAt(100);
     mpErrorConsole->mUpperPane->slot_toggleTimeStamps();
     mpErrorConsole->print("*** starting new session ***\n");
@@ -466,7 +497,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     config->beginChanges();
     config->setThemeName(mpHost->mEditorTheme);
     config->setFont(mpHost->mDisplayFont);
-    config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
+    config->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
+                                  ? edbee::TextEditorConfig::ShowWhitespaces
+                                  : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->endChanges();
 
@@ -501,8 +534,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // QLineEdit does not provide a signal to hook on for the clear action
     // see https://bugreports.qt.io/browse/QTBUG-36257 for problem
     // credit to Albert for the workaround
-    for (int i(0); i < pLineEdit_searchTerm->children().size(); ++i) {
-        auto *pAction_clear(qobject_cast<QAction *>(pLineEdit_searchTerm->children().at(i)));
+    for (auto child : pLineEdit_searchTerm->children()) {
+        auto *pAction_clear(qobject_cast<QAction *>(child));
 
         // The name was found by inspection - but as it is a QT internal it
         // might change in the future:
@@ -775,6 +808,7 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
                     mpSourceEditorEdbee->setFocus();
                     controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
                     controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollNever);
                     break;
                 case SearchResultIsName:
                     mpTriggersMainArea->lineEdit_trigger_name->setFocus(Qt::OtherFocusReason);
@@ -829,6 +863,7 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
                     mpSourceEditorEdbee->setFocus();
                     controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
                     controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollNever);
                     break;
                 case SearchResultIsName:
                     mpAliasMainArea->lineEdit_alias_name->setFocus(Qt::OtherFocusReason);
@@ -877,6 +912,7 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
                     mpSourceEditorEdbee->setFocus();
                     controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
                     controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollNever);
                     break;
                 case SearchResultIsName:
                     mpScriptsMainArea->lineEdit_script_name->setFocus(Qt::OtherFocusReason);
@@ -929,6 +965,7 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
                     mpSourceEditorEdbee->setFocus();
                     controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
                     controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollNever);
                     break;
                 case SearchResultIsName:
                     mpActionsMainArea->lineEdit_action_name->setFocus(Qt::OtherFocusReason);
@@ -994,6 +1031,7 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
                     mpSourceEditorEdbee->setFocus();
                     controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
                     controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollNever);
                     break;
                 case SearchResultIsName:
                     mpTimersMainArea->lineEdit_timer_name->setFocus(Qt::OtherFocusReason);
@@ -1037,6 +1075,7 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
                     mpSourceEditorEdbee->setFocus();
                     controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
                     controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollNever);
                     break;
                 case SearchResultIsName:
                     mpTriggersMainArea->lineEdit_trigger_name->setFocus(Qt::OtherFocusReason);
@@ -1097,6 +1136,7 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
                     mpSourceEditorEdbee->setFocus();
                     controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
                     controller->moveCaretTo(pItem->data(0, PatternOrLineRole).toInt(), pItem->data(0, PositionRole).toInt(), false);
+                    controller->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollNever);
                     break;
                 default:
                     qDebug() << "dlgTriggerEditor::slot_item_selected_list(...) Called for a VAR type item but handler for element of type:"
@@ -4312,6 +4352,7 @@ void dlgTriggerEditor::saveScript()
     pT->setScript(script);
 
     pT->compile();
+    mpHost->getTriggerUnit()->doCleanup();
     QIcon icon;
     if (pT->isFolder()) {
         if (!pT->mPackageName.isEmpty()) {
@@ -4419,32 +4460,32 @@ void dlgTriggerEditor::saveVar()
     if (!pItem->parent()) {
         return;
     }
-    LuaInterface* lI = mpHost->getLuaInterface();
-    VarUnit* vu = lI->getVarUnit();
-    TVar* var = vu->getWVar(pItem);
+    auto* luaInterface = mpHost->getLuaInterface();
+    auto* varUnit = luaInterface->getVarUnit();
+    TVar* variable = varUnit->getWVar(pItem);
     bool newVar = false;
-    if (!var) {
+    if (!variable) {
         newVar = true;
-        var = vu->getTVar(pItem);
+        variable = varUnit->getTVar(pItem);
     }
-    if (!var) {
+    if (!variable) {
         return;
     }
     QString newName = mpVarsMainArea->lineEdit_var_name->text();
     QString newValue = mpSourceEditorEdbeeDocument->text();
-    if (newName == "") {
+    if (newName.isEmpty()) {
         slot_var_selected(pItem);
         return;
     }
     mChangingVar = true;
     int uiNameType = mpVarsMainArea->comboBox_variable_key_type->itemData(mpVarsMainArea->comboBox_variable_key_type->currentIndex(), Qt::UserRole).toInt();
     int uiValueType = mpVarsMainArea->comboBox_variable_value_type->itemData(mpVarsMainArea->comboBox_variable_value_type->currentIndex(), Qt::UserRole).toInt();
-    if ((uiNameType == 3 || uiNameType == 4) && newVar) {
-        uiNameType = -1;
+    if ((uiNameType == LUA_TNUMBER || uiNameType == LUA_TSTRING) && newVar) {
+        uiNameType = LUA_TNONE;
     }
     //check variable recasting
     int varRecast = canRecast(pItem, uiNameType, uiValueType);
-    if ((uiNameType == -1) || (var && uiNameType != var->getKeyType())) {
+    if ((uiNameType == -1) || (variable && uiNameType != variable->getKeyType())) {
         if (QString(newName).toInt()) {
             uiNameType = LUA_TNUMBER;
         } else {
@@ -4464,37 +4505,38 @@ void dlgTriggerEditor::saveVar()
         //we sometimes get in here from new variables
         if (newVar) {
             //we're making this var
-            var = vu->getTVar(pItem);
-            if (!var) {
-                var = new TVar();
+            variable = varUnit->getTVar(pItem);
+            if (!variable) {
+                variable = new TVar();
             }
-            var->setName(newName, uiNameType);
-            var->setValue(newValue, uiValueType);
-            lI->createVar(var);
-            vu->addVariable(var);
-            vu->addTreeItem(pItem, var);
-            vu->removeTempVar(pItem);
+            variable->setName(newName, uiNameType);
+            variable->setValue(newValue, uiValueType);
+            luaInterface->createVar(variable);
+            varUnit->addVariable(variable);
+            varUnit->addTreeItem(pItem, variable);
+            varUnit->removeTempVar(pItem);
+            varUnit->getBase()->addChild(variable);
             pItem->setText(0, newName);
             mpCurrentVarItem = nullptr;
-        } else if (var) {
-            if (newName == var->getName() && (var->getValueType() == LUA_TTABLE && newValue == var->getValue())) {
+        } else if (variable) {
+            if (newName == variable->getName() && (variable->getValueType() == LUA_TTABLE && newValue == variable->getValue())) {
                 //no change made
             } else {
                 //we're trying to rename it/recast it
                 int change = 0;
-                if (newName != var->getName() || uiNameType != var->getKeyType()) {
+                if (newName != variable->getName() || uiNameType != variable->getKeyType()) {
                     //lets make sure the nametype works
-                    if (var->getKeyType() == LUA_TNUMBER && newName.toInt()) {
+                    if (variable->getKeyType() == LUA_TNUMBER && newName.toInt()) {
                         uiNameType = LUA_TNUMBER;
                     } else {
                         uiNameType = LUA_TSTRING;
                     }
                     change = change | 0x1;
                 }
-                var->setNewName(newName, uiNameType);
-                if (var->getValueType() != LUA_TTABLE && (newValue != var->getValue() || uiValueType != var->getValueType())) {
+                variable->setNewName(newName, uiNameType);
+                if (variable->getValueType() != LUA_TTABLE && (newValue != variable->getValue() || uiValueType != variable->getValueType())) {
                     //lets check again
-                    if (var->getValueType() == LUA_TTABLE) {
+                    if (variable->getValueType() == LUA_TTABLE) {
                         //HEIKO: obvious logic error used to be valueType == LUA_TABLE
                         uiValueType = LUA_TTABLE;
                     } else if (uiValueType == LUA_TNUMBER && newValue.toInt()) {
@@ -4504,33 +4546,33 @@ void dlgTriggerEditor::saveVar()
                     } else {
                         uiValueType = LUA_TSTRING; //nope, you don't agree, you lose your value
                     }
-                    var->setValue(newValue, uiValueType);
+                    variable->setValue(newValue, uiValueType);
                     change = change | 0x2;
                 }
                 if (change) {
                     if (change & 0x1 || newVar) {
-                        lI->renameVar(var);
+                        luaInterface->renameVar(variable);
                     }
-                    if ((var->getValueType() != LUA_TTABLE && change & 0x2) || newVar) {
-                        lI->setValue(var);
+                    if ((variable->getValueType() != LUA_TTABLE && change & 0x2) || newVar) {
+                        luaInterface->setValue(variable);
                     }
                     pItem->setText(0, newName);
                     mpCurrentVarItem = nullptr;
                 } else {
-                    var->clearNewName();
+                    variable->clearNewName();
                 }
             }
         }
     } else if (varRecast == 1) { //recast it
-        TVar* var = vu->getWVar(pItem);
+        TVar* var = varUnit->getWVar(pItem);
         if (newVar) {
             //we're making this var
-            var = vu->getTVar(pItem);
+            var = varUnit->getTVar(pItem);
             var->setName(newName, uiNameType);
             var->setValue(newValue, uiValueType);
-            lI->createVar(var);
-            vu->addVariable(var);
-            vu->addTreeItem(pItem, var);
+            luaInterface->createVar(var);
+            varUnit->addVariable(var);
+            varUnit->addTreeItem(pItem, var);
             pItem->setText(0, newName);
             mpCurrentVarItem = nullptr;
         } else if (var) {
@@ -4564,10 +4606,10 @@ void dlgTriggerEditor::saveVar()
             }
             if (change) {
                 if (change & 0x1 || newVar) {
-                    lI->renameVar(var);
+                    luaInterface->renameVar(var);
                 }
                 if (change & 0x2 || newVar) {
-                    lI->setValue(var);
+                    luaInterface->setValue(var);
                 }
                 pItem->setText(0, newName);
                 mpCurrentVarItem = nullptr;
@@ -4576,18 +4618,18 @@ void dlgTriggerEditor::saveVar()
     }
     //redo this here in case we changed type
     pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsTristate | Qt::ItemIsUserCheckable);
-    pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
-    if (!vu->shouldSave(var)) {
+    pItem->setToolTip(0, tr("Checked variables will be saved and loaded with your profile."));
+    if (!varUnit->shouldSave(variable)) {
         pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable));
         pItem->setForeground(0, QBrush(QColor("grey")));
         pItem->setToolTip(0, "");
         pItem->setCheckState(0, Qt::Unchecked);
-    } else if (vu->isSaved(var)) {
+    } else if (varUnit->isSaved(variable)) {
         pItem->setCheckState(0, Qt::Checked);
     }
-    pItem->setData(0, Qt::UserRole, var->getValueType());
+    pItem->setData(0, Qt::UserRole, variable->getValueType());
     QIcon icon;
-    switch (var->getValueType()) {
+    switch (variable->getValueType()) {
     case 5:
         icon.addPixmap(QPixmap(QStringLiteral(":/icons/table.png")), QIcon::Normal, QIcon::Off);
         break;
@@ -4677,20 +4719,27 @@ void dlgTriggerEditor::saveKey()
     }
 }
 
-QColor dlgTriggerEditor::itemTypeColor(const int type)
+QString dlgTriggerEditor::itemTypeStyleSheet(const int type)
 {
     switch (type) {
-    case REGEX_PERL:        return QColor(0, 0, 195); // Was: Qt::blue;
-    case REGEX_BEGIN_OF_LINE_SUBSTRING: return QColor(195, 0, 0);
-    case REGEX_EXACT_MATCH: return QColor(0, 195, 0);
-    case REGEX_LUA_CODE:    return QColor(0, 155, 155);
-    case REGEX_LINE_SPACER: return QColor(155, 0, 155); // Was QColor(137, 0, 205);
-    case REGEX_COLOR_PATTERN: return Qt::darkGray; // Not normally seen as the text entry is hidden for this type
-    case REGEX_PROMPT:      return QColor(155, 155, 0); // Was black, but that is the same as substring
+    case REGEX_PERL:                    return QLatin1String("QLineEdit { background-color: #FFFF00; color: #0000FF; }");
+    case REGEX_BEGIN_OF_LINE_SUBSTRING: return QLatin1String("QLineEdit { background-color: #00FFFF; color: #FF0000; }");
+    case REGEX_EXACT_MATCH:             return QLatin1String("QLineEdit { background-color: #FF00FF; color: #00FF00; }");
+    case REGEX_LUA_CODE:                return QLatin1String("QLineEdit { background-color: #FF0000; color: #00FFFF; }");
+    case REGEX_LINE_SPACER:             return QLatin1String("QLineEdit { background-color: #00FF00; color: #FF00FF; }");
+    case REGEX_COLOR_PATTERN: // Text is never shown so the style is not changed
+        [[clang::fallthrough]];
+    case REGEX_PROMPT: // Text is never shown so the style is not changed
+        [[clang::fallthrough]];
+    case REGEX_SUBSTRING:
+        // The substring one is used by default so has to use the default style
+        // so as not to paint the empty items differently to ones that have
+        // been used in other triggers and never changed
+        [[clang::fallthrough]];
     default:
-        // Includes case REGEX_SUBSTRING
-        return Qt::black;
+        return QString();
     }
+
 }
 
 void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdit* pItem)
@@ -4837,7 +4886,10 @@ void dlgTriggerEditor::slot_setupPatternControls(int type)
             pPatternItem->lineEdit_pattern->clear();
         }
     }
-    pPatternItem->lineEdit_pattern->setStyleSheet(QStringLiteral("QLineEdit { color: %1; }").arg(itemTypeColor(type).name()));
+    // Now sets both foreground and the opposite color background to avoid text
+    // being lost with a dark desktop environment or hopefully not being
+    // readable by those with partial color blindness.
+    pPatternItem->lineEdit_pattern->setStyleSheet(itemTypeStyleSheet(type));
 }
 
 void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
@@ -5786,6 +5838,10 @@ void dlgTriggerEditor::fillout_form()
     mpAliasBaseItem->setExpanded(true);
     std::list<TAlias*> baseNodeList_alias = mpHost->getAliasUnit()->getAliasRootNodeList();
     for (auto alias : baseNodeList_alias) {
+        if (alias->isTemporary()) {
+            continue;
+        }
+
         QString s = alias->getName();
         QStringList sList;
         sList << s;
@@ -5851,6 +5907,10 @@ void dlgTriggerEditor::fillout_form()
     mpActionBaseItem->setExpanded(true);
     std::list<TAction*> baseNodeList_action = mpHost->getActionUnit()->getActionRootNodeList();
     for (auto action : baseNodeList_action) {
+        if (action->isTemporary()) {
+            continue;
+        }
+
         QString s = action->getName();
         QStringList sList;
         sList << s;
@@ -5908,6 +5968,10 @@ void dlgTriggerEditor::fillout_form()
     mpKeyBaseItem->setExpanded(true);
     std::list<TKey*> baseNodeList_key = mpHost->getKeyUnit()->getKeyRootNodeList();
     for (auto key : baseNodeList_key) {
+        if (key->isTemporary()) {
+            continue;
+        }
+
         QString s = key->getName();
         QStringList sList;
         sList << s;
@@ -6447,25 +6511,6 @@ void dlgTriggerEditor::focusOutEvent(QFocusEvent* pE)
     Q_UNUSED(pE);
 
     saveOpenChanges();
-    autoSave();
-}
-
-// this doesn't seem 100% right - I couldn't find a "window lost focus" event
-// The focusOutEvent above is not it - that is for keyboard focus
-void dlgTriggerEditor::leaveEvent(QEvent *event)
-{
-    Q_UNUSED(event);
-
-    saveOpenChanges();
-
-    // delay autosave for next event loop in case the user has pressed 'Save profile as' and
-    // the focus was lost due to a file export dialog. In this case, don't want
-    // autosave kicking in and blocking the save profile
-    QTimer::singleShot(0, this, [this]() {
-        if (!mSavingAs) {
-            autoSave();
-        }
-    });
 }
 
 void dlgTriggerEditor::changeView(int view)
@@ -7269,6 +7314,8 @@ void dlgTriggerEditor::slot_export()
         QMessageBox::warning(this, tr("export package:"), tr("Cannot write file %1:\n%2.").arg(fileName, file.errorString()));
         return;
     }
+    // Should close the file that we have confirmed can be opened:
+    file.close();
 
     switch (mCurrentView) {
     case static_cast<int>(EditorViewType::cmTriggerView):
@@ -7991,11 +8038,10 @@ void dlgTriggerEditor::slot_changeEditorTextOptions(QTextOption::Flags state)
 {
     edbee::TextEditorConfig* config = mpSourceEditorEdbee->config();
 
-    // Although this option seems to be a binary choice the Edbee editor widget
-    // needs a integer 1 to show whitespace characters and an integer 0 to hide
-    // them:
     config->beginChanges();
-    config->setShowWhitespaceMode(state & QTextOption::ShowTabsAndSpaces ? 1 : 0);
+    config->setShowWhitespaceMode((state & QTextOption::ShowTabsAndSpaces)
+                                  ? edbee::TextEditorConfig::ShowWhitespaces
+                                  : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(state & QTextOption::ShowLineAndParagraphSeparators);
     config->endChanges();
 }
@@ -8020,7 +8066,9 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
     config->beginChanges();
     config->setThemeName(mpHost->mEditorTheme);
     config->setFont(mpHost->mDisplayFont);
-    config->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
+    config->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
+                                  ? edbee::TextEditorConfig::ShowWhitespaces
+                                  : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->setSmartTab(true);
     config->setCaretBlinkRate(200);
@@ -8045,7 +8093,9 @@ void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
         localConfig->beginChanges();
         localConfig->setThemeName(theme);
         localConfig->setFont(mpHost->mDisplayFont);
-        localConfig->setShowWhitespaceMode(mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces ? 1 : 0);
+        localConfig->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
+                                           ? edbee::TextEditorConfig::ShowWhitespaces
+                                           : edbee::TextEditorConfig::HideWhitespaces);
         localConfig->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
         localConfig->endChanges();
 }
