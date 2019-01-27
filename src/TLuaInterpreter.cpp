@@ -6320,6 +6320,7 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
 // colour or TTrigger::scmIgnored ignore; it is anticipated that additional
 // special values less than zero may be added to detect other types of text (or
 // for a 16M colour value where the components have to be given)
+// Documentation: https://wiki.mudlet.org/w/Manual:Mudlet_Object_Functions#tempAnsiColorTrigger
 int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
