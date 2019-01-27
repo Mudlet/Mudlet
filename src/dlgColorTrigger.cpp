@@ -96,7 +96,7 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, const bool isBackGro
     // These will correctly set the colours on the value label in their area:
     if (mIsBackground) {
         if (mpTrigger->mColorTriggerBgAnsi >= 16 && mpTrigger->mColorTriggerBgAnsi <= 231) {
-
+            slot_moreColorsClicked();
             horizontalSlider_red->setSliderPosition((mpTrigger->mColorTriggerBgAnsi - 16) / 36);
             horizontalSlider_green->setSliderPosition((mpTrigger->mColorTriggerBgAnsi - 16 - horizontalSlider_red->value() * 36) / 6);
             horizontalSlider_blue->setSliderPosition((mpTrigger->mColorTriggerBgAnsi - 16 - horizontalSlider_red->value() * 36) - horizontalSlider_green->value() * 6);
@@ -105,7 +105,7 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, const bool isBackGro
             slot_setRBGButtonFocus();
 
         } else if (mpTrigger->mColorTriggerBgAnsi >= 232 && mpTrigger->mColorTriggerBgAnsi <= 255) {
-
+            slot_moreColorsClicked();
             // The RGB controls will be at zeros so this will set the things up
             // to those
             slot_rgbColorChanged();
@@ -132,6 +132,7 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, const bool isBackGro
 
     } else {
         if (mpTrigger->mColorTriggerFgAnsi >= 16 && mpTrigger->mColorTriggerFgAnsi <= 231) {
+            slot_moreColorsClicked();
             // Current background for this trigger is a RGB one so set that
             // control to the matching value:
 
@@ -143,6 +144,7 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, const bool isBackGro
             slot_setRBGButtonFocus();
 
         } else if (mpTrigger->mColorTriggerFgAnsi >= 232 && mpTrigger->mColorTriggerFgAnsi <= 255) {
+            slot_moreColorsClicked();
             // Current background for this trigger is a Gray one so set that
             // control to the matching value:
 
