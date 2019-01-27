@@ -733,7 +733,7 @@ TBuffer::TBuffer(Host* pH)
 , mWrapAt(99999999)
 , mWrapIndent(0)
 , mCursorY(0)
-, mMXP(true)
+, mMXP(false)
 , mAssemblingToken(false)
 , currentToken("")
 , openT(0)
@@ -1327,7 +1327,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 #if defined(DEBUG_MXP_PROCESSING)
                     qDebug().nospace().noquote() << "    Consider the MXP control sequence: \"" << localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str() << "\"";
 #endif
-                    if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF && mpHost->mServerMXPenabled) {
+                    if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF && mpHost->mServerMXPenabled && isFromServer) {
                         mGotCSI = false;
 
                         bool isOk = false;
