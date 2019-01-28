@@ -3,7 +3,8 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2016, 2018-2019 by Stephen Lyons                   *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
@@ -346,8 +347,10 @@ public:
     static int loadRawFile(lua_State*);
     static int setBold(lua_State*);
     static int setItalics(lua_State*);
-    static int setUnderline(lua_State*);
+    static int setReverse(lua_State*);
+    static int setOverline(lua_State*);
     static int setStrikeOut(lua_State*);
+    static int setUnderline(lua_State*);
     static int disconnect(lua_State*);
     static int reconnect(lua_State*);
     static int getMudletHomeDir(lua_State*);
@@ -438,27 +441,27 @@ public:
     static int getServerEncodingsList(lua_State*);
     static int alert(lua_State* L);
 #ifdef QT_TEXTTOSPEECH_LIB
-	static int ttsSpeak(lua_State* L);
-	static int ttsSkip(lua_State* L);
-	static int ttsSetRate(lua_State* L);
-	static int ttsSetPitch(lua_State* L);
-	static int ttsSetVolume(lua_State* L);
-	static int ttsGetRate(lua_State* L);
-	static int ttsGetPitch(lua_State* L);
-	static int ttsGetVolume(lua_State* L);
-	static int ttsSetVoiceByName(lua_State* L);
-	static int ttsSetVoiceByIndex(lua_State* L);
-	static int ttsGetCurrentVoice(lua_State* L);
-	static int ttsGetVoices(lua_State* L);	
-	static int ttsQueue(lua_State* L);
-	static int ttsGetQueue(lua_State* L);
-	static int ttsPause(lua_State* L);
-	static int ttsResume(lua_State* L);
-	static int ttsClearQueue(lua_State* L);
-	static int ttsGetCurrentLine(lua_State* L);
-	static int ttsGetState(lua_State* L);
-	static void ttsBuild();
-	static void ttsStateChanged(QTextToSpeech::State state);
+    static int ttsSpeak(lua_State* L);
+    static int ttsSkip(lua_State* L);
+    static int ttsSetRate(lua_State* L);
+    static int ttsSetPitch(lua_State* L);
+    static int ttsSetVolume(lua_State* L);
+    static int ttsGetRate(lua_State* L);
+    static int ttsGetPitch(lua_State* L);
+    static int ttsGetVolume(lua_State* L);
+    static int ttsSetVoiceByName(lua_State* L);
+    static int ttsSetVoiceByIndex(lua_State* L);
+    static int ttsGetCurrentVoice(lua_State* L);
+    static int ttsGetVoices(lua_State* L);
+    static int ttsQueue(lua_State* L);
+    static int ttsGetQueue(lua_State* L);
+    static int ttsPause(lua_State* L);
+    static int ttsResume(lua_State* L);
+    static int ttsClearQueue(lua_State* L);
+    static int ttsGetCurrentLine(lua_State* L);
+    static int ttsGetState(lua_State* L);
+    static void ttsBuild();
+    static void ttsStateChanged(QTextToSpeech::State state);
 #endif // QT_TEXTTOSPEECH_LIB
     static int tempPromptTrigger(lua_State*);
     static int permPromptTrigger(lua_State*);
@@ -466,6 +469,7 @@ public:
     static int getRowCount(lua_State*);
     static int getOS(lua_State*);
     static int getAvailableFonts(lua_State* L);
+    static int tempAnsiColorTrigger(lua_State*);
     static int setDiscordApplicationID(lua_State* L);
     static int usingMudletsDiscordID(lua_State*);
     static int setDiscordState(lua_State*);

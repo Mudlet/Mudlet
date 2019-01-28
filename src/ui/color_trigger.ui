@@ -3,97 +3,68 @@
  <class>color_trigger</class>
  <widget class="QDialog" name="color_trigger">
   <property name="windowModality">
-   <enum>Qt::ApplicationModal</enum>
+   <enum>Qt::NonModal</enum>
   </property>
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>364</width>
-    <height>270</height>
+    <width>765</width>
+    <height>533</height>
    </rect>
+  </property>
+  <property name="windowTitle">
+   <string>ANSI 256 Color chooser</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="../mudlet.qrc">
+    <normaloff>:/icons/mudlet_color.png</normaloff>:/icons/mudlet_color.png</iconset>
   </property>
   <property name="modal">
    <bool>true</bool>
   </property>
-  <widget class="QPushButton" name="closeButton">
-   <property name="geometry">
-    <rect>
-     <x>270</x>
-     <y>240</y>
-     <width>81</width>
-     <height>20</height>
-    </rect>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="sizeConstraint">
+    <enum>QLayout::SetMinimumSize</enum>
    </property>
-   <property name="text">
-    <string>cancel</string>
-   </property>
-  </widget>
-  <widget class="QGroupBox" name="groupBox_2">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>0</y>
-     <width>341</width>
-     <height>231</height>
-    </rect>
-   </property>
-   <property name="title">
-    <string>choose color to trigger on</string>
-   </property>
-   <layout class="QGridLayout" name="gridLayout_8">
-    <item row="0" column="0">
-     <layout class="QGridLayout" name="gridLayout_4">
+   <item>
+    <widget class="QLabel" name="label">
+     <property name="frameShape">
+      <enum>QFrame::Panel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Plain</enum>
+     </property>
+     <property name="text">
+      <string comment="Ensure that &quot;Default&quot;, &quot;Ignore&quot; and &quot;Cancel&quot; in this instruction are the same as used for the controls elsewhere on this dialog.">&lt;small&gt;Choose:&lt;ul&gt;&lt;li&gt;one of the basic 16 colors below&lt;/li&gt;
+&lt;li&gt;click the &lt;i&gt;more&lt;/i&gt; button to get access to other colors in the 256-color set, then follow the instructions to select a color from that part of the 256 colors supported; if such a color is already in use then that part will already be showing&lt;/li&gt;
+&lt;li&gt;click the &lt;i&gt;Default&lt;/i&gt; or &lt;i&gt;Ignore&lt;/i&gt; buttons at the bottom for a pair of other special cases&lt;/li&gt;
+&lt;li&gt;clcik &lt;i&gt;Cancel&lt;/i&gt; to close this dialog without making any changes&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</string>
+     </property>
+     <property name="scaledContents">
+      <bool>false</bool>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="textInteractionFlags">
+      <set>Qt::NoTextInteraction</set>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox_basicColors">
+     <property name="title">
+      <string>Basic ANSI Colors [0-15] - click a button to select that color number directly:</string>
+     </property>
+     <property name="checkable">
+      <bool>false</bool>
+     </property>
+     <layout class="QGridLayout" name="gridLayout" rowstretch="1,1,0,1,1">
+      <property name="sizeConstraint">
+       <enum>QLayout::SetMinimumSize</enum>
+      </property>
       <item row="0" column="0">
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>Black:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label_2">
-        <property name="text">
-         <string>Red:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="label_3">
-        <property name="text">
-         <string>Green:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="0">
-       <widget class="QLabel" name="label_5">
-        <property name="text">
-         <string>Blue:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="5" column="0">
-       <widget class="QLabel" name="label_6">
-        <property name="text">
-         <string>Magenta:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="6" column="0">
-       <widget class="QLabel" name="label_7">
-        <property name="text">
-         <string>Cyan:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="7" column="0">
-       <widget class="QLabel" name="label_8">
-        <property name="text">
-         <string>White:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
        <widget class="QPushButton" name="pushButton_black">
         <property name="autoFillBackground">
          <bool>true</bool>
@@ -103,7 +74,7 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
+      <item row="0" column="1">
        <widget class="QPushButton" name="pushButton_red">
         <property name="autoFillBackground">
          <bool>true</bool>
@@ -113,7 +84,7 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="1">
+      <item row="0" column="2">
        <widget class="QPushButton" name="pushButton_green">
         <property name="autoFillBackground">
          <bool>true</bool>
@@ -123,7 +94,7 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="1">
+      <item row="0" column="3">
        <widget class="QPushButton" name="pushButton_yellow">
         <property name="autoFillBackground">
          <bool>true</bool>
@@ -133,7 +104,7 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="1">
+      <item row="1" column="0">
        <widget class="QPushButton" name="pushButton_blue">
         <property name="autoFillBackground">
          <bool>true</bool>
@@ -143,7 +114,7 @@
         </property>
        </widget>
       </item>
-      <item row="5" column="1">
+      <item row="1" column="1">
        <widget class="QPushButton" name="pushButton_magenta">
         <property name="autoFillBackground">
          <bool>true</bool>
@@ -153,7 +124,7 @@
         </property>
        </widget>
       </item>
-      <item row="6" column="1">
+      <item row="1" column="2">
        <widget class="QPushButton" name="pushButton_cyan">
         <property name="autoFillBackground">
          <bool>true</bool>
@@ -163,7 +134,7 @@
         </property>
        </widget>
       </item>
-      <item row="7" column="1">
+      <item row="1" column="3">
        <widget class="QPushButton" name="pushButton_white">
         <property name="autoFillBackground">
          <bool>true</bool>
@@ -173,67 +144,14 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="label_4">
-        <property name="text">
-         <string>Yellow:</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
-    <item row="0" column="1">
-     <layout class="QGridLayout" name="gridLayout_3">
-      <item row="0" column="0">
-       <widget class="QLabel" name="label_13">
-        <property name="text">
-         <string>Light black:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label_14">
-        <property name="text">
-         <string>Light red:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="label_9">
-        <property name="text">
-         <string>Light green:</string>
+      <item row="2" column="0" colspan="4">
+       <widget class="Line" name="line_basicColorDivider">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>
       <item row="3" column="0">
-       <widget class="QLabel" name="label_15">
-        <property name="text">
-         <string>Light yellow:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="0">
-       <widget class="QLabel" name="label_16">
-        <property name="text">
-         <string>Light blue:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="5" column="0">
-       <widget class="QLabel" name="label_11">
-        <property name="text">
-         <string>Light magenta:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="6" column="0">
-       <widget class="QLabel" name="label_12">
-        <property name="text">
-         <string>Light cyan:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
        <widget class="QPushButton" name="pushButton_Lblack">
         <property name="autoFillBackground">
          <bool>true</bool>
@@ -243,7 +161,7 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
+      <item row="3" column="1">
        <widget class="QPushButton" name="pushButton_Lred">
         <property name="autoFillBackground">
          <bool>true</bool>
@@ -253,7 +171,7 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="1">
+      <item row="3" column="2">
        <widget class="QPushButton" name="pushButton_Lgreen">
         <property name="autoFillBackground">
          <bool>true</bool>
@@ -263,7 +181,7 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="1">
+      <item row="3" column="3">
        <widget class="QPushButton" name="pushButton_Lyellow">
         <property name="autoFillBackground">
          <bool>true</bool>
@@ -273,7 +191,7 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="1">
+      <item row="4" column="0">
        <widget class="QPushButton" name="pushButton_Lblue">
         <property name="autoFillBackground">
          <bool>true</bool>
@@ -283,7 +201,7 @@
         </property>
        </widget>
       </item>
-      <item row="5" column="1">
+      <item row="4" column="1">
        <widget class="QPushButton" name="pushButton_Lmagenta">
         <property name="autoFillBackground">
          <bool>true</bool>
@@ -293,7 +211,7 @@
         </property>
        </widget>
       </item>
-      <item row="6" column="1">
+      <item row="4" column="2">
        <widget class="QPushButton" name="pushButton_Lcyan">
         <property name="autoFillBackground">
          <bool>true</bool>
@@ -303,14 +221,7 @@
         </property>
        </widget>
       </item>
-      <item row="7" column="0">
-       <widget class="QLabel" name="label_10">
-        <property name="text">
-         <string>Light white:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="7" column="1">
+      <item row="4" column="3">
        <widget class="QPushButton" name="pushButton_Lwhite">
         <property name="autoFillBackground">
          <bool>true</bool>
@@ -321,10 +232,233 @@
        </widget>
       </item>
      </layout>
-    </item>
-   </layout>
-  </widget>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox_rgbScale">
+     <property name="title">
+      <string>ANSI 6R x 6G x 6B Colors [16-231] - adjust red, green, blue and click button to select matching color number:</string>
+     </property>
+     <property name="checkable">
+      <bool>false</bool>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2" columnstretch="1,1,1,1">
+      <item row="0" column="0" alignment="Qt::AlignHCenter">
+       <widget class="QLabel" name="label_red">
+        <property name="text">
+         <string>Red (0-5)</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1" alignment="Qt::AlignHCenter">
+       <widget class="QLabel" name="label_green">
+        <property name="text">
+         <string>Green (0-5)</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2" alignment="Qt::AlignHCenter">
+       <widget class="QLabel" name="label_blue">
+        <property name="text">
+         <string>Blue (0-5)</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="3" alignment="Qt::AlignLeft">
+       <widget class="QLabel" name="label_rgbFormula">
+        <property name="text">
+         <string>16 + 36 x R + 6 x G + B =</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0" rowspan="2">
+       <widget class="QSlider" name="horizontalSlider_red">
+        <property name="maximum">
+         <number>5</number>
+        </property>
+        <property name="pageStep">
+         <number>1</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="tickPosition">
+         <enum>QSlider::TicksAbove</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1" rowspan="2">
+       <widget class="QSlider" name="horizontalSlider_green">
+        <property name="maximum">
+         <number>5</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="tickPosition">
+         <enum>QSlider::TicksAbove</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2" rowspan="2">
+       <widget class="QSlider" name="horizontalSlider_blue">
+        <property name="maximum">
+         <number>5</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="tickPosition">
+         <enum>QSlider::TicksAbove</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="3">
+       <widget class="QLabel" name="label_rgbValue">
+        <property name="font">
+         <font>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Plain</enum>
+        </property>
+        <property name="text">
+         <string>[16]</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="3">
+       <widget class="QPushButton" name="pushButton_setUsingRgbValue">
+        <property name="text">
+         <string>Set to RGB value</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox_grayScale">
+     <property name="title">
+      <string>ANSI 24 Grays scale [232-255] - adjust gray and click button to select matching color number:</string>
+     </property>
+     <property name="checkable">
+      <bool>false</bool>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_3" columnstretch="3,1">
+      <item row="0" column="0" alignment="Qt::AlignHCenter">
+       <widget class="QLabel" name="label_gray">
+        <property name="text">
+         <string>Gray (0-23)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1" alignment="Qt::AlignLeft">
+       <widget class="QLabel" name="label_grayFormula">
+        <property name="text">
+         <string>232 + Gr =</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0" rowspan="2">
+       <widget class="QSlider" name="horizontalSlider_gray">
+        <property name="maximum">
+         <number>23</number>
+        </property>
+        <property name="pageStep">
+         <number>4</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="tickPosition">
+         <enum>QSlider::TicksAbove</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLabel" name="label_grayValue">
+        <property name="font">
+         <font>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>[232]</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QPushButton" name="pushButton_setUsingGrayValue">
+        <property name="text">
+         <string>Set to Grayscale value</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Apply|QDialogButtonBox::Cancel|QDialogButtonBox::Ignore|QDialogButtonBox::Reset</set>
+     </property>
+     <property name="centerButtons">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
  </widget>
- <resources/>
- <connections/>
+ <resources>
+  <include location="../mudlet.qrc"/>
+ </resources>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>color_trigger</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>378</x>
+     <y>413</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>378</x>
+     <y>217</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

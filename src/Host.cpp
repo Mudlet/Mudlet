@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -1334,6 +1334,73 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
     if (needToEmit) {
         emit signal_changeIsAmbigousWidthGlyphsToBeWide(localState);
     }
+}
+
+QColor Host::getAnsiColor(const int ansiCode, const bool isBackground) const
+{
+    // clang-format off
+    switch (ansiCode) {
+    case 0:         return mBlack;
+    case 1:         return mRed;
+    case 2:         return mGreen;
+    case 3:         return mYellow;
+    case 4:         return mBlue;
+    case 5:         return mMagenta;
+    case 6:         return mCyan;
+    case 7:         return mWhite;
+    case 8:         return mLightBlack;
+    case 9:         return mLightRed;
+    case 10:        return mLightGreen;
+    case 11:        return mLightYellow;
+    case 12:        return mLightBlue;
+    case 13:        return mLightMagenta;
+    case 14:        return mLightCyan;
+    case 15:        return mLightWhite;
+    // Grey scale divided into 24 values:
+    case 232:       return QColor(  0,   0,   0); //   0.000
+    case 233:       return QColor( 11,  11,  11); //  11.087
+    case 234:       return QColor( 22,  22,  22); //  22.174
+    case 235:       return QColor( 33,  33,  33); //  33.261
+    case 236:       return QColor( 44,  44,  44); //  44.348
+    case 237:       return QColor( 55,  55,  55); //  55.435
+    case 238:       return QColor( 67,  67,  67); //  66.522
+    case 239:       return QColor( 78,  78,  78); //  77.609
+    case 240:       return QColor( 89,  89,  89); //  88.696
+    case 241:       return QColor(100, 100, 100); //  99.783
+    case 242:       return QColor(111, 111, 111); // 110.870
+    case 243:       return QColor(122, 122, 122); // 121.957
+    case 244:       return QColor(133, 133, 133); // 133.043
+    case 245:       return QColor(144, 144, 144); // 144.130
+    case 246:       return QColor(155, 155, 155); // 155.217
+    case 247:       return QColor(166, 166, 166); // 166.304
+    case 248:       return QColor(177, 177, 177); // 177.391
+    case 249:       return QColor(188, 188, 188); // 188.478
+    case 250:       return QColor(200, 200, 200); // 199.565
+    case 251:       return QColor(211, 211, 211); // 210.652
+    case 252:       return QColor(222, 222, 222); // 221.739
+    case 253:       return QColor(233, 233, 233); // 232.826
+    case 254:       return QColor(244, 244, 244); // 243.913
+    case 255:       return QColor(255, 255, 255); // 255.000
+    default:
+        if (ansiCode == TTrigger::scmIgnored) {
+            // No-op - corresponds to no setting or ignoring this aspect
+            return QColor();
+        } else if (ansiCode == TTrigger::scmDefault) {
+            return isBackground ? mBgColor : mFgColor;
+        } else if (ansiCode >= 16 && ansiCode <= 231) {
+            // because color 1-15 behave like normal ANSI colors we need to subtract 16
+            // 6x6 RGB color space
+            int r = (ansiCode - 16) / 36;
+            int g = (ansiCode - 16 - (r * 36)) / 6;
+            int b = (ansiCode - 16 - (r * 36)) - (g * 6);
+            // The following WERE using 42 as factor but that does not reflect
+            // changes already made in TBuffer::translateToPlainText a while ago:
+            return QColor(r * 51, g * 51, b * 51);
+        } else {
+            return QColor(); // Noop
+        }
+    }
+    // clang-format on
 }
 
 // handles out of band (OOB) GMCP/MSDP data for Discord - called whenever GMCP

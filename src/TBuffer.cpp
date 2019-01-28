@@ -632,120 +632,93 @@ const QMap<QString, QVector<QString>> TBuffer::mSupportedMxpElements = {
     {QStringLiteral("a"), {"href", "hint"}}
 };
 
+// Default constructor:
 TChar::TChar()
+: mFgColor(Qt::white)
+, mBgColor(Qt::black)
+, mFlags(None)
+, mIsSelected(false)
+, mLinkIndex(0)
 {
-    fgR = 255;
-    fgG = 255;
-    fgB = 255;
-    bgR = 0;
-    bgG = 0;
-    bgB = 0;
-    flags = 0;
-    link = 0;
 }
 
-TChar::TChar(int fR, int fG, int fB, int bR, int bG, int bB, bool b, bool i, bool u, bool s, int _link) : fgR(fR), fgG(fG), fgB(fB), bgR(bR), bgG(bG), bgB(bB), link(_link)
+TChar::TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags, const int linkIndex)
+: mFgColor(fg)
+, mBgColor(bg)
+, mFlags(flags)
+, mIsSelected(false)
+, mLinkIndex(linkIndex)
 {
-    flags = 0;
-    if (i) {
-        flags |= TCHAR_ITALICS;
-    }
-    if (b) {
-        flags |= TCHAR_BOLD;
-    }
-    if (u) {
-        flags |= TCHAR_UNDERLINE;
-    }
-    if (s) {
-        flags |= TCHAR_STRIKEOUT;
-    }
 }
 
 TChar::TChar(Host* pH)
+: mFlags(None)
+, mIsSelected(false)
+, mLinkIndex(0)
 {
     if (pH) {
-        fgR = pH->mFgColor.red();
-        fgG = pH->mFgColor.green();
-        fgB = pH->mFgColor.blue();
-        bgR = pH->mBgColor.red();
-        bgG = pH->mBgColor.green();
-        bgB = pH->mBgColor.blue();
+        mFgColor = pH->mFgColor;
+        mBgColor = pH->mBgColor;
     } else {
-        fgR = 255;
-        fgG = 255;
-        fgB = 255;
-        bgR = 0;
-        bgG = 0;
-        bgB = 0;
+        mFgColor = Qt::white;
+        mBgColor = Qt::black;
     }
-    flags = 0;
-    link = 0;
 }
 
-bool TChar::operator==(const TChar& c)
+// Note: this operator compares ALL aspects of 'this' against 'other' which may
+// not be wanted in every case:
+bool TChar::operator==(const TChar& other)
 {
-    if (fgR != c.fgR) {
+    if (mIsSelected != other.mIsSelected) {
         return false;
     }
-    if (fgG != c.fgG) {
+    if (mLinkIndex != other.mLinkIndex) {
         return false;
     }
-    if (fgB != c.fgB) {
+    if (mFgColor != other.mFgColor) {
         return false;
     }
-    if (bgR != c.bgR) {
+    if (mBgColor != other.mBgColor) {
         return false;
     }
-    if (bgG != c.bgG) {
-        return false;
-    }
-    if (bgB != c.bgB) {
-        return false;
-    }
-    if (flags != c.flags) {
-        return false;
-    }
-    if (link != c.link) {
+    if (mFlags != other.mFlags) {
         return false;
     }
     return true;
 }
 
+// Copy constructor:
 TChar::TChar(const TChar& copy)
+: mFgColor(copy.mFgColor)
+, mBgColor(copy.mBgColor)
+, mFlags(copy.mFlags)
+, mIsSelected(false)
+, mLinkIndex(copy.mLinkIndex)
 {
-    fgR = copy.fgR;
-    fgG = copy.fgG;
-    fgB = copy.fgB;
-    bgR = copy.bgR;
-    bgG = copy.bgG;
-    bgB = copy.bgB;
-    flags = copy.flags;
-    link = copy.link;
-    flags &= ~(TCHAR_INVERSE); //for some reason we always clear the inverse, is this a bug?
 }
-
 
 TBuffer::TBuffer(Host* pH)
 : mLinkID(0)
 , mLinesLimit(10000)
 , mBatchDeleteSize(1000)
-, mUntriggered(0)
 , mWrapAt(99999999)
 , mWrapIndent(0)
 , mCursorY(0)
 , mMXP(false)
 , mAssemblingToken(false)
-, currentToken("")
+, currentToken()
 , openT(0)
 , closeT(0)
 , mMXP_LINK_MODE(false)
 , mIgnoreTag(false)
-, mSkip("")
+, mSkip()
 , mParsingVar(false)
+, mOpenMainQuote()
 , mMXP_SEND_NO_REF_MODE(false)
 , mGotESC(false)
 , mGotCSI(false)
 , mGotOSC(false)
+, mIsDefaultColor(true)
 , mBlack(pH->mBlack)
 , mLightBlack(pH->mLightBlack)
 , mRed(pH->mRed)
@@ -763,27 +736,21 @@ TBuffer::TBuffer(Host* pH)
 , mLightWhite(pH->mLightWhite)
 , mWhite(pH->mWhite)
 , mpHost(pH)
-, mCursorMoved(false)
+, mForeGroundColor(pH->mFgColor)
+, mForeGroundColorLight(pH->mFgColor)
+, mBackGroundColor(pH->mBgColor)
 , mBold(false)
 , mItalics(false)
-, mUnderline(false)
+, mOverline(false)
+, mReverse(false)
 , mStrikeOut(false)
-, mOpenMainQuote()
-, mEchoText()
-, mIsDefaultColor()
-, isUserScrollBack()
-, maxx()
-, maxy()
-, hadLF()
+, mUnderline(false)
 , lastLoggedFromLine(0)
 , lastloggedToLine(0)
 , mEncoding()
 , mMainIncomingCodec(nullptr)
 {
     clear();
-    newLines = 0;
-    mLastLine = 0;
-    updateColors();
 
     TMxpElement _element;
     _element.name = "SEND";
@@ -825,78 +792,24 @@ void TBuffer::updateColors()
     }
 
     mBlack = pH->mBlack;
-    mBlackR = mBlack.red();
-    mBlackG = mBlack.green();
-    mBlackB = mBlack.blue();
     mLightBlack = pH->mLightBlack;
-    mLightBlackR = mLightBlack.red();
-    mLightBlackG = mLightBlack.green();
-    mLightBlackB = mLightBlack.blue();
     mRed = pH->mRed;
-    mRedR = mRed.red();
-    mRedG = mRed.green();
-    mRedB = mRed.blue();
     mLightRed = pH->mLightRed;
-    mLightRedR = mLightRed.red();
-    mLightRedG = mLightRed.green();
-    mLightRedB = mLightRed.blue();
     mLightGreen = pH->mLightGreen;
-    mLightGreenR = mLightGreen.red();
-    mLightGreenG = mLightGreen.green();
-    mLightGreenB = mLightGreen.blue();
     mGreen = pH->mGreen;
-    mGreenR = mGreen.red();
-    mGreenG = mGreen.green();
-    mGreenB = mGreen.blue();
     mLightBlue = pH->mLightBlue;
-    mLightBlueR = mLightBlue.red();
-    mLightBlueG = mLightBlue.green();
-    mLightBlueB = mLightBlue.blue();
     mBlue = pH->mBlue;
-    mBlueR = mBlue.red();
-    mBlueG = mBlue.green();
-    mBlueB = mBlue.blue();
     mLightYellow = pH->mLightYellow;
-    mLightYellowR = mLightYellow.red();
-    mLightYellowG = mLightYellow.green();
-    mLightYellowB = mLightYellow.blue();
     mYellow = pH->mYellow;
-    mYellowR = mYellow.red();
-    mYellowG = mYellow.green();
-    mYellowB = mYellow.blue();
     mLightCyan = pH->mLightCyan;
-    mLightCyanR = mLightCyan.red();
-    mLightCyanG = mLightCyan.green();
-    mLightCyanB = mLightCyan.blue();
     mCyan = pH->mCyan;
-    mCyanR = mCyan.red();
-    mCyanG = mCyan.green();
-    mCyanB = mCyan.blue();
     mLightMagenta = pH->mLightMagenta;
-    mLightMagentaR = mLightMagenta.red();
-    mLightMagentaG = mLightMagenta.green();
-    mLightMagentaB = mLightMagenta.blue();
     mMagenta = pH->mMagenta;
-    mMagentaR = mMagenta.red();
-    mMagentaG = mMagenta.green();
-    mMagentaB = mMagenta.blue();
     mLightWhite = pH->mLightWhite;
-    mLightWhiteR = mLightWhite.red();
-    mLightWhiteG = mLightWhite.green();
-    mLightWhiteB = mLightWhite.blue();
     mWhite = pH->mWhite;
-    mWhiteR = mWhite.red();
-    mWhiteG = mWhite.green();
-    mWhiteB = mWhite.blue();
-    mCurrentFgColorR = pH->mFgColor.red();
-    mCurrentFgColorG = pH->mFgColor.green();
-    mCurrentFgColorB = pH->mFgColor.blue();
-    mCurrentFgColorLightR = mCurrentFgColorR;
-    mCurrentFgColorLightG = mCurrentFgColorG;
-    mCurrentFgColorLightB = mCurrentFgColorB;
-    mCurrentBgColorR = pH->mBgColor.red();
-    mCurrentBgColorG = pH->mBgColor.green();
-    mCurrentBgColorB = pH->mBgColor.blue();
+    mForeGroundColor = pH->mFgColor;
+    mForeGroundColorLight = pH->mFgColor;
+    mBackGroundColor = pH->mBgColor;
 }
 
 QPoint TBuffer::getEndPos()
@@ -913,6 +826,8 @@ QPoint TBuffer::getEndPos()
     return P_end;
 }
 
+// If buffer is empty zero is now returned and that is also returned if it only
+// contains ONE line
 int TBuffer::getLastLineNumber()
 {
     if (static_cast<int>(buffer.size()) > 0) {
@@ -924,148 +839,17 @@ int TBuffer::getLastLineNumber()
 
 void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, TChar format)
 {
-    mLinkID++;
-    if (mLinkID > 1000) {
+    if (++mLinkID > 1000) {
         mLinkID = 1;
     }
     mLinkStore[mLinkID] = command;
     mHintStore[mLinkID] = hint;
     if (!trigMode) {
-        append(text,
-               0,
-               text.length(),
-               format.fgR,
-               format.fgG,
-               format.fgB,
-               format.bgR,
-               format.bgG,
-               format.bgB,
-               format.flags & TCHAR_BOLD,
-               format.flags & TCHAR_ITALICS,
-               format.flags & TCHAR_UNDERLINE,
-               format.flags & TCHAR_STRIKEOUT,
-               mLinkID);
+        append(text, 0, text.length(), format.mFgColor, format.mBgColor, format.mFlags, mLinkID);
     } else {
-        appendLine(text,
-                   0,
-                   text.length(),
-                   format.fgR,
-                   format.fgG,
-                   format.fgB,
-                   format.bgR,
-                   format.bgG,
-                   format.bgB,
-                   format.flags & TCHAR_BOLD,
-                   format.flags & TCHAR_ITALICS,
-                   format.flags & TCHAR_UNDERLINE,
-                   format.flags & TCHAR_STRIKEOUT,
-                   mLinkID);
+        appendLine(text, 0, text.length(), format.mFgColor, format.mBgColor, format.mFlags, mLinkID);
     }
 }
-
-//void TBuffer::appendLink( QString & text,
-//                          int sub_start,
-//                          int sub_end,
-//                          int fgColorR,
-//                          int fgColorG,
-//                          int fgColorB,
-//                          int bgColorR,
-//                          int bgColorG,
-//                          int bgColorB,
-//                          bool bold,
-//                          bool italics,
-//                          bool underline )
-//{
-//    if( static_cast<int>(buffer.size()) > mLinesLimit )
-//    {
-//        shrinkBuffer();
-//    }
-//    int last = buffer.size()-1;
-//    if( last < 0 )
-//    {
-//        std::deque<TChar> newLine;
-//        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline);
-//        newLine.push_back( c );
-//        buffer.push_back( newLine );
-//        lineBuffer.push_back(QString());
-//        promptBuffer.push_back(false);
-//        timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
-//        dirty.push_back(true);
-//        last = 0;
-//    }
-//    bool firstChar = (lineBuffer.back().size() == 0);
-//    int length = text.size();
-//    if( length < 1 ) return;
-//    if( sub_end >= length ) sub_end = text.size()-1;
-
-//    for( int i=sub_start; i<=(sub_start+sub_end); i++ )
-//    {
-//        if( text.at(i) == '\n' )
-//        {
-//            std::deque<TChar> newLine;
-//            buffer.push_back( newLine );
-//            lineBuffer.push_back( QString() );
-//            QString time = "-------------";
-//            timeBuffer << time;
-//            promptBuffer << false;
-//            dirty << true;
-//            mLastLine++;
-//            newLines++;
-//            firstChar = true;
-//            continue;
-//        }
-//        if( lineBuffer.back().size() >= mWrapAt )
-//        {
-//            //assert(lineBuffer.back().size()==buffer.back().size());
-//            const QString lineBreaks = ",.- ";
-//            const QString nothing = "";
-//            for( int i=lineBuffer.back().size()-1; i>=0; i-- )
-//            {
-//                if( lineBreaks.indexOf( lineBuffer.back().at(i) ) > -1 )
-//                {
-//                    QString tmp = lineBuffer.back().mid(0,i+1);
-//                    QString lineRest = lineBuffer.back().mid(i+1);
-//                    lineBuffer.back() = tmp;
-//                    std::deque<TChar> newLine;
-
-//                    int k = lineRest.size();
-//                    if( k > 0 )
-//                    {
-//                        while( k > 0 )
-//                        {
-//                            newLine.push_front(buffer.back().back());
-//                            buffer.back().pop_back();
-//                            k--;
-//                        }
-//                    }
-
-//                    buffer.push_back( newLine );
-//                    if( lineRest.size() > 0 )
-//                        lineBuffer.append( lineRest );
-//                    else
-//                        lineBuffer.append( nothing );
-//                    QString time = "-------------";
-//                    timeBuffer << time;
-//                    promptBuffer << false;
-//                    dirty << true;
-//                    mLastLine++;
-//                    newLines++;
-//                    break;
-//                }
-//            }
-//        }
-//        lineBuffer.back().append( text.at( i ) );
-
-//        TChar c(fgColorR,fgColorG,fgColorB,bgColorR,bgColorG,bgColorB,bold,italics,underline, mLinkID );
-//        buffer.back().push_back( c );
-//        if( firstChar )
-//        {
-//            timeBuffer.back() = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
-//        }
-//    }
-//}
-
-
 
 /* ANSI color codes: sequence = "ESCAPE + [ code_1; ... ; code_n m"
       -----------------------------------------
@@ -1206,7 +990,6 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     // done as opposed to a a repeated switch(...) and branch to one of a series
     // of decoding methods each with another up to 128 value switch()
 
-    mUntriggered = lineBuffer.size() - 1;
     size_t localBufferLength = localBuffer.length();
     size_t localBufferPosition = 0;
     if (!localBufferLength) {
@@ -1379,7 +1162,6 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     }
                     // end of if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF)
                     // We have manually disabled MXP negotiation
-                    mCode.clear();
                     break;
 
                 default: // Unhandled other (valid) CSI final byte sequences will end up here
@@ -1458,7 +1240,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
             if (ch == '<') {
                 if (!mParsingVar) {
-                    openT++;
+                    ++openT;
                     if (!currentToken.empty()) {
                         currentToken += ch;
                     }
@@ -1470,7 +1252,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
             if (ch == '>') {
                 if (!mParsingVar) {
-                    closeT++;
+                    ++closeT;
                 }
 
                 // sanity check
@@ -1720,7 +1502,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             mLinkID = 1;
                         }
                         QStringList _tl = _t2.split('|');
-                        for (int i = 0; i < _tl.size(); i++) {
+                        for (int i = 0, total = _tl.size(); i < total; ++i) {
                             _tl[i].replace("|", "");
                             if (_element.name == "A") {
                                 _tl[i] = "openUrl([[" + _tl[i] + "]])";
@@ -1954,38 +1736,27 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             }
         }
 
-        TChar c(!mIsDefaultColor && mBold ? mCurrentFgColorLightR : mCurrentFgColorR,
-                !mIsDefaultColor && mBold ? mCurrentFgColorLightG : mCurrentFgColorG,
-                !mIsDefaultColor && mBold ? mCurrentFgColorLightB : mCurrentFgColorB,
-                mCurrentBgColorR,
-                mCurrentBgColorG,
-                mCurrentBgColorB,
-                mIsDefaultColor ? mBold : false,
-                mItalics,
-                mUnderline,
-                mStrikeOut);
+        const TChar::AttributeFlags attributeFlags =
+                ((mIsDefaultColor ? mBold : false) ? TChar::Bold : TChar::None)
+                | (mItalics ? TChar::Italic : TChar::None)
+                | (mOverline ? TChar::Overline : TChar::None)
+                | (mReverse ? TChar::Reverse : TChar::None)
+                | (mStrikeOut ? TChar::StrikeOut : TChar::None)
+                | (mUnderline ? TChar::Underline : TChar::None);
+
+        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
 
         if (mMXP_LINK_MODE) {
-            c.link = mLinkID;
-            c.flags |= TCHAR_UNDERLINE;
+            c.mLinkIndex = mLinkID;
+            c.mFlags |= TChar::Underline;
         }
 
-        mMudBuffer.push_back(c);
-
         if (isTwoTCharsNeeded) {
-            TChar c2(!mIsDefaultColor && mBold ? mCurrentFgColorLightR : mCurrentFgColorR,
-                     !mIsDefaultColor && mBold ? mCurrentFgColorLightG : mCurrentFgColorG,
-                     !mIsDefaultColor && mBold ? mCurrentFgColorLightB : mCurrentFgColorB,
-                     mCurrentBgColorR,
-                     mCurrentBgColorG,
-                     mCurrentBgColorB,
-                     mIsDefaultColor ? mBold : false,
-                     mItalics,
-                     mUnderline,
-                     mStrikeOut);
-
-            // CHECK: Do we need to duplicate stuff for mMXP_LINK_MODE?
-            mMudBuffer.push_back(c2);
+            // CHECK: Do we need to duplicate stuff for mMXP_LINK_MODE - yes I think we do:
+            mMudBuffer.push_back(c);
+            mMudBuffer.push_back(c);
+        } else {
+            mMudBuffer.push_back(c);
         }
 
         ++localBufferPosition;
@@ -2033,68 +1804,36 @@ void TBuffer::decodeSGR38(QStringList parameters, bool isColonSeparated)
 
             switch (tag) {
             case 0:
-                mCurrentFgColorR = mBlackR;
-                mCurrentFgColorG = mBlackG;
-                mCurrentFgColorB = mBlackB;
-                mCurrentFgColorLightR = mLightBlackR;
-                mCurrentFgColorLightG = mLightBlackG;
-                mCurrentFgColorLightB = mLightBlackB;
+                mForeGroundColor = mBlack;
+                mForeGroundColorLight = mLightBlack;
                 break;
             case 1:
-                mCurrentFgColorR = mRedR;
-                mCurrentFgColorG = mRedG;
-                mCurrentFgColorB = mRedB;
-                mCurrentFgColorLightR = mLightRedR;
-                mCurrentFgColorLightG = mLightRedG;
-                mCurrentFgColorLightB = mLightRedB;
+                mForeGroundColor = mRed;
+                mForeGroundColorLight = mLightRed;
                 break;
             case 2:
-                mCurrentFgColorR = mGreenR;
-                mCurrentFgColorG = mGreenG;
-                mCurrentFgColorB = mGreenB;
-                mCurrentFgColorLightR = mLightGreenR;
-                mCurrentFgColorLightG = mLightGreenG;
-                mCurrentFgColorLightB = mLightGreenB;
+                mForeGroundColor = mGreen;
+                mForeGroundColorLight = mLightGreen;
                 break;
             case 3:
-                mCurrentFgColorR = mYellowR;
-                mCurrentFgColorG = mYellowG;
-                mCurrentFgColorB = mYellowB;
-                mCurrentFgColorLightR = mLightYellowR;
-                mCurrentFgColorLightG = mLightYellowG;
-                mCurrentFgColorLightB = mLightYellowB;
+                mForeGroundColor = mYellow;
+                mForeGroundColorLight = mLightYellow;
                 break;
             case 4:
-                mCurrentFgColorR = mBlueR;
-                mCurrentFgColorG = mBlueG;
-                mCurrentFgColorB = mBlueB;
-                mCurrentFgColorLightR = mLightBlueR;
-                mCurrentFgColorLightG = mLightBlueG;
-                mCurrentFgColorLightB = mLightBlueB;
+                mForeGroundColor = mBlue;
+                mForeGroundColorLight = mLightBlue;
                 break;
             case 5:
-                mCurrentFgColorR = mMagentaR;
-                mCurrentFgColorG = mMagentaG;
-                mCurrentFgColorB = mMagentaB;
-                mCurrentFgColorLightR = mLightMagentaR;
-                mCurrentFgColorLightG = mLightMagentaG;
-                mCurrentFgColorLightB = mLightMagentaB;
+                mForeGroundColor = mMagenta;
+                mForeGroundColorLight = mLightMagenta;
                 break;
             case 6:
-                mCurrentFgColorR = mCyanR;
-                mCurrentFgColorG = mCyanG;
-                mCurrentFgColorB = mCyanB;
-                mCurrentFgColorLightR = mLightCyanR;
-                mCurrentFgColorLightG = mLightCyanG;
-                mCurrentFgColorLightB = mLightCyanB;
+                mForeGroundColor = mCyan;
+                mForeGroundColorLight = mLightCyan;
                 break;
             case 7:
-                mCurrentFgColorR = mWhiteR;
-                mCurrentFgColorG = mWhiteG;
-                mCurrentFgColorB = mWhiteB;
-                mCurrentFgColorLightR = mLightWhiteR;
-                mCurrentFgColorLightG = mLightWhiteG;
-                mCurrentFgColorLightB = mLightWhiteB;
+                mForeGroundColor = mWhite;
+                mForeGroundColorLight = mLightWhite;
                 break;
             }
 
@@ -2111,12 +1850,8 @@ void TBuffer::decodeSGR38(QStringList parameters, bool isColonSeparated)
             // 6 x 42 DOES equal 252 BUT IT IS OUT OF RANGE
             // Instead we use 51:
             // 0:0; 1:51; 2:102; 3:153; 4:204: 5:255
-            mCurrentFgColorR = r * 51;
-            mCurrentFgColorLightR = r * 51;
-            mCurrentFgColorG = g * 51;
-            mCurrentFgColorLightG = g * 51;
-            mCurrentFgColorB = b * 51;
-            mCurrentFgColorLightB = b * 51;
+            mForeGroundColor = QColor(r * 51, g * 51, b * 51);
+            mForeGroundColorLight = mForeGroundColor;
 
         } else {
             // black + 23 tone grayscale from dark to light
@@ -2166,43 +1901,31 @@ void TBuffer::decodeSGR38(QStringList parameters, bool isColonSeparated)
             }
 
              // clang-format on
-            mCurrentFgColorR = value;
-            mCurrentFgColorLightR = value;
-            mCurrentFgColorG = value;
-            mCurrentFgColorLightG = value;
-            mCurrentFgColorB = value;
-            mCurrentFgColorLightB = value;
+            mForeGroundColor = QColor(value, value, value);
+            mForeGroundColorLight = mForeGroundColor;
         }
 
     } else if (parameters.at(1) == QLatin1String("2")) {
         if (parameters.count() >= 6) {
             // Have enough for all three colour
             // components
-            mCurrentFgColorR = qBound(0, parameters.at(3).toInt(), 255);
-            mCurrentFgColorG = qBound(0, parameters.at(4).toInt(), 255);
-            mCurrentFgColorB = qBound(0, parameters.at(5).toInt(), 255);
+            mForeGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), qBound(0, parameters.at(4).toInt(), 255), qBound(0, parameters.at(5).toInt(), 255));
         } else if (parameters.count() >= 5) {
             // Have enough for two colour
             // components, but blue component is
             // zero
-            mCurrentFgColorR = qBound(0, parameters.at(3).toInt(), 255);
-            mCurrentFgColorG = qBound(0, parameters.at(4).toInt(), 255);
-            mCurrentFgColorB = 0;
+            mForeGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), qBound(0, parameters.at(4).toInt(), 255), 0);
         } else if (parameters.count() >= 4) {
             // Have enough for one colour component,
             // but green and blue components are
             // zero
-            mCurrentFgColorR = qBound(0, parameters.at(3).toInt(), 255);
-            mCurrentFgColorG = 0;
-            mCurrentFgColorB = 0;
+            mForeGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), 0, 0);
         } else  {
             // No codes left for any colour
             // components so colour must be black,
             // as all of red, green and blue
             // components are zero
-            mCurrentFgColorR = 0;
-            mCurrentFgColorG = 0;
-            mCurrentFgColorB = 0;
+            mForeGroundColor = Qt::black;
         }
 
         if (parameters.count() >= 3 && !parameters.at(2).isEmpty()) {
@@ -2216,9 +1939,7 @@ void TBuffer::decodeSGR38(QStringList parameters, bool isColonSeparated)
 #endif
             }
         }
-        mCurrentFgColorLightR = mCurrentFgColorR;
-        mCurrentFgColorLightG = mCurrentFgColorG;
-        mCurrentFgColorLightB = mCurrentFgColorB;
+        mForeGroundColorLight = mForeGroundColor;
 
     } else if (parameters.at(1) == QLatin1String("4")
             || parameters.at(1) == QLatin1String("3")
@@ -2286,80 +2007,44 @@ void TBuffer::decodeSGR48(QStringList parameters, bool isColonSeparated)
                 useLightColor = false;
             }
             mIsDefaultColor = false;
-            int bgColorLightR = 0;
-            int bgColorLightG = 0;
-            int bgColorLightB = 0;
+            QColor bgColorLight;
 
             switch (tag) {
             case 0:
-                mCurrentBgColorR = mBlackR;
-                mCurrentBgColorG = mBlackG;
-                mCurrentBgColorB = mBlackB;
-                bgColorLightR = mLightBlackR;
-                bgColorLightG = mLightBlackG;
-                bgColorLightB = mLightBlackB;
+                mBackGroundColor = mBlack;
+                bgColorLight = mLightBlack;
                 break;
             case 1:
-                mCurrentBgColorR = mRedR;
-                mCurrentBgColorG = mRedG;
-                mCurrentBgColorB = mRedB;
-                bgColorLightR = mLightRedR;
-                bgColorLightG = mLightRedG;
-                bgColorLightB = mLightRedB;
+                mBackGroundColor = mRed;
+                bgColorLight = mLightRed;
                 break;
             case 2:
-                mCurrentBgColorR = mGreenR;
-                mCurrentBgColorG = mGreenG;
-                mCurrentBgColorB = mGreenB;
-                bgColorLightR = mLightGreenR;
-                bgColorLightG = mLightGreenG;
-                bgColorLightB = mLightGreenB;
+                mBackGroundColor = mGreen;
+                bgColorLight = mLightGreen;
                 break;
             case 3:
-                mCurrentBgColorR = mYellowR;
-                mCurrentBgColorG = mYellowG;
-                mCurrentBgColorB = mYellowB;
-                bgColorLightR = mLightYellowR;
-                bgColorLightG = mLightYellowG;
-                bgColorLightB = mLightYellowB;
+                mBackGroundColor = mYellow;
+                bgColorLight = mLightYellow;
                 break;
             case 4:
-                mCurrentBgColorR = mBlueR;
-                mCurrentBgColorG = mBlueG;
-                mCurrentBgColorB = mBlueB;
-                bgColorLightR = mLightBlueR;
-                bgColorLightG = mLightBlueG;
-                bgColorLightB = mLightBlueB;
+                mBackGroundColor = mBlue;
+                bgColorLight = mLightBlue;
                 break;
             case 5:
-                mCurrentBgColorR = mMagentaR;
-                mCurrentBgColorG = mMagentaG;
-                mCurrentBgColorB = mMagentaB;
-                bgColorLightR = mLightMagentaR;
-                bgColorLightG = mLightMagentaG;
-                bgColorLightB = mLightMagentaB;
+                mBackGroundColor = mMagenta;
+                bgColorLight = mLightMagenta;
                 break;
             case 6:
-                mCurrentBgColorR = mCyanR;
-                mCurrentBgColorG = mCyanG;
-                mCurrentBgColorB = mCyanB;
-                bgColorLightR = mLightCyanR;
-                bgColorLightG = mLightCyanG;
-                bgColorLightB = mLightCyanB;
+                mBackGroundColor = mCyan;
+                bgColorLight = mLightCyan;
                 break;
             case 7:
-                mCurrentBgColorR = mWhiteR;
-                mCurrentBgColorG = mWhiteG;
-                mCurrentBgColorB = mWhiteB;
-                bgColorLightR = mLightWhiteR;
-                bgColorLightG = mLightWhiteG;
-                bgColorLightB = mLightWhiteB;
+                mBackGroundColor = mWhite;
+                bgColorLight = mLightWhite;
                 break;
             }
             if (useLightColor) {
-                mCurrentBgColorR = bgColorLightR;
-                mCurrentBgColorG = bgColorLightG;
-                mCurrentBgColorB = bgColorLightB;
+                mBackGroundColor = bgColorLight;
             }
 
         } else if (tag < 232) {
@@ -2375,9 +2060,7 @@ void TBuffer::decodeSGR48(QStringList parameters, bool isColonSeparated)
             // 6 x 42 DOES equal 252 BUT IT IS OUT OF RANGE
             // Instead we use 51:
             // 0:0; 1:51; 2:102; 3:153; 4:204: 5:255
-            mCurrentBgColorR = r * 51;
-            mCurrentBgColorG = g * 51;
-            mCurrentBgColorB = b * 51;
+            mBackGroundColor = QColor(r * 51, g * 51, b * 51);
 
         } else {
             // black + 23 tone grayscale from dark to light
@@ -2426,43 +2109,33 @@ void TBuffer::decodeSGR48(QStringList parameters, bool isColonSeparated)
 #endif
             }
              // clang-format on
-            mCurrentBgColorR = value;
-            mCurrentBgColorG = value;
-            mCurrentBgColorB = value;
+            mBackGroundColor = QColor(value, value, value);
         }
 
     } else if (parameters.at(1) == QLatin1String("2")) {
         if (parameters.count() >= 6) {
             // Have enough for all three colour
             // components
-            mCurrentBgColorR = qBound(0, parameters.at(3).toInt(), 255);
-            mCurrentBgColorG = qBound(0, parameters.at(4).toInt(), 255);
-            mCurrentBgColorB = qBound(0, parameters.at(5).toInt(), 255);
+            mBackGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), qBound(0, parameters.at(4).toInt(), 255), qBound(0, parameters.at(5).toInt(), 255));
 
         } else if (parameters.count() >= 5) {
             // Have enough for two colour
             // components, but blue component is
             // zero
-            mCurrentBgColorR = qBound(0, parameters.at(3).toInt(), 255);
-            mCurrentBgColorG = qBound(0, parameters.at(4).toInt(), 255);
-            mCurrentBgColorB = 0;
+            mBackGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), qBound(0, parameters.at(4).toInt(), 255), 0);
 
         } else if (parameters.count() >= 4) {
             // Have enough for one colour component,
             // but green and blue components are
             // zero
-            mCurrentBgColorR = qBound(0, parameters.at(3).toInt(), 255);
-            mCurrentBgColorG = 0;
-            mCurrentBgColorB = 0;
+            mBackGroundColor = QColor(qBound(0, parameters.at(3).toInt(), 255), 0, 0);
 
         } else  {
             // No codes left for any colour
             // components so colour must be black,
             // as all of red, green and blue
             // components are zero
-            mCurrentBgColorR = 0;
-            mCurrentBgColorG = 0;
-            mCurrentBgColorB = 0;
+            mBackGroundColor = Qt::black;
         }
 
         if (parameters.count() >= 3 && !parameters.at(2).isEmpty()) {
@@ -2781,16 +2454,14 @@ void TBuffer::decodeSGR(const QString& sequence)
                 switch (tag) {
                 case 0:
                     mIsDefaultColor = true;
-                    mCurrentFgColorR = pHost->mFgColor.red();
-                    mCurrentFgColorG = pHost->mFgColor.green();
-                    mCurrentFgColorB = pHost->mFgColor.blue();
-                    mCurrentBgColorR = pHost->mBgColor.red();
-                    mCurrentBgColorG = pHost->mBgColor.green();
-                    mCurrentBgColorB = pHost->mBgColor.blue();
+                    mForeGroundColor = pHost->mFgColor;
+                    mBackGroundColor = pHost->mBgColor;
                     mBold = false;
                     mItalics = false;
-                    mUnderline = false;
+                    mOverline = false;
+                    mReverse = false;
                     mStrikeOut = false;
+                    mUnderline = false;
                     break;
                 case 1:
                     mBold = true;
@@ -2826,14 +2497,14 @@ void TBuffer::decodeSGR(const QString& sequence)
                 // case 6:
                 // TODO:
                 //    break; //fast blinking
-                // case 7:
-                // TODO:
-                //    break; //inverse
+                case 7:
+                    mReverse = true;
+                    break;
                 // case 8: // Concealed characters (set foreground to be the same as background?)
                 //    break;
                 case 9:
                     mStrikeOut = true;
-                    break; //strikethrough
+                    break;
                 // case 10:
                 //    break; //default font
                 // case 21: // Double underline according to specs
@@ -2847,86 +2518,54 @@ void TBuffer::decodeSGR(const QString& sequence)
                 case 24:
                     mUnderline = false;
                     break;
-                case 25:
-                    break; // blink off
-                // case 27:
-                // TODO:
-                //    break; //inverse off
+                // case 25:
+                //    break; // blink off
+                case 27:
+                    mReverse = false;
+                    break;
                 // case 28: // Revealed characters (undoes the effect of "8")
                 //    break;
                 case 29:
                     mStrikeOut = false;
-                    break; //not crossed out (strikethrough) text
+                    break;
                 case 30:
-                    mCurrentFgColorR = mBlackR;
-                    mCurrentFgColorG = mBlackG;
-                    mCurrentFgColorB = mBlackB;
-                    mCurrentFgColorLightR = mLightBlackR;
-                    mCurrentFgColorLightG = mLightBlackG;
-                    mCurrentFgColorLightB = mLightBlackB;
+                    mForeGroundColor = mBlack;
+                    mForeGroundColorLight = mLightBlack;
                     mIsDefaultColor = false;
                     break;
                 case 31:
-                    mCurrentFgColorR = mRedR;
-                    mCurrentFgColorG = mRedG;
-                    mCurrentFgColorB = mRedB;
-                    mCurrentFgColorLightR = mLightRedR;
-                    mCurrentFgColorLightG = mLightRedG;
-                    mCurrentFgColorLightB = mLightRedB;
+                    mForeGroundColor = mRed;
+                    mForeGroundColorLight = mLightRed;
                     mIsDefaultColor = false;
                     break;
                 case 32:
-                    mCurrentFgColorR = mGreenR;
-                    mCurrentFgColorG = mGreenG;
-                    mCurrentFgColorB = mGreenB;
-                    mCurrentFgColorLightR = mLightGreenR;
-                    mCurrentFgColorLightG = mLightGreenG;
-                    mCurrentFgColorLightB = mLightGreenB;
+                    mForeGroundColor = mGreen;
+                    mForeGroundColorLight = mLightGreen;
                     mIsDefaultColor = false;
                     break;
                 case 33:
-                    mCurrentFgColorR = mYellowR;
-                    mCurrentFgColorG = mYellowG;
-                    mCurrentFgColorB = mYellowB;
-                    mCurrentFgColorLightR = mLightYellowR;
-                    mCurrentFgColorLightG = mLightYellowG;
-                    mCurrentFgColorLightB = mLightYellowB;
+                    mForeGroundColor = mYellow;
+                    mForeGroundColorLight = mLightYellow;
                     mIsDefaultColor = false;
                     break;
                 case 34:
-                    mCurrentFgColorR = mBlueR;
-                    mCurrentFgColorG = mBlueG;
-                    mCurrentFgColorB = mBlueB;
-                    mCurrentFgColorLightR = mLightBlueR;
-                    mCurrentFgColorLightG = mLightBlueG;
-                    mCurrentFgColorLightB = mLightBlueB;
+                    mForeGroundColor = mBlue;
+                    mForeGroundColorLight = mLightBlue;
                     mIsDefaultColor = false;
                     break;
                 case 35:
-                    mCurrentFgColorR = mMagentaR;
-                    mCurrentFgColorG = mMagentaG;
-                    mCurrentFgColorB = mMagentaB;
-                    mCurrentFgColorLightR = mLightMagentaR;
-                    mCurrentFgColorLightG = mLightMagentaG;
-                    mCurrentFgColorLightB = mLightMagentaB;
+                    mForeGroundColor = mMagenta;
+                    mForeGroundColorLight = mLightMagenta;
                     mIsDefaultColor = false;
                     break;
                 case 36:
-                    mCurrentFgColorR = mCyanR;
-                    mCurrentFgColorG = mCyanG;
-                    mCurrentFgColorB = mCyanB;
-                    mCurrentFgColorLightR = mLightCyanR;
-                    mCurrentFgColorLightG = mLightCyanG;
-                    mCurrentFgColorLightB = mLightCyanB;
+                    mForeGroundColor = mCyan;
+                    mForeGroundColorLight = mLightCyan;
                     mIsDefaultColor = false;
                     break;
                 case 37:
-                    mCurrentFgColorR = mWhiteR;
-                    mCurrentFgColorG = mWhiteG;
-                    mCurrentFgColorB = mWhiteB;
-                    mCurrentFgColorLightR = mLightWhiteR;
-                    mCurrentFgColorLightG = mLightWhiteG;
-                    mCurrentFgColorLightB = mLightWhiteB;
+                    mForeGroundColor = mWhite;
+                    mForeGroundColorLight = mLightWhite;
                     mIsDefaultColor = false;
                     break;
                 case 38: {
@@ -3022,49 +2661,31 @@ void TBuffer::decodeSGR(const QString& sequence)
                 }
                     break;
                 case 39: //default foreground color
-                    mCurrentFgColorR = pHost->mFgColor.red();
-                    mCurrentFgColorG = pHost->mFgColor.green();
-                    mCurrentFgColorB = pHost->mFgColor.blue();
+                    mForeGroundColor = pHost->mFgColor;
                     break;
                 case 40:
-                    mCurrentBgColorR = mBlackR;
-                    mCurrentBgColorG = mBlackG;
-                    mCurrentBgColorB = mBlackB;
+                    mBackGroundColor = mBlack;
                     break;
                 case 41:
-                    mCurrentBgColorR = mRedR;
-                    mCurrentBgColorG = mRedG;
-                    mCurrentBgColorB = mRedB;
+                    mBackGroundColor = mRed;
                     break;
                 case 42:
-                    mCurrentBgColorR = mGreenR;
-                    mCurrentBgColorG = mGreenG;
-                    mCurrentBgColorB = mGreenB;
+                    mBackGroundColor = mGreen;
                     break;
                 case 43:
-                    mCurrentBgColorR = mYellowR;
-                    mCurrentBgColorG = mYellowG;
-                    mCurrentBgColorB = mYellowB;
+                    mBackGroundColor = mYellow;
                     break;
                 case 44:
-                    mCurrentBgColorR = mBlueR;
-                    mCurrentBgColorG = mBlueG;
-                    mCurrentBgColorB = mBlueB;
+                    mBackGroundColor = mBlue;
                     break;
                 case 45:
-                    mCurrentBgColorR = mMagentaR;
-                    mCurrentBgColorG = mMagentaG;
-                    mCurrentBgColorB = mMagentaB;
+                    mBackGroundColor = mMagenta;
                     break;
                 case 46:
-                    mCurrentBgColorR = mCyanR;
-                    mCurrentBgColorG = mCyanG;
-                    mCurrentBgColorB = mCyanB;
+                    mBackGroundColor = mCyan;
                     break;
                 case 47:
-                    mCurrentBgColorR = mWhiteR;
-                    mCurrentBgColorG = mWhiteG;
-                    mCurrentBgColorB = mWhiteB;
+                    mBackGroundColor = mWhite;
                     break;
                 case 48: {
                     // We only have single elements so we will need to steal the
@@ -3157,22 +2778,20 @@ void TBuffer::decodeSGR(const QString& sequence)
                 }
                     break;
                 case 49: // default background color
-                    mCurrentBgColorR = pHost->mBgColor.red();
-                    mCurrentBgColorG = pHost->mBgColor.green();
-                    mCurrentBgColorB = pHost->mBgColor.blue();
+                    mBackGroundColor = pHost->mBgColor;
                     break;
                 // case 51: // Framed
                 //    break;
                 // case 52: // Encircled
                 //    break;
-                // case 53: // overline on
-                // TODO:
-                //    break;
+                case 53:
+                    mOverline = true;
+                    break;
                 // case 54: // Not framed, not encircled
                 //    break;
-                // case 55: // overline off
-                // TODO:
-                //    break;
+                case 55:
+                    mOverline = false;
+                    break;
                 // 56 to 59 reserved for future standardization
                 // case 60: // ideogram underline or right side line
                 //    break;
@@ -3186,7 +2805,73 @@ void TBuffer::decodeSGR(const QString& sequence)
                 //    break;
                 // case 65: // cancels the effects of 60 to 64
                 //    break;
-                };
+                case 90:
+                    mForeGroundColor = mLightBlack;
+                    mForeGroundColorLight = mLightBlack;
+                    mIsDefaultColor = false;
+                    break;
+                case 91:
+                    mForeGroundColor = mLightRed;
+                    mForeGroundColorLight = mLightRed;
+                    mIsDefaultColor = false;
+                    break;
+                case 92:
+                    mForeGroundColor = mLightGreen;
+                    mForeGroundColorLight = mLightGreen;
+                    mIsDefaultColor = false;
+                    break;
+                case 93:
+                    mForeGroundColor = mLightYellow;
+                    mForeGroundColorLight = mLightYellow;
+                    mIsDefaultColor = false;
+                    break;
+                case 94:
+                    mForeGroundColor = mLightBlue;
+                    mForeGroundColorLight = mLightBlue;
+                    mIsDefaultColor = false;
+                    break;
+                case 95:
+                    mForeGroundColor = mLightMagenta;
+                    mForeGroundColorLight = mLightMagenta;
+                    mIsDefaultColor = false;
+                    break;
+                case 96:
+                    mForeGroundColor = mLightCyan;
+                    mForeGroundColorLight = mLightCyan;
+                    mIsDefaultColor = false;
+                    break;
+                case 97:
+                    mForeGroundColor = mLightWhite;
+                    mForeGroundColorLight = mLightWhite;
+                    mIsDefaultColor = false;
+                    break;
+                case 100:
+                    mBackGroundColor = mLightBlack;
+                    break;
+                case 101:
+                    mBackGroundColor = mLightRed;
+                    break;
+                case 102:
+                    mBackGroundColor = mLightGreen;
+                    break;
+                case 103:
+                    mBackGroundColor = mLightYellow;
+                    break;
+                case 104:
+                    mBackGroundColor = mLightBlue;
+                    break;
+                case 105:
+                    mBackGroundColor = mLightMagenta;
+                    break;
+                case 106:
+                    mBackGroundColor = mLightCyan;
+                    break;
+                case 107:
+                    mBackGroundColor = mLightWhite;
+                    break;
+                default:
+                    qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled single SGR code sequence CSI " << tag << " m received, Mudlet will ignore it.";
+                }
             }
         }
     }
@@ -3347,20 +3032,7 @@ void TBuffer::resetColors()
     }
 }
 
-void TBuffer::append(const QString& text,
-                     int sub_start,
-                     int sub_end,
-                     int fgColorR,
-                     int fgColorG,
-                     int fgColorB,
-                     int bgColorR,
-                     int bgColorG,
-                     int bgColorB,
-                     bool bold,
-                     bool italics,
-                     bool underline,
-                     bool strikeout,
-                     int linkID)
+void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar format, int linkID)
 {
     // CHECK: What about other Unicode line breaks, e.g. soft-hyphen:
     const QString lineBreaks = QStringLiteral(",.- ");
@@ -3370,11 +3042,14 @@ void TBuffer::append(const QString& text,
     }
     int last = buffer.size() - 1;
     if (last < 0) {
+        // buffer is completely empty
         std::deque<TChar> newLine;
-        TChar c(fgColorR, fgColorG, fgColorB, bgColorR, bgColorG, bgColorB, bold, italics, underline, strikeout);
-        if (mEchoText) {
-            c.flags |= TCHAR_ECHO;
-        }
+        // The ternary operator is used here to set/reset only the TChar::Echo bit in the flags:
+        TChar c(format.mFgColor,
+                format.mBgColor,
+                (mEchoText
+                 ? (TChar::Echo | (format.mFlags & TChar::TestMask))
+                 : (format.mFlags & TChar::TestMask)));
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
@@ -3392,8 +3067,9 @@ void TBuffer::append(const QString& text,
         sub_end = text.size() - 1;
     }
 
-    for (int i = sub_start; i < length; i++) { //FIXME <=substart+sub_end muss nachsehen, ob wirklich noch teilbereiche gebraucht werden
-        if (text.at(i) == '\n') {
+    for (int i = sub_start; i < length; ++i) {
+        //FIXME <=substart+sub_end muss nachsehen, ob wirklich noch teilbereiche gebraucht werden
+        if (text.at(i) == QChar::LineFeed) {
             log(size() - 1, size() - 1);
             std::deque<TChar> newLine;
             buffer.push_back(newLine);
@@ -3401,8 +3077,6 @@ void TBuffer::append(const QString& text,
             timeBuffer << QStringLiteral("-------------");
             promptBuffer << false;
             dirty << true;
-            mLastLine++;
-            newLines++;
             firstChar = true;
             continue;
         }
@@ -3411,7 +3085,7 @@ void TBuffer::append(const QString& text,
         // to "unit" character width (whatever we work THAT out to be)
         // multiplied by mWrap:
         if (lineBuffer.back().size() >= mWrapAt) {
-            for (int i = lineBuffer.back().size() - 1; i >= 0; i--) {
+            for (int i = lineBuffer.back().size() - 1; i >= 0; --i) {
                 if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1) {
                     QString tmp = lineBuffer.back().mid(0, i + 1);
                     QString lineRest = lineBuffer.back().mid(i + 1);
@@ -3436,8 +3110,6 @@ void TBuffer::append(const QString& text,
                     timeBuffer << QStringLiteral("-------------");
                     promptBuffer << false;
                     dirty << true;
-                    mLastLine++;
-                    newLines++;
                     log(size() - 2, size() - 2);
                     // Was absent causing loss of all but last line of wrapped
                     // long lines of user input and some other console displayed
@@ -3447,10 +3119,12 @@ void TBuffer::append(const QString& text,
             }
         }
         lineBuffer.back().append(text.at(i));
-        TChar c(fgColorR, fgColorG, fgColorB, bgColorR, bgColorG, bgColorB, bold, italics, underline, strikeout, linkID);
-        if (mEchoText) {
-            c.flags |= TCHAR_ECHO;
-        }
+        TChar c(format.mFgColor,
+                format.mBgColor,
+                (mEchoText
+                 ? (TChar::Echo | (format.mFlags & TChar::TestMask))
+                 : (format.mFlags & TChar::TestMask)),
+                linkID);
         buffer.back().push_back(c);
         if (firstChar) {
             timeBuffer.back() = QTime::currentTime().toString(QStringLiteral("hh:mm:ss.zzz   "));
@@ -3459,38 +3133,22 @@ void TBuffer::append(const QString& text,
     }
 }
 
-void TBuffer::appendLine(const QString& text,
-                         int sub_start,
-                         int sub_end,
-                         int fgColorR,
-                         int fgColorG,
-                         int fgColorB,
-                         int bgColorR,
-                         int bgColorG,
-                         int bgColorB,
-                         bool bold,
-                         bool italics,
-                         bool underline,
-                         bool strikeout,
-                         int linkID)
+void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID)
 {
-    if (sub_end < 0) {
-        return;
-    }
+    // CHECK: What about other Unicode line breaks, e.g. soft-hyphen:
+    const QString lineBreaks = QStringLiteral(",.- ");
+
     if (static_cast<int>(buffer.size()) > mLinesLimit) {
         shrinkBuffer();
     }
     int last = buffer.size() - 1;
     if (last < 0) {
         std::deque<TChar> newLine;
-        TChar c(fgColorR, fgColorG, fgColorB, bgColorR, bgColorG, bgColorB, bold, italics, underline, strikeout);
-        if (mEchoText) {
-            c.flags |= TCHAR_ECHO;
-        }
+        TChar c(fgColor, bgColor, (mEchoText ? (TChar::Echo | flags) : flags));
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
-        timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+        timeBuffer << QTime::currentTime().toString(QStringLiteral("hh:mm:ss.zzz   "));
         promptBuffer << false;
         dirty << true;
         last = 0;
@@ -3504,66 +3162,116 @@ void TBuffer::appendLine(const QString& text,
         sub_end = text.size() - 1;
     }
 
-    for (int i = sub_start; i <= (sub_start + sub_end); i++) {
-        lineBuffer.back().append(text.at(i));
-        TChar c(fgColorR, fgColorG, fgColorB, bgColorR, bgColorG, bgColorB, bold, italics, underline, strikeout, linkID);
-        if (mEchoText) {
-            c.flags |= TCHAR_ECHO;
+    for (int i = sub_start; i < length; ++i) {
+        if (text.at(i) == '\n') {
+            log(size() - 1, size() - 1);
+            std::deque<TChar> newLine;
+            buffer.push_back(newLine);
+            lineBuffer.push_back(QString());
+            timeBuffer << QStringLiteral("-------------");
+            promptBuffer << false;
+            dirty << true;
+            firstChar = true;
+            continue;
         }
+
+        // FIXME: (I18n) Need to measure painted line width and compare that
+        // to "unit" character width (whatever we work THAT out to be)
+        // multiplied by mWrap:
+        if (lineBuffer.back().size() >= mWrapAt) {
+            for (int i = lineBuffer.back().size() - 1; i >= 0; --i) {
+                if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1) {
+                    QString tmp = lineBuffer.back().mid(0, i + 1);
+                    QString lineRest = lineBuffer.back().mid(i + 1);
+                    lineBuffer.back() = tmp;
+                    std::deque<TChar> newLine;
+
+                    int k = lineRest.size();
+                    if (k > 0) {
+                        while (k > 0) {
+                            newLine.push_front(buffer.back().back());
+                            buffer.back().pop_back();
+                            k--;
+                        }
+                    }
+
+                    buffer.push_back(newLine);
+                    if (lineRest.size() > 0) {
+                        lineBuffer.append(lineRest);
+                    } else {
+                        lineBuffer.append(QString());
+                    }
+                    timeBuffer << QStringLiteral("-------------");
+                    promptBuffer << false;
+                    dirty << true;
+                    log(size() - 2, size() - 2);
+                    // Was absent causing loss of all but last line of wrapped
+                    // long lines of user input and some other console displayed
+                    // text from log file.
+                    break;
+                }
+            }
+        }
+        lineBuffer.back().append(text.at(i));
+        TChar c(fgColor, bgColor, (mEchoText ? (TChar::Echo | flags) : flags), linkID);
+        buffer.back().push_back(c);
+        if (firstChar) {
+            timeBuffer.back() = QTime::currentTime().toString(QStringLiteral("hh:mm:ss.zzz   "));
+            firstChar = false;
+        }
+    }
+}
+
+void TBuffer::appendLine(const QString& text, const int sub_start, const int sub_end,
+                         const QColor& fgColor, const QColor& bgColor,
+                         const TChar::AttributeFlags flags, const int linkID)
+{
+    if (sub_end < 0) {
+        return;
+    }
+    if (static_cast<int>(buffer.size()) > mLinesLimit) {
+        shrinkBuffer();
+    }
+    int lastLine = buffer.size() - 1;
+    if (Q_UNLIKELY(lastLine < 0)) {
+        // There are NO lines in the buffer - so initialize with a new empty line
+        std::deque<TChar> newLine;
+        TChar c(fgColor, bgColor, (mEchoText ? (TChar::Echo | flags) : flags));
+        newLine.push_back(c);
+        buffer.push_back(newLine);
+        lineBuffer.push_back(QString());
+        timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+        promptBuffer << false;
+        dirty << true;
+        lastLine = 0;
+    }
+
+    bool firstChar = (lineBuffer.back().size() == 0);
+    int length = text.size();
+    if (length < 1) {
+        return;
+    }
+    int lineEndPos = sub_end;
+    if (lineEndPos >= length) {
+        lineEndPos = text.size() - 1;
+    }
+
+    for (int i = sub_start; i <= (sub_start + lineEndPos); i++) {
+        lineBuffer.back().append(text.at(i));
+        TChar c(fgColor, bgColor, (mEchoText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
         if (firstChar) {
             timeBuffer.back() = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+            firstChar = false;
         }
     }
 }
 
-QPoint TBuffer::insert(QPoint& where, const QString& text, int fgColorR, int fgColorG, int fgColorB, int bgColorR, int bgColorG, int bgColorB, bool bold, bool italics, bool underline, bool strikeout)
-{
-    QPoint P(-1, -1);
-
-    int x = where.x();
-    int y = where.y();
-
-    if (y < 0) {
-        return P;
-    }
-    if (y >= static_cast<int>(buffer.size())) {
-        return P;
-    }
-
-
-    for (auto character : text) {
-        if (character == QChar('\n')) {
-            std::deque<TChar> newLine;
-            TChar c(fgColorR, fgColorG, fgColorB, bgColorR, bgColorG, bgColorB, bold, italics, underline, strikeout);
-            newLine.push_back(c);
-            buffer.push_back(newLine);
-            promptBuffer.insert(y, false);
-            const QString nothing = "";
-            lineBuffer.insert(y, nothing);
-            timeBuffer << "-->"; //this is intentional -> faster
-            dirty.insert(y, true);
-            mLastLine++;
-            newLines++;
-            x = 0;
-            y++;
-            continue;
-        }
-        lineBuffer[y].insert(x, character);
-        TChar c(fgColorR, fgColorG, fgColorB, bgColorR, bgColorG, bgColorB, bold, italics, underline, strikeout);
-        auto it = buffer[y].begin();
-        buffer[y].insert(it + x, c);
-    }
-    dirty[y] = true;
-    P.setX(x);
-    P.setY(y);
-    return P;
-}
-
-
+// This was called "insert" but that is commonly used for built in methods and
+// it makes it harder to pick out usages of this specific method:
 bool TBuffer::insertInLine(QPoint& P, const QString& text, TChar& format)
 {
-    if (text.size() < 1) {
+    if (text.isEmpty()) {
         return false;
     }
     int x = P.x();
@@ -3572,34 +3280,25 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, TChar& format)
         if (x < 0) {
             return false;
         }
-        if (x >= static_cast<int>(buffer[y].size())) {
+        if (x >= static_cast<int>(buffer.at(y).size())) {
             TChar c;
-            expandLine(y, x - buffer[y].size(), c);
+            expandLine(y, x - buffer.at(y).size(), c);
         }
-        for (int i = 0; i < text.size(); i++) {
+        for (int i = 0, total = text.size(); i < total; ++i) {
             lineBuffer[y].insert(x + i, text.at(i));
             TChar c = format;
             auto it = buffer[y].begin();
             buffer[y].insert(it + x + i, c);
         }
     } else {
-        appendLine(text,
-                   0,
-                   text.size(),
-                   format.fgR,
-                   format.fgG,
-                   format.fgB,
-                   format.bgR,
-                   format.bgG,
-                   format.bgB,
-                   format.flags & TCHAR_BOLD,
-                   format.flags & TCHAR_ITALICS,
-                   format.flags & TCHAR_UNDERLINE,
-                   format.flags & TCHAR_STRIKEOUT);
+        appendLine(text, 0, text.size(), format.mFgColor, format.mBgColor, format.mFlags);
     }
     return true;
 }
 
+// This is very poorly designed as P2 is used to determine the last character to
+// copy BUT no consideration is given to P2.y() != p1.y() i.e. a copy of more
+// than a single line - and it copys a single QChar at a time....
 TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
 {
     TBuffer slice(mpHost);
@@ -3610,37 +3309,28 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
         return slice;
     }
 
-    if ((x < 0) || (x >= static_cast<int>(buffer[y].size())) || (P2.x() < 0) || (P2.x() > static_cast<int>(buffer[y].size()))) {
+    if ((x < 0) || (x >= static_cast<int>(buffer.at(y).size())) || (P2.x() < 0) || (P2.x() > static_cast<int>(buffer.at(y).size()))) {
         x = 0;
     }
-    for (; x < P2.x(); x++) {
-        QString s(lineBuffer[y][x]);
-        slice.append(s,
-                     0,
-                     1,
-                     buffer[y][x].fgR,
-                     buffer[y][x].fgG,
-                     buffer[y][x].fgB,
-                     buffer[y][x].bgR,
-                     buffer[y][x].bgG,
-                     buffer[y][x].bgB,
-                     (buffer[y][x].flags & TCHAR_BOLD),
-                     (buffer[y][x].flags & TCHAR_ITALICS),
-                     (buffer[y][x].flags & TCHAR_UNDERLINE),
-                     (buffer[y][x].flags & TCHAR_STRIKEOUT));
+
+    for (int total = P2.x(); x < total; ++x) {
+        // This is rather inefficient as s is only ever one QChar long
+        QString s(lineBuffer.at(y).at(x));
+        slice.append(s, 0, 1, buffer.at(y).at(x).mFgColor, buffer.at(y).at(x).mBgColor, buffer.at(y).at(x).mFlags);
     }
     return slice;
 }
 
+// This is constrained to P1.y() == P2.y()....
 TBuffer TBuffer::cut(QPoint& P1, QPoint& P2)
 {
     TBuffer slice = copy(P1, P2);
-    QString nothing = "";
     TChar format;
-    replaceInLine(P1, P2, nothing, format);
+    replaceInLine(P1, P2, QString(), format);
     return slice;
 }
 
+// This only copies the first line of chunk's contents:
 void TBuffer::paste(QPoint& P, TBuffer chunk)
 {
     bool needAppend = false;
@@ -3653,69 +3343,47 @@ void TBuffer::paste(QPoint& P, TBuffer chunk)
     if (y < 0 || y > getLastLineNumber()) {
         y = getLastLineNumber();
     }
-    if (y == -1) {
-        needAppend = true;
-    } else {
-        if (x < 0 || x >= static_cast<int>(buffer[y].size())) {
-            return;
-        }
+    // FIXME: RISK OF EXCEPTION getLastLineNumber() returns zero (not -1) if
+    // the buffer is empty, so y can never be less than zero here - however that
+    // will cause an exception with std::deque::at(size_t) - previously
+    // std::deque::operator[size_t] was used and that exhibits UNDEFINED
+    // BEHAVIOUR in the same situation:
+    if (x < 0 || x >= static_cast<int>(buffer.at(y).size())) {
+        return;
     }
-    for (int cx = 0; cx < static_cast<int>(chunk.buffer[0].size()); cx++) {
+
+    for (int cx = 0, total = static_cast<int>(chunk.buffer.at(0).size()); cx < total; ++cx) {
+        // This is rather inefficient as s is only ever one QChar long
         QPoint P_current(cx, y);
         if ((y < getLastLineNumber()) && (!needAppend)) {
-            TChar& format = chunk.buffer[0][cx];
-            QString s = QString(chunk.lineBuffer[0][cx]);
+            TChar& format = chunk.buffer.at(0).at(cx);
+            QString s = QString(chunk.lineBuffer.at(0).at(cx));
             insertInLine(P_current, s, format);
         } else {
             hasAppended = true;
-            QString s(chunk.lineBuffer[0][cx]);
-            append(s,
-                   0,
-                   1,
-                   chunk.buffer[0][cx].fgR,
-                   chunk.buffer[0][cx].fgG,
-                   chunk.buffer[0][cx].fgB,
-                   chunk.buffer[0][cx].bgR,
-                   chunk.buffer[0][cx].bgG,
-                   chunk.buffer[0][cx].bgB,
-                   (chunk.buffer[0][cx].flags & TCHAR_BOLD),
-                   (chunk.buffer[0][cx].flags & TCHAR_ITALICS),
-                   (chunk.buffer[0][cx].flags & TCHAR_UNDERLINE),
-                   (chunk.buffer[0][cx].flags & TCHAR_STRIKEOUT));
+            QString s(chunk.lineBuffer.at(0).at(cx));
+            append(s, 0, 1, chunk.buffer.at(0).at(cx).mFgColor, chunk.buffer.at(0).at(cx).mBgColor, chunk.buffer.at(0).at(cx).mFlags);
         }
     }
-    if (hasAppended) {
+
+    if (hasAppended && y != -1) {
         TChar format;
-        if (y == -1) {
-        } else {
-            wrapLine(y, mWrapAt, mWrapIndent, format);
-        }
+        wrapLine(y, mWrapAt, mWrapIndent, format);
     }
 }
 
+// This only appends the FIRST line of chunk:
 void TBuffer::appendBuffer(const TBuffer& chunk)
 {
     if (chunk.buffer.empty()) {
         return;
     }
-    for (int cx = 0; cx < static_cast<int>(chunk.buffer[0].size()); cx++) {
-        QString s(chunk.lineBuffer[0][cx]);
-        append(s,
-               0,
-               1,
-               chunk.buffer[0][cx].fgR,
-               chunk.buffer[0][cx].fgG,
-               chunk.buffer[0][cx].fgB,
-               chunk.buffer[0][cx].bgR,
-               chunk.buffer[0][cx].bgG,
-               chunk.buffer[0][cx].bgB,
-               (chunk.buffer[0][cx].flags & TCHAR_BOLD),
-               (chunk.buffer[0][cx].flags & TCHAR_ITALICS),
-               (chunk.buffer[0][cx].flags & TCHAR_UNDERLINE),
-               (chunk.buffer[0][cx].flags & TCHAR_STRIKEOUT));
+    for (int cx = 0, total = static_cast<int>(chunk.buffer.at(0).size()); cx < total; ++cx) {
+        QString s(chunk.lineBuffer.at(0).at(cx));
+        append(s, 0, 1, chunk.buffer.at(0).at(cx).mFgColor, chunk.buffer.at(0).at(cx).mBgColor, chunk.buffer.at(0).at(cx).mFlags);
     }
-    QString lf = "\n";
-    append(lf, 0, 1, 0, 0, 0, 0, 0, 0, false, false, false, false);
+
+    append(QString(QChar::LineFeed), 0, 1, Qt::black, Qt::black, TChar::None);
 }
 
 int TBuffer::calcWrapPos(int line, int begin, int end)
@@ -3728,7 +3396,7 @@ int TBuffer::calcWrapPos(int line, int begin, int end)
     if (lineSize < end) {
         end = lineSize;
     }
-    for (int i = end; i >= begin; i--) {
+    for (int i = end; i >= begin; --i) {
         if (lineBreaks.indexOf(lineBuffer[line].at(i)) > -1) {
             return i;
         }
@@ -3736,21 +3404,21 @@ int TBuffer::calcWrapPos(int line, int begin, int end)
     return 0;
 }
 
-inline int TBuffer::skipSpacesAtBeginOfLine(int i, int i2)
+inline int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
 {
     int offset = 0;
-    int i_end = lineBuffer[i].size();
-    QChar space = ' ';
-    while (i2 < i_end) {
-        if (buffer[i][i2].flags & TCHAR_ECHO) {
+    int position = column;
+    int endOfLinePosition = lineBuffer.at(row).size();
+    while (position < endOfLinePosition) {
+        if (buffer.at(row).at(position).mFlags & TChar::Echo) {
             break;
         }
-        if (lineBuffer[i][i2] == space) {
-            offset++;
+        if (lineBuffer.at(row).at(position) == QChar::Space) {
+            ++offset;
         } else {
             break;
         }
-        i2++;
+        position++;
     }
     return offset;
 }
@@ -3765,14 +3433,14 @@ inline int TBuffer::wrap(int startLine)
     QStringList timeList;
     QList<bool> promptList;
     int lineCount = 0;
-    for (int i = startLine; i < static_cast<int>(buffer.size()); i++) {
+    for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
         bool isPrompt = promptBuffer[i];
         std::deque<TChar> newLine;
         QString lineText = "";
         QString time = timeBuffer[i];
         int indent = 0;
         if (static_cast<int>(buffer[i].size()) >= mWrapAt) {
-            for (int i3 = 0; i3 < mWrapIndent; i3++) {
+            for (int i3 = 0; i3 < mWrapIndent; ++i3) {
                 TChar pSpace;
                 newLine.push_back(pSpace);
                 lineText.append(" ");
@@ -3788,7 +3456,7 @@ inline int TBuffer::wrap(int startLine)
             queue.push(emptyLine);
             timeList.append(time);
         }
-        for (int i2 = 0; i2 < static_cast<int>(buffer[i].size());) {
+        for (int i2 = 0, total = static_cast<int>(buffer[i].size()); i2 < total;) {
             if (length - i2 > mWrapAt - indent) {
                 wrapPos = calcWrapPos(i, i2, i2 + mWrapAt - indent);
                 lastSpace = qMax(0, wrapPos);
@@ -3796,7 +3464,7 @@ inline int TBuffer::wrap(int startLine)
                 lastSpace = 0;
             }
             int wrapPosition = (lastSpace) ? lastSpace : (mWrapAt - indent);
-            for (int i3 = 0; i3 < wrapPosition; i3++) {
+            for (int i3 = 0; i3 < wrapPosition; ++i3) {
                 if (lastSpace > 0) {
                     if (i2 > lastSpace) {
                         break;
@@ -3832,7 +3500,7 @@ inline int TBuffer::wrap(int startLine)
         }
         lineCount++;
     }
-    for (int i = 0; i < lineCount; i++) {
+    for (int i = 0; i < lineCount; ++i) {
         buffer.pop_back();
         lineBuffer.pop_back();
         timeBuffer.pop_back();
@@ -3840,14 +3508,12 @@ inline int TBuffer::wrap(int startLine)
         dirty.pop_back();
     }
 
-    newLines -= lineCount;
-    newLines += queue.size();
     int insertedLines = queue.size() - 1;
     while (!queue.empty()) {
         buffer.push_back(queue.front());
         queue.pop();
     }
-    for (int i = 0; i < tempList.size(); i++) {
+    for (int i = 0, total = tempList.size(); i < total; ++i) {
         if (tempList[i].size() < 1) {
             lineBuffer.append(QString());
             timeBuffer.append(QString());
@@ -3889,10 +3555,10 @@ void TBuffer::log(int fromLine, int toLine)
     }
 
     QStringList linesToLog;
-    for (int i = fromLine; i <= toLine; i++) {
+    for (int i = fromLine; i <= toLine; ++i) {
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             // This only handles a single line of logged text at a time:
-            linesToLog << bufferToHtml(QPoint(0, i), QPoint(buffer.at(i).size(), i), mpHost->mIsLoggingTimestamps);
+            linesToLog << bufferToHtml(mpHost->mIsLoggingTimestamps, i);
         } else {
             linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(13) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
         }
@@ -3925,7 +3591,7 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
     QStringList tempList;
     int lineCount = 0;
 
-    for (int i = startLine; i < static_cast<int>(buffer.size()); i++) {
+    for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
         if (i > startLine) {
             break; //only wrap one line of text
         }
@@ -3934,7 +3600,7 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
 
         int indent = 0;
         if (static_cast<int>(buffer[i].size()) >= screenWidth) {
-            for (int i3 = 0; i3 < indentSize; i3++) {
+            for (int i3 = 0; i3 < indentSize; ++i3) {
                 TChar pSpace = format;
                 newLine.push_back(pSpace);
                 lineText.append(" ");
@@ -3945,14 +3611,14 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
         int wrapPos = -1;
         auto length = static_cast<int>(buffer[i].size());
 
-        for (int i2 = 0; i2 < static_cast<int>(buffer[i].size());) {
+        for (int i2 = 0, total = static_cast<int>(buffer[i].size()); i2 < total;) {
             if (length - i2 > screenWidth - indent) {
                 wrapPos = calcWrapPos(i, i2, i2 + screenWidth - indent);
                 lastSpace = qMax(-1, wrapPos);
             } else {
                 lastSpace = -1;
             }
-            for (int i3 = 0; i3 < screenWidth - indent; i3++) {
+            for (int i3 = 0, total = screenWidth - indent; i3 < total; ++i3) {
                 if (lastSpace > 0) {
                     if (i2 >= lastSpace) {
                         i2++;
@@ -4011,7 +3677,7 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
         i++;
     }
 
-    for (int i = 0; i < tempList.size(); i++) {
+    for (int i = 0, total = tempList.size(); i < total; ++i) {
         lineBuffer.insert(startLine + i, tempList[i]);
         timeBuffer.insert(startLine + i, time);
         promptBuffer.insert(startLine + i, isPrompt);
@@ -4020,7 +3686,6 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
     log(startLine, startLine + tempList.size() - 1);
     return insertedLines > 0 ? insertedLines : 0;
 }
-
 
 bool TBuffer::moveCursor(QPoint& where)
 {
@@ -4035,6 +3700,7 @@ bool TBuffer::moveCursor(QPoint& where)
 
     if (static_cast<int>(buffer[y].size()) - 1 > x) {
         TChar c;
+        // CHECKME: should "buffer[cookedY].size() - 1" be bracketed - which would change the -1 to +1 in the following:
         expandLine(y, x - buffer[y].size() - 1, c);
     }
     return true;
@@ -4052,7 +3718,6 @@ QString& TBuffer::line(int n)
     return lineBuffer[n];
 }
 
-
 int TBuffer::find(int line, const QString& what, int pos = 0)
 {
     if (lineBuffer[line].size() >= pos) {
@@ -4067,7 +3732,6 @@ int TBuffer::find(int line, const QString& what, int pos = 0)
     return lineBuffer[line].indexOf(what, pos);
 }
 
-
 QStringList TBuffer::split(int line, const QString& splitter)
 {
     if ((line >= static_cast<int>(buffer.size())) || (line < 0)) {
@@ -4075,7 +3739,6 @@ QStringList TBuffer::split(int line, const QString& splitter)
     }
     return lineBuffer[line].split(splitter);
 }
-
 
 QStringList TBuffer::split(int line, QRegularExpression splitter)
 {
@@ -4085,13 +3748,12 @@ QStringList TBuffer::split(int line, QRegularExpression splitter)
     return lineBuffer[line].split(splitter);
 }
 
-
 void TBuffer::expandLine(int y, int count, TChar& pC)
 {
     int size = buffer[y].size() - 1;
-    for (int i = size; i < size + count; i++) {
+    for (int i = size, total = size + count; i < total; ++i) {
         buffer[y].push_back(pC);
-        lineBuffer[y].append(" ");
+        lineBuffer[y].append(QChar::Space);
     }
 }
 
@@ -4166,7 +3828,7 @@ bool TBuffer::deleteLine(int y)
 
 void TBuffer::shrinkBuffer()
 {
-    for (int i = 0; i < mBatchDeleteSize; i++) {
+    for (int i = 0; i < mBatchDeleteSize; ++i) {
         lineBuffer.pop_front();
         promptBuffer.pop_front();
         timeBuffer.pop_front();
@@ -4181,7 +3843,7 @@ bool TBuffer::deleteLines(int from, int to)
     if ((from >= 0) && (from < static_cast<int>(buffer.size())) && (from <= to) && (to >= 0) && (to < static_cast<int>(buffer.size()))) {
         int delta = to - from + 1;
 
-        for (int i = from; i < from + delta; i++) {
+        for (int i = from, total = from + delta; i < total; ++i) {
             lineBuffer.removeAt(i);
             timeBuffer.removeAt(i);
             promptBuffer.removeAt(i);
@@ -4195,42 +3857,7 @@ bool TBuffer::deleteLines(int from, int to)
     }
 }
 
-
-bool TBuffer::applyFormat(QPoint& P_begin, QPoint& P_end, TChar& format)
-{
-    int x1 = P_begin.x();
-    int x2 = P_end.x();
-    int y1 = P_begin.y();
-    int y2 = P_end.y();
-
-    if ((x1 >= 0) && ((y2 < static_cast<int>(buffer.size())) && (y2 >= 0)) && ((x2 > x1) || (y2 > y1)) && (x1 < static_cast<int>(buffer[y1].size())))
-    // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
-    // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
-
-    {
-        for (int y = y1; y <= y2; y++) {
-            int x = 0;
-            if (y == y1) {
-                x = x1;
-            }
-            while (x < static_cast<int>(buffer[y].size())) {
-                if (y >= y2) {
-                    if (x >= x2) {
-                        return true;
-                    }
-                }
-
-                buffer[y][x] = format;
-                x++;
-            }
-        }
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool TBuffer::applyLink(QPoint& P_begin, QPoint& P_end, const QString& linkText, QStringList& linkFunction, QStringList& linkHint)
+bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStringList& linkFunction, const QStringList& linkHint)
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
@@ -4238,17 +3865,26 @@ bool TBuffer::applyLink(QPoint& P_begin, QPoint& P_end, const QString& linkText,
     int y2 = P_end.y();
     bool incLinkID = false;
     int linkID = 0;
-    if ((x1 >= 0) && ((y2 < static_cast<int>(buffer.size())) && (y2 >= 0)) && ((x2 > x1) || (y2 > y1)) && (x1 < static_cast<int>(buffer[y1].size())))
-    // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
-    // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
 
-    {
-        for (int y = y1; y <= y2; y++) {
+    // clang-format off
+    if ((x1 >= 0)
+        && ((x2 > x1) || (y2 > y1))
+        && ((y2 >= 0) && (y2 < static_cast<int>(buffer.size())))
+        && (x1 < static_cast<int>(buffer.at(y1).size()))) {
+        // clang-format on
+
+        /*
+         * Even if the end selection is out of bounds we still apply the format
+         * until the end of the line to simplify and ultimately speed up user
+         * scripting (no need to calc end of line) - so we don't use:
+         * && ( x2 < static_cast<int>(buffer.at(y2).size()) ) )
+         */
+        for (int y = y1; y <= y2; ++y) {
             int x = 0;
             if (y == y1) {
                 x = x1;
             }
-            while (x < static_cast<int>(buffer[y].size())) {
+            while (x < static_cast<int>(buffer.at(y).size())) {
                 if (y >= y2) {
                     if (x >= x2) {
                         return true;
@@ -4264,8 +3900,7 @@ bool TBuffer::applyLink(QPoint& P_begin, QPoint& P_end, const QString& linkText,
                     mLinkStore[mLinkID] = linkFunction;
                     mHintStore[mLinkID] = linkHint;
                 }
-                buffer[y][x].link = linkID;
-                x++;
+                buffer.at(y).at(x++).mLinkIndex = linkID;
             }
         }
         return true;
@@ -4274,35 +3909,43 @@ bool TBuffer::applyLink(QPoint& P_begin, QPoint& P_end, const QString& linkText,
     }
 }
 
-bool TBuffer::applyBold(QPoint& P_begin, QPoint& P_end, bool bold)
+// Replaces (bool)TBuffer::applyXxxx(QPoint& P_begin, QPoint& P_end, bool state)
+// where Xxxxx is Bold, Italics, Strikeout, Underline
+// Can set multiple attributes to given state
+bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const TChar::AttributeFlags attributes, const bool state)
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
     int y1 = P_begin.y();
     int y2 = P_end.y();
 
-    if ((x1 >= 0) && ((y2 < static_cast<int>(buffer.size())) && (y2 >= 0)) && ((x2 > x1) || (y2 > y1)) && (x1 < static_cast<int>(buffer[y1].size())))
-    // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
-    // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
+    // clang-format off
+    if ((x1 >= 0)
+        && ((x2 > x1) || (y2 > y1))
+        && ((y2 >= 0) && (y2 < static_cast<int>(buffer.size())))
+            && (x1 < static_cast<int>(buffer[y1].size()))) {
+        // clang-format on
 
-    {
-        for (int y = y1; y <= y2; y++) {
+        /*
+         * Even if the end selection is out of bounds we still apply the format
+         * until the end of the line to simplify and ultimately speed up user
+         * scripting (no need to calc end of line) - so we don't use:
+         * && ( x2 < static_cast<int>(buffer.at(y2).size()) ) )
+         */
+
+        for (int y = y1; y <= y2; ++y) {
             int x = 0;
             if (y == y1) {
                 x = x1;
             }
-            while (x < static_cast<int>(buffer[y].size())) {
+            while (x < static_cast<int>(buffer.at(y).size())) {
                 if (y >= y2) {
                     if (x >= x2) {
                         return true;
                     }
                 }
-                if (bold) {
-                    buffer[y][x].flags |= TCHAR_BOLD;
-                } else {
-                    buffer[y][x].flags &= ~(TCHAR_BOLD);
-                }
-                x++;
+                buffer.at(y).at(x).mFlags = (buffer.at(y).at(x).mFlags &~(attributes)) | (state ? attributes : TChar::None);
+                ++x;
             }
         }
         return true;
@@ -4311,35 +3954,40 @@ bool TBuffer::applyBold(QPoint& P_begin, QPoint& P_end, bool bold)
     }
 }
 
-bool TBuffer::applyItalics(QPoint& P_begin, QPoint& P_end, bool bold)
+bool TBuffer::applyFgColor(const QPoint& P_begin, const QPoint& P_end, const QColor& newColor)
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
     int y1 = P_begin.y();
     int y2 = P_end.y();
 
-    if ((x1 >= 0) && ((y2 < static_cast<int>(buffer.size())) && (y2 >= 0)) && ((x2 > x1) || (y2 > y1)) && (x1 < static_cast<int>(buffer[y1].size())))
-    // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
-    // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
+    // clang-format off
+    if ((x1 >= 0)
+        && ((x2 > x1) || (y2 > y1))
+        && ((y2 >= 0) && (y2 < static_cast<int>(buffer.size())))
+            && (x1 < static_cast<int>(buffer[y1].size()))) {
+        // clang-format on
 
-    {
-        for (int y = y1; y <= y2; y++) {
+        /*
+         * Even if the end selection is out of bounds we still apply the format
+         * until the end of the line to simplify and ultimately speed up user
+         * scripting (no need to calc end of line) - so we don't use:
+         * && ( x2 < static_cast<int>(buffer.at(y2).size()) ) )
+         */
+
+        for (int y = y1; y <= y2; ++y) {
             int x = 0;
             if (y == y1) {
+                // Override position start column if on first line to given start column
                 x = x1;
             }
-            while (x < static_cast<int>(buffer[y].size())) {
-                if (y >= y2) {
-                    if (x >= x2) {
-                        return true;
-                    }
+            while (x < static_cast<int>(buffer.at(y).size())) {
+                if (y >= y2 && x >= x2) {
+                    // Escape if on or past last line and past last character on the last line
+                    return true;
                 }
-                if (bold) {
-                    buffer[y][x].flags |= TCHAR_ITALICS;
-                } else {
-                    buffer[y][x].flags &= ~(TCHAR_ITALICS);
-                }
-                x++;
+
+                buffer.at(y).at(x++).mFgColor = newColor;
             }
         }
         return true;
@@ -4348,144 +3996,40 @@ bool TBuffer::applyItalics(QPoint& P_begin, QPoint& P_end, bool bold)
     }
 }
 
-bool TBuffer::applyUnderline(QPoint& P_begin, QPoint& P_end, bool bold)
+bool TBuffer::applyBgColor(const QPoint& P_begin, const QPoint& P_end, const QColor& newColor)
 {
     int x1 = P_begin.x();
     int x2 = P_end.x();
     int y1 = P_begin.y();
     int y2 = P_end.y();
 
-    if ((x1 >= 0) && ((y2 < static_cast<int>(buffer.size())) && (y2 >= 0)) && ((x2 > x1) || (y2 > y1)) && (x1 < static_cast<int>(buffer[y1].size())))
-    // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
-    // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
+    // clang-format off
+    if ((x1 >= 0)
+        && ((x2 > x1) || (y2 > y1))
+        && ((y2 >= 0) && (y2 < static_cast<int>(buffer.size())))
+            && (x1 < static_cast<int>(buffer[y1].size()))) {
+        // clang-format on
 
-    {
-        for (int y = y1; y <= y2; y++) {
+        /*
+         * Even if the end selection is out of bounds we still apply the format
+         * until the end of the line to simplify and ultimately speed up user
+         * scripting (no need to calc end of line) - so we don't use:
+         * && ( x2 < static_cast<int>(buffer.at(y2).size()) ) )
+         */
+
+        for (int y = y1; y <= y2; ++y) {
             int x = 0;
             if (y == y1) {
+                // Override position start column if on first line to given start column
                 x = x1;
             }
-            while (x < static_cast<int>(buffer[y].size())) {
-                if (y >= y2) {
-                    if (x >= x2) {
-                        return true;
-                    }
+            while (x < static_cast<int>(buffer.at(y).size())) {
+                if (y >= y2 && x >= x2) {
+                    // Escape if on or past last line and on or past last character on last line
+                    return true;
                 }
 
-                if (bold) {
-                    buffer[y][x].flags |= TCHAR_UNDERLINE;
-                } else {
-                    buffer[y][x].flags &= ~(TCHAR_UNDERLINE);
-                }
-                x++;
-            }
-        }
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool TBuffer::applyStrikeOut(QPoint& P_begin, QPoint& P_end, bool strikeout)
-{
-    int x1 = P_begin.x();
-    int x2 = P_end.x();
-    int y1 = P_begin.y();
-    int y2 = P_end.y();
-
-    if ((x1 >= 0) && ((y2 < static_cast<int>(buffer.size())) && (y2 >= 0)) && ((x2 > x1) || (y2 > y1)) && (x1 < static_cast<int>(buffer[y1].size())))
-    // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
-    // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
-
-    {
-        for (int y = y1; y <= y2; y++) {
-            int x = 0;
-            if (y == y1) {
-                x = x1;
-            }
-            while (x < static_cast<int>(buffer[y].size())) {
-                if (y >= y2) {
-                    if (x >= x2) {
-                        return true;
-                    }
-                }
-
-                if (strikeout) {
-                    buffer[y][x].flags |= TCHAR_STRIKEOUT;
-                } else {
-                    buffer[y][x].flags &= ~(TCHAR_STRIKEOUT);
-                }
-                x++;
-            }
-        }
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool TBuffer::applyFgColor(QPoint& P_begin, QPoint& P_end, int fgColorR, int fgColorG, int fgColorB)
-{
-    int x1 = P_begin.x();
-    int x2 = P_end.x();
-    int y1 = P_begin.y();
-    int y2 = P_end.y();
-
-    if ((x1 >= 0) && ((y2 < static_cast<int>(buffer.size())) && (y2 >= 0)) && ((x2 > x1) || (y2 > y1)) && (x1 < static_cast<int>(buffer[y1].size())))
-    // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
-    // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
-
-    {
-        for (int y = y1; y <= y2; y++) {
-            int x = 0;
-            if (y == y1) {
-                x = x1;
-            }
-            while (x < static_cast<int>(buffer[y].size())) {
-                if (y >= y2) {
-                    if (x >= x2) {
-                        return true;
-                    }
-                }
-
-                buffer[y][x].fgR = fgColorR;
-                buffer[y][x].fgG = fgColorG;
-                buffer[y][x].fgB = fgColorB;
-                x++;
-            }
-        }
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool TBuffer::applyBgColor(QPoint& P_begin, QPoint& P_end, int bgColorR, int bgColorG, int bgColorB)
-{
-    int x1 = P_begin.x();
-    int x2 = P_end.x();
-    int y1 = P_begin.y();
-    int y2 = P_end.y();
-    if ((x1 >= 0) && ((y2 < static_cast<int>(buffer.size())) && (y2 >= 0)) && ((x2 > x1) || (y2 > y1)) && (x1 < static_cast<int>(buffer[y1].size())))
-    // even if the end selection is out of bounds we still apply the format until the end of the line to simplify and ultimately speed up user scripting (no need to calc end of line)
-    // && ( x2 < static_cast<int>(buffer[y2].size()) ) )
-    {
-        for (int y = y1; y <= y2; y++) {
-            int x = 0;
-            if (y == y1) {
-                x = x1;
-            }
-            while (x < static_cast<int>(buffer[y].size())) {
-                if (y >= y2) {
-                    if (x >= x2) {
-                        return true;
-                    }
-                }
-
-                (buffer[y][x]).bgR = bgColorR;
-                (buffer[y][x]).bgG = bgColorG;
-                (buffer[y][x]).bgB = bgColorB;
-                x++;
+                buffer.at(y).at(x++).mBgColor = newColor;
             }
         }
         return true;
@@ -4497,152 +4041,145 @@ bool TBuffer::applyBgColor(QPoint& P_begin, QPoint& P_end, int bgColorR, int bgC
 QStringList TBuffer::getEndLines(int n)
 {
     QStringList linesList;
-    for (int i = getLastLineNumber() - n; i < getLastLineNumber(); i++) {
+    for (int i = getLastLineNumber() - n, total = getLastLineNumber(); i < total; ++i) {
         linesList << line(i);
     }
     return linesList;
 }
 
-
-QString TBuffer::bufferToHtml(QPoint P1, QPoint P2, bool allowedTimestamps, int spacePadding)
+// This actually only works on a SINGLE line at a time - so was restuctured to
+// reflect that in the arguments needed - with sensible defaults on all
+// arguments - the positions within the line refer to raw QChar/TChar indexes
+// and not graphemes, it is up to the caller to ensure those indexes are useful
+// this method only checks that they fit.
+// Note: spacePadding is expected to be non-zero on ONLY the first call to this
+// method - it is needed to pad the first line out when the first line of a
+// selection is not a complete line of text and there are more lines to follow
+QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int row /*= -1*/,
+                              const int endColumn /*= -1*/, const int startColumn /*= 0*/,
+                              int spacePadding /*= 0*/)
 {
-    int y = P1.y();
-    int x = P1.x();
+    int pos = startColumn;
     QString s;
-    if (y < 0 || y >= static_cast<int>(buffer.size())) {
+    if (row < 0 || row >= static_cast<int>(buffer.size())) {
+        // Empty string
         return s;
     }
 
-    if ((x < 0) || (x >= static_cast<int>(buffer[y].size())) || (P2.x() >= static_cast<int>(buffer[y].size()))) {
-        x = 0;
-    }
-    if (P2.x() < 0) {
-        P2.setX(buffer[y].size());
+    // std:deque uses std::deque:size_type as index type which is an unsigned
+    // long int, but row (and pos) are signed ints...!
+    auto cookedRow = static_cast<unsigned long>(row);
+
+    if ((pos < 0) || (pos >= static_cast<int>(buffer.at(cookedRow).size()))) {
+        pos = 0;
     }
 
-    bool bold = false;
-    bool italics = false;
-    bool underline = false;
-    //    bool overline = false;
-    bool strikeout = false;
-    //    bool inverse = false;
-    int fgR = 0;
-    int fgG = 0;
-    int fgB = 0;
-    int bgR = 0;
-    int bgG = 0;
-    int bgB = 0;
+    int lastPos = endColumn;
+    if (lastPos < 0 || lastPos > static_cast<int>(buffer.at(cookedRow).size())) {
+        // lastPos is now at ONE PAST the last valid one to use to index into
+        // row - this can have been triggered by a -1 argument
+        lastPos = static_cast<int>(buffer.at(cookedRow).size());
+    }
+
+    TChar::AttributeFlags currentFlags = TChar::None;
+    QColor currentFgColor(Qt::black);
+    QColor currentBgColor(Qt::black);
     // This combination of color values (black on black) cannot usefully be used in practice
     // - so use as initialization values
-    QString fontWeight;
-    QString fontStyle;
-    QString textDecoration;
+
+    // Assume we are on the first line until told otherwise:
     bool firstSpan = true;
-    if (allowedTimestamps && !timeBuffer[y].isEmpty()) {
-        firstSpan = false;
-        // formatting according to TTextEdit.cpp: if( i2 < timeOffset )
-        s.append(R"(<span style="color: rgb(200,150,0); background: rgb(22,22,22); )");
-        s.append(R"(font-weight: normal; font-style: normal; text-decoration: normal">)");
-        s.append(timeBuffer[y].leftRef(13));
+    // If times stamps are to be shown AND the first line is a partial
+    // then we need:
+    // <span timestamp format>Timestamp (13 chars)</span><span default>___padding spaces___</span><span first chunk style>first chunk...
+    // we will NOT need a closing "</span>"
+    if (showTimeStamp && !timeBuffer.at(row).isEmpty()) {
+        // TODO: formatting according to TTextEdit.cpp: if( i2 < timeOffset ) - needs updating if we allow the colours to be user set:
+        s.append(QStringLiteral("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); \">%1").arg(timeBuffer.at(row).left(13)));
     }
+
+    // Pad out a partial first line:
     if (spacePadding > 0) {
-        // used for "copy HTML", first line of selection
+        // used for "copy HTML", this is the first line of selection (because of
+        // the padding needed)
         if (firstSpan) {
+            // Must skip the close of the preceding span as there isn't one
             firstSpan = false;
         } else {
-            s.append("</span>");
+            s.append(QLatin1String("</span>"));
         }
-        s.append("<span>");
-        s.append(QString(spacePadding, QLatin1Char(' ')));
+
+        s.append(QStringLiteral("<span>%1").arg(QString(spacePadding, QChar::Space)));
         // Pad out with spaces to the right so a partial first line lines up
     }
-    for (; x < P2.x(); x++) {
-        if (x >= static_cast<int>(buffer[y].size())) {
-            break;
-        }
-        if (firstSpan || buffer[y][x].fgR != fgR || buffer[y][x].fgG != fgG || buffer[y][x].fgB != fgB || buffer[y][x].bgR != bgR || buffer[y][x].bgG != bgG || buffer[y][x].bgB != bgB
-            || bool(buffer[y][x].flags & TCHAR_BOLD) != bold
-            || bool(buffer[y][x].flags & TCHAR_UNDERLINE) != underline
-            || bool(buffer[y][x].flags & TCHAR_ITALICS) != italics
-            || bool(buffer[y][x].flags & TCHAR_STRIKEOUT) != strikeout
-            //            || bool( buffer[y][x].flags & TCHAR_OVERLINE ) != overline
-            //            || bool( buffer[y][x].flags & TCHAR_INVERSE ) != inverse
-            ) { // Can leave this on a separate line until line above uncommented.
+
+    for (auto cookedPos = static_cast<unsigned long>(pos); pos < lastPos; ++cookedPos, ++pos) {
+        // Do we need to start a new span?
+        if (firstSpan
+            || buffer.at(cookedRow).at(cookedPos).mFgColor != currentFgColor
+            || buffer.at(cookedRow).at(cookedPos).mBgColor != currentBgColor
+            || (buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask) != currentFlags) {
+
             if (firstSpan) {
-                firstSpan = false; // The first span won't need to close the previous one
+                firstSpan = false; // The first span - won't need to close the previous one
             } else {
-                s += "</span>";
+                s.append(QLatin1String("</span>"));
             }
-            fgR = buffer[y][x].fgR;
-            fgG = buffer[y][x].fgG;
-            fgB = buffer[y][x].fgB;
-            bgR = buffer[y][x].bgR;
-            bgG = buffer[y][x].bgG;
-            bgB = buffer[y][x].bgB;
-            bold = buffer[y][x].flags & TCHAR_BOLD;
-            italics = buffer[y][x].flags & TCHAR_ITALICS;
-            underline = buffer[y][x].flags & TCHAR_UNDERLINE;
-            strikeout = buffer[y][x].flags & TCHAR_STRIKEOUT;
-            //            overline = buffer[y][x].flags & TCHAR_OVERLINE;
-            //            inverse = buffer[y][x].flags & TCHAR_INVERSE;
-            if (bold) {
-                fontWeight = "bold";
+            currentFgColor = buffer.at(cookedRow).at(cookedPos).mFgColor;
+            currentBgColor = buffer.at(cookedRow).at(cookedPos).mBgColor;
+            currentFlags = buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask;
+
+            // clang-format off
+            if (currentFlags & TChar::Reverse) {
+                // Swap the fore and background colours:
+                s.append(QStringLiteral("<span style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
+                         .arg(QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 1 to 3
+                              QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 4 to 6
+                              currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
+                              currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
+                              currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline ) // remainder is arg 9
+                              ? QStringLiteral(" text-decoration:%1%2%3")
+                                .arg(currentFlags & TChar::Underline
+                                     ? QLatin1String(" undeline")
+                                     : QString(),
+                                     currentFlags & TChar::StrikeOut
+                                     ? QLatin1String(" line-through")
+                                     : QString(),
+                                     currentFlags & TChar::Overline
+                                     ? QLatin1String(" overline")
+                                     : QString())
+                              : QString()));
             } else {
-                fontWeight = "normal";
+                s.append(QStringLiteral("<span style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
+                         .arg(QString::number(currentFgColor.red()), QString::number(currentFgColor.green()), QString::number(currentFgColor.blue()), // args 1 to 3
+                              QString::number(currentBgColor.red()), QString::number(currentBgColor.green()), QString::number(currentBgColor.blue()), // args 4 to 6
+                              currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
+                              currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
+                              currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline ) // remainder is arg 9
+                              ? QStringLiteral(" text-decoration:%1%2%3")
+                                .arg(currentFlags & TChar::Underline ? QLatin1String(" undeline") : QString(),
+                                     currentFlags & TChar::StrikeOut ? QLatin1String(" line-through") : QString(),
+                                     currentFlags & TChar::Overline ? QLatin1String(" overline") : QString())
+                              : QString()));
             }
-            if (italics) {
-                fontStyle = "italic";
-            } else {
-                fontStyle = "normal";
-            }
-            if (!(underline || strikeout /* || overline */)) {
-                textDecoration = "normal";
-            } else {
-                textDecoration = "";
-                if (underline) {
-                    textDecoration += "underline ";
-                }
-                if (strikeout) {
-                    textDecoration += "line-through ";
-                }
-                //                if( overline ) {
-                //                    textDecoration += "overline ";
-                //                }
-                textDecoration = textDecoration.trimmed();
-            }
-            s += R"(<span style=")";
-            //            if( inverse )
-            //            {
-            //                s += "color: rgb(" + QString::number(bgR) + ","
-            //                                   + QString::number(bgG) + ","
-            //                                   + QString::number(bgB) + ");";
-            //                s += " background: rgb(" + QString::number(fgR) + ","
-            //                                         + QString::number(fgG) + ","
-            //                                         + QString::number(fgB) + ");";
-            //            }
-            //            else
-            //            {
-            s += "color: rgb(" + QString::number(fgR) + "," + QString::number(fgG) + "," + QString::number(fgB) + ");";
-            s += " background: rgb(" + QString::number(bgR) + "," + QString::number(bgG) + "," + QString::number(bgB) + ");";
-            //            }
-            s += " font-weight: " + fontWeight + "; font-style: " + fontStyle + "; text-decoration: " + textDecoration + R"(">)";
+            // clang-format on
         }
-        if (lineBuffer[y][x] == '<') {
-            s.append("&lt;");
-        } else if (lineBuffer[y][x] == '>') {
+        if (lineBuffer.at(row).at(pos) == QChar('<')) {
+            s.append(QLatin1String("&lt;"));
+        } else if (lineBuffer.at(row).at(pos) == QChar('>')) {
             s.append("&gt;");
         } else {
-            s.append(lineBuffer[y][x]);
+            s.append(lineBuffer.at(row).at(pos));
         }
     }
-    if (s.size() > 0) {
-        s.append("</span>");
+    if (!s.isEmpty()) {
+        s.append(QLatin1String("</span>"));
         // Needed to balance the very first open <span>, but only if we have
         // included anything. the previously appearing <br /> is an XML tag, NOT
         // a (strict) HTML 4 one
     }
 
-    s.append(QStringLiteral("<br>\n"));
+    s.append(QLatin1String("<br>\n"));
     // Needed to reproduce empty lines in capture, as this method is called for
     // EACH line, even the empty ones, the spans are styled as "pre" so literal
     // linefeeds would be treated as such THERE but we deliberately place the

@@ -181,11 +181,8 @@ void TMap::mapClear()
 
 void TMap::logError(QString& msg)
 {
-    auto orange = QColor(255, 128, 0);
-    auto black = QColor(Qt::black);
-    QString s1 = QString("[MAP ERROR:]%1\n").arg(msg);
     if (mpHost->mpEditorDialog) {
-        mpHost->mpEditorDialog->mpErrorConsole->printDebug(orange, black, s1);
+        mpHost->mpEditorDialog->mpErrorConsole->print(tr("[MAP ERROR:]%1\n").arg(msg), QColor(255, 128, 0), QColor(Qt::black));
     }
 }
 

@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -202,6 +202,7 @@ public:
     bool removeDir(const QString&, const QString&);
     void readPackageConfig(const QString&, QString&);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
+    QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
     QPair<bool, QString> writeProfileData(const QString&, const QString&);
     QString readProfileData(const QString&);
     void xmlSaved(const QString& xmlName);

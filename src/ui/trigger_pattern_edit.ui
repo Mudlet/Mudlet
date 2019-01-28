@@ -92,7 +92,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Foreground Color</string>
+      <string>Foreground color ignored</string>
      </property>
     </widget>
    </item>
@@ -116,7 +116,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Background Color</string>
+      <string>Background color ignored</string>
      </property>
     </widget>
    </item>
