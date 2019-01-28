@@ -45,7 +45,10 @@
 #include <QSslError>
 #include "post_guard.h"
 
-#define DEBUG
+// Uncomment this to get debugging messages about WILL/WONT/DO/DONT commands for
+// suboptions - change the value to 2 to get a bit more detail about the sizes
+// of the messages
+#define DEBUG_TELNET 1
 
 using namespace std;
 
@@ -704,7 +707,7 @@ void cTelnet::sendTelnetOption(char type, char option)
         _type = "ERROR wrong telnet type";
     };
 
-    qDebug() << "CLIENT SENDING Telnet: " << _type << " " << (quint8)option;
+    qDebug().noquote().nospace() << "WE send telnet IAC " << _type << " " << decodeOption(option);
 #endif
     string output;
     output += TN_IAC;
@@ -743,10 +746,98 @@ void cTelnet::setDownloadProgress(qint64 got, qint64 tot)
     mpProgressDialog->setValue(static_cast<int>(got));
 }
 
+// Helper to identify which protocol is being negotiated!
+QString cTelnet::decodeOption(const unsigned char ch) const
+{
+    // From http://www.iana.org/assignments/telnet-options/telnet-options.xhtml
+    // and other places:
+    switch (ch) {
+    // Official:
+    case 0:     return QLatin1String("BINARY (0)");
+    case 1:     return QLatin1String("ECHO (1)");
+    case 2:     return QLatin1String("RECONNECTION (2)");
+    case 3:     return QLatin1String("SUPPRESS_GO_AHEAD (3)");
+    case 4:     return QLatin1String("APROX_MSG_SIZE (4)");
+    case 5:     return QLatin1String("STATUS (5)");
+    case 6:     return QLatin1String("TIMING_MARK (6)");
+    case 7:     return QLatin1String("REMOTE_CTRL_TRANS_AND_ECHO (7)");
+    case 8:     return QLatin1String("OUTPUT_L_WIDTH (8)");
+    case 9:     return QLatin1String("OUTPUT_P_SIZE (9)");
+    case 10:    return QLatin1String("OUTPUT_CR_DISPOSITION (10)");
+    case 11:    return QLatin1String("OUTPUT_HTAB_STOPS (11)");
+    case 12:    return QLatin1String("OUTPUT_HTAB_DISPOSITION (12)");
+    case 13:    return QLatin1String("OUTPUT_FF_DISPOSITION (13)");
+    case 14:    return QLatin1String("OUTPUT_VTAB_STOPS (14)");
+    case 15:    return QLatin1String("OUTPUT_VTAB_DISPOSITION (15)");
+    case 16:    return QLatin1String("OUTPUT_LF_DISPOSITION (16)");
+    case 17:    return QLatin1String("EXTENDED_ASCII (17)");
+    case 18:    return QLatin1String("LOGOUT (18)");
+    case 19:    return QLatin1String("BYTE_MACRO (19)");
+    case 20:    return QLatin1String("DATA_ENTRY_TERMINAL (20)");
+    case 21:    return QLatin1String("SUPDUP (21)");
+    case 22:    return QLatin1String("SUPDUP_OUTPUT (22)");
+    case 23:    return QLatin1String("SEND_LOCATION (23)");
+    case 24:    return QLatin1String("TTYPE (24)");
+    case 25:    return QLatin1String("EOR (25)");
+    case 26:    return QLatin1String("TACACS_USER_ID (26)");
+    case 27:    return QLatin1String("OUTPUT_MARKING (27)");
+    case 28:    return QLatin1String("TERMINAL_LOCATION_NUMBER (28)");
+    case 29:    return QLatin1String("TELNET_3270_REGIME (29)");
+    case 30:    return QLatin1String("X3_PAD (30)");
+    case 31:    return QLatin1String("NAWS (31)");
+    case 32:    return QLatin1String("TERMINAL_SPEED (32)");
+    case 33:    return QLatin1String("REMOTE_FLOW_CONTROL (33)");
+    case 34:    return QLatin1String("LINEMODE (34)");
+    case 35:    return QLatin1String("X_DISPLAY_LOCATION (35)");
+    case 36:    return QLatin1String("ENVIRONMENT_OPTION (36)");
+    case 37:    return QLatin1String("AUTHENTICATION_OPTIOM (37)");
+    case 38:    return QLatin1String("ENCRYPTION_OPTION (38)");
+    case 39:    return QLatin1String("NEW_ENVIRONMENT_OPTION (39)");
+    case 40:    return QLatin1String("TN3270E (40)");
+    case 41:    return QLatin1String("XAUTH (41)");
+    case 42:    return QLatin1String("CHARSET (42)");
+    case 43:    return QLatin1String("TELNET_REMOTE_SERIAL_PORT (43)");
+    case 44:    return QLatin1String("COM_PORT_CONTROL_OPTION (44)");
+    case 45:    return QLatin1String("TELNET_SUPPRESS_LOCAL_ECHO (45)");
+    case 46:    return QLatin1String("TELNET_START_TLS (46)");
+    case 47:    return QLatin1String("KERMIT (47)");
+    case 48:    return QLatin1String("SEND_URL (48)");
+    case 49:    return QLatin1String("FORWARD_X (49)");
+
+    // Unofficial:
+    case 69:    return QLatin1String("MSDP (69)");
+    case 70:    return QLatin1String("MSSP (70)");
+
+    case 85:    return QLatin1String("MCCP (85)");
+    case 86:    return QLatin1String("MCCP2 (86)");
+
+    case 90:    return QLatin1String("MSP (90)");
+    case 91:    return QLatin1String("MXP (91)");
+
+    case 93:    return QLatin1String("ZENITH (93)");
+
+    case 102:   return QLatin1String("AARDWULF (102)");
+
+    // Official:
+    case 138:   return QLatin1String("TELOPT_PRAGRMA_LOGON (138)");
+    case 139:   return QLatin1String("TELOPT_SSPI_LOGON (139)");
+    case 140:   return QLatin1String("TELOPT_PRAGMA_HEARTBEAT (140)");
+
+    // Unofficial:
+    case 200:   return QLatin1String("ATCP (200)");
+    case 201:   return QLatin1String("GMCP (201)");
+
+    // Official:
+    case 255:   return QLatin1String("EXTENDED_OPTIONS_LIST (255)");
+    default:
+        return QStringLiteral("UNKNOWN (%1)").arg(ch, 3);
+    }
+}
+
 void cTelnet::processTelnetCommand(const string& command)
 {
     char ch = command[1];
-#ifdef DEBUG_TELNET
+#if defined(DEBUG_TELNET) && (DEBUG_TELNET > 1)
     QString _type;
     switch ((quint8)ch) {
     case 239:
@@ -777,9 +868,9 @@ void cTelnet::processTelnetCommand(const string& command)
         _type = QString::number((quint8)ch);
     };
     if (command.size() > 2) {
-        qDebug() << "SERVER sends telnet signal (" << command.size() << "):" << _type << " + " << (quint8)command[2];
+        qDebug() << "SERVER sent telnet (" << command.size() << " bytes):" << _type << " + " << decodeOption(command[2]);
     } else {
-        qDebug() << "SERVER sends telnet signal (" << command.size() << "):" << _type;
+        qDebug() << "SERVER sent telnet (" << command.size() << " bytes):" << _type;
     }
 #endif
 
@@ -794,6 +885,9 @@ void cTelnet::processTelnetCommand(const string& command)
         //server wants to enable some option (or he sends a timing-mark)...
         option = command[2];
         const auto idxOption = static_cast<size_t>(option);
+#ifdef DEBUG_TELNET
+        qDebug().nospace().noquote() << "Server sent telnet IAC WILL " << decodeOption(option);
+#endif
 
         if (option == OPT_EOR) {
             //EOR support (END OF RECORD=TN_GA
@@ -811,7 +905,9 @@ void cTelnet::processTelnetCommand(const string& command)
                 output += OPT_MSDP; // disable MSDP per http://tintin.sourceforge.net/msdp/
                 // This will be unaffected by Mud Server encoding:
                 socketOutRaw(output);
-                qDebug() << "TELNET IAC DONT MSDP";
+#ifdef DEBUG_TELNET
+                qDebug() << "WE send telnet IAC DONT MSDP";
+#endif
                 break;
             } else {
                 sendTelnetOption(TN_DO, OPT_MSDP);
@@ -828,7 +924,9 @@ void cTelnet::processTelnetCommand(const string& command)
                 output += TN_SE;
                 // This will be unaffected by Mud Server encoding:
                 socketOutRaw(output);
-                qDebug() << "TELNET IAC DO MSDP";
+#ifdef DEBUG_TELNET
+                qDebug() << "WE send telnet IAC DO MSDP";
+#endif
                 raiseProtocolEvent("sysProtocolEnabled", "MSDP");
                 break;
             }
@@ -969,20 +1067,18 @@ void cTelnet::processTelnetCommand(const string& command)
     }
 
     case TN_WONT: {
-//server refuses to enable some option...
-#ifdef DEBUG
-        qDebug() << "cTelnet::processTelnetCommand() TN_WONT command=" << (quint8)command[2];
-#endif
+        //server refuses to enable some option
         option = command[2];
         const auto idxOption = static_cast<size_t>(option);
+#ifdef DEBUG_TELNET
+        qDebug().nospace().noquote() << "Server sent telnet IAC WONT " << decodeOption(option);
+#endif
         if (triedToEnable[idxOption]) {
             hisOptionState[idxOption] = false;
             triedToEnable[idxOption] = false;
             heAnnouncedState[idxOption] = true;
         } else {
-#ifdef DEBUG
-            qDebug() << "cTelnet::processTelnetCommand() we dont accept his option because we didnt want it to be enabled";
-#endif
+
             if (option == OPT_MSDP) {
                 // MSDP got turned off
                 raiseProtocolEvent("sysProtocolDisabled", "MSDP");
@@ -1037,24 +1133,21 @@ void cTelnet::processTelnetCommand(const string& command)
     }
 
     case TN_DO: {
-#ifdef DEBUG
-        qDebug() << "telnet: server wants us to enable option:" << (quint8)command[2];
-#endif
         //server wants us to enable some option
         option = command[2];
         const auto idxOption = static_cast<size_t>(option);
+#ifdef DEBUG_TELNET
+        qDebug().nospace().noquote() << "Server sent telnet IAC DO " << decodeOption(option);
+#endif
         if (option == OPT_MSDP && mpHost->mEnableMSDP) {
             // MSDP support
-            qDebug() << "TELNET IAC DO MSDP";
             sendTelnetOption(TN_WILL, OPT_MSDP);
-
             raiseProtocolEvent("sysProtocolEnabled", "MSDP");
             break;
         }
 
         if (option == OPT_ATCP && !mpHost->mEnableGMCP) {
             // ATCP support, enable only if GMCP is off as GMCP is better
-            qDebug() << "TELNET IAC DO ATCP";
             enableATCP = true;
             sendTelnetOption(TN_WILL, OPT_ATCP);
             raiseProtocolEvent("sysProtocolEnabled", "ATCP");
@@ -1063,7 +1156,6 @@ void cTelnet::processTelnetCommand(const string& command)
 
         if (option == OPT_GMCP && mpHost->mEnableGMCP) {
             // GMCP support
-            qDebug() << "TELNET IAC DO GMCP";
             enableGMCP = true;
             sendTelnetOption(TN_WILL, OPT_GMCP);
             raiseProtocolEvent("sysProtocolEnabled", "GMCP");
@@ -1078,19 +1170,16 @@ void cTelnet::processTelnetCommand(const string& command)
             break;
         }
 
-        if (option == OPT_102) // channel 102 support
-        {
-            qDebug() << "TELNET IAC DO CHANNEL 102";
+        if (option == OPT_102) {
+            // channel 102 support
             enableChannel102 = true;
             sendTelnetOption(TN_WILL, OPT_102);
             raiseProtocolEvent("sysProtocolEnabled", "channel102");
             break;
         }
-#ifdef DEBUG
-        qDebug() << "server wants us to enable telnet option " << (quint8)option << "(TN_DO + " << (quint8)option << ")";
-#endif
+
         if (option == OPT_TIMING_MARK) {
-            qDebug() << "OK we are willing to enable TIMING_MARK";
+            qDebug() << "We ARE willing to enable TIMING_MARK";
             // send WILL TIMING_MARK
             sendTelnetOption(TN_WILL, option);
         } else if (!myOptionState[idxOption]) {
@@ -1098,19 +1187,19 @@ void cTelnet::processTelnetCommand(const string& command)
 
             if ((option == OPT_STATUS) || (option == OPT_NAWS) || (option == OPT_TERMINAL_TYPE)) {
                 if (option == OPT_STATUS) {
-                    qDebug() << "OK we are willing to enable telnet option STATUS";
+                    qDebug() << "We ARE willing to enable telnet option STATUS";
                 }
                 if (option == OPT_TERMINAL_TYPE) {
-                    qDebug() << "OK we are willing to enable telnet option TERMINAL_TYPE";
+                    qDebug() << "We ARE willing to enable telnet option TERMINAL_TYPE";
                 }
                 if (option == OPT_NAWS) {
-                    qDebug() << "OK we are willing to enable telnet option NAWS";
+                    qDebug() << "We ARE willing to enable telnet option NAWS";
                 }
                 sendTelnetOption(TN_WILL, option);
                 myOptionState[idxOption] = true;
                 announcedState[idxOption] = true;
             } else {
-                qDebug() << "SORRY, we are NOT WILLING to enable this telnet option.";
+                qDebug() << "We are NOT WILLING to enable this telnet option.";
                 sendTelnetOption(TN_WONT, option);
                 myOptionState[idxOption] = false;
                 announcedState[idxOption] = true;
@@ -1123,12 +1212,12 @@ void cTelnet::processTelnetCommand(const string& command)
         break;
     }
     case TN_DONT: {
-//only respond if value changed or if this option has not been announced yet
-#ifdef DEBUG
-        qDebug() << "cTelnet::processTelnetCommand() TN_DONT command=" << (quint8)command[2];
-#endif
+        //only respond if value changed or if this option has not been announced yet
         option = command[2];
         const auto idxOption = static_cast<size_t>(option);
+#ifdef DEBUG_TELNET
+        qDebug().nospace().noquote() << "Server sent telnet IAC DONT " << decodeOption(option);
+#endif
         if (option == OPT_MSDP) {
             // MSDP got turned off
             raiseProtocolEvent("sysProtocolDisabled", "MSDP");

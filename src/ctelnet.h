@@ -168,6 +168,8 @@ public:
 
     void requestDiscordInfo();
 
+    QString decodeOption(const unsigned char) const;
+
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;
     double networkLatency;
