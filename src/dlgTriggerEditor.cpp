@@ -4360,6 +4360,7 @@ void dlgTriggerEditor::saveScript()
     pT->setScript(script);
 
     pT->compile();
+    mpHost->getTriggerUnit()->doCleanup();
     QIcon icon;
     if (pT->isFolder()) {
         if (!pT->mPackageName.isEmpty()) {
@@ -4522,6 +4523,7 @@ void dlgTriggerEditor::saveVar()
             varUnit->addVariable(variable);
             varUnit->addTreeItem(pItem, variable);
             varUnit->removeTempVar(pItem);
+            varUnit->getBase()->addChild(variable);
             pItem->setText(0, newName);
             mpCurrentVarItem = nullptr;
         } else if (variable) {
@@ -4624,7 +4626,7 @@ void dlgTriggerEditor::saveVar()
     }
     //redo this here in case we changed type
     pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsTristate | Qt::ItemIsUserCheckable);
-    pItem->setToolTip(0, "Checked variables will be saved and loaded with your profile.");
+    pItem->setToolTip(0, tr("Checked variables will be saved and loaded with your profile."));
     if (!varUnit->shouldSave(variable)) {
         pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable));
         pItem->setForeground(0, QBrush(QColor("grey")));

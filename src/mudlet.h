@@ -177,9 +177,6 @@ public:
     static QPointer<QMainWindow> mpDebugArea;
     static bool debugMode;
     QMap<Host*, TConsole*> mConsoleMap;
-    QMap<Host*, QMap<QString, TConsole*>> mHostConsoleMap;
-    QMap<Host*, QMap<QString, TDockWidget*>> mHostDockConsoleMap;
-    QMap<Host*, QMap<QString, TLabel*>> mHostLabelMap;
     bool isGoingDown() { return mIsGoingDown; }
     int mToolbarIconSize;
     int mEditorTreeWidgetIconSize;
@@ -215,6 +212,7 @@ public:
     int getColumnCount(Host* pHost, QString& name);
     int getRowCount(Host* pHost, QString& name);
     QStringList getAvailableFonts();
+    void hideMudletsVariables(Host *pHost);
 
     static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;
@@ -358,6 +356,7 @@ public:
     void show_options_dialog(QString tab);
     void setInterfaceLanguage(const QString &languageCode);
     QList<QString> getAvailableTranslationCodes() const { return mTranslatorsMap.keys(); }
+    QPair<bool, QStringList> getLines(Host* pHost, const QString& windowName, const int lineFrom, const int lineTo);
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
@@ -393,7 +392,6 @@ public slots:
     void slot_replaySpeedUp();
     void slot_replaySpeedDown();
     void toggleFullScreenView();
-    void slot_userToolBar_orientation_changed(Qt::Orientation);
     void slot_show_about_dialog();
     void slot_show_help_dialog_video();
     void slot_show_help_dialog_forum();
@@ -402,7 +400,6 @@ public slots:
     void slot_module_clicked(QTableWidgetItem*);
     void slot_module_changed(QTableWidgetItem*);
     void slot_multi_view();
-    void slot_userToolBar_hovered(QAction* pA);
     void slot_connection_dlg_finished(const QString& profile, int historyVersion);
     void slot_timer_fires();
     void slot_send_login();

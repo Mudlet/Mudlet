@@ -46,20 +46,18 @@
 #include <chrono>
 
 
-TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDebugConsole, bool isLowerPane)
+TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLowerPane)
 : QWidget(pW)
 , mCursorY(0)
 , mIsCommandPopup(false)
 , mIsTailMode(true)
-, mShowTimeStamps(isDebugConsole)
+, mShowTimeStamps(false)
 , mForceUpdate(false)
 , mHighlight_on(false)
 , mHighlightingBegin(false)
 , mHighlightingEnd(false)
 , mInit_OK(false)
 , mInversOn(false)
-, mIsDebugConsole(isDebugConsole)
-, mIsMiniConsole(false)
 , mIsLowerPane(isLowerPane)
 , mLastRenderBottom(0)
 , mMouseTracking(false)
@@ -70,7 +68,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
 , mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
 {
     mLastClickTimer.start();
-    if (!mIsDebugConsole) {
+    if (pC->getType() != TConsole::CentralDebugConsole) {
         mFontHeight = QFontMetrics(mpHost->mDisplayFont).height();
         mFontWidth = QFontMetrics(mpHost->mDisplayFont).width(QChar('W'));
         mScreenWidth = 100;
@@ -92,7 +90,8 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isDe
 #endif
         setFont(mpHost->mDisplayFont);
     } else {
-        mIsDebugConsole = true;
+        // This is part of the Central Debug Console
+        mShowTimeStamps = true;
         mFontHeight = QFontMetrics(mDisplayFont).height();
         mFontWidth = QFontMetrics(mDisplayFont).width(QChar('W'));
         mScreenWidth = 100;
@@ -244,7 +243,9 @@ void TTextEdit::updateScreenView()
 #endif
         return; //NOTE: das ist wichtig, damit ich keine floating point exception bekomme, wenn mScreenHeight==0, was hier der Fall wäre
     }
-    if (!mIsDebugConsole && !mIsMiniConsole) {
+    // This was "if (pC->mType == TConsole::MainConsole) {"
+    // and mIsMiniConsole is true for user created Mini Consoles and User Windows
+    if (mpConsole->getType() == TConsole::MainConsole) {
         mFontWidth = QFontMetrics(mpHost->mDisplayFont).width(QChar('W'));
         mFontDescent = QFontMetrics(mpHost->mDisplayFont).descent();
         mFontAscent = QFontMetrics(mpHost->mDisplayFont).ascent();
@@ -293,7 +294,7 @@ void TTextEdit::updateScreenView()
     }
     mScreenHeight = visibleRegion().boundingRect().height() / mFontHeight;
     int currentScreenWidth = visibleRegion().boundingRect().width() / mFontWidth;
-    if (!mIsDebugConsole && !mIsMiniConsole) {
+    if (mpConsole->getType() == TConsole::MainConsole) {
         // This is the MAIN console - we do not want it to ever disappear!
         mScreenWidth = qMax(40, currentScreenWidth);
 
@@ -655,7 +656,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 
     QPainter p(&pixmap);
     p.setCompositionMode(QPainter::CompositionMode_Source);
-    if (!mIsDebugConsole && !mIsMiniConsole) {
+    if (mpConsole->getType() == TConsole::MainConsole) {
         p.setFont(mpHost->mDisplayFont);
         p.setRenderHint(QPainter::TextAntialiasing, !mpHost->mNoAntiAlias);
     } else {
@@ -1352,19 +1353,14 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     }
 
     QString title;
-    if (this->mIsDebugConsole) {
+    if (mpConsole->getType() == TConsole::CentralDebugConsole) {
         title = tr("Mudlet, debug console extract");
-    } else if (this->mIsMiniConsole) {
-        if (!this->mpHost->mpConsole->mSubConsoleMap.empty()) {
-            for (auto it = this->mpHost->mpConsole->mSubConsoleMap.cbegin(); it != this->mpHost->mpConsole->mSubConsoleMap.cend(); ++it) {
-                if ((*it).second == this->mpConsole) {
-                    title = tr("Mudlet, %1 mini-console extract from %2 profile").arg((*it).first.data(), this->mpHost->getName());
-                    break;
-                }
-            }
-        }
+    } else if (mpConsole->getType() == TConsole::SubConsole) {
+        title = tr("Mudlet, %1 mini-console extract from %2 profile").arg(mpHost->mpConsole->mSubConsoleMap.key(mpConsole), mpHost->getName());
+    } else if (mpConsole->getType() == TConsole::UserWindow) {
+        title = tr("Mudlet, %1 user window extract from %2 profile").arg(mpHost->mpConsole->mSubConsoleMap.key(mpConsole), mpHost->getName());
     } else {
-        title = tr("Mudlet, %1 console extract from %2 profile").arg(this->mpConsole->mConsoleName, this->mpHost->getName());
+        title = tr("Mudlet, main console extract from %1 profile").arg(mpHost->getName());
     }
 
     QStringList fontsList;                  // List of fonts to become the font-family entry for
@@ -1527,7 +1523,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
 std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect rectangle, int lineOffset) const
 {
     painter.setCompositionMode(QPainter::CompositionMode_Source);
-    if (!mIsDebugConsole && !mIsMiniConsole) {
+    if (mpConsole->getType() == TConsole::MainConsole) {
         painter.setFont(mpHost->mDisplayFont);
         painter.setRenderHint(QPainter::TextAntialiasing, !mpHost->mNoAntiAlias);
     } else {
@@ -1666,7 +1662,11 @@ void TTextEdit::showEvent(QShowEvent* event)
 void TTextEdit::resizeEvent(QResizeEvent* event)
 {
     updateScreenView();
-    if (!mIsLowerPane && !mIsDebugConsole) {
+    if (!mIsLowerPane && mpConsole->getType() != TConsole::CentralDebugConsole) {
+        // CHECKME: This looks suspect - it would seem to be called on resizing
+        // floating user windows, and the Editor's Error TConsole as well as
+        // components in the main window - for NAWS purposes it seems more
+        // likely to be needed ONLY on the main TConsole for the profile
         mpHost->adjustNAWS();
     }
 
@@ -1777,7 +1777,7 @@ int TTextEdit::getColumnCount()
 {
     int charWidth;
 
-    if (!mIsDebugConsole && !mIsMiniConsole) {
+    if (mpConsole->getType() == TConsole::MainConsole) {
         charWidth = qRound(QFontMetricsF(mpHost->mDisplayFont).averageCharWidth());
     } else {
         charWidth = qRound(QFontMetricsF(mDisplayFont).averageCharWidth());
@@ -1790,7 +1790,7 @@ int TTextEdit::getRowCount()
 {
     int rowHeight;
 
-    if (!mIsDebugConsole && !mIsMiniConsole) {
+    if (mpConsole->getType() == TConsole::MainConsole) {
         rowHeight = qRound(QFontMetricsF(mpHost->mDisplayFont).lineSpacing());
     } else {
         rowHeight = qRound(QFontMetricsF(mDisplayFont).lineSpacing());

@@ -119,12 +119,10 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mStandardFormat.flags &= ~(TCHAR_UNDERLINE);
         mStandardFormat.flags &= ~(TCHAR_STRIKEOUT);
     } else {
-        setWindowTitle(tr("Non Debug Console"));
         if (mType & (ErrorConsole|SubConsole|UserWindow)) {
             // Orginally this was for TConsole instances with a parent pointer
             // This branch for: UserWindows, SubConsole, ErrorConsole
             // mIsSubConsole was true for these
-            mpHost->mpConsole->mSubConsoleList.append(this);
             mMainFrameTopHeight = 0;
             mMainFrameBottomHeight = 0;
             mMainFrameLeftWidth = 0;
@@ -314,12 +312,12 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         setFocusProxy(mpCommandLine);
     }
 
-    mUpperPane = new TTextEdit(this, splitter, &buffer, mpHost, (mType & CentralDebugConsole), false);
+    mUpperPane = new TTextEdit(this, splitter, &buffer, mpHost, false);
     mUpperPane->setContentsMargins(0, 0, 0, 0);
     mUpperPane->setSizePolicy(sizePolicy3);
     mUpperPane->setFocusPolicy(Qt::NoFocus);
 
-    mLowerPane = new TTextEdit(this, splitter, &buffer, mpHost, (mType & CentralDebugConsole), true);
+    mLowerPane = new TTextEdit(this, splitter, &buffer, mpHost, true);
     mLowerPane->setContentsMargins(0, 0, 0, 0);
     mLowerPane->setSizePolicy(sizePolicy3);
     mLowerPane->setFocusPolicy(Qt::NoFocus);
@@ -592,7 +590,7 @@ Host* TConsole::getHost()
 
 void TConsole::setLabelStyleSheet(std::string& buf, std::string& sh)
 {
-    std::string key = buf;
+    QString key = QString::fromUtf8(buf.c_str());
     QString sheet = sh.c_str();
     if (mLabelMap.find(key) != mLabelMap.end()) {
         QLabel* pC = mLabelMap[key];
@@ -699,7 +697,7 @@ void TConsole::refresh()
 
 void TConsole::closeEvent(QCloseEvent* event)
 {
-    if (mType & CentralDebugConsole) {
+    if (mType == CentralDebugConsole) {
         if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
             event->accept();
             return;
@@ -712,15 +710,35 @@ void TConsole::closeEvent(QCloseEvent* event)
         }
     }
 
-    if (mType & (SubConsole|UserWindow|Buffer)) {
+    if (mType & (SubConsole|Buffer)) {
         if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
-            std::string key = objectName().toLatin1().data();
-            TConsole* pC = mpHost->mpConsole;
-            if (pC->mSubConsoleMap.find(key) != pC->mSubConsoleMap.end()) {
+            QString key = objectName();
+            auto pC = mpHost->mpConsole->mSubConsoleMap.take(key);
+            if (pC) {
                 mUpperPane->close();
                 mLowerPane->close();
+            }
 
-                pC->mSubConsoleMap.erase(key);
+            event->accept();
+            return;
+        } else {
+            hide();
+            event->ignore();
+            return;
+        }
+    }
+
+    if (mType == UserWindow) {
+        if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
+            QString key = objectName();
+            auto pC = mpHost->mpConsole->mSubConsoleMap.take(key);
+            auto pD = mpHost->mpConsole->mDockWidgetMap.take(key);
+            if (pC) {
+                mUpperPane->close();
+                mLowerPane->close();
+            }
+            if (!pD) {
+                qDebug() << "TConsole::closeEvent(QCloseEvent*) INFO - closing a UserWindow but the TDockWidget pointer was not found to be removed...";
             }
 
             event->accept();
@@ -1794,39 +1812,16 @@ void TConsole::selectCurrentLine()
     selectSection(0, buffer.line(mUserCursor.y()).size());
 }
 
-/*void TConsole::selectCurrentLine( std::string & buf )
-   {
-    std::string key = buf;
-    if( buf == "main" )
-    {
-        return selectCurrentLine();
-    }
-    if( mSubConsoleMap.find( key ) != mSubConsoleMap.end() )
-    {
-        TConsole * pC = mSubConsoleMap[key];
-        if( ! pC ) return;
-        pC->selectCurrentLine();
-        return;
-    }
-    else
-    {
-        return;
-    }
-   }*/
 void TConsole::selectCurrentLine(std::string& buf)
 {
-    std::string key = buf;
-    if (buf == "main") {
+    QString key = QString::fromUtf8(buf.c_str());
+    if (key == QLatin1String("main")) {
         selectCurrentLine();
-    }
-    if (mSubConsoleMap.find(key) != mSubConsoleMap.end()) {
-        TConsole* pC = mSubConsoleMap[key];
-        if (!pC) {
-            return;
-        }
-        pC->selectCurrentLine();
-    } else {
         return;
+    }
+    auto pC = mSubConsoleMap.value(key);
+    if (pC) {
+        pC->selectCurrentLine();
     }
 }
 
@@ -1878,54 +1873,42 @@ std::list<int> TConsole::_getBgColor()
 
 std::list<int> TConsole::getFgColor(std::string& buf)
 {
-    std::list<int> result;
-    std::string key = buf;
-    if (buf == "main") {
+    QString key = QString::fromUtf8(buf.c_str());
+    if (key == QLatin1String("main")) {
         return _getFgColor();
     }
-    if (mSubConsoleMap.find(key) != mSubConsoleMap.end()) {
-        TConsole* pC = mSubConsoleMap[key];
-        if (!pC) {
-            return result;
-        }
+    auto pC = mSubConsoleMap.value(key);
+    if (pC) {
         return pC->_getFgColor();
-    } else {
-        return result;
     }
+
+    return {};
 }
 
 std::list<int> TConsole::getBgColor(std::string& buf)
 {
-    std::list<int> result;
-    std::string key = buf;
-    if (buf == "main") {
+    QString key = QString::fromUtf8(buf.c_str());
+    if (key == QLatin1String("main")) {
         return _getBgColor();
     }
-    if (mSubConsoleMap.find(key) != mSubConsoleMap.end()) {
-        TConsole* pC = mSubConsoleMap[key];
-        if (!pC) {
-            return result;
-        }
+    auto pC = mSubConsoleMap.value(key);
+    if (pC) {
         return pC->_getBgColor();
-    } else {
-        return result;
     }
+
+    return {};
 }
 
 void TConsole::luaWrapLine(std::string& buf, int line)
 {
-    std::string key = buf;
-    if (buf == "main") {
+    QString key = QString::fromUtf8(buf.c_str());
+    if (key == QLatin1String("main")) {
         _luaWrapLine(line);
         return;
     }
-    if (mSubConsoleMap.find(key) != mSubConsoleMap.end()) {
-        TConsole* pC = mSubConsoleMap[key];
-        if (!pC) {
-            return;
-        }
+    auto pC = mSubConsoleMap.value(key);
+    if (pC) {
         pC->_luaWrapLine(line);
-        return;
     }
 }
 
@@ -1973,22 +1956,16 @@ QString TConsole::getCurrentLine()
 
 QString TConsole::getCurrentLine(std::string& buf)
 {
-    std::string key = buf;
-    if (buf == "main") {
+    QString key = QString::fromUtf8(buf.c_str());
+    if (key == QLatin1String("main")) {
         return getCurrentLine();
     }
-    if (mSubConsoleMap.find(key) != mSubConsoleMap.end()) {
-        TConsole* pC = mSubConsoleMap[key];
-        if (!pC) {
-            return ""; //return value was false but a QString is needed not a boolean
-        } else {
-            return pC->getCurrentLine();
-        }
-    } else {
-        return QString("ERROR: mini console does not exist");
+    auto pC = mSubConsoleMap.value(key);
+    if (pC) {
+        return pC->getCurrentLine();
     }
+    return QStringLiteral("ERROR: mini console does not exist");
 }
-
 
 int TConsole::getLastLineNumber()
 {
@@ -2300,11 +2277,10 @@ void TConsole::printDebug(QColor& c, QColor& d, const QString& msg)
 
 TConsole* TConsole::createBuffer(const QString& name)
 {
-    std::string key = name.toLatin1().data();
-    if (mSubConsoleMap.find(key) == mSubConsoleMap.end()) {
+    if (!mSubConsoleMap.contains(name)) {
         auto pC = new TConsole(mpHost, Buffer);
-        mSubConsoleMap[key] = pC;
-        pC->setWindowTitle(name);
+        mSubConsoleMap[name] = pC;
+        pC->mConsoleName = name;
         pC->setContentsMargins(0, 0, 0, 0);
         pC->hide();
         pC->layerCommandLine->hide();
@@ -2316,40 +2292,35 @@ TConsole* TConsole::createBuffer(const QString& name)
 
 void TConsole::resetMainConsole()
 {
-    std::map<string, TConsole*>::const_iterator it;
-    it = mSubConsoleMap.begin();
-    for (; it != mSubConsoleMap.end(); it++) {
-        QMap<QString, TConsole*>& dockWindowConsoleMap = mudlet::self()->mHostConsoleMap[mpHost];
-        QString n = it->first.c_str();
-        dockWindowConsoleMap.remove(n);
-        (*it->second).close();
+    QMutableMapIterator<QString, TConsole*> itSubConsole(mSubConsoleMap);
+    while (itSubConsole.hasNext()) {
+        itSubConsole.next();
+        // CHECK: Do we need to handle the float/dockable widgets here:
+        itSubConsole.value()->close();
+        itSubConsole.remove();
     }
 
-    std::map<string, TLabel*>::const_iterator it2;
-    for (it2 = mLabelMap.begin(); it2 != mLabelMap.end(); it2++) {
-        QMap<QString, TLabel*>& dockWindowConsoleMap = mudlet::self()->mHostLabelMap[mpHost];
-        QString n = it2->first.c_str();
-        dockWindowConsoleMap.remove(n);
-        (*it2->second).close();
+    QMutableMapIterator<QString, TLabel*> itLabel(mLabelMap);
+    while (itLabel.hasNext()) {
+        itLabel.next();
+        itLabel.value()->close();
+        itLabel.remove();
     }
-    mSubConsoleMap.clear();
-    mLabelMap.clear();
 }
 
 // This is a sub-console overlaid on to the main console
 TConsole* TConsole::createMiniConsole(const QString& name, int x, int y, int width, int height)
 {
-    std::string key = name.toLatin1().data();
-    if (mSubConsoleMap.find(key) == mSubConsoleMap.end()) {
-        auto pC = new TConsole(mpHost, SubConsole, mpMainFrame);
+    auto pC = mSubConsoleMap.value(name);
+    if (!pC) {
+        pC = new TConsole(mpHost, SubConsole, mpMainFrame);
         if (!pC) {
             return nullptr;
         }
-        mSubConsoleMap[key] = pC;
+        mSubConsoleMap[name] = pC;
         pC->setObjectName(name);
+        pC->mConsoleName = name;
         pC->setFocusPolicy(Qt::NoFocus);
-        pC->mUpperPane->setIsMiniConsole();
-        pC->mLowerPane->setIsMiniConsole();
         const auto& hostCommandLine = mpHost->mpConsole->mpCommandLine;
         pC->setFocusProxy(hostCommandLine);
         pC->mUpperPane->setFocusProxy(hostCommandLine);
@@ -2370,18 +2341,18 @@ TConsole* TConsole::createMiniConsole(const QString& name, int x, int y, int wid
 
 TLabel* TConsole::createLabel(const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
 {
-    std::string key = name.toLatin1().data();
-    if (mLabelMap.find(key) == mLabelMap.end()) {
-        auto pC = new TLabel(mpMainFrame);
-        mLabelMap[key] = pC;
-        pC->setObjectName(name);
-        pC->setAutoFillBackground(fillBackground);
-        pC->setClickThrough(clickThrough);
-        pC->resize(width, height);
-        pC->setContentsMargins(0, 0, 0, 0);
-        pC->move(x, y);
-        pC->show();
-        return pC;
+    auto pL = mLabelMap.value(name);
+    if (!pL) {
+        pL = new TLabel(mpMainFrame);
+        mLabelMap[name] = pL;
+        pL->setObjectName(name);
+        pL->setAutoFillBackground(fillBackground);
+        pL->setClickThrough(clickThrough);
+        pL->resize(width, height);
+        pL->setContentsMargins(0, 0, 0, 0);
+        pL->move(x, y);
+        pL->show();
+        return pL;
     } else {
         return nullptr;
     }
@@ -2419,10 +2390,9 @@ void TConsole::createMapper(int x, int y, int width, int height)
 
 bool TConsole::createButton(const QString& name, int x, int y, int width, int height, bool fillBackground)
 {
-    std::string key = name.toLatin1().data();
-    if (mLabelMap.find(key) == mLabelMap.end()) {
+    if (!mLabelMap.contains(name)) {
         auto pC = new TLabel(mpMainFrame);
-        mLabelMap[key] = pC;
+        mLabelMap[name] = pC;
         pC->setObjectName(name);
         pC->setAutoFillBackground(fillBackground);
         pC->resize(width, height);
@@ -2437,10 +2407,10 @@ bool TConsole::createButton(const QString& name, int x, int y, int width, int he
 
 bool TConsole::setBackgroundImage(const QString& name, const QString& path)
 {
-    std::string key = name.toLatin1().data();
-    if (mLabelMap.find(key) != mLabelMap.end()) {
+    auto pL = mLabelMap.value(name);
+    if (pL) {
         QPixmap bgPixmap(path);
-        mLabelMap[key]->setPixmap(bgPixmap);
+        pL->setPixmap(bgPixmap);
         return true;
     } else {
         return false;
@@ -2449,26 +2419,27 @@ bool TConsole::setBackgroundImage(const QString& name, const QString& path)
 
 bool TConsole::setBackgroundColor(const QString& name, int r, int g, int b, int alpha)
 {
-    std::string key = name.toLatin1().data();
-    if (mSubConsoleMap.find(key) != mSubConsoleMap.end()) {
+    auto pC = mSubConsoleMap.value(name);
+    auto pL = mLabelMap.value(name);
+    if (pC) {
         QPalette mainPalette;
         mainPalette.setColor(QPalette::Window, QColor(r, g, b, alpha));
-        mSubConsoleMap[key]->setPalette(mainPalette);
-        mSubConsoleMap[key]->mUpperPane->mBgColor = QColor(r, g, b, alpha);
-        mSubConsoleMap[key]->mLowerPane->mBgColor = QColor(r, g, b, alpha);
+        pC->setPalette(mainPalette);
+        pC->mUpperPane->mBgColor = QColor(r, g, b, alpha);
+        pC->mLowerPane->mBgColor = QColor(r, g, b, alpha);
         // update the display properly when color selections change.
-        mSubConsoleMap[key]->mUpperPane->updateScreenView();
-        mSubConsoleMap[key]->mUpperPane->forceUpdate();
-        if (!mSubConsoleMap[key]->mUpperPane->mIsTailMode) {
+        pC->mUpperPane->updateScreenView();
+        pC->mUpperPane->forceUpdate();
+        if (!pC->mUpperPane->mIsTailMode) {
             // The upper pane having mIsTailMode true means lower pane is hidden
-            mSubConsoleMap[key]->mLowerPane->updateScreenView();
-            mSubConsoleMap[key]->mLowerPane->forceUpdate();
+            pC->mLowerPane->updateScreenView();
+            pC->mLowerPane->forceUpdate();
         }
         return true;
-    } else if (mLabelMap.find(key) != mLabelMap.end()) {
+    } else if (pL) {
         QPalette mainPalette;
         mainPalette.setColor(QPalette::Window, QColor(r, g, b, alpha));
-        mLabelMap[key]->setPalette(mainPalette);
+        pL->setPalette(mainPalette);
         return true;
     } else {
         return false;
@@ -2477,12 +2448,13 @@ bool TConsole::setBackgroundColor(const QString& name, int r, int g, int b, int 
 
 bool TConsole::raiseWindow(const QString& name)
 {
-    std::string key = name.toLatin1().data();
-    if (mSubConsoleMap.find(key) != mSubConsoleMap.end()) {
-        mSubConsoleMap[key]->raise();
+    auto pC = mSubConsoleMap.value(name);
+    auto pL = mLabelMap.value(name);
+    if (pC) {
+        pC->raise();
         return true;
-    } else if (mLabelMap.find(key) != mLabelMap.end()) {
-        mLabelMap[key]->raise();
+    } else if (pL) {
+        pL->raise();
         return true;
     } else {
         return false;
@@ -2491,13 +2463,14 @@ bool TConsole::raiseWindow(const QString& name)
 
 bool TConsole::lowerWindow(const QString& name)
 {
-    std::string key = name.toLatin1().data();
-    if (mSubConsoleMap.find(key) != mSubConsoleMap.end()) {
-        mSubConsoleMap[key]->lower();
+    auto pC = mSubConsoleMap.value(name);
+    auto pL = mLabelMap.value(name);
+    if (pC) {
+        pC->lower();
         mpMainDisplay->lower();
         return true;
-    } else if (mLabelMap.find(key) != mLabelMap.end()) {
-        mLabelMap[key]->lower();
+    } else if (pL) {
+        pL->lower();
         mpMainDisplay->lower();
         return true;
     } else {
@@ -2507,18 +2480,18 @@ bool TConsole::lowerWindow(const QString& name)
 
 bool TConsole::showWindow(const QString& name)
 {
-    std::string key = name.toLatin1().data();
-    if (mSubConsoleMap.find(key) != mSubConsoleMap.end()) {
-        mSubConsoleMap[key]->mUpperPane->updateScreenView();
-        mSubConsoleMap[key]->mUpperPane->forceUpdate();
-        mSubConsoleMap[key]->show();
+    auto pC = mSubConsoleMap.value(name);
+    auto pL = mLabelMap.value(name);
+    if (pC) {
+        pC->mUpperPane->updateScreenView();
+        pC->mUpperPane->forceUpdate();
+        pC->show();
 
-        mSubConsoleMap[key]->mLowerPane->updateScreenView();
-        mSubConsoleMap[key]->mLowerPane->forceUpdate();
-        //mSubConsoleMap[key]->move(mSubConsoleMap[key]->mOldX, mSubConsoleMap[key]->mOldY);
+        pC->mLowerPane->updateScreenView();
+        pC->mLowerPane->forceUpdate();
         return true;
-    } else if (mLabelMap.find(key) != mLabelMap.end()) {
-        mLabelMap[key]->show();
+    } else if (pL) {
+        pL->show();
         return true;
     } else {
         return false;
@@ -2527,13 +2500,13 @@ bool TConsole::showWindow(const QString& name)
 
 bool TConsole::hideWindow(const QString& name)
 {
-    std::string key = name.toLatin1().data();
-    if (mSubConsoleMap.find(key) != mSubConsoleMap.end()) {
-        //mSubConsoleMap[key]->move(9999,9999);
-        mSubConsoleMap[key]->hide();
+    auto pC = mSubConsoleMap.value(name);
+    auto pL = mLabelMap.value(name);
+    if (pC) {
+        pC->hide();
         return true;
-    } else if (mLabelMap.find(key) != mLabelMap.end()) {
-        mLabelMap[key]->hide();
+    } else if (pL) {
+        pL->hide();
         return true;
     } else {
         return false;
@@ -2542,12 +2515,13 @@ bool TConsole::hideWindow(const QString& name)
 
 bool TConsole::printWindow(const QString& name, const QString& text)
 {
-    std::string key = name.toLatin1().data();
-    if (mSubConsoleMap.find(key) != mSubConsoleMap.end()) {
-        mSubConsoleMap[key]->print(text);
+    auto pC = mSubConsoleMap.value(name);
+    auto pL = mLabelMap.value(name);
+    if (pC) {
+        pC->print(text);
         return true;
-    } else if (mLabelMap.find(key) != mLabelMap.end()) {
-        mLabelMap[key]->setText(text);
+    } else if (pL) {
+        pL->setText(text);
         return true;
     } else {
         return false;

@@ -56,23 +56,23 @@ public:
     void addTreeItem(QTreeWidgetItem*, TVar*);
     void addSavedVar(TVar*);
     void removeSavedVar(TVar*);
-    void removeHidden(TVar*);
     void addHidden(TVar*, int);
     void addHidden(QString);
-    bool isHidden(TVar*);
+    bool isHidden(TVar *var);
+    bool isHidden(const QString &fullname);
+    void removeHidden(TVar *var);
+    void removeHidden(const QString &name);
     bool isSaved(TVar*);
     void addPointer(const void*);
-
-public:
     QSet<QString> hidden;
     QSet<QString> hiddenByUser;
+    QSet<QString> savedVars;
 
 private:
     TVar* base;
     QSet<QString> varList;
     QMap<QTreeWidgetItem*, TVar*> wVars;
     QMap<QTreeWidgetItem*, TVar*> tVars;
-    QSet<QString> savedVars;
     QSet<const void*> pointers;
 };
 
