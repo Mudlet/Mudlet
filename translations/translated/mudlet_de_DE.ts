@@ -3635,7 +3635,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="159"/>
       <source>&lt;p&gt;A timer will a short interval will quickly fill up the &lt;i&gt;Central Debug Console&lt;/i&gt; windows with messages that it ran correctly on &lt;i&gt;each&lt;/i&gt; occasion it is called.  This (per profile) control adjusts a threshold that will hide those messages in just that window for those timers which run &lt;b&gt;correctly&lt;/b&gt; when the timer&apos;s interval is less than this setting.&lt;/p&gt;&lt;p&gt;&lt;u&gt;Any timer script that has errors will still have its error messages reported whatever the setting.&lt;/u&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ein Timer mit kurzem Intervall wird schnell das &lt;i&gt;Zentrale Debug-Konsole&lt;/i&gt; - Fenster füllen, weil er bei &lt;i&gt;jedem Aufruf&lt;/i&gt; melden wird, dass er richtig gelaufen ist. Die folgende (profilspezifische) Einstellung regelt eine Schwelle, unter der diese Meldungen an das Fenster unterdrückt werden, wenn ein Timer &lt;b&gt;richtig&lt;/b&gt; gelaufen ist, und sein Intervall kleiner ist als diese Einstellung.&lt;/p&gt;&lt;p&gt;&lt;u&gt;Wenn ein Skript eines Timers einen Fehler meldet, werden diese weiter unabhängig von dieser Einstellung erscheinen.&lt;/u&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="165"/>
@@ -5280,7 +5280,14 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
 There are other inherited options that arise from the Qt Libraries which are
 less likely to be useful for normal use of this application:
 </source>
-      <translation type="unfinished"/>
+      <translation>Verwendung: %1 [OPTION...]
+       -h, --help      zeigt diese Meldung.
+       -v, --version   zeigt Versionsinformationen an.
+       -q, --quiet     kein Splashscreen beim Start.
+
+Es gibt andere Optionen, die aus den Qt-Bibliotheken übernommen wurden, die 
+wahrscheinlich weniger nützlich für die normale Verwendung dieser Anwendung sind:
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="222"/>
@@ -5794,7 +5801,7 @@ less likely to be useful for normal use of this application:
       <location filename="../src/mudlet.cpp" line="136"/>
       <source>Chinese [Simplified]</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation>Chinesisch [vereinfacht]</translation>
+      <translation>Chinesisch [simpel]</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="137"/>

@@ -1604,31 +1604,31 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="86"/>
       <source>South-west</source>
-      <translation type="unfinished"/>
+      <translation>Sudoeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="87"/>
       <location filename="../src/TRoom.cpp" line="861"/>
       <source>East</source>
-      <translation type="unfinished"/>
+      <translation>Leste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="88"/>
       <location filename="../src/TRoom.cpp" line="876"/>
       <source>West</source>
-      <translation type="unfinished"/>
+      <translation>Oeste</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="89"/>
       <location filename="../src/TRoom.cpp" line="891"/>
       <source>Up</source>
-      <translation type="unfinished"/>
+      <translation>Cima</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="90"/>
       <location filename="../src/TRoom.cpp" line="906"/>
       <source>Down</source>
-      <translation type="unfinished"/>
+      <translation>Baixo</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="91"/>
@@ -1696,14 +1696,16 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="980"/>
       <source>[ INFO ]  - In room id:%1 patching {internal fixup} of (special) exit to
 %2, was: &quot;%3&quot; now: &quot;%4&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Na sala id:%1 patching {internal fixup} da (special) saída para
+%2, era: &quot;%3&quot; agora: &quot;%4&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1014"/>
       <source>[ INFO ]  - In room with id: %1 correcting special exit &quot;%2&quot; that
 was to room with an exit to invalid room: %3 to now go
 to: %4.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Na sala com id: %1 corrigindo saída especial special &quot;%2&quot; que
+era para sala com uma saída para uma sala inválida: %3 agora vai para: %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1055"/>
@@ -1731,17 +1733,17 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1156"/>
       <source>%1 (open)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (aberto)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1159"/>
       <source>%1 (closed)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (fechado)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1162"/>
       <source>%1 (locked)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (trancado)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1165"/>

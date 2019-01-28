@@ -443,23 +443,23 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2632"/>
       <source>create new map</source>
-      <translation type="unfinished"/>
+      <translation>crear un nuevo mapa</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2635"/>
       <source>load map</source>
-      <translation type="unfinished"/>
+      <translation>cargar mapa</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2648"/>
       <source>create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>crear habitación</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2649"/>
       <source>Create a new room here</source>
-      <translation type="unfinished"/>
+      <translation>Crear una nueva habitación aquí</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2655"/>
@@ -660,7 +660,7 @@ selected rooms:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="3592"/>
       <source>Spread out rooms</source>
-      <translation type="unfinished"/>
+      <translation>Separar habitaciones</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3593"/>
@@ -737,7 +737,7 @@ rooms:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="3892"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Cargar mapa de Mudlet</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3894"/>
@@ -1198,7 +1198,7 @@ this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="10792"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>Reproduciendo %1</translation>
     </message>
   </context>
   <context>
@@ -1426,17 +1426,17 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1542"/>
       <source>Start my own</source>
-      <translation type="unfinished"/>
+      <translation>Iniciar mi propio</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2010"/>
       <source>Map issues</source>
-      <translation type="unfinished"/>
+      <translation>Problemas de mapa</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2017"/>
       <source>Area issues</source>
-      <translation type="unfinished"/>
+      <translation>Problemas de área</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2025"/>
@@ -1446,7 +1446,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2034"/>
       <source>Room issues</source>
-      <translation type="unfinished"/>
+      <translation>Problemas de habitación</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2043"/>
@@ -1513,7 +1513,7 @@ importado a petición del usuario.</translation>
     <message>
       <location filename="../src/TMap.cpp" line="2222"/>
       <source>Map import</source>
-      <translation type="unfinished"/>
+      <translation>Importar mapa</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2249"/>
@@ -1524,7 +1524,7 @@ in main console!</source>
     <message>
       <location filename="../src/TMap.cpp" line="2284"/>
       <source>[ ALERT ] - Map download was canceled, on user&apos;s request.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - La descarga de mapa ha sido cancelada, a petición del usuario.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2303"/>
@@ -1559,7 +1559,8 @@ in main console!</source>
       <location filename="../src/TMap.cpp" line="2363"/>
       <source>[ ERROR ] - Map download problem, failure in parsing destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] -Problema de descarga de mapa, fallo en el análisis del archivo de destino:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2368"/>
@@ -2135,7 +2136,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1240"/>
       <source>Copy HTML</source>
-      <translation type="unfinished"/>
+      <translation>Copiar Html</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1244"/>
@@ -2150,7 +2151,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1252"/>
       <source>Search on %1</source>
-      <translation type="unfinished"/>
+      <translation>Buscar en %1</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1272"/>
@@ -2474,7 +2475,7 @@ encoding that is currently set {&quot;%1&quot;} for the game server.It may not u
       <location filename="../src/ctelnet.cpp" line="1359"/>
       <source>ERROR</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>ERROR</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1371"/>
@@ -2492,19 +2493,19 @@ encoding that is currently set {&quot;%1&quot;} for the game server.It may not u
       <location filename="../src/ctelnet.cpp" line="1393"/>
       <source>ALERT</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>ALERTA</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1404"/>
       <source>INFO</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>INFO</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1415"/>
       <source>OK</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1604"/>
@@ -3256,7 +3257,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1104"/>
       <source>Discord integration not available on this platform</source>
-      <translation type="unfinished"/>
+      <translation>Integración de discord no disponible en esta plataforma</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1110"/>
@@ -3339,7 +3340,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="372"/>
       <source>! Joining %1...</source>
-      <translation type="unfinished"/>
+      <translation>! Conectando %1...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="377"/>
@@ -3354,12 +3355,12 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="444"/>
       <source>[ERROR] Syntax: %1</source>
-      <translation type="unfinished"/>
+      <translation>[ERROR] Sintaxis: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="446"/>
       <source>[ERROR] Unknown command: %1</source>
-      <translation type="unfinished"/>
+      <translation>[ERROR] Comando desconocido: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="590"/>
@@ -3571,7 +3572,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1616"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Cargar mapa de Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1631"/>
@@ -3695,7 +3696,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2498"/>
       <source>Could not update themes: %1</source>
-      <translation type="unfinished"/>
+      <translation>No se pudo actualizar temas: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2501"/>
@@ -3822,31 +3823,31 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="2946"/>
       <source>Large icon</source>
       <comment>Discord Rich Presence large icon</comment>
-      <translation type="unfinished"/>
+      <translation>Ícono Grande</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2947"/>
       <source>Detail</source>
       <comment>Discord Rich Presence detail</comment>
-      <translation type="unfinished"/>
+      <translation>Detalle</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2949"/>
       <source>Small icon</source>
       <comment>Discord Rich Presence small icon</comment>
-      <translation type="unfinished"/>
+      <translation>Ícono pequeño</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2950"/>
       <source>State</source>
       <comment>Discord Rich Presence state</comment>
-      <translation type="unfinished"/>
+      <translation>Estado</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2952"/>
       <source>Party size</source>
       <comment>Discord Rich Presence party size</comment>
-      <translation type="unfinished"/>
+      <translation>Tamaño del grupo</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2953"/>
@@ -4641,7 +4642,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2123"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2128"/>
       <source>Command {Down}</source>
-      <translation type="unfinished"/>
+      <translation>Comando {Abajo}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1485"/>
@@ -4649,7 +4650,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2142"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2147"/>
       <source>Command {Up}</source>
-      <translation type="unfinished"/>
+      <translation>Comando {Arriba}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1514"/>
@@ -4918,7 +4919,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7826"/>
       <source>choose sound file</source>
-      <translation type="unfinished"/>
+      <translation>elegir archivo de sonido</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7826"/>
@@ -5180,7 +5181,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="108"/>
       <source>Toolbox</source>
-      <translation type="unfinished"/>
+      <translation>Caja de herramientas</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="122"/>
@@ -5470,7 +5471,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="143"/>
       <source>^</source>
-      <translation type="unfinished"/>
+      <translation>^</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="258"/>
