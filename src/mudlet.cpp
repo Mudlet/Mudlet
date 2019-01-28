@@ -1608,8 +1608,12 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         pC->show();
         pC->layerCommandLine->hide();
         pC->mpScrollBar->hide();
+        const auto& hostCommandLine = pHost->mpConsole->mpCommandLine;
+        pC->setFocusProxy(hostCommandLine);
+        pC->mUpperPane->setFocusProxy(hostCommandLine);
+        pC->mLowerPane->setFocusProxy(hostCommandLine);
         pHost->mpConsole->mSubConsoleMap.insert(name, pC);
-        // TODO: Allow user to specify alternate dock locations - and for it to be floating and not docked initially!:
+        // TODO: Allow user to specify alternate dock locations - and for it to be floating and not docked initially!
         addDockWidget(Qt::RightDockWidgetArea, pD);
 
         setWindowFontSize(pHost, name, 10);
