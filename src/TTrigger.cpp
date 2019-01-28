@@ -39,6 +39,7 @@ using namespace std;
 
 // Some extraordinary numbers outside of the range (0-255) used for ANSI colors:
 // Changing them WILL modify the Lua API of TLuaInterpreter::tempColorTrigger
+// and the replacement TLuaInterpreter::tempAnsiColorTrigger
 const int TTrigger::scmDefault = -2;
 const int TTrigger::scmIgnored = -1;
 
@@ -1058,8 +1059,8 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
 // A TColorTable is a simple struct that stores four values, the two given ANSI
 // colors for foreground and background (proper ANSI indexes) and what they look
 // like give the current Host settings (the first 16 ANSI ones and the default
-// fore and background colors can be changed by {currently} the user and if
-// OSC P/R support is ever implimented - by the MUD Server!)
+// fore and background colors can be changed by the user and since OSC P/R
+// support has been implimented - by the MUD Server!)
 TColorTable* TTrigger::createColorPattern(int ansiFg, int ansiBg)
 {
     /*

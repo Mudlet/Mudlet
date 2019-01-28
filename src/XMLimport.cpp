@@ -1649,8 +1649,8 @@ void XMLimport::remapColorsToAnsiNumber(QStringList & patternList, const QList<i
 {
     // The regexp is slightly modified compared to the one we once used to allow
     // it to capture a '-' sign as part of the color numbers as we use -2 for
-    // ignored which was/is not handled by code before Mudlet 3.12.x (and we
-    // might have more  negative numbers in the future!)
+    // ignored which was/is/will not handled by code before Mudlet 3.17.x (and
+    // we might have more  negative numbers in the future!)
     QRegularExpression regex = QRegularExpression(QStringLiteral("FG(-?\\d+)BG(-?\\d+)"));
     QMutableStringListIterator itPattern(patternList);
     QListIterator<int> itType(typeList);

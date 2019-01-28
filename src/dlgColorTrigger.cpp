@@ -47,20 +47,19 @@ dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, const bool isBackGro
     // mIsBackground) for the colour trigger - only use the other one (which
     // must be set)
     // The Apply button unhides the display of the colors codes 16 - 255 - it
-    // is set up as a one-shot operation, and is effectively "fire" if the
-    // existingWe need another button to use to open/show the colors past 16, the most
-    // obvious Standard button is one that has the Apply role:
+    // is set up as a one-shot operation, and is effectively "fired" if the
+    // existing color is in that range of numbers:
     buttonBox->button(QDialogButtonBox::Apply)->setText(tr("More colors"));
     buttonBox->button(QDialogButtonBox::Apply)->setCheckable(true);
-    buttonBox->button(QDialogButtonBox::Apply)->setToolTip(tr("Click to show the controls to select the remainder of the 256 color range."));
+    buttonBox->button(QDialogButtonBox::Apply)->setToolTip(tr("Click to access all 256 ANSI colors."));
     connect(buttonBox->button(QDialogButtonBox::Apply), &QAbstractButton::clicked, this, &dlgColorTrigger::slot_moreColorsClicked);
 
     connect(buttonBox->button(QDialogButtonBox::Ignore), &QAbstractButton::pressed, this, &dlgColorTrigger::slot_resetColorClicked);
     buttonBox->button(QDialogButtonBox::Ignore)->setToolTip(mudlet::htmlWrapper(mIsBackground
                                                                                 ? tr("<p>Click to make the color trigger ignore the text's background color - however chosing this for both this and the foreground is an error.</p>")
                                                                                 : tr("<p>Click to make the color trigger ignore the text's foreground color - however chosing this for both this and the background is an error.</p>")));
-    // The reset button means trigger only if the text is not set to anything
-    // so is in the "default" colour - what ever THAT is
+    // The Reset button means trigger only if the text is not set to anything
+    // so is in the "default" colour - what ever THAT is:
     connect(buttonBox->button(QDialogButtonBox::Reset), &QAbstractButton::pressed, this, &dlgColorTrigger::slot_defaultColorClicked);
     buttonBox->button(QDialogButtonBox::Reset)->setText(tr("Default"));
     buttonBox->button(QDialogButtonBox::Reset)->setToolTip(mudlet::htmlWrapper(mIsBackground
@@ -403,7 +402,7 @@ void dlgColorTrigger::slot_moreColorsClicked()
     // Impliment a one-shot action by disabling it once it is pressed:
     buttonBox->button(QDialogButtonBox::Apply)->setEnabled(false);
 
-    buttonBox->button(QDialogButtonBox::Apply)->setToolTip(tr("This button does not do anything once all the color options are showing."));
+    buttonBox->button(QDialogButtonBox::Apply)->setToolTip(tr("All color options are showing."));
 
     if (groupBox_rgbScale->isHidden()) {
         groupBox_rgbScale->show();
