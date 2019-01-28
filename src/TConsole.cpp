@@ -2343,7 +2343,7 @@ void TConsole::print(const char* txt)
     mLowerPane->showNewLines();
 }
 
-// echoUserWindow(const QString& msg) was a redundent wrapper around this method:
+// echoUserWindow(const QString& msg) was a redundant wrapper around this method:
 void TConsole::print(const QString& msg)
 {
     buffer.append(msg, 0, msg.size(), mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
