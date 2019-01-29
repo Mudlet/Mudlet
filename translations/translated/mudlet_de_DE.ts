@@ -8131,12 +8131,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1008"/>
       <source>(characters to ignore in selection, for example &apos; or &quot;)</source>
-      <translation type="unfinished"/>
+      <translation>(Zeichen, die in der Auswahl ignoriert werden, bspw. &apos; oder &quot;)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1024"/>
       <source>&lt;p&gt;Some games (notably all IRE MUDs) suffer from a bug where they don&apos;t properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Einige Spiele (besonders alle IRE MUDs) leiden unter einem Fehler, wobei sie mit dem Client nicht richtig kommunizieren, wo eine Zeile umbrechen sollte. Aktiviere diese Einstellung, damit Text nicht immer an die vorherige Promptzeile angehängt wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1034"/>
