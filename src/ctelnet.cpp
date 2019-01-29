@@ -170,7 +170,11 @@ void cTelnet::reset()
         heAnnouncedState[i] = false;
         triedToEnable[i] = false;
     }
-    iac = iac2 = insb = false;
+    iac = false;
+    iac2 = false;
+    insb = false;
+    // Ensure we do not think that the game server is echoing for us:
+    mpHost->mIsRemoteEchoingActive = false;
     command = "";
     mMudData = "";
 }
