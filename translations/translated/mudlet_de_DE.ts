@@ -8161,7 +8161,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1084"/>
       <source>Enable text analyzer</source>
-      <translation type="unfinished"/>
+      <translation>Textanalyse aktivieren</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1112"/>
