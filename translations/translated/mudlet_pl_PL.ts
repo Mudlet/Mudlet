@@ -456,7 +456,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2703"/>
       <source>Delete</source>
       <comment>Menu option to delete a room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Skasuj</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2704"/>
@@ -467,7 +467,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2707"/>
       <source>Color</source>
       <comment>Menu option to change a room color in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Kolor</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2708"/>
@@ -631,7 +631,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2801"/>
       <source>Delete</source>
       <comment>Menu option to delete a label in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Skasuj</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2802"/>
@@ -764,7 +764,7 @@ podświetlonej lokacji (%1), do:</translation>
       <location filename="../src/T2DMap.cpp" line="3346"/>
       <location filename="../src/T2DMap.cpp" line="3621"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Anuluj</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3430"/>
@@ -803,7 +803,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3471"/>
       <source>%1 {count:%2}</source>
       <comment>Everything after the first parameter (the &apos;%1&apos;) will be removed by processing it as a QRegularExpression programmatically, ensure the translated text has ` {` immediately after the &apos;%1&apos;, and &apos;}&apos; as the very last character, so that the right portion can be extracted if the user clicks on this item when it is shown in the QComboBox it is put in.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 {ilość: %2}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3590"/>
@@ -2720,13 +2720,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1759"/>
       <source>{3-per-em space}</source>
       <comment>Unicode U+2004 codepoint - three-per-em (&apos;m&apos;) wide (thick) space.</comment>
-      <translation type="unfinished"/>
+      <translation>{3-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1760"/>
       <source>{4-per-em space}</source>
       <comment>Unicode U+2005 codepoint - four-per-em (&apos;m&apos;) wide (Middle) space.</comment>
-      <translation type="unfinished"/>
+      <translation>{4-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1761"/>
@@ -2942,25 +2942,25 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1796"/>
       <source>{variation selector 1}</source>
       <comment>Unicode U+FE00 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 1}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1797"/>
       <source>{variation selector 2}</source>
       <comment>Unicode U+FE01 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1798"/>
       <source>{variation selector 3}</source>
       <comment>Unicode U+FE02 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1799"/>
       <source>{variation selector 4}</source>
       <comment>Unicode U+FE03 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1800"/>
@@ -3080,19 +3080,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1844"/>
       <source>{FitzPatrick modifier 1 or 2}</source>
       <comment>Unicode codepoint U+0001F3FB - FitzPatrick modifier (Emoji Human skin-tone) 1-2.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 1 or 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1845"/>
       <source>{FitzPatrick modifier 3}</source>
       <comment>Unicode codepoint U+0001F3FC - FitzPatrick modifier (Emoji Human skin-tone) 3.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1846"/>
       <source>{FitzPatrick modifier 4}</source>
       <comment>Unicode codepoint U+0001F3FD - FitzPatrick modifier (Emoji Human skin-tone) 4.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1847"/>
@@ -3523,7 +3523,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1621"/>
       <source>Cancel</source>
       <comment>Cancel download of GUI package from Server</comment>
-      <translation type="unfinished"/>
+      <translation>Anuluj</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1612"/>
@@ -4032,7 +4032,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="511"/>
       <source> Destination </source>
-      <translation type="unfinished"/>
+      <translation> Koniec </translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="522"/>
@@ -4296,37 +4296,37 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="77"/>
       <source>Black</source>
-      <translation type="unfinished"/>
+      <translation>Czarny</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="78"/>
       <source>Red</source>
-      <translation type="unfinished"/>
+      <translation>Czerwony</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="79"/>
       <source>Green</source>
-      <translation type="unfinished"/>
+      <translation>Zielony</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="80"/>
       <source>Yellow</source>
-      <translation type="unfinished"/>
+      <translation>Żółty</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="81"/>
       <source>Blue</source>
-      <translation type="unfinished"/>
+      <translation>Niebieski</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="82"/>
       <source>Magenta</source>
-      <translation type="unfinished"/>
+      <translation>Purpura</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="83"/>
       <source>Cyan</source>
-      <translation type="unfinished"/>
+      <translation>Cyjan</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="84"/>
@@ -4341,43 +4341,43 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="87"/>
       <source>Light red</source>
-      <translation type="unfinished"/>
+      <translation>Rozjaśniony czerwony</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="88"/>
       <source>Light green</source>
-      <translation type="unfinished"/>
+      <translation>Rozjaśniony zielony</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="89"/>
       <source>Light yellow</source>
-      <translation type="unfinished"/>
+      <translation>Rozjaśniony żółty</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="90"/>
       <source>Light blue</source>
-      <translation type="unfinished"/>
+      <translation>Rozjaśniony niebieski</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="91"/>
       <source>Light magenta</source>
-      <translation type="unfinished"/>
+      <translation>Rozjaśniona purpura</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="92"/>
       <source>Light cyan</source>
-      <translation type="unfinished"/>
+      <translation>Rozjaśniony cyjan</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="93"/>
       <source>Light white</source>
-      <translation type="unfinished"/>
+      <translation>Rozjaśniony biały</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="218"/>
       <source>%1 [%2]</source>
       <comment>Color Trigger dialog button in basic 16-color set, the first value is the name of the color, the second is the ANSI color number - for most languages modification is not likely to be needed - this text is used in two places</comment>
-      <translation type="unfinished"/>
+      <translation>%1 [%2] </translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="405"/>
@@ -5013,7 +5013,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="1721"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mapa Mudlet'a (*.dat);;Dane mapy w formacie xml (*.xml);;Dowolny plik (*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2869"/>
@@ -5522,7 +5522,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="317"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5638"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Wyzwalacze</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="318"/>
@@ -5799,7 +5799,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2227"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2301"/>
       <source>Name</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1188"/>
@@ -6424,7 +6424,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="40"/>
@@ -7103,7 +7103,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="284"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>Połącz</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="285"/>
@@ -7113,7 +7113,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="293"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Wyzwalacze</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="294"/>
@@ -8194,7 +8194,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1698"/>
       <location filename="../src/ui/profile_preferences.ui" line="2351"/>
       <source>White:</source>
-      <translation type="unfinished"/>
+      <translation>Biały:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1705"/>
@@ -8623,7 +8623,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2675"/>
       <source>Server address:</source>
-      <translation type="unfinished"/>
+      <translation>Adres serwera:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2682"/>
@@ -8668,7 +8668,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="58"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Zapisz</translation>
     </message>
   </context>
   <context>
@@ -8767,7 +8767,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1826"/>
       <source>Key:</source>
-      <translation type="unfinished"/>
+      <translation>Klawisz:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1844"/>
@@ -9046,7 +9046,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1978"/>
       <source>&amp;Save</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Zapisz</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1886"/>
@@ -9056,7 +9056,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
       <source>&amp;Cancel</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Anuluj</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2001"/>
@@ -9132,7 +9132,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="40"/>
@@ -9204,7 +9204,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="63"/>
@@ -9343,7 +9343,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="138"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="164"/>
@@ -9487,7 +9487,7 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="41"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="54"/>
