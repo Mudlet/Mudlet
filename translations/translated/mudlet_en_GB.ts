@@ -469,7 +469,7 @@ please wait...</translation>
       <location filename="../src/T2DMap.cpp" line="2707"/>
       <source>Color</source>
       <comment>Menu option to change a room color in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Colour</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2708"/>
@@ -524,7 +524,7 @@ please wait...</translation>
       <location filename="../src/T2DMap.cpp" line="2727"/>
       <source>Weight</source>
       <comment>Menu option to set a room weight in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Weight</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2728"/>
@@ -858,7 +858,7 @@ selected rooms:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2222"/>
       <source>Background color</source>
-      <translation type="unfinished"/>
+      <translation>Background colour</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2223"/>
@@ -1433,7 +1433,7 @@ this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="11492"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>Playing %1</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14744"/>
@@ -2737,13 +2737,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1759"/>
       <source>{3-per-em space}</source>
       <comment>Unicode U+2004 codepoint - three-per-em (&apos;m&apos;) wide (thick) space.</comment>
-      <translation type="unfinished"/>
+      <translation>{3-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1760"/>
       <source>{4-per-em space}</source>
       <comment>Unicode U+2005 codepoint - four-per-em (&apos;m&apos;) wide (Middle) space.</comment>
-      <translation type="unfinished"/>
+      <translation>{4-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1761"/>
@@ -2959,25 +2959,25 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1796"/>
       <source>{variation selector 1}</source>
       <comment>Unicode U+FE00 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 1}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1797"/>
       <source>{variation selector 2}</source>
       <comment>Unicode U+FE01 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1798"/>
       <source>{variation selector 3}</source>
       <comment>Unicode U+FE02 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1799"/>
       <source>{variation selector 4}</source>
       <comment>Unicode U+FE03 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1800"/>
@@ -3097,19 +3097,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1844"/>
       <source>{FitzPatrick modifier 1 or 2}</source>
       <comment>Unicode codepoint U+0001F3FB - FitzPatrick modifier (Emoji Human skin-tone) 1-2.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 1 or 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1845"/>
       <source>{FitzPatrick modifier 3}</source>
       <comment>Unicode codepoint U+0001F3FC - FitzPatrick modifier (Emoji Human skin-tone) 3.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1846"/>
       <source>{FitzPatrick modifier 4}</source>
       <comment>Unicode codepoint U+0001F3FD - FitzPatrick modifier (Emoji Human skin-tone) 4.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1847"/>
@@ -3281,7 +3281,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="62"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Name:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
@@ -3361,7 +3361,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="256"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Command:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="266"/>
@@ -3389,7 +3389,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="35"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Name:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="57"/>
@@ -3424,7 +3424,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="149"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Command:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="176"/>
@@ -3719,7 +3719,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="139"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Save</translation>
     </message>
   </context>
   <context>
@@ -4054,7 +4054,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="522"/>
       <source> Command</source>
-      <translation type="unfinished"/>
+      <translation> Command</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="567"/>
@@ -4338,37 +4338,37 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="77"/>
       <source>Black</source>
-      <translation type="unfinished"/>
+      <translation>Black</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="78"/>
       <source>Red</source>
-      <translation type="unfinished"/>
+      <translation>Red</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="79"/>
       <source>Green</source>
-      <translation type="unfinished"/>
+      <translation>Green</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="80"/>
       <source>Yellow</source>
-      <translation type="unfinished"/>
+      <translation>Yellow</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="81"/>
       <source>Blue</source>
-      <translation type="unfinished"/>
+      <translation>Blue</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="82"/>
       <source>Magenta</source>
-      <translation type="unfinished"/>
+      <translation>Magenta</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="83"/>
       <source>Cyan</source>
-      <translation type="unfinished"/>
+      <translation>Cyan</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="84"/>
@@ -4383,43 +4383,43 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="87"/>
       <source>Light red</source>
-      <translation type="unfinished"/>
+      <translation>Light red</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="88"/>
       <source>Light green</source>
-      <translation type="unfinished"/>
+      <translation>Light green</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="89"/>
       <source>Light yellow</source>
-      <translation type="unfinished"/>
+      <translation>Light yellow</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="90"/>
       <source>Light blue</source>
-      <translation type="unfinished"/>
+      <translation>Light blue</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="91"/>
       <source>Light magenta</source>
-      <translation type="unfinished"/>
+      <translation>Light magenta</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="92"/>
       <source>Light cyan</source>
-      <translation type="unfinished"/>
+      <translation>Light cyan</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="93"/>
       <source>Light white</source>
-      <translation type="unfinished"/>
+      <translation>Light white</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="218"/>
       <source>%1 [%2]</source>
       <comment>Color Trigger dialog button in basic 16-color set, the first value is the name of the color, the second is the ANSI color number - for most languages modification is not likely to be needed - this text is used in two places</comment>
-      <translation type="unfinished"/>
+      <translation>%1 [%2]</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="405"/>
@@ -5141,7 +5141,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="3062"/>
       <source>Time</source>
       <comment>Discord Rich Presence time until or time elapsed</comment>
-      <translation type="unfinished"/>
+      <translation>Time</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3097"/>
@@ -5259,7 +5259,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="223"/>
       <location filename="../src/dlgRoomExits.cpp" line="1939"/>
       <source>Prevent a route being created via this exit, equivalent to an infinite exit weight.</source>
-      <translation type="unfinished"/>
+      <translation>Prevent a route being created via this exit, equivalent to an infinite exit weight.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="229"/>
@@ -5336,7 +5336,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="767"/>
       <location filename="../src/dlgRoomExits.cpp" line="1372"/>
       <source>Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="810"/>
@@ -5347,7 +5347,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="820"/>
       <location filename="../src/dlgRoomExits.cpp" line="1406"/>
       <source>Set the number of the room north of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Set the number of the room north of this one, will be blue for a valid number or red for invalid.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="862"/>
@@ -5358,7 +5358,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="872"/>
       <location filename="../src/dlgRoomExits.cpp" line="1437"/>
       <source>Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="914"/>
@@ -5369,7 +5369,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="924"/>
       <location filename="../src/dlgRoomExits.cpp" line="1468"/>
       <source>Set the number of the room up from this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Set the number of the room up from this one, will be blue for a valid number or red for invalid.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="966"/>
@@ -5380,7 +5380,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="976"/>
       <location filename="../src/dlgRoomExits.cpp" line="1499"/>
       <source>Set the number of the room west of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Set the number of the room west of this one, will be blue for a valid number or red for invalid.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1018"/>
@@ -5391,7 +5391,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1028"/>
       <location filename="../src/dlgRoomExits.cpp" line="1530"/>
       <source>Set the number of the room east of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Set the number of the room east of this one, will be blue for a valid number or red for invalid.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1070"/>
@@ -5402,7 +5402,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1080"/>
       <location filename="../src/dlgRoomExits.cpp" line="1561"/>
       <source>Set the number of the room down from this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Set the number of the room down from this one, will be blue for a valid number or red for invalid.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1122"/>
@@ -5413,7 +5413,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1132"/>
       <location filename="../src/dlgRoomExits.cpp" line="1592"/>
       <source>Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1174"/>
@@ -5424,7 +5424,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1184"/>
       <location filename="../src/dlgRoomExits.cpp" line="1623"/>
       <source>Set the number of the room south of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Set the number of the room south of this one, will be blue for a valid number or red for invalid.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1226"/>
@@ -5435,7 +5435,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1236"/>
       <location filename="../src/dlgRoomExits.cpp" line="1654"/>
       <source>Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1278"/>
@@ -5446,7 +5446,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1288"/>
       <location filename="../src/dlgRoomExits.cpp" line="1685"/>
       <source>Set the number of the room in from this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Set the number of the room in from this one, will be blue for a valid number or red for invalid.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1330"/>
@@ -5457,7 +5457,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1340"/>
       <location filename="../src/dlgRoomExits.cpp" line="1716"/>
       <source>Set the number of the room out from this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Set the number of the room out from this one, will be blue for a valid number or red for invalid.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1364"/>
@@ -5840,7 +5840,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2227"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2301"/>
       <source>Name</source>
-      <translation type="unfinished"/>
+      <translation>Name</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1188"/>
@@ -5864,7 +5864,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2313"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2318"/>
       <source>Command</source>
-      <translation type="unfinished"/>
+      <translation>Command</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1216"/>
@@ -6000,7 +6000,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2313"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2343"/>
       <source>Key</source>
-      <translation type="unfinished"/>
+      <translation>Key</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1761"/>
@@ -6124,7 +6124,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="5431"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7833"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Command:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5470"/>
@@ -6404,12 +6404,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgVarsMainArea.cpp" line="51"/>
       <location filename="../src/dlgVarsMainArea.cpp" line="78"/>
       <source>Auto-Type</source>
-      <translation type="unfinished"/>
+      <translation>Auto-Type</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="52"/>
       <source>key (string)</source>
-      <translation type="unfinished"/>
+      <translation>key (string)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="53"/>
@@ -6429,27 +6429,27 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="79"/>
       <source>string</source>
-      <translation type="unfinished"/>
+      <translation>string</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="80"/>
       <source>number</source>
-      <translation type="unfinished"/>
+      <translation>number</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="81"/>
       <source>boolean</source>
-      <translation type="unfinished"/>
+      <translation>boolean</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="82"/>
       <source>table</source>
-      <translation type="unfinished"/>
+      <translation>table</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="83"/>
       <source>function</source>
-      <translation type="unfinished"/>
+      <translation>function</translation>
     </message>
   </context>
   <context>
@@ -6465,12 +6465,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Name:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="40"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Command:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
@@ -9086,7 +9086,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1978"/>
       <source>&amp;Save</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Save</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1886"/>
@@ -9172,7 +9172,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Name:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="40"/>
@@ -9383,12 +9383,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="138"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Name:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="164"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Command:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="440"/>
@@ -9527,7 +9527,7 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="41"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Name:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="54"/>
