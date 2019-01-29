@@ -3279,7 +3279,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2186"/>
       <source>Index (UTF-16)</source>
       <comment>1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Index (UTF-16)</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2127"/>
@@ -3293,21 +3293,21 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2192"/>
       <source>Visual</source>
       <comment>3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a &apos;{&apos;...&apos;}&apos; wrapped letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Ansicht</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2135"/>
       <location filename="../src/TTextEdit.cpp" line="2196"/>
       <source>Index (UTF-8)</source>
       <comment>4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Index (UTF-8)</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2139"/>
       <location filename="../src/TTextEdit.cpp" line="2200"/>
       <source>Byte</source>
       <comment>5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Byte</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2143"/>
