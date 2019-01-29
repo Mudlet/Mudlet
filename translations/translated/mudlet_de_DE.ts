@@ -2656,7 +2656,7 @@ Sie wurden aus dem Bereich entfernt.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1172"/>
       <source>[ INFO ]  - Area name changed to prevent duplicates or unnamed ones; old name: &quot;%1&quot;, new name: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Bereichsnamen geändert, um Duplikate und Unbenannte zu vermeiden. Alter Name: &quot;%1&quot;, neuer Name: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1181"/>
@@ -2759,12 +2759,12 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1193"/>
       <source>Analyse characters</source>
-      <translation type="unfinished"/>
+      <translation>Zeichen analysieren</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1202"/>
       <source>&lt;p&gt;Hover on this item to display the Unicode codepoints in the selection &lt;i&gt;(only the first line!)&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Auf dieses Element zeigen, um die Unicode Codepunkte der Auswahl anzuzeigen &lt;i&gt;(nur die erste Zeile!)&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1211"/>
