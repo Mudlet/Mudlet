@@ -3679,24 +3679,25 @@ the encoding is changed.</source>
       <location filename="../src/ctelnet.cpp" line="1593"/>
       <source>[ INFO ]  - The server wants to upgrade the GUI to new version &apos;%1&apos;.
 Uninstalling old version &apos;%2&apos;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Der Server möchte die GUI auf die neue Version &apos;%1&apos; aktualisieren. 
+Die alte Version &apos;%2&apos; wird deinstalliert.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1333"/>
       <source>[ INFO ]  - Server offers downloadable GUI (url=&apos;%1&apos;) (package=&apos;%2&apos;)...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Server bietet GUI zum Download an (URL=&apos;%1&apos;) (Paket=&apos;%2&apos;)...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1335"/>
       <location filename="../src/ctelnet.cpp" line="1614"/>
       <source>[  OK  ]  - Package is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Paket  ist bereits installiert.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1342"/>
       <location filename="../src/ctelnet.cpp" line="1621"/>
       <source>downloading game GUI from server</source>
-      <translation type="unfinished"/>
+      <translation>Spiel-GUI wird vom Server geladen</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1342"/>
