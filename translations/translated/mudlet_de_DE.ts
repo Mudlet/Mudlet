@@ -3685,7 +3685,7 @@ Die alte Version &apos;%2&apos; wird deinstalliert.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="1333"/>
       <source>[ INFO ]  - Server offers downloadable GUI (url=&apos;%1&apos;) (package=&apos;%2&apos;)...</source>
-      <translation>[ INFO ]  - Server bietet GUI zum Download an (URL=&apos;%1&apos;) (Paket=&apos;%2&apos;)...</translation>
+      <translation>[ INFO ]  - Server bietet GUI zum Download an (URL=&apos;%1&apos;) (Paket=&apos;%2&apos;).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1335"/>
@@ -3709,7 +3709,7 @@ Die alte Version &apos;%2&apos; wird deinstalliert.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="1612"/>
       <source>[ INFO ]  - Server offers downloadable GUI (url=&apos;%1&apos;) (package=&apos;%2&apos;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Server bietet GUI zum Download an (URL=&apos;%1&apos;) (Paket=&apos;%2&apos;).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1755"/>
@@ -3756,18 +3756,19 @@ Die alte Version &apos;%2&apos; wird deinstalliert.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="2016"/>
       <source>Cannot perform replay, another one may already be in progress. Try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>Kann Wiederholung nicht anzeigen. Eine andere könnte bereits laufen. Bitte wiederholen, nachdem diese endet.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2018"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress.
 Try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ]  - Kann Wiederholung nicht ausführen. Eine andere könnte 
+bereits laufen. Bitte wiederholen, nachdem diese endet.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2026"/>
       <source>Cannot read file &quot;%1&quot;, error message was: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Kann Datei &quot;%1&quot; nicht lesen, Fehlermeldung war: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2029"/>
@@ -3787,7 +3788,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="17"/>
       <source>ANSI 256 Color chooser</source>
-      <translation type="unfinished"/>
+      <translation>ANSI-256-Farben-Auswahl</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="39"/>
@@ -3932,7 +3933,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2301"/>
       <source>Secure:</source>
-      <translation type="unfinished"/>
+      <translation>Sicher:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2308"/>
@@ -3987,12 +3988,12 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2398"/>
       <source>Open profile on Mudlet start</source>
-      <translation type="unfinished"/>
+      <translation>Profil beim Start von Mudlet öffnen</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2408"/>
       <source>Reconnect automatically</source>
-      <translation type="unfinished"/>
+      <translation>Automatisch neu verbinden</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2463"/>
@@ -4649,18 +4650,21 @@ Nutzungen</translation>
       <source>The %1 character is not permitted. Use one of the following:
 &quot;%2&quot;.
 </source>
-      <translation type="unfinished"/>
+      <translation>Das Zeichen %1 ist nicht gestattet. Verwenden Sie eines der folgenden:
+&quot;%2&quot;.
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1784"/>
       <source>Port number must be above zero and below 65535.
 </source>
-      <translation type="unfinished"/>
+      <translation>Die Portnummer muss größer als null sein und unter 65535.
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1792"/>
       <source>Mudlet is not configured for secure connections.</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet ist nicht für sichere Verbindungen konfiguriert.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1795"/>
