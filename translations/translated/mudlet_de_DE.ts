@@ -2206,7 +2206,10 @@ Benutzerdaten des Raums unter dem Schlüssel: &quot;%4&quot;).</translation>
     <message>
       <location filename="../src/TRoom.cpp" line="1270"/>
       <source>[ INFO ]  - Room had special exit &quot;%1&quot; that was to room with an invalid room: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ]  - Der Raum hat einen besonderen Ausgang &quot;%1&quot; in
+Richtung: %2 aber dieser Raum existiert nicht. Der Ausgang wird
+entfernt (aber die ID des Ziel-Raumes wird gespeichert in den 
+Benutzerdaten des Raums unter dem Schlüssel: &quot;%3&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1303"/>
@@ -2290,7 +2293,7 @@ an exit to invalid room: %3 to now go to: %4.</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1489"/>
       <source>[ INFO ]  - Correcting exit &quot;%1&quot; that was to invalid room id: %2 to now go to: %3.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Korrigiere den Ausgang &quot;%1&quot;, der zu einem ungültigen Raum mit ID %2 zeigte, zeigt nun zu %3.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1500"/>
@@ -2308,7 +2311,11 @@ und der Ausgang wird in eine Abzweigung umgewandelt.</translation>
     <message>
       <location filename="../src/TRoom.cpp" line="1513"/>
       <source>[ WARN ]  - Room has an exit &quot;%1&quot; to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key: &quot;%4&quot;) and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ]  - Der Raum hat einen Ausgang &quot;%1&quot; in
+Richtung: %2 aber dieser Raum existiert nicht. Der Ausgang wird
+entfernt (aber die ID des Ziel-Raumes wird gespeichert in den 
+Benutzerdaten des Raums unter dem Schlüssel: &quot;%4&quot;) 
+und der Ausgang wird in eine Abzweigung umgewandelt.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1557"/>
@@ -2322,7 +2329,9 @@ also wird die Abzweigung entfernt.</translation>
     <message>
       <location filename="../src/TRoom.cpp" line="1567"/>
       <source>[ ALERT ] - Room has an exit &quot;%1&quot; to: %2 but also has a stub exit in the same direction!  As a real exit precludes a stub, the latter will be removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ]  - Der Raum hat einen Ausgang &quot;%1&quot; in
+Richtung: %2 aber außerdem eine Abzweigung in dieselbe Richtung. 
+Ein richtiger Ausgang geht vor, also wird die Abzweigung entfernt.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1623"/>
