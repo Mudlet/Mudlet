@@ -3322,17 +3322,17 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTrigger.cpp" line="212"/>
       <source>Error: in item %1, perl regex: &quot;%2&quot;, it failed to compile, reason: &quot;%3&quot;.</source>
-      <translation>Fehler: im Element %1, Perl-Regex: &quot;%2&quot;, konnte nicht kompilieren, Grund: &quot;%3&quot;.</translation>
+      <translation>Fehler bei Element %1: Perl-Regex &quot;%2&quot; konnte nicht kompilieren, Grund: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="232"/>
       <source>Error: in item %1, lua condition function &quot;%2&quot; failed to compile, reason:%3.</source>
-      <translation type="unfinished"/>
+      <translation>Fehler bei Element %1: Lua-Funktion &quot;%2&quot; konnte nicht kompilieren, Grund: %3.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="251"/>
       <source>Error: in item %1, no colors to match were set - at least &lt;i&gt;one&lt;/i&gt; of the foreground or background must not be &lt;i&gt;ignored&lt;/i&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Fehler bei Element %1: Keine zu suchenden Farben gewählt - mindestens &lt;i&gt;eine&lt;/i&gt; der Vordergrund- oder Hintergrundfarben darf nicht &lt;i&gt;ignoriert&lt;/i&gt; werden.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="1044"/>
