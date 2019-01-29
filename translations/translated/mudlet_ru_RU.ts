@@ -710,31 +710,31 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3051"/>
       <location filename="../src/T2DMap.cpp" line="4676"/>
       <source>Solid line</source>
-      <translation type="unfinished"/>
+      <translation>Сплошная линия</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3052"/>
       <location filename="../src/T2DMap.cpp" line="4677"/>
       <source>Dot line</source>
-      <translation type="unfinished"/>
+      <translation>Точечная линия</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3053"/>
       <location filename="../src/T2DMap.cpp" line="4678"/>
       <source>Dash line</source>
-      <translation type="unfinished"/>
+      <translation>Линия тире</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3054"/>
       <location filename="../src/T2DMap.cpp" line="4679"/>
       <source>Dash-dot line</source>
-      <translation type="unfinished"/>
+      <translation>Тире-точка линия</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3055"/>
       <location filename="../src/T2DMap.cpp" line="4680"/>
       <source>Dash-dot-dot line</source>
-      <translation type="unfinished"/>
+      <translation>Тире-точка-точка линия</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3322"/>
@@ -812,7 +812,7 @@ it with a new symbol for this room:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="3608"/>
       <source>Define new color</source>
-      <translation type="unfinished"/>
+      <translation>Определить новый цвет</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3915"/>
@@ -1257,7 +1257,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1011"/>
       <source>Log session ending at %1.</source>
-      <translation type="unfinished"/>
+      <translation>Сеанс журнала заканчивается в %1.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1012"/>
@@ -1273,7 +1273,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2373"/>
       <source>System Message: %1</source>
-      <translation type="unfinished"/>
+      <translation>Системное сообщение: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2520"/>
@@ -1564,7 +1564,7 @@ Error from Lua: </source>
     <message>
       <location filename="../src/TMap.cpp" line="219"/>
       <source>AreaID=%2 does not exist, can not set RoomID=%1 to non-existing area!</source>
-      <translation type="unfinished"/>
+      <translation>AreaID=%2 не существует, не возможно установить RoomID=%1 в несуществующую область!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="437"/>
@@ -3611,7 +3611,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="17"/>
       <source>ANSI 256 Color chooser</source>
-      <translation type="unfinished"/>
+      <translation>Выбор цвета ANSI 256</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="39"/>
@@ -3660,7 +3660,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="353"/>
       <source>Set to RGB value</source>
-      <translation type="unfinished"/>
+      <translation>Установить значение RGB</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="363"/>
@@ -3685,7 +3685,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="424"/>
       <source>Set to Grayscale value</source>
-      <translation type="unfinished"/>
+      <translation>Значение в оттенках серого</translation>
     </message>
   </context>
   <context>
@@ -3756,7 +3756,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2301"/>
       <source>Secure:</source>
-      <translation type="unfinished"/>
+      <translation>Зашищенный:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2308"/>
@@ -4089,7 +4089,8 @@ If you are, please type in the profile name as a confirmation:</source>
       <location filename="../src/ui/glyph_usage.ui" line="44"/>
       <source>Symbol
 (Set Font)</source>
-      <translation type="unfinished"/>
+      <translation>Символ
+(Установить шрифт)</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="50"/>
