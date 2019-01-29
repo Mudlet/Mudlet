@@ -14697,8 +14697,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapSelection", TLuaInterpreter::getMapSelection);
     lua_register(pGlobalLua, "enableClickthrough", TLuaInterpreter::enableClickthrough);
     lua_register(pGlobalLua, "disableClickthrough", TLuaInterpreter::disableClickthrough);
+    lua_register(pGlobalLua, "getPlayerName", TLuaInterpreter::getPlayerName);
+    lua_register(pGlobalLua, "sendPlayerName", TLuaInterpreter::sendPlayerName);
+    lua_register(pGlobalLua, "sendPlayerPassword", TLuaInterpreter::sendPlayerPassword);
     // PLACEMARKER: End of main Lua interpreter functions registration
-
 
     // prepend profile path to package.path and package.cpath
     // with a singleShot Timer to avoid crash on startup.
@@ -15577,4 +15579,45 @@ int TLuaInterpreter::disableClickthrough(lua_State* L)
 
     mudlet::self()->setClickthrough(&host, windowName, false);
     return 0;
+}
+
+int TLuaInterpreter::getPlayerName(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    lua_pushstring(L, host.getLogin().toUtf8().constData());
+    return 1;
+}
+
+int TLuaInterpreter::sendPlayerName(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    QString name = host.getLogin();
+    if (name.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "no character name set so nothing to send");
+        return 2;
+    } else {
+        host.mTelnet.slot_send_login();
+        lua_pushboolean(L, true);
+        return 1;
+    }
+}
+
+int TLuaInterpreter::sendPlayerPassword(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+
+    // This is a tiny bit of information leak but give the overall security of
+    // things it is not likely to be a problem
+    if (host.getPass().isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "no password set so nothing to send");
+        return 2;
+    } else {
+        host.mTelnet.slot_send_pass();
+        lua_pushboolean(L, true);
+        return 1;
+    }
 }

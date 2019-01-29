@@ -492,6 +492,9 @@ public:
     static int setDiscordGame(lua_State*);
     static int getPlayerRoom(lua_State*);
     static int getMapSelection(lua_State*);
+    static int getPlayerName(lua_State*);
+    static int sendPlayerName(lua_State*);
+    static int sendPlayerPassword(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 

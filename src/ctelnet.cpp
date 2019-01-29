@@ -407,9 +407,11 @@ void cTelnet::handle_socket_signal_connected()
     QString nothing = "";
     mpHost->mLuaInterpreter.call(func, nothing);
     mConnectionTime.start();
-    if ((mpHost->getLogin().size() > 0) && (mpHost->getPass().size() > 0)) {
+    if (mpHost->getLogin().size() > 0) {
         mTimerLogin->start(2000);
-        mTimerPass->start(3000);
+        if (mpHost->getPass().size() > 0) {
+            mTimerPass->start(3000);
+        }
     }
 
     emit signal_connected(mpHost);
