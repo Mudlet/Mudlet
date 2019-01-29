@@ -804,7 +804,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3471"/>
       <source>%1 {count:%2}</source>
       <comment>Everything after the first parameter (the &apos;%1&apos;) will be removed by processing it as a QRegularExpression programmatically, ensure the translated text has ` {` immediately after the &apos;%1&apos;, and &apos;}&apos; as the very last character, so that the right portion can be extracted if the user clicks on this item when it is shown in the QComboBox it is put in.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 {contagem:%2}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3590"/>
@@ -2727,13 +2727,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1759"/>
       <source>{3-per-em space}</source>
       <comment>Unicode U+2004 codepoint - three-per-em (&apos;m&apos;) wide (thick) space.</comment>
-      <translation type="unfinished"/>
+      <translation>{3-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1760"/>
       <source>{4-per-em space}</source>
       <comment>Unicode U+2005 codepoint - four-per-em (&apos;m&apos;) wide (Middle) space.</comment>
-      <translation type="unfinished"/>
+      <translation>{4-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1761"/>
@@ -2949,25 +2949,25 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1796"/>
       <source>{variation selector 1}</source>
       <comment>Unicode U+FE00 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 1}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1797"/>
       <source>{variation selector 2}</source>
       <comment>Unicode U+FE01 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1798"/>
       <source>{variation selector 3}</source>
       <comment>Unicode U+FE02 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1799"/>
       <source>{variation selector 4}</source>
       <comment>Unicode U+FE03 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1800"/>
@@ -3087,19 +3087,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1844"/>
       <source>{FitzPatrick modifier 1 or 2}</source>
       <comment>Unicode codepoint U+0001F3FB - FitzPatrick modifier (Emoji Human skin-tone) 1-2.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 1 or 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1845"/>
       <source>{FitzPatrick modifier 3}</source>
       <comment>Unicode codepoint U+0001F3FC - FitzPatrick modifier (Emoji Human skin-tone) 3.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1846"/>
       <source>{FitzPatrick modifier 4}</source>
       <comment>Unicode codepoint U+0001F3FD - FitzPatrick modifier (Emoji Human skin-tone) 4.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1847"/>
@@ -4382,7 +4382,7 @@ Count</source>
       <location filename="../src/dlgColorTrigger.cpp" line="218"/>
       <source>%1 [%2]</source>
       <comment>Color Trigger dialog button in basic 16-color set, the first value is the name of the color, the second is the ANSI color number - for most languages modification is not likely to be needed - this text is used in two places</comment>
-      <translation type="unfinished"/>
+      <translation>%1 [%2]</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="405"/>
@@ -5442,17 +5442,17 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1743"/>
       <source>northwest</source>
-      <translation type="unfinished"/>
+      <translation>noroeste</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1744"/>
       <source>north</source>
-      <translation type="unfinished"/>
+      <translation>norte</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1745"/>
       <source>northeast</source>
-      <translation type="unfinished"/>
+      <translation>nordeste</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1746"/>
@@ -5462,12 +5462,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1747"/>
       <source>west</source>
-      <translation type="unfinished"/>
+      <translation>oeste</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1748"/>
       <source>east</source>
-      <translation type="unfinished"/>
+      <translation>leste</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1749"/>
@@ -5477,17 +5477,17 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1750"/>
       <source>southwest</source>
-      <translation type="unfinished"/>
+      <translation>sudoeste</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1751"/>
       <source>south</source>
-      <translation type="unfinished"/>
+      <translation>sul</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1752"/>
       <source>southeast</source>
-      <translation type="unfinished"/>
+      <translation>sudeste</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1753"/>
