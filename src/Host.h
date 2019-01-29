@@ -258,7 +258,21 @@ public:
     QScopedPointer<TMap> mpMap;
     dlgNotepad* mpNotePad;
 
+    // This is set when we want commands we typed to be shown on the main
+    // TConsole:
     bool mPrintCommand;
+
+    /*
+     * This is set when the Server is remote echoing what WE send to it,
+     * it will have negotiated the ECHO suboption by sending a IAC WILL ECHO and
+     * we have agreed to it with a IAC DO ECHO - in this state it is normal
+     * Telnet behaviour to NOT echo what we send - to prevent doubled lines.
+     * The rationale behind this is so that when we type passwords - WE do not
+     * echo what we type and rely on the other end to, but they do not, so as to
+     * hide them on our screen (and from logging!) - It should negate the effect
+     * of the above mPrintCommand being true...
+     */
+    bool mIsRemoteEchoingActive;
 
     // To cover the corner case of the user changing the mode
     // whilst a log is being written, this stores the mode of

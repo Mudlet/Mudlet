@@ -505,7 +505,7 @@
           <item row="1" column="0" colspan="2">
            <widget class="QCheckBox" name="show_sent_text_checkbox">
             <property name="toolTip">
-             <string>Echo the text you send in the display box</string>
+             <string>&lt;p&gt;Echo the text you send in the display box.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This can be disabled by the game server if it negotiates to use the telnet ECHO option&lt;/i&gt;&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Show the text you sent</string>
