@@ -8400,7 +8400,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1748"/>
       <source>Server allowed to redefine these colors</source>
-      <translation type="unfinished"/>
+      <translation>Der Server darf diese Farben neu definieren</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1772"/>
@@ -8491,27 +8491,27 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2786"/>
       <source>Security</source>
-      <translation type="unfinished"/>
+      <translation>Sicherheit</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2808"/>
       <source>SSL</source>
-      <translation type="unfinished"/>
+      <translation>SSL</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4744"/>
       <source>Accept self-signed certificates</source>
-      <translation type="unfinished"/>
+      <translation>Akzeptiere selbstsignierte Zertifikate</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4754"/>
       <source>Accept expired certificates</source>
-      <translation type="unfinished"/>
+      <translation>Akzeptiere abgelaufene Zertifikate</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4764"/>
       <source>Secure connection</source>
-      <translation type="unfinished"/>
+      <translation>Sichere Verbindung</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4777"/>
