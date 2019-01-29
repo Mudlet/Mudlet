@@ -8516,22 +8516,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4777"/>
       <source>Certificate</source>
-      <translation type="unfinished"/>
+      <translation>Zertifikat</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4811"/>
       <source>Serial:</source>
-      <translation type="unfinished"/>
+      <translation>Seriennummer:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4824"/>
       <source>Issuer:</source>
-      <translation type="unfinished"/>
+      <translation>Aussteller:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4834"/>
       <source>Issued to:</source>
-      <translation type="unfinished"/>
+      <translation>Ausgestellt für:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4844"/>
