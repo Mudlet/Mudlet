@@ -4671,28 +4671,36 @@ Nutzungen</translation>
       <source>Mudlet is not configured for secure connections.
 
 </source>
-      <translation type="unfinished"/>
+      <translation>Mudlet ist nicht für sichere Verbindungen konfiguriert.
+
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1804"/>
       <source>Mudlet can not load support for secure connections.
 
 </source>
-      <translation type="unfinished"/>
+      <translation>Mudlet kann keine Unterstützung für sichere Verbindungen laden.
+
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1818"/>
       <source>Please enter the URL or IP address of the Game server.
 
 %1</source>
-      <translation type="unfinished"/>
+      <translation>Bitte nenne die URL oder IP-Adresse des Spielservers.
+
+%1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1827"/>
       <source>SSL connections require the URL of the Game server.
 
 %1</source>
-      <translation type="unfinished"/>
+      <translation>SSL-Verbindungen benötigen die URL des Spielservers.
+
+%1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1859"/>
@@ -4750,7 +4758,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgIRC.cpp" line="376"/>
       <source>[Error] MSGLIMIT requires &lt;limit&gt; to be a whole number greater than zero!</source>
-      <translation type="unfinished"/>
+      <translation>[Error] MSGLIMIT erfordert, dass &lt;limit&gt; eine ganze Zahl und größer als Null ist!</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="406"/>
@@ -4982,7 +4990,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="690"/>
       <source>Show &quot;%1&quot; in the map area selection</source>
-      <translation type="unfinished"/>
+      <translation>Zeige &quot;%1&quot; in der Auswahl der Kartengebiete</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="801"/>
@@ -5195,7 +5203,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="160"/>
       <source>&lt;p&gt;A timer with a short interval will quickly fill up the &lt;i&gt;Central Debug Console&lt;/i&gt; windows with messages that it ran correctly on &lt;i&gt;each&lt;/i&gt; occasion it is called.  This (per profile) control adjusts a threshold that will hide those messages in just that window for those timers which run &lt;b&gt;correctly&lt;/b&gt; when the timer&apos;s interval is less than this setting.&lt;/p&gt;&lt;p&gt;&lt;u&gt;Any timer script that has errors will still have its error messages reported whatever the setting.&lt;/u&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ein Timer mit kurzem Intervall wird schnell das Fenster für die &lt;i&gt;Zentrale Debug-Konsole&lt;/i&gt; füllen, weil er bei &lt;i&gt;jedem Aufruf&lt;/i&gt; melden wird, dass er richtig gelaufen ist. Die folgende (profilspezifische) Einstellung regelt eine Schwelle, unter der diese Meldungen an das Fenster unterdrückt werden, wenn ein Timer &lt;b&gt;richtig&lt;/b&gt; gelaufen ist, und sein Intervall kleiner ist als diese Einstellung.&lt;/p&gt;&lt;p&gt;&lt;u&gt;Wenn ein Skript eines Timers einen Fehler meldet, werden diese weiter unabhängig von dieser Einstellung erscheinen.&lt;/u&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="179"/>
@@ -5458,7 +5466,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="216"/>
       <source>(room ID)</source>
       <comment>Placeholder, if no room ID is set for an exit, yet. This string is used in 2 places, ensure they match!</comment>
-      <translation type="unfinished"/>
+      <translation>(Raum-ID)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="127"/>
@@ -5468,7 +5476,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="2324"/>
       <source>(command or Lua script)</source>
       <comment>Placeholder, if a special exit has no code given, yet. This string is also used programmatically - ensure all five instances are the same</comment>
-      <translation type="unfinished"/>
+      <translation>(Befehl oder Lua-Skript)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="140"/>
@@ -5487,7 +5495,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="1793"/>
       <location filename="../src/dlgRoomExits.cpp" line="1911"/>
       <source>Exit to &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Ausgang nach &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="756"/>
@@ -5706,7 +5714,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1855"/>
       <source>Exits for room: &quot;%1&quot; [*]</source>
-      <translation type="unfinished"/>
+      <translation>Ausgänge aus Raum: &quot;%1&quot; [*]</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1857"/>
@@ -5933,7 +5941,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="438"/>
       <source>Generates a statistics summary display on the main profile console.</source>
-      <translation type="unfinished"/>
+      <translation>Erstellt zusammenfassende Statistiken im Hauptfenster.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="441"/>
@@ -6227,26 +6235,26 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <location filename="../src/dlgTriggerEditor.cpp" line="4946"/>
       <source>Foreground color ignored</source>
       <comment>Color trigger ignored foreground color button, ensure all threee instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Vordergrundfarbe ignoriert</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4853"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4950"/>
       <source>Default foreground color</source>
       <comment>Color trigger default foreground color button, ensure all threee instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Standard-Vordergrundfarbe</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4857"/>
       <source>Foreground color [ANSI %1]</source>
-      <translation type="unfinished"/>
+      <translation>Vordergrundfarbe [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4862"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4961"/>
       <source>Background color ignored</source>
       <comment>Color trigger ignored background color button, ensure all threee instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Hintergrundfarbe ignoriert</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4866"/>
@@ -6257,19 +6265,19 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4870"/>
       <source>Background color [ANSI %1]</source>
-      <translation type="unfinished"/>
+      <translation>Hintergrundfarbe [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4954"/>
       <source>Foreground color [ANSI %1]</source>
       <comment>Color trigger ANSI foreground color button, ensure all threee instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Vordergrundfarbe [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4965"/>
       <source>Default background color</source>
       <comment>Color trigger ignored background color button, ensure all threee instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Standard-Hintergrundfarbe</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4969"/>
