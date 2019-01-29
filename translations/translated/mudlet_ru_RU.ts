@@ -2597,7 +2597,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1193"/>
       <source>Analyse characters</source>
-      <translation type="unfinished"/>
+      <translation>Анализировать символы</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1202"/>
@@ -3117,7 +3117,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2186"/>
       <source>Index (UTF-16)</source>
       <comment>1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Индекс (UTF-16)</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2127"/>
@@ -3131,21 +3131,21 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2192"/>
       <source>Visual</source>
       <comment>3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a &apos;{&apos;...&apos;}&apos; wrapped letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Отображение</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2135"/>
       <location filename="../src/TTextEdit.cpp" line="2196"/>
       <source>Index (UTF-8)</source>
       <comment>4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Индекс (UTF-8)</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2139"/>
       <location filename="../src/TTextEdit.cpp" line="2200"/>
       <source>Byte</source>
       <comment>5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Байт</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2143"/>
@@ -3234,7 +3234,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/XMLimport.cpp" line="519"/>
       <source>Parsing room data [count: %1]...</source>
-      <translation type="unfinished"/>
+      <translation>Анализ комнат [всего: %1]...</translation>
     </message>
   </context>
   <context>
@@ -3519,7 +3519,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1342"/>
       <location filename="../src/ctelnet.cpp" line="1621"/>
       <source>downloading game GUI from server</source>
-      <translation type="unfinished"/>
+      <translation>загрузка интерфейса с сервера</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1342"/>
@@ -3633,17 +3633,17 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="252"/>
       <source>Red (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Красный (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="262"/>
       <source>Green (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Зеленый (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="272"/>
       <source>Blue (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Синий (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="282"/>
@@ -3653,7 +3653,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="343"/>
       <source>[16]</source>
-      <translation type="unfinished"/>
+      <translation>[16]</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="353"/>
@@ -3668,7 +3668,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="375"/>
       <source>Gray (0-23)</source>
-      <translation type="unfinished"/>
+      <translation>Серый (0-23)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="382"/>
@@ -3678,7 +3678,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="414"/>
       <source>[232]</source>
-      <translation type="unfinished"/>
+      <translation>[232]</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="424"/>
@@ -3809,12 +3809,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2398"/>
       <source>Open profile on Mudlet start</source>
-      <translation type="unfinished"/>
+      <translation>Загрузить профиль при старте</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2408"/>
       <source>Reconnect automatically</source>
-      <translation type="unfinished"/>
+      <translation>Переподключатся автоматически</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2463"/>
@@ -4255,12 +4255,12 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="52"/>
       <source>More colors</source>
-      <translation type="unfinished"/>
+      <translation>Больше цветов</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="54"/>
       <source>Click to access all 256 ANSI colors.</source>
-      <translation type="unfinished"/>
+      <translation>Нажмите, чтобы получить доступ ко всем 256 ANSI цветов.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
@@ -4275,7 +4275,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="64"/>
       <source>Default</source>
-      <translation type="unfinished"/>
+      <translation>По умолчанию</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="66"/>
@@ -4469,21 +4469,25 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1792"/>
       <source>Mudlet is not configured for secure connections.</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet не настроен на безопасные соединения.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1795"/>
       <source>Mudlet is not configured for secure connections.
 
 </source>
-      <translation type="unfinished"/>
+      <translation>Mudlet не настроен на безопасные соединения.
+
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1804"/>
       <source>Mudlet can not load support for secure connections.
 
 </source>
-      <translation type="unfinished"/>
+      <translation>Mudlet не можете загрузить поддержку безопасных соединений.
+
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1818"/>
@@ -5259,7 +5263,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="216"/>
       <source>(room ID)</source>
       <comment>Placeholder, if no room ID is set for an exit, yet. This string is used in 2 places, ensure they match!</comment>
-      <translation type="unfinished"/>
+      <translation>(номер комнаты)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="127"/>
@@ -5269,7 +5273,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="2324"/>
       <source>(command or Lua script)</source>
       <comment>Placeholder, if a special exit has no code given, yet. This string is also used programmatically - ensure all five instances are the same</comment>
-      <translation type="unfinished"/>
+      <translation>(команда или скрипт Луа)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="140"/>
@@ -5288,7 +5292,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1793"/>
       <location filename="../src/dlgRoomExits.cpp" line="1911"/>
       <source>Exit to &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Выход в &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="756"/>
@@ -5584,7 +5588,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="340"/>
       <source>Show Keybindings</source>
-      <translation type="unfinished"/>
+      <translation>Показать комбинации клавиш</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="343"/>
@@ -6609,7 +6613,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/main.cpp" line="296"/>
       <source>Version: </source>
-      <translation type="unfinished"/>
+      <translation>Версия: </translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="356"/>
@@ -7265,7 +7269,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="380"/>
       <source>Replay</source>
-      <translation type="unfinished"/>
+      <translation>Повтор</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="385"/>
@@ -7405,7 +7409,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="3128"/>
       <source>Select Replay</source>
-      <translation type="unfinished"/>
+      <translation>Выбрать повтор</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3130"/>
@@ -7999,7 +8003,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1084"/>
       <source>Enable text analyzer</source>
-      <translation type="unfinished"/>
+      <translation>Включить анализатор текста</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1112"/>
@@ -8011,7 +8015,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1146"/>
       <source>h:mm:ss.zzz</source>
       <comment>Used to set a time interval only</comment>
-      <translation type="unfinished"/>
+      <translation>h:mm:ss.zzz</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1292"/>
@@ -8238,7 +8242,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1748"/>
       <source>Server allowed to redefine these colors</source>
-      <translation type="unfinished"/>
+      <translation>Сервер позволен пересмотреть эти цвета</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1772"/>
@@ -8339,37 +8343,37 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4744"/>
       <source>Accept self-signed certificates</source>
-      <translation type="unfinished"/>
+      <translation>Принимать самоподписанные сертификаты</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4754"/>
       <source>Accept expired certificates</source>
-      <translation type="unfinished"/>
+      <translation>Принимать просроченные сертификаты</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4764"/>
       <source>Secure connection</source>
-      <translation type="unfinished"/>
+      <translation>Безопасное соединение</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4777"/>
       <source>Certificate</source>
-      <translation type="unfinished"/>
+      <translation>Сертификат</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4811"/>
       <source>Serial:</source>
-      <translation type="unfinished"/>
+      <translation>Серия:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4824"/>
       <source>Issuer:</source>
-      <translation type="unfinished"/>
+      <translation>Издатель:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4834"/>
       <source>Issued to:</source>
-      <translation type="unfinished"/>
+      <translation>Кому выдано:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4844"/>
