@@ -36,10 +36,11 @@ TTimer::TTimer(TTimer* parent, Host* pHost)
 , mModuleMasterFolder(false)
 , mpHost(pHost)
 , mNeedsToBeCompiled(true)
-, mpTimer(new QTimer)
+, mpQTimer(new QTimer)
 , mModuleMember(false)
+, mKnownToBeUnregistered(false)
 {
-    mpTimer->stop();
+    mpQTimer->stop();
 }
 
 TTimer::TTimer(const QString& name, QTime time, Host* pHost)
@@ -51,21 +52,22 @@ TTimer::TTimer(const QString& name, QTime time, Host* pHost)
 , mTime(time)
 , mpHost(pHost)
 , mNeedsToBeCompiled(true)
-, mpTimer(new QTimer)
+, mpQTimer(new QTimer)
 , mModuleMember(false)
+, mKnownToBeUnregistered(false)
 {
-    mpTimer->stop();
+    mpQTimer->stop();
 }
 
 TTimer::~TTimer()
 {
-    mpTimer->stop();
+    mpQTimer->stop();
     if (!mpHost) {
         return;
     }
     mpHost->getTimerUnit()->unregisterTimer(this);
-    mudlet::self()->unregisterTimer(mpTimer);
-    mpTimer->deleteLater();
+    mudlet::self()->unregisterTimer(this);
+    mpQTimer->deleteLater();
 }
 
 bool TTimer::registerTimer()
@@ -74,7 +76,7 @@ bool TTimer::registerTimer()
         return false;
     }
     setTime(mTime);
-    mudlet::self()->registerTimer(this, mpTimer);
+    mudlet::self()->registerTimer(this);
     return mpHost->getTimerUnit()->registerTimer(this);
 }
 
@@ -93,8 +95,8 @@ void TTimer::setTime(QTime time)
 {
     QMutexLocker locker(&mLock);
     mTime = time;
-    mpTimer->setInterval(mTime.msec() + (1000 * mTime.second()) + (1000 * 60 * mTime.minute()) + (1000 * 60 * 60 * mTime.hour()));
-    mpTimer->stop();
+    mpQTimer->setInterval(mTime.msec() + (1000 * mTime.second()) + (1000 * 60 * mTime.minute()) + (1000 * 60 * 60 * mTime.hour()));
+    mpQTimer->stop();
 }
 
 // children of folder = regular timers
@@ -128,10 +130,10 @@ bool TTimer::setIsActive(bool b)
 
 void TTimer::start()
 {
-    mpTimer->setSingleShot(isTemporary());
+    mpQTimer->setSingleShot(isTemporary());
 
     if (!isFolder()) {
-        mpTimer->start();
+        mpQTimer->start();
     } else {
         stop();
     }
@@ -139,7 +141,7 @@ void TTimer::start()
 
 void TTimer::stop()
 {
-    mpTimer->stop();
+    mpQTimer->stop();
 }
 
 void TTimer::compile()
@@ -174,7 +176,7 @@ void TTimer::compileAll()
 bool TTimer::setScript(const QString& script)
 {
     mScript = script;
-    if (script == "") {
+    if (script.isEmpty()) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
     } else {
@@ -186,18 +188,17 @@ bool TTimer::setScript(const QString& script)
 
 bool TTimer::compileScript()
 {
-    mFuncName = QString("Timer") + QString::number(mID);
-    QString code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    mFuncName = QStringLiteral("Timer%1").arg(mID);
+    QString code = QStringLiteral("function %1()\n%2\nend\n").arg(mFuncName, mScript);
     QString error;
-    if (mpHost->mLuaInterpreter.compile(code, error, "Timer: " + getName())) {
+    if (mpHost->mLuaInterpreter.compile(code, error, QStringLiteral("Timer: %1").arg(mName))) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
-        return true;
     } else {
         mOK_code = false;
         setError(error);
-        return false;
     }
+    return mOK_code;
 }
 
 bool TTimer::checkRestart()
@@ -208,7 +209,7 @@ bool TTimer::checkRestart()
 void TTimer::execute()
 {
     if (!isActive() || isFolder()) {
-        mpTimer->stop();
+        mpQTimer->stop();
         return;
     }
 
@@ -218,7 +219,7 @@ void TTimer::execute()
         } else {
             mpHost->mLuaInterpreter.compileAndExecuteScript(mScript);
         }
-        mpTimer->stop();
+        mpQTimer->stop();
         mpHost->getTimerUnit()->markCleanup(this);
         return;
     }
@@ -249,7 +250,7 @@ void TTimer::execute()
 
         if (!mpHost->mLuaInterpreter.call(mFuncName, mName, (mTime < mpHost->mTimerDebugOutputSuppressionInterval))) {
 
-            mpTimer->stop();
+            mpQTimer->stop();
         }
     }
 }
@@ -273,11 +274,11 @@ void TTimer::enableTimer(int id)
         if (canBeUnlocked(nullptr)) {
             if (activate()) {
                 if (mScript.size() > 0) {
-                    mpTimer->start();
+                    mpQTimer->start();
                 }
             } else {
                 deactivate();
-                mpTimer->stop();
+                mpQTimer->stop();
             }
         }
     }
@@ -295,7 +296,7 @@ void TTimer::disableTimer(int id)
 {
     if (mID == id) {
         deactivate();
-        mpTimer->stop();
+        mpQTimer->stop();
     }
 
     for (auto timer : *mpMyChildrenList) {
@@ -310,11 +311,11 @@ void TTimer::enableTimer()
     if (canBeUnlocked(nullptr)) {
         if (activate()) {
             if (mScript.size() > 0) {
-                mpTimer->start();
+                mpQTimer->start();
             }
         } else {
             deactivate();
-            mpTimer->stop();
+            mpQTimer->stop();
         }
     }
     if (!isOffsetTimer()) {
@@ -329,7 +330,7 @@ void TTimer::enableTimer()
 void TTimer::disableTimer()
 {
     deactivate();
-    mpTimer->stop();
+    mpQTimer->stop();
     for (auto timer : *mpMyChildrenList) {
         timer->disableTimer();
     }
@@ -341,10 +342,10 @@ void TTimer::enableTimer(const QString& name)
     if (mName == name) {
         if (canBeUnlocked(nullptr)) {
             if (activate()) {
-                mpTimer->start();
+                mpQTimer->start();
             } else {
                 deactivate();
-                mpTimer->stop();
+                mpQTimer->stop();
             }
         }
     }
@@ -360,7 +361,7 @@ void TTimer::disableTimer(const QString& name)
 {
     if (mName == name) {
         deactivate();
-        mpTimer->stop();
+        mpQTimer->stop();
     }
 
     for (auto timer : *mpMyChildrenList) {
@@ -372,5 +373,5 @@ void TTimer::disableTimer(const QString& name)
 void TTimer::killTimer()
 {
     deactivate();
-    mpTimer->stop();
+    mpQTimer->stop();
 }

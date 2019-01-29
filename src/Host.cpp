@@ -368,7 +368,7 @@ void Host::reloadModule(const QString& reloadModuleName)
 void Host::resetProfile()
 {
     getTimerUnit()->stopAllTriggers();
-    mudlet::self()->mTimerMap.clear();
+    mudlet::self()->clearHostTimerMap(this);
     getTimerUnit()->removeAllTempTimers();
     getTriggerUnit()->removeAllTempTriggers();
     getKeyUnit()->removeAllTempKeys();

@@ -107,8 +107,9 @@ public:
     void disableToolbarButtons();
     void enableToolbarButtons();
     Host* getActiveHost();
-    void registerTimer(TTimer*, QTimer*);
-    void unregisterTimer(QTimer*);
+    void registerTimer(TTimer*);
+    void unregisterTimer(TTimer*);
+    void clearHostTimerMap(Host*);
     void forceClose();
     bool saveWindowLayout();
     bool loadWindowLayout();
@@ -216,7 +217,8 @@ public:
     QTime mReplayTime;
     int mReplaySpeed;
     QToolBar* mpMainToolBar;
-    QMap<QTimer*, TTimer*> mTimerMap;
+    // Was mTimerMap shared between all Host instances:
+    QMap<Host*, QMap<QTimer*, TTimer*>> mHostTimerMap;
     QMap<Host*, QPointer<dlgIRC>> mpIrcClientMap;
     QString version;
     QPointer<Host> mpCurrentActiveHost;

@@ -196,6 +196,8 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
             mpTimer->enableTimer(mpTimer->getID());
         } else {
             mpHost->getTimerUnit()->unregisterTimer(mpTimer);
+            // Set flag so that it can be silently deleted:
+            mpTimer->setKnownUnregistered();
             delete mpTimer;
         }
 
@@ -1229,7 +1231,7 @@ int XMLimport::readTimerGroup(TTimer* pParent)
         }
     }
 
-    mudlet::self()->registerTimer(pT, pT->mpTimer);
+    mudlet::self()->registerTimer(pT);
 
     if (!pT->mpParent && pT->shouldBeActive()) {
         pT->setIsActive(true);
