@@ -757,13 +757,13 @@ the highlighted room (%1) to:</source>
       <location filename="../src/T2DMap.cpp" line="3341"/>
       <location filename="../src/T2DMap.cpp" line="3616"/>
       <source>OK</source>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3346"/>
       <location filename="../src/T2DMap.cpp" line="3621"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Annuleren</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3430"/>
@@ -2934,7 +2934,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1796"/>
       <source>{variation selector 1}</source>
       <comment>Unicode U+FE00 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 1}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1797"/>
@@ -3515,7 +3515,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1621"/>
       <source>Cancel</source>
       <comment>Cancel download of GUI package from Server</comment>
-      <translation type="unfinished"/>
+      <translation>Annuleren</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1612"/>
