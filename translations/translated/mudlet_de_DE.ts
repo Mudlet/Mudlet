@@ -449,7 +449,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2699"/>
       <source>Move</source>
       <comment>Menu option to move a room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Verschieben</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2700"/>
@@ -482,7 +482,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2711"/>
       <source>Spread</source>
       <comment>Menu option to space out rooms in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Ausbreiten</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2712"/>
@@ -493,7 +493,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2715"/>
       <source>Shrink</source>
       <comment>Menu option to move rooms closer in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Schrumpfen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2716"/>
@@ -504,7 +504,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2719"/>
       <source>Lock</source>
       <comment>Menu option to lock a room for speed walks in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Sperren</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2720"/>
@@ -515,7 +515,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2723"/>
       <source>Unlock</source>
       <comment>Menu option to unlock a room for speed walks in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Entsperren</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2724"/>
@@ -548,7 +548,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2735"/>
       <source>Symbol</source>
       <comment>Menu option to set symbol(s) to mark rooms in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Symbol</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2736"/>
@@ -559,7 +559,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2739"/>
       <source>Move to</source>
       <comment>Menu option to move rooms elsewhere in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Verschieben nach</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2740"/>
@@ -581,7 +581,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2747"/>
       <source>Custom exit lines</source>
       <comment>Menu option to create custom exit lines in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Benutzerdefinierte Ausgangslinien</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2754"/>
@@ -597,7 +597,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2761"/>
       <source>Create label</source>
       <comment>Menu option to add text or image to the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Markierung erstellen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2762"/>
@@ -608,7 +608,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2765"/>
       <source>Set location</source>
       <comment>Menu option to assign player location in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Standort festlegen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2767"/>
@@ -624,7 +624,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2798"/>
       <source>Move</source>
       <comment>Menu option to move a label in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Verschieben</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2799"/>
@@ -646,7 +646,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2818"/>
       <source>Add point</source>
       <comment>Menu option to add a point to a custom line in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Punkt hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2825"/>
@@ -662,7 +662,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2831"/>
       <source>Remove point</source>
       <comment>Menu option to remove a point of a custom line in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Punkt entfernen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2838"/>
@@ -677,7 +677,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2844"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
-      <translation type="unfinished"/>
+      <translation>Benutze &quot;Linie löschen&quot;, um das einzige Segment zu entfernen, das an einem bearbeitbaren Punkt endet</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2848"/>
@@ -688,7 +688,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2851"/>
       <source>Properties</source>
       <comment>Menu option to adjust a custom line in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Eigenschaften</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2854"/>
@@ -699,7 +699,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2857"/>
       <source>Delete line</source>
       <comment>Menu option to delete a custom line in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Linie löschen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2858"/>
@@ -710,31 +710,31 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="3051"/>
       <location filename="../src/T2DMap.cpp" line="4676"/>
       <source>Solid line</source>
-      <translation type="unfinished"/>
+      <translation>Durchgezogene Linie</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3052"/>
       <location filename="../src/T2DMap.cpp" line="4677"/>
       <source>Dot line</source>
-      <translation type="unfinished"/>
+      <translation>Gepunktete Linie</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3053"/>
       <location filename="../src/T2DMap.cpp" line="4678"/>
       <source>Dash line</source>
-      <translation type="unfinished"/>
+      <translation>Gestrichelte Linie</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3054"/>
       <location filename="../src/T2DMap.cpp" line="4679"/>
       <source>Dash-dot line</source>
-      <translation type="unfinished"/>
+      <translation>Strich-Punkt-Linie</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3055"/>
       <location filename="../src/T2DMap.cpp" line="4680"/>
       <source>Dash-dot-dot line</source>
-      <translation type="unfinished"/>
+      <translation>Strich-Punkt-Punkt-Linie</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3322"/>
@@ -822,12 +822,12 @@ einem neuen Symbol für diesen Raum:</translation>
       <location filename="../src/T2DMap.cpp" line="3590"/>
       <source>Delete color</source>
       <comment>Deletes an environment colour</comment>
-      <translation type="unfinished"/>
+      <translation>Farbe löschen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3608"/>
       <source>Define new color</source>
-      <translation type="unfinished"/>
+      <translation>Neue Farbe definieren</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3915"/>
@@ -858,7 +858,7 @@ ausgewählten Räume:</translation>
       <location filename="../src/T2DMap.cpp" line="2219"/>
       <source>no text</source>
       <comment>Default text if a label is created in mapper with no text</comment>
-      <translation type="unfinished"/>
+      <translation>ohne Text</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1506"/>
@@ -866,7 +866,8 @@ ausgewählten Räume:</translation>
       <location filename="../src/T2DMap.cpp" line="1897"/>
       <source>Mapper: Cannot find a path to this room using known exits.
 </source>
-      <translation type="unfinished"/>
+      <translation>Mapper: Finde durch bekannte Ausgänge keinen Weg zu diesem Raum.
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2215"/>
@@ -887,35 +888,35 @@ ausgewählten Räume:</translation>
       <location filename="../src/T2DMap.cpp" line="2641"/>
       <source>Undo</source>
       <comment>Menu option to undo drawing the last segment of a line in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Rückgängig machen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2649"/>
       <source>Properties</source>
       <comment>Menu option to change properties of a line in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Eigenschaften</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2655"/>
       <source>Finish</source>
       <comment>Menu option to finish drawing a line in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Fertigstellen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2677"/>
       <source>Create new map</source>
-      <translation type="unfinished"/>
+      <translation>Neue Karte erstellen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2680"/>
       <source>Load map</source>
-      <translation type="unfinished"/>
+      <translation>Karte laden</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2693"/>
       <source>Create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Raum erstellen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3673"/>
@@ -1041,7 +1042,7 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TAlias.cpp" line="255"/>
       <source>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Fehler: Fehlerhafter regulärer Ausdruck (Regex) bei &quot;Muster:&quot;, Grund: &quot;%1&quot;.</translation>
     </message>
   </context>
   <context>
@@ -8536,12 +8537,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4844"/>
       <source>Expires:</source>
-      <translation type="unfinished"/>
+      <translation>Läuft ab:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4860"/>
       <source>Accept all certificate errors       (unsecure)</source>
-      <translation type="unfinished"/>
+      <translation>Akzeptiere alle Zertifikatsfehler (unsicher)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1821"/>
@@ -8871,7 +8872,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1591"/>
       <location filename="../src/ui/room_exits.ui" line="1731"/>
       <source>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle einen positiven Wert, um die normale Gewichtung des Raums für diese Ausgangsrichtung zu setzen. Null setzt wieder den Standard.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="236"/>
@@ -9225,7 +9226,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1886"/>
       <source>Exit Weight (0=No override)</source>
-      <translation type="unfinished"/>
+      <translation>Gewichtung des Ausgangs (0=Nicht überschreiben)</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
@@ -9261,7 +9262,7 @@ Gewicht</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2066"/>
       <source>&lt;p&gt;Set to a positive integer value to override the default (Room) Weight for using this Exit route, a zero value assigns the default.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle einen positiven Wert, um die normale Gewichtung des Raums für diese Ausgangsrichtung zu setzen. Null setzt wieder den Standard.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2071"/>
@@ -9652,12 +9653,12 @@ Ansonsten den kompletten Treffer hervorheben.</translation>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="95"/>
       <source>Foreground color ignored</source>
-      <translation type="unfinished"/>
+      <translation>Vordergrundfarbe ignoriert</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="119"/>
       <source>Background color ignored</source>
-      <translation type="unfinished"/>
+      <translation>Hintergrundfarbe ignoriert</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="146"/>
