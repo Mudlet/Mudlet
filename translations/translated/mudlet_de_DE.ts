@@ -2637,7 +2637,7 @@ Sie wurden aus dem Bereich entfernt.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1158"/>
       <source>It has been detected that &quot;_###&quot; form suffixes have already been used, for simplicity in the renaming algorithm these will have been removed and possibly changed as Mudlet sorts this matter out, if a number assigned in this way &lt;b&gt;is&lt;/b&gt; important to you, you can change it back, provided you rename the area that has been allocated the suffix that was wanted first...!&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>Es wurde erkannt, dass Suffixe in der Form &quot;_###&quot; bereits verwendet wurden. Diese wurden zur Einfachheit der Umbenennung entfernt und eventuell geändert. Wenn eine zugewiesene Nummer auf diese Weise wichtig ist, kann sie zurückgeändert werden. Dazu muss zuerst der Bereich umbenannt werden, dem das gewünschte Suffix zugewiesen wurde.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1162"/>
