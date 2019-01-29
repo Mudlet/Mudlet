@@ -1536,36 +1536,42 @@ Einige Funktionen sind möglicherweise nicht verfügbar.
       <source>[ ERROR ] - Cannot find Lua module lfs (Lua File System).
 Probably will not be able to access Mudlet Lua code.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - Konnte Lua-Modul lfs (Lua File System) nicht finden.
+Wahrscheinlich wird es nicht möglich sein, auf Mudlet Lua-Code zuzugreifen.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14785"/>
       <source>[  OK  ]  - Lua module lfs loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ]  - Lua-Modul lfs geladen.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14796"/>
       <source>[ ERROR ] - Cannot find Lua module luasql.sqlite3.
 Database support will not be available.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - Konnte Lua-Modul luasql.sqlite3 nicht finden.
+Es wird keine Unterstützung für Datenbanken verfügbar sein.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14801"/>
       <source>[  OK  ]  - Lua module sqlite3 loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ]  - Lua-Modul sqlite3 geladen.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14813"/>
       <source>[ ERROR ] - Cannot find Lua module utf8.
 utf8.* Lua functions won&apos;t be available.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - Konnte Lua-Modul utf8 nicht finden.
+Die utf8.* Lua Funktionen werden nicht verfügbar sein.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14818"/>
       <source>[  OK  ]  - Lua module utf8 loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ]  - Lua-Modul utf8 geladen.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14830"/>
@@ -1577,7 +1583,7 @@ yajl.* Lua functions won&apos;t be available.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14835"/>
       <source>[  OK  ]  - Lua module yajl loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ]  - Lua-Modul yajl geladen.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14925"/>
@@ -1588,20 +1594,21 @@ yajl.* Lua functions won&apos;t be available.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14929"/>
       <source>[  OK  ]  - Lua code formatter loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[OK] - Lua Code-Formatierer geladen.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14962"/>
       <location filename="../src/TLuaInterpreter.cpp" line="14966"/>
       <location filename="../src/TLuaInterpreter.cpp" line="14982"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ]  - Mudlet-Lua-API &amp; Geyser Layoutmanager geladen.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14976"/>
       <source>[ ERROR ] - LuaGlobal.lua compile error - please report!
 Error from Lua: </source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - LuaGlobal.lua Kompilierungsfehler - bitte melden!
+Fehler von Lua: </translation>
     </message>
   </context>
   <context>
@@ -1734,7 +1741,8 @@ map with others relying on the original format.</source>
       <location filename="../src/TMap.cpp" line="185"/>
       <source>[MAP ERROR:]%1
 </source>
-      <translation type="unfinished"/>
+      <translation>[KARTENFEHLER:]%1
+</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1031"/>
