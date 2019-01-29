@@ -3657,7 +3657,12 @@ encoding that is currently set {&quot;%1&quot;} for the game server.
 It may not understand what is sent to it.
 Note: this warning will only be issued once, even if this happens again, until
 the encoding is changed.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ]  - Ungültige Zeichen in den ausgehende Daten. Ein oder mehrere Zeichen 
+können nicht in einen akzeptablen Bereich kodiert werden für die derzeit für diesen 
+Spielserver festgelegte Zeichenkodierung {&quot;%1&quot;}.
+Er wird vielleicht nicht verstehen, was ihm gesendet wird.
+Hinweis: Diese Warnung wird nur einmal angezeigt, selbst wenn es wieder passiert, bis
+die Kodierung geändert wird.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="577"/>
