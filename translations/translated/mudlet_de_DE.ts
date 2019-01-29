@@ -3613,39 +3613,41 @@ or your nameservers are not working properly.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="361"/>
       <source>[ INFO ]  - Looking up the IP address of server:</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Suche die IP-Adresse des Servers:</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="377"/>
       <source>[ ERROR ] - TCP/IP socket ERROR:</source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - TCP/IP-Socket-FEHLER:</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="400"/>
       <source>[ INFO ]  - A secure connection has been established successfully.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Eine sichere Verbindung wurde erfolgreich hergestellt.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="402"/>
       <source>[ INFO ]  - A connection has been established successfully.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Eine Verbindung wurde erfolgreich hergestellt.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="440"/>
       <source>[ INFO ]  - Connection time: %1
     </source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Verbindungszeit: %1
+    </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="479"/>
       <source>Secure connections aren&apos;t supported by this game on this port - try turning the option off.</source>
-      <translation type="unfinished"/>
+      <translation>Sichere Verbindungen werden von diesem Spiel auf diesem Port nicht unterstützt – versuche, die Option zu deaktivieren.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="524"/>
       <source>[ INFO ]  - Trying secure connection to %1: %2 ...
 </source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Versuche, eine sichere Verbindung aufzubauen zu %1: %2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="562"/>
