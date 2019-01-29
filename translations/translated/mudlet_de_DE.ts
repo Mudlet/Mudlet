@@ -460,7 +460,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2703"/>
       <source>Delete</source>
       <comment>Menu option to delete a room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Löschen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2704"/>
@@ -471,7 +471,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2707"/>
       <source>Color</source>
       <comment>Menu option to change a room color in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Farbe</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2708"/>
@@ -526,7 +526,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2727"/>
       <source>Weight</source>
       <comment>Menu option to set a room weight in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Gewicht</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2728"/>
@@ -537,7 +537,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2731"/>
       <source>Exits</source>
       <comment>Menu option to set exits for a room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Ausgänge</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2732"/>
@@ -570,7 +570,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2743"/>
       <source>Area</source>
       <comment>Menu option to set the area ID of a room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Bereich</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2744"/>
@@ -635,7 +635,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2801"/>
       <source>Delete</source>
       <comment>Menu option to delete a label in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Löschen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2802"/>
@@ -762,13 +762,13 @@ den markierten Raum (%1), verschieben nach:</translation>
       <location filename="../src/T2DMap.cpp" line="3341"/>
       <location filename="../src/T2DMap.cpp" line="3616"/>
       <source>OK</source>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3346"/>
       <location filename="../src/T2DMap.cpp" line="3621"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Abbrechen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3430"/>
@@ -816,7 +816,7 @@ einem neuen Symbol für diesen Raum:</translation>
       <location filename="../src/T2DMap.cpp" line="3471"/>
       <source>%1 {count:%2}</source>
       <comment>Everything after the first parameter (the &apos;%1&apos;) will be removed by processing it as a QRegularExpression programmatically, ensure the translated text has ` {` immediately after the &apos;%1&apos;, and &apos;}&apos; as the very last character, so that the right portion can be extracted if the user clicks on this item when it is shown in the QComboBox it is put in.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 {Anzahl: %2}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3590"/>
@@ -871,17 +871,17 @@ ausgewählten Räume:</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2215"/>
       <source>Enter label text.</source>
-      <translation type="unfinished"/>
+      <translation>Text der Markierung eingeben.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2222"/>
       <source>Background color</source>
-      <translation type="unfinished"/>
+      <translation>Hintergrundfarbe</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2223"/>
       <source>Foreground color</source>
-      <translation type="unfinished"/>
+      <translation>Vordergrundfarbe</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2641"/>
@@ -2849,13 +2849,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1759"/>
       <source>{3-per-em space}</source>
       <comment>Unicode U+2004 codepoint - three-per-em (&apos;m&apos;) wide (thick) space.</comment>
-      <translation type="unfinished"/>
+      <translation>{3-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1760"/>
       <source>{4-per-em space}</source>
       <comment>Unicode U+2005 codepoint - four-per-em (&apos;m&apos;) wide (Middle) space.</comment>
-      <translation type="unfinished"/>
+      <translation>{4-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1761"/>
@@ -3071,25 +3071,25 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1796"/>
       <source>{variation selector 1}</source>
       <comment>Unicode U+FE00 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 1}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1797"/>
       <source>{variation selector 2}</source>
       <comment>Unicode U+FE01 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1798"/>
       <source>{variation selector 3}</source>
       <comment>Unicode U+FE02 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1799"/>
       <source>{variation selector 4}</source>
       <comment>Unicode U+FE03 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1800"/>
@@ -3209,19 +3209,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1844"/>
       <source>{FitzPatrick modifier 1 or 2}</source>
       <comment>Unicode codepoint U+0001F3FB - FitzPatrick modifier (Emoji Human skin-tone) 1-2.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 1 or 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1845"/>
       <source>{FitzPatrick modifier 3}</source>
       <comment>Unicode codepoint U+0001F3FC - FitzPatrick modifier (Emoji Human skin-tone) 3.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1846"/>
       <source>{FitzPatrick modifier 4}</source>
       <comment>Unicode codepoint U+0001F3FD - FitzPatrick modifier (Emoji Human skin-tone) 4.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1847"/>
@@ -3663,7 +3663,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1621"/>
       <source>Cancel</source>
       <comment>Cancel download of GUI package from Server</comment>
-      <translation type="unfinished"/>
+      <translation>Abbrechen</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1612"/>
@@ -4450,37 +4450,37 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="77"/>
       <source>Black</source>
-      <translation type="unfinished"/>
+      <translation>Schwarz</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="78"/>
       <source>Red</source>
-      <translation type="unfinished"/>
+      <translation>Rot</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="79"/>
       <source>Green</source>
-      <translation type="unfinished"/>
+      <translation>Grün</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="80"/>
       <source>Yellow</source>
-      <translation type="unfinished"/>
+      <translation>Gelb</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="81"/>
       <source>Blue</source>
-      <translation type="unfinished"/>
+      <translation>Blau</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="82"/>
       <source>Magenta</source>
-      <translation type="unfinished"/>
+      <translation>Magenta</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="83"/>
       <source>Cyan</source>
-      <translation type="unfinished"/>
+      <translation>Cyan</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="84"/>
@@ -4495,43 +4495,43 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="87"/>
       <source>Light red</source>
-      <translation type="unfinished"/>
+      <translation>Helles Rot</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="88"/>
       <source>Light green</source>
-      <translation type="unfinished"/>
+      <translation>Helles Grün</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="89"/>
       <source>Light yellow</source>
-      <translation type="unfinished"/>
+      <translation>Helles Gelb</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="90"/>
       <source>Light blue</source>
-      <translation type="unfinished"/>
+      <translation>Helles Blau</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="91"/>
       <source>Light magenta</source>
-      <translation type="unfinished"/>
+      <translation>Helles Magenta</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="92"/>
       <source>Light cyan</source>
-      <translation type="unfinished"/>
+      <translation>Helles Cyan</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="93"/>
       <source>Light white</source>
-      <translation type="unfinished"/>
+      <translation>Helles Weiß</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="218"/>
       <source>%1 [%2]</source>
       <comment>Color Trigger dialog button in basic 16-color set, the first value is the name of the color, the second is the ANSI color number - for most languages modification is not likely to be needed - this text is used in two places</comment>
-      <translation type="unfinished"/>
+      <translation>%1 [%2]</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="405"/>
