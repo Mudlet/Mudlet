@@ -435,7 +435,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mProfileSaveAsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_profileSaveAsAction);
 
     QAction* viewStatsAction = new QAction(QIcon(QStringLiteral(":/icons/view-statistics.png")), tr("Statistics"), this);
-    viewStatsAction->setStatusTip(tr("Generates a statics summary display on the main profile console."));
+    viewStatsAction->setStatusTip(tr("Generates a statistics summary display on the main profile console."));
     connect(viewStatsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_viewStatsAction);
 
     QAction* viewErrorsAction = new QAction(QIcon(QStringLiteral(":/icons/errors.png")), tr("errors"), this);

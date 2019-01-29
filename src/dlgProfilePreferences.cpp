@@ -157,7 +157,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     // Set the tooltip on the containing widget so both the label and the
     // control have the same tool-tip:
-    widget_timerDebugOutputMinimumInterval->setToolTip(tr("<p>A timer will a short interval will quickly fill up the <i>Central Debug Console</i> "
+    widget_timerDebugOutputMinimumInterval->setToolTip(tr("<p>A timer with a short interval will quickly fill up the <i>Central Debug Console</i> "
                                                           "windows with messages that it ran correctly on <i>each</i> occasion it is called.  This (per profile) "
                                                           "control adjusts a threshold that will hide those messages in just that window for those timers which "
                                                           "run <b>correctly</b> when the timer's interval is less than this setting.</p>"

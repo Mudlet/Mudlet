@@ -2544,7 +2544,7 @@
                 <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
                </property>
                <property name="text">
-                <string> # </string>
+                <string notr="true"> # </string>
                </property>
               </widget>
              </item>
@@ -2563,7 +2563,7 @@
                 <set>Qt::ImhDigitsOnly</set>
                </property>
                <property name="inputMask">
-                <string>9999;#</string>
+                <string notr="true">9999;#</string>
                </property>
                <property name="maxLength">
                 <number>4</number>
