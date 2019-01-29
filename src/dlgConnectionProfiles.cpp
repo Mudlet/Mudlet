@@ -61,7 +61,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     // settings suggest it:
     mudlet::self()->mShowIconsOnDialogs = !abort->icon().isNull();
 
-    auto Welcome_text_template = tr("<p><center><big><b>Welcome to Mudlet!</b><bold></center></p>"
+    auto Welcome_text_template = tr("<p><center><big><b>Welcome to Mudlet!</b></big></center></p>"
                                     "<p><center><b>Click on one of the games on the list to play.</b></center></p>"
                                     "<p>To play a game not in the list, click on %1 "
                                     "<span style=\" color:#555753;\">New</span>, fill in the <i>Profile Name</i>, "
