@@ -1280,7 +1280,8 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="2559"/>
       <source>No search results, sorry!
 </source>
-      <translation type="unfinished"/>
+      <translation>Нет результатов поиска, к сожалению!
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="367"/>
@@ -1444,7 +1445,7 @@ this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="14920"/>
       <location filename="../src/TLuaInterpreter.cpp" line="14974"/>
       <source>no error message available from Lua</source>
-      <translation type="unfinished"/>
+      <translation>нет сообщения об ошибке от Луа</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14746"/>
@@ -1455,7 +1456,7 @@ this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="14827"/>
       <location filename="../src/TLuaInterpreter.cpp" line="14922"/>
       <source>Lua error:</source>
-      <translation type="unfinished"/>
+      <translation>Ошибка Луа:</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14749"/>
@@ -1683,7 +1684,8 @@ map with others relying on the original format.</source>
       <location filename="../src/TMap.cpp" line="185"/>
       <source>[MAP ERROR:]%1
 </source>
-      <translation type="unfinished"/>
+      <translation>[ОШИБКА КАРТЫ:]%1
+</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1031"/>
@@ -8378,12 +8380,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4844"/>
       <source>Expires:</source>
-      <translation type="unfinished"/>
+      <translation>Истекает:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4860"/>
       <source>Accept all certificate errors       (unsecure)</source>
-      <translation type="unfinished"/>
+      <translation>Принимать все ошибки сертификата (небезопасно)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1821"/>
@@ -9490,12 +9492,12 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="95"/>
       <source>Foreground color ignored</source>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана игнорируется</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="119"/>
       <source>Background color ignored</source>
-      <translation type="unfinished"/>
+      <translation>Цвет заднего плана игнорируется</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="146"/>
@@ -9544,12 +9546,12 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="159"/>
       <source>key (string)</source>
-      <translation type="unfinished"/>
+      <translation>ключ (текст)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="164"/>
       <source>index (integer)</source>
-      <translation type="unfinished"/>
+      <translation>индекс (целое число)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="169"/>
