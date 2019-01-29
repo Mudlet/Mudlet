@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018 by Stephen Lyons                        *
+ *   Copyright (C) 2014-2016, 2018-2019 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
@@ -27,6 +27,7 @@
 #include "TTextEdit.h"
 
 #include "TConsole.h"
+#include "TDockWidget.h"
 #include "TEvent.h"
 #include "mudlet.h"
 #include "wcwidth.h"
@@ -1545,7 +1546,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         mCtrlSelecting = false;
     }
 
-    if (mpConsole->getType() & (TConsole::MainConsole|TConsole::Buffer)) {
+    if (mpConsole->getType() == TConsole::MainConsole) {
         TEvent mudletEvent;
         mudletEvent.mArgumentList.append(QLatin1String("sysWindowMouseReleaseEvent"));
         switch (event->button()) {
@@ -1569,6 +1570,11 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         mpHost->raiseEvent(mudletEvent);
+    } else if (mpConsole->getType() == TConsole::UserWindow && mpConsole->mpDockWidget && mpConsole->mpDockWidget->isFloating()) {
+        // Need to take an extra step to return focus to main profile TConsole's
+        // instance - using same method as TAction::execute():
+        mpHost->mpConsole->activateWindow();
+        mpHost->mpConsole->setFocus();
     }
 }
 

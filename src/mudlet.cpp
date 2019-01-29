@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -1602,16 +1602,14 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         pD->setFeatures(QDockWidget::AllDockWidgetFeatures);
         pD->setWindowTitle(tr("User window - %1 - %2").arg(pHost->getName(), name));
         pHost->mpConsole->mDockWidgetMap.insert(name, pD);
-        auto pC = new TConsole(pHost, TConsole::UserWindow, pD);
+        // It wasn't obvious but the parent passed to the TConsole constructor
+        // is sliced down to a QWidget and is NOT a TDockWidget pointer:
+        auto pC = new TConsole(pHost, TConsole::UserWindow, pD->widget());
         pC->setContentsMargins(0, 0, 0, 0);
-        pD->setWidget(pC);
+        pD->setTConsole(pC);
         pC->show();
         pC->layerCommandLine->hide();
         pC->mpScrollBar->hide();
-        const auto& hostCommandLine = pHost->mpConsole->mpCommandLine;
-        pC->setFocusProxy(hostCommandLine);
-        pC->mUpperPane->setFocusProxy(hostCommandLine);
-        pC->mLowerPane->setFocusProxy(hostCommandLine);
         pHost->mpConsole->mSubConsoleMap.insert(name, pC);
         // TODO: Allow user to specify alternate dock locations - and for it to be floating and not docked initially!
         addDockWidget(Qt::RightDockWidgetArea, pD);

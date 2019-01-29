@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018 by Stephen Lyons                        *
+ *   Copyright (C) 2014-2016, 2018-2019 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -183,7 +183,10 @@ public:
 
 
     QPointer<Host> mpHost;
-    TCommandLine* mpCommandLine;
+    // Only assigned a value for user windows:
+    QPointer<TDockWidget> mpDockWidget;
+    // Only on a MainConsole type instance:
+    QPointer<TCommandLine> mpCommandLine;
 
     TBuffer buffer;
     static const QString cmLuaLineVariable;

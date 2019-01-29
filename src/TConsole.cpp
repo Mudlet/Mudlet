@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -27,6 +27,7 @@
 #include "Host.h"
 #include "TCommandLine.h"
 #include "TDebug.h"
+#include "TDockWidget.h"
 #include "TEvent.h"
 #include "TLabel.h"
 #include "TMap.h"
@@ -52,6 +53,7 @@ const QString TConsole::cmLuaLineVariable("line");
 TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 : QWidget(parent)
 , mpHost(pH)
+, mpDockWidget(nullptr)
 , mpCommandLine(nullptr)
 , buffer(pH)
 , emergencyStop(new QToolButton)
@@ -259,7 +261,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     baseHFrameLayout->setMargin(0);
     centralLayout->setMargin(0);
 
-    if (mType & (MainConsole|Buffer)) {
+    if (mType == MainConsole) {
         mpCommandLine = new TCommandLine(pH, this, mpMainDisplay);
         mpCommandLine->setContentsMargins(0, 0, 0, 0);
         mpCommandLine->setSizePolicy(sizePolicy);
@@ -287,9 +289,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     splitter->setHandleWidth(3);
     splitter->setPalette(splitterPalette);
     splitter->setParent(layer);
-    if (mpCommandLine) {
-        setFocusProxy(mpCommandLine);
-    }
 
     mUpperPane = new TTextEdit(this, splitter, &buffer, mpHost, false);
     mUpperPane->setContentsMargins(0, 0, 0, 0);
@@ -300,6 +299,16 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mLowerPane->setContentsMargins(0, 0, 0, 0);
     mLowerPane->setSizePolicy(sizePolicy3);
     mLowerPane->setFocusPolicy(Qt::NoFocus);
+
+    if (mType == MainConsole) {
+        setFocusProxy(mpCommandLine);
+        mUpperPane->setFocusProxy(mpCommandLine);
+        mLowerPane->setFocusProxy(mpCommandLine);
+    } else if (mType == UserWindow) {
+        setFocusProxy(mpHost->mpConsole->mpCommandLine);
+        mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
+        mLowerPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
+    }
 
     splitter->addWidget(mUpperPane);
     splitter->addWidget(mLowerPane);
@@ -529,11 +538,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     setFocusPolicy(Qt::ClickFocus);
     mUpperPane->setFocusPolicy(Qt::ClickFocus);
     mLowerPane->setFocusPolicy(Qt::ClickFocus);
-    if (mpCommandLine) {
-        setFocusProxy(mpCommandLine);
-        mUpperPane->setFocusProxy(mpCommandLine);
-        mLowerPane->setFocusProxy(mpCommandLine);
-    }
 
     buttonLayerSpacer->setAutoFillBackground(true);
     buttonLayerSpacer->setPalette(__pal);
@@ -1067,7 +1071,7 @@ void TConsole::slot_toggleReplayRecording()
 void TConsole::changeColors()
 {
     mDisplayFont.setFixedPitch(true);
-    if (mType & CentralDebugConsole) {
+    if (mType == CentralDebugConsole) {
         mDisplayFont.setStyleStrategy((QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality));
         mDisplayFont.setFixedPitch(true);
         mUpperPane->setFont(mDisplayFont);
@@ -1109,13 +1113,15 @@ void TConsole::changeColors()
         mUpperPane->setPalette(palette);
         mLowerPane->setPalette(palette);
     } else if (mType == MainConsole) {
-        QPalette pal;
-        pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor); //QColor(0,0,192));
-        pal.setColor(QPalette::Highlight, QColor(0, 0, 192));
-        pal.setColor(QPalette::HighlightedText, QColor(Qt::white));
-        pal.setColor(QPalette::Base, mpHost->mCommandLineBgColor); //QColor(255,255,225));
-        mpCommandLine->setPalette(pal);
-        mpCommandLine->mRegularPalette = pal;
+        if (mpCommandLine) {
+            QPalette pal;
+            pal.setColor(QPalette::Text, mpHost->mCommandLineFgColor); //QColor(0,0,192));
+            pal.setColor(QPalette::Highlight, QColor(0, 0, 192));
+            pal.setColor(QPalette::HighlightedText, QColor(Qt::white));
+            pal.setColor(QPalette::Base, mpHost->mCommandLineBgColor); //QColor(255,255,225));
+            mpCommandLine->setPalette(pal);
+            mpCommandLine->mRegularPalette = pal;
+        }
         if (mpHost->mNoAntiAlias) {
             mpHost->mDisplayFont.setStyleStrategy(QFont::NoAntialias);
         } else {
@@ -1153,7 +1159,9 @@ void TConsole::changeColors()
         mLowerPane->setPalette(palette);
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
-        mpCommandLine->setFont(mpHost->mDisplayFont);
+        if (mpCommandLine) {
+            mpCommandLine->setFont(mpHost->mDisplayFont);
+        }
         mFormatCurrent.setColors(mpHost->mFgColor, mpHost->mBgColor);
     } else {
         Q_ASSERT_X(false, "TConsole::changeColors()", "invalid TConsole type detected");
