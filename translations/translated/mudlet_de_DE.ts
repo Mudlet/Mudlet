@@ -2349,7 +2349,7 @@ und der Ausgang wird in eine Abzweigung umgewandelt.</translation>
     <message>
       <location filename="../src/TRoom.cpp" line="1634"/>
       <source>[ INFO ]  - Room exit &quot;%1&quot; that was to a room with an invalid id: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%4&quot;) and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Der Raumausgang &quot;%1&quot; ging zu einem Raum mit einer ungültigen ID %2, die nicht existiert. Der Ausgang wird entfernt (aber die ID des Ziel-Raumes wird gespeichert in den Benutzerdaten des Raums unter dem Schlüssel: &quot;%4&quot;) und der Ausgang wird in eine Abzweigung umgewandelt.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1650"/>
@@ -2363,7 +2363,8 @@ gespeichert unter dem Schlüssel: &quot;%1&quot;.</translation>
     <message>
       <location filename="../src/TRoom.cpp" line="1654"/>
       <source>  It was locked, this is recorded as user data with key: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>  Er war versperrt. Dies wird als Benutzerdaten 
+gespeichert unter dem Schlüssel: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1662"/>
@@ -2377,7 +2378,8 @@ gespeichert unter dem Schlüssel: &quot;%1&quot;.</translation>
     <message>
       <location filename="../src/TRoom.cpp" line="1666"/>
       <source>  It had a weight, this is recorded as user data with key: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>  Er hatte ein Gewicht. Dies wird als Benutzerdaten 
+gespeichert unter dem Schlüssel: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1677"/>
