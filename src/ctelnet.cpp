@@ -557,14 +557,16 @@ bool cTelnet::sendData(QString& data)
 
     if (mpHost->mAllowToSendCommand) {
         string outData;
+        QString errorMsgTemplate = "[ WARN ]  - Invalid characters in outgoing data, one or more characters cannot\n"
+            "be encoded into the range that is acceptable for the character\n"
+            "encoding that is currently set {\"%1\"} for the game server.\n"
+            "It may not understand what is sent to it.\n"
+            "Note: this warning will only be issued once, even if this happens again, until\n"
+            "the encoding is changed.";
         if (!mEncoding.isEmpty()) {
             if ((! mEncodingWarningIssued) && (! outgoingDataCodec->canEncode(data))) {
-                QString errorMsg = tr("[ WARN ]  - Invalid characters in outgoing data, one or more characters cannot\n"
-                                      "be encoded into the range that is acceptable for the character\n"
-                                      "encoding that is currently set {\"%1\"} for the game server.\n"
-                                      "It may not understand what is sent to it.\n"
-                                      "Note: this warning will only be issued once, even if this happens again, until\n"
-                                      "the encoding is changed.").arg(mEncoding);
+                QString errorMsg = tr("errorMsgTemplate, 
+                                      "%1 is the name of the encoding currently set.").arg(mEncoding);
                 postMessage(errorMsg);
                 mEncodingWarningIssued = true;
             }
@@ -574,12 +576,8 @@ bool cTelnet::sendData(QString& data)
             // Plain, raw ASCII, we hope!
             for (int i = 0, total = data.size(); i < total; ++i) {
                 if ((! mEncodingWarningIssued) && (data.at(i).row() || data.at(i).cell() > 127)){
-                    QString errorMsg = tr("[ WARN ]  - Invalid characters in outgoing data, one or more characters cannot\n"
-                                          "be encoded into the range that is acceptable for the character\n"
-                                          "encoding that is currently set {\"ASCII\"} for the MUD Server.\n"
-                                          "It may not understand what is sent to it.\n"
-                                          "Note: this warning will only be issued once, even if this happens again, until\n"
-                                          "the encoding is changed.");
+                QString errorMsg = tr("errorMsgTemplate, 
+                                      "%1 is the name of the encoding currently set.").arg(QStringLiteral("ASCII"));
                     postMessage(errorMsg);
                     mEncodingWarningIssued = true;
                     break;
