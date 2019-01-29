@@ -449,7 +449,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2699"/>
       <source>Move</source>
       <comment>Menu option to move a room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Переместить</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2700"/>
@@ -460,7 +460,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2703"/>
       <source>Delete</source>
       <comment>Menu option to delete a room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Удалить</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2704"/>
@@ -471,7 +471,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2707"/>
       <source>Color</source>
       <comment>Menu option to change a room color in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2708"/>
@@ -482,7 +482,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2711"/>
       <source>Spread</source>
       <comment>Menu option to space out rooms in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Распространить</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2712"/>
@@ -493,7 +493,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2715"/>
       <source>Shrink</source>
       <comment>Menu option to move rooms closer in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Сжать</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2716"/>
@@ -504,7 +504,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2719"/>
       <source>Lock</source>
       <comment>Menu option to lock a room for speed walks in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Заблокировать</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2720"/>
@@ -515,7 +515,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2723"/>
       <source>Unlock</source>
       <comment>Menu option to unlock a room for speed walks in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Разблокировать</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2724"/>
@@ -526,7 +526,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2727"/>
       <source>Weight</source>
       <comment>Menu option to set a room weight in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Вес</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2728"/>
@@ -537,7 +537,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2731"/>
       <source>Exits</source>
       <comment>Menu option to set exits for a room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Выходы</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2732"/>
@@ -548,7 +548,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2735"/>
       <source>Symbol</source>
       <comment>Menu option to set symbol(s) to mark rooms in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Символ</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2736"/>
@@ -559,7 +559,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2739"/>
       <source>Move to</source>
       <comment>Menu option to move rooms elsewhere in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Переместить в</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2740"/>
@@ -570,7 +570,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2743"/>
       <source>Area</source>
       <comment>Menu option to set the area ID of a room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Область</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2744"/>
@@ -597,7 +597,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2761"/>
       <source>Create label</source>
       <comment>Menu option to add text or image to the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Создать ярлык</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2762"/>
@@ -608,7 +608,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2765"/>
       <source>Set location</source>
       <comment>Menu option to assign player location in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Установить местоположение</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2767"/>
@@ -624,7 +624,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2798"/>
       <source>Move</source>
       <comment>Menu option to move a label in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Переместить</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2799"/>
@@ -635,7 +635,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2801"/>
       <source>Delete</source>
       <comment>Menu option to delete a label in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Удалить</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2802"/>
@@ -646,7 +646,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2818"/>
       <source>Add point</source>
       <comment>Menu option to add a point to a custom line in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Добавить точку</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2825"/>
@@ -662,7 +662,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2831"/>
       <source>Remove point</source>
       <comment>Menu option to remove a point of a custom line in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Удалить точку</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2838"/>
@@ -688,7 +688,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2851"/>
       <source>Properties</source>
       <comment>Menu option to adjust a custom line in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Свойства</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2854"/>
@@ -699,7 +699,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2857"/>
       <source>Delete line</source>
       <comment>Menu option to delete a custom line in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Удалить линию</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2858"/>
@@ -761,13 +761,13 @@ the highlighted room (%1) to:</source>
       <location filename="../src/T2DMap.cpp" line="3341"/>
       <location filename="../src/T2DMap.cpp" line="3616"/>
       <source>OK</source>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3346"/>
       <location filename="../src/T2DMap.cpp" line="3621"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Отменить</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3430"/>
@@ -801,13 +801,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3471"/>
       <source>%1 {count:%2}</source>
       <comment>Everything after the first parameter (the &apos;%1&apos;) will be removed by processing it as a QRegularExpression programmatically, ensure the translated text has ` {` immediately after the &apos;%1&apos;, and &apos;}&apos; as the very last character, so that the right portion can be extracted if the user clicks on this item when it is shown in the QComboBox it is put in.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 {всего: %2}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3590"/>
       <source>Delete color</source>
       <comment>Deletes an environment colour</comment>
-      <translation type="unfinished"/>
+      <translation>Удалить звет</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3608"/>
@@ -837,7 +837,7 @@ selected rooms:</source>
       <location filename="../src/T2DMap.cpp" line="2219"/>
       <source>no text</source>
       <comment>Default text if a label is created in mapper with no text</comment>
-      <translation type="unfinished"/>
+      <translation>без текста</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1506"/>
@@ -850,51 +850,51 @@ selected rooms:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2215"/>
       <source>Enter label text.</source>
-      <translation type="unfinished"/>
+      <translation>Введите текст метки.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2222"/>
       <source>Background color</source>
-      <translation type="unfinished"/>
+      <translation>Цвет фона</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2223"/>
       <source>Foreground color</source>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2641"/>
       <source>Undo</source>
       <comment>Menu option to undo drawing the last segment of a line in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Отменить</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2649"/>
       <source>Properties</source>
       <comment>Menu option to change properties of a line in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Свойства</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2655"/>
       <source>Finish</source>
       <comment>Menu option to finish drawing a line in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Завершить</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2677"/>
       <source>Create new map</source>
-      <translation type="unfinished"/>
+      <translation>Создать новую карту</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2680"/>
       <source>Load map</source>
-      <translation type="unfinished"/>
+      <translation>Загрузить карту</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2693"/>
       <source>Create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Создать комнату</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3673"/>
@@ -2720,13 +2720,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1759"/>
       <source>{3-per-em space}</source>
       <comment>Unicode U+2004 codepoint - three-per-em (&apos;m&apos;) wide (thick) space.</comment>
-      <translation type="unfinished"/>
+      <translation>{3-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1760"/>
       <source>{4-per-em space}</source>
       <comment>Unicode U+2005 codepoint - four-per-em (&apos;m&apos;) wide (Middle) space.</comment>
-      <translation type="unfinished"/>
+      <translation>{4-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1761"/>
@@ -2942,25 +2942,25 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1796"/>
       <source>{variation selector 1}</source>
       <comment>Unicode U+FE00 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 1}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1797"/>
       <source>{variation selector 2}</source>
       <comment>Unicode U+FE01 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1798"/>
       <source>{variation selector 3}</source>
       <comment>Unicode U+FE02 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1799"/>
       <source>{variation selector 4}</source>
       <comment>Unicode U+FE03 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1800"/>
@@ -3080,19 +3080,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1844"/>
       <source>{FitzPatrick modifier 1 or 2}</source>
       <comment>Unicode codepoint U+0001F3FB - FitzPatrick modifier (Emoji Human skin-tone) 1-2.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 1 or 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1845"/>
       <source>{FitzPatrick modifier 3}</source>
       <comment>Unicode codepoint U+0001F3FC - FitzPatrick modifier (Emoji Human skin-tone) 3.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1846"/>
       <source>{FitzPatrick modifier 4}</source>
       <comment>Unicode codepoint U+0001F3FD - FitzPatrick modifier (Emoji Human skin-tone) 4.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1847"/>
@@ -3526,7 +3526,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1621"/>
       <source>Cancel</source>
       <comment>Cancel download of GUI package from Server</comment>
-      <translation type="unfinished"/>
+      <translation>Отменить</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1612"/>
@@ -4300,37 +4300,37 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="77"/>
       <source>Black</source>
-      <translation type="unfinished"/>
+      <translation>Чёрный</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="78"/>
       <source>Red</source>
-      <translation type="unfinished"/>
+      <translation>Красный</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="79"/>
       <source>Green</source>
-      <translation type="unfinished"/>
+      <translation>Зеленый</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="80"/>
       <source>Yellow</source>
-      <translation type="unfinished"/>
+      <translation>Желтый</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="81"/>
       <source>Blue</source>
-      <translation type="unfinished"/>
+      <translation>Синий</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="82"/>
       <source>Magenta</source>
-      <translation type="unfinished"/>
+      <translation>Пурпурный</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="83"/>
       <source>Cyan</source>
-      <translation type="unfinished"/>
+      <translation>Голубой</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="84"/>
@@ -4345,43 +4345,43 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="87"/>
       <source>Light red</source>
-      <translation type="unfinished"/>
+      <translation>Светло-красный</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="88"/>
       <source>Light green</source>
-      <translation type="unfinished"/>
+      <translation>Светло-зеленый</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="89"/>
       <source>Light yellow</source>
-      <translation type="unfinished"/>
+      <translation>Светло-желтый</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="90"/>
       <source>Light blue</source>
-      <translation type="unfinished"/>
+      <translation>Светло-голубой</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="91"/>
       <source>Light magenta</source>
-      <translation type="unfinished"/>
+      <translation>Светло-пурпурный</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="92"/>
       <source>Light cyan</source>
-      <translation type="unfinished"/>
+      <translation>Светло-голубой</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="93"/>
       <source>Light white</source>
-      <translation type="unfinished"/>
+      <translation>Светло-белый</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="218"/>
       <source>%1 [%2]</source>
       <comment>Color Trigger dialog button in basic 16-color set, the first value is the name of the color, the second is the ANSI color number - for most languages modification is not likely to be needed - this text is used in two places</comment>
-      <translation type="unfinished"/>
+      <translation>%1 [%2]</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="405"/>
