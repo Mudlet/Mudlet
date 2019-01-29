@@ -1310,19 +1310,20 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="1567"/>
       <source>Loading map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Lade Karte(1) &quot;%1&quot; bei %2 Bericht</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2373"/>
       <source>System Message: %1</source>
-      <translation type="unfinished"/>
+      <translation>Systemnachricht: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2520"/>
       <location filename="../src/TConsole.cpp" line="2559"/>
       <source>No search results, sorry!
 </source>
-      <translation type="unfinished"/>
+      <translation>Leider keine Suchergebnisse
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="367"/>
@@ -1411,12 +1412,12 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="1654"/>
       <source>Importing map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Importiere Karte(1) &quot;%1&quot; bei %2 Bericht</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1657"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Kartendatei gefunden, aber sie konnte nicht geöffnet werden. Prüfe bitte die Berechtigungen bei:&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1660"/>
@@ -1491,7 +1492,7 @@ Damit der Bildschirm sich nicht mit wiederholten Nachrichten füllt, ist dies de
       <location filename="../src/TLuaInterpreter.cpp" line="14920"/>
       <location filename="../src/TLuaInterpreter.cpp" line="14974"/>
       <source>no error message available from Lua</source>
-      <translation type="unfinished"/>
+      <translation>keine Fehlermeldung von Lua verfügbar</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14746"/>
@@ -1502,30 +1503,33 @@ Damit der Bildschirm sich nicht mit wiederholten Nachrichten füllt, ist dies de
       <location filename="../src/TLuaInterpreter.cpp" line="14827"/>
       <location filename="../src/TLuaInterpreter.cpp" line="14922"/>
       <source>Lua error:</source>
-      <translation type="unfinished"/>
+      <translation>Lua Fehler:</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14749"/>
       <source>[ ERROR ] - Cannot find Lua module rex_pcre.
 Some functions may not be available.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - Konnte Lua-Modul rex_pcre nicht finden.
+Einige Funktionen sind möglicherweise nicht verfügbar.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14754"/>
       <source>[  OK  ]  - Lua module rex_pcre loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ]  - Lua-Modul rex_pcre geladen.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14765"/>
       <source>[ ERROR ] - Cannot find Lua module zip.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - Konnte Lua-Modul zip nicht finden.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14769"/>
       <source>[  OK  ]  - Lua module zip loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ]  - Lua-Modul zip geladen.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14780"/>
