@@ -1899,7 +1899,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2148"/>
       <source>Room id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>Raum-ID: %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2150"/>
