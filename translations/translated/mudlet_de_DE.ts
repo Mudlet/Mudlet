@@ -1565,7 +1565,7 @@ Es wird keine Unterstützung für Datenbanken verfügbar sein.
 utf8.* Lua functions won&apos;t be available.
 </source>
       <translation>[ FEHLER ] - Konnte Lua-Modul utf8 nicht finden.
-Die utf8.* Lua Funktionen werden nicht verfügbar sein.
+Die Lua-Funktionen utf8.* werden nicht verfügbar sein.
 </translation>
     </message>
     <message>
@@ -1578,7 +1578,9 @@ Die utf8.* Lua Funktionen werden nicht verfügbar sein.
       <source>[ ERROR ] - Cannot find Lua module yajl.
 yajl.* Lua functions won&apos;t be available.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - Konnte Lua-Modul yajl nicht finden.
+Die Lua-Funktionen yajl.* werden nicht verfügbar sein.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14835"/>
@@ -1589,7 +1591,9 @@ yajl.* Lua functions won&apos;t be available.
       <location filename="../src/TLuaInterpreter.cpp" line="14925"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - Code-Formatierer kann nicht geladen werden.
+Die Einrückungungsfunktion wird nicht verfügbar sein.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14929"/>
@@ -1748,13 +1752,15 @@ map with others relying on the original format.</source>
       <location filename="../src/TMap.cpp" line="1031"/>
       <source>[ ERROR ] - The format {%1} you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version {%2}.</source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - Du versuchst, die Karte in einen zu neuen Format {%1} zu speichern.
+Diese Version von Mudlet unterstützt nur Formate bis zur Version {%2}.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1057"/>
       <source>[ WARN ]  - Saving map in a format {%1} different from the
 recommended format {%2} for this version of Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ]  - Speichere Karte in einem anderen Format {%1} als
+dem für diese Version von Mudlet empfohlenem Format {%2}.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1088"/>
@@ -1787,7 +1793,7 @@ ID der betroffenen Regionen: %1.</translation>
       <location filename="../src/TMap.cpp" line="1406"/>
       <location filename="../src/TMap.cpp" line="1696"/>
       <source>[ ERROR ] - Unable to open (for reading) map file: &quot;%1&quot;!</source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ]  - Kartendatei kann nicht (zum Lesen) geöffnet werden: &quot;%1&quot;!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1415"/>
@@ -1831,7 +1837,7 @@ bitte warten...</translation>
     <message>
       <location filename="../src/TMap.cpp" line="1446"/>
       <source>[ INFO ]  - Reading map (format version:%1) file: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Lese Karte (Formatversion: %1) Datei: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1553"/>
@@ -1863,7 +1869,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1709"/>
       <source>[ INFO ]  - Checking map file: &quot;%1&quot;, format version:%2...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Prüfe Kartendatei: &quot;%1&quot;, Formatversion: %2...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2117"/>
@@ -1878,7 +1884,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2130"/>
       <source>Area id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>Bereichs-ID: %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2132"/>
