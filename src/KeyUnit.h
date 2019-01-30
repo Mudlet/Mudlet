@@ -95,7 +95,7 @@ private:
     TKey* getKeyPrivate(int id);
     void initStats();
     void _assembleReport(TKey*);
-    void addKeyRootNode(TKey* pT, int parentPosition = -1, int childPosition = -1);
+    void addKeyRootNode(TKey* pT, int parentPosition = -1, int childPosition = -1, bool moveKey = false);
     void addKey(TKey* pT);
     void removeKeyRootNode(TKey* pT);
     void removeKey(TKey*);
