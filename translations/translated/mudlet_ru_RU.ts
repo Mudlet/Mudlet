@@ -7596,7 +7596,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="186"/>
       <source>Log options</source>
-      <translation>Параметры файла журнала</translation>
+      <translation>Параметры журнала</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="195"/>
@@ -7671,7 +7671,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="521"/>
       <source>React to all keybindings on the same key</source>
-      <translation type="unfinished"/>
+      <translation>Реагировать на все сочетания клавиш на одном и том же ключе</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="531"/>
@@ -7686,7 +7686,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="548"/>
       <source>Command line minimum height in pixels:</source>
-      <translation type="unfinished"/>
+      <translation>Минимальная высота командной строки в пикселях:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="571"/>
@@ -8245,7 +8245,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1748"/>
       <source>Server allowed to redefine these colors</source>
-      <translation>Сервер позволен пересмотреть эти цвета</translation>
+      <translation>Сервер позволен переопределять эти цвета</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1772"/>
