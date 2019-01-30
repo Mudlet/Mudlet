@@ -4847,27 +4847,31 @@ void dlgTriggerEditor::slot_setupPatternControls(int type)
             if (textAnsiFg == TTrigger::scmIgnored) {
                 pPatternItem->pushButton_fgColor->setStyleSheet(QString());
                 pPatternItem->pushButton_fgColor->setText(tr("Foreground color ignored",
-                                                             "Color trigger ignored foreground color button, ensure all threee instances have the same text"));
+                                                             "Color trigger ignored foreground color button, ensure all three instances have the same text"));
             } else if (textAnsiFg == TTrigger::scmDefault) {
                 pPatternItem->pushButton_fgColor->setStyleSheet(QString());
                 pPatternItem->pushButton_fgColor->setText(tr("Default foreground color",
-                                                             "Color trigger default foreground color button, ensure all threee instances have the same text"));
+                                                             "Color trigger default foreground color button, ensure all three instances have the same text"));
             } else {
                 pPatternItem->pushButton_fgColor->setStyleSheet(generateButtonStyleSheet(mpHost->getAnsiColor(textAnsiFg, false)));
-                pPatternItem->pushButton_fgColor->setText(tr("Foreground color [ANSI %1]").arg(QString::number(textAnsiFg)));
+                pPatternItem->pushButton_fgColor->setText(tr("Foreground color [ANSI %1]",
+                                                             "Color trigger ANSI foreground color button, ensure all three instances have the same text")
+                                                          .arg(QString::number(textAnsiFg)));
             }
 
             if (textAnsiBg == TTrigger::scmIgnored) {
                 pPatternItem->pushButton_bgColor->setStyleSheet(QString());
                 pPatternItem->pushButton_bgColor->setText(tr("Background color ignored",
-                                                             "Color trigger ignored background color button, ensure all threee instances have the same text"));
+                                                             "Color trigger ignored background color button, ensure all three instances have the same text"));
             } else if (textAnsiBg == TTrigger::scmDefault) {
                 pPatternItem->pushButton_bgColor->setStyleSheet(QString());
                 pPatternItem->pushButton_bgColor->setText(tr("Default background color",
-                                                             "Color trigger default background color button, ensure all threee instances have the same text"));
+                                                             "Color trigger default background color button, ensure all three instances have the same text"));
             } else {
                 pPatternItem->pushButton_bgColor->setStyleSheet(generateButtonStyleSheet(mpHost->getAnsiColor(textAnsiBg, true)));
-                pPatternItem->pushButton_bgColor->setText(tr("Background color [ANSI %1]").arg(QString::number(textAnsiBg)));
+                pPatternItem->pushButton_bgColor->setText(tr("Background color [ANSI %1]",
+                                                             "Color trigger ANSI background color button, ensure all three instances have the same text")
+                                                          .arg(QString::number(textAnsiBg)));
             }
 
         } /*else {
@@ -4944,30 +4948,30 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                     if (pT->mColorPatternList.at(i)->ansiFg == TTrigger::scmIgnored) {
                         pPatternItem->pushButton_fgColor->setStyleSheet(QString());
                         pPatternItem->pushButton_fgColor->setText(tr("Foreground color ignored",
-                                                                     "Color trigger ignored foreground color button, ensure all threee instances have the same text"));
+                                                                     "Color trigger ignored foreground color button, ensure all three instances have the same text"));
                     } else if (pT->mColorPatternList.at(i)->ansiFg == TTrigger::scmDefault) {
                         pPatternItem->pushButton_fgColor->setStyleSheet(QString());
                         pPatternItem->pushButton_fgColor->setText(tr("Default foreground color",
-                                                                     "Color trigger default foreground color button, ensure all threee instances have the same text"));
+                                                                     "Color trigger default foreground color button, ensure all three instances have the same text"));
                     } else {
                         pPatternItem->pushButton_fgColor->setStyleSheet(generateButtonStyleSheet(pT->mColorPatternList.at(i)->mFgColor));
                         pPatternItem->pushButton_fgColor->setText(tr("Foreground color [ANSI %1]",
-                                                                     "Color trigger ANSI foreground color button, ensure all threee instances have the same text")
+                                                                     "Color trigger ANSI foreground color button, ensure all three instances have the same text")
                                                                      .arg(QString::number(pT->mColorPatternList.at(i)->ansiFg)));
                     }
 
                     if (pT->mColorPatternList.at(i)->ansiBg == TTrigger::scmIgnored) {
                         pPatternItem->pushButton_bgColor->setStyleSheet(QString());
                         pPatternItem->pushButton_bgColor->setText(tr("Background color ignored",
-                                                                     "Color trigger ignored background color button, ensure all threee instances have the same text"));
+                                                                     "Color trigger ignored background color button, ensure all three instances have the same text"));
                     } else if (pT->mColorPatternList.at(i)->ansiBg == TTrigger::scmDefault) {
                         pPatternItem->pushButton_bgColor->setStyleSheet(QString());
                         pPatternItem->pushButton_bgColor->setText(tr("Default background color",
-                                                                     "Color trigger ignored background color button, ensure all threee instances have the same text"));
+                                                                     "Color trigger default background color button, ensure all three instances have the same text"));
                     } else {
                         pPatternItem->pushButton_bgColor->setStyleSheet(generateButtonStyleSheet(pT->mColorPatternList.at(i)->mBgColor));
                         pPatternItem->pushButton_bgColor->setText(tr("Background color [ANSI %1]",
-                                                                     "Color trigger ANSI background color button, ensure all threee instances have the same text")
+                                                                     "Color trigger ANSI background color button, ensure all three instances have the same text")
                                                                   .arg(QString::number(pT->mColorPatternList.at(i)->ansiBg)));
                     }
                 } else {
