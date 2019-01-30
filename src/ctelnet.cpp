@@ -557,7 +557,7 @@ bool cTelnet::sendData(QString& data)
 
     if (mpHost->mAllowToSendCommand) {
         string outData;
-        QString errorMsgTemplate = "[ WARN ]  - Invalid characters in outgoing data, one or more characters cannot\n"
+        auto errorMsgTemplate = "[ WARN ]  - Invalid characters in outgoing data, one or more characters cannot\n"
             "be encoded into the range that is acceptable for the character\n"
             "encoding that is currently set {\"%1\"} for the game server.\n"
             "It may not understand what is sent to it.\n"
@@ -577,7 +577,7 @@ bool cTelnet::sendData(QString& data)
             for (int i = 0, total = data.size(); i < total; ++i) {
                 if ((! mEncodingWarningIssued) && (data.at(i).row() || data.at(i).cell() > 127)){
                 QString errorMsg = tr(errorMsgTemplate, 
-                                      "%1 is the name of the encoding currently set.").arg(QLatin1String("ASCII"));
+                                      "%1 is the name of the encoding currently set.").arg(QStringLiteral("ASCII"));
                     postMessage(errorMsg);
                     mEncodingWarningIssued = true;
                     break;
