@@ -565,7 +565,7 @@ bool cTelnet::sendData(QString& data)
             "the encoding is changed.";
         if (!mEncoding.isEmpty()) {
             if ((! mEncodingWarningIssued) && (! outgoingDataCodec->canEncode(data))) {
-                QString errorMsg = tr("errorMsgTemplate, 
+                QString errorMsg = tr(errorMsgTemplate, 
                                       "%1 is the name of the encoding currently set.").arg(mEncoding);
                 postMessage(errorMsg);
                 mEncodingWarningIssued = true;
@@ -576,8 +576,8 @@ bool cTelnet::sendData(QString& data)
             // Plain, raw ASCII, we hope!
             for (int i = 0, total = data.size(); i < total; ++i) {
                 if ((! mEncodingWarningIssued) && (data.at(i).row() || data.at(i).cell() > 127)){
-                QString errorMsg = tr("errorMsgTemplate, 
-                                      "%1 is the name of the encoding currently set.").arg(QStringLiteral("ASCII"));
+                QString errorMsg = tr(errorMsgTemplate, 
+                                      "%1 is the name of the encoding currently set.").arg(QLatin1String("ASCII"));
                     postMessage(errorMsg);
                     mEncodingWarningIssued = true;
                     break;
