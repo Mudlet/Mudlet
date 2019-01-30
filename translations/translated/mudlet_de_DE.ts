@@ -6819,18 +6819,20 @@ wahrscheinlich weniger nützlich für die normale Verwendung dieser Anwendung si
       <location filename="../src/main.cpp" line="266"/>
       <source>Report bugs to: https://github.com/Mudlet/Mudlet/issues.
 </source>
-      <translation type="unfinished"/>
+      <translation>Berichte Fehler an: https://github.com/Mudlet/Mudlet/issues
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="267"/>
       <source>Project home page: http://www.mudlet.org/.
 </source>
-      <translation type="unfinished"/>
+      <translation>Webseite des Projekts: http://www.mudlet.org/
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="296"/>
       <source>Version: </source>
-      <translation type="unfinished"/>
+      <translation>Version: </translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="356"/>
@@ -6844,19 +6846,30 @@ certain conditions; select the
 &apos;About&apos; item for details.
 
 </source>
-      <translation type="unfinished"/>
+      <translation>
+
+Mudlet wird geliefert
+OHNE JEGLICHE GARANTIE!
+Dies ist freie Software und darf
+gerne weiter verteilt werden unter
+bestimmten Bedingungen; Details finden
+sich im &apos;Über&apos; Mudlet Menu.
+
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="363"/>
       <source>Locating profiles... </source>
-      <translation type="unfinished"/>
+      <translation>Profile auffinden... </translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="388"/>
       <source>Done.
 
 Loading font files... </source>
-      <translation type="unfinished"/>
+      <translation>Fertig.
+
+Lade Schriftdateien... </translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="455"/>
@@ -6867,7 +6880,13 @@ All data has been loaded successfully.
 Starting... Have fun!
 
 </source>
-      <translation type="unfinished"/>
+      <translation>Fertig.
+
+Alle Daten wurden erfolgreich geladen.
+
+Starte... Viel Spaß!
+
+</translation>
     </message>
   </context>
   <context>
@@ -6905,22 +6924,22 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="150"/>
       <source>&lt;p&gt;Configure connection details of, and make a connection to, game servers.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Konfiguriere die Details der Verbindungen und verbinde zu Spielservern.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="158"/>
       <source>&lt;p&gt;Disconnect from the current game server.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Trenne die Verbindung zum aktuellen Spielserver.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="166"/>
       <source>&lt;p&gt;Disconnect and then reconnect to the current game server.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Trenne und verbinde dann wieder zum aktuellen Spielserver.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="174"/>
       <source>&lt;p&gt;Configure setting for the Mudlet application globally and for the current profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Konfiguriere Einstellungen für die Mudlet Anwendung insgesamt und für das aktuelle Profil.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="182"/>
@@ -6930,17 +6949,17 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="190"/>
       <source>&lt;p&gt;Opens a free form text editor window for the active profile that is saved between sessions.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Öffne einen formlosen Texteditor, das im aktiven Profil zwischen den Sitzungen gespeichert wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="198"/>
       <source>&lt;p&gt;Opens the (on-line) Mudlet Wiki, at the API front page, in your system web-browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Öffne das Mudlet Wiki online (auf der API-Startseite) mit dem Webbrowser deines Systems.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="206"/>
       <source>&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Informiere dich über diese Version von Mudlet, die Menschen, die daran beteiligt waren, und die Lizenz, unter der du es teilen kannst.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="214"/>
