@@ -446,7 +446,6 @@ signals:
     void signal_menuBarVisibilityChanged(const controlsVisibility);
     void signal_toolBarVisibilityChanged(const controlsVisibility);
     void signal_showIconsOnMenusChanged(const Qt::CheckState);
-    void signal_updateAvailable();
 
 
 private slots:
@@ -473,7 +472,7 @@ private slots:
     void slot_module_manager_destroyed();
 #if defined(INCLUDE_UPDATER)
     void slot_update_installed();
-    void slot_updateAvailable();
+    void slot_updateAvailable(const int);
 #endif
 
 private:
@@ -532,6 +531,7 @@ private:
     QPointer<QAction> mpActionReplay;
 
     QPointer<QAction> mpActionAbout;
+    QPointer<QToolButton> mpButtonAbout;
     QPointer<QAction> mpActionAliases;
     QPointer<QAction> mpActionButtons;
     QPointer<QAction> mpActionConnect;
