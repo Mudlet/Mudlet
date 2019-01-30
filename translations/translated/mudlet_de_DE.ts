@@ -3672,7 +3672,12 @@ encoding that is currently set {&quot;ASCII&quot;} for the MUD Server.
 It may not understand what is sent to it.
 Note: this warning will only be issued once, even if this happens again, until
 the encoding is changed.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARNUNG ]  - Ungültige Zeichen in den ausgehende Daten. Ein oder mehrere Zeichen 
+können nicht in einen akzeptablen Bereich kodiert werden für die derzeit für diesen 
+Spielserver festgelegte Zeichenkodierung {&quot;{ASCII}&quot;}.
+Er wird vielleicht nicht verstehen, was ihm gesendet wird.
+Hinweis: Diese Warnung wird nur einmal angezeigt, selbst wenn es wieder passiert, bis
+die Kodierung geändert wird.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1314"/>
@@ -3812,32 +3817,32 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="252"/>
       <source>Red (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Rot (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="262"/>
       <source>Green (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Grün (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="272"/>
       <source>Blue (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Blau (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="282"/>
       <source>16 + 36 x R + 6 x G + B =</source>
-      <translation type="unfinished"/>
+      <translation>16 + 36 x R + 6 x G + B =</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="343"/>
       <source>[16]</source>
-      <translation type="unfinished"/>
+      <translation>[16]</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="353"/>
       <source>Set to RGB value</source>
-      <translation type="unfinished"/>
+      <translation>Wähle den RGB-Wert</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="363"/>
@@ -3847,22 +3852,22 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="375"/>
       <source>Gray (0-23)</source>
-      <translation type="unfinished"/>
+      <translation>Grau (0-23)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="382"/>
       <source>232 + Gr =</source>
-      <translation type="unfinished"/>
+      <translation>232 + Gr =</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="414"/>
       <source>[232]</source>
-      <translation type="unfinished"/>
+      <translation>[232]</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="424"/>
       <source>Set to Grayscale value</source>
-      <translation type="unfinished"/>
+      <translation>Wähle Graustufen-Wert</translation>
     </message>
   </context>
   <context>
@@ -4036,7 +4041,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="43"/>
       <source>&lt;p&gt;Select Style, Color and whether to end the line with an arrow head.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wählen Sie den Stil, die Farbe und ob die Linie mit einem Pfeil enden soll.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="122"/>
@@ -4099,17 +4104,17 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="47"/>
       <source>&lt;p&gt;Selecting an exit immediately proceeds to drawing the first line segment from the centre point of the room.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Einen Ausgang auswählen führt unmittelbar dazu, dass das erste Liniensegment ab der Mitte des Raums gezeichnet wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="60"/>
       <source>&lt;p&gt;Select Style, Color and whether to end the line with an arrow head BEFORE then choosing the exit to draw the line for...&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle ZUERST Design und Farbe der Linie, und ob das Ende eine Pfeilspitze haben soll, dann wähle den Ausgang zu dem du die Linie zeichnen willst...&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="187"/>
       <source>&lt;p&gt;Select a normal exit to commence drawing a line for it, buttons are shown depressed if they already have such a custom line and disabled if there is not exit in that direction.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle einen normalen Ausgang, um das Zeichnen einer Linie dorthin zu beginnen. Die Buttons sehen gedrückt aus, wenn es sie schon so eine benutzerdefinierte Linie haben, und sind deaktiviert, wenn es keinen Ausgang in die Richtung gibt.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="190"/>
@@ -4179,12 +4184,12 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="444"/>
       <source>&lt;p&gt;Select a special exit to commence drawing a line for it, the first column is checked if the exit already has such a custom line.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle einen besonderen Ausgang, um das Zeichnen einer Linie dorthin zu beginnen. Die erste Spalte ist markiert, wenn der Ausgang schon so eine benutzerdefinierte Linie hat.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="503"/>
       <source>&lt;p&gt;Indicates if there is already a custom line for this special exit, will be replaced if the exit is selected.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Gibt an, ob es schon eine benutzerdefinierte für diesen besonderen Ausgang gibt. Dieser wird ersetzt, wenn der Ausgang gewählt wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="514"/>
@@ -4194,12 +4199,13 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="525"/>
       <source>&lt;p&gt;The command or LUA script that goes to the given room.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Der Befehl oder das LUA Skript, das in den gegebenen Raum führt.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="561"/>
       <source>&lt;p&gt;To remove a custom line: cancel this dialog, select the line and right-click to obtain a &amp;quot;delete&amp;quot; option.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Um eine benutzerdefinierte Linie zu entfernen, breche diesen Dialog ab,
+wähle die Linie und rechtsklicke für die Möglichkeit zu &quot;löschen&quot;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="447"/>
@@ -4447,17 +4453,17 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="52"/>
       <source>More colors</source>
-      <translation type="unfinished"/>
+      <translation>Weitere Farben</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="54"/>
       <source>Click to access all 256 ANSI colors.</source>
-      <translation type="unfinished"/>
+      <translation>Klicke für Zugriff auf alle 256 ANSI-Farben.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
       <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s background color - however chosing this for both this and the foreground is an error.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Klicke, damit der Farbtrigger die Hintergrundfarbe des Textes ignoriert - allerdings wäre es ein Fehler, die sowohl für Vordergrund- und Hintergrundfarbe auszuwählen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="60"/>
@@ -6511,42 +6517,42 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <location filename="../src/dlgTriggerEditor.cpp" line="7933"/>
       <source>Foreground color ignored</source>
       <comment>Color trigger ignored foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Vordergrundfarbe ignoriert</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7936"/>
       <source>Default foreground color</source>
       <comment>Color trigger default foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Standard-Vordergrundfarbe</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7939"/>
       <source>Foreground color [ANSI %1]</source>
       <comment>Color trigger ANSI foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Vordergrundfarbe [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7978"/>
       <source>Select background trigger color for item %1</source>
-      <translation type="unfinished"/>
+      <translation>Wähle die Hintergrundfarbe, bei der Element %1 auslösen soll</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7996"/>
       <source>Background color ignored</source>
       <comment>Color trigger ignored background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Hintergrundfarbe ignoriert</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7999"/>
       <source>Default background color</source>
       <comment>Color trigger default background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Standard-Hintergrundfarbe</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8002"/>
       <source>Background color [ANSI %1]</source>
       <comment>Color trigger ANSI background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Hintergrundfarbe [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8027"/>
@@ -6960,32 +6966,32 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="259"/>
       <source>&lt;p&gt;Show or hide the game map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zeige oder verstecke die Karte des Spiels.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="267"/>
       <source>&lt;p&gt;Install and remove collections of Mudlet lua items (packages).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Installiere und entferne Sammlungen von Mudlet Lua-Elementen (Pakete).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="275"/>
       <source>&lt;p&gt;Install and remove (share- &amp; sync-able) collections of Mudlet lua items (modules).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Installiere und entferne (gemeinsam nutzbare und synchronisierbare) Sammlungen von Mudlet Lua-Elementen (Module).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="283"/>
       <source>&lt;p&gt;Gather and bundle up collections of Mudlet Lua items and other reasources into a module.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Sammle und bündle einige Mudlet Lua-Elemente und anderen Ressourcen in ein Modul.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="291"/>
       <source>&lt;p&gt;Share the screen area between multiple open profiles.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Teile den Bildschirm zwischen mehreren offenen Profilen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="299"/>
       <source>&lt;p&gt;Hide or show the search area and the bottom buttons to the right of the input area on the input line.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zeige oder verstecke den Suchbereich und die Schaltflächen unten rechts neben dem Eingabefeld in der Eingabezeile.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="155"/>
@@ -7595,7 +7601,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="1603"/>
       <source>User window - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Benutzerfenster - %1 - %2</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2988"/>
