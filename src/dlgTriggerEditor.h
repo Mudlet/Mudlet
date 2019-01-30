@@ -396,8 +396,6 @@ private:
     void clearEditorNotification() const;
     void runScheduledCleanReset();
     void autoSave();
-    // Helper to color the text in (and possible the control value) that the pattern area:
-    QString itemTypeStyleSheet(const int);
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
 
 

@@ -4719,11 +4719,6 @@ void dlgTriggerEditor::saveKey()
     }
 }
 
-QString dlgTriggerEditor::itemTypeStyleSheet(const int type)
-{
-    return QString();
-}
-
 void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdit* pItem)
 {
     switch (type) {
@@ -4868,10 +4863,6 @@ void dlgTriggerEditor::slot_setupPatternControls(int type)
             pPatternItem->lineEdit_pattern->clear();
         }
     }
-    // Now sets both foreground and the opposite color background to avoid text
-    // being lost with a dark desktop environment or hopefully not being
-    // readable by those with partial color blindness.
-    pPatternItem->lineEdit_pattern->setStyleSheet(itemTypeStyleSheet(type));
 }
 
 void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
