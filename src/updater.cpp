@@ -214,7 +214,7 @@ void Updater::setupOnLinux()
     });
 
     // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
-    updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed, nullptr, settings);
+    updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, nullptr, settings);
     mpInstallOrRestart->setText(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::installOrRestartClicked);
