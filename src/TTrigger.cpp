@@ -209,7 +209,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
                     TDebug(QColor(Qt::red), QColor(Qt::gray)) << R"(in: ")" << regexp.constData() << "\"\n" >> 0;
                 }
                 setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
-                                 .arg(tr(R"(Error: in item %1, perl regex: "%2", it failed to compile, reason: "%3".)").arg(QString::number(i), regexp.constData(), error)));
+                                 .arg(tr(R"(Error: in item %1, perl regex: "%2", it failed to compile, reason: "%3".)").arg(QString::number(i + 1), regexp.constData(), error)));
                 state = false;
             } else {
                 if (mudlet::debugMode) {
