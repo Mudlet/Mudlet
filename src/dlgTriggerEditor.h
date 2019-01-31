@@ -418,7 +418,6 @@ private:
     QTreeWidgetItem* mpCurrentTriggerItem;
     QTreeWidgetItem* mpCurrentAliasItem;
     QTreeWidgetItem* mpCurrentVarItem;
-// Not used:    QLineEdit* mpCursorPositionIndicator;
 
     int mCurrentView;
 
