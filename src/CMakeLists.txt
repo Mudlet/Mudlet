@@ -234,8 +234,6 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(PCRE_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "PCRE install directory.")
-
 set(YAJL_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "YAJL install directory.")
 
 set(ZIP_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "ZIP install directory.")
@@ -404,7 +402,6 @@ include_directories(
     ${Qt5UiTools_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIRS}
     ${LUA_INCLUDE_DIR}
-    ${PCRE_INCLUDE_DIR}
     ${YAJL_INCLUDE_DIR}
     ${PUGIXML_INCLUDE_DIR}
 )
@@ -469,13 +466,13 @@ target_link_libraries(mudlet
     ${Boost_LIBRARIES}
     ${LUA_LIBRARIES}
     ${OPENGL_LIBRARIES}
-    ${PCRE_LIBRARIES}
     ${YAJL_LIBRARIES}
     ${ZLIB_LIBRARIES}
     ${PUGIXML_LIBRARIES}
     communi
     edbee-lib
     HUNSPELL::SHARED
+    PCRE::SHARED
 )
 
 if(Qt5TextToSpeech_FOUND)
