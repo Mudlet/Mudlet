@@ -4719,29 +4719,6 @@ void dlgTriggerEditor::saveKey()
     }
 }
 
-QString dlgTriggerEditor::itemTypeStyleSheet(const int type)
-{
-    switch (type) {
-    case REGEX_PERL:                    return QLatin1String("QLineEdit { background-color: #FFFF00; color: #0000FF; }");
-    case REGEX_BEGIN_OF_LINE_SUBSTRING: return QLatin1String("QLineEdit { background-color: #00FFFF; color: #FF0000; }");
-    case REGEX_EXACT_MATCH:             return QLatin1String("QLineEdit { background-color: #FF00FF; color: #00FF00; }");
-    case REGEX_LUA_CODE:                return QLatin1String("QLineEdit { background-color: #FF0000; color: #00FFFF; }");
-    case REGEX_LINE_SPACER:             return QLatin1String("QLineEdit { background-color: #00FF00; color: #FF00FF; }");
-    case REGEX_COLOR_PATTERN: // Text is never shown so the style is not changed
-        [[clang::fallthrough]];
-    case REGEX_PROMPT: // Text is never shown so the style is not changed
-        [[clang::fallthrough]];
-    case REGEX_SUBSTRING:
-        // The substring one is used by default so has to use the default style
-        // so as not to paint the empty items differently to ones that have
-        // been used in other triggers and never changed
-        [[clang::fallthrough]];
-    default:
-        return QString();
-    }
-
-}
-
 void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdit* pItem)
 {
     switch (type) {
@@ -4886,10 +4863,6 @@ void dlgTriggerEditor::slot_setupPatternControls(int type)
             pPatternItem->lineEdit_pattern->clear();
         }
     }
-    // Now sets both foreground and the opposite color background to avoid text
-    // being lost with a dark desktop environment or hopefully not being
-    // readable by those with partial color blindness.
-    pPatternItem->lineEdit_pattern->setStyleSheet(itemTypeStyleSheet(type));
 }
 
 void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
