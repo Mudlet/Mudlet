@@ -229,7 +229,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
             QString error;
             if (!mpLua->compile(code, error, QString::fromStdString(funcName))) {
                 setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
-                                 .arg(tr(R"(Error: in item %1, lua condition function "%2" failed to compile, reason:%3.)").arg(QString::number(i + 1), regexList.at(i), error)));
+                                 .arg(tr(R"(Error: in item %1, lua condition function "%2" failed to compile, reason: "%3".)").arg(QString::number(i + 1), regexList.at(i), error)));
                 state = false;
                 if (mudlet::debugMode) {
                     TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA ERROR: failed to compile, reason:\n" << error << "\n" >> 0;
