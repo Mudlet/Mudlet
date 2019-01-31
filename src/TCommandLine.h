@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2018-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -29,14 +29,15 @@
 #include <QPointer>
 #include <QString>
 #include <QStringList>
+#include <QTextDecoder>
 #include "post_guard.h"
 
+#include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
 
 class TConsole;
 class KeyUnit;
 class Host;
-class TConsole;
 
 
 class TCommandLine : public QPlainTextEdit //QLineEdit
@@ -49,49 +50,52 @@ public:
     ~TCommandLine();
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
+
+
     QPalette mRegularPalette;
 
+
 private:
-    QString mLastCompletion;
+    bool event(QEvent*) override;
+    void mousePressEvent(QMouseEvent*) override;
     void handleAutoCompletion();
     void spellCheck();
-    void handleTabCompletion(bool direction);
-    void historyUp(QKeyEvent* event);
-    void historyDown(QKeyEvent* event);
-    bool event(QEvent* event) override;
-    void enterCommand(QKeyEvent* event);
+    void handleTabCompletion(bool);
+    void historyUp(QKeyEvent*);
+    void historyDown(QKeyEvent*);
+    void enterCommand(QKeyEvent*);
     void adjustHeight();
-    void mousePressEvent(QMouseEvent* event) override;
     void processNormalKey(QEvent*);
     bool processPotentialKeyBinding(QKeyEvent*);
 
-    int mHistoryBuffer;
-    QStringList mHistoryList;
-    QMap<QString, int> mHistoryMap;
-    bool mAutoCompletion;
-    bool mTabCompletion;
+
     QPointer<Host> mpHost;
+    KeyUnit* mpKeyUnit;
+    TConsole* mpConsole;
+    QString mLastCompletion;
     int mTabCompletionCount;
     int mAutoCompletionCount;
     QString mTabCompletionTyped;
-    QString mAutoCompletionTyped;
     bool mUserKeptOnTyping;
-
-    QPalette mTabCompletionPalette;
-    QPalette mAutoCompletionPalette;
-    KeyUnit* mpKeyUnit;
-    TConsole* mpConsole;
-    QString mSelectedText;
-    int mSelectionStart;
-    QString mTabCompletionOld;
-    Hunhandle* mpHunspell;
-    QPoint mPopupPosition;
-    int mHunspellSuggestionNumber;
-    char** mpHunspellSuggestionList;
 
 
 public slots:
     void slot_popupMenu();
+    void slot_changeSpellDict(const QString&);
+
+
+private:
+    int mHistoryBuffer;
+    QStringList mHistoryList;
+    QString mSelectedText;
+    int mSelectionStart;
+    QString mTabCompletionOld;
+    QPoint mPopupPosition;
+    Hunhandle* mpHunspell;
+    QByteArray mHunspellCodecName;
+    QTextCodec* mpHunspellCodec;
+    int mHunspellSuggestionNumber;
+    char** mpHunspellSuggestionList;
 };
 
 #endif // MUDLET_TCOMMANDLINE_H
