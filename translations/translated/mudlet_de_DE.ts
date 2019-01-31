@@ -4194,7 +4194,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="514"/>
       <source>&lt;p&gt;The room this special exit leads to.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Der Raum, zu dem dieser spezielle Ausgang führt.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="525"/>
@@ -4468,32 +4468,32 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="60"/>
       <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s foreground color - however chosing this for both this and the background is an error.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Klicke, damit der Farbtrigger die Vordergrundfarbe des Textes ignoriert - allerdings wäre es ein Fehler, die sowohl für Vordergrund- und Hintergrundfarbe auszuwählen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="64"/>
       <source>Default</source>
-      <translation type="unfinished"/>
+      <translation>Standard</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="66"/>
       <source>&lt;p&gt;Click to make the color trigger when the text&apos;s background color has not been modified from its normal value.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Klicke hier, um den Trigger auszulösen, wenn die Hintergrundfarbe des Textes nicht vom Normalwert geändert wurde.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="67"/>
       <source>&lt;p&gt;Click to make the color trigger when the text&apos;s foreground color has not been modified from its normal value.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Klicke hier, um den Trigger auszulösen, wenn die Vordergrundfarbe des Textes nicht vom Normalwert geändert wurde.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="71"/>
       <source>&lt;p&gt;Click a color to make the trigger fire only when the text&apos;s background color matches the color number indicated.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle eine Farbe, um den Trigger nur dann auszulösen, wenn die Hintergrundfarbe des Textes mit der angegebenen Farbnummer übereinstimmt.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="72"/>
       <source>&lt;p&gt;Click a color to make the trigger fire only when the text&apos;s foreground color matches the color number indicated.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle eine Farbe, um den Trigger nur dann auszulösen, wenn die Vordergrundfarbe des Textes mit der angegebenen Farbnummer übereinstimmt.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="77"/>
@@ -4533,12 +4533,12 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="84"/>
       <source>White (Light gray)</source>
-      <translation type="unfinished"/>
+      <translation>Weiß (Hellgrau)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="86"/>
       <source>Light black (Dark gray)</source>
-      <translation type="unfinished"/>
+      <translation>Hellschwarz (Dunkelgrau)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="87"/>
@@ -4584,7 +4584,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="405"/>
       <source>All color options are showing.</source>
-      <translation type="unfinished"/>
+      <translation>Alle Farboptionen werden angezeigt.</translation>
     </message>
   </context>
   <context>
@@ -4613,7 +4613,7 @@ Nutzungen</translation>
       <location filename="../src/dlgConnectionProfiles.cpp" line="64"/>
       <source>&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;Welcome to Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;b&gt;Click on one of the games on the list to play.&lt;/b&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;To play a game not in the list, click on %1 &lt;span style=&quot; color:#555753;&quot;&gt;New&lt;/span&gt;, fill in the &lt;i&gt;Profile Name&lt;/i&gt;, &lt;i&gt;Server address&lt;/i&gt;, and &lt;i&gt;Port&lt;/i&gt; fields in the &lt;i&gt;Required &lt;/i&gt; area.&lt;/p&gt;&lt;p&gt;After that, click %2 &lt;span style=&quot; color:#555753;&quot;&gt;Connect&lt;/span&gt; to play.&lt;/p&gt;&lt;p&gt;Have fun!&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;The Mudlet Team &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</source>
       <comment>Welcome message. Both %1 and %2 may be replaced by icons when this text is used.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;Willkommen bei Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;b&gt;Klicke zum Spielen auf eines der Spiele aus der Liste.&lt;/b&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;Um ein Spiel zu spielen, das nicht aufgelistet ist, klicke auf %1 &lt;span style=&quot; color:#555753;&quot;&gt;Neu&lt;/span&gt;, fülle die Felder &lt;i&gt;Profilname&lt;/i&gt;, &lt;i&gt;Serveradresse&lt;/i&gt;, und &lt;i&gt;Port&lt;/i&gt; unter &lt;i&gt;Benötigt&lt;/i&gt; aus.&lt;/p&gt;&lt;p&gt;Klicke danach auf %2 &lt;span style=&quot; color:#555753;&quot;&gt;Verbinden&lt;/span&gt; zum Spielen.&lt;/p&gt;&lt;p&gt;Viel Spaß!&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;Das Mudlet Team &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="386"/>
