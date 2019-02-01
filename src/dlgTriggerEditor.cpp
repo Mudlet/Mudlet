@@ -8208,7 +8208,7 @@ QColor dlgTriggerEditor::parseButtonStyleSheetColors(const QString& styleSheetTe
             case 9: // RRRGGGBBB
                 [[clang::fallthrough]];
             case 12: // RRRRGGGGBBBB
-                return QColor(match.captured(1));
+                return QColor(match.captured(1).prepend(QLatin1Char('#')));
 
             default:
             // case 8: // AARRGGBB - Invalid here
@@ -8242,7 +8242,7 @@ QColor dlgTriggerEditor::parseButtonStyleSheetColors(const QString& styleSheetTe
             case 9: // RRRGGGBBB
                 [[clang::fallthrough]];
             case 12: // RRRRGGGGBBBB
-                return QColor(match.captured(1));
+                return QColor(match.captured(1).prepend(QLatin1Char('#')));
 
             default:
             // case 8: // AARRGGBB - Invalid here
