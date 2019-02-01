@@ -533,24 +533,14 @@ void TCommandLine::spellCheck()
     QTextCursor c = textCursor();
     c.select(QTextCursor::WordUnderCursor);
     QByteArray encodedText = mpHunspellCodec->fromUnicode(c.selectedText());
-    // By including the hunspell C++ header before the C one we get access to
-    // some possible useful #define constants, however HUNSPELL_OK_WARN did
-    // not seem to be associated with "bad" (obsence?) words as originally
-    // thought:
-    int spellCheckResult = Hunspell_spell(mpHunspell, encodedText.constData());
-    if (spellCheckResult == HUNSPELL_OK) {
-        // Word is spelt correctly
-        f.setFontUnderline(false);
-    } else if (spellCheckResult == HUNSPELL_OK_WARN) {
-        // Word is wrong somehow - but in what manner is not clear at present:
-        f.setUnderlineStyle(QTextCharFormat::DashDotLine);
-        f.setUnderlineColor(Qt::blue);
-        f.setFontUnderline(true);
-    } else {
+    if (!Hunspell_spell(mpHunspell, encodedText.constData())) {
         // Word is misspelt
         f.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
         f.setUnderlineColor(Qt::red);
         f.setFontUnderline(true);
+    } else {
+        // Word is spelt correctly
+        f.setFontUnderline(false);
     }
     c.setCharFormat(f);
     setTextCursor(c);
@@ -583,8 +573,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
         QTextCursor c = cursorForPosition(event->pos());
         c.select(QTextCursor::WordUnderCursor);
         QByteArray encodedText = mpHunspellCodec->fromUnicode(c.selectedText());
-        int spellCheckResult = Hunspell_spell(mpHunspell, encodedText.constData());
-        if (!spellCheckResult) {
+        if (!Hunspell_spell(mpHunspell, encodedText.constData())) {
             // The word is NOT in the dictionary:
             char** sl;
             auto separator = popup->actions().first();
@@ -611,25 +600,10 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
             mpHunspellSuggestionList = sl;
             popup->insertActions(separator, spellings);
-        } else if (spellCheckResult == HUNSPELL_OK_WARN) {
-            // Word is spelt correctly but for some reason Hunspell says it is
-            // wrong in some way:
-            auto separator = popup->actions().first();
-            separator = popup->insertSeparator(separator);
-            auto pA = new QAction(tr("word is not okay",
-                                     // Intentional comment
-                                     "Used when the command spelling checker reports that a word is spelt correctly "
-                                     "but it is unhappy about it, the coder thought that it meant it was obscene or "
-                                     "otherwise unsafe to use but testing has not proved that to be the case; "
-                                     "nevertheless the Hunspell checker has gone to the extent of reporting that "
-                                     "there is a problem with this word - we just do not know what that is!"));
-            pA->setEnabled(false);
-            pA->setIcon(QIcon(QStringLiteral(":/icons/dialog-warning.png")));
-            popup->insertAction(separator, pA);
         }
         // else the word is in the dictionary - in either case show the context
-        // menu - either the one with the prefixed spellings, the warning or
-        // the standard one:
+        // menu - either the one with the prefixed spellings, or the standard
+        // one:
 
         mPopupPosition = event->pos();
         popup->popup(event->globalPos());
