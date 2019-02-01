@@ -193,8 +193,8 @@ int main(int argc, char* argv[])
     auto * app = qobject_cast<QApplication*>(initApp.data());
 
 #ifdef Q_OS_UNIX
-    auto dpi = app->primaryScreen()->devicePixelRatio();
-    if (dpi > 1) {
+    auto dpi = app->primaryScreen()->physicalDotsPerInch();
+    if (dpi > 200) {
         QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     }
 #endif
