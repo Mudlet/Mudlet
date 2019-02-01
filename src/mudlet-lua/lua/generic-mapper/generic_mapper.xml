@@ -115,8 +115,10 @@ end</script>
 					<string>^You are blocked by .*$</string>
 					<string>^There is no exit in that direction.$</string>
 					<string>^The .* is locked.$</string>
+					<string>^Alas, you cannot go that way\.\.\.$</string>
 				</regexCodeList>
 				<regexCodePropertyList>
+					<integer>1</integer>
 					<integer>1</integer>
 					<integer>1</integer>
 					<integer>1</integer>
