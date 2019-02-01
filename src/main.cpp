@@ -32,6 +32,7 @@
 #endif // defined(Q_OS_WIN32) && ! defined(INCLUDE_UPDATER)
 #include <QPainter>
 #include <QSplashScreen>
+#include <QScreen>
 #include "post_guard.h"
 
 
@@ -188,12 +189,15 @@ int main(int argc, char* argv[])
     spDebugConsole = nullptr;
     unsigned int startupAction = 0;
 
-#ifdef Q_OS_UNIX
-    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-#endif
-
     QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction));
     auto * app = qobject_cast<QApplication*>(initApp.data());
+
+#ifdef Q_OS_UNIX
+    auto dpi = app->primaryScreen()->devicePixelRatio();
+    if (dpi > 1) {
+        QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    }
+#endif
 
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
