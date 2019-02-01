@@ -188,10 +188,6 @@ int main(int argc, char* argv[])
     spDebugConsole = nullptr;
     unsigned int startupAction = 0;
 
-#ifdef Q_OS_UNIX
-    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-#endif
-
     QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction));
     auto * app = qobject_cast<QApplication*>(initApp.data());
 
