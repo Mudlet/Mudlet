@@ -1022,7 +1022,15 @@ void mudlet::slot_close_profile_requested(int tab)
     pH->closingDown();
 
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
+#if defined (Q_OS_WIN32)
+    if (pH->mSslTsl) {
+        pH->mTelnet.abortConnection();
+    } else {
+        pH->mTelnet.disconnect();
+    }
+#else
     pH->mTelnet.disconnect();
+#endif
 
     pH->stopAllTriggers();
     pH->mpEditorDialog->close();

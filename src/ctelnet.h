@@ -131,6 +131,7 @@ public:
     ~cTelnet();
     void connectIt(const QString& address, int port);
     void disconnect();
+    void abortConnection();
     bool sendData(QString& data);
     void setATCPVariables(const QByteArray&);
     void setGMCPVariables(const QByteArray&);
