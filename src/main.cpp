@@ -188,7 +188,9 @@ int main(int argc, char* argv[])
     spDebugConsole = nullptr;
     unsigned int startupAction = 0;
 
-#ifdef Q_OS_UNIX
+    // due to a Qt bug, this only safely works for both non- and HiDPI displays on 5.12+
+    // 5.6 - 5.11 make the application blow up in size on non-HiDPI displays
+#if defined (Q_OS_UNIX) && (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
 
