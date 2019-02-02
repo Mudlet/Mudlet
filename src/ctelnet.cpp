@@ -376,6 +376,12 @@ void cTelnet::disconnect()
 
 }
 
+void cTelnet::abortConnection()
+{
+    mDontReconnect = true;
+    socket.abort();
+}
+
 void cTelnet::handle_socket_signal_error()
 {
     QString err = tr("[ ERROR ] - TCP/IP socket ERROR:") % socket.errorString();
