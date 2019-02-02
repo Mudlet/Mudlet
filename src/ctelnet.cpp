@@ -1640,9 +1640,9 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
     // remove \r's from the data, as yajl doesn't like it
     data.remove(QChar::CarriageReturn);
 
-    if (transcodedMsg.startsWith(QLatin1String("External.Discord.Status"))
-        || transcodedMsg.startsWith(QLatin1String("External.Discord.Info"))) {
-        mpHost->processDiscordGMCP(transcodedMsg, data);
+    if (packageMessage.startsWith(QLatin1String("External.Discord.Status"))
+        || packageMessage.startsWith(QLatin1String("External.Discord.Info"))) {
+        mpHost->processDiscordGMCP(packageMessage, data);
     }
 
     mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
