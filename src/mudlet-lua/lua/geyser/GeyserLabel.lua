@@ -526,7 +526,10 @@ function Geyser.Label:new (cons, container)
   if me.onLeave then
     me:setOnLeave(me.onLeave, me.args)
   end
-
+  
+  -- Set clickthrough if included in constructor
+  if cons.clickthrough then me:enableClickthrough() end
+  
   --print("  New in " .. self.name .. " : " .. me.name)
   return me
 end
@@ -618,6 +621,16 @@ function Geyser.Label:addChild(cons, container)
   table.insert(self.nestedLabels, me)
   me:hide()
   return me
+end
+
+--- Sets label to no longer intercept mouse events
+function Geyser.Label:enableClickthrough()
+  enableClickthrough(self.name)
+end
+
+--- Sets label to once again intercept mouse events
+function Geyser.Label:disableClickthrough()
+  disableClickthrough(self.name)
 end
 
 ---

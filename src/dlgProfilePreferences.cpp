@@ -56,6 +56,20 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 {
     // init generated dialog
     setupUi(this);
+ 
+    QPixmap holdPixmap;
+
+    holdPixmap = *(this->notificationAreaIconLabelWarning->pixmap());
+    holdPixmap.setDevicePixelRatio(5.3);
+    this->notificationAreaIconLabelWarning->setPixmap(holdPixmap);
+
+    holdPixmap = *(this->notificationAreaIconLabelError->pixmap());
+    holdPixmap.setDevicePixelRatio(5.3);
+    this->notificationAreaIconLabelError->setPixmap(holdPixmap);
+
+    holdPixmap = *(this->notificationAreaIconLabelInformation->pixmap());
+    holdPixmap.setDevicePixelRatio(5.3);
+    this->notificationAreaIconLabelInformation->setPixmap(holdPixmap);
 
     // The groupBox_debug is no longer empty, (it contains
     // checkBox_showIconsOnMenus) so can no longer be "hidden until needed"
@@ -179,7 +193,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     // Set the tooltip on the containing widget so both the label and the
     // control have the same tool-tip:
-    widget_timerDebugOutputMinimumInterval->setToolTip(tr("<p>A timer will a short interval will quickly fill up the <i>Central Debug Console</i> "
+    widget_timerDebugOutputMinimumInterval->setToolTip(tr("<p>A timer with a short interval will quickly fill up the <i>Central Debug Console</i> "
                                                           "windows with messages that it ran correctly on <i>each</i> occasion it is called.  This (per profile) "
                                                           "control adjusts a threshold that will hide those messages in just that window for those timers which "
                                                           "run <b>correctly</b> when the timer's interval is less than this setting.</p>"
@@ -1803,21 +1817,15 @@ void dlgProfilePreferences::saveMap()
                            // Just in case is needed to make the above message
                            // show up when saving big maps
 
-    // Temporarily use whatever version is currently set
-    int oldSaveVersionFormat = pHost->mpMap->mSaveVersion;
-    pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
-
     // Ensure the setting is already made as the saveMap(...) uses the set value
     bool showAuditErrors = mudlet::self()->showMapAuditErrors();
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
-    if (pHost->mpConsole->saveMap(fileName)) {
+    if (pHost->mpConsole->saveMap(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt())) {
         label_mapFileActionResult->setText(tr("Saved map to %1.").arg(fileName));
     } else {
         label_mapFileActionResult->setText(tr("Could not save map to %1.").arg(fileName));
     }
-    // Then restore prior version
-    pHost->mpMap->mSaveVersion = oldSaveVersionFormat;
     mudlet::self()->setShowMapAuditErrors(showAuditErrors);
 
     QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);

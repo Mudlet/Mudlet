@@ -7,7 +7,6 @@
         <file>echo.xml</file>
         <file>edbee_defaults/Lua.tmLanguage</file>
         <file>edbee_defaults/Mudlet.tmTheme</file>
-        <file>generic_mapper_script.xml</file>
         <file>icons/120x30RoDLogo.png</file>
         <file>icons/3klogo.png</file>
         <file>icons/3slogo.png</file>
@@ -113,6 +112,7 @@
         <file>icons/media-tape.png</file>
         <file>icons/midnightsun2.png</file>
         <file>icons/module-manager.png</file>
+        <file>icons/mudlet_color.png</file>
         <file>icons/mudlet_configure.png</file>
         <file>icons/mudlet_custom_exit.png</file>
         <file>icons/mudlet_custom_exit_properties.png</file>
@@ -174,5 +174,6 @@
         <file>ui/package_manager.ui</file>
         <file>ui/package_manager_unpack.ui</file>
         <file>ui/set_room_area.ui</file>
+        <file>mudlet-lua/lua/generic-mapper/generic_mapper.xml</file>
     </qresource>
 </RCC>
