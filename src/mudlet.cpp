@@ -2735,7 +2735,7 @@ void mudlet::slot_show_connection_dialog()
     connect(pDlg, &dlgConnectionProfiles::signal_establish_connection, this, &mudlet::slot_connection_dlg_finished);
     pDlg->fillout_form();
 
-    connect(pDlg, &QDialog::accepted, [=]() { enableToolbarButtons(); });
+    connect(pDlg, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
     pDlg->setAttribute(Qt::WA_DeleteOnClose);
     pDlg->show();
 }
@@ -4026,7 +4026,7 @@ void mudlet::slot_update_installed()
     disconnect(dactionUpdate, &QAction::triggered, this, nullptr);
 
     // rejig to restart Mudlet instead
-    QObject::connect(dactionUpdate, &QAction::triggered, [=]() {
+    QObject::connect(dactionUpdate, &QAction::triggered, this, [=]() {
         forceClose();
         QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
     });
