@@ -555,7 +555,11 @@ void TCommandLine::slot_popupMenu()
     if (!pA) {
         return;
     }
+#if defined(Q_OS_FREEBSD)
+    QString t = pA->data().toString();
+#else
     QString t = pA->text();
+#endif
     QTextCursor c = cursorForPosition(mPopupPosition);
     c.select(QTextCursor::WordUnderCursor);
 
@@ -586,6 +590,14 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             if (mHunspellSuggestionNumber) {
                 for (int i = 0; i < mHunspellSuggestionNumber; ++i) {
                     auto pA = new QAction(mpHunspellCodec->toUnicode(sl[i]));
+#if defined(Q_OS_FREEBSD)
+                    // Adding the text afterwards as user data as well as in the
+                    // constructor is to fix a bug(?) in FreeBSD that
+                    // automagically adds a '&' somewhere in the text to be a
+                    // shortcut - but doesn't show it and forgets to remove
+                    // it when asked for the text later:
+                    pA->setData(mpHunspellCodec->toUnicode(sl[i]));
+#endif
                     connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
                     spellings << pA;
                 }
