@@ -70,7 +70,7 @@ class TTrigger : public Tree<TTrigger>
 public:
     virtual ~TTrigger();
     TTrigger(TTrigger* parent, Host* pHost);
-    TTrigger(const QString& name, QStringList regexList, QList<int> regexPropertyList, bool isMultiline, Host* pHost); //throws exception ExObjNoCreate
+    TTrigger(const QString& name, const QStringList& regexList, const QList<int>& regexPropertyList, bool isMultiline, Host* pHost); //throws exception ExObjNoCreate
 
     // Used as ANSI color code for either fore or back ground in color triggers
     // that is not considered when checking the color - both being set to this

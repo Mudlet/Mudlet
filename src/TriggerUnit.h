@@ -72,7 +72,7 @@ public:
     void markCleanup(TTrigger* pT);
     void doCleanup();
     void uninstall(const QString&);
-    void _uninstall(TTrigger* pChild, QString packageName);
+    void _uninstall(TTrigger* pChild, const QString& packageName);
 
     int statsTriggerTotal;
     int statsTempTriggers;

@@ -59,8 +59,8 @@ public:
     void doCleanup();
     QString assembleReport();
     int getNewID();
-    void uninstall(QString);
-    void _uninstall(TTimer* pChild, QString packageName);
+    void uninstall(const QString&);
+    void _uninstall(TTimer* pChild, const QString& packageName);
 
 
     QMultiMap<QString, TTimer*> mLookupTable;

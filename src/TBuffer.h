@@ -149,7 +149,7 @@ public:
     int find(int line, const QString& what, int pos);
     int wrap(int);
     QStringList split(int line, const QString& splitter);
-    QStringList split(int line, QRegularExpression splitter);
+    QStringList split(int line, const QRegularExpression& splitter);
     bool replaceInLine(QPoint& start, QPoint& end, const QString& with, TChar& format);
     bool deleteLine(int);
     bool deleteLines(int from, int to);
@@ -258,8 +258,8 @@ private:
     bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
     QString processSupportsRequest(const QString &attributes);
     void decodeSGR(const QString&);
-    void decodeSGR38(QStringList, bool isColonSeparated = true);
-    void decodeSGR48(QStringList, bool isColonSeparated = true);
+    void decodeSGR38(const QStringList&, bool isColonSeparated = true);
+    void decodeSGR48(const QStringList&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
     void resetColors();
 

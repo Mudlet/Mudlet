@@ -42,15 +42,15 @@ signals:
     void signal_establish_connection(QString profile_name, int historyVersion);
 
 public slots:
-    void slot_update_name(QString);
+    void slot_update_name(const QString&);
     void slot_save_name();
     void slot_update_url(const QString &);
-    void slot_update_port(QString);
+    void slot_update_port(const QString&);
     void slot_update_SSL_TSL_port(int state);
     void slot_update_login(const QString &);
     void slot_update_pass(const QString &);
     void slot_update_website(const QString &);
-    void slot_deleteprofile_check(QString);
+    void slot_deleteprofile_check(const QString&);
     void slot_update_description();
 
     void slot_item_clicked(QListWidgetItem*);
@@ -66,7 +66,7 @@ public slots:
     void slot_copy_profile();
 
 private:
-    void copyFolder(QString sourceFolder, QString destFolder);
+    void copyFolder(const QString& sourceFolder, const QString& destFolder);
     QString getDescription(const QString& hostUrl, quint16 port, const QString& profile_name);
     bool validateConnect();
     void updateDiscordStatus();
