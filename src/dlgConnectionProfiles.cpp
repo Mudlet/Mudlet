@@ -232,13 +232,7 @@ void dlgConnectionProfiles::slot_update_url(const QString& url)
         return;
     }
 
-    if (validateProfile()) {
-        QListWidgetItem* pItem = profiles_tree_widget->currentItem();
-        if (!pItem) {
-            return;
-        }
-        QString profile = pItem->text();
-    }
+    validateProfile();
 }
 
 void dlgConnectionProfiles::slot_update_autoreconnect(int state)
@@ -288,24 +282,12 @@ void dlgConnectionProfiles::slot_update_port(const QString ignoreBlank)
         return;
     }
 
-    if (validateProfile()) {
-        QListWidgetItem* pItem = profiles_tree_widget->currentItem();
-        if (!pItem) {
-            return;
-        }
-        QString profile = pItem->text();
-    }
+    validateProfile();
 }
 
 void dlgConnectionProfiles::slot_update_SSL_TSL_port(int state)
 {
-    if (validateProfile()) {
-        QListWidgetItem* pItem = profiles_tree_widget->currentItem();
-        if (!pItem) {
-            return;
-        }
-        QString profile = pItem->text();
-    }
+    validateProfile();
 }
 
 void dlgConnectionProfiles::slot_update_name(const QString newName)
