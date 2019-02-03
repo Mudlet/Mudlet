@@ -143,17 +143,15 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(new_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_addProfile);
     connect(copy_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_copy_profile);
     connect(remove_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_deleteProfile);
-    connect(profile_name_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_name);
+    connect(profile_name_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_validate_name);
     connect(profile_name_entry, &QLineEdit::editingFinished, this, &dlgConnectionProfiles::slot_save_name);
-    connect(host_name_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_update_url);
-    connect(port_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_update_port);
-    connect(port_ssl_tsl, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_SSL_TSL_port);
+    connect(host_name_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_validate_url);
+    connect(port_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_validate_port);
     connect(auto_reconnect, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_autoreconnect);
     connect(profiles_tree_widget, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_item_clicked);
 
     // wrap in lambda since Qt doesn't see the existence of the default argument and complains with
     // "The slot requires more arguments than the signal provides."
-    connect(profile_name_entry, &QLineEdit::editingFinished, this, [this]() {writeProfileData();});
     connect(host_name_entry, &QLineEdit::editingFinished, this, [this]() {writeProfileData();});
     connect(port_entry, &QLineEdit::editingFinished, this, [this]() {writeProfileData();});
     connect(port_ssl_tsl, &QCheckBox::stateChanged, this, [this]() {writeProfileData();});
@@ -224,7 +222,7 @@ void dlgConnectionProfiles::closeEvent(QCloseEvent* event)
     event->accept();
 }
 
-void dlgConnectionProfiles::slot_update_url(const QString& url)
+void dlgConnectionProfiles::slot_validate_url(const QString& url)
 {
     if (url.isEmpty()) {
         validUrl = false;
@@ -270,11 +268,9 @@ void dlgConnectionProfiles::slot_update_discord_optin(int state)
     }
 }
 
-void dlgConnectionProfiles::slot_update_port(const QString ignoreBlank)
+void dlgConnectionProfiles::slot_validate_port(const QString port)
 {
-    QString port = port_entry->text().trimmed();
-
-    if (ignoreBlank.isEmpty()) {
+    if (port.isEmpty()) {
         validPort = false;
         if (connect_button) {
             connect_button->setDisabled(true);
@@ -285,12 +281,7 @@ void dlgConnectionProfiles::slot_update_port(const QString ignoreBlank)
     validateProfile();
 }
 
-void dlgConnectionProfiles::slot_update_SSL_TSL_port(int state)
-{
-    validateProfile();
-}
-
-void dlgConnectionProfiles::slot_update_name(const QString newName)
+void dlgConnectionProfiles::slot_validate_name(const QString newName)
 {
     Q_UNUSED(newName);
     validateProfile();
@@ -301,130 +292,128 @@ void dlgConnectionProfiles::slot_save_name()
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     QString newProfileName = profile_name_entry->text().trimmed();
 
-    if (!validName || newProfileName.isEmpty()) {
+    if (!validName || newProfileName.isEmpty() || !pItem) {
         return;
     }
 
-    if (pItem) {
-        mCurrentQSettings = getProfileSettings(newProfileName);
-        QString currentProfileEditName = pItem->text();
-        int row = mProfileList.indexOf(currentProfileEditName); // This returns -1 if currentProfileEditName not present!
-        if ((row >= 0) && (row < mProfileList.size())) {
-            mProfileList[row] = newProfileName;
-        } else {
-            mProfileList << newProfileName;
-        }
+    mCurrentQSettings = getProfileSettings(newProfileName);
+    QString currentProfileEditName = pItem->text();
+    int row = mProfileList.indexOf(currentProfileEditName); // This returns -1 if currentProfileEditName not present!
+    if ((row >= 0) && (row < mProfileList.size())) {
+        mProfileList[row] = newProfileName;
+    } else {
+        mProfileList << newProfileName;
+    }
 
-        // don't do anything if this was just a normal click, and not an edit of any sort
-        if (currentProfileEditName == newProfileName) {
-            return;
-        }
+    // don't do anything if this was just a normal click, and not an edit of any sort
+    if (currentProfileEditName == newProfileName) {
+        return;
+    }
 
-        pItem->setText(newProfileName);
+    pItem->setText(newProfileName);
 
-        QDir currentPath(mudlet::getMudletPath(mudlet::profileHomePath, currentProfileEditName));
-        QDir dir;
+    QDir currentPath(mudlet::getMudletPath(mudlet::profileHomePath, currentProfileEditName));
+    QDir dir;
 
-        if (currentPath.exists()) {
-            // CHECKME: previous code specified a path ending in a '/'
-            QDir parentpath(mudlet::getMudletPath(mudlet::profilesPath));
-            if (!parentpath.rename(currentProfileEditName, newProfileName)) {
-                notificationArea->show();
-                notificationAreaIconLabelWarning->show();
-                notificationAreaIconLabelError->hide();
-                notificationAreaIconLabelInformation->hide();
-                notificationAreaMessageBox->show();
-                notificationAreaMessageBox->setText(tr("Could not rename your profile data on the computer."));
-            }
-        } else if (!dir.mkpath(mudlet::getMudletPath(mudlet::profileHomePath, newProfileName))) {
+    if (currentPath.exists()) {
+        // CHECKME: previous code specified a path ending in a '/'
+        QDir parentpath(mudlet::getMudletPath(mudlet::profilesPath));
+        if (!parentpath.rename(currentProfileEditName, newProfileName)) {
             notificationArea->show();
             notificationAreaIconLabelWarning->show();
             notificationAreaIconLabelError->hide();
             notificationAreaIconLabelInformation->hide();
             notificationAreaMessageBox->show();
-            notificationAreaMessageBox->setText(tr("Could not create the new profile folder on your computer."));
+            notificationAreaMessageBox->setText(tr("Could not rename your profile data on the computer."));
         }
+    } else if (!dir.mkpath(mudlet::getMudletPath(mudlet::profileHomePath, newProfileName))) {
+        notificationArea->show();
+        notificationAreaIconLabelWarning->show();
+        notificationAreaIconLabelError->hide();
+        notificationAreaIconLabelInformation->hide();
+        notificationAreaMessageBox->show();
+        notificationAreaMessageBox->setText(tr("Could not create the new profile folder on your computer."));
+    }
 
-        // if this was a previously deleted profile, restore it
-        auto& settings = *mudlet::self()->mpSettings;
-        auto deletedDefaultMuds = settings.value(QStringLiteral("deletedDefaultMuds"), QStringList()).toStringList();
-        if (deletedDefaultMuds.contains(newProfileName)) {
-            deletedDefaultMuds.removeOne(newProfileName);
-            settings.setValue(QStringLiteral("deletedDefaultMuds"), deletedDefaultMuds);
-            // run fillout_form to re-create the default profile icon and description
-            fillout_form();
-            // and re-select the profile since focus is lost
-            auto newProfileIcon = profiles_tree_widget->findItems(newProfileName, Qt::MatchExactly).first();
-            profiles_tree_widget->setCurrentItem(newProfileIcon);
-            slot_item_clicked(newProfileIcon);
-        } else {
-            // code stolen from fillout_form, should be moved to its own function
-            QFont font(QStringLiteral("Bitstream Vera Sans Mono"), 1, QFont::Normal);
-            // Some uses of QFont have a third argument such as QFont::Helvetica or
-            // QFont::Courier but that is not a valid value for that argument - it
-            // is a font weight and typically only QFont::Normal or QFont::Bold is
-            // correct there (or a number 0 to 99, the two given are 50 and 75
-            // respectively)
+    // if this was a previously deleted profile, restore it
+    auto& settings = *mudlet::self()->mpSettings;
+    auto deletedDefaultMuds = settings.value(QStringLiteral("deletedDefaultMuds"), QStringList()).toStringList();
+    if (deletedDefaultMuds.contains(newProfileName)) {
+        deletedDefaultMuds.removeOne(newProfileName);
+        settings.setValue(QStringLiteral("deletedDefaultMuds"), deletedDefaultMuds);
+        // run fillout_form to re-create the default profile icon and description
+        fillout_form();
+        // and re-select the profile since focus is lost
+        auto newProfileIcon = profiles_tree_widget->findItems(newProfileName, Qt::MatchExactly).first();
+        profiles_tree_widget->setCurrentItem(newProfileIcon);
+        slot_item_clicked(newProfileIcon);
+    } else {
+        // code stolen from fillout_form, should be moved to its own function
+        QFont font(QStringLiteral("Bitstream Vera Sans Mono"), 1, QFont::Normal);
+        // Some uses of QFont have a third argument such as QFont::Helvetica or
+        // QFont::Courier but that is not a valid value for that argument - it
+        // is a font weight and typically only QFont::Normal or QFont::Bold is
+        // correct there (or a number 0 to 99, the two given are 50 and 75
+        // respectively)
 
-            QString sList = newProfileName;
-            QString s = newProfileName;
-            pItem->setFont(font);
-            pItem->setForeground(QColor(Qt::white));
-            profiles_tree_widget->addItem(pItem);
-            QPixmap pb(120, 30);
-            pb.fill(Qt::transparent);
-            uint hash = qHash(sList);
-            QLinearGradient shade(0, 0, 120, 30);
-            int i = row;
-            quint8 i1 = hash % 255;
-            quint8 i2 = (hash + i) % 255;
-            quint8 i3 = (i * hash) % 255;
-            quint8 i4 = (3 * hash) % 255;
-            quint8 i5 = (hash) % 255;
-            quint8 i6 = (hash / (i + 2)) % 255; // Under some corner cases i might be -1 or 0
-            shade.setColorAt(1, QColor(i1, i2, i3, 255));
-            shade.setColorAt(0, QColor(i4, i5, i6, 255));
+        QString sList = newProfileName;
+        QString s = newProfileName;
+        pItem->setFont(font);
+        pItem->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pItem);
+        QPixmap pb(120, 30);
+        pb.fill(Qt::transparent);
+        uint hash = qHash(sList);
+        QLinearGradient shade(0, 0, 120, 30);
+        int i = row;
+        quint8 i1 = hash % 255;
+        quint8 i2 = (hash + i) % 255;
+        quint8 i3 = (i * hash) % 255;
+        quint8 i4 = (3 * hash) % 255;
+        quint8 i5 = (hash) % 255;
+        quint8 i6 = (hash / (i + 2)) % 255; // Under some corner cases i might be -1 or 0
+        shade.setColorAt(1, QColor(i1, i2, i3, 255));
+        shade.setColorAt(0, QColor(i4, i5, i6, 255));
 
-            QPainter pt(&pb);
-            pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
-            pt.fillRect(QRect(0, 0, 120, 30), shade);
-            QPixmap pg(QStringLiteral(":/icons/mudlet_main_32px.png"));
-            pt.drawPixmap(QRect(5, 5, 20, 20), pg);
+        QPainter pt(&pb);
+        pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
+        pt.fillRect(QRect(0, 0, 120, 30), shade);
+        QPixmap pg(QStringLiteral(":/icons/mudlet_main_32px.png"));
+        pt.drawPixmap(QRect(5, 5, 20, 20), pg);
 
-            QFont _font;
-            QImage _pm(90, 30, QImage::Format_ARGB32_Premultiplied);
-            QPainter _pt(&_pm);
-            _pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
-            int fs = 30;
-            for (; fs > 1; fs--) {
-                _pt.eraseRect(QRect(0, 0, 90, 30));
-                _pt.fillRect(QRect(0, 0, 90, 30), QColor(255, 0, 0, 10));
-                _font = QFont(QStringLiteral("DejaVu Sans"), fs, QFont::Normal);
-                _pt.setFont(_font);
-                QRect _r;
-                if ((i1 + i2 + i3 + i4 + i5 + i6) / 6 < 100) {
-                    _pt.setPen(QColor(Qt::white));
-                } else {
-                    _pt.setPen(QColor(Qt::black));
-                }
-                _pt.drawText(QRect(0, 0, 90, 30), Qt::AlignHCenter | Qt::AlignVCenter | Qt::TextWordWrap, s, &_r);
-                /*if( QFontMetrics( _font ).boundingRect( s ).width() <= 80
-                   && QFontMetrics( _font ).boundingRect( s ).height() <= 30 )*/
-                if (_r.width() <= 90 && _r.height() <= 30) {
-                    break;
-                }
-            }
-            pt.setFont(_font);
+        QFont _font;
+        QImage _pm(90, 30, QImage::Format_ARGB32_Premultiplied);
+        QPainter _pt(&_pm);
+        _pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
+        int fs = 30;
+        for (; fs > 1; fs--) {
+            _pt.eraseRect(QRect(0, 0, 90, 30));
+            _pt.fillRect(QRect(0, 0, 90, 30), QColor(255, 0, 0, 10));
+            _font = QFont(QStringLiteral("DejaVu Sans"), fs, QFont::Normal);
+            _pt.setFont(_font);
             QRect _r;
             if ((i1 + i2 + i3 + i4 + i5 + i6) / 6 < 100) {
-                pt.setPen(QColor(Qt::white));
+                _pt.setPen(QColor(Qt::white));
             } else {
-                pt.setPen(QColor(Qt::black));
+                _pt.setPen(QColor(Qt::black));
             }
-            pt.drawText(QRect(30, 0, 90, 30), Qt::AlignHCenter | Qt::AlignVCenter | Qt::TextWordWrap, s, &_r);
-            QIcon mi = QIcon(pb);
-            pItem->setIcon(mi);
+            _pt.drawText(QRect(0, 0, 90, 30), Qt::AlignHCenter | Qt::AlignVCenter | Qt::TextWordWrap, s, &_r);
+            /*if( QFontMetrics( _font ).boundingRect( s ).width() <= 80
+                   && QFontMetrics( _font ).boundingRect( s ).height() <= 30 )*/
+            if (_r.width() <= 90 && _r.height() <= 30) {
+                break;
+            }
         }
+        pt.setFont(_font);
+        QRect _r;
+        if ((i1 + i2 + i3 + i4 + i5 + i6) / 6 < 100) {
+            pt.setPen(QColor(Qt::white));
+        } else {
+            pt.setPen(QColor(Qt::black));
+        }
+        pt.drawText(QRect(30, 0, 90, 30), Qt::AlignHCenter | Qt::AlignVCenter | Qt::TextWordWrap, s, &_r);
+        QIcon mi = QIcon(pb);
+        pItem->setIcon(mi);
     }
 }
 
@@ -1757,130 +1746,127 @@ bool dlgConnectionProfiles::validateProfile()
 
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
 
-    if (pItem) {
-        QString name = profile_name_entry->text().trimmed();
-        const QString allowedChars = QStringLiteral(". _0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ");
+    if (!pItem) {
+        return false;
+    }
 
-        for (int i = 0; i < name.size(); ++i) {
-            if (!allowedChars.contains(name.at(i))) {
-                notificationAreaIconLabelWarning->show();
-                notificationAreaMessageBox->setText(
-                        QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("The %1 character is not permitted. Use one of the following:\n\"%2\".\n").arg(name.at(i), allowedChars)));
-                name.replace(name.at(i--), QString());
-                profile_name_entry->setText(name);
-                validName = false;
-                valid = false;
-                break;
-            }
-        }
+    QString name = profile_name_entry->text().trimmed();
+    const QString allowedChars = QStringLiteral(". _0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ");
 
-        // see if there is an edit that already uses a similar name
-        if (pItem->text() != name && mProfileList.contains(name)) {
-            notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("This profile name is already in use.")));
+    for (int i = 0; i < name.size(); ++i) {
+        if (!allowedChars.contains(name.at(i))) {
+            notificationAreaIconLabelWarning->show();
+            notificationAreaMessageBox->setText(
+                    QStringLiteral("%1\n%2").arg(notificationAreaMessageBox->text(), tr("The %1 character is not permitted. Use one of the following:\n\"%2\".\n").arg(name.at(i), allowedChars)));
+            name.replace(name.at(i--), QString());
+            profile_name_entry->setText(name);
             validName = false;
             valid = false;
-        } else {
-            pItem->setText(name);
+            break;
         }
+    }
 
-        QString port = port_entry->text().trimmed();
-        if (!port.isEmpty() && (port.indexOf(QRegularExpression(QStringLiteral("^\\d+$")), 0) == -1)) {
-            QString val = port;
-            val.chop(1);
-            port_entry->setText(val);
-            notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("You have to enter a number. Other characters are not permitted.")));
-            port_entry->setPalette(mErrorPalette);
-            validPort = false;
-            valid = false;
-        }
+    // see if there is an edit that already uses a similar name
+    if (pItem->text() != name && mProfileList.contains(name)) {
+        notificationAreaIconLabelError->show();
+        notificationAreaMessageBox->setText(QStringLiteral("%1\n%2").arg(notificationAreaMessageBox->text(), tr("This profile name is already in use.")));
+        validName = false;
+        valid = false;
+    }
 
-        bool ok;
-        int num = port.trimmed().toInt(&ok);
-        if (!port.isEmpty() && (num > 65536 && ok)) {
-            notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Port number must be above zero and below 65535.\r\n")));
-            port_entry->setPalette(mErrorPalette);
-            validPort = false;
-            valid = false;
-        }
+    QString port = port_entry->text().trimmed();
+    if (!port.isEmpty() && (port.indexOf(QRegularExpression(QStringLiteral("^\\d+$")), 0) == -1)) {
+        QString val = port;
+        val.chop(1);
+        port_entry->setText(val);
+        notificationAreaIconLabelError->show();
+        notificationAreaMessageBox->setText(QStringLiteral("%1\n%2").arg(notificationAreaMessageBox->text(), tr("You have to enter a number. Other characters are not permitted.")));
+        port_entry->setPalette(mErrorPalette);
+        validPort = false;
+        valid = false;
+    }
+
+    bool ok;
+    int num = port.trimmed().toInt(&ok);
+    if (!port.isEmpty() && (num > 65536 && ok)) {
+        notificationAreaIconLabelError->show();
+        notificationAreaMessageBox->setText(QStringLiteral("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Port number must be above zero and below 65535.\r\n")));
+        port_entry->setPalette(mErrorPalette);
+        validPort = false;
+        valid = false;
+    }
 
 #if defined(QT_NO_SSL)
-        port_ssl_tsl->setEnabled(false);
-        port_ssl_tsl->setToolTip(tr("Mudlet is not configured for secure connections."));
+    port_ssl_tsl->setEnabled(false);
+    port_ssl_tsl->setToolTip(tr("Mudlet is not configured for secure connections."));
+    if (port_ssl_tsl->isChecked()) {
+        notificationAreaIconLabelError->show();
+        notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Mudlet is not configured for secure connections.\n\n")));
+        port_ssl_tsl->setEnabled(true);
+        validPort = false;
+        valid = false;
+    }
+#else
+    if (!QSslSocket::supportsSsl()) {
         if (port_ssl_tsl->isChecked()) {
             notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Mudlet is not configured for secure connections.\n\n")));
-            port_ssl_tsl->setEnabled(true);
+            notificationAreaMessageBox->setText(QStringLiteral("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Mudlet can not load support for secure connections.\n\n")));
             validPort = false;
             valid = false;
         }
-#else
-        if (!QSslSocket::supportsSsl()) {
-            if (port_ssl_tsl->isChecked()) {
-                notificationAreaIconLabelError->show();
-                notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Mudlet can not load support for secure connections.\n\n")));
-                validPort = false;
-                valid = false;
-            }
-        } else {
-            port_ssl_tsl->setEnabled(true);
-            port_ssl_tsl->setToolTip("");
-        }
+    } else {
+        port_ssl_tsl->setEnabled(true);
+        port_ssl_tsl->setToolTip(QString());
+    }
 #endif
-        QUrl check;
-        QString url = host_name_entry->text().trimmed();
-        check.setHost(url);
-        if (!check.isValid()) {
+    QUrl check;
+    QString url = host_name_entry->text().trimmed();
+    check.setHost(url);
+    if (!check.isValid()) {
+        notificationAreaIconLabelError->show();
+        notificationAreaMessageBox->setText(QStringLiteral("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Please enter the URL or IP address of the Game server.\n\n%1").arg(check.errorString())));
+        host_name_entry->setPalette(mErrorPalette);
+        validUrl = false;
+        valid = false;
+    }
+
+    if (url.indexOf(QRegularExpression(QStringLiteral("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
+        if (port_ssl_tsl->isChecked()) {
             notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Please enter the URL or IP address of the Game server.\n\n%1").arg(check.errorString())));
+            notificationAreaMessageBox->setText(QStringLiteral("%1\n%2").arg(notificationAreaMessageBox->text(), tr("SSL connections require the URL of the Game server.\n\n%1").arg(check.errorString())));
             host_name_entry->setPalette(mErrorPalette);
             validUrl = false;
             valid = false;
         }
-
-        if (url.indexOf(QRegularExpression(QStringLiteral("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
-            if (port_ssl_tsl->isChecked()) {
-                notificationAreaIconLabelError->show();
-                notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("SSL connections require the URL of the Game server.\n\n%1").arg(check.errorString())));
-                host_name_entry->setPalette(mErrorPalette);
-                validUrl = false;
-                valid = false;
-            }
-        }
-
-        if (valid) {
-            port_entry->setPalette(mOKPalette);
-            host_name_entry->setPalette(mOKPalette);
-            notificationArea->hide();
-            notificationAreaIconLabelWarning->hide();
-            notificationAreaIconLabelError->hide();
-            notificationAreaIconLabelInformation->hide();
-            notificationAreaMessageBox->hide();
-            validName = true;
-            validPort = true;
-            validUrl = true;
-
-            if (connect_button) {
-                connect_button->setEnabled(true);
-                connect_button->setToolTip(QString());
-            }
-
-            return true;
-
-        } else {
-            notificationArea->show();
-            notificationAreaMessageBox->show();
-            if (connect_button) {
-                connect_button->setDisabled(true);
-                connect_button->setToolTip(
-                        QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Please set a valid profile name, game server address and the game port before connecting.")));
-            }
-            return false;
-        }
     }
-    return false;
+
+    if (valid) {
+        port_entry->setPalette(mOKPalette);
+        host_name_entry->setPalette(mOKPalette);
+        notificationArea->hide();
+        notificationAreaIconLabelWarning->hide();
+        notificationAreaIconLabelError->hide();
+        notificationAreaIconLabelInformation->hide();
+        notificationAreaMessageBox->hide();
+        validName = true;
+        validPort = true;
+        validUrl = true;
+
+        if (connect_button) {
+            connect_button->setEnabled(true);
+            connect_button->setToolTip(QString());
+        }
+        return true;
+    } else {
+        notificationArea->show();
+        notificationAreaMessageBox->show();
+        if (connect_button) {
+            connect_button->setDisabled(true);
+            connect_button->setToolTip(
+                    QStringLiteral("<p>%1</p>").arg(tr("Please set a valid profile name, game server address and the game port before connecting.")));
+        }
+        return false;
+    }
 }
 
 // credit: http://www.qtcentre.org/archive/index.php/t-23469.html

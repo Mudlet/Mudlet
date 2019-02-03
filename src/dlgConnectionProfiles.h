@@ -46,11 +46,10 @@ signals:
 
 public slots:
     QPair<bool, QString> writeProfileData(const QString& profile = QString());
-    void slot_update_name(QString);
+    void slot_validate_name(QString);
     void slot_save_name();
-    void slot_update_url(const QString &);
-    void slot_update_SSL_TSL_port(int state);
-    void slot_update_port(const QString);
+    void slot_validate_url(const QString &);
+    void slot_validate_port(const QString);
     void slot_deleteprofile_check(const QString);
 
     void slot_item_clicked(QListWidgetItem*);
