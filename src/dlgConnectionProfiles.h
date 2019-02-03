@@ -37,7 +37,6 @@ public:
     dlgConnectionProfiles(QWidget* parent = nullptr);
     void fillout_form();
     QPointer<QSettings> getProfileSettings(const QString& profile);
-    QPair<bool, QString> writeProfileData(const QString& profile = QString());
     QString readProfileData(const QString& profile, const QString& item);
     void accept() override;
     void closeEvent(QCloseEvent* event) override;
@@ -46,6 +45,7 @@ signals:
     void signal_establish_connection(QString profile_name, int historyVersion);
 
 public slots:
+    QPair<bool, QString> writeProfileData(const QString& profile = QString());
     void slot_update_name(QString);
     void slot_save_name();
     void slot_update_url(const QString &);

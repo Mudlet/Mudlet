@@ -150,6 +150,15 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(port_ssl_tsl, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_SSL_TSL_port);
     connect(auto_reconnect, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_autoreconnect);
     connect(profiles_tree_widget, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_item_clicked);
+
+    // wrap in lambda since Qt doesn't see the existence of the default argument and complains with
+    // "The slot requires more arguments than the signal provides."
+    connect(profile_name_entry, &QLineEdit::editingFinished, this, [this]() {writeProfileData();});
+    connect(host_name_entry, &QLineEdit::editingFinished, this, [this]() {writeProfileData();});
+    connect(port_entry, &QLineEdit::editingFinished, this, [this]() {writeProfileData();});
+    connect(port_ssl_tsl, &QCheckBox::stateChanged, this, [this]() {writeProfileData();});
+    connect(auto_reconnect, &QCheckBox::stateChanged, this, [this]() {writeProfileData();});
+
     connect(profiles_tree_widget, &QListWidget::itemDoubleClicked, this, &dlgConnectionProfiles::accept);
 
     connect(discord_optin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_discord_optin);
@@ -197,6 +206,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 void dlgConnectionProfiles::accept()
 {
     if (validName && validUrl && validPort) {
+        writeProfileData();
         slot_connectToServer();
         QDialog::accept();
     }
@@ -300,6 +310,7 @@ void dlgConnectionProfiles::slot_update_SSL_TSL_port(int state)
 
 void dlgConnectionProfiles::slot_update_name(const QString newName)
 {
+    Q_UNUSED(newName);
     validateProfile();
 }
 
@@ -492,8 +503,8 @@ void dlgConnectionProfiles::slot_deleteprofile_check(const QString text)
 void dlgConnectionProfiles::slot_reallyDeleteProfile()
 {
     QString profile = profiles_tree_widget->currentItem()->text();
-    QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, profile));
-    dir.removeRecursively();
+    QDir profileDir(mudlet::getMudletPath(mudlet::profileHomePath, profile));
+    profileDir.removeRecursively();
 
     // record the deleted default profile so it does not get re-created in the future
     auto& settings = *mudlet::self()->mpSettings;
@@ -504,7 +515,16 @@ void dlgConnectionProfiles::slot_reallyDeleteProfile()
     settings.setValue(QStringLiteral("deletedDefaultMuds"), deletedDefaultMuds);
 
     fillout_form();
-    profiles_tree_widget->setFocus();
+
+    profiles_tree_widget->setFocus();    
+
+    mCurrentQSettings.clear();
+
+    QTimer::singleShot(0, this, [profile]() {
+        // delete again, since qsettings will re-create it when the focus on this profile is lost
+        QDir profileDir(mudlet::getMudletPath(mudlet::profileHomePath, profile));
+        profileDir.removeRecursively();
+    });
 }
 
 // called when the 'delete' button is pressed, raises a dialog to confirm deletion
