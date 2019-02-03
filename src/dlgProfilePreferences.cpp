@@ -2104,7 +2104,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     Host* pHost = mpHost;
     if (pHost) {
         if (dictList->currentItem()) {
-            pHost->mSpellDic = dictList->currentItem()->text();
+            pHost->setSpellDic(dictList->currentItem()->text());
         }
 
         pHost->mEnableSpellCheck = enableSpellCheck->isChecked();
