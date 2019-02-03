@@ -367,7 +367,7 @@ public:
     QPair<bool, QStringList> getLines(Host* pHost, const QString& windowName, const int lineFrom, const int lineTo);	
     static QPointer<QSettings> getConfig();
     QPointer<QSettings> getQSettings();
-    
+
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
 #endif
