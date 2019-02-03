@@ -7246,7 +7246,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="363"/>
       <source>Open a notepad that you can store your notes in</source>
-      <translation type="unfinished"/>
+      <translation>Откройте блокнот, в котором можно хранить заметки</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="368"/>
@@ -7407,7 +7407,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="3078"/>
       <source>%1 - notes</source>
-      <translation>%1 - заметки</translation>
+      <translation>%1 - блокнот</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3128"/>
