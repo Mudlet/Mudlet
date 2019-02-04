@@ -3462,7 +3462,7 @@ or your nameservers are not working properly.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="400"/>
       <source>[ INFO ]  - A secure connection has been established successfully.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Защищенное соединение установлено успешно.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="402"/>
@@ -3590,7 +3590,7 @@ Uninstalling old version &apos;%2&apos;.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="2016"/>
       <source>Cannot perform replay, another one may already be in progress. Try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>Невозможно выполнить повтор, возможно, уже выполняется другой. Повторите попытку, когда он будет завершен.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2018"/>
@@ -4622,7 +4622,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="636"/>
       <source>! The Nickname %1 is reserved. Automatically changing Nickname to: %2</source>
-      <translation type="unfinished"/>
+      <translation>! Прозвище %1 зарезервирован. Автоматически меняется ник на: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="648"/>
@@ -4903,7 +4903,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1929"/>
       <source>Could not backup the map - saving it failed.</source>
-      <translation type="unfinished"/>
+      <translation>Не удалось создать резервную копию карты - сохранение не выполнено.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1954"/>
