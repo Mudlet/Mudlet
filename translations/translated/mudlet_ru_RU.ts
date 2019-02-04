@@ -845,7 +845,8 @@ selected rooms:</source>
       <location filename="../src/T2DMap.cpp" line="1897"/>
       <source>Mapper: Cannot find a path to this room using known exits.
 </source>
-      <translation type="unfinished"/>
+      <translation>Маппер: Не удается найти путь к этой комнате с использованием известных выходов.
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2215"/>
@@ -1346,13 +1347,14 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1609"/>
       <source>Pre-Map importing(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Предварительный отчет об импорте карты (1)</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1632"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ Ошибка ] - Файл карты не найден, путь и имя было:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1638"/>
@@ -1363,7 +1365,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1647"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Файл карты расположен и открыт, теперь его анализ...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1654"/>
@@ -1394,12 +1396,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2585"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Запрос на перезагрузку карты получен от системы...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2590"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] -... Запрос на перезагрузку системной карты завершен.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2592"/>
@@ -2418,7 +2420,7 @@ out what new id numbers to use.</source>
       <location filename="../src/TRoomDB.cpp" line="901"/>
       <location filename="../src/TRoomDB.cpp" line="904"/>
       <source>[ INFO ]  - Room id numbering is satisfactory.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Нумерация идентификаторов комнат является удовлетворительной.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="921"/>
@@ -2652,13 +2654,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1747"/>
       <source>{tab}</source>
       <comment>Unicode U+0009 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{tab}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1748"/>
       <source>{line-feed}</source>
       <comment>Unicode U+000A codepoint. Not likely to be seen as it gets filtered out.</comment>
-      <translation type="unfinished"/>
+      <translation>{line-feed}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1749"/>
@@ -3000,7 +3002,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1805"/>
       <source>{variation selector 10}</source>
       <comment>Unicode U+FE09 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 10}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1806"/>
@@ -3284,7 +3286,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="127"/>
       <source>Number of columns/rows (depending on orientation):</source>
-      <translation type="unfinished"/>
+      <translation>Количество столбцов/строк (в зависимости от ориентации):</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="150"/>
@@ -3392,7 +3394,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="103"/>
       <source>enter a perl regex pattern for your alias; alias are triggers on your input</source>
-      <translation type="unfinished"/>
+      <translation>введите шаблон regex perl для алиаса; алиасы - это риггеры для вашего ввода</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="110"/>
@@ -3657,7 +3659,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="282"/>
       <source>16 + 36 x R + 6 x G + B =</source>
-      <translation type="unfinished"/>
+      <translation>16 + 36 x R + 6 x G + B =</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="343"/>
@@ -3672,7 +3674,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="363"/>
       <source>ANSI 24 Grays scale [232-255] - adjust gray and click button to select matching color number:</source>
-      <translation type="unfinished"/>
+      <translation>ANSI 24 Grays scale [232-255] - настройте серый цвет и нажмите кнопку, чтобы выбрать соответствующий номер цвета:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="375"/>
@@ -3682,7 +3684,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="382"/>
       <source>232 + Gr =</source>
-      <translation type="unfinished"/>
+      <translation>232 + Gr =</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="414"/>
@@ -4276,7 +4278,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
       <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s background color - however chosing this for both this and the foreground is an error.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Нажмите, чтобы триггер цвета игнорировал цвет фона текста&apos;s - однако выбор этого и для этого, и для переднего плана является ошибкой.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="60"/>
@@ -4469,7 +4471,9 @@ Count</source>
       <source>The %1 character is not permitted. Use one of the following:
 &quot;%2&quot;.
 </source>
-      <translation type="unfinished"/>
+      <translation>Символ %1 не допускается. Используйте один из следующих:
+&quot;%2&quot;.
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1784"/>
@@ -6130,7 +6134,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5964"/>
       <source>Key Bindings</source>
-      <translation type="unfinished"/>
+      <translation>Привязки клавиш</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7024"/>
@@ -6295,12 +6299,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7850"/>
       <source>Select foreground color to apply to matches</source>
-      <translation type="unfinished"/>
+      <translation>Выберите цвет переднего плана для применения к совпадением</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7869"/>
       <source>Select background color to apply to matches</source>
-      <translation type="unfinished"/>
+      <translation>Выберите цвет фона для применения к совпадениям</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7877"/>
@@ -6321,19 +6325,19 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7933"/>
       <source>Foreground color ignored</source>
       <comment>Color trigger ignored foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана игнорируется</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7936"/>
       <source>Default foreground color</source>
       <comment>Color trigger default foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана по умолчанию</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7939"/>
       <source>Foreground color [ANSI %1]</source>
       <comment>Color trigger ANSI foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7978"/>
@@ -6344,19 +6348,19 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7996"/>
       <source>Background color ignored</source>
       <comment>Color trigger ignored background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет фона игнорируется</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7999"/>
       <source>Default background color</source>
       <comment>Color trigger default background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет фона по умолчанию</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8002"/>
       <source>Background color [ANSI %1]</source>
       <comment>Color trigger ANSI background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет фона [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8027"/>
@@ -6646,14 +6650,16 @@ certain conditions; select the
     <message>
       <location filename="../src/main.cpp" line="363"/>
       <source>Locating profiles... </source>
-      <translation type="unfinished"/>
+      <translation>Поиск профилей... </translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="388"/>
       <source>Done.
 
 Loading font files... </source>
-      <translation type="unfinished"/>
+      <translation>Готово.
+
+Загрузка файлов шрифтов... </translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="455"/>
@@ -6664,7 +6670,13 @@ All data has been loaded successfully.
 Starting... Have fun!
 
 </source>
-      <translation type="unfinished"/>
+      <translation>Готово.
+
+Все данные успешно загружены.
+
+Запуск... Повеселись!
+
+</translation>
     </message>
   </context>
   <context>
@@ -7293,7 +7305,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="386"/>
       <source>Disconnects you from the game and connects once again</source>
-      <translation type="unfinished"/>
+      <translation>Отключает вас от игры и снова соединяется</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="391"/>
@@ -7752,22 +7764,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="711"/>
       <source>Top border height:</source>
-      <translation type="unfinished"/>
+      <translation>Высота верхней границы:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="755"/>
       <source>Left border width:</source>
-      <translation type="unfinished"/>
+      <translation>Ширина левой границы:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="799"/>
       <source>Bottom border height:</source>
-      <translation type="unfinished"/>
+      <translation>Высота нижней границы:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="843"/>
       <source>Right border width:</source>
-      <translation type="unfinished"/>
+      <translation>Ширина правой границы:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="884"/>
@@ -7987,7 +7999,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1008"/>
       <source>(characters to ignore in selection, for example &apos; or &quot;)</source>
-      <translation type="unfinished"/>
+      <translation>(символы игнорировать при выборе, например &apos; или &quot;)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1024"/>
@@ -8347,12 +8359,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2786"/>
       <source>Security</source>
-      <translation type="unfinished"/>
+      <translation>Безопасность</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2808"/>
       <source>SSL</source>
-      <translation type="unfinished"/>
+      <translation>SSL</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4744"/>
@@ -8483,12 +8495,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2033"/>
       <source>Only use symbols (glyphs) from chosen font</source>
-      <translation type="unfinished"/>
+      <translation>Использовать только символы (глифы) из выбранного шрифта</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2040"/>
       <source>Show symbol usage...</source>
-      <translation type="unfinished"/>
+      <translation>Показать использование символов...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2064"/>
@@ -8498,7 +8510,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2070"/>
       <source>Select your color preferences for the map display</source>
-      <translation type="unfinished"/>
+      <translation>Выберите цветовые предпочтения для отображения карты</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2076"/>
@@ -8518,12 +8530,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2421"/>
       <source>Force compression off</source>
-      <translation type="unfinished"/>
+      <translation>Принудительно отключить компрессию</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2428"/>
       <source>Force telnet GA signal interpretation off</source>
-      <translation type="unfinished"/>
+      <translation>Принудительно отключить интерпретацию сигналов GA telnet</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2435"/>
@@ -9080,7 +9092,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1886"/>
       <source>Exit Weight (0=No override)</source>
-      <translation type="unfinished"/>
+      <translation>Вес выхода (0 = Без переопределения)</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
@@ -9429,7 +9441,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="961"/>
       <source>line delta</source>
-      <translation type="unfinished"/>
+      <translation>дельта линии</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1123"/>
@@ -9459,7 +9471,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1165"/>
       <source>only pass matches to children as trigger input</source>
-      <translation type="unfinished"/>
+      <translation>в качестве текста для дочерных триггеров передавать только совпадения</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1287"/>
@@ -9475,7 +9487,7 @@ Without this option, the pattern matching will stop after the first successful m
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1336"/>
       <source>match all occurences of the pattern in the line</source>
-      <translation type="unfinished"/>
+      <translation>соответствовать всем вхождениям шаблона в строке</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1467"/>
