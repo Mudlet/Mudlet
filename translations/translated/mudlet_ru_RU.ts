@@ -1539,7 +1539,7 @@ yajl.* Lua functions won&apos;t be available.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14929"/>
       <source>[  OK  ]  - Lua code formatter loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - загружен форматировщик кода Lua.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14962"/>
@@ -3006,79 +3006,79 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1806"/>
       <source>{variation selector 11}</source>
       <comment>Unicode U+FE0A codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 11}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1807"/>
       <source>{variation selector 12}</source>
       <comment>Unicode U+FE0B codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 12}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1808"/>
       <source>{variation selector 13}</source>
       <comment>Unicode U+FE0C codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 13}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1809"/>
       <source>{variation selector 14}</source>
       <comment>Unicode U+FE0D codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 14}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1810"/>
       <source>{variation selector 15}</source>
       <comment>Unicode U+FE0E codepoint - after an Emoji codepoint forces the textual (black &amp; white) rendition.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 15}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1811"/>
       <source>{variation selector 16}</source>
       <comment>Unicode U+FE0F codepoint - after an Emoji codepoint forces the proper coloured &apos;Emoji&apos; rendition.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 16}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1812"/>
       <source>{zero width no-break space}</source>
       <comment>Unicode U+FEFF codepoint - also known as the Byte-order-mark at start of text!).</comment>
-      <translation type="unfinished"/>
+      <translation>{zero width no-break space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1818"/>
       <source>{interlinear annotation anchor}</source>
       <comment>Unicode U+FFF9 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{interlinear annotation anchor}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1819"/>
       <source>{interlinear annotation separator}</source>
       <comment>Unicode U+FFFA codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{interlinear annotation separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1820"/>
       <source>{interlinear annotation terminator}</source>
       <comment>Unicode U+FFFB codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{interlinear annotation terminator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1821"/>
       <source>{object replacement character}</source>
       <comment>Unicode U+FFFC codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{object replacement character}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1833"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint in range U+FFD0 to U+FDEF - not a character.</comment>
-      <translation type="unfinished"/>
+      <translation>{noncharacter}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1835"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint in range U+FFFx - not a character.</comment>
-      <translation type="unfinished"/>
+      <translation>{noncharacter}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1844"/>
@@ -3102,19 +3102,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1847"/>
       <source>{FitzPatrick modifier 5}</source>
       <comment>Unicode codepoint U+0001F3FE - FitzPatrick modifier (Emoji Human skin-tone) 5.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 5}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1848"/>
       <source>{FitzPatrick modifier 6}</source>
       <comment>Unicode codepoint U+0001F3FF - FitzPatrick modifier (Emoji Human skin-tone) 6.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 6}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1852"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</comment>
-      <translation type="unfinished"/>
+      <translation>{noncharacter}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2124"/>
@@ -3156,7 +3156,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2204"/>
       <source>Lua character or code</source>
       <comment>6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Lua символ или код</translation>
     </message>
   </context>
   <context>
@@ -3228,7 +3228,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/XMLimport.cpp" line="361"/>
       <source>Parsing environment data...</source>
-      <translation type="unfinished"/>
+      <translation>Анализ данных среды...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="369"/>
@@ -3442,17 +3442,20 @@ and this one cannot read it, you need a newer Mudlet!</source>
 Connection cannot be established.
 The server name is not correct, not working properly,
 or your nameservers are not working properly.</source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Ошибка поиска имени хоста!
+Невозможно установить соединение.
+Имя сервера не правильно, не работает должным образом,
+или ваши серверы имен не работают должным образом.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="361"/>
       <source>[ INFO ]  - Looking up the IP address of server:</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Поиск IP-адреса сервера:</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="377"/>
       <source>[ ERROR ] - TCP/IP socket ERROR:</source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - ошибка TCP/IP сокета:</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="400"/>
@@ -3468,18 +3471,20 @@ or your nameservers are not working properly.</source>
       <location filename="../src/ctelnet.cpp" line="440"/>
       <source>[ INFO ]  - Connection time: %1
     </source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - время соединения: %1
+    </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="479"/>
       <source>Secure connections aren&apos;t supported by this game on this port - try turning the option off.</source>
-      <translation type="unfinished"/>
+      <translation>Защищенные соединения не поддерживаются этой игрой на этом порту - попробуйте выключить опцию.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="524"/>
       <source>[ INFO ]  - Trying secure connection to %1: %2 ...
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Попытка защищенного соединения с %1: %2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="562"/>
@@ -3517,7 +3522,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1335"/>
       <location filename="../src/ctelnet.cpp" line="1614"/>
       <source>[  OK  ]  - Package is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Пакет уже установлен.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1342"/>
@@ -4014,7 +4019,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="514"/>
       <source>&lt;p&gt;The room this special exit leads to.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Комната куда етот специальный выход выводит.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="525"/>
@@ -4167,7 +4172,8 @@ Count</source>
       <source>&lt;p&gt;Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.&lt;/p&gt;
 &lt;p&gt;Mudlet is released under the GPL license version 2, which is reproduced below:&lt;/p&gt;</source>
       <comment>For non-english language versions please append a translation of the following to explain why the GPL is NOT reproduced in the relevent language: &apos;but only the English form is considered the official version of the license, so the following is reproduced in that language:&apos; to replace &apos;which is reproduced below:&apos;...</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet был первоначально написан Хейко Кёном, KoehnHeiko@googlemail.com.&lt;/p&gt;
+&lt;p&gt;Mudlet выпущен под лицензией GPL версии 2, которая воспроизводится ниже:&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="472"/>
@@ -4474,14 +4480,14 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1792"/>
       <source>Mudlet is not configured for secure connections.</source>
-      <translation>Mudlet не настроен на безопасные соединения.</translation>
+      <translation>Mudlet не настроен на защищенные соединения.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1795"/>
       <source>Mudlet is not configured for secure connections.
 
 </source>
-      <translation>Mudlet не настроен на безопасные соединения.
+      <translation>Mudlet не настроен на защищенные соединения.
 
 </translation>
     </message>
@@ -4490,7 +4496,7 @@ Count</source>
       <source>Mudlet can not load support for secure connections.
 
 </source>
-      <translation>Mudlet не можете загрузить поддержку безопасных соединений.
+      <translation>Mudlet не может загрузить поддержку защищенных соединений.
 
 </translation>
     </message>
@@ -8358,7 +8364,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4764"/>
       <source>Secure connection</source>
-      <translation>Безопасное соединение</translation>
+      <translation>Защищенное соединение</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4777"/>
