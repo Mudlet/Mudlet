@@ -3904,7 +3904,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="44"/>
       <source>Choose line format, color and arrow option and then select the exit to start drawing</source>
-      <translation type="unfinished"/>
+      <translation>Выберите формат линии, цвет и стрелку, а затем выберите выход для начала рисования</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="63"/>
@@ -4346,12 +4346,12 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="84"/>
       <source>White (Light gray)</source>
-      <translation type="unfinished"/>
+      <translation>Белый (светло-серый)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="86"/>
       <source>Light black (Dark gray)</source>
-      <translation type="unfinished"/>
+      <translation>Светло-черный (темно-серый)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="87"/>
@@ -4397,7 +4397,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="405"/>
       <source>All color options are showing.</source>
-      <translation type="unfinished"/>
+      <translation>Все цветовые опции показаны.</translation>
     </message>
   </context>
   <context>
@@ -4475,7 +4475,8 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1784"/>
       <source>Port number must be above zero and below 65535.
 </source>
-      <translation type="unfinished"/>
+      <translation>Номер порта должен быть выше нуля и ниже 65535.
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1792"/>
@@ -4505,7 +4506,9 @@ Count</source>
       <source>Please enter the URL or IP address of the Game server.
 
 %1</source>
-      <translation type="unfinished"/>
+      <translation>Пожалуйста, введите URL-адрес или IP-адрес игрового сервера.
+
+%1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1827"/>
@@ -4772,7 +4775,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="579"/>
       <source>Named file (concatenate logs in one file)</source>
-      <translation type="unfinished"/>
+      <translation>Именованный файл (объединение журналов в один файл)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="610"/>
@@ -4802,7 +4805,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="690"/>
       <source>Show &quot;%1&quot; in the map area selection</source>
-      <translation type="unfinished"/>
+      <translation>Показать &quot;%1&quot; в выборе области карты</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="801"/>
