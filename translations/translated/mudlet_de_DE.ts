@@ -1598,7 +1598,7 @@ Die Einrückungungsfunktion wird nicht verfügbar sein.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14929"/>
       <source>[  OK  ]  - Lua code formatter loaded.</source>
-      <translation>[OK] - Lua Code-Formatierer geladen.</translation>
+      <translation>[ OK ]  - Lua Code-Formatierer geladen.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14962"/>

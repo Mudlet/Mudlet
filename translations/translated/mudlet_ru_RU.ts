@@ -4998,6 +4998,11 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="139"/>
       <source>&lt;p&gt;Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.&lt;/p&gt;</source>
+      <translation>&lt;p&gt;Автоматическое обновление отключено в сборках разработки, чтобы предотвратить обновления от перезаписовать ваш Mudlet.&lt;/p&gt;</translation>
+    </message>
+    <message>
+      <location filename="../src/dlgProfilePreferences.cpp" line="160"/>
+      <source>&lt;p&gt;A timer with a short interval will quickly fill up the &lt;i&gt;Central Debug Console&lt;/i&gt; windows with messages that it ran correctly on &lt;i&gt;each&lt;/i&gt; occasion it is called.  This (per profile) control adjusts a threshold that will hide those messages in just that window for those timers which run &lt;b&gt;correctly&lt;/b&gt; when the timer&apos;s interval is less than this setting.&lt;/p&gt;&lt;p&gt;&lt;u&gt;Any timer script that has errors will still have its error messages reported whatever the setting.&lt;/u&gt;&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
@@ -7246,7 +7251,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="363"/>
       <source>Open a notepad that you can store your notes in</source>
-      <translation type="unfinished"/>
+      <translation>Откройте блокнот, в котором можно хранить заметки</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="368"/>
@@ -7407,7 +7412,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="3078"/>
       <source>%1 - notes</source>
-      <translation>%1 - заметки</translation>
+      <translation>%1 - блокнот</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3128"/>
