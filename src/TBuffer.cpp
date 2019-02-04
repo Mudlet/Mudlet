@@ -2899,14 +2899,14 @@ void TBuffer::decodeOSC(const QString& sequence)
                 // Uses mid(...) rather than at(...) because we want the return to
                 // be a (single character) QString and not a QChar so we can use
                 // QString::toUInt(...):
-                quint8 colorNumber = sequence.mid(1,1).toUInt(&isOk, 16);
+                quint8 colorNumber = sequence.midRef(1,1).toUInt(&isOk, 16);
                 quint8 rr = 0;
                 if (isOk) {
-                    rr = sequence.mid(2, 2).toUInt(&isOk, 16);
+                    rr = sequence.midRef(2, 2).toUInt(&isOk, 16);
                 }
                 quint8 gg = 0;
                 if (isOk) {
-                    gg = sequence.mid(4, 2).toUInt(&isOk, 16);
+                    gg = sequence.midRef(4, 2).toUInt(&isOk, 16);
                 }
                 quint8 bb = 0;
                 if (isOk) {
