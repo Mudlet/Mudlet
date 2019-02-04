@@ -211,7 +211,7 @@ void VarUnit::addHidden(TVar* var, int user)
     }
 }
 
-void VarUnit::addHidden(QString var)
+void VarUnit::addHidden(const QString& var)
 {
     hiddenByUser.insert(var);
 }

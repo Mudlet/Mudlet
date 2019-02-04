@@ -1763,7 +1763,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     }
 }
 
-void TBuffer::decodeSGR38(QStringList parameters, bool isColonSeparated)
+void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
 {
 #if defined(DEBUG_SGR_PROCESSING)
     qDebug() << "    TBuffer::decodeSGR38(" << parameters << "," << isColonSeparated <<") INFO - called";
@@ -1967,7 +1967,7 @@ void TBuffer::decodeSGR38(QStringList parameters, bool isColonSeparated)
     }
 }
 
-void TBuffer::decodeSGR48(QStringList parameters, bool isColonSeparated)
+void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
 {
 #if defined(DEBUG_SGR_PROCESSING)
     qDebug() << "    TBuffer::decodeSGR48(" << parameters << "," << isColonSeparated <<") INFO - called";
@@ -3740,7 +3740,7 @@ QStringList TBuffer::split(int line, const QString& splitter)
     return lineBuffer[line].split(splitter);
 }
 
-QStringList TBuffer::split(int line, QRegularExpression splitter)
+QStringList TBuffer::split(int line, const QRegularExpression& splitter)
 {
     if ((line >= static_cast<int>(buffer.size())) || (line < 0)) {
         return QStringList();

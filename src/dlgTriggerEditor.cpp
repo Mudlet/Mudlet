@@ -7982,7 +7982,7 @@ void dlgTriggerEditor::slot_color_trigger_bg()
     }
 }
 
-void dlgTriggerEditor::slot_updateStatusBar(QString statusText)
+void dlgTriggerEditor::slot_updateStatusBar(const QString& statusText)
 {
     // edbee adds the scope and last command which is rather technical debugging information,
     // so strip it away by removing the first pipe and everything after it

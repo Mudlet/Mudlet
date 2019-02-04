@@ -42,12 +42,12 @@ class HostManager
 public:
     HostManager() = default; /* : mpActiveHost() - Not needed */
 
-    Host* getHost(QString hostname);
+    Host* getHost(const QString& hostname);
     int getHostCount();
     QStringList getHostList();
-    bool addHost(QString name, QString port, QString login, QString pass);
-    bool deleteHost(QString);
-    void postIrcMessage(QString, QString, QString);
+    bool addHost(const QString& name, const QString& port, const QString& login, const QString& pass);
+    bool deleteHost(const QString&);
+    void postIrcMessage(const QString&, const QString&, const QString&);
     void postInterHostEvent(const Host*, const TEvent&, const bool = false);
 
 private:

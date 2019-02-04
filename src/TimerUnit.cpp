@@ -28,7 +28,7 @@
 
 using namespace std;
 
-void TimerUnit::_uninstall(TTimer* pChild, QString packageName)
+void TimerUnit::_uninstall(TTimer* pChild, const QString& packageName)
 {
     list<TTimer*>* childrenList = pChild->mpMyChildrenList;
     for (auto timer : *childrenList) {
@@ -38,7 +38,7 @@ void TimerUnit::_uninstall(TTimer* pChild, QString packageName)
 }
 
 
-void TimerUnit::uninstall(QString packageName)
+void TimerUnit::uninstall(const QString& packageName)
 {
     for (auto rootTimer : mTimerRootNodeList) {
         if (rootTimer->mPackageName == packageName) {
