@@ -1269,7 +1269,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1567"/>
       <source>Loading map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Загрузка карты(1) &quot;%1&quot; в %2 отчет</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2373"/>
@@ -3467,7 +3467,7 @@ or your nameservers are not working properly.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="402"/>
       <source>[ INFO ]  - A connection has been established successfully.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Соединение установлено успешно.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="440"/>
@@ -3518,7 +3518,7 @@ Uninstalling old version &apos;%2&apos;.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="1333"/>
       <source>[ INFO ]  - Server offers downloadable GUI (url=&apos;%1&apos;) (package=&apos;%2&apos;)...</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Сервер предлагает загружаемый интерфейс (url=&apos;%1&apos;) (package=&apos;%2&apos;)...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1335"/>
@@ -4923,7 +4923,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1976"/>
       <source>Map copied successfully to other profile %1.</source>
-      <translation type="unfinished"/>
+      <translation>Карта успешно скопирована в другой профиль %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1988"/>
@@ -5529,7 +5529,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1855"/>
       <source>Exits for room: &quot;%1&quot; [*]</source>
-      <translation type="unfinished"/>
+      <translation>Выходы для комнаты: &quot;%1&quot; [*]</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1857"/>
@@ -5780,7 +5780,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="447"/>
       <source>Shows/Hides the separate Central Debug Console - when being displayed the system will be slower.</source>
-      <translation type="unfinished"/>
+      <translation>Показать/скрыть консоль централизованной отладки - при включении система будет медленнее.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="550"/>
@@ -6049,55 +6049,55 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="4946"/>
       <source>Foreground color ignored</source>
       <comment>Color trigger ignored foreground color button, ensure all threee instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана игнорируется</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4853"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4950"/>
       <source>Default foreground color</source>
       <comment>Color trigger default foreground color button, ensure all threee instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана по умолчанию</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4857"/>
       <source>Foreground color [ANSI %1]</source>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4862"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4961"/>
       <source>Background color ignored</source>
       <comment>Color trigger ignored background color button, ensure all threee instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет фона игнорируется</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4866"/>
       <source>Default background color</source>
       <comment>Color trigger default background color button, ensure all threee instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет фона по умолчанию</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4870"/>
       <source>Background color [ANSI %1]</source>
-      <translation type="unfinished"/>
+      <translation>Цвет фона [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4954"/>
       <source>Foreground color [ANSI %1]</source>
       <comment>Color trigger ANSI foreground color button, ensure all threee instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4965"/>
       <source>Default background color</source>
       <comment>Color trigger ignored background color button, ensure all threee instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет фона по умолчанию</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4969"/>
       <source>Background color [ANSI %1]</source>
       <comment>Color trigger ANSI background color button, ensure all threee instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет фона [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4980"/>
@@ -6626,7 +6626,8 @@ less likely to be useful for normal use of this application:
       <location filename="../src/main.cpp" line="267"/>
       <source>Project home page: http://www.mudlet.org/.
 </source>
-      <translation type="unfinished"/>
+      <translation>Главная страница проекта: http://www.mudlet.org/.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="296"/>
@@ -7068,7 +7069,7 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="138"/>
       <source>Chinese [Traditional]</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Китайский [Tрадиционный]</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="139"/>
@@ -7410,7 +7411,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="1603"/>
       <source>User window - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Пользовательское окно - %1 - %2</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2988"/>
@@ -7749,7 +7750,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="671"/>
       <source>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </source>
-      <translation type="unfinished"/>
+      <translation>Используйте сглаживание шрифтов. Сглаживает шрифты, если у вас высокое разрешение экрана, и вы можете использовать более крупные шрифты. Обратите внимание, что при низком разрешении и небольших размерах шрифта шрифт становится размытым. </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="674"/>
