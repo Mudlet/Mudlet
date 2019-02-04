@@ -10833,7 +10833,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
         if (n == 3 || (n > 3 && n < 5 && gotBool)) {
             lua_pushfstring(L, "echoLink: bad argument #%d type (text as string expected, got %s!)", s, luaL_typename(L, s));
         } else {
-            lua_pushfstring(L, "echoLink: bad argument #%d type (optionally window name as string expected, got %s!)", s, luaL_typename(L, s));
+            lua_pushfstring(L, "echoLink: bad argument #%d type (optional window name as string expected, got %s!)", s, luaL_typename(L, s));
         }
         return lua_error(L);
     } else {
@@ -10904,7 +10904,12 @@ int TLuaInterpreter::echoLink(lua_State* L)
         text = a2;
         function << a3;
         hint << a4;
-        mudlet::self()->echoLink(&host, windowName, text, function, hint, useCurrentFormat);
+
+        if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
+            host.mpConsole->echoLink(text, function, hint, useCurrentFormat);
+        } else {
+            mudlet::self()->echoLink(&host, windowName, text, function, hint, useCurrentFormat);
+        }
     }
     return 0;
 }

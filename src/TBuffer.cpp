@@ -1763,7 +1763,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     }
 }
 
-void TBuffer::decodeSGR38(QStringList parameters, bool isColonSeparated)
+void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
 {
 #if defined(DEBUG_SGR_PROCESSING)
     qDebug() << "    TBuffer::decodeSGR38(" << parameters << "," << isColonSeparated <<") INFO - called";
@@ -1967,7 +1967,7 @@ void TBuffer::decodeSGR38(QStringList parameters, bool isColonSeparated)
     }
 }
 
-void TBuffer::decodeSGR48(QStringList parameters, bool isColonSeparated)
+void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
 {
 #if defined(DEBUG_SGR_PROCESSING)
     qDebug() << "    TBuffer::decodeSGR48(" << parameters << "," << isColonSeparated <<") INFO - called";
@@ -2899,14 +2899,14 @@ void TBuffer::decodeOSC(const QString& sequence)
                 // Uses mid(...) rather than at(...) because we want the return to
                 // be a (single character) QString and not a QChar so we can use
                 // QString::toUInt(...):
-                quint8 colorNumber = sequence.mid(1,1).toUInt(&isOk, 16);
+                quint8 colorNumber = sequence.midRef(1,1).toUInt(&isOk, 16);
                 quint8 rr = 0;
                 if (isOk) {
-                    rr = sequence.mid(2, 2).toUInt(&isOk, 16);
+                    rr = sequence.midRef(2, 2).toUInt(&isOk, 16);
                 }
                 quint8 gg = 0;
                 if (isOk) {
-                    gg = sequence.mid(4, 2).toUInt(&isOk, 16);
+                    gg = sequence.midRef(4, 2).toUInt(&isOk, 16);
                 }
                 quint8 bb = 0;
                 if (isOk) {
@@ -3740,7 +3740,7 @@ QStringList TBuffer::split(int line, const QString& splitter)
     return lineBuffer[line].split(splitter);
 }
 
-QStringList TBuffer::split(int line, QRegularExpression splitter)
+QStringList TBuffer::split(int line, const QRegularExpression& splitter)
 {
     if ((line >= static_cast<int>(buffer.size())) || (line < 0)) {
         return QStringList();

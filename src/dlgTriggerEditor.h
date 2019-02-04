@@ -277,7 +277,7 @@ public slots:
     void slot_setTreeWidgetIconSize(int);
     void slot_color_trigger_fg();
     void slot_color_trigger_bg();
-    void slot_updateStatusBar(QString statusText); // For the source code editor
+    void slot_updateStatusBar(const QString& statusText); // For the source code editor
     void slot_profileSaveStarted();
     void slot_profileSaveFinished();
 
@@ -396,8 +396,6 @@ private:
     void clearEditorNotification() const;
     void runScheduledCleanReset();
     void autoSave();
-    // Helper to color the text in (and possible the control value) that the pattern area:
-    QString itemTypeStyleSheet(const int);
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
 
 
@@ -420,7 +418,6 @@ private:
     QTreeWidgetItem* mpCurrentTriggerItem;
     QTreeWidgetItem* mpCurrentAliasItem;
     QTreeWidgetItem* mpCurrentVarItem;
-// Not used:    QLineEdit* mpCursorPositionIndicator;
 
     int mCurrentView;
 

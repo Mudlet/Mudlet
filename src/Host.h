@@ -118,6 +118,8 @@ public:
     bool               getMayRedefineColors() { QMutexLocker locker(& mLock); return mServerMayRedefineColors; }
     void               setDiscordApplicationID(const QString& s);
     const QString&     getDiscordApplicationID();
+    void               setSpellDic(const QString&);
+    const QString&     getSpellDic() { QMutexLocker locker(& mLock); return mSpellDic; }
 
     void closingDown();
     bool isClosingDown();
@@ -373,7 +375,6 @@ public:
     QColor mBgColor_2;
     bool mMapStrongHighlight;
     QStringList mGMCP_merge_table_keys;
-    QString mSpellDic;
     bool mLogStatus;
     bool mEnableSpellCheck;
     QStringList mInstalledPackages;
@@ -419,6 +420,7 @@ signals:
     void signal_changeIsAmbigousWidthGlyphsToBeWide(bool);
     void profileSaveStarted();
     void profileSaveFinished();
+    void signal_changeSpellDict(const QString&);
 
 private slots:
     void slot_reloadModules();
@@ -507,6 +509,10 @@ private:
     // 16 basic colors (and OSC "R\" to reset them).
     bool mServerMayRedefineColors;
 
+    // Was public but hidden to prevent it being changed without going through
+    // the process to signal to existing uses that they need to change
+    // dictionaries:
+    QString mSpellDic;
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
     void updateModuleZips() const;

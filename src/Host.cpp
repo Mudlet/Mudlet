@@ -1657,3 +1657,17 @@ bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscri
         return true;
     }
 }
+
+void Host::setSpellDic(const QString& newDict)
+{
+    QMutexLocker locker(& mLock);
+    bool isChanged = false;
+    if (!newDict.isEmpty() && mSpellDic != newDict) {
+        mSpellDic = newDict;
+        isChanged = true;
+    }
+    locker.unlock();
+    if (isChanged) {
+        emit signal_changeSpellDict(mSpellDic);
+    }
+}

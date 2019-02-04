@@ -170,7 +170,11 @@ void cTelnet::reset()
         heAnnouncedState[i] = false;
         triedToEnable[i] = false;
     }
-    iac = iac2 = insb = false;
+    iac = false;
+    iac2 = false;
+    insb = false;
+    // Ensure we do not think that the game server is echoing for us:
+    mpHost->mIsRemoteEchoingActive = false;
     command = "";
     mMudData = "";
 }
@@ -372,6 +376,12 @@ void cTelnet::disconnect()
 
 }
 
+void cTelnet::abortConnection()
+{
+    mDontReconnect = true;
+    socket.abort();
+}
+
 void cTelnet::handle_socket_signal_error()
 {
     QString err = tr("[ ERROR ] - TCP/IP socket ERROR:") % socket.errorString();
@@ -557,14 +567,16 @@ bool cTelnet::sendData(QString& data)
 
     if (mpHost->mAllowToSendCommand) {
         string outData;
+        auto errorMsgTemplate = "[ WARN ]  - Invalid characters in outgoing data, one or more characters cannot\n"
+            "be encoded into the range that is acceptable for the character\n"
+            "encoding that is currently set {\"%1\"} for the game server.\n"
+            "It may not understand what is sent to it.\n"
+            "Note: this warning will only be issued once, even if this happens again, until\n"
+            "the encoding is changed.";
         if (!mEncoding.isEmpty()) {
             if ((! mEncodingWarningIssued) && (! outgoingDataCodec->canEncode(data))) {
-                QString errorMsg = tr("[ WARN ]  - Invalid characters in outgoing data, one or more characters cannot\n"
-                                      "be encoded into the range that is acceptable for the character\n"
-                                      "encoding that is currently set {\"%1\"} for the game server.\n"
-                                      "It may not understand what is sent to it.\n"
-                                      "Note: this warning will only be issued once, even if this happens again, until\n"
-                                      "the encoding is changed.").arg(mEncoding);
+                QString errorMsg = tr(errorMsgTemplate, 
+                                      "%1 is the name of the encoding currently set.").arg(mEncoding);
                 postMessage(errorMsg);
                 mEncodingWarningIssued = true;
             }
@@ -574,12 +586,8 @@ bool cTelnet::sendData(QString& data)
             // Plain, raw ASCII, we hope!
             for (int i = 0, total = data.size(); i < total; ++i) {
                 if ((! mEncodingWarningIssued) && (data.at(i).row() || data.at(i).cell() > 127)){
-                    QString errorMsg = tr("[ WARN ]  - Invalid characters in outgoing data, one or more characters cannot\n"
-                                          "be encoded into the range that is acceptable for the character\n"
-                                          "encoding that is currently set {\"ASCII\"} for the MUD Server.\n"
-                                          "It may not understand what is sent to it.\n"
-                                          "Note: this warning will only be issued once, even if this happens again, until\n"
-                                          "the encoding is changed.");
+                QString errorMsg = tr(errorMsgTemplate, 
+                                      "%1 is the name of the encoding currently set.").arg(QStringLiteral("ASCII"));
                     postMessage(errorMsg);
                     mEncodingWarningIssued = true;
                     break;
@@ -1330,7 +1338,7 @@ void cTelnet::processTelnetCommand(const string& command)
                 packageName.remove(QLatin1Char('\\'));
                 packageName.remove(QLatin1Char('.'));
 
-                postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2')...").arg(url, packageName));
+                postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
                 if (mpHost->mInstalledPackages.contains(packageName)) {
                     postMessage(tr("[  OK  ]  - Package is already installed."));
                     return;
@@ -1632,9 +1640,9 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
     // remove \r's from the data, as yajl doesn't like it
     data.remove(QChar::CarriageReturn);
 
-    if (transcodedMsg.startsWith(QLatin1String("External.Discord.Status"))
-        || transcodedMsg.startsWith(QLatin1String("External.Discord.Info"))) {
-        mpHost->processDiscordGMCP(transcodedMsg, data);
+    if (packageMessage.startsWith(QLatin1String("External.Discord.Status"))
+        || packageMessage.startsWith(QLatin1String("External.Discord.Info"))) {
+        mpHost->processDiscordGMCP(packageMessage, data);
     }
 
     mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);

@@ -478,7 +478,11 @@ mudlet::mudlet()
     connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
     connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_irc);
 #if !defined(INCLUDE_UPDATER)
+    // Hide the update menu item if the code is not included
     dactionUpdate->setVisible(false);
+#else
+    // Also, only show it if this is a release version
+    dactionUpdate->setVisible(!scmIsDevelopmentVersion);
 #endif
     connect(dactionPackageManager, &QAction::triggered, this, &mudlet::slot_package_manager);
     connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_package_exporter);
@@ -1022,7 +1026,15 @@ void mudlet::slot_close_profile_requested(int tab)
     pH->closingDown();
 
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
+#if defined (Q_OS_WIN32)
+    if (pH->mSslTsl) {
+        pH->mTelnet.abortConnection();
+    } else {
+        pH->mTelnet.disconnect();
+    }
+#else
     pH->mTelnet.disconnect();
+#endif
 
     pH->stopAllTriggers();
     pH->mpEditorDialog->close();
@@ -2723,7 +2735,7 @@ void mudlet::slot_show_connection_dialog()
     connect(pDlg, &dlgConnectionProfiles::signal_establish_connection, this, &mudlet::slot_connection_dlg_finished);
     pDlg->fillout_form();
 
-    connect(pDlg, &QDialog::accepted, [=]() { enableToolbarButtons(); });
+    connect(pDlg, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
     pDlg->setAttribute(Qt::WA_DeleteOnClose);
     pDlg->show();
 }
@@ -3994,7 +4006,11 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
 #if defined(INCLUDE_UPDATER)
 void mudlet::checkUpdatesOnStart()
 {
-    updater->checkUpdatesOnStart();
+    if (!scmIsDevelopmentVersion) {
+        // Only try and create an updater (which checks for updates online) if
+        // this is a release version:
+        updater->checkUpdatesOnStart();
+    }
 }
 
 void mudlet::slot_check_manual_update()
@@ -4010,7 +4026,7 @@ void mudlet::slot_update_installed()
     disconnect(dactionUpdate, &QAction::triggered, this, nullptr);
 
     // rejig to restart Mudlet instead
-    QObject::connect(dactionUpdate, &QAction::triggered, [=]() {
+    QObject::connect(dactionUpdate, &QAction::triggered, this, [=]() {
         forceClose();
         QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
     });
