@@ -830,7 +830,10 @@ new graphemes (&quot;visible characters&quot;),
 to set; or a space to clear; all
 selected rooms:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Выберите существующий символ в списке
+(отсортированный по наиболее используемым) или введите один или несколько новых графем
+(&quot;видимые символы&quot;),, для установки; или пробел для очистки;все 
+выбранные комнаты:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="725"/>
@@ -911,7 +914,8 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation type="unfinished"/>
+      <translation>Уменьшить интервал выбранных комнат,
+центрируясь на подсвеченной комнате на коэффициент, равный:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3735"/>
@@ -925,7 +929,8 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation type="unfinished"/>
+      <translation>Уменьшить интервал выбранных комнат,
+центрируясь на подсвеченной комнате на коэффициент, равный:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3866"/>
@@ -1004,7 +1009,7 @@ rooms:</source>
     <message>
       <location filename="../src/TAlias.cpp" line="255"/>
       <source>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Ошибка: в &quot;шаблон:&quot;, неверное регулярное выражение, причина: &quot;%1&quot;.</translation>
     </message>
   </context>
   <context>
@@ -1012,7 +1017,7 @@ rooms:</source>
     <message>
       <location filename="../src/TArea.cpp" line="373"/>
       <source>roomID=%1 does not exist, can not set properties of a non-existent room!</source>
-      <translation type="unfinished"/>
+      <translation>roomID=%1 не существует, невозможно задать свойства несуществующей комнаты!</translation>
     </message>
   </context>
   <context>
