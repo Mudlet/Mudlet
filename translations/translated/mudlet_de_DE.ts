@@ -1423,7 +1423,7 @@ Ganzzahl eingeben:</translation>
       <location filename="../src/TConsole.cpp" line="1660"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; could not be opened for reading).</source>
-      <translation>loadMap: bad argument #1 value (benutzter Dateiname: 
+      <translation>loadMap: Falscher Wert für Argument #1 (benutzter Dateiname: 
 &quot;%1&quot; konnte nicht gelesen werden).</translation>
     </message>
     <message>
@@ -1439,7 +1439,7 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="2585"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation>[ INFO ] - Anforderung vom System empfangen, die Karte neu zu laden...</translation>
+      <translation>[ INFO ]  - Anforderung vom System empfangen, die Karte neu zu laden...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2590"/>
