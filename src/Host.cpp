@@ -519,13 +519,13 @@ const unsigned int Host::assemblePath()
 {
     unsigned int totalWeight = 0;
     QStringList pathList;
-    for (int i : mpMap->mPathList) {
+    for (int i : qAsConst(mpMap->mPathList)) {
         QString n = QString::number(i);
         pathList.append(n);
     }
     QStringList directionList = mpMap->mDirList;
     QStringList weightList;
-    for (int stepWeight : mpMap->mWeightList) {
+    for (int stepWeight : qAsConst(mpMap->mWeightList)) {
         totalWeight += stepWeight;
         QString n = QString::number(stepWeight);
         weightList.append(n);
@@ -1277,7 +1277,7 @@ void Host::installPackageFonts(const QString &packageName)
 // ensures fonts from all installed packages are loaded in Mudlet
 void Host::refreshPackageFonts()
 {
-    for (const auto& package : mInstalledPackages) {
+    for (const auto& package : qAsConst(mInstalledPackages)) {
         installPackageFonts(package);
     }
 }
