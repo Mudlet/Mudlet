@@ -1253,14 +1253,15 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="981"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Протоколирование начинается с &apos;чч: мм: сс&apos; на &apos;дддддд&apos;, &apos;d&apos; &apos;ММММ&apos; &apos;гггг&apos;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1002"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.
 </source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Протоколирование начинается с &apos;чч: мм: сс&apos; на &apos;дддддд&apos;, &apos;d&apos; &apos;ММММ&apos; &apos;гггг&apos;.
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1011"/>
@@ -1271,7 +1272,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="1012"/>
       <source>hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>чч:мм:сс&apos; на &apos;&apos;дддд&apos;,&apos; &apos;&apos;ММММ&apos;&apos;гггг</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1567"/>
@@ -1309,7 +1310,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="400"/>
       <source>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</source>
-      <translation type="unfinished"/>
+      <translation>&lt;i&gt;N:&lt;/i&gt; -задержка сервера игры и сети (aka ping, в секундах), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; -время обработки системы-сколько времени потребовалось для обработки последней строки.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="438"/>
@@ -1367,7 +1368,8 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="1638"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; was not found).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: неверное значение аргумента #1 (используемое имя файла: 
+&quot;%1&quot; не найдено).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1647"/>
@@ -1377,18 +1379,19 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1654"/>
       <source>Importing map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Импорт карты (1) &quot;%1&quot; в отчете %2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1657"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФОРМАЦИЯ]-Файл карты обнаружен, но не удалось открыть, проверьте разрешения на:&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1660"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; could not be opened for reading).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: неверный аргумент #1 (используемое имя файла: 
+&quot;%1&quot; невозможно открыть для чтения).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2184"/>
@@ -1413,7 +1416,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2592"/>
       <source>[ WARN ]  - ... System Map reload request failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ПРЕДУПРЕЖДЕНИЕ] -... Сбой запроса на перезагрузку системной карты.</translation>
     </message>
   </context>
   <context>
@@ -1421,7 +1424,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9771"/>
       <source>[ WARN ]  - Lua command setAreaUserData() used - it is currently flagged as experimental!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN]-использована команда Lua setAreaUserData () - она в настоящее время помечена как экспериментальная!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9772"/>
