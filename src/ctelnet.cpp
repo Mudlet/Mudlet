@@ -327,7 +327,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
 void cTelnet::requestDiscordInfo()
 {
     mudlet* pMudlet = mudlet::self();
-    if (pMudlet->mDiscord.libraryLoaded() && !mpHost->mDiscordDisableServerSide) {
+    if (pMudlet->mDiscord.libraryLoaded()) {
         string data;
         data = TN_IAC;
         data += TN_SB;
@@ -992,7 +992,7 @@ void cTelnet::processTelnetCommand(const string& command)
             output += TN_SE;
             socketOutRaw(output);
 
-            if (mudlet::self()->mDiscord.libraryLoaded() && !mpHost->mDiscordDisableServerSide) {
+            if (mudlet::self()->mDiscord.libraryLoaded()) {
                 output = TN_IAC;
                 output += TN_SB;
                 output += OPT_GMCP;
