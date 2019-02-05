@@ -651,12 +651,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2825"/>
       <source>Divide segment by adding a new point mid-way along</source>
-      <translation type="unfinished"/>
+      <translation>Разделить сегмент путем добавления новой точки в середине</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2828"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
-      <translation type="unfinished"/>
+      <translation>Сначала выберите точку, затем добавьте новую точку посередине вдоль сегмента в направлении комнаты</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2831"/>
@@ -677,7 +677,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2844"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
-      <translation type="unfinished"/>
+      <translation>используйте &quot;удалить строку&quot;, чтобы удалить единственный сегмент, заканчивающийся в редактируемой точке</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2848"/>
@@ -740,7 +740,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3322"/>
       <source>Move the selection, centered on
 the highlighted room (%1) to:</source>
-      <translation type="unfinished"/>
+      <translation>Переместить выделенное по центру подсвеченной комнаты (%1), чтобы:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3324"/>
@@ -795,7 +795,9 @@ with a new symbol to use for all the rooms:</source>
       <source>The symbol is &quot;%1&quot; in the selected room,
 delete this to clear the symbol or replace
 it with a new symbol for this room:</source>
-      <translation type="unfinished"/>
+      <translation>Символ &quot;%1&quot; в выбранной комнате,
+удалите это, чтобы очистить или заменить
+на новый символ этой комнаты:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3471"/>
