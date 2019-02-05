@@ -1435,7 +1435,7 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
     bool hasInvite = false;
     auto inviteUrl = discordInfo.value(QStringLiteral("inviteurl"));
     // Will be of form: "https://discord.gg/#####"
-    if (inviteUrl != QJsonValue::Undefined) {
+    if (inviteUrl != QJsonValue::Undefined && !inviteUrl.toString().isEmpty()) {
         hasInvite = true;
     }
 
