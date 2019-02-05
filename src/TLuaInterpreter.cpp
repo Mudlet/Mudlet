@@ -1579,7 +1579,7 @@ int TLuaInterpreter::getColumnNumber(lua_State* L)
         }
         int result = 0;
         if (windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-            lua_pushnumber(L, host.mpConsole->getColumnNumber());
+            result = host.mpConsole->getColumnNumber();
         } else {
             result = mudlet::self()->getColumnNumber(&host, windowName);
         }
