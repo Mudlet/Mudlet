@@ -2082,9 +2082,17 @@ void T2DMap::paintEvent(QPaintEvent* e)
             TArea* _paid = mpMap->mpRoomDB->getArea(_iaid);
             QString _paid_name = mpMap->mpRoomDB->getAreaNamesMap().value(_iaid);
             if (_paid) {
-                infoText = tr("Area: %1 ID:%2 x:%3 <-> %4 y:%5 <-> %6 z:%7 <-> %8\n",
-                              "%1 is the (text) name of the area, %2 is the number for it, %3 to %8 are pairs (min <-> max) of extremes for each of x,y and z coordinates")
-                                   .arg(_paid_name,
+                infoText = tr("Area:%1%2 ID:%1%3 x:%1%4%1<‑>%1%5 y:%1%6%1<‑>%1%7 z:%1%8%1<‑>%1%9\n",
+                              // Intentional separator
+                              "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle"
+                              "them literally in raw strings) and non-breaking hyphens which are used to "
+                              "prevent the line being split at some places it might otherwise be; when "
+                              "translating please consider at which points the text may be divided to fit onto "
+                              "more than one line. "
+                              "%2 is the (text) name of the area, %3 is the number for it, "
+                              "%4 to %9 are pairs (min <-> max) of extremes for each of x,y and z coordinates")
+                                   .arg(QChar(160),
+                                        _paid_name,
                                         QString::number(_iaid),
                                         QString::number(_paid->min_x),
                                         QString::number(_paid->max_x),
@@ -2111,12 +2119,16 @@ void T2DMap::paintEvent(QPaintEvent* e)
             // If one or more rooms are selected - make the text slightly orange.
             switch (selectionSize) {
             case 0:
-                infoText.append(tr("Room ID: %1 Position on Map: (%2,%3,%4) - current player location\n",
+                infoText.append(tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location\n",
                                    // Intentional comment to separate arguments
-                                   "This text is for when NO rooms are selected - %1 is the room number of, "
-                                   "and %2-%4 are the x,y and z coordinates for, the current player's Room.")
-                                .arg(QString::number(roomID), QString::number(_prid->x),
-                                     QString::number(_prid->y), QString::number(_prid->z)));
+                                   "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle"
+                                   "them literally in raw strings) and a non-breaking hyphen which are used to "
+                                   "prevent the line being split at some places it might otherwise be; when "
+                                   "translating please consider at which points the text may be divided to fit onto "
+                                   "more than one line. "
+                                   "This text is for when NO rooms are selected, %3 is the room number "
+                                   "of, and %4-%6 are the x,y and z coordinates for, the current player's room.")
+                                        .arg(QChar(160), QString::number(roomID), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z)));
                 if (playerAreaID != mAreaID) {
                     f.setItalic(true);
                 } else {
@@ -2124,11 +2136,16 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 }
                 break;
             case 1:
-                infoText.append(tr("Room ID: %1 Position on Map: (%2,%3,%4) - selected room\n",
+                infoText.append(tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room\n",
                                    // Intentional comment to separate arguments
-                                   "This text is for when ONE room is selected - %1 is the room number of. "
-                                   "and %2-%4 are the x,y and z coordinates for, the selected Room.")
-                                .arg(QString::number(roomID), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z)));
+                                   "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle"
+                                   "them literally in raw strings) and a non-breaking hyphen which are used to "
+                                   "prevent the line being split at some places it might otherwise be; when "
+                                   "translating please consider at which points the text may be divided to fit onto "
+                                   "more than one line. "
+                                   "This text is for when ONE room is selected, %3 is the room number "
+                                   "of, and %4-%6 are the x,y and z coordinates for, the selected Room.")
+                                        .arg(QChar(160), QString::number(roomID), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z)));
                 f.setBold(true);
                 if (infoColor.lightness() > 127) {
                     infoColor = QColor(255, 223, 191); // Slightly orange white
@@ -2137,15 +2154,21 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 }
                 break;
             default:
-                infoText.append(tr("Room ID: %1 Position on Map: (%2,%3,%4) - center of %n selected rooms\n",
+                infoText.append(tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms\n",
                                    // Intentional comment to separate arguments
-                                   "This text is for when TWO or MORE rooms are selected - %1 is the room number "
-                                   "for which %2-%4 are the x,y and z coordinates of the room nearest the middle of "
-                                   "the selection. This room has the yellow cross-hairs. %n is the count of rooms "
-                                   "selected and will ALWAYS be greater than 1 in this situation. It is provided "
-                                   "so that non-English translations can select required plural forms as needed",
+                                   "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle"
+                                   "them literally in raw strings) and a non-breaking hyphen which are used to "
+                                   "prevent the line being split at some places it might otherwise be; when "
+                                   "translating please consider at which points the text may be divided to fit onto "
+                                   "more than one line. "
+                                   "This text is for when TWO or MORE rooms are selected; %1 is the room "
+                                   "number for which %2-%4 are the x,y and z coordinates of the room nearest the "
+                                   "middle of the selection. This room has the yellow cross-hairs. %n is the count "
+                                   "of rooms selected and will ALWAYS be greater than 1 in this situation. It is "
+                                   "provided so that non-English translations can select required plural forms as "
+                                   "needed.",
                                    selectionSize)
-                                .arg(QString::number(roomID), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z)));
+                                        .arg(QChar(160), QString::number(roomID), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z)));
                 f.setBold(true);
                 if (infoColor.lightness() > 127) {
                     infoColor = QColor(255, 223, 191); // Slightly orange white
@@ -2164,7 +2187,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
                            "center of the view (but y will be negative compared to previous room related "
                            "ones as it represents the real coordinate system for this widget which has "
                            "y increasing in a downward direction!)")
-                        .arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3).arg(QString::number(mOx), QString::number(mOy), QString::number(mOz)));
+                                .arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3)
+                                .arg(QString::number(mOx), QString::number(mOy), QString::number(mOz)));
 #endif
 
         // Left margin for info widget:
@@ -2192,7 +2216,10 @@ void T2DMap::paintEvent(QPaintEvent* e)
         painter.fillRect(mMapInfoRect, QColor(150, 150, 150, 80));
         painter.setPen(infoColor);
         painter.setFont(f);
-        painter.drawText(mMapInfoRect.left() + 10, mMapInfoRect.top() + 10, mMapInfoRect.width() - 20, mMapInfoRect.height() - 20, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, infoText);
+        painter.drawText(mMapInfoRect.left() + 10, mMapInfoRect.top() + 10,
+                         mMapInfoRect.width() - 20, mMapInfoRect.height() - 20,
+                         Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop,
+                         infoText);
         //forget about font size changing and bolding/italicisation:
         painter.restore();
     }
@@ -2684,7 +2711,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLinesRoomFrom);
             if (room) {
-                auto customLineUndoLastPoint = new QAction(tr("undo", "2D Mapper context menu (drawing custom exit line) item"), this);
+                auto customLineUndoLastPoint = new QAction(tr("Undo", "2D Mapper context menu (drawing custom exit line) item"), this);
                 customLineUndoLastPoint->setToolTip(tr("Undo last point", "2D Mapper context menu (drawing custom exit line) item tooltip"));
                 if (room->customLines.value(mCustomLinesRoomExit).count() > 1) {
                     connect(customLineUndoLastPoint, &QAction::triggered, this, &T2DMap::slot_undoCustomLineLastPoint);
@@ -2692,13 +2719,13 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     customLineUndoLastPoint->setEnabled(false);
                 }
 
-                auto customLineProperties = new QAction(tr("properties", "2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)"), this);
+                auto customLineProperties = new QAction(tr("Properties", "2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)"), this);
                 customLineProperties->setText(
                         tr("properties...", "2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)"));
                 customLineProperties->setToolTip(tr("Change the properties of this line", "2D Mapper context menu (drawing custom exit line) item tooltip"));
                 connect(customLineProperties, &QAction::triggered, this, &T2DMap::slot_customLineProperties);
 
-                auto customLineFinish = new QAction(tr("finish", "2D Mapper context menu (drawing custom exit line) item"), this);
+                auto customLineFinish = new QAction(tr("Finish", "2D Mapper context menu (drawing custom exit line) item"), this);
                 customLineFinish->setToolTip(tr("Finish drawing this line", "2D Mapper context menu (drawing custom exit line) item tooltip"));
                 connect(customLineFinish, &QAction::triggered, this, &T2DMap::slot_doneCustomLine);
 
@@ -2720,10 +2747,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             auto pArea = mpMap->mpRoomDB->getArea(mAreaID);
 
             if (!playerRoom || !pArea) {
-                auto createMap = new QAction(tr("create new map", "2D Mapper context menu (no map found) item"), this);
+                auto createMap = new QAction(tr("Create new map", "2D Mapper context menu (no map found) item"), this);
                 connect(createMap, &QAction::triggered, this, &T2DMap::slot_newMap);
 
-                auto loadMap = new QAction(tr("load map", "2D Mapper context menu (no map found) item"), this);
+                auto loadMap = new QAction(tr("Load map", "2D Mapper context menu (no map found) item"), this);
                 connect(loadMap, &QAction::triggered, this, &T2DMap::slot_loadMap);
 
                 mPopupMenu = true;
@@ -2736,61 +2763,61 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             }
 
             if (mMultiSelectionSet.isEmpty()) {
-                mpCreateRoomAction = new QAction(tr("create room", "Menu option to create a new room in the mapper"), this);
+                mpCreateRoomAction = new QAction(tr("Create room", "Menu option to create a new room in the mapper"), this);
                 mpCreateRoomAction->setToolTip(tr("Create a new room here"));
                 connect(mpCreateRoomAction.data(), &QAction::triggered, this, &T2DMap::slot_createRoom);
                 popup->addAction(mpCreateRoomAction);
             }
 
-            auto moveRoom = new QAction(tr("move", "2D Mapper context menu (room) item"), this);
+            auto moveRoom = new QAction(tr("Move", "2D Mapper context menu (room) item"), this);
             moveRoom->setToolTip(tr("Move room", "2D Mapper context menu (room) item tooltip"));
             connect(moveRoom, &QAction::triggered, this, &T2DMap::slot_moveRoom);
 
-            auto deleteRoom = new QAction(tr("delete", "2D Mapper context menu (room) item"), this);
+            auto deleteRoom = new QAction(tr("Delete", "2D Mapper context menu (room) item"), this);
             deleteRoom->setToolTip(tr("Delete room", "2D Mapper context menu (room) item tooltip"));
             connect(deleteRoom, &QAction::triggered, this, &T2DMap::slot_deleteRoom);
 
-            auto recolorRoom = new QAction(tr("color", "2D Mapper context menu (room) item"), this);
+            auto recolorRoom = new QAction(tr("Color", "2D Mapper context menu (room) item"), this);
             recolorRoom->setToolTip(tr("Change room color", "2D Mapper context menu (room) item tooltip"));
             connect(recolorRoom, &QAction::triggered, this, &T2DMap::slot_changeColor);
 
-            auto spreadRooms = new QAction(tr("spread", "2D Mapper context menu (room) item"), this);
+            auto spreadRooms = new QAction(tr("Spread", "2D Mapper context menu (room) item"), this);
             spreadRooms->setToolTip(tr("Increase map X-Y spacing for the selected group of rooms", "2D Mapper context menu (room) item tooltip"));
             connect(spreadRooms, &QAction::triggered, this, &T2DMap::slot_spread);
 
-            auto shrinkRooms = new QAction(tr("shrink", "2D Mapper context menu (room) item"), this);
+            auto shrinkRooms = new QAction(tr("Shrink", "2D Mapper context menu (room) item"), this);
             shrinkRooms->setToolTip(tr("Decrease map X-Y spacing for the selected group of rooms", "2D Mapper context menu (room) item tooltip"));
             connect(shrinkRooms, &QAction::triggered, this, &T2DMap::slot_shrink);
 
-            auto lockRoom = new QAction(tr("lock", "2D Mapper context menu (room) item"), this);
+            auto lockRoom = new QAction(tr("Lock", "2D Mapper context menu (room) item"), this);
             lockRoom->setToolTip(tr("Lock room for speed walks", "2D Mapper context menu (room) item tooltip"));
             connect(lockRoom, &QAction::triggered, this, &T2DMap::slot_lockRoom);
 
-            auto unlockRoom = new QAction(tr("unlock", "2D Mapper context menu (room) item"), this);
+            auto unlockRoom = new QAction(tr("Unlock", "2D Mapper context menu (room) item"), this);
             unlockRoom->setToolTip(tr("Unlock room for speed walks", "2D Mapper context menu (room) item tooltip"));
             connect(unlockRoom, &QAction::triggered, this, &T2DMap::slot_unlockRoom);
 
-            auto weightRoom = new QAction(tr("weight", "2D Mapper context menu (room) item"), this);
+            auto weightRoom = new QAction(tr("Weight", "2D Mapper context menu (room) item"), this);
             weightRoom->setToolTip(tr("Set room weight", "2D Mapper context menu (room) item tooltip"));
             connect(weightRoom, &QAction::triggered, this, &T2DMap::slot_setRoomWeight);
 
-            auto roomExits = new QAction(tr("exits", "2D Mapper context menu (room) item"), this);
+            auto roomExits = new QAction(tr("Exits", "2D Mapper context menu (room) item"), this);
             roomExits->setToolTip(tr("Set room exits", "2D Mapper context menu (room) item tooltip"));
             connect(roomExits, &QAction::triggered, this, &T2DMap::slot_setExits);
 
-            auto roomSymbol = new QAction(tr("symbol", "2D Mapper context menu (room) item"), this);
+            auto roomSymbol = new QAction(tr("Symbol", "2D Mapper context menu (room) item"), this);
             roomSymbol->setToolTip(tr("Set one or more symbols or letters to mark special rooms", "2D Mapper context menu (room) item tooltip"));
             connect(roomSymbol, &QAction::triggered, this, &T2DMap::slot_setSymbol);
 
-            auto moveRoomXY = new QAction(tr("move to", "2D Mapper context menu (room) item"), this);
+            auto moveRoomXY = new QAction(tr("Move to", "2D Mapper context menu (room) item"), this);
             moveRoomXY->setToolTip(tr("Move selected group to a given position", "2D Mapper context menu (room) item tooltip"));
             connect(moveRoomXY, &QAction::triggered, this, &T2DMap::slot_movePosition);
 
-            auto roomArea = new QAction(tr("area", "2D Mapper context menu (room) item"), this);
+            auto roomArea = new QAction(tr("Area", "2D Mapper context menu (room) item"), this);
             roomArea->setToolTip(tr("Set room's area number", "2D Mapper context menu (room) item tooltip"));
             connect(roomArea, &QAction::triggered, this, &T2DMap::slot_setArea);
 
-            auto customExitLine = new QAction(tr("custom exit lines", "2D Mapper context menu (room) item"), this);
+            auto customExitLine = new QAction(tr("Custom exit line", "2D Mapper context menu (room) item"), this);
             if (pArea && !pArea->gridMode) {
                 customExitLine->setToolTip(tr("Replace an exit line with a custom line", "2D Mapper context menu (room) item tooltip (enabled state)"));
                 connect(customExitLine, &QAction::triggered, this, &T2DMap::slot_setCustomLine);
@@ -2800,17 +2827,17 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 customExitLine->setEnabled(false);
             }
 
-            auto createLabel = new QAction(tr("create Label", "2D Mapper context menu (room) item"), this);
+            auto createLabel = new QAction(tr("Create Label", "2D Mapper context menu (room) item"), this);
             createLabel->setToolTip(tr("Create labels to show text or images", "2D Mapper context menu (room) item tooltip"));
             connect(createLabel, &QAction::triggered, this, &T2DMap::slot_createLabel);
 
-            auto setPlayerLocation = new QAction(tr("set location", "2D Mapper context menu (room) item"), this);
+            auto setPlayerLocation = new QAction(tr("Set location", "2D Mapper context menu (room) item"), this);
             if (mMultiSelectionSet.size() == 1) { // Only enable if ONE room is highlighted
                 setPlayerLocation->setToolTip(tr("Set player current location to here", "2D Mapper context menu (room) item tooltip (enabled state)"));
                 connect(setPlayerLocation, &QAction::triggered, this, &T2DMap::slot_setPlayerLocation);
             } else {
                 setPlayerLocation->setEnabled(false);
-                setPlayerLocation->setToolTip(tr("Cannot set location when not exactly one room selected", "2D Mapper context menu (room) item tooltip (disabled state)"));
+                setPlayerLocation->setToolTip(tr("Can only set location when exactly one room is selected", "2D Mapper context menu (room) item tooltip (disabled state)"));
             }
 
             mPopupMenu = true;
@@ -2837,10 +2864,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             popup->popup(mapToGlobal(event->pos()));
         } else if (mLabelHighlighted) {
-            auto moveLabel = new QAction(tr("move", "2D Mapper context menu (label) item"), this);
+            auto moveLabel = new QAction(tr("Move", "2D Mapper context menu (label) item"), this);
             moveLabel->setToolTip(tr("Move label", "2D Mapper context menu item (label) tooltip"));
             connect(moveLabel, &QAction::triggered, this, &T2DMap::slot_moveLabel);
-            auto deleteLabel = new QAction(tr("delete", "2D Mapper context menu (label) item"), this);
+            auto deleteLabel = new QAction(tr("Delete", "2D Mapper context menu (label) item"), this);
             deleteLabel->setToolTip(tr("Delete label", "2D Mapper context menu (label) item tooltip"));
             connect(deleteLabel, &QAction::triggered, this, &T2DMap::slot_deleteLabel);
             mPopupMenu = true;
@@ -2857,7 +2884,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             if (mCustomLineSelectedRoom > 0) {
                 TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLineSelectedRoom);
                 if (room) {
-                    auto addPoint = new QAction(tr("add point", "2D Mapper context menu (custom line editing) item"), this);
+                    auto addPoint = new QAction(tr("Add point", "2D Mapper context menu (custom line editing) item"), this);
                     if (mCustomLineSelectedPoint > -1)
                     // The first user manipulable point IS zero - line is
                     // drawn to it from a point around room symbol dependent
@@ -2871,7 +2898,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                                                 "2D Mapper context menu (custom line editing) item tooltip (disabled state, i.e must do the suggested action first)"));
                     }
 
-                    auto removePoint = new QAction(tr("remove point", "2D Mapper context menu (custom line editing) item"), this);
+                    auto removePoint = new QAction(tr("Remove point", "2D Mapper context menu (custom line editing) item"), this);
                     // Permit this to be enabled if the current point is 0 or
                     // greater, but not if there is no others
                     if (mCustomLineSelectedPoint > -1) {
@@ -2897,7 +2924,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                                                    "2D Mapper context menu (custom line editing) item tooltip (disabled state, user will need to do something before it can be used)"));
                     }
 
-                    auto lineProperties = new QAction(tr("properties", "2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)"), this);
+                    auto lineProperties = new QAction(tr("Properties", "2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)"), this);
                     // Changed seperately, because the constructor silently copies the text elsewhere
                     // (tooltip and/or object name IIRC) whereas the ellipsis is meant only for display
                     lineProperties->setText(
@@ -2905,7 +2932,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     lineProperties->setToolTip(tr("Change the properties of this custom line"));
                     connect(lineProperties, &QAction::triggered, this, &T2DMap::slot_customLineProperties);
 
-                    auto deleteLine = new QAction(tr("delete line", "2D Mapper context menu (custom line editing) item"), this);
+                    auto deleteLine = new QAction(tr("Delete line", "2D Mapper context menu (custom line editing) item"), this);
                     deleteLine->setToolTip(tr("Delete all of this custom line", "2D Mapper context menu (custom line editing) item tooltip"));
                     connect(deleteLine, &QAction::triggered, this, &T2DMap::slot_deleteCustomExitLine);
 
