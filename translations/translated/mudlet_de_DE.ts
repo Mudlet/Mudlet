@@ -1378,7 +1378,7 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="1547"/>
       <source>Pre-Map loading(1) report</source>
-      <translation>Bericht bevor die Karte geladen wird(1)</translation>
+      <translation>Bericht bevor die Karte lädt(1)</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1565"/>
@@ -1401,7 +1401,7 @@ Ganzzahl eingeben:</translation>
       <location filename="../src/TConsole.cpp" line="1638"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; was not found).</source>
-      <translation>loadMap: bad argument #1 value (benutzter Dateiname: 
+      <translation>loadMap: Falscher Wert für Argument #1 (benutzter Dateiname: 
 &quot;%1&quot; wurde nicht gefunden).</translation>
     </message>
     <message>
