@@ -398,7 +398,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="107"/>
       <source>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection. Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.</source>
-      <translation type="unfinished"/>
+      <translation>Нажмите на строку, чтобы выбрать или отменить выбор номера комнаты (или названия комнаты, если оно было задано), чтобы добавить или удалить комнату из выборки. Для сортировки нажмите на соответствующий заголовок. Обратите внимание, что имя столбца будет отображаться только, если хотя бы одна из комнат имеет  название.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2228"/>
@@ -581,7 +581,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2747"/>
       <source>Custom exit lines</source>
       <comment>Menu option to create custom exit lines in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Пользовательские линии выходов</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2754"/>
@@ -651,12 +651,12 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2825"/>
       <source>Divide segment by adding a new point mid-way along</source>
-      <translation type="unfinished"/>
+      <translation>Разделить сегмент путем добавления новой точки в середине</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2828"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
-      <translation type="unfinished"/>
+      <translation>Сначала выберите точку, затем добавьте новую точку посередине вдоль сегмента в направлении комнаты</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2831"/>
@@ -667,17 +667,17 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2838"/>
       <source>Merge pair of segments by removing this point</source>
-      <translation type="unfinished"/>
+      <translation>Объединить пару сегментов путем удаления этой точки</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2840"/>
       <source>Remove last segment by removing this point</source>
-      <translation type="unfinished"/>
+      <translation>Удалить последний сегмент путем удаления этой точки</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2844"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
-      <translation type="unfinished"/>
+      <translation>используйте &quot;удалить строку&quot;, чтобы удалить единственный сегмент, заканчивающийся в редактируемой точке</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2848"/>
@@ -740,7 +740,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3322"/>
       <source>Move the selection, centered on
 the highlighted room (%1) to:</source>
-      <translation type="unfinished"/>
+      <translation>Переместить выделенное по центру подсвеченной комнаты (%1), чтобы:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3324"/>
@@ -795,7 +795,9 @@ with a new symbol to use for all the rooms:</source>
       <source>The symbol is &quot;%1&quot; in the selected room,
 delete this to clear the symbol or replace
 it with a new symbol for this room:</source>
-      <translation type="unfinished"/>
+      <translation>Символ &quot;%1&quot; в выбранной комнате,
+удалите это, чтобы очистить или заменить
+на новый символ этой комнаты:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3471"/>
@@ -828,7 +830,10 @@ new graphemes (&quot;visible characters&quot;),
 to set; or a space to clear; all
 selected rooms:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Выберите существующий символ в списке
+(отсортированный по наиболее используемым) или введите один или несколько новых графем
+(&quot;видимые символы&quot;),, для установки; или пробел для очистки;все 
+выбранные комнаты:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="725"/>
@@ -845,7 +850,8 @@ selected rooms:</source>
       <location filename="../src/T2DMap.cpp" line="1897"/>
       <source>Mapper: Cannot find a path to this room using known exits.
 </source>
-      <translation type="unfinished"/>
+      <translation>Маппер: Не удается найти путь к этой комнате с использованием известных выходов.
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2215"/>
@@ -908,7 +914,8 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation type="unfinished"/>
+      <translation>Уменьшить интервал выбранных комнат,
+центрируясь на подсвеченной комнате на коэффициент, равный:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3735"/>
@@ -922,7 +929,8 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation type="unfinished"/>
+      <translation>Уменьшить интервал выбранных комнат,
+центрируясь на подсвеченной комнате на коэффициент, равный:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3866"/>
@@ -1001,7 +1009,7 @@ rooms:</source>
     <message>
       <location filename="../src/TAlias.cpp" line="255"/>
       <source>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Ошибка: в &quot;шаблон:&quot;, неверное регулярное выражение, причина: &quot;%1&quot;.</translation>
     </message>
   </context>
   <context>
@@ -1009,7 +1017,7 @@ rooms:</source>
     <message>
       <location filename="../src/TArea.cpp" line="373"/>
       <source>roomID=%1 does not exist, can not set properties of a non-existent room!</source>
-      <translation type="unfinished"/>
+      <translation>roomID=%1 не существует, невозможно задать свойства несуществующей комнаты!</translation>
     </message>
   </context>
   <context>
@@ -1245,14 +1253,15 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="981"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Протоколирование начинается с &apos;чч: мм: сс&apos; на &apos;дддддд&apos;, &apos;d&apos; &apos;ММММ&apos; &apos;гггг&apos;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1002"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.
 </source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Протоколирование начинается с &apos;чч: мм: сс&apos; на &apos;дддддд&apos;, &apos;d&apos; &apos;ММММ&apos; &apos;гггг&apos;.
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1011"/>
@@ -1263,12 +1272,12 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="1012"/>
       <source>hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>чч:мм:сс&apos; на &apos;&apos;дддд&apos;,&apos; &apos;&apos;ММММ&apos;&apos;гггг</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1567"/>
       <source>Loading map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Загрузка карты(1) &quot;%1&quot; в %2 отчет</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2373"/>
@@ -1301,7 +1310,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="400"/>
       <source>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</source>
-      <translation type="unfinished"/>
+      <translation>&lt;i&gt;N:&lt;/i&gt; -задержка сервера игры и сети (aka ping, в секундах), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; -время обработки системы-сколько времени потребовалось для обработки последней строки.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="438"/>
@@ -1346,40 +1355,43 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1609"/>
       <source>Pre-Map importing(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Предварительный отчет об импорте карты (1)</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1632"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ Ошибка ] - Файл карты не найден, путь и имя было:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1638"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; was not found).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: неверное значение аргумента #1 (используемое имя файла: 
+&quot;%1&quot; не найдено).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1647"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Файл карты расположен и открыт, теперь его анализ...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1654"/>
       <source>Importing map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Импорт карты (1) &quot;%1&quot; в отчете %2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1657"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФОРМАЦИЯ]-Файл карты обнаружен, но не удалось открыть, проверьте разрешения на:&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1660"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; could not be opened for reading).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: неверный аргумент #1 (используемое имя файла: 
+&quot;%1&quot; невозможно открыть для чтения).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2184"/>
@@ -1394,17 +1406,17 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2585"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Запрос на перезагрузку карты получен от системы...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2590"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] -... Запрос на перезагрузку системной карты завершен.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2592"/>
       <source>[ WARN ]  - ... System Map reload request failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ПРЕДУПРЕЖДЕНИЕ] -... Сбой запроса на перезагрузку системной карты.</translation>
     </message>
   </context>
   <context>
@@ -1412,7 +1424,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9771"/>
       <source>[ WARN ]  - Lua command setAreaUserData() used - it is currently flagged as experimental!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN]-использована команда Lua setAreaUserData () - она в настоящее время помечена как экспериментальная!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9772"/>
@@ -1468,18 +1480,19 @@ Some functions may not be available.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14754"/>
       <source>[  OK  ]  - Lua module rex_pcre loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ ОК ] - модуль Луа rex_pcre загружен.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14765"/>
       <source>[ ERROR ] - Cannot find Lua module zip.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Не удается найти модуль Lua zip.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14769"/>
       <source>[  OK  ]  - Lua module zip loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ ОК ] - модуль Луа zip загружен.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14780"/>
@@ -1491,7 +1504,7 @@ Probably will not be able to access Mudlet Lua code.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14785"/>
       <source>[  OK  ]  - Lua module lfs loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ ОК ] - модуль Луа lfs загружен.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14796"/>
@@ -1503,7 +1516,7 @@ Database support will not be available.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14801"/>
       <source>[  OK  ]  - Lua module sqlite3 loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ ОК ] - модуль Луа sqlite3 загружен.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14813"/>
@@ -1515,7 +1528,7 @@ utf8.* Lua functions won&apos;t be available.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14818"/>
       <source>[  OK  ]  - Lua module utf8 loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ ОК ] - модуль Луа utf8 загружен.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14830"/>
@@ -1527,7 +1540,7 @@ yajl.* Lua functions won&apos;t be available.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14835"/>
       <source>[  OK  ]  - Lua module yajl loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ ОК ] - модуль Луа yajl загружен.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14925"/>
@@ -1538,7 +1551,7 @@ yajl.* Lua functions won&apos;t be available.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14929"/>
       <source>[  OK  ]  - Lua code formatter loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - загружен форматировщик кода Lua.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14962"/>
@@ -2383,7 +2396,7 @@ Old ==&gt; New</source>
       <location filename="../src/TRoomDB.cpp" line="825"/>
       <location filename="../src/TRoomDB.cpp" line="828"/>
       <source>[ INFO ]  - Area id numbering is satisfactory.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Нумерация идентификаторов областей является удовлетворительной.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="836"/>
@@ -2400,7 +2413,8 @@ out what new id numbers to use.</source>
       <location filename="../src/TRoomDB.cpp" line="848"/>
       <source>[ INFO ]  - The renumbered rooms will be:
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Перенумерованные комнаты будут:
+</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="864"/>
@@ -2416,7 +2430,7 @@ out what new id numbers to use.</source>
       <location filename="../src/TRoomDB.cpp" line="901"/>
       <location filename="../src/TRoomDB.cpp" line="904"/>
       <source>[ INFO ]  - Room id numbering is satisfactory.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Нумерация идентификаторов комнат является удовлетворительной.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="921"/>
@@ -2650,73 +2664,73 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1747"/>
       <source>{tab}</source>
       <comment>Unicode U+0009 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{tab}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1748"/>
       <source>{line-feed}</source>
       <comment>Unicode U+000A codepoint. Not likely to be seen as it gets filtered out.</comment>
-      <translation type="unfinished"/>
+      <translation>{line-feed}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1749"/>
       <source>{carriage-return}</source>
       <comment>Unicode U+000D codepoint. Not likely to be seen as it gets filtered out.</comment>
-      <translation type="unfinished"/>
+      <translation>{carriage-return}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1750"/>
       <source>{space}</source>
       <comment>Unicode U+0020 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1751"/>
       <source>{non-breaking space}</source>
       <comment>Unicode U+00A0 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{non-breaking space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1752"/>
       <source>{soft hyphen}</source>
       <comment>Unicode U+00AD codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{soft hyphen}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1753"/>
       <source>{combining grapheme joiner}</source>
       <comment>Unicode U+034F codepoint (badly named apparently - see Wikipedia!)</comment>
-      <translation type="unfinished"/>
+      <translation>{combining grapheme joiner}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1754"/>
       <source>{ogham space mark}</source>
       <comment>Unicode U+1680 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{ogham space mark}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1755"/>
       <source>{&apos;n&apos; quad}</source>
       <comment>Unicode U+2000 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{&apos;n&apos; quad}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1756"/>
       <source>{&apos;m&apos; quad}</source>
       <comment>Unicode U+2001 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{&apos;m&apos; quad}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1757"/>
       <source>{&apos;n&apos; space}</source>
       <comment>Unicode U+2002 codepoint - En (&apos;n&apos;) wide space.</comment>
-      <translation type="unfinished"/>
+      <translation>{&apos;n&apos; space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1758"/>
       <source>{&apos;m&apos; space}</source>
       <comment>Unicode U+2003 codepoint - Em (&apos;m&apos;) wide space.</comment>
-      <translation type="unfinished"/>
+      <translation>{&apos;m&apos; space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1759"/>
@@ -2734,211 +2748,211 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1761"/>
       <source>{6-per-em space}</source>
       <comment>Unicode U+2006 codepoint - six-per-em (&apos;m&apos;) wide (Sometimes the same as a Thin) space.</comment>
-      <translation type="unfinished"/>
+      <translation>{6-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1762"/>
       <source>{digit space}</source>
       <comment>Unicode U+2007 codepoint - figure (digit) wide space.</comment>
-      <translation type="unfinished"/>
+      <translation>{digit space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1763"/>
       <source>{punctuation wide space}</source>
       <comment>Unicode U+2008 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{punctuation wide space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1764"/>
       <source>{5-per-em space}</source>
       <comment>Unicode U+2009 codepoint - five-per-em (&apos;m&apos;) wide space.</comment>
-      <translation type="unfinished"/>
+      <translation>{5-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1765"/>
       <source>{hair width space}</source>
       <comment>Unicode U+200A codepoint - thinnest space.</comment>
-      <translation type="unfinished"/>
+      <translation>{hair width space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1766"/>
       <source>{zero width space}</source>
       <comment>Unicode U+200B codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{zero width space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1767"/>
       <source>{Zero width non-joiner}</source>
       <comment>Unicode U+200C codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{Zero width non-joiner}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1768"/>
       <source>{zero width joiner}</source>
       <comment>Unicode U+200D codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{zero width joiner}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1769"/>
       <source>{left-to-right mark}</source>
       <comment>Unicode U+200E codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{left-to-right mark}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1770"/>
       <source>{right-to-left mark}</source>
       <comment>Unicode U+200F codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{right-to-left mark}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1771"/>
       <source>{line separator}</source>
       <comment>Unicode 0x2028 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{line separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1772"/>
       <source>{paragraph separator}</source>
       <comment>Unicode U+2029 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{paragraph separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1773"/>
       <source>{Left-to-right embedding}</source>
       <comment>Unicode U+202A codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{Left-to-right embedding}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1774"/>
       <source>{right-to-left embedding}</source>
       <comment>Unicode U+202B codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{right-to-left embedding}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1775"/>
       <source>{pop directional formatting}</source>
       <comment>Unicode U+202C codepoint - pop (undo last) directional formatting.</comment>
-      <translation type="unfinished"/>
+      <translation>{pop directional formatting}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1776"/>
       <source>{Left-to-right override}</source>
       <comment>Unicode U+202D codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{Left-to-right override}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1777"/>
       <source>{right-to-left override}</source>
       <comment>Unicode U+202E codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{right-to-left override}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1778"/>
       <source>{narrow width no-break space}</source>
       <comment>Unicode U+202F codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{narrow width no-break space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1779"/>
       <source>{medium width mathematical space}</source>
       <comment>Unicode U+205F codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{medium width mathematical space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1780"/>
       <source>{zero width non-breaking space}</source>
       <comment>Unicode U+2060 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{zero width non-breaking space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1781"/>
       <source>{function application}</source>
       <comment>Unicode U+2061 codepoint - function application (whatever that means!)</comment>
-      <translation type="unfinished"/>
+      <translation>{function application}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1782"/>
       <source>{invisible times}</source>
       <comment>Unicode U+2062 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{invisible times}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1783"/>
       <source>{invisible separator}</source>
       <comment>Unicode U+2063 codepoint - invisible separator or comma.</comment>
-      <translation type="unfinished"/>
+      <translation>{invisible separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1784"/>
       <source>{invisible plus}</source>
       <comment>Unicode U+2064 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{invisible plus}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1785"/>
       <source>{left-to-right isolate}</source>
       <comment>Unicode U+2066 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{left-to-right isolate}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1786"/>
       <source>{right-to-left isolate}</source>
       <comment>Unicode U+2067 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{right-to-left isolate}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1787"/>
       <source>{first strong isolate}</source>
       <comment>Unicode U+2068 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{first strong isolate}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1788"/>
       <source>{pop directional isolate}</source>
       <comment>Unicode U+2069 codepoint - pop (undo last) directional isolate.</comment>
-      <translation type="unfinished"/>
+      <translation>{pop directional isolate}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1789"/>
       <source>{inhibit symmetrical swapping}</source>
       <comment>Unicode U+206A codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{inhibit symmetrical swapping}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1790"/>
       <source>{activate symmetrical swapping}</source>
       <comment>Unicode U+206B codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{activate symmetrical swapping}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1791"/>
       <source>{inhibit arabic form-shaping}</source>
       <comment>Unicode U+206C codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{inhibit arabic form-shaping}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1792"/>
       <source>{activate arabic form-shaping}</source>
       <comment>Unicode U+206D codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{activate arabic form-shaping}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1793"/>
       <source>{national digit shapes}</source>
       <comment>Unicode U+206E codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{national digit shapes}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1794"/>
       <source>{nominal Digit shapes}</source>
       <comment>Unicode U+206F codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{nominal Digit shapes}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1795"/>
       <source>{ideaographic space}</source>
       <comment>Unicode U+3000 codepoint - ideaographic (CJK Wide) space</comment>
-      <translation type="unfinished"/>
+      <translation>{ideaographic space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1796"/>
@@ -2968,115 +2982,115 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1800"/>
       <source>{variation selector 5}</source>
       <comment>Unicode U+FE04 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 5}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1801"/>
       <source>{variation selector 6}</source>
       <comment>Unicode U+FE05 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 6}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1802"/>
       <source>{variation selector 7}</source>
       <comment>Unicode U+FE06 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 7}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1803"/>
       <source>{variation selector 8}</source>
       <comment>Unicode U+FE07 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 8}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1804"/>
       <source>{variation selector 9}</source>
       <comment>Unicode U+FE08 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 9}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1805"/>
       <source>{variation selector 10}</source>
       <comment>Unicode U+FE09 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 10}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1806"/>
       <source>{variation selector 11}</source>
       <comment>Unicode U+FE0A codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 11}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1807"/>
       <source>{variation selector 12}</source>
       <comment>Unicode U+FE0B codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 12}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1808"/>
       <source>{variation selector 13}</source>
       <comment>Unicode U+FE0C codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 13}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1809"/>
       <source>{variation selector 14}</source>
       <comment>Unicode U+FE0D codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 14}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1810"/>
       <source>{variation selector 15}</source>
       <comment>Unicode U+FE0E codepoint - after an Emoji codepoint forces the textual (black &amp; white) rendition.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 15}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1811"/>
       <source>{variation selector 16}</source>
       <comment>Unicode U+FE0F codepoint - after an Emoji codepoint forces the proper coloured &apos;Emoji&apos; rendition.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 16}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1812"/>
       <source>{zero width no-break space}</source>
       <comment>Unicode U+FEFF codepoint - also known as the Byte-order-mark at start of text!).</comment>
-      <translation type="unfinished"/>
+      <translation>{zero width no-break space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1818"/>
       <source>{interlinear annotation anchor}</source>
       <comment>Unicode U+FFF9 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{interlinear annotation anchor}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1819"/>
       <source>{interlinear annotation separator}</source>
       <comment>Unicode U+FFFA codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{interlinear annotation separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1820"/>
       <source>{interlinear annotation terminator}</source>
       <comment>Unicode U+FFFB codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{interlinear annotation terminator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1821"/>
       <source>{object replacement character}</source>
       <comment>Unicode U+FFFC codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{object replacement character}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1833"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint in range U+FFD0 to U+FDEF - not a character.</comment>
-      <translation type="unfinished"/>
+      <translation>{noncharacter}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1835"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint in range U+FFFx - not a character.</comment>
-      <translation type="unfinished"/>
+      <translation>{noncharacter}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1844"/>
@@ -3100,19 +3114,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1847"/>
       <source>{FitzPatrick modifier 5}</source>
       <comment>Unicode codepoint U+0001F3FE - FitzPatrick modifier (Emoji Human skin-tone) 5.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 5}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1848"/>
       <source>{FitzPatrick modifier 6}</source>
       <comment>Unicode codepoint U+0001F3FF - FitzPatrick modifier (Emoji Human skin-tone) 6.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 6}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1852"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</comment>
-      <translation type="unfinished"/>
+      <translation>{noncharacter}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2124"/>
@@ -3154,7 +3168,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2204"/>
       <source>Lua character or code</source>
       <comment>6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Lua символ или код</translation>
     </message>
   </context>
   <context>
@@ -3226,7 +3240,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/XMLimport.cpp" line="361"/>
       <source>Parsing environment data...</source>
-      <translation type="unfinished"/>
+      <translation>Анализ данных среды...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="369"/>
@@ -3282,7 +3296,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="127"/>
       <source>Number of columns/rows (depending on orientation):</source>
-      <translation type="unfinished"/>
+      <translation>Количество столбцов/строк (в зависимости от ориентации):</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="150"/>
@@ -3390,7 +3404,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="103"/>
       <source>enter a perl regex pattern for your alias; alias are triggers on your input</source>
-      <translation type="unfinished"/>
+      <translation>введите шаблон regex perl для алиаса; алиасы - это риггеры для вашего ввода</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="110"/>
@@ -3440,44 +3454,49 @@ and this one cannot read it, you need a newer Mudlet!</source>
 Connection cannot be established.
 The server name is not correct, not working properly,
 or your nameservers are not working properly.</source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Ошибка поиска имени хоста!
+Невозможно установить соединение.
+Имя сервера не правильно, не работает должным образом,
+или ваши серверы имен не работают должным образом.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="361"/>
       <source>[ INFO ]  - Looking up the IP address of server:</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Поиск IP-адреса сервера:</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="377"/>
       <source>[ ERROR ] - TCP/IP socket ERROR:</source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - ошибка TCP/IP сокета:</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="400"/>
       <source>[ INFO ]  - A secure connection has been established successfully.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Защищенное соединение установлено успешно.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="402"/>
       <source>[ INFO ]  - A connection has been established successfully.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Соединение установлено успешно.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="440"/>
       <source>[ INFO ]  - Connection time: %1
     </source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - время соединения: %1
+    </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="479"/>
       <source>Secure connections aren&apos;t supported by this game on this port - try turning the option off.</source>
-      <translation type="unfinished"/>
+      <translation>Защищенные соединения не поддерживаются этой игрой на этом порту - попробуйте выключить опцию.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="524"/>
       <source>[ INFO ]  - Trying secure connection to %1: %2 ...
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Попытка защищенного соединения с %1: %2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="562"/>
@@ -3509,13 +3528,13 @@ Uninstalling old version &apos;%2&apos;.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="1333"/>
       <source>[ INFO ]  - Server offers downloadable GUI (url=&apos;%1&apos;) (package=&apos;%2&apos;)...</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Сервер предлагает загружаемый интерфейс (url=&apos;%1&apos;) (package=&apos;%2&apos;)...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1335"/>
       <location filename="../src/ctelnet.cpp" line="1614"/>
       <source>[  OK  ]  - Package is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Пакет уже установлен.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1342"/>
@@ -3581,7 +3600,7 @@ Uninstalling old version &apos;%2&apos;.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="2016"/>
       <source>Cannot perform replay, another one may already be in progress. Try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>Невозможно выполнить повтор, возможно, уже выполняется другой. Повторите попытку, когда он будет завершен.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2018"/>
@@ -3650,7 +3669,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="282"/>
       <source>16 + 36 x R + 6 x G + B =</source>
-      <translation type="unfinished"/>
+      <translation>16 + 36 x R + 6 x G + B =</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="343"/>
@@ -3665,7 +3684,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="363"/>
       <source>ANSI 24 Grays scale [232-255] - adjust gray and click button to select matching color number:</source>
-      <translation type="unfinished"/>
+      <translation>ANSI 24 Grays scale [232-255] - настройте серый цвет и нажмите кнопку, чтобы выбрать соответствующий номер цвета:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="375"/>
@@ -3675,7 +3694,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="382"/>
       <source>232 + Gr =</source>
-      <translation type="unfinished"/>
+      <translation>232 + Gr =</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="414"/>
@@ -3806,7 +3825,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2392"/>
       <source>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</source>
-      <translation type="unfinished"/>
+      <translation>При включении этого параметра Mudlet будет автоматически подключаться к этому профилю при запуске</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2398"/>
@@ -3897,7 +3916,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="44"/>
       <source>Choose line format, color and arrow option and then select the exit to start drawing</source>
-      <translation type="unfinished"/>
+      <translation>Выберите формат линии, цвет и стрелку, а затем выберите выход для начала рисования</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="63"/>
@@ -4012,7 +4031,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="514"/>
       <source>&lt;p&gt;The room this special exit leads to.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Комната куда етот специальный выход выводит.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="525"/>
@@ -4165,17 +4184,18 @@ Count</source>
       <source>&lt;p&gt;Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.&lt;/p&gt;
 &lt;p&gt;Mudlet is released under the GPL license version 2, which is reproduced below:&lt;/p&gt;</source>
       <comment>For non-english language versions please append a translation of the following to explain why the GPL is NOT reproduced in the relevent language: &apos;but only the English form is considered the official version of the license, so the following is reproduced in that language:&apos; to replace &apos;which is reproduced below:&apos;...</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet был первоначально написан Хейко Кёном, KoehnHeiko@googlemail.com.&lt;/p&gt;
+&lt;p&gt;Mudlet выпущен под лицензией GPL версии 2, которая воспроизводится ниже:&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="472"/>
       <source>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; is built upon the shoulders of other projects in the FOSS world; as well as using many GPL components we also make use of some third-party software with other licenses:&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; построен на плечах других проектов в мире FOSS, а также с использованием многих GPL компонентов мы также используем некоторые сторонние программы с другими лицензиями:&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="643"/>
       <source>&lt;h2&gt;&lt;u&gt;Communi IRC Library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008-2016 The Communi Project&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Библиотека IRC Коммуни&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Авторское право © 2008-2016 Проект Коммуни&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="646"/>
@@ -4268,7 +4288,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
       <source>&lt;p&gt;Click to make the color trigger ignore the text&apos;s background color - however chosing this for both this and the foreground is an error.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Нажмите, чтобы триггер цвета игнорировал цвет фона текста&apos;s - однако выбор этого и для этого, и для переднего плана является ошибкой.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="60"/>
@@ -4338,12 +4358,12 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="84"/>
       <source>White (Light gray)</source>
-      <translation type="unfinished"/>
+      <translation>Белый (светло-серый)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="86"/>
       <source>Light black (Dark gray)</source>
-      <translation type="unfinished"/>
+      <translation>Светло-черный (темно-серый)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="87"/>
@@ -4389,7 +4409,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="405"/>
       <source>All color options are showing.</source>
-      <translation type="unfinished"/>
+      <translation>Все цветовые опции показаны.</translation>
     </message>
   </context>
   <context>
@@ -4461,25 +4481,28 @@ Count</source>
       <source>The %1 character is not permitted. Use one of the following:
 &quot;%2&quot;.
 </source>
-      <translation type="unfinished"/>
+      <translation>Символ %1 не допускается. Используйте один из следующих:
+&quot;%2&quot;.
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1784"/>
       <source>Port number must be above zero and below 65535.
 </source>
-      <translation type="unfinished"/>
+      <translation>Номер порта должен быть выше нуля и ниже 65535.
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1792"/>
       <source>Mudlet is not configured for secure connections.</source>
-      <translation>Mudlet не настроен на безопасные соединения.</translation>
+      <translation>Mudlet не настроен на защищенные соединения.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1795"/>
       <source>Mudlet is not configured for secure connections.
 
 </source>
-      <translation>Mudlet не настроен на безопасные соединения.
+      <translation>Mudlet не настроен на защищенные соединения.
 
 </translation>
     </message>
@@ -4488,7 +4511,7 @@ Count</source>
       <source>Mudlet can not load support for secure connections.
 
 </source>
-      <translation>Mudlet не можете загрузить поддержку безопасных соединений.
+      <translation>Mudlet не может загрузить поддержку защищенных соединений.
 
 </translation>
     </message>
@@ -4497,7 +4520,9 @@ Count</source>
       <source>Please enter the URL or IP address of the Game server.
 
 %1</source>
-      <translation type="unfinished"/>
+      <translation>Пожалуйста, введите URL-адрес или IP-адрес игрового сервера.
+
+%1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1827"/>
@@ -4607,7 +4632,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="636"/>
       <source>! The Nickname %1 is reserved. Automatically changing Nickname to: %2</source>
-      <translation type="unfinished"/>
+      <translation>! Прозвище %1 зарезервирован. Автоматически меняется ник на: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="648"/>
@@ -4764,7 +4789,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="579"/>
       <source>Named file (concatenate logs in one file)</source>
-      <translation type="unfinished"/>
+      <translation>Именованный файл (объединение журналов в один файл)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="610"/>
@@ -4794,7 +4819,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="690"/>
       <source>Show &quot;%1&quot; in the map area selection</source>
-      <translation type="unfinished"/>
+      <translation>Показать &quot;%1&quot; в выборе области карты</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="801"/>
@@ -4888,7 +4913,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1929"/>
       <source>Could not backup the map - saving it failed.</source>
-      <translation type="unfinished"/>
+      <translation>Не удалось создать резервную копию карты - сохранение не выполнено.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1954"/>
@@ -4908,7 +4933,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1976"/>
       <source>Map copied successfully to other profile %1.</source>
-      <translation type="unfinished"/>
+      <translation>Карта успешно скопирована в другой профиль %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1988"/>
@@ -4999,11 +5024,6 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="139"/>
       <source>&lt;p&gt;Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Автоматическое обновление отключено в сборках разработки, чтобы предотвратить обновления от перезаписовать ваш Mudlet.&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgProfilePreferences.cpp" line="160"/>
-      <source>&lt;p&gt;A timer with a short interval will quickly fill up the &lt;i&gt;Central Debug Console&lt;/i&gt; windows with messages that it ran correctly on &lt;i&gt;each&lt;/i&gt; occasion it is called.  This (per profile) control adjusts a threshold that will hide those messages in just that window for those timers which run &lt;b&gt;correctly&lt;/b&gt; when the timer&apos;s interval is less than this setting.&lt;/p&gt;&lt;p&gt;&lt;u&gt;Any timer script that has errors will still have its error messages reported whatever the setting.&lt;/u&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="160"/>
@@ -5519,7 +5539,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1855"/>
       <source>Exits for room: &quot;%1&quot; [*]</source>
-      <translation type="unfinished"/>
+      <translation>Выходы для комнаты: &quot;%1&quot; [*]</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1857"/>
@@ -5770,7 +5790,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="447"/>
       <source>Shows/Hides the separate Central Debug Console - when being displayed the system will be slower.</source>
-      <translation type="unfinished"/>
+      <translation>Показать/скрыть консоль централизованной отладки - при включении система будет медленнее.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="550"/>
@@ -6039,55 +6059,55 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="4946"/>
       <source>Foreground color ignored</source>
       <comment>Color trigger ignored foreground color button, ensure all threee instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана игнорируется</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4853"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4950"/>
       <source>Default foreground color</source>
       <comment>Color trigger default foreground color button, ensure all threee instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана по умолчанию</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4857"/>
       <source>Foreground color [ANSI %1]</source>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4862"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4961"/>
       <source>Background color ignored</source>
       <comment>Color trigger ignored background color button, ensure all threee instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет фона игнорируется</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4866"/>
       <source>Default background color</source>
       <comment>Color trigger default background color button, ensure all threee instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет фона по умолчанию</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4870"/>
       <source>Background color [ANSI %1]</source>
-      <translation type="unfinished"/>
+      <translation>Цвет фона [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4954"/>
       <source>Foreground color [ANSI %1]</source>
       <comment>Color trigger ANSI foreground color button, ensure all threee instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4965"/>
       <source>Default background color</source>
       <comment>Color trigger ignored background color button, ensure all threee instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет фона по умолчанию</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4969"/>
       <source>Background color [ANSI %1]</source>
       <comment>Color trigger ANSI background color button, ensure all threee instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет фона [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4980"/>
@@ -6124,7 +6144,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5964"/>
       <source>Key Bindings</source>
-      <translation type="unfinished"/>
+      <translation>Привязки клавиш</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7024"/>
@@ -6289,12 +6309,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7850"/>
       <source>Select foreground color to apply to matches</source>
-      <translation type="unfinished"/>
+      <translation>Выберите цвет переднего плана для применения к совпадением</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7869"/>
       <source>Select background color to apply to matches</source>
-      <translation type="unfinished"/>
+      <translation>Выберите цвет фона для применения к совпадениям</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7877"/>
@@ -6315,19 +6335,19 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7933"/>
       <source>Foreground color ignored</source>
       <comment>Color trigger ignored foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана игнорируется</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7936"/>
       <source>Default foreground color</source>
       <comment>Color trigger default foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана по умолчанию</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7939"/>
       <source>Foreground color [ANSI %1]</source>
       <comment>Color trigger ANSI foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7978"/>
@@ -6338,19 +6358,19 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7996"/>
       <source>Background color ignored</source>
       <comment>Color trigger ignored background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет фона игнорируется</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7999"/>
       <source>Default background color</source>
       <comment>Color trigger default background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет фона по умолчанию</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8002"/>
       <source>Background color [ANSI %1]</source>
       <comment>Color trigger ANSI background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет фона [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8027"/>
@@ -6616,7 +6636,8 @@ less likely to be useful for normal use of this application:
       <location filename="../src/main.cpp" line="267"/>
       <source>Project home page: http://www.mudlet.org/.
 </source>
-      <translation type="unfinished"/>
+      <translation>Главная страница проекта: http://www.mudlet.org/.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="296"/>
@@ -6640,14 +6661,16 @@ certain conditions; select the
     <message>
       <location filename="../src/main.cpp" line="363"/>
       <source>Locating profiles... </source>
-      <translation type="unfinished"/>
+      <translation>Поиск профилей... </translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="388"/>
       <source>Done.
 
 Loading font files... </source>
-      <translation type="unfinished"/>
+      <translation>Готово.
+
+Загрузка файлов шрифтов... </translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="455"/>
@@ -6658,7 +6681,13 @@ All data has been loaded successfully.
 Starting... Have fun!
 
 </source>
-      <translation type="unfinished"/>
+      <translation>Готово.
+
+Все данные успешно загружены.
+
+Запуск... Повеселись!
+
+</translation>
     </message>
   </context>
   <context>
@@ -7050,7 +7079,7 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="138"/>
       <source>Chinese [Traditional]</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Китайский [Tрадиционный]</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="139"/>
@@ -7287,7 +7316,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="386"/>
       <source>Disconnects you from the game and connects once again</source>
-      <translation type="unfinished"/>
+      <translation>Отключает вас от игры и снова соединяется</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="391"/>
@@ -7392,7 +7421,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="1603"/>
       <source>User window - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Пользовательское окно - %1 - %2</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2988"/>
@@ -7731,7 +7760,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="671"/>
       <source>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </source>
-      <translation type="unfinished"/>
+      <translation>Используйте сглаживание шрифтов. Сглаживает шрифты, если у вас высокое разрешение экрана, и вы можете использовать более крупные шрифты. Обратите внимание, что при низком разрешении и небольших размерах шрифта шрифт становится размытым. </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="674"/>
@@ -7746,22 +7775,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="711"/>
       <source>Top border height:</source>
-      <translation type="unfinished"/>
+      <translation>Высота верхней границы:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="755"/>
       <source>Left border width:</source>
-      <translation type="unfinished"/>
+      <translation>Ширина левой границы:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="799"/>
       <source>Bottom border height:</source>
-      <translation type="unfinished"/>
+      <translation>Высота нижней границы:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="843"/>
       <source>Right border width:</source>
-      <translation type="unfinished"/>
+      <translation>Ширина правой границы:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="884"/>
@@ -7981,7 +8010,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1008"/>
       <source>(characters to ignore in selection, for example &apos; or &quot;)</source>
-      <translation type="unfinished"/>
+      <translation>(символы игнорировать при выборе, например &apos; или &quot;)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1024"/>
@@ -8341,12 +8370,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2786"/>
       <source>Security</source>
-      <translation type="unfinished"/>
+      <translation>Безопасность</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2808"/>
       <source>SSL</source>
-      <translation type="unfinished"/>
+      <translation>SSL</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4744"/>
@@ -8361,7 +8390,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4764"/>
       <source>Secure connection</source>
-      <translation>Безопасное соединение</translation>
+      <translation>Защищенное соединение</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4777"/>
@@ -8477,12 +8506,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2033"/>
       <source>Only use symbols (glyphs) from chosen font</source>
-      <translation type="unfinished"/>
+      <translation>Использовать только символы (глифы) из выбранного шрифта</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2040"/>
       <source>Show symbol usage...</source>
-      <translation type="unfinished"/>
+      <translation>Показать использование символов...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2064"/>
@@ -8492,7 +8521,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2070"/>
       <source>Select your color preferences for the map display</source>
-      <translation type="unfinished"/>
+      <translation>Выберите цветовые предпочтения для отображения карты</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2076"/>
@@ -8512,12 +8541,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2421"/>
       <source>Force compression off</source>
-      <translation type="unfinished"/>
+      <translation>Принудительно отключить компрессию</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2428"/>
       <source>Force telnet GA signal interpretation off</source>
-      <translation type="unfinished"/>
+      <translation>Принудительно отключить интерпретацию сигналов GA telnet</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2435"/>
@@ -9074,7 +9103,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1886"/>
       <source>Exit Weight (0=No override)</source>
-      <translation type="unfinished"/>
+      <translation>Вес выхода (0 = Без переопределения)</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
@@ -9423,7 +9452,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="961"/>
       <source>line delta</source>
-      <translation type="unfinished"/>
+      <translation>дельта линии</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1123"/>
@@ -9453,7 +9482,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1165"/>
       <source>only pass matches to children as trigger input</source>
-      <translation type="unfinished"/>
+      <translation>в качестве текста для дочерных триггеров передавать только совпадения</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1287"/>
@@ -9469,7 +9498,7 @@ Without this option, the pattern matching will stop after the first successful m
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1336"/>
       <source>match all occurences of the pattern in the line</source>
-      <translation type="unfinished"/>
+      <translation>соответствовать всем вхождениям шаблона в строке</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1467"/>
