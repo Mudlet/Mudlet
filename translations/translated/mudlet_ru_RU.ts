@@ -3649,7 +3649,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="240"/>
       <source>ANSI 6R x 6G x 6B Colors [16-231] - adjust red, green, blue and click button to select matching color number:</source>
-      <translation type="unfinished"/>
+      <translation>ANSI 6R x 6G x 6B Цвета [16-231] - отрегулируйте красный, зеленый, синий и нажмите кнопку, чтобы выбрать соответствующий номер цвета:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="252"/>
@@ -3941,7 +3941,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="47"/>
       <source>&lt;p&gt;Selecting an exit immediately proceeds to drawing the first line segment from the centre point of the room.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Выбор выхода сразу же переходит к рисованию первого сегмента линии от центральной точки комнаты.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="60"/>
@@ -4036,7 +4036,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="525"/>
       <source>&lt;p&gt;The command or LUA script that goes to the given room.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Команда или скрипт Lua, который идет к данной комнате.&lt;p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="561"/>
