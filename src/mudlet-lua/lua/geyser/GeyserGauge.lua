@@ -103,6 +103,20 @@ function Geyser.Gauge:setStyleSheet(css, cssback, cssText)
   end
 end
 
+--- Sets the gauge to no longer intercept mouse events
+function Geyser.Gauge:enableClickthrough()
+    self.front:enableClickthrough()
+    self.back:enableClickthrough()
+    self.text:enableClickthrough()
+end
+
+--- Sets the gauge to once again intercept mouse events
+function Geyser.Gauge:disableClickthrough()
+    self.front:disableClickthrough()
+    self.back:disableClickthrough()
+    self.text:disableClickthrough()
+end
+
 -- Save a reference to our parent constructor
 Geyser.Gauge.parent = Geyser.Container
 
@@ -152,6 +166,9 @@ function Geyser.Gauge:new (cons, container)
   -- Set whether this gauge is strict about its max value being 100 or not
   if cons.strict then me.strict = true else me.strict = false end
 
+  -- Set clickthrough if included in constructor
+  if cons.clickthrough then me:enableClickthrough() end
+  
   --print("  New in " .. self.name .. " : " .. me.name)
   return me
 end

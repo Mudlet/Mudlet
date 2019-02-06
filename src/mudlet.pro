@@ -81,7 +81,14 @@ msvc:QMAKE_CXXFLAGS += -MP
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.12
 
 QT += network opengl uitools multimedia gui concurrent
-qtHaveModule(gamepad): QT += gamepad
+qtHaveModule(gamepad) {
+    QT += gamepad
+    message("Using Gamepad module")
+}
+qtHaveModule(texttospeech) {
+    QT += texttospeech
+    message("Using TextToSpeech module")
+}
 
 ############################# TEMPORARY TESTING PART ###########################
 # Tempory tests to determine what scope variables are correct, it seems that
@@ -140,7 +147,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.16.1
+VERSION = 3.17.0
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -702,6 +709,7 @@ LUA.files = \
     $${PWD}/mudlet-lua/lua/GMCP.lua \
     $${PWD}/mudlet-lua/lua/GUIUtils.lua \
     $${PWD}/mudlet-lua/lua/KeyCodes.lua \
+    $${PWD}/mudlet-lua/lua/TTSValues.lua \
     $${PWD}/mudlet-lua/lua/LuaGlobal.lua \
     $${PWD}/mudlet-lua/lua/Other.lua \
     $${PWD}/mudlet-lua/lua/StringUtils.lua \

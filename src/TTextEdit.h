@@ -25,6 +25,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+
+#include "TBuffer.h"
+
 #include "pre_guard.h"
 #include <QMap>
 #include <QPointer>
@@ -36,7 +39,6 @@
 #include <string>
 
 class Host;
-class TBuffer;
 class TConsole;
 class TChar;
 
@@ -50,17 +52,15 @@ class TTextEdit : public QWidget
 
 public:
     Q_DISABLE_COPY(TTextEdit)
-    TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isDebugConsole, bool isLowerPane);
+    TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isLowerPane);
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
     void drawForeground(QPainter&, const QRect&);
-    void drawFrame(QPainter&, const QRect&);
     void drawBackground(QPainter&, const QRect&, const QColor&) const;
-    void updateLastLine();
     uint getGraphemeBaseCharacter(const QString& str) const;
     void drawLine(QPainter& painter, int lineNumber, int rowOfScreen) const;
     int drawGrapheme(QPainter &painter, const QPoint &cursor, const QString &c, int column, TChar &style) const;
-    void drawCharacters(QPainter& painter, const QRect& rect, QString& text, bool isBold, bool isUnderline, bool isItalics, bool isStrikeOut, QColor& fgColor, QColor& bgColor);
+    void drawCharacters(QPainter&, const QRect&, QString&, const QColor&, const TChar::AttributeFlags);
     void showNewLines();
     void forceUpdate();
     void needUpdate(int, int);
@@ -83,7 +83,6 @@ public:
     int bufferScrollDown(int lines);
 // Not used:    void setConsoleFgColor(int r, int g, int b) { mFgColor = QColor(r, g, b); }
     void setConsoleBgColor(int r, int g, int b) { mBgColor = QColor(r, g, b); }
-    void setIsMiniConsole() { mIsMiniConsole = true; }
     void searchSelectionOnline();
     int getColumnCount();
     int getRowCount();
@@ -135,13 +134,7 @@ private:
     int mFontHeight;
     int mFontWidth;
     bool mForceUpdate;
-    bool mHighlight_on;
-    bool mHighlightingBegin;
-    bool mHighlightingEnd;
-    bool mInit_OK;
-    bool mInversOn;
-    bool mIsDebugConsole;
-    bool mIsMiniConsole;
+
     // Each TConsole instance uses two instances of this class, one above the
     // other but they need to behave differently in some ways; this flag is set
     // or reset on creation and is used to adjust the behaviour depending on
@@ -149,7 +142,6 @@ private:
     const bool mIsLowerPane;
     // last line offset rendered
     int mLastRenderBottom;
-    int mLeftMargin;
     bool mMouseTracking;
     bool mCtrlSelecting;
     int mDragStartY;

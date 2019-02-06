@@ -99,6 +99,7 @@ private:
     void getVersionString(QString&);
     QString readScriptElement();
 
+    void remapColorsToAnsiNumber(QStringList&, const QList<int>&);
 
     QPointer<Host> mpHost;
     QString mPackageName;

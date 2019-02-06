@@ -2,7 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -37,7 +37,11 @@
 
 using namespace std;
 
-const QString nothing = "";
+// Some extraordinary numbers outside of the range (0-255) used for ANSI colors:
+// Changing them WILL modify the Lua API of TLuaInterpreter::tempColorTrigger
+// and the replacement TLuaInterpreter::tempAnsiColorTrigger
+const int TTrigger::scmDefault = -2;
+const int TTrigger::scmIgnored = -1;
 
 TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 : Tree<TTrigger>( parent )
@@ -47,15 +51,12 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mSoundTrigger( false )
 , mStayOpen( 0 )
 , mColorTrigger( false )
-, mColorTriggerFg( false )
-, mColorTriggerBg( false )
 , mKeepFiring( 0 )
 , mpHost( pHost )
 , exportItem(true)
 , mModuleMasterFolder(false)
 , mNeedsToBeCompiled(true)
 , mTriggerType(REGEX_SUBSTRING)
-
 , mIsLineTrigger(false)
 , mStartOfLineDelta(0)
 , mLineDelta(3)
@@ -66,14 +67,14 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 , mBgColor(QColor(Qt::yellow))
 , mIsColorizerTrigger(false)
 , mModuleMember(false)
-, mColorTriggerFgAnsi()
-, mColorTriggerBgAnsi()
+, mColorTriggerFgAnsi(scmIgnored)
+, mColorTriggerBgAnsi(scmIgnored)
 , mRegisteredAnonymousLuaFunction(false)
 , mExpiryCount(-1)
 {
 }
 
-TTrigger::TTrigger(const QString& name, QStringList regexList, QList<int> regexProperyList, bool isMultiline, Host* pHost)
+TTrigger::TTrigger(const QString& name, const QStringList& regexList, const QList<int>& regexProperyList, bool isMultiline, Host* pHost)
 : Tree<TTrigger>(nullptr)
 , mTriggerContainsPerlRegex( false )
 , mPerlSlashGOption( false )
@@ -81,8 +82,6 @@ TTrigger::TTrigger(const QString& name, QStringList regexList, QList<int> regexP
 , mSoundTrigger( false )
 , mStayOpen( 0 )
 , mColorTrigger( false )
-, mColorTriggerFg( false )
-, mColorTriggerBg( false )
 , mKeepFiring( 0 )
 , mpHost( pHost )
 , mName( name )
@@ -102,8 +101,8 @@ TTrigger::TTrigger(const QString& name, QStringList regexList, QList<int> regexP
 , mBgColor(QColor(Qt::yellow))
 , mIsColorizerTrigger(false)
 , mModuleMember(false)
-, mColorTriggerFgAnsi()
-, mColorTriggerBgAnsi()
+, mColorTriggerFgAnsi(scmIgnored)
+, mColorTriggerBgAnsi(scmIgnored)
 , mRegisteredAnonymousLuaFunction(false)
 , mExpiryCount(-1)
 {
@@ -112,6 +111,20 @@ TTrigger::TTrigger(const QString& name, QStringList regexList, QList<int> regexP
 
 TTrigger::~TTrigger()
 {
+    QMutableListIterator<TColorTable*> itColorTable(mColorPatternList);
+    while (itColorTable.hasNext()) {
+        if (itColorTable.next()) {
+//            qDebug() << "TTrigger::~TTrigger() INFO: removing TColorTable from mColorPatternList: (ansiFg:"
+//                     << itColorTable.peekPrevious()->ansiFg
+//                     << itColorTable.peekPrevious()->mFgColor
+//                     << "ansiBg:"
+//                     << itColorTable.peekPrevious()->ansiBg
+//                     << itColorTable.peekPrevious()->mBgColor
+//                     << ").";
+            delete itColorTable.peekPrevious();
+        }
+        itColorTable.remove();
+    }
     if (!mpHost) {
         return;
     }
@@ -141,7 +154,22 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
     mRegexMap.clear();
     mRegexCodePropertyList.clear();
     mLuaConditionMap.clear();
-    mColorPatternList.clear();
+    // mColorPatternList is filled with pointers to TColorTable instances that
+    // were created with "new" and they need to be "delete"-d:
+    QMutableListIterator<TColorTable*> itColorTable(mColorPatternList);
+    while (itColorTable.hasNext()) {
+        if (itColorTable.next()) {
+//            qDebug() << "TTrigger::setRegexCodeList() INFO: removing TColorTable from mColorPatternList: (ansiFg:"
+//                     << itColorTable.peekPrevious()->ansiFg
+//                     << itColorTable.peekPrevious()->mFgColor
+//                     << "ansiBg:"
+//                     << itColorTable.peekPrevious()->ansiBg
+//                     << itColorTable.peekPrevious()->mBgColor
+//                     << ").";
+            delete itColorTable.peekPrevious();
+        }
+        itColorTable.remove();
+    }
     mTriggerContainsPerlRegex = false;
 
     if (propertyList.size() != regexList.size()) {
@@ -181,7 +209,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
                     TDebug(QColor(Qt::red), QColor(Qt::gray)) << R"(in: ")" << regexp.constData() << "\"\n" >> 0;
                 }
                 setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
-                                 .arg(tr(R"(Error: in item %1, perl regex: "%2", it failed to compile, reason: "%3".)").arg(QString::number(i), regexp.constData(), error)));
+                                 .arg(tr(R"(Error: in item %1, perl regex: "%2", it failed to compile, reason: "%3".)").arg(QString::number(i + 1), regexp.constData(), error)));
                 state = false;
             } else {
                 if (mudlet::debugMode) {
@@ -201,7 +229,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
             QString error;
             if (!mpLua->compile(code, error, QString::fromStdString(funcName))) {
                 setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
-                                 .arg(tr(R"(Error: in item %1, lua condition function "%2" failed to compile, reason:%3.)").arg(QString::number(i), regexList.at(i), error)));
+                                 .arg(tr(R"(Error: in item %1, lua condition function "%2" failed to compile, reason: "%3".)").arg(QString::number(i + 1), regexList.at(i), error)));
                 state = false;
                 if (mudlet::debugMode) {
                     TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA ERROR: failed to compile, reason:\n" << error << "\n" >> 0;
@@ -213,21 +241,22 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
         }
 
         if (propertyList[i] == REGEX_COLOR_PATTERN) {
-            QRegularExpression regex = QRegularExpression(QStringLiteral(R"(FG(\d+)BG(\d+))"));
-            QRegularExpressionMatch match = regex.match(regexList[i]);
+            int textAnsiFg = scmIgnored;
+            int textAnsiBg = scmIgnored;
+            // Decode the pattern string to the colour codes wanted:
+            TTrigger::decodeColorPatternText(regexList.at(i), textAnsiFg, textAnsiBg);
 
-            int _pos = match.capturedStart();
-
-            if (_pos == -1) {
-                mColorPatternList.push_back(nullptr);
+            if (textAnsiBg == scmIgnored && textAnsiFg == scmIgnored) {
+                setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
+                                 .arg(tr("Error: in item %1, no colors to match were set - at least <i>one</i> of the foreground or background must not be <i>ignored</i>.")
+                                      .arg(QString::number(i+1))));
                 state = false;
                 continue;
             }
 
-            int ansiFg = match.captured(1).toInt();
-            int ansiBg = match.captured(2).toInt();
-
-            if (!setupColorTrigger(ansiFg, ansiBg)) {
+            // The setupColorTrigger(...) method will push_back the created
+            // TColorTable instance if it is successful:
+            if (!setupColorTrigger(textAnsiFg, textAnsiBg)) {
                 mColorPatternList.push_back(nullptr);
                 state = false;
                 continue;
@@ -236,11 +265,8 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
             mColorPatternList.push_back(nullptr);
         }
     }
-    if (!state) {
-        mOK_init = false;
-    } else {
-        mOK_init = true;
-    }
+
+    mOK_init = state;
     return state;
 }
 
@@ -623,16 +649,24 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
 
     TColorTable* pCT = mColorPatternList[regexNumber];
     if (!pCT) {
-        return false; //no color pattern created
+        return false; // no color pattern created
     }
-    int mFgR = pCT->fgR;
-    int mFgG = pCT->fgG;
-    int mFgB = pCT->fgB;
-    int mBgR = pCT->bgR;
-    int mBgG = pCT->bgG;
-    int mBgB = pCT->bgB;
-    for (auto it = bufferLine.begin(); it != bufferLine.end(); it++, pos++) {
-        if (((*it).fgR == mFgR) && ((*it).fgG == mFgG) && ((*it).fgB == mFgB) && ((*it).bgR == mBgR) && ((*it).bgG == mBgG) && ((*it).bgB == mBgB)) {
+
+    if (pCT->ansiBg == scmIgnored && pCT->ansiFg == scmIgnored) {
+        // BOTH the foreground AND the background colors are set to "ignore"
+        // so this is not an active color trigger setup - so ignore it
+        return false; // no color settings to match against
+    }
+
+    for (auto it = bufferLine.begin(); it != bufferLine.end(); ++it, ++pos) {
+        // This now allows matching against the current default colours (-1) and
+        // allows ONE of the foreground or background to NOT be considered (-2)
+        // Ideally we should base the matching on only the ANSI code but not
+        // all parts of the text come from the Server and can be determined to
+        // have come from a decoded ANSI code number:
+        if (  ((pCT->ansiFg == scmIgnored)||((pCT->ansiFg == scmDefault) && mpHost->mpConsole->mFgColor == (*it).foreground())||(pCT->mFgColor == (*it).foreground()))
+            &&((pCT->ansiBg == scmIgnored)||((pCT->ansiBg == scmDefault) && mpHost->mpConsole->mBgColor == (*it).foreground())||(pCT->mBgColor == (*it).background()))) {
+
             if (matchBegin == -1) {
                 matchBegin = pos;
             }
@@ -640,6 +674,7 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
         } else {
             matching = false;
         }
+
         if ((!matching) || (matching && (pos + 1 >= static_cast<int>(bufferLine.size())))) {
             if (matchBegin > -1) {
                 std::string got;
@@ -1020,200 +1055,43 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
 
 
 // Die Musternummer wird ID im color-pattern lookup table
+// This NOW uses proper ANSI numbers
+// A TColorTable is a simple struct that stores four values, the two given ANSI
+// colors for foreground and background (proper ANSI indexes) and what they look
+// like give the current Host settings (the first 16 ANSI ones and the default
+// fore and background colors can be changed by the user and since OSC P/R
+// support has been implimented - by the MUD Server!)
 TColorTable* TTrigger::createColorPattern(int ansiFg, int ansiBg)
 {
-    /* Mudlet simplified ANSI color codes
-      -----------------------------------
-      0  default text color
-      1  light black
-      2  dark black
-      3  light red
-      4  dark red
-      5  light green
-      6  dark green
-      7  light yellow
-      8  dark yellow
-      9  light blue
-      10 dark blue
-      11 light magenta
-      12 dark magenta
-      13 light cyan
-      14 dark cyan
-      15 light white
-      16 dark white */
+    /*
+     *  OLD Mudlet simplified ANSI color codes
+     *                       -> proper ANSI numbers
+     * ---------------------------------------------
+     *  0  default text color -> (-1 special value!)
+     *  1  light black        ->  8
+     *  2  dark black         ->  0
+     *  3  light red          ->  9
+     *  4  dark red           ->  1
+     *  5  light green        -> 10
+     *  6  dark green         ->  2
+     *  7  light yellow       -> 11
+     *  8  dark yellow        ->  3
+     *  9  light blue         -> 12
+     * 10 dark blue           ->  4
+     * 11 light magenta       -> 13
+     * 12 dark magenta        ->  5
+     * 13 light cyan          -> 14
+     * 14 dark cyan           ->  6
+     * 15 light white         -> 15
+     * 16 dark white          ->  7
+     */
 
-    bool invalidColorCode = false;
+    QColor fgColor = mpHost->getAnsiColor(ansiFg, false);
+    QColor bgColor = mpHost->getAnsiColor(ansiBg, true);
 
-    int fgColorR = 0;
-    int fgColorG = 0;
-    int fgColorB = 0;
-    int bgColorR = 0;
-    int bgColorG = 0;
-    int bgColorB = 0;
-
-    int tag = ansiFg;
-    if (tag <= 16) {
-        QColor c;
-        switch (tag) {
-        case 0:
-            c = mpHost->mFgColor;
-            break;
-        case 1:
-            c = mpHost->mLightBlack;
-            break;
-        case 2:
-            c = mpHost->mBlack;
-            break;
-        case 3:
-            c = mpHost->mLightRed;
-            break;
-        case 4:
-            c = mpHost->mRed;
-            break;
-        case 5:
-            c = mpHost->mLightGreen;
-            break;
-        case 6:
-            c = mpHost->mGreen;
-            break;
-        case 7:
-            c = mpHost->mLightYellow;
-            break;
-        case 8:
-            c = mpHost->mYellow;
-            break;
-        case 9:
-            c = mpHost->mLightBlue;
-            break;
-        case 10:
-            c = mpHost->mBlue;
-            break;
-        case 11:
-            c = mpHost->mLightMagenta;
-            break;
-        case 12:
-            c = mpHost->mMagenta;
-            break;
-        case 13:
-            c = mpHost->mLightCyan;
-            break;
-        case 14:
-            c = mpHost->mCyan;
-            break;
-        case 15:
-            c = mpHost->mLightWhite;
-            break;
-        case 16:
-            c = mpHost->mWhite;
-            break;
-        }
-        fgColorR = c.red();
-        fgColorG = c.green();
-        fgColorB = c.blue();
-    } else {
-        if (tag < 232) {
-            tag -= 16; // because color 1-15 behave like normal ANSI colors
-            // 6x6 RGB color space
-            int r = tag / 36;
-            int g = (tag - (r * 36)) / 6;
-            int b = (tag - (r * 36)) - (g * 6);
-            fgColorR = r * 42;
-            fgColorG = g * 42;
-            fgColorB = b * 42;
-        } else if (tag < 256) {
-            // black + 23 tone grayscale from dark to light gray
-            tag -= 232;
-            fgColorR = tag * 10;
-            fgColorG = tag * 10;
-            fgColorB = tag * 10;
-        } else {
-            //return invalid color error
-            invalidColorCode = true;
-        }
-    }
-
-    tag = ansiBg;
-    if (tag <= 16) {
-        QColor c;
-        switch (tag) {
-        case 0:
-            c = mpHost->mBgColor;
-            break;
-        case 1:
-            c = mpHost->mLightBlack;
-            break;
-        case 2:
-            c = mpHost->mBlack;
-            break;
-        case 3:
-            c = mpHost->mLightRed;
-            break;
-        case 4:
-            c = mpHost->mRed;
-            break;
-        case 5:
-            c = mpHost->mLightGreen;
-            break;
-        case 6:
-            c = mpHost->mGreen;
-            break;
-        case 7:
-            c = mpHost->mLightYellow;
-            break;
-        case 8:
-            c = mpHost->mYellow;
-            break;
-        case 9:
-            c = mpHost->mLightBlue;
-            break;
-        case 10:
-            c = mpHost->mBlue;
-            break;
-        case 11:
-            c = mpHost->mLightMagenta;
-            break;
-        case 12:
-            c = mpHost->mMagenta;
-            break;
-        case 13:
-            c = mpHost->mLightCyan;
-            break;
-        case 14:
-            c = mpHost->mCyan;
-            break;
-        case 15:
-            c = mpHost->mLightWhite;
-            break;
-        case 16:
-            c = mpHost->mWhite;
-            break;
-        }
-        bgColorR = c.red();
-        bgColorG = c.green();
-        bgColorB = c.blue();
-    } else {
-        if (tag < 232) {
-            tag -= 16; // because color 1-15 behave like normal ANSI colors
-            // 6x6 RGB color space
-            int r = tag / 36;
-            int g = (tag - (r * 36)) / 6;
-            int b = (tag - (r * 36)) - (g * 6);
-            bgColorR = r * 42;
-            bgColorG = g * 42;
-            bgColorB = b * 42;
-        } else if (tag < 256) {
-            // black + 23 tone grayscale from dark to light gray
-            tag -= 232;
-            bgColorR = tag * 10;
-            bgColorG = tag * 10;
-            bgColorB = tag * 10;
-        } else {
-            //return invalid color error
-            invalidColorCode = true;
-        }
-    }
-
-    if (invalidColorCode) {
+    // If BOTH ansiFg AND ansiBg are scmIgnored then the color pattern is
+    // totally unset
+    if (!(fgColor.isValid() || bgColor.isValid()) ) {
         return nullptr;
     }
 
@@ -1224,12 +1102,8 @@ TColorTable* TTrigger::createColorPattern(int ansiFg, int ansiBg)
 
     pCT->ansiBg = ansiBg;
     pCT->ansiFg = ansiFg;
-    pCT->bgB = bgColorB;
-    pCT->bgG = bgColorG;
-    pCT->bgR = bgColorR;
-    pCT->fgB = fgColorB;
-    pCT->fgG = fgColorG;
-    pCT->fgR = fgColorR;
+    pCT->mBgColor = bgColor;
+    pCT->mFgColor = fgColor;
     return pCT;
 }
 
@@ -1237,21 +1111,33 @@ bool TTrigger::setupColorTrigger(int ansiFg, int ansiBg)
 {
     TColorTable* pCT = createColorPattern(ansiFg, ansiBg);
     if (!pCT) {
+        // This can be caused by both ansiFg and ansiBg being scmIgnored
         return false;
     }
+//    qDebug() << "TTrigger::setupColorTrigger(" << ansiFg
+//             << ", "
+//             << ansiBg
+//             << ") INFO: adding TColorTable to mColorPatternList: (ansiFg:"
+//             << pCT->ansiFg
+//             << pCT->mFgColor
+//             << "ansiBg:"
+//             << pCT->ansiBg
+//             << pCT->mBgColor
+//             << ").";
     mColorPatternList.push_back(pCT);
     return true;
 }
 
+// The numbers here are NOW the proper ANSI colour codes (0 to 255)
+// or scmDefault for default fore/background or scmIgnored for ignored
 bool TTrigger::setupTmpColorTrigger(int ansiFg, int ansiBg)
 {
     TColorTable* pCT = createColorPattern(ansiFg, ansiBg);
     if (!pCT) {
         return false;
     }
-    QString code;
-    code = QString("FG%1BG%2").arg(QString::number(ansiFg), QString::number(ansiBg));
-    mRegexCodeList << code;
+
+    mRegexCodeList << createColorPatternText(ansiFg, ansiBg);
     mRegexCodePropertyList << REGEX_COLOR_PATTERN;
     mColorPatternList.push_back(pCT);
     return true;
@@ -1421,4 +1307,63 @@ TTrigger* TTrigger::killTrigger(const QString& name)
         trigger->killTrigger(name);
     }
     return nullptr;
+}
+
+// Provide a pair of helpers which means we can provide a slightly more readable
+// pattern text for the odd cases - and do it in one place:
+QString TTrigger::createColorPatternText(const int fgColorCode, const int bgColorCode)
+{
+    QString fgText;
+    QString bgText;
+    if (fgColorCode == scmIgnored) {
+        fgText = QLatin1String("IGNORE");
+    } else if (fgColorCode == scmDefault) {
+        fgText = QLatin1String("DEFAULT");
+    } else {
+        fgText = QStringLiteral("%1").arg(fgColorCode, 3, 10, QLatin1Char('0'));
+    }
+
+    if (bgColorCode == scmIgnored) {
+        bgText = QLatin1String("IGNORE");
+    } else if (bgColorCode == scmDefault) {
+        bgText = QLatin1String("DEFAULT");
+    } else {
+        bgText = QStringLiteral("%1").arg(bgColorCode, 3, 10, QLatin1Char('0'));
+    }
+
+    return QStringLiteral("ANSI_COLORS_F{%1}_B{%2}").arg(fgText, bgText);
+}
+
+void TTrigger::decodeColorPatternText(const QString& patternText, int& fgColorCode, int& bgColorCode)
+{
+    // The numbers used for the text have changed - see table in:
+    // TColorTable* TTrigger::createColorPattern(int ansiFg, int ansiBg)
+    QRegularExpression regex = QRegularExpression(QStringLiteral("^ANSI_COLORS_F{(\\d+|DEFAULT|IGNORE)}_B{(\\d+|DEFAULT|IGNORE)}$"));
+    // Was QRegularExpression regex = QRegularExpression(QStringLiteral(R"(FG(\d+)BG(\d+))"));
+    QRegularExpressionMatch match = regex.match(patternText);
+    // scmDefault is the new code for "default" colour (as 0 is a valid ANSI color number!)
+    // scmIgnored is the new code for "reset" i.e. NOT set color trigger (i.e. don't
+    // bother with checking this part of the colour)
+
+    if (match.capturedStart() > -1) {
+        // There *is* a match - now examine what was found:
+        if (match.captured(1) == QLatin1String("DEFAULT")) {
+            fgColorCode = scmDefault;
+        } else if (match.captured(1) == QLatin1String("IGNORE")) {
+            fgColorCode = scmIgnored;
+        } else {
+            fgColorCode = match.captured(1).toInt();
+        }
+
+        if (match.captured(2) == QLatin1String("DEFAULT")) {
+            bgColorCode = scmDefault;
+        } else if (match.captured(2) == QLatin1String("IGNORE")) {
+            bgColorCode = scmIgnored;
+        } else {
+            bgColorCode = match.captured(2).toInt();
+        }
+    } else {
+        fgColorCode = scmIgnored;
+        bgColorCode = scmIgnored;
+    }
 }

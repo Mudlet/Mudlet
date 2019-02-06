@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2018-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,6 +25,8 @@
 
 #include "pre_guard.h"
 #include "ui_color_trigger.h"
+#include <QSignalMapper>
+#include <QPointer>
 #include "post_guard.h"
 
 class Host;
@@ -36,31 +39,31 @@ class dlgColorTrigger : public QDialog, public Ui::color_trigger
 
 public:
     Q_DISABLE_COPY(dlgColorTrigger)
-    dlgColorTrigger(QWidget*, TTrigger*, int);
+    dlgColorTrigger(QWidget*, TTrigger*, const bool isBackground, const QString &title = QString());
 
 public slots:
-    void setColorBlack();
-    void setColorLightBlack();
-    void setColorRed();
-    void setColorLightRed();
-    void setColorBlue();
-    void setColorLightBlue();
-    void setColorGreen();
-    void setColorLightGreen();
-    void setColorYellow();
-    void setColorLightYellow();
-    void setColorCyan();
-    void setColorLightCyan();
-    void setColorMagenta();
-    void setColorLightMagenta();
-    void setColorWhite();
-    void setColorLightWhite();
+    void slot_basicColorClicked(int);
+    void slot_resetColorClicked();
+    void slot_defaultColorClicked();
+    void slot_moreColorsClicked();
+    void slot_rgbColorChanged();
+    void slot_setRBGButtonFocus();
+    void slot_grayColorChanged(int);
+    void slot_setGreyButtonFocus();
+    void slot_rgbColorClicked();
+    void slot_grayColorClicked();
 
-    void slot_save_and_exit();
 
 private:
+    void setupBasicButton(QPushButton*, const int, const QColor&, const QString&);
+
+    QSignalMapper* mSignalMapper;
     TTrigger* mpTrigger;
-    int mMode;
+    bool mIsBackground;
+    QColor mRgbAnsiColor;
+    QColor mGrayAnsiColor;
+    int mRgbAnsiColorNumber;
+    int mGrayAnsiColorNumber;
 };
 
 #endif // MUDLET_DLGCOLORTRIGGER_H

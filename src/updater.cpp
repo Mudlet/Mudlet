@@ -155,7 +155,7 @@ void Updater::setupOnWindows()
     });
 
     // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
-    updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed, nullptr, settings);
+    updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, nullptr, settings);
     mpInstallOrRestart->setText(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::installOrRestartClicked);
@@ -183,11 +183,12 @@ void Updater::prepareSetupOnWindows(const QString& downloadedSetupName)
 #if defined(Q_OS_LINUX)
 void Updater::setupOnLinux()
 {
-    QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qWarning() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available"; });
+    QObject::connect(feed, &dblsqd::Feed::ready, this, [=]() { qWarning() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available"; });
 
     // Setup to automatically download the new release when an update is
     // available or wave a flag when it is to be done manually
-    QObject::connect(feed, &dblsqd::Feed::ready, [=]() {
+    // Setup to automatically download the new release when an update is available
+    QObject::connect(feed, &dblsqd::Feed::ready, this, [=]() {
 
         // only update release builds to prevent auto-update from overwriting your
         // compiled binary while in development
@@ -207,7 +208,7 @@ void Updater::setupOnLinux()
     });
 
     // Setup to unzip and replace old binary when the download is done
-    QObject::connect(feed, &dblsqd::Feed::downloadFinished, [=]() {
+    QObject::connect(feed, &dblsqd::Feed::downloadFinished, this, [=]() {
         // if automatic updates are enabled, and this isn't a manual check, perform the automatic update
         if (!(updateAutomatically() && updateDialog->isHidden())) {
             return;
@@ -222,7 +223,7 @@ void Updater::setupOnLinux()
     });
 
     // finally, create the dblsqd objects. Constructing the UpdateDialog triggers the update check
-    updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::Manual : dblsqd::UpdateDialog::OnLastWindowClosed, nullptr, settings);
+    updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, nullptr, settings);
     mpInstallOrRestart->setText(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);
     connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::installOrRestartClicked);

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016, 2018 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -34,7 +34,7 @@
 #include "mudlet.h"
 
 
-bool HostManager::deleteHost(QString hostname)
+bool HostManager::deleteHost(const QString& hostname)
 {
     mPoolReadWriteLock.lockForWrite(); // Will block until gets lock
 
@@ -50,7 +50,7 @@ bool HostManager::deleteHost(QString hostname)
     }
 }
 
-bool HostManager::addHost(QString hostname, QString port, QString login, QString pass)
+bool HostManager::addHost(const QString& hostname, const QString& port, const QString& login, const QString& pass)
 {
     if (hostname.isEmpty()) {
         qDebug() << "HostManager::addHost(" << hostname.toUtf8().constData() << ") ERROR: an unnamed Host is not permitted, aborting and returning false!";
@@ -111,7 +111,7 @@ int HostManager::getHostCount()
     return total;
 }
 
-void HostManager::postIrcMessage(QString a, QString b, QString c)
+void HostManager::postIrcMessage(const QString& a, const QString& b, const QString& c)
 {
     mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
 
@@ -128,9 +128,11 @@ void HostManager::postIrcMessage(QString a, QString b, QString c)
 // send out the events to the other hosts in a predictable and consistent order
 // and so that no one host gets an unfair advantage when emitting events. The
 // sending profile host does NOT get the event!
-void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event)
+// Note: Optional forceGlobal allows passing a null pointer as pHost, and will raise
+// an event for all profiles.
+void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event, const bool forceGlobal)
 {
-    if (!pHost) {
+    if (!pHost && !forceGlobal) {
         return;
     }
 
@@ -168,7 +170,7 @@ void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event)
     }
 }
 
-Host* HostManager::getHost(QString hostname)
+Host* HostManager::getHost(const QString& hostname)
 {
     mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
     Host* pHost = mHostPool.value(hostname).data();

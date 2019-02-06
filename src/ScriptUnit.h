@@ -55,8 +55,8 @@ public:
     void unregisterScript(TScript* pT);
     void reParentScript(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
     void stopAllTriggers();
-    void uninstall(QString);
-    void _uninstall(TScript* pChild, QString packageName);
+    void uninstall(const QString&);
+    void _uninstall(TScript* pChild, const QString& packageName);
     int getNewID();
     QMutex mScriptUnitLock;
     QList<TScript*> uninstallList;

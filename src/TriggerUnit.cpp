@@ -45,7 +45,7 @@ void TriggerUnit::initStats()
     statsRegexTriggers = 0;
 }
 
-void TriggerUnit::_uninstall(TTrigger* pChild, QString packageName)
+void TriggerUnit::_uninstall(TTrigger* pChild, const QString& packageName)
 {
     list<TTrigger*>* childrenList = pChild->mpMyChildrenList;
     for (auto trigger : *childrenList) {

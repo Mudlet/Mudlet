@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -52,18 +52,13 @@ class TMatchState;
 #define REGEX_COLOR_PATTERN 6
 #define REGEX_PROMPT 7
 
-#define OVECCOUNT 30 // should be a multiple of 3
 
 struct TColorTable
 {
     int ansiFg;
     int ansiBg;
-    int fgR;
-    int fgG;
-    int fgB;
-    int bgR;
-    int bgG;
-    int bgB;
+    QColor mFgColor;
+    QColor mBgColor;
 };
 
 class TTrigger : public Tree<TTrigger>
@@ -75,7 +70,21 @@ class TTrigger : public Tree<TTrigger>
 public:
     virtual ~TTrigger();
     TTrigger(TTrigger* parent, Host* pHost);
-    TTrigger(const QString& name, QStringList regexList, QList<int> regexPorpertyList, bool isMultiline, Host* pHost); //throws exception ExObjNoCreate
+    TTrigger(const QString& name, const QStringList& regexList, const QList<int>& regexPropertyList, bool isMultiline, Host* pHost); //throws exception ExObjNoCreate
+
+    // Used as ANSI color code for either fore or back ground in color triggers
+    // that is not considered when checking the color - both being set to this
+    // is an error:
+    static const int scmIgnored;
+    // Used as ANSI color code for either fore or back ground in color triggers
+    // and corresponds to matching against the "default" colour - e.g. whatever
+    // is used immediately after a "<ESC>[0m" sequence - or "<ESC>[39m" for
+    // foreground and "<ESC>[49m" for background:
+    // It cannot be 0 because ANSI color 0 is "black" and that is chosen
+    // by "<ESC>[30m" (foreground) or "<ESC>[40m" (background) and the default
+    // need not be black on white / white on black.
+    static const int scmDefault;
+
     QString getCommand() { return mCommand; }
     void compileAll();
     void setCommand(const QString& b) { mCommand = b; }
@@ -83,16 +92,16 @@ public:
     void setName(const QString& name);
     QStringList& getRegexCodeList() { return mRegexCodeList; }
     QList<int> getRegexCodePropertyList() { return mRegexCodePropertyList; }
-    QColor getFgColor() { return mFgColor; }
-    QColor getBgColor() { return mBgColor; }
-    void setFgColor(QColor& c) { mFgColor = c; }
-    void setBgColor(QColor& c) { mBgColor = c; }
-    bool isColorizerTrigger() { return mIsColorizerTrigger; }
-    void setIsColorizerTrigger(bool b) { mIsColorizerTrigger = b; }
+    QColor getFgColor() const { return mFgColor; }
+    QColor getBgColor() const { return mBgColor; }
+    void setColorizerFgColor(const QColor& c) { mFgColor = c; }
+    void setColorizerBgColor(const QColor& c) { mBgColor = c; }
+    bool isColorizerTrigger() const { return mIsColorizerTrigger; }
+    void setIsColorizerTrigger(const bool b) { mIsColorizerTrigger = b; }
     void compile();
     void execute();
     bool isFilterChain();
-    bool setRegexCodeList(QStringList regex, QList<int> regexPorpertyList);
+    bool setRegexCodeList(QStringList regex, QList<int> regexPropertyList);
     QString getScript() { return mScript; }
     bool setScript(const QString& script);
     bool compileScript();
@@ -125,6 +134,10 @@ public:
     bool setupColorTrigger(int, int);
     bool setupTmpColorTrigger(int ansiFg, int ansiBg);
     TColorTable* createColorPattern(int, int);
+    static QString createColorPatternText(const int fgColorCode, const int bgColorCode);
+    static void decodeColorPatternText(const QString& patternText, int& fgColorCode, int& bgColorCode);
+
+
     bool mTriggerContainsPerlRegex;
     bool mPerlSlashGOption;
     bool mFilterTrigger;
@@ -133,8 +146,9 @@ public:
     int mStayOpen;
     bool mColorTrigger;
     QList<TColorTable*> mColorPatternList;
-    bool mColorTriggerFg;
-    bool mColorTriggerBg;
+    // The next four members refer to the details of the currently selected
+    // color trigger pattern item - it is not obvious that they need to be
+    // stored in the profile even though they are:
     QColor mColorTriggerFgColor;
     QColor mColorTriggerBgColor;
     int mColorTriggerFgAnsi;
@@ -151,6 +165,7 @@ public:
 
     int getExpiryCount() const;
     void setExpiryCount(int expiryCount);
+
 
 private:
     TTrigger() = default;
@@ -180,6 +195,7 @@ private:
     TLuaInterpreter* mpLua;
     std::map<int, std::string> mLuaConditionMap;
     QString mFuncName;
+    // The colors to use if mIsColorizeTrigger is true:
     QColor mFgColor;
     QColor mBgColor;
     bool mIsColorizerTrigger;

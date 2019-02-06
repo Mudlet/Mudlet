@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -118,6 +118,8 @@ public:
     bool               getMayRedefineColors() { QMutexLocker locker(& mLock); return mServerMayRedefineColors; }
     void               setDiscordApplicationID(const QString& s);
     const QString&     getDiscordApplicationID();
+    void               setSpellDic(const QString&);
+    const QString&     getSpellDic() { QMutexLocker locker(& mLock); return mSpellDic; }
 
     void closingDown();
     bool isClosingDown();
@@ -202,6 +204,7 @@ public:
     bool removeDir(const QString&, const QString&);
     void readPackageConfig(const QString&, QString&);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
+    QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
     QPair<bool, QString> writeProfileData(const QString&, const QString&);
     QString readProfileData(const QString&);
     void xmlSaved(const QString& xmlName);
@@ -233,6 +236,7 @@ public:
     QFont mDisplayFont;
     bool mEnableGMCP;
     bool mEnableMSDP;
+    bool mServerMXPenabled;
     QTextStream mErrorLogStream;
     QMap<QString, QList<TScript*>> mEventHandlerMap;
     bool mFORCE_GA_OFF;
@@ -256,7 +260,21 @@ public:
     QScopedPointer<TMap> mpMap;
     dlgNotepad* mpNotePad;
 
+    // This is set when we want commands we typed to be shown on the main
+    // TConsole:
     bool mPrintCommand;
+
+    /*
+     * This is set when the Server is remote echoing what WE send to it,
+     * it will have negotiated the ECHO suboption by sending a IAC WILL ECHO and
+     * we have agreed to it with a IAC DO ECHO - in this state it is normal
+     * Telnet behaviour to NOT echo what we send - to prevent doubled lines.
+     * The rationale behind this is so that when we type passwords - WE do not
+     * echo what we type and rely on the other end to, but they do not, so as to
+     * hide them on our screen (and from logging!) - It should negate the effect
+     * of the above mPrintCommand being true...
+     */
+    bool mIsRemoteEchoingActive;
 
     // To cover the corner case of the user changing the mode
     // whilst a log is being written, this stores the mode of
@@ -357,7 +375,6 @@ public:
     QColor mBgColor_2;
     bool mMapStrongHighlight;
     QStringList mGMCP_merge_table_keys;
-    QString mSpellDic;
     bool mLogStatus;
     bool mEnableSpellCheck;
     QStringList mInstalledPackages;
@@ -403,6 +420,7 @@ signals:
     void signal_changeIsAmbigousWidthGlyphsToBeWide(bool);
     void profileSaveStarted();
     void profileSaveFinished();
+    void signal_changeSpellDict(const QString&);
 
 private slots:
     void slot_reloadModules();
@@ -491,6 +509,10 @@ private:
     // 16 basic colors (and OSC "R\" to reset them).
     bool mServerMayRedefineColors;
 
+    // Was public but hidden to prevent it being changed without going through
+    // the process to signal to existing uses that they need to change
+    // dictionaries:
+    QString mSpellDic;
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
     void updateModuleZips() const;
