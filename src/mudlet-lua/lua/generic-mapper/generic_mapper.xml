@@ -2761,7 +2761,7 @@ function map.speedwalk(roomID, walkPath, walkDirs)
     until k &gt; #walkDirs
     if map.configs.use_translation then
         for k, v in ipairs(walkDirs) do
-            walkDirs[k] = map.configs.lang_dirs[v]
+            walkDirs[k] = map.configs.lang_dirs[v] or v
         end
     end
     -- perform walk
