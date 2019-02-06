@@ -94,7 +94,7 @@ public:
     static mudlet* self();
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
-    HostManager& getHostManager() { return mHostManager; }    
+    HostManager& getHostManager() { return mHostManager; }
     FontManager mFontManager;
     Discord mDiscord;
     QPointer<QSettings> mpSettings;
@@ -356,7 +356,7 @@ public:
     // Used to enable "emergency" control recovery action - if Mudlet is
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
-    bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);    
+    bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     void show_options_dialog(QString tab);
     void setInterfaceLanguage(const QString &languageCode);
     QList<QString> getAvailableTranslationCodes() const { return mTranslatorsMap.keys(); }
@@ -450,6 +450,7 @@ signals:
     void signal_toolBarVisibilityChanged(const controlsVisibility);
     void signal_showIconsOnMenusChanged(const Qt::CheckState);
 
+
 private slots:
     void slot_close_profile();
     void slot_tab_changed(int);
@@ -474,6 +475,7 @@ private slots:
     void slot_module_manager_destroyed();
 #if defined(INCLUDE_UPDATER)
     void slot_update_installed();
+    void slot_updateAvailable(const int);
 #endif
 
 private:
@@ -532,6 +534,7 @@ private:
     QPointer<QAction> mpActionReplay;
 
     QPointer<QAction> mpActionAbout;
+    QPointer<QToolButton> mpButtonAbout;
     QPointer<QAction> mpActionAliases;
     QPointer<QAction> mpActionButtons;
     QPointer<QAction> mpActionConnect;

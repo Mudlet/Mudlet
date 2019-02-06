@@ -106,7 +106,7 @@ void Updater::finishSetup()
     recordUpdateTime();
     recordUpdatedVersion();
     mUpdateInstalled = true;
-    emit updateInstalled();
+    emit signal_updateInstalled();
 }
 
 #if defined(Q_OS_MACOS)
@@ -125,15 +125,18 @@ void Updater::setupOnWindows()
 
     // Setup to automatically download the new release when an update is available
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() {
-        if (mudlet::scmIsDevelopmentVersion || !updateAutomatically()) {
+        if (mudlet::scmIsDevelopmentVersion) {
             return;
         }
 
         auto updates = feed->getUpdates();
         if (updates.isEmpty()) {
             return;
+        } else if (!updateAutomatically()) {
+            emit signal_updateAvailable(updates.size());
+        } else {
+            feed->downloadRelease(updates.first());
         }
-        feed->downloadRelease(updates.first());
     });
 
     // Setup to run setup.exe to replace the old installation
@@ -182,20 +185,26 @@ void Updater::setupOnLinux()
 {
     QObject::connect(feed, &dblsqd::Feed::ready, this, [=]() { qWarning() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available"; });
 
+    // Setup to automatically download the new release when an update is
+    // available or wave a flag when it is to be done manually
     // Setup to automatically download the new release when an update is available
     QObject::connect(feed, &dblsqd::Feed::ready, this, [=]() {
 
         // only update release builds to prevent auto-update from overwriting your
         // compiled binary while in development
-        if (mudlet::scmIsDevelopmentVersion || !updateAutomatically()) {
+        if (mudlet::scmIsDevelopmentVersion) {
             return;
         }
 
         auto updates = feed->getUpdates();
         if (updates.isEmpty()) {
             return;
+        } else if (!updateAutomatically()) {
+            emit signal_updateAvailable(updates.size());
+            return;
+        } else {
+            feed->downloadRelease(updates.first());
         }
-        feed->downloadRelease(updates.first());
     });
 
     // Setup to unzip and replace old binary when the download is done

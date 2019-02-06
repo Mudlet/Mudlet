@@ -75,7 +75,9 @@ private:
 
 
 signals:
-    void updateInstalled();
+    void signal_updateInstalled();
+    // Argument is a count of updates available
+    void signal_updateAvailable(const int);
     void signal_automaticUpdatesChanged(const bool);
 
 public slots:
