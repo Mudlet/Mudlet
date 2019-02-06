@@ -133,7 +133,7 @@ void Updater::setupOnWindows()
         if (updates.isEmpty()) {
             return;
         } else if (!updateAutomatically()) {
-            emit signal_updateAvailable(feed->getUpdates().size());
+            emit signal_updateAvailable(updates.size());
         } else {
             feed->downloadRelease(updates.first());
         }
@@ -199,7 +199,7 @@ void Updater::setupOnLinux()
         if (updates.isEmpty()) {
             return;
         } else if (!updateAutomatically()) {
-            emit signal_updateAvailable(feed->getUpdates().size());
+            emit signal_updateAvailable(updates.size());
             return;
         } else {
             feed->downloadRelease(updates.first());

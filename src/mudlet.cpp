@@ -3958,7 +3958,8 @@ void mudlet::slot_updateAvailable(const int updateCount)
     }
     mpActionAbout->setToolTip(tr("<p>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</p>",
                                  // Intentional comment
-                                 "Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation)."));
+                                 "Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - "
+                                 "please ensure all have the same translation)."));
 
     // Create a new button (QActions actually turn into QToolButtons when they
     // are placed on a QToolBar - but we need to generate one ourselves so we
@@ -3967,9 +3968,10 @@ void mudlet::slot_updateAvailable(const int updateCount)
     mpButtonAbout = new QToolButton();
     mpButtonAbout->setIcon(QIcon(QStringLiteral(":/icons/mudlet_important.png")));
     mpButtonAbout->setToolTip(tr("<p>About Mudlet</p>"
-                                 "<p><i><b>%n updates</b> is/are now available!</i><p>",
+                                 "<p><i>%n update(s) is/are now available!</i><p>",
                                  // Intentional comment
-                                 "%n is the count of available updates",
+                                 "This is the tooltip text for the 'About' Mudlet main toolbar button when it has been changed by adding a menu which now contains the original 'About Mudlet' action "
+                                 "and a new one to access the manual update process",
                                  updateCount));
     mpButtonAbout->setText(tr("About"));
     mpButtonAbout->setPopupMode(QToolButton::InstantPopup);
@@ -3983,14 +3985,14 @@ void mudlet::slot_updateAvailable(const int updateCount)
     // Stuff the QAction/QToolButton we just pulled into the new menu
     pUpdateMenu->insertAction(nullptr, mpActionAbout);
     // We can then add in the new item to give access the update(s)
-    auto pActionReview = pUpdateMenu->addAction(tr("Review update(s)...",
+    auto pActionReview = pUpdateMenu->addAction(tr("Review %n update(s)...",
                                                    // Intentional comment
-                                                   "Although not displayed in the text, there is a supplied argument {%n} that will adjust the translation to fit for one (or more) updates",
+                                                   "Review update(s) menu item, %n is the the count of how many updates are available",
                                                    updateCount),
                                                 this, &mudlet::slot_check_manual_update);
-    pActionReview->setToolTip(tr("<p>Review the %n update(s) available...</p>",
+    pActionReview->setToolTip(tr("<p>Review the update(s) available...</p>",
                                  // Intentional comment
-                                 "%n is the count of how many updates there are available to install, will be one or more",
+                                 "Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here",
                                  updateCount));
     // Override the default hide tooltips state:
     pUpdateMenu->setToolTipsVisible(true);
