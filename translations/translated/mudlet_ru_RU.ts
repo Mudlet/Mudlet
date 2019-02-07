@@ -1720,7 +1720,8 @@ map with others relying on the original format.</source>
       <location filename="../src/TMap.cpp" line="1031"/>
       <source>[ ERROR ] - The format {%1} you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version {%2}.</source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Формат {%1}, в котором вы пытаетесь сохранить карту, слишком новый
+для этой версии Mudlet. Поддерживаются только форматы до версии {%2}.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1057"/>
