@@ -945,7 +945,9 @@ factor of:</source>
 (= travel time), minimum
 (and default) is 1:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Введите новый вес комнаты
+(= времени прохода), минимальная
+(и по умолчанию) 1:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3880"/>
@@ -956,7 +958,11 @@ selected rooms, minimum
 the only current value
 used is:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Введите новый вес комнат
+(= времени поездки) для всех
+выделенных комнат, минимальная
+(и по умолчанию) 1 и
+теперешний вес:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3913"/>
@@ -1440,7 +1446,7 @@ this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9832"/>
       <source>[ WARN ]  - Lua command setMapUserData() used - it is currently flagged as experimental!</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ]  - использованная команда Lua setMapUserData() в настоящее время помечена как экспериментальная!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="11492"/>
@@ -1475,7 +1481,9 @@ this command...!</source>
       <source>[ ERROR ] - Cannot find Lua module rex_pcre.
 Some functions may not be available.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Не удается найти модуль Lua rex_pcre.
+Некоторые функции могут быть недоступны.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14754"/>
@@ -1499,7 +1507,9 @@ Some functions may not be available.
       <source>[ ERROR ] - Cannot find Lua module lfs (Lua File System).
 Probably will not be able to access Mudlet Lua code.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Не удается найти Lua module lfs (Lua File System).
+Вероятно, не удастся получить доступ к коду Mudlet Lua.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14785"/>
