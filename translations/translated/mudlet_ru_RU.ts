@@ -1521,7 +1521,9 @@ Probably will not be able to access Mudlet Lua code.
       <source>[ ERROR ] - Cannot find Lua module luasql.sqlite3.
 Database support will not be available.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Не удается найти модуль Lua luasql.sqlite3.
+Поддержка базы данных будет недоступна.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14801"/>
@@ -1533,7 +1535,9 @@ Database support will not be available.
       <source>[ ERROR ] - Cannot find Lua module utf8.
 utf8.* Lua functions won&apos;t be available.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Не удается найти модуль Lua utf8.
+utf8 .* функции Lua не будут доступны.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14818"/>
@@ -1556,7 +1560,8 @@ yajl.* Lua functions won&apos;t be available.
       <location filename="../src/TLuaInterpreter.cpp" line="14925"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Не удается загрузить программу форматирования кода, функция индентирования недоступна.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14929"/>
@@ -1568,13 +1573,14 @@ yajl.* Lua functions won&apos;t be available.
       <location filename="../src/TLuaInterpreter.cpp" line="14966"/>
       <location filename="../src/TLuaInterpreter.cpp" line="14982"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Загружен Mudlet-lua API и Geyser Layout менеджер.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14976"/>
       <source>[ ERROR ] - LuaGlobal.lua compile error - please report!
 Error from Lua: </source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Ошибка компиляции LuaGlobal.lua - пожалуйста, сообщите!
+Ошибка от Lua: </translation>
     </message>
   </context>
   <context>
@@ -1582,7 +1588,7 @@ Error from Lua: </source>
     <message>
       <location filename="../src/TMap.cpp" line="208"/>
       <source>RoomID=%1 does not exist, can not set AreaID=%2 for non-existing room!</source>
-      <translation type="unfinished"/>
+      <translation>RoomID=%1 не существует, не возможно установить AreaID=%2 в несуществующую комнату!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="219"/>
@@ -1597,17 +1603,17 @@ Error from Lua: </source>
     <message>
       <location filename="../src/TMap.cpp" line="463"/>
       <source>[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - ПРЕОБРАЗОВАНИЕ: метка старого стиля, areaID:%1 labelID:%2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="466"/>
       <source>[ INFO ] - Converting old style label id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Преобразование метки старого стиля: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="471"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - ПРЕОБРАЗОВАНИЕ: невозможно преобразовать метку старого стиля в области с id: %1, ИД метки: %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="474"/>
