@@ -2676,13 +2676,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1753"/>
       <source>{combining grapheme joiner}</source>
       <comment>Unicode U+034F codepoint (badly named apparently - see Wikipedia!)</comment>
-      <translation type="unfinished"/>
+      <translation>{diacritique invisible bloquant}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1754"/>
       <source>{ogham space mark}</source>
       <comment>Unicode U+1680 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{espace d'ogam}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1755"/>
@@ -2958,79 +2958,79 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1800"/>
       <source>{variation selector 5}</source>
       <comment>Unicode U+FE04 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{sélecteur de variante-5}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1801"/>
       <source>{variation selector 6}</source>
       <comment>Unicode U+FE05 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{sélecteur de variante-6}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1802"/>
       <source>{variation selector 7}</source>
       <comment>Unicode U+FE06 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{sélecteur de variante-7}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1803"/>
       <source>{variation selector 8}</source>
       <comment>Unicode U+FE07 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{sélecteur de variante-8}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1804"/>
       <source>{variation selector 9}</source>
       <comment>Unicode U+FE08 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{sélecteur de variante-9}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1805"/>
       <source>{variation selector 10}</source>
       <comment>Unicode U+FE09 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{sélecteur de variante-10}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1806"/>
       <source>{variation selector 11}</source>
       <comment>Unicode U+FE0A codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{sélecteur de variante-11}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1807"/>
       <source>{variation selector 12}</source>
       <comment>Unicode U+FE0B codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{sélecteur de variante-12}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1808"/>
       <source>{variation selector 13}</source>
       <comment>Unicode U+FE0C codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{sélecteur de variante-13}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1809"/>
       <source>{variation selector 14}</source>
       <comment>Unicode U+FE0D codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{sélecteur de variante-14}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1810"/>
       <source>{variation selector 15}</source>
       <comment>Unicode U+FE0E codepoint - after an Emoji codepoint forces the textual (black &amp; white) rendition.</comment>
-      <translation type="unfinished"/>
+      <translation>{sélecteur de variante-15}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1811"/>
       <source>{variation selector 16}</source>
       <comment>Unicode U+FE0F codepoint - after an Emoji codepoint forces the proper coloured &apos;Emoji&apos; rendition.</comment>
-      <translation type="unfinished"/>
+      <translation>{sélecteur de variante-16}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1812"/>
       <source>{zero width no-break space}</source>
       <comment>Unicode U+FEFF codepoint - also known as the Byte-order-mark at start of text!).</comment>
-      <translation type="unfinished"/>
+      <translation>{espace insécable sans chasse}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1818"/>
