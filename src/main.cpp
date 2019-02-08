@@ -115,7 +115,7 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
     if ((action) & (1 | 2)) {
         return new QCoreApplication(argc, argv);
     } else {
-#if defined(Q_OS_MACOS)
+#if defined(Q_OS_MACOS) && (QT_VERSION < QT_VERSION_CHECK(5, 12, 0))
         // Workaround for horrible mac rendering issues once the mapper widget
         // is open - see https://bugreports.qt.io/browse/QTBUG-41257
         QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
