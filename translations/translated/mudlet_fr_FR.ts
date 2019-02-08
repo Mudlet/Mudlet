@@ -2640,37 +2640,37 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1747"/>
       <source>{tab}</source>
       <comment>Unicode U+0009 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{tabulation horizontale}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1748"/>
       <source>{line-feed}</source>
       <comment>Unicode U+000A codepoint. Not likely to be seen as it gets filtered out.</comment>
-      <translation type="unfinished"/>
+      <translation>{changement de ligne}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1749"/>
       <source>{carriage-return}</source>
       <comment>Unicode U+000D codepoint. Not likely to be seen as it gets filtered out.</comment>
-      <translation type="unfinished"/>
+      <translation>{retour de chariot}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1750"/>
       <source>{space}</source>
       <comment>Unicode U+0020 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{espace}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1751"/>
       <source>{non-breaking space}</source>
       <comment>Unicode U+00A0 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{espace insécable}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1752"/>
       <source>{soft hyphen}</source>
       <comment>Unicode U+00AD codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{trait d'union conditionnel}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1753"/>
@@ -3072,37 +3072,37 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1844"/>
       <source>{FitzPatrick modifier 1 or 2}</source>
       <comment>Unicode codepoint U+0001F3FB - FitzPatrick modifier (Emoji Human skin-tone) 1-2.</comment>
-      <translation>{FitzPatrick modifier 1 or 2}</translation>
+      <translation>{modificateur FitzPatrick 1 ou 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1845"/>
       <source>{FitzPatrick modifier 3}</source>
       <comment>Unicode codepoint U+0001F3FC - FitzPatrick modifier (Emoji Human skin-tone) 3.</comment>
-      <translation>{FitzPatrick modifier 3}</translation>
+      <translation>{modificateur FitzPatrick 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1846"/>
       <source>{FitzPatrick modifier 4}</source>
       <comment>Unicode codepoint U+0001F3FD - FitzPatrick modifier (Emoji Human skin-tone) 4.</comment>
-      <translation>{FitzPatrick modifier 4}</translation>
+      <translation>{modificateur FitzPatrick 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1847"/>
       <source>{FitzPatrick modifier 5}</source>
       <comment>Unicode codepoint U+0001F3FE - FitzPatrick modifier (Emoji Human skin-tone) 5.</comment>
-      <translation type="unfinished"/>
+      <translation>{modificateur FitzPatrick 5}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1848"/>
       <source>{FitzPatrick modifier 6}</source>
       <comment>Unicode codepoint U+0001F3FF - FitzPatrick modifier (Emoji Human skin-tone) 6.</comment>
-      <translation type="unfinished"/>
+      <translation>{modificateur FitzPatrick 6}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1852"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</comment>
-      <translation type="unfinished"/>
+      <translation>{pas un caractère}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2124"/>
