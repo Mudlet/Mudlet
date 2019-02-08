@@ -15593,8 +15593,7 @@ int TLuaInterpreter::sendPlayerName(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    QString name = host.getLogin();
-    if (name.isEmpty()) {
+    if (host.getLogin().isEmpty()) {
         lua_pushnil(L);
         lua_pushstring(L, "no character name set so nothing to send");
         return 2;
