@@ -3042,8 +3042,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1819"/>
       <source>{interlinear annotation separator}</source>
       <comment>Unicode U+FFFA codepoint.</comment>
-      <translation>34/5000
-{séparateur d'annotation interlinéaire}</translation>
+      <translation>{séparateur d'annotation interlinéaire}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1820"/>
