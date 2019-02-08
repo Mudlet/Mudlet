@@ -206,6 +206,7 @@ signals:
 private:
     cTelnet() = default;
 
+    void readSocket(char *&data, int size);
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
