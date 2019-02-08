@@ -3036,37 +3036,38 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1818"/>
       <source>{interlinear annotation anchor}</source>
       <comment>Unicode U+FFF9 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{ancre d'annotation interlinéaire}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1819"/>
       <source>{interlinear annotation separator}</source>
       <comment>Unicode U+FFFA codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>34/5000
+{séparateur d'annotation interlinéaire}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1820"/>
       <source>{interlinear annotation terminator}</source>
       <comment>Unicode U+FFFB codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{terminateur d'annotation interlinéaire}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1821"/>
       <source>{object replacement character}</source>
       <comment>Unicode U+FFFC codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{caractere de remèplacement d'objet}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1833"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint in range U+FFD0 to U+FDEF - not a character.</comment>
-      <translation type="unfinished"/>
+      <translation>{pas un caractère}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1835"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint in range U+FFFx - not a character.</comment>
-      <translation type="unfinished"/>
+      <translation>{pas un caractère}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1844"/>
