@@ -3038,13 +3038,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1785"/>
       <source>{left-to-right isolate}</source>
       <comment>Unicode U+2066 codepoint.</comment>
-      <translation>{left-to-right isolate}</translation>
+      <translation>{isoler gauche-à-droite}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1786"/>
       <source>{right-to-left isolate}</source>
       <comment>Unicode U+2067 codepoint.</comment>
-      <translation>{right-to-left isolate}</translation>
+      <translation>{isoler droite-à-gauche}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1787"/>
@@ -3074,25 +3074,25 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1791"/>
       <source>{inhibit arabic form-shaping}</source>
       <comment>Unicode U+206C codepoint.</comment>
-      <translation>{inhibit arabic form-shaping}</translation>
+      <translation>{inhibiteur d'échange arabe}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1792"/>
       <source>{activate arabic form-shaping}</source>
       <comment>Unicode U+206D codepoint.</comment>
-      <translation>{activate arabic form-shaping}</translation>
+      <translation>{activateur d'échange arabe}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1793"/>
       <source>{national digit shapes}</source>
       <comment>Unicode U+206E codepoint.</comment>
-      <translation>{national digit shapes}</translation>
+      <translation>{sélecteur de formes numbérales nationales}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1794"/>
       <source>{nominal Digit shapes}</source>
       <comment>Unicode U+206F codepoint.</comment>
-      <translation>{nominal Digit shapes}</translation>
+      <translation>{sélecteur de formes numbérales de références}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1795"/>
