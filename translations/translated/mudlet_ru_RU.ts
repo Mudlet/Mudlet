@@ -1805,31 +1805,37 @@ it but it will try!  The file is: &quot;%2&quot;.</source>
       <source>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
 There is so much data that it DOES NOT have that you could be
 better off starting again...</source>
-      <translation type="unfinished"/>
+      <translation>[ Информация ] - вы, возможно, желаете подарить этот файл карты в музей Mudlet!
+Существует так много данных, которых Музей не имеет, может быть
+лучше начать снова ...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1445"/>
       <source>[ INFO ]  - Reading map (format version:%1) file:
 &quot;%2&quot;,
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>[ИНФОРМАЦИЯ] - Чтение карты (версия формата:%1) файл:
+&quot;%2&quot;,
+, пожалуйста, подождите...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1446"/>
       <source>[ INFO ]  - Reading map (format version:%1) file: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ Информация ] - чтение карты (формат версии: файл%1): &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1553"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФОРМАЦИЯ]-Не найдена область по умолчанию (для комнат, не назначенных зоне
+), добавляется зарезервированный ID -1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1637"/>
       <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
-      <translation type="unfinished"/>
+      <translation>[ИНФОРМАЦИЯ] - Успешно прочитан файл карты (%1s), проверяем некоторые детали согласования
+...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1652"/>
@@ -1849,7 +1855,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1709"/>
       <source>[ INFO ]  - Checking map file: &quot;%1&quot;, format version:%2...</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФОРМАЦИЯ]-Проверка файла карты: &quot;%1&quot;, формат версии:%2...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2117"/>
@@ -1864,7 +1870,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2130"/>
       <source>Area id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>Id Зоны: %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2132"/>
@@ -1879,7 +1885,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2148"/>
       <source>Room id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>Id комнаты: %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2150"/>
@@ -5970,7 +5976,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2039"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2044"/>
       <source>Event Handler</source>
-      <translation type="unfinished"/>
+      <translation>Обработчик событий</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1446"/>
@@ -8518,7 +8524,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1981"/>
       <source>days since today, keeping newer and monthly backups</source>
-      <translation type="unfinished"/>
+      <translation>дней с сегодняшнего дня, сохраняя новые и ежемесячные резервные копии</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1994"/>
@@ -8538,7 +8544,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2023"/>
       <source>Show the default area in map area selection</source>
-      <translation type="unfinished"/>
+      <translation>Показать область по умолчанию в выборе области карты</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2033"/>
@@ -9232,7 +9238,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="40"/>
       <source>Registered Event Handlers:</source>
-      <translation type="unfinished"/>
+      <translation>Зарегистрированные обработчики событий:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="33"/>
@@ -9242,7 +9248,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="88"/>
       <source>&lt;p&gt;Remove (selected) event handler from list.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Удалить (выбранный) обработчик событий из списка.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="91"/>
@@ -9252,12 +9258,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="98"/>
       <source>Add User Event Handler:</source>
-      <translation type="unfinished"/>
+      <translation>Добавить обработчик событий:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="133"/>
       <source>&lt;p&gt;Add entered event handler name to list.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Добавить введенное имя обработчика событий в список.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="136"/>
