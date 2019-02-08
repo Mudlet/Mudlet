@@ -3032,7 +3032,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1784"/>
       <source>{invisible plus}</source>
       <comment>Unicode U+2064 codepoint.</comment>
-      <translation>{invisible plus}</translation>
+      <translation>{signe d'addition invisible}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1785"/>
@@ -3062,13 +3062,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1789"/>
       <source>{inhibit symmetrical swapping}</source>
       <comment>Unicode U+206A codepoint.</comment>
-      <translation>{inhibit symmetrical swapping}</translation>
+      <translation>{inhibiteur d'échange symétrique}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1790"/>
       <source>{activate symmetrical swapping}</source>
       <comment>Unicode U+206B codepoint.</comment>
-      <translation>{activate symmetrical swapping}</translation>
+      <translation>{activateur d'échange symétrique}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1791"/>
