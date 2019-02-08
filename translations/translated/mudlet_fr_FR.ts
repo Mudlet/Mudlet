@@ -2850,37 +2850,37 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1782"/>
       <source>{invisible times}</source>
       <comment>Unicode U+2062 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{signe multiplier invisible}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1783"/>
       <source>{invisible separator}</source>
       <comment>Unicode U+2063 codepoint - invisible separator or comma.</comment>
-      <translation type="unfinished"/>
+      <translation>{séparateur invisible}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1784"/>
       <source>{invisible plus}</source>
       <comment>Unicode U+2064 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{signe d'addition invisible}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1785"/>
       <source>{left-to-right isolate}</source>
       <comment>Unicode U+2066 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{isoler gauche-à-droite}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1786"/>
       <source>{right-to-left isolate}</source>
       <comment>Unicode U+2067 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{isoler droite-à-gauche}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1787"/>
       <source>{first strong isolate}</source>
       <comment>Unicode U+2068 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{premier isolat fort}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1788"/>
@@ -2892,43 +2892,43 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1789"/>
       <source>{inhibit symmetrical swapping}</source>
       <comment>Unicode U+206A codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{inhibiteur d'échange symétrique}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1790"/>
       <source>{activate symmetrical swapping}</source>
       <comment>Unicode U+206B codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{activateur d'échange symétrique}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1791"/>
       <source>{inhibit arabic form-shaping}</source>
       <comment>Unicode U+206C codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{inhibiteur d'échange arabe}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1792"/>
       <source>{activate arabic form-shaping}</source>
       <comment>Unicode U+206D codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{activateur d'échange arabe}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1793"/>
       <source>{national digit shapes}</source>
       <comment>Unicode U+206E codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{sélecteur de formes numbérales nationales}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1794"/>
       <source>{nominal Digit shapes}</source>
       <comment>Unicode U+206F codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{sélecteur de formes numbérales de références}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1795"/>
       <source>{ideaographic space}</source>
       <comment>Unicode U+3000 codepoint - ideaographic (CJK Wide) space</comment>
-      <translation type="unfinished"/>
+      <translation>{espace idéographique}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1796"/>
