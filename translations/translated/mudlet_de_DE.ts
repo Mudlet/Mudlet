@@ -2912,43 +2912,43 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1764"/>
       <source>{5-per-em space}</source>
       <comment>Unicode U+2009 codepoint - five-per-em (&apos;m&apos;) wide space.</comment>
-      <translation>{5-per-em space}</translation>
+      <translation>{cinquième de cadratin}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1765"/>
       <source>{hair width space}</source>
       <comment>Unicode U+200A codepoint - thinnest space.</comment>
-      <translation>{hair width space}</translation>
+      <translation>{espace ultrafine}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1766"/>
       <source>{zero width space}</source>
       <comment>Unicode U+200B codepoint.</comment>
-      <translation>{zero width space}</translation>
+      <translation>{espace sans chasse}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1767"/>
       <source>{Zero width non-joiner}</source>
       <comment>Unicode U+200C codepoint.</comment>
-      <translation>{Zero width non-joiner}</translation>
+      <translation>{antiliant sans chasse}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1768"/>
       <source>{zero width joiner}</source>
       <comment>Unicode U+200D codepoint.</comment>
-      <translation>{zero width joiner}</translation>
+      <translation>{liant sans chasse}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1769"/>
       <source>{left-to-right mark}</source>
       <comment>Unicode U+200E codepoint.</comment>
-      <translation>{left-to-right mark}</translation>
+      <translation>{marque gauche-à-droite}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1770"/>
       <source>{right-to-left mark}</source>
       <comment>Unicode U+200F codepoint.</comment>
-      <translation>{right-to-left mark}</translation>
+      <translation>{marque droite-à-gauche}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1771"/>
@@ -2960,19 +2960,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1772"/>
       <source>{paragraph separator}</source>
       <comment>Unicode U+2029 codepoint.</comment>
-      <translation>{paragraph separator}</translation>
+      <translation>{séparateur de paragraphes}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1773"/>
       <source>{Left-to-right embedding}</source>
       <comment>Unicode U+202A codepoint.</comment>
-      <translation>{Left-to-right embedding}</translation>
+      <translation>{enchâssement gauche-à-droite}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1774"/>
       <source>{right-to-left embedding}</source>
       <comment>Unicode U+202B codepoint.</comment>
-      <translation>{right-to-left embedding}</translation>
+      <translation>{enchâssement droite-à-gauche}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1775"/>
