@@ -988,7 +988,10 @@ new (positive) integer
 value for all selected
 rooms:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Выберите существующую
+ стоимость прохода по клетке (=время путешествия)
+ из списка (отсортированного по наиболее используемым значениям) 
+или введите новое положительное число для всех выбранных комнат:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3973"/>
@@ -1444,7 +1447,12 @@ will NOT persist between sessions as the relevent data IS NOT SAVED.
 
 To avoid filling the screen up with repeated messages, this is your only warning about
 this command...!</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФОРМАЦИЯ]-Для  полной функциональности указанная выше команда запрашивает ревизию в формате файла карты
+и, несмотря на то, что она закодировано, НЕ включена, поэтому действие&apos;с кодом
+не будет сохраняться между сеансами, так как релевантные данные не были сохранены.
+
+Чтобы не заполнять экран повторными сообщениями, это единственное предупреждение о
+этой команде ...!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9832"/>
@@ -1552,7 +1560,9 @@ utf8 .* функции Lua не будут доступны.
       <source>[ ERROR ] - Cannot find Lua module yajl.
 yajl.* Lua functions won&apos;t be available.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА]-Не удается найти модуль Lua yajl.
+yajl.* Функции Lua будут&apos; не доступны.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14835"/>
@@ -1710,7 +1720,8 @@ Error from Lua: </source>
       <source>[ ALERT ] - Saving map in a format {%1} that is different than the one it was
 loaded as {%2}. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation type="unfinished"/>
+      <translation>[ Предупреждение ] - при сохранении карты в формате {%1}, которая отличается от той, что была загружена, как
+{%2}. Это может быть проблемой, если вы захотите поделиться данной картой с другими, полагаясь на оригинальный формат.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="185"/>
@@ -1737,14 +1748,16 @@ recommended format {%2} for this version of Mudlet.</source>
       <location filename="../src/TMap.cpp" line="1088"/>
       <source>[ ALERT ] - Map User data has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!</source>
-      <translation type="unfinished"/>
+      <translation>[ALERT] - Данные карты были потеряны в сохраненном файле . Повторите сохранение в формате
+по крайней мере 17й версии, чтобы сохранить его перед выходом!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1167"/>
       <source>[ ALERT ] - User data for this area has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!
 </source>
-      <translation type="unfinished"/>
+      <translation>[ Предупреждение ] - пользовательские данные для этой зоны было потеряны в файле карты. Пересохраните в формате как минимум 17й версии, чтобы избежать потерь, перед выходом!
+</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1171"/>
@@ -1775,14 +1788,17 @@ Mudlet can handle (%2)!  The file is:
       <location filename="../src/TMap.cpp" line="1422"/>
       <source>[ INFO ]  - You will need to upgrade your Mudlet or find a map file saved in an
 older format.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФОРМАЦИЯ]-Необходимо обновить Mudlet или предоставьте файл карты, сохраненный в старом формате
+.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1429"/>
       <source>[ ALERT ] - Map file is really old, it&apos;s file format (%1) is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try!  The file is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT]-Файл карты очень старый,&apos;, формат файла (%1) настолько древний, что
+эта версия Mudlet не сможет получить достаточно информации из него
+, но она попытается!  Файл: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1436"/>
