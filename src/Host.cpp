@@ -1408,10 +1408,6 @@ QColor Host::getAnsiColor(const int ansiCode, const bool isBackground) const
 // Telnet sub-option comes in and starts with "External.Discord.(Status|Info)"
 void Host::processDiscordGMCP(const QString& packageMessage, const QString& data)
 {
-    if (mDiscordDisableServerSide) {
-        return;
-    }
-
     auto document = QJsonDocument::fromJson(data.toUtf8());
     if (!document.isObject()) {
         return;
@@ -1476,6 +1472,10 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
 
 void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
 {
+    if (mDiscordDisableServerSide) {
+        return;
+    }
+
     auto pMudlet = mudlet::self();
     auto gameName = discordInfo.value(QStringLiteral("game"));
     if (gameName != QJsonValue::Undefined) {
