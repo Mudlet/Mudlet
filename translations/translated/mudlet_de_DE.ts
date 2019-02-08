@@ -2978,25 +2978,25 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1775"/>
       <source>{pop directional formatting}</source>
       <comment>Unicode U+202C codepoint - pop (undo last) directional formatting.</comment>
-      <translation>{pop directional formatting}</translation>
+      <translation>{dépilement de formatage directionnel}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1776"/>
       <source>{Left-to-right override}</source>
       <comment>Unicode U+202D codepoint.</comment>
-      <translation>{Left-to-right override}</translation>
+      <translation>{forçage gauche-à-droite}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1777"/>
       <source>{right-to-left override}</source>
       <comment>Unicode U+202E codepoint.</comment>
-      <translation>{right-to-left override}</translation>
+      <translation>{forçage droite-à-gauche}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1778"/>
       <source>{narrow width no-break space}</source>
       <comment>Unicode U+202F codepoint.</comment>
-      <translation>{narrow width no-break space}</translation>
+      <translation>{espace insécable étroite}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1779"/>
@@ -3008,25 +3008,25 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1780"/>
       <source>{zero width non-breaking space}</source>
       <comment>Unicode U+2060 codepoint.</comment>
-      <translation>{zero width non-breaking space}</translation>
+      <translation>{gluon de mots}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1781"/>
       <source>{function application}</source>
       <comment>Unicode U+2061 codepoint - function application (whatever that means!)</comment>
-      <translation>{function application}</translation>
+      <translation>{application d'une fonction}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1782"/>
       <source>{invisible times}</source>
       <comment>Unicode U+2062 codepoint.</comment>
-      <translation>{invisible times}</translation>
+      <translation>{signe multiplier invisible}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1783"/>
       <source>{invisible separator}</source>
       <comment>Unicode U+2063 codepoint - invisible separator or comma.</comment>
-      <translation>{invisible separator}</translation>
+      <translation>{séparateur invisible}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1784"/>
