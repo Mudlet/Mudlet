@@ -2766,19 +2766,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1768"/>
       <source>{zero width joiner}</source>
       <comment>Unicode U+200D codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{liant sans chasse}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1769"/>
       <source>{left-to-right mark}</source>
       <comment>Unicode U+200E codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{marque gauche-à-droite}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1770"/>
       <source>{right-to-left mark}</source>
       <comment>Unicode U+200F codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{marque droite-à-gauche}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1771"/>
@@ -2790,61 +2790,61 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1772"/>
       <source>{paragraph separator}</source>
       <comment>Unicode U+2029 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{séparateur de paragraphes}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1773"/>
       <source>{Left-to-right embedding}</source>
       <comment>Unicode U+202A codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{enchâssement gauche-à-droite}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1774"/>
       <source>{right-to-left embedding}</source>
       <comment>Unicode U+202B codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{enchâssement droite-à-gauche}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1775"/>
       <source>{pop directional formatting}</source>
       <comment>Unicode U+202C codepoint - pop (undo last) directional formatting.</comment>
-      <translation type="unfinished"/>
+      <translation>{dépilement de formatage directionnel}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1776"/>
       <source>{Left-to-right override}</source>
       <comment>Unicode U+202D codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{forçage gauche-à-droite}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1777"/>
       <source>{right-to-left override}</source>
       <comment>Unicode U+202E codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{forçage droite-à-gauche}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1778"/>
       <source>{narrow width no-break space}</source>
       <comment>Unicode U+202F codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{espace insécable étroite}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1779"/>
       <source>{medium width mathematical space}</source>
       <comment>Unicode U+205F codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{espace moyenne mathématics}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1780"/>
       <source>{zero width non-breaking space}</source>
       <comment>Unicode U+2060 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{gluon de mots}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1781"/>
       <source>{function application}</source>
       <comment>Unicode U+2061 codepoint - function application (whatever that means!)</comment>
-      <translation type="unfinished"/>
+      <translation>{application d'une fonction}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1782"/>
