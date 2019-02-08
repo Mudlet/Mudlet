@@ -6966,7 +6966,7 @@ void dlgTriggerEditor::slot_script_main_area_add_handler()
         }
         QListWidgetItem* pItem = mpScriptsMainArea->listWidget_script_registered_event_handlers->currentItem();
         if (!pItem) {
-            return;
+            goto LAZY; //why we have to be this lazy too?
         }
         pItem->setText(mpScriptsMainArea->lineEdit_script_event_handler_entry->text());
         mIsScriptsMainAreaEditHandler = false;
