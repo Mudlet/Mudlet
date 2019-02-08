@@ -2858,73 +2858,73 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1755"/>
       <source>{&apos;n&apos; quad}</source>
       <comment>Unicode U+2000 codepoint.</comment>
-      <translation>{demi-cadratin}</translation>
+      <translation>{&apos;n&apos; quad}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1756"/>
       <source>{&apos;m&apos; quad}</source>
       <comment>Unicode U+2001 codepoint.</comment>
-      <translation>{cadratin}</translation>
+      <translation>{&apos;m&apos; quad}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1757"/>
       <source>{&apos;n&apos; space}</source>
       <comment>Unicode U+2002 codepoint - En (&apos;n&apos;) wide space.</comment>
-      <translation>{espace demi-cadratin}</translation>
+      <translation>{&apos;n&apos; space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1758"/>
       <source>{&apos;m&apos; space}</source>
       <comment>Unicode U+2003 codepoint - Em (&apos;m&apos;) wide space.</comment>
-      <translation>{espace cadratin}</translation>
+      <translation>{&apos;m&apos; space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1759"/>
       <source>{3-per-em space}</source>
       <comment>Unicode U+2004 codepoint - three-per-em (&apos;m&apos;) wide (thick) space.</comment>
-      <translation>{tiers de cadratin}</translation>
+      <translation>{3-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1760"/>
       <source>{4-per-em space}</source>
       <comment>Unicode U+2005 codepoint - four-per-em (&apos;m&apos;) wide (Middle) space.</comment>
-      <translation>{quart de cadratin}</translation>
+      <translation>{4-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1761"/>
       <source>{6-per-em space}</source>
       <comment>Unicode U+2006 codepoint - six-per-em (&apos;m&apos;) wide (Sometimes the same as a Thin) space.</comment>
-      <translation>{sixième de cadratin}</translation>
+      <translation>{6-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1762"/>
       <source>{digit space}</source>
       <comment>Unicode U+2007 codepoint - figure (digit) wide space.</comment>
-      <translation>{espace tabulaire}</translation>
+      <translation>{digit space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1763"/>
       <source>{punctuation wide space}</source>
       <comment>Unicode U+2008 codepoint.</comment>
-      <translation>{espace ponctuation}</translation>
+      <translation>{punctuation wide space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1764"/>
       <source>{5-per-em space}</source>
       <comment>Unicode U+2009 codepoint - five-per-em (&apos;m&apos;) wide space.</comment>
-      <translation>{cinquième de cadratin}</translation>
+      <translation>{5-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1765"/>
       <source>{hair width space}</source>
       <comment>Unicode U+200A codepoint - thinnest space.</comment>
-      <translation>{espace ultrafine}</translation>
+      <translation>{hair width space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1766"/>
       <source>{zero width space}</source>
       <comment>Unicode U+200B codepoint.</comment>
-      <translation>{espace sans chasse}</translation>
+      <translation>{zero width space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1767"/>
