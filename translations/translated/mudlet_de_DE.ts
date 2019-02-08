@@ -2858,31 +2858,31 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1755"/>
       <source>{&apos;n&apos; quad}</source>
       <comment>Unicode U+2000 codepoint.</comment>
-      <translation>{&apos;n&apos; quad}</translation>
+      <translation>{demi-cadratin}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1756"/>
       <source>{&apos;m&apos; quad}</source>
       <comment>Unicode U+2001 codepoint.</comment>
-      <translation>{&apos;m&apos; quad}</translation>
+      <translation>{cadratin}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1757"/>
       <source>{&apos;n&apos; space}</source>
       <comment>Unicode U+2002 codepoint - En (&apos;n&apos;) wide space.</comment>
-      <translation>{&apos;n&apos; space}</translation>
+      <translation>{espace demi-cadratin}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1758"/>
       <source>{&apos;m&apos; space}</source>
       <comment>Unicode U+2003 codepoint - Em (&apos;m&apos;) wide space.</comment>
-      <translation>{&apos;m&apos; space}</translation>
+      <translation>{espace cadratin}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1759"/>
       <source>{3-per-em space}</source>
       <comment>Unicode U+2004 codepoint - three-per-em (&apos;m&apos;) wide (thick) space.</comment>
-      <translation>{3-per-em space}</translation>
+      <translation>{tiers de cadratin}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1760"/>
@@ -3002,7 +3002,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1779"/>
       <source>{medium width mathematical space}</source>
       <comment>Unicode U+205F codepoint.</comment>
-      <translation>{medium width mathematical space}</translation>
+      <translation>{espace moyenne mathématics}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1780"/>
