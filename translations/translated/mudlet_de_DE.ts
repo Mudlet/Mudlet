@@ -2888,25 +2888,25 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1760"/>
       <source>{4-per-em space}</source>
       <comment>Unicode U+2005 codepoint - four-per-em (&apos;m&apos;) wide (Middle) space.</comment>
-      <translation>{4-per-em space}</translation>
+      <translation>{quart de cadratin}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1761"/>
       <source>{6-per-em space}</source>
       <comment>Unicode U+2006 codepoint - six-per-em (&apos;m&apos;) wide (Sometimes the same as a Thin) space.</comment>
-      <translation>{6-per-em space}</translation>
+      <translation>{sixième de cadratin}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1762"/>
       <source>{digit space}</source>
       <comment>Unicode U+2007 codepoint - figure (digit) wide space.</comment>
-      <translation>{digit space}</translation>
+      <translation>{espace tabulaire}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1763"/>
       <source>{punctuation wide space}</source>
       <comment>Unicode U+2008 codepoint.</comment>
-      <translation>{punctuation wide space}</translation>
+      <translation>{espace ponctuation}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1764"/>
