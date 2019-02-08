@@ -3014,37 +3014,37 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1781"/>
       <source>{function application}</source>
       <comment>Unicode U+2061 codepoint - function application (whatever that means!)</comment>
-      <translation>{application d'une fonction}</translation>
+      <translation>{function application}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1782"/>
       <source>{invisible times}</source>
       <comment>Unicode U+2062 codepoint.</comment>
-      <translation>{signe multiplier invisible}</translation>
+      <translation>{invisible times}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1783"/>
       <source>{invisible separator}</source>
       <comment>Unicode U+2063 codepoint - invisible separator or comma.</comment>
-      <translation>{séparateur invisible}</translation>
+      <translation>{invisible separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1784"/>
       <source>{invisible plus}</source>
       <comment>Unicode U+2064 codepoint.</comment>
-      <translation>{signe d'addition invisible}</translation>
+      <translation>{invisible plus}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1785"/>
       <source>{left-to-right isolate}</source>
       <comment>Unicode U+2066 codepoint.</comment>
-      <translation>{isoler gauche-à-droite}</translation>
+      <translation>{left-to-right isolate}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1786"/>
       <source>{right-to-left isolate}</source>
       <comment>Unicode U+2067 codepoint.</comment>
-      <translation>{isoler droite-à-gauche}</translation>
+      <translation>{right-to-left isolate}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1787"/>
@@ -3062,37 +3062,37 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1789"/>
       <source>{inhibit symmetrical swapping}</source>
       <comment>Unicode U+206A codepoint.</comment>
-      <translation>{inhibiteur d'échange symétrique}</translation>
+      <translation>{inhibit symmetrical swapping}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1790"/>
       <source>{activate symmetrical swapping}</source>
       <comment>Unicode U+206B codepoint.</comment>
-      <translation>{activateur d'échange symétrique}</translation>
+      <translation>{activate symmetrical swapping}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1791"/>
       <source>{inhibit arabic form-shaping}</source>
       <comment>Unicode U+206C codepoint.</comment>
-      <translation>{inhibiteur d'échange arabe}</translation>
+      <translation>{inhibit arabic form-shaping}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1792"/>
       <source>{activate arabic form-shaping}</source>
       <comment>Unicode U+206D codepoint.</comment>
-      <translation>{activateur d'échange arabe}</translation>
+      <translation>{activate arabic form-shaping}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1793"/>
       <source>{national digit shapes}</source>
       <comment>Unicode U+206E codepoint.</comment>
-      <translation>{sélecteur de formes numbérales nationales}</translation>
+      <translation>{national digit shapes}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1794"/>
       <source>{nominal Digit shapes}</source>
       <comment>Unicode U+206F codepoint.</comment>
-      <translation>{sélecteur de formes numbérales de références}</translation>
+      <translation>{nominal Digit shapes}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1795"/>
