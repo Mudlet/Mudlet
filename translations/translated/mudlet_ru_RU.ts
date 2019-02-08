@@ -2161,12 +2161,14 @@ in main console!</source>
       <source>[ INFO ]  - In room with id: %1 correcting special exit &quot;%2&quot; that
 was to room with an exit to invalid room: %3 to now go
 to: %4.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФОРМАЦИЯ]-В комнате с ID: %1 исправлен особый выход &quot;%2&quot; ,
+-помещение с выходом в недопустимую комнату: %3 до
+до %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1174"/>
       <source>[ INFO ]  - Room needed correcting of special exit &quot;%1&quot; that was to room with an exit to invalid room: %2 to now go to: %3.</source>
-      <translation type="unfinished"/>
+      <translation>[ИНФОРМАЦИЯ] - Комната нуждалась в корректировке специального выхода &quot;%1&quot; , который находился в комнате с выходом в некорректную комнату: %2 теперь перейти по адресу: %3.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1205"/>
@@ -2180,7 +2182,7 @@ the room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1218"/>
       <source>[ WARN ]  - Room has a special exit &quot;%1&quot; with an exit to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN]-В комнате есть специальный выход &quot;%1&quot; с выходом: %2 , но эта комната не существует.  Выход будет удален (но ID места назначения будет храниться в пользовательских данных комнаты под ключом:&quot;%3&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1257"/>
@@ -2225,34 +2227,37 @@ room user data under a key:
       <location filename="../src/TRoom.cpp" line="1319"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus door items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ Информация]-В комнате с id: %1 обнаружена одна или несколько избыточных  дверей, которые были удалены:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1326"/>
       <source>[ INFO ]  - Room had one or more surplus door items that were removed:%1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO]-В помещении было удалено одно или несколько помеченных на удаленных элементов дверей:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1342"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus weight items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ Информация]-В комнате с id: %1 обнаружена одна или несколько избыточных  дверей, которые были удалены:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1349"/>
       <source>[ INFO ]  - Room had one or more surplus weight items that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO]-В помещении было удалено одно или несколько помеченных на удаленных элементов дверей:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1365"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus exit lock items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ Информация]-В комнате с id: %1 обнаружена одна или несколько избыточных  запертых дверей, которые были удалены:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1372"/>
       <source>[ INFO ]  - Room had one or more surplus exit lock items that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO]-В помещении было удалено одно или несколько помеченных на удаленных элементов запертых дверей:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1451"/>
@@ -2264,7 +2269,8 @@ were removed: %2.</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1457"/>
       <source>[ INFO ]  - Room had one or more surplus custom line elements that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФОРМАЦИЯ ]  - В комнате найдена одна или более избыточных пользовательских элементов строки, которые
+были удалены: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1480"/>
@@ -2275,7 +2281,7 @@ an exit to invalid room: %3 to now go to: %4.</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1489"/>
       <source>[ INFO ]  - Correcting exit &quot;%1&quot; that was to invalid room id: %2 to now go to: %3.</source>
-      <translation type="unfinished"/>
+      <translation>[ПРЕДУПРЕЖДЕНИЕ] - Исправление выхода &quot;%1&quot; , который вел в комнату с недействительным идентификатором : %2 , теперь ведет в: %3.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1500"/>
@@ -2620,7 +2626,7 @@ first will also gain a suffix in this manner.
     <message>
       <location filename="../src/TRoomDB.cpp" line="1214"/>
       <source>[ ALERT ] - An empty area name was detected in the Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[ ТРЕВОГА]-В файле карты обнаружено пустое имя Зоны!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1217"/>
@@ -6543,7 +6549,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="57"/>
       <source>Key Binding:</source>
-      <translation type="unfinished"/>
+      <translation>Привязка клавиш:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="111"/>
@@ -8406,7 +8412,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2007"/>
       <source>&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you&apos;re on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Это позволяет сглаживать (AA) для 2D вида карты, делая его более гладкой и приятной. Отключите это, если вы на очень медленном компьютере.&lt;/p&gt;&lt;p&gt;3D вид карты всегда имеет сглаживание.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2020"/>
