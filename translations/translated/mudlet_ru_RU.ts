@@ -1905,7 +1905,12 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ТРЕВОГА ] - по крайней мере, одна штука была обнаружена при последней операции с картой 
+, рекомендуется пересмотреть протокол в
+файле:
+&quot;%1&quot;
+- искать (последний) протокол с названием:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2174"/>
@@ -1915,7 +1920,12 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[Информация] - Эквивалент вышеуказанной информации о последней операции карты
+сохранён для просмотра в качестве последнего отчета в
+файл:
+&quot;%1&quot;
+- ищите (последний) отчет с заголовком:
+&quot;%2&quot;. 321.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2248"/>
@@ -1941,7 +1951,8 @@ the file:
       <location filename="../src/TMap.cpp" line="2284"/>
       <source>loadMap: unable to perform request, a map is already being downloaded or
 imported at user request.</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: невозможно выполнить запрос, карта уже загружается или
+импортирована по запросу пользователя.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2316"/>
@@ -1957,12 +1968,13 @@ imported at user request.</source>
       <location filename="../src/TMap.cpp" line="2344"/>
       <source>loadMap: failure to import XML map file, further information may be available
 in main console!</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: сбой при импорте файла карты XML, дополнительная информация доступна
+в главной консоли!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2379"/>
       <source>[ ALERT ] - Map download was canceled, on user&apos;s request.</source>
-      <translation type="unfinished"/>
+      <translation>[ПРЕДУПРЕЖДЕНИЕ]-Загрузка карты отменена, по требованию пользователя&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2398"/>
@@ -1975,36 +1987,41 @@ in main console!</source>
       <location filename="../src/TMap.cpp" line="2412"/>
       <source>[ ALERT ] - Map download failed, error reported was:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ТРЕВОГА]-Не удалось загрузить карту, сообщение об ошибке:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2420"/>
       <source>[ ALERT ] - Map download failed, unable to open destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ТРЕВОГА]-Не удалось загрузить карту, невозможно открыть целевой файл:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2425"/>
       <source>[ ALERT ] - Map download failed, unable to write destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ТРЕВОГА]-Не удалось загрузить карту, невозможно записать файл назначения:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2432"/>
       <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФОРМАЦИЯ]-... карта загружена и размещена, теперь анализируем информацию ...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2458"/>
       <source>[ ERROR ] - Map download problem, failure in parsing destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА]-Ошибка загрузки карты, ошибка при анализе содержимого файла назначения:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2463"/>
       <source>[ ERROR ] - Map download problem, unable to read destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ОШИБКА]-Не удалось загрузить карту, невозможно открыть целевой файл:
+%1.</translation>
     </message>
   </context>
   <context>
@@ -2095,7 +2112,7 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="275"/>
       <source>Warning: When setting the Area for Room (Id: %1) it did not have a current area!</source>
-      <translation type="unfinished"/>
+      <translation>Предупреждение: При установке Зоны для комнаты (Id: %1) у нее нет текущей зоны!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="955"/>
@@ -2120,23 +2137,24 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1116"/>
       <source>[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}</source>
-      <translation type="unfinished"/>
+      <translation>[ПРЕДУПРЕЖДЕНИЕ]-В комнате ID:%1 удаление недопустимого (особого) выхода в %2 { без имени!}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1120"/>
       <source>[ WARN ]  - Room had an invalid (special) exit to %1 {with no name!} it was removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN]-В комнате был недопустимый (специальный) выход %1 { без имени!} он был удален.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1130"/>
       <source>[ INFO ]  - In room id:%1 patching {internal fixup} of (special) exit to
 %2, was: &quot;%3&quot; now: &quot;%4&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ИНФОРМАЦИЯ] - В комнате ID:%1 , исправлен {internal fixup} (специальный) выход на
+%2, было: &quot;%3&quot; сейчас: &quot;%4&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1138"/>
       <source>[ INFO ]  - Room needed patching {internal fixup} of (special) exit to %1, was: &quot;%2&quot; now: &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФОРМАЦИЯ ]  - Комната нуждается в исправлении {internal fixup} из (специального) выхода в %1, была: &quot;%2&quot; сейчас: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1164"/>
