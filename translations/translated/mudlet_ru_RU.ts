@@ -788,7 +788,10 @@ for this/these room(s):</source>
 more of the selected rooms, delete this to
 clear it from all selected rooms or replace
 with a new symbol to use for all the rooms:</source>
-      <translation type="unfinished"/>
+      <translation>Единственный используемый символ- &quot;%1&quot; в одной или
+более выбранных комнатах, удалите его чтобы 
+очистить у всех выбранных помещений или замените
+на новый символ, чтобы использовать его для всех комнат:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3446"/>
