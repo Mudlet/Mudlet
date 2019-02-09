@@ -473,7 +473,7 @@ int TLuaInterpreter::getProfileName(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions:getCommandSeparator
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCommandSeparator
 int TLuaInterpreter::getCommandSeparator(lua_State* L)
 {
     Host& host = getHostFromLua(L);
