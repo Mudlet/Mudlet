@@ -88,6 +88,7 @@ public:
 
 
     QString            getName()                        { QMutexLocker locker(& mLock); return mHostName; }
+    QString            getCommandSeparator()            { QMutexLocker locker(& mLock); return mCommandSeparator; }
     void               setName(const QString& s )       { QMutexLocker locker(& mLock); mHostName = s; }
     QString            getUrl()                         { QMutexLocker locker(& mLock); return mUrl; }
     void               setUrl(const QString& s )        { QMutexLocker locker(& mLock); mUrl = s; }
