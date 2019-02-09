@@ -427,7 +427,9 @@ void cTelnet::handle_socket_signal_connected()
     TEvent event;
     event.mArgumentList.append(QStringLiteral("sysConnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    qDebug() << "raising sysConnectionEvent...";
     mpHost->raiseEvent(event);
+    qDebug() << "done with sysConnectionEvent.";
 }
 
 void cTelnet::handle_socket_signal_disconnected()

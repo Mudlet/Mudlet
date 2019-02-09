@@ -691,6 +691,7 @@ void Host::incomingStreamProcessor(const QString& data, int line)
 
 void Host::registerEventHandler(const QString& name, TScript* pScript)
 {
+    qDebug() << "registerEventHandler" << name;
     if (mEventHandlerMap.contains(name)) {
         if (!mEventHandlerMap[name].contains(pScript)) {
             mEventHandlerMap[name].append(pScript);
@@ -703,6 +704,7 @@ void Host::registerEventHandler(const QString& name, TScript* pScript)
 }
 void Host::registerAnonymousEventHandler(const QString& name, const QString& fun)
 {
+    qDebug() << "registerAnonymousEventHandler" << name;
     if (mAnonymousEventHandlerFunctions.contains(name)) {
         if (!mAnonymousEventHandlerFunctions[name].contains(fun)) {
             mAnonymousEventHandlerFunctions[name].push_back(fun);
@@ -730,6 +732,7 @@ void Host::raiseEvent(const TEvent& pE)
     if (mEventHandlerMap.contains(pE.mArgumentList.at(0))) {
         QList<TScript*> scriptList = mEventHandlerMap.value(pE.mArgumentList.at(0));
         for (auto& script : scriptList) {
+            qDebug() << "running script" << script->getName();
             script->callEventHandler(pE);
         }
     }
