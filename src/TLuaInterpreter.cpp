@@ -14711,8 +14711,12 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapSelection", TLuaInterpreter::getMapSelection);
     lua_register(pGlobalLua, "enableClickthrough", TLuaInterpreter::enableClickthrough);
     lua_register(pGlobalLua, "disableClickthrough", TLuaInterpreter::disableClickthrough);
+    lua_register(pGlobalLua, "addWordToProfileDictionary", TLuaInterpreter::addWordToProfileDictionary);
+    lua_register(pGlobalLua, "removeWordFromProfileDictionary", TLuaInterpreter::removeWordFromProfileDictionary);
+    lua_register(pGlobalLua, "spellCheckWord", TLuaInterpreter::spellCheckWord);
+    lua_register(pGlobalLua, "spellSuggestWord", TLuaInterpreter::spellSuggestWord);
+    lua_register(pGlobalLua, "getProfileDictionaryWordList", TLuaInterpreter::getProfileDictionaryWordList);
     // PLACEMARKER: End of main Lua interpreter functions registration
-
 
     // prepend profile path to package.path and package.cpath
     // with a singleShot Timer to avoid crash on startup.
@@ -15591,4 +15595,169 @@ int TLuaInterpreter::disableClickthrough(lua_State* L)
 
     mudlet::self()->setClickthrough(&host, windowName, false);
     return 0;
+}
+
+int TLuaInterpreter::addWordToProfileDictionary(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    if (!host.mEnableSpellCheck) {
+        lua_pushnil(L);
+        lua_pushstring(L, "spell-checking is not enabled in the preferences for this profile");
+        return 2;
+    }
+
+    QString text;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "addWordToProfileDictionary: bad argument #1 type (word as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        text = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    if (!host.mpConsole->addSingleWordToSet(text)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "the word \"%s\" already seems to be in the profile's own dictionary", text.toUtf8().constData());
+        return 2;
+    } else {
+        lua_pushboolean(L, true);
+        return 1;
+    }
+}
+
+int TLuaInterpreter::removeWordFromProfileDictionary(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    if (!host.mEnableSpellCheck) {
+        lua_pushnil(L);
+        lua_pushstring(L, "spell-checking is not enabled in the preferences for this profile");
+        return 2;
+    }
+
+    QString text;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "removeWordFromProfileDictionary: bad argument #1 type (word as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        text = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    if (!host.mpConsole->removeSingleWordFromSet(text)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "the word \"%s\" does not appear to be in the profile's own dictionary", text.toUtf8().constData());
+        return 2;
+    } else {
+        lua_pushboolean(L, true);
+        return 1;
+    }
+}
+
+int TLuaInterpreter::spellCheckWord(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    if (!host.mEnableSpellCheck) {
+        lua_pushnil(L);
+        lua_pushstring(L, "spell-checking is not enabled in the preferences for this profile");
+        return 2;
+    }
+
+    QString text;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "spellCheckWord: bad argument #1 type (word as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        text = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    bool useProfileDictionary = false;
+    if (lua_gettop(L) > 1) {
+        if (!lua_isboolean(L, 2)) {
+            lua_pushfstring(L, "spellCheckWord: bad argument #2 type (check profile dictionary as boolean is optional {use 'false' or omit to check against system dictionary}, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        } else {
+            useProfileDictionary = lua_toboolean(L, 2);
+        }
+    }
+
+    if (useProfileDictionary) {
+        lua_pushboolean(L, Hunspell_spell(host.mpConsole->getHunspelHandle_profile(), text.toUtf8().constData()));
+    } else {
+        QByteArray encodedText = host.mpConsole->getHunspellCodec_system()->fromUnicode(text);
+        lua_pushboolean(L, Hunspell_spell(host.mpConsole->getHunspelHandle_system(), encodedText.constData()));
+    }
+    return 1;
+}
+
+int TLuaInterpreter::spellSuggestWord(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    if (!host.mEnableSpellCheck) {
+        lua_pushnil(L);
+        lua_pushstring(L, "spell-checking is not enabled in the preferences for this profile");
+        return 2;
+    }
+
+    QString text;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "spellSuggestWord: bad argument #1 type (word as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        text = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    bool useProfileDictionary = false;
+    if (lua_gettop(L) > 1) {
+        if (!lua_isboolean(L, 2)) {
+            lua_pushfstring(L, "spellSuggestWord: bad argument #2 type (check profile dictionary as boolean is optional {use 'false' or omit to check against system dictionary}, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        } else {
+            useProfileDictionary = lua_toboolean(L, 2);
+        }
+    }
+
+    char **wordList;
+    size_t wordCount = 0;
+    if (useProfileDictionary) {
+        wordCount = Hunspell_suggest(host.mpConsole->getHunspelHandle_profile(), &wordList, text.toUtf8().constData());
+    } else {
+        QByteArray encodedText = host.mpConsole->getHunspellCodec_system()->fromUnicode(text);
+        wordCount = Hunspell_suggest(host.mpConsole->getHunspelHandle_system(), &wordList, encodedText.constData());
+    }
+    lua_newtable(L);
+    for (size_t i = 0; i < wordCount; ++i) {
+        lua_pushnumber(L, i+1);
+        lua_pushstring(L, wordList[i]);
+        lua_settable(L, -3);
+    }
+    Hunspell_free_list((useProfileDictionary
+                        ? host.mpConsole->getHunspelHandle_profile()
+                        : host.mpConsole->getHunspelHandle_system()),
+                       &wordList, wordCount);
+    return 1;
+}
+
+int TLuaInterpreter::getProfileDictionaryWordList(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    if (!host.mEnableSpellCheck) {
+        lua_pushnil(L);
+        lua_pushstring(L, "spell-checking is not enabled in the preferences for this profile");
+        return 2;
+    }
+
+    QStringList wordList = host.mpConsole->getWordSet().toList();
+    int wordCount = wordList.size();
+    if (wordCount > 1) {
+        QCollator sorter;
+        sorter.setCaseSensitivity(Qt::CaseSensitive);
+        std::sort(wordList.begin(), wordList.end(), sorter);
+    }
+
+    lua_newtable(L);
+    for (int i = 0; i < wordCount; ++i) {
+        lua_pushinteger(L, i+1);
+        lua_pushstring(L, wordList.at(i).toUtf8().constData());
+        lua_settable(L, -3);
+    }
+
+    return 1;
 }

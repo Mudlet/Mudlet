@@ -439,25 +439,29 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     ircNick->setText(dlgIRC::readIrcNickName(pHost));
 
     dictList->setSelectionMode(QAbstractItemView::SingleSelection);
-    enableSpellCheck->setChecked(pHost->mEnableSpellCheck);
+    groupBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
+    groupBox_autoAddWordsFromServerToDictionary->setChecked(pHost->mAutoAddServerWordsToDictionary);
+    checkBox_autoAddWordsToDictionaryWithDigits->setChecked(pHost->mAutoAddWordsWithDigits);
+    spinBox_autoAddToDictionaryWordLength->setValue(pHost->mMinimumAutoAddWordLength);
     checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
     checkBox_useWideAmbiguousEastAsianGlyphs->setCheckState(pHost->getWideAmbiguousEAsianGlyphsControlState());
 
     QString path;
     // This is duplicated (and should be the same as) the code in:
-    // TCommandLine::TCommandLine(Host*, TConsole*, QWidget*)
+    // (void)TConsole::setSystemSpellDictionary(const QString& newDict)
+    const QString& currentDictionary = pHost->getSpellDic();
 #if defined(Q_OS_MACOS)
     path = QStringLiteral("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
 #elif defined(Q_OS_FREEBSD)
-    if (QFile::exists(QStringLiteral("/usr/local/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
+    if (QFile::exists(QStringLiteral("/usr/local/share/hunspell/%1.aff").arg(currentDictionary))) {
         path = QLatin1String("/usr/local/share/hunspell/");
-    } else if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
+    } else if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(currentDictionary))) {
         path = QLatin1String("/usr/share/hunspell/");
     } else {
         path = QLatin1String("./");
     }
 #elif defined(Q_OS_LINUX)
-    if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
+    if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(currentDictionary))) {
         path = QLatin1String("/usr/share/hunspell/");
     } else {
         path = QLatin1String("./");
@@ -471,12 +475,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
     QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
     entries = entries.filter(rex);
-    for (int i = 0; i < entries.size(); i++) {
+    for (int i = 0, total = entries.size(); i < total; ++i) {
         // This is a file name and to support macOs platforms should not be case sensitive:
         entries[i].remove(QLatin1String(".dic"), Qt::CaseInsensitive);
-        auto item = new QListWidgetItem(entries[i]);
+        auto item = new QListWidgetItem(entries.at(i));
+        item->setTextAlignment(Qt::AlignCenter);
         dictList->addItem(item);
-        if (entries[i] == pHost->mSpellDic) {
+        if (entries.at(i) == currentDictionary) {
             item->setSelected(true);
         }
     }
@@ -985,7 +990,7 @@ void dlgProfilePreferences::clearHostDetails()
     ircNick->clear();
 
     dictList->clear();
-    enableSpellCheck->setChecked(false);
+    groupBox_spellCheck->setChecked(false);
     checkBox_echoLuaErrors->setChecked(false);
 
     groupBox_downloadMapOptions->setVisible(false);
@@ -2107,7 +2112,10 @@ void dlgProfilePreferences::slot_save_and_exit()
             pHost->setSpellDic(dictList->currentItem()->text());
         }
 
-        pHost->mEnableSpellCheck = enableSpellCheck->isChecked();
+        pHost->mEnableSpellCheck = groupBox_spellCheck->isChecked();
+        pHost->mAutoAddServerWordsToDictionary = groupBox_autoAddWordsFromServerToDictionary->isChecked();
+        pHost->mAutoAddWordsWithDigits = checkBox_autoAddWordsToDictionaryWithDigits->isChecked();
+        pHost->mMinimumAutoAddWordLength = spinBox_autoAddToDictionaryWordLength->value();
         pHost->mWrapAt = wrap_at_spinBox->value();
         pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
         pHost->mPrintCommand = show_sent_text_checkbox->isChecked();

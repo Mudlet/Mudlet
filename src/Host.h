@@ -378,6 +378,9 @@ public:
     QStringList mGMCP_merge_table_keys;
     bool mLogStatus;
     bool mEnableSpellCheck;
+    bool mAutoAddServerWordsToDictionary;
+    bool mAutoAddWordsWithDigits;
+    int mMinimumAutoAddWordLength;
     QStringList mInstalledPackages;
     QMap<QString, QStringList> mInstalledModules;
     QMap<QString, int> mModulePriorities;
@@ -511,8 +514,7 @@ private:
     bool mServerMayRedefineColors;
 
     // Was public but hidden to prevent it being changed without going through
-    // the process to signal to existing uses that they need to change
-    // dictionaries:
+    // the process to signal to users that they need to change dictionaries:
     QString mSpellDic;
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);

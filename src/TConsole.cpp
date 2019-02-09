@@ -40,6 +40,7 @@
 #include "pre_guard.h"
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QRegularExpression>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QTextCodec>
@@ -91,6 +92,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mTriggerEngineMode(false)
 , mWrapAt(100)
 , networkLatency(new QLineEdit)
+, profile_name(mpHost ? mpHost->getName() : QStringLiteral("debug console"))
 , mIsPromptLine(false)
 , mUserAgreedToCloseConsole(false)
 , mpBufferSearchBox(new QLineEdit)
@@ -100,6 +102,9 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mSearchQuery()
 , mpButtonMainLayer(nullptr)
 , mType(type)
+, mSpellDic()
+, mpHunspell_system(nullptr)
+, mpHunspell_profile(nullptr)
 {
     auto ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
@@ -137,11 +142,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mStandardFormat.setTextFormat(mpHost->mFgColor, mpHost->mBgColor, TChar::None);
     }
     setContentsMargins(0, 0, 0, 0);
-    if (mpHost) {
-        profile_name = mpHost->getName();
-    } else {
-        profile_name = "debug console";
-    }
     mFormatSystemMessage.setBackground(mBgColor);
     mFormatSystemMessage.setForeground(Qt::red);
     setAttribute(Qt::WA_DeleteOnClose);
@@ -550,7 +550,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layerCommandLine->setPalette(__pal);
 
     changeColors();
-    if (mType & (MainConsole|Buffer)) {
+    if (mType == MainConsole) {
         // During first use where mIsDebugConsole IS true mudlet::self() is null
         // then - but we rely on that flag to avoid having to also test for a
         // non-null mudlet::self() - the connect(...) will produce a debug
@@ -561,6 +561,34 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         connect(this, &TConsole::signal_newDataAlert, mudlet::self(), &mudlet::slot_newDataOnHost, Qt::UniqueConnection);
         // For some odd reason the first seems to get connected twice - the
         // last flag prevents multiple ones being made
+
+        // Install the spelling dictionary from the system:
+        setSystemSpellDictionary(mpHost->getSpellDic());
+
+        // Install the spelling dictionary for the profile - needs to handle the
+        // absence of files for the first run in a new profile or from an older
+        // Mudlet version:
+        QString hostName(mpHost->getName());
+        QString spell_aff = mudlet::self()->getMudletPath(mudlet::profileDataItemPath, hostName, QStringLiteral("profile.aff"));
+        QString spell_dic = mudlet::self()->getMudletPath(mudlet::profileDataItemPath, hostName, QStringLiteral("profile.dic"));
+        qDebug() << "TCommandLine::TConsole(...) INFO - Preparing profile's own Hunspell dictionary...";
+        mudlet::self()->prepareDictionary(mudlet::self()->getMudletPath(mudlet::profileDataItemPath, hostName, QStringLiteral("profile")), mWordSet);
+        mpHunspell_profile = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
+    }
+}
+
+TConsole::~TConsole()
+{
+    if (mpHunspell_system) {
+        Hunspell_destroy(mpHunspell_system);
+        mpHunspell_system = nullptr;
+    }
+    if (mpHunspell_profile) {
+        Hunspell_destroy(mpHunspell_profile);
+        mpHunspell_profile = nullptr;
+        // Need to commit any changes to personal dictionary
+        qDebug() << "TCommandLine::~TConsole(...) INFO - Saving profile's own Hunspell dictionary...";
+        mudlet::self()->saveDictionary(mudlet::self()->getMudletPath(mudlet::profileDataItemPath, profile_name, QStringLiteral("profile")), mWordSet);
     }
 }
 
@@ -2593,4 +2621,110 @@ void TConsole::slot_reloadMap(QList<QString> profilesList)
     }
 
     pHost->postMessage(outcomeMsg);
+}
+
+bool TConsole::addSingleWordToSet(const QString& word)
+{
+    bool isAdded = false;
+    if (!mWordSet.contains(word)) {
+        mWordSet.insert(word);
+        qDebug().noquote().nospace() << "TConsole::addSingleWordToSet(\"" << word << "\") INFO - word added to mWordSet.";
+        isAdded = true;
+    };
+    if (Hunspell_add(mpHunspell_profile, word.toUtf8().constData())) {
+        qDebug().noquote().nospace() << "TConsole::addSingleWordToSet(\"" << word << "\") INFO - word added to loaded profile hunspell dictionary.";
+        isAdded = true;
+    };
+    return isAdded;
+}
+
+bool TConsole::removeSingleWordFromSet(const QString& word)
+{
+    bool isRemoved = false;
+    if (mWordSet.remove(word)) {
+        qDebug().noquote().nospace() << "TConsole::removeSingleWordFromSet(\"" << word << "\") INFO - word removed from mWordSet.";
+        isRemoved = true;
+    };
+    if (Hunspell_remove(mpHunspell_profile, word.toUtf8().constData())) {
+        qDebug().noquote().nospace() << "TConsole::removeSingleWordFromSet(\"" << word << "\") INFO - word removed from loaded profile hunspell dictionary.";
+        isRemoved = true;
+    };
+    return isRemoved;
+}
+
+void TConsole::updateWordList(const QString& newText)
+{
+    QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Word, newText);
+    int startPos = 0;
+    int endPos = wordFinder.toNextBoundary();
+    int minimumAutoAddWordLength = mpHost->mMinimumAutoAddWordLength;
+    bool autoAddWordsWithDigits = mpHost->mAutoAddWordsWithDigits;
+    QSet<QString> wordSet;
+    QRegularExpression excludeCharacters(QStringLiteral("\\d"));
+    do {
+        if (endPos > 0) {
+            QString word(newText.mid(startPos, endPos - startPos));
+            // skip short words:
+            if (TBuffer::graphemeLength(word) >= minimumAutoAddWordLength) {
+                // Skip words that match the reqular expression if we are not
+                // set to auto-add them - currently this is just if it contains
+                // a digit - but something like this could be user extendable
+                // in the future:
+                if (autoAddWordsWithDigits || !excludeCharacters.match(word).hasMatch()) {
+                    if (!Hunspell_spell(mpHunspell_system, mpHunspellCodec_system->fromUnicode(word).constData())) {
+                        // Word is NOT in system dictionary
+                        addSingleWordToSet(word);
+                    }
+                }
+            }
+            startPos = endPos;
+            endPos = wordFinder.toNextBoundary();
+        }
+    } while (endPos > 0);
+    mWordSet.unite(wordSet);
+}
+
+void TConsole::setSystemSpellDictionary(const QString& newDict)
+{
+    if (!newDict.isEmpty() && mSpellDic != newDict) {
+        mSpellDic = newDict;
+
+        // This is duplicated (and should be the same as) the code in:
+        // (void) dlgProfilePreferences::initWithHost(Host*)
+        QString path;
+#if defined(Q_OS_MACOS)
+        path = QStringLiteral("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
+#elif defined(Q_OS_FREEBSD)
+        if (QFile::exists(QStringLiteral("/usr/local/share/hunspell/%1.aff").arg(newDict))) {
+            path = QLatin1String("/usr/local/share/hunspell/");
+        } else if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(newDict))) {
+            path = QLatin1String("/usr/share/hunspell/");
+        } else {
+            path = QLatin1String("./");
+        }
+#elif defined(Q_OS_LINUX)
+        if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(newDict))) {
+            path = QLatin1String("/usr/share/hunspell/");
+        } else {
+            path = QLatin1String("./");
+        }
+#else
+        // Probably Windows!
+        path = "./";
+#endif
+
+        QString spell_aff = QStringLiteral("%1%2.aff").arg(path, newDict);
+        QString spell_dic = QStringLiteral("%1%2.dic").arg(path, newDict);
+        // The man page for hunspell advises Utf8 encoding of the pathFileNames for
+        // use on Windows platforms which can have non ASCII characters...
+        if (mpHunspell_system) {
+            Hunspell_destroy(mpHunspell_system);
+        }
+        mpHunspell_system = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
+        if (mpHunspell_system) {
+            mHunspellCodecName_system = QByteArray(Hunspell_get_dic_encoding(mpHunspell_system));
+            qDebug().noquote().nospace() << "TCommandLine::setSystemSpellDictionary(\"" << newDict << "\") INFO - System Hunspell dictionary loaded for profile, it uses a \"" << Hunspell_get_dic_encoding(mpHunspell_system) << "\" encoding...";
+            mpHunspellCodec_system = QTextCodec::codecForName(mHunspellCodecName_system);
+        }
+    }
 }

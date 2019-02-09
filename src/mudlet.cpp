@@ -53,15 +53,16 @@
 #include <QtUiTools/quiloader.h>
 #include <QDesktopServices>
 #include <QDesktopWidget>
-#include <QFileDialog>
-#include <QMessageBox>
-#include <QScrollBar>
-#include <QTableWidget>
-#include <QToolBar>
 #include <QFile>
+#include <QFileDialog>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
+#include <QMessageBox>
+#include <QScrollBar>
+#include <QTableWidget>
+#include <QTextStream>
+#include <QToolBar>
 #include <QVariantHash>
 
 #include <zip.h>
@@ -4305,4 +4306,287 @@ QPair<bool, QStringList> mudlet::getLines(Host* pHost, const QString& windowName
         failMessage << QStringLiteral("mini console, user window or buffer \"%1\" not found").arg(windowName);
         return qMakePair(false, failMessage);
     }
+}
+
+bool mudlet::prepareDictionary(const QString& pathFileBaseName, QSet<QString>& wordSet)
+{
+    // Need to check that the files exist first:
+    QString dictionaryPathFileName(QStringLiteral("%1.dic").arg(pathFileBaseName));
+    QString affixPathFileName(QStringLiteral("%1.aff").arg(pathFileBaseName));
+    QFile dictionary(dictionaryPathFileName);
+    QFile affix(affixPathFileName);
+    int oldWordCount = 1;
+    QStringList wordList;
+    QHash<QString, unsigned int> graphemeCounts;
+    QStringList affixLines;
+    QTextStream* as = nullptr;
+    QTextStream* ds = nullptr;
+
+    if (dictionary.exists()) {
+        // First update the line count in the list of words
+        if (!dictionary.open(QFile::ReadOnly|QFile::ExistingOnly|QFile::Text)) {
+            qWarning().nospace().noquote() << "mudlet::prepareDictionary(...) ERROR - failed to open dictionary file (for reading): \"" << dictionaryPathFileName << "\" reason: " << dictionary.errorString();
+            return false;
+        }
+
+        ds = new QTextStream(&dictionary);
+        QString dictionaryLine;
+        ds->readLineInto(&dictionaryLine);
+
+        bool isOk = false;
+        oldWordCount = dictionaryLine.toInt(&isOk);
+        do {
+            ds->readLineInto(&dictionaryLine);
+            if (!dictionaryLine.isEmpty()) {
+                // qDebug().nospace().noquote() << "    " << dictionaryLine;
+                wordList << dictionaryLine;
+                QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, dictionaryLine);
+                // The finder will be at the start of the string
+                int startPos = 0;
+                int endPos = graphemeFinder.toNextBoundary();
+                do {
+                    if (endPos > 0) {
+                        QString grapheme(dictionaryLine.mid(startPos, endPos - startPos));
+                        if (graphemeCounts.contains(grapheme)) {
+                            ++graphemeCounts[grapheme];
+                        } else {
+                            graphemeCounts[grapheme] = 1;
+                        }
+                        startPos = endPos;
+                        endPos = graphemeFinder.toNextBoundary();
+                    }
+                } while (endPos > 0);
+            }
+        } while (!ds->atEnd() && ds->status() == QTextStream::Ok);
+
+        if (ds->status() != QTextStream::Ok) {
+            qWarning().nospace().noquote() << "mudlet::prepareDictionary(...) ERROR - failed to completely read dictionary file: \"" << dictionaryPathFileName << "\" status: " << ds->status();
+            return false;
+        }
+
+        delete ds;
+        ds = nullptr;
+        dictionary.close();
+    }
+
+    if (wordList.count() > 1) {
+        // This will use the system default locale - it might be better to use
+        // the Mudlet one...
+        QCollator sorter;
+        sorter.setCaseSensitivity(Qt::CaseSensitive);
+        std::sort(wordList.begin(), wordList.end(), sorter);
+        int dupCount = wordList.removeDuplicates();
+        if (dupCount) {
+            qDebug().nospace().noquote() << "  Removed " << dupCount << " duplicates.";
+        }
+    }
+
+    // We have read, sorted (and deduplicated if it was) the wordlist
+    int wordCount = wordList.count();
+    if (wordCount > oldWordCount) {
+        qDebug().nospace().noquote() << "  Considering an extra " << wordCount - oldWordCount << " words.";
+
+    } else if (wordCount < oldWordCount) {
+        qDebug().nospace().noquote() << "  Considering " << wordCount - oldWordCount << " fewer words.";
+    } else {
+        qDebug().nospace().noquote() << "  No change in the number of words in dictionary.";
+    }
+
+    // (Re)Open the file to write out the cleaned/new contents
+    // QFile::WriteOnly automatically implies QFile::Truncate in the abscence of
+    // certain other flags:
+    if (!dictionary.open(QFile::WriteOnly|QFile::Text)) {
+        qWarning().nospace().noquote() << "mudlet::prepareDictionary(...) ERROR - failed to open dictionary file (for writing): \"" << dictionaryPathFileName << "\" reason: " << dictionary.errorString();
+        return false;
+    }
+
+    ds = new QTextStream(&dictionary);
+    // Ensure the number is at least 1:
+    *ds << qMax(1, wordCount);
+    *ds << QChar(QChar::LineFeed);
+    *ds << wordList.join(QChar::LineFeed).toUtf8();
+    *ds << QChar(QChar::LineFeed);
+    ds->flush();
+    delete ds;
+    if (dictionary.error() != QFile::NoError) {
+        qWarning().nospace().noquote() << "mudlet::prepareDictionary(...) ERROR - failed to completely write dictionary file: \"" << dictionaryPathFileName << "\" status: " << dictionary.errorString();
+        return false;
+    }
+
+    QMultiMap<unsigned int, QString> sortedGraphemeCounts;
+    // Sort the graphemes into a descending order list:
+    if (graphemeCounts.size()) {
+        QHashIterator<QString, unsigned int> itGraphemeCount(graphemeCounts);
+        while (itGraphemeCount.hasNext()) {
+            itGraphemeCount.next();
+            sortedGraphemeCounts.insert(itGraphemeCount.value(), itGraphemeCount.key());
+        }
+    }
+
+    // Generate TRY line:
+    QString tryLine = QStringLiteral("TRY ");
+    QMapIterator<unsigned int, QString> itGrapheme(sortedGraphemeCounts);
+    itGrapheme.toBack();
+    while (itGrapheme.hasPrevious()) {
+        itGrapheme.previous();
+        tryLine.append(itGrapheme.value());
+    }
+
+    affixLines << QStringLiteral("SET UTF-8");
+    affixLines << tryLine;
+
+    // Finally, having got the needed content, write it out:
+    if (!affix.open(QFile::WriteOnly|QFile::Text)) {
+        qWarning().nospace().noquote() << "mudlet::prepareDictionary(...) ERROR - failed to open affix file (for writing): \"" << affixPathFileName << "\" reason: " << affix.errorString();
+        return false;
+    }
+
+    as = new QTextStream(&affix);
+    *as << affixLines.join(QChar::LineFeed).toUtf8();
+    *as << QChar(QChar::LineFeed);
+    as->flush();
+    delete as;
+    if (affix.error() != QFile::NoError) {
+        qWarning().nospace().noquote() << "mudlet::prepareDictionary(...) ERROR - failed to completely write affix file: \"" << affixPathFileName << "\" status: " << affix.errorString();
+        return false;
+    }
+    affix.close();
+
+    // The pair of files are now usable by hunspell library and being use to make
+    // suggestions - they are also capable of being munched - but since we are
+    // using this on our own profiles' dictionaries we will not know the
+    // language that the Mud uses and thus which locale's affixes are suitable.
+
+    // Also, given how we are using the dictionary, any affix rules are going
+    // to confuse our add/remove code.  We just need the SET line to force the
+    // Hunspell API to be UTF-8 and the TRY line to allow for searching for
+    // completions. Anyhow we now need to keep the copy of the word list ourself
+    // to allow for persistant editing of it:
+
+    wordSet = wordList.toSet();
+}
+
+bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& wordSet)
+{
+    // First update the line count in the list of words
+    QString dictionaryPathFileName(QStringLiteral("%1.dic").arg(pathFileBaseName));
+    QString affixPathFileName(QStringLiteral("%1.aff").arg(pathFileBaseName));
+    QFile dictionary(dictionaryPathFileName);
+    QFile affix(affixPathFileName);
+    if (!dictionary.open(QFile::ReadOnly|QFile::ExistingOnly|QFile::Text)) {
+        qWarning().nospace().noquote() << "mudlet::saveDictionary(...) ERROR - failed to open dictionary file (for reading): \"" << dictionaryPathFileName << "\" reason: " << dictionary.errorString();
+        return false;
+    }
+
+    QTextStream* ds = new QTextStream(&dictionary);
+    QString dictionaryLine;
+    ds->readLineInto(&dictionaryLine);
+    QHash<QString, unsigned int> graphemeCounts;
+    bool isOk = false;
+    int oldWordCount = dictionaryLine.toInt(&isOk);
+    delete ds;
+    dictionary.close();
+
+    // In this method we parse the wordSet and not the file
+    QStringList wordList = wordSet.toList();
+    int wordCount = wordList.count();
+    if (wordCount > 1) {
+        // This will use the system default locale - it might be better to use
+        // the Mudlet one...
+        QCollator sorter;
+        sorter.setCaseSensitivity(Qt::CaseSensitive);
+        std::sort(wordList.begin(), wordList.end(), sorter);
+    }
+
+    for (int index = 0; index < wordCount; ++index) {
+        // qDebug().nospace().noquote() << "    " << wordList.at(index);
+        QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, wordList.at(index));
+        // The finder will be at the start of the string
+        int startPos = 0;
+        int endPos = graphemeFinder.toNextBoundary();
+        do {
+            if (endPos > 0) {
+                QString grapheme(wordList.at(index).mid(startPos, endPos - startPos));
+                if (graphemeCounts.contains(grapheme)) {
+                    ++graphemeCounts[grapheme];
+                } else {
+                    graphemeCounts[grapheme] = 1;
+                }
+                startPos = endPos;
+                endPos = graphemeFinder.toNextBoundary();
+            }
+        } while (endPos > 0);
+    }
+
+    // We have sorted and scanned the wordlist
+    if (wordCount > oldWordCount) {
+        qDebug().nospace().noquote() << "  Saving an extra " << wordCount - oldWordCount << " words in dictionary.";
+    } else if (wordCount < oldWordCount) {
+        qDebug().nospace().noquote() << "  Saving " << wordCount - oldWordCount << " fewer words in dictionary.";
+    } else {
+        qDebug().nospace().noquote() << "  No change in the number of words in dictionary.";
+    }
+
+    // Open the file to write out the contents
+    // QFile::WriteOnly automatically implies QFile::Truncate in the abscence of
+    // certain other flags:
+    if (!dictionary.open(QFile::WriteOnly|QFile::Text)) {
+        qWarning().nospace().noquote() << "mudlet::saveDictionary(...) ERROR - failed to open dictionary file (for writing): \"" << dictionaryPathFileName << "\" reason: " << dictionary.errorString();
+        return false;
+    }
+
+    ds = new QTextStream(&dictionary);
+    // Ensure the number is at least 1:
+    *ds << qMax(1, wordCount);
+    *ds << QChar(QChar::LineFeed);
+    *ds << wordList.join(QChar::LineFeed).toUtf8();
+    *ds << QChar(QChar::LineFeed);
+    ds->flush();
+    delete ds;
+    if (dictionary.error() != QFile::NoError) {
+        qWarning().nospace().noquote() << "mudlet::saveDictionary(...) ERROR - failed to completely write dictionary file: \"" << dictionaryPathFileName << "\" status: " << dictionary.errorString();
+        return false;
+    }
+
+    // Sort the graphemes into a QMultiMap - which will sort them into a low to
+    // high occurance order:
+    QMultiMap<unsigned int, QString> sortedGraphemeCounts;
+    if (graphemeCounts.size()) {
+        QHashIterator<QString, unsigned int> itGraphemeCount(graphemeCounts);
+        while (itGraphemeCount.hasNext()) {
+            itGraphemeCount.next();
+            sortedGraphemeCounts.insert(itGraphemeCount.value(), itGraphemeCount.key());
+        }
+    }
+
+    // Generate the new TRY line - and read the occurance vs graphemes map
+    // backwards to get the most frequently occuring ones first:
+    QString tryLine = QStringLiteral("TRY ");
+    QMapIterator<unsigned int, QString> itGrapheme(sortedGraphemeCounts);
+    itGrapheme.toBack();
+    while (itGrapheme.hasPrevious()) {
+        itGrapheme.previous();
+        tryLine.append(itGrapheme.value());
+    }
+    QStringList affixLines;
+    affixLines << QStringLiteral("SET UTF-8") << tryLine;
+
+    // Having got the needed content, write it back out again:
+    if (!affix.open(QFile::WriteOnly|QFile::Text)) {
+        qWarning().nospace().noquote() << "mudlet::saveDictionary(...) ERROR - failed to open affix file (for writing): \"" << affixPathFileName << "\" reason: " << affix.errorString();
+        return false;
+    }
+
+    QTextStream* as = new QTextStream(&affix);
+    *as << affixLines.join(QChar::LineFeed).toUtf8();
+    *as << QChar(QChar::LineFeed);
+    as->flush();
+    delete as;
+    if (affix.error() != QFile::NoError) {
+        qWarning().nospace().noquote() << "mudlet::saveDictionary(...) ERROR - failed to completely write affix file: \"" << affixPathFileName << "\" status: " << affix.errorString();
+        return false;
+    }
+    affix.close();
+
+    return true;
 }

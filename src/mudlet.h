@@ -361,12 +361,21 @@ public:
     void setInterfaceLanguage(const QString &languageCode);
     QList<QString> getAvailableTranslationCodes() const { return mTranslatorsMap.keys(); }
     QPair<bool, QStringList> getLines(Host* pHost, const QString& windowName, const int lineFrom, const int lineTo);
+    void setEnableFullScreenMode(const bool);
+    // Both of these revises the contents of the .aff file: the first will
+    // handle a .dic file that has been updated externally/manually (to add
+    // or remove words) - it also puts the contents of the .dic file into the
+    // supplied second argument; the second will replace the .dic file with just
+    // the words in the supplied second argument and is to be used at the end of
+    // a session to store away the user's changes:
+    bool prepareDictionary(const QString&, QSet<QString>&);
+    bool saveDictionary(const QString&, QSet<QString>&);
+
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
 #endif
 
-    void setEnableFullScreenMode(const bool);
 
     // Currently tracks the "mudlet_option_use_smallscreen" file's existance but
     // may eventually migrate solely to the "EnableFullScreenMode" in the main

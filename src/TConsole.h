@@ -35,6 +35,9 @@
 #include <QWidget>
 #include "post_guard.h"
 
+#include <hunspell/hunspell.hxx>
+#include <hunspell/hunspell.h>
+
 #include <list>
 #include <map>
 
@@ -72,6 +75,8 @@ public:
 
     Q_DISABLE_COPY(TConsole)
     TConsole(Host*, ConsoleType type = UnknownType, QWidget* parent = nullptr);
+    ~TConsole();
+
     void reset();
     void resetMainConsole();
     Host* getHost();
@@ -180,6 +185,15 @@ public:
 
     void toggleLogging(bool);
     ConsoleType getType() const { return mType; }
+    void updateWordList(const QString&);
+    bool addSingleWordToSet(const QString&);
+    bool removeSingleWordFromSet(const QString&);
+    void setSystemSpellDictionary(const QString&);
+    const QString& getSystemSpellDictionary() const { return mSpellDic; }
+    Hunhandle* getHunspelHandle_system() const { return mpHunspell_system; }
+    Hunhandle* getHunspelHandle_profile() const { return mpHunspell_profile; }
+    QTextCodec* getHunspellCodec_system() const { return mpHunspellCodec_system; }
+    const QSet<QString>& getWordSet() const { return mWordSet; }
 
 
     QPointer<Host> mpHost;
@@ -298,8 +312,49 @@ private:
 
 
     ConsoleType mType;
+
+    // Was public in Host class but moved here (for main TConsole) and made
+    // private to prevent it being changed without going through the process to
+    // load in the the changed dictionary:
+    QString mSpellDic;
+
+    // Two handles, one for the dictionary the user choses from the system and a
+    // second for a per profile one built by the user and possibly from the text
+    // received from the mud.
+    Hunhandle* mpHunspell_system;
+    Hunhandle* mpHunspell_profile;
+    // The profile dictionary will always use the UTF-8 codec, but the one
+    // selected from the system's ones may not:
+    QByteArray mHunspellCodecName_system;
+    QTextCodec* mpHunspellCodec_system;
+    // To update the profile dictionary we actually have to track all the words
+    // in it so we loaded the contents into this on startup and adjust it as we
+    // go. Then, at the end of a session we will psudo-munch the revised
+    // contents to update the profile.dic and profile.aff files:
+    QSet<QString> mWordSet;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
+
+#if ! defined(QT_NO_DEBUG)
+inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
+{
+    QString text;
+    QDebugStateSaver saver(debug);
+    switch (type) {
+    case TConsole::UnknownType:           text = QStringLiteral("Unknown"); break;
+    case TConsole::CentralDebugConsole:   text = QStringLiteral("Central Debug Console"); break;
+    case TConsole::ErrorConsole:          text = QStringLiteral("Profile Error Console"); break;
+    case TConsole::MainConsole:           text = QStringLiteral("Profile Main Console"); break;
+    case TConsole::SubConsole:            text = QStringLiteral("Mini Console"); break;
+    case TConsole::UserWindow:            text = QStringLiteral("User Window"); break;
+    case TConsole::Buffer:                text = QStringLiteral("Buffer"); break;
+    default:
+        text = QStringLiteral("Non-coded Type");
+    }
+    debug.nospace() << text;
+    return debug;
+}
+#endif // ! defined(QT_NO_DEBUG)
 
 #endif // MUDLET_TCONSOLE_H

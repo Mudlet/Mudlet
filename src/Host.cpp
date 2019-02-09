@@ -132,9 +132,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mFgColor_2(Qt::lightGray)
 , mBgColor_2(Qt::black)
 , mMapStrongHighlight(false)
-, mSpellDic(QLatin1String("en_US"))
 , mLogStatus(false)
 , mEnableSpellCheck(true)
+, mAutoAddServerWordsToDictionary(false)
+, mAutoAddWordsWithDigits(false)
+, mMinimumAutoAddWordLength(4)
 , mDiscordDisableServerSide(true)
 , mDiscordAccessFlags(DiscordLuaAccessEnabled | DiscordSetSubMask)
 , mLineSize(10.0)
@@ -172,6 +174,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mWideAmbigousWidthGlyphs(false)
 , mSGRCodeHasColSpaceId(false)
 , mServerMayRedefineColors(false)
+, mSpellDic()
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
@@ -1667,7 +1670,7 @@ void Host::setSpellDic(const QString& newDict)
         isChanged = true;
     }
     locker.unlock();
-    if (isChanged) {
-        emit signal_changeSpellDict(mSpellDic);
+    if (isChanged && mpConsole) {
+        mpConsole->setSystemSpellDictionary(newDict);
     }
 }

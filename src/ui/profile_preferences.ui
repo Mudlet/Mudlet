@@ -484,8 +484,8 @@
          <property name="title">
           <string>Input</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_5" columnstretch="1,1,1,1">
-          <item row="0" column="0" colspan="2">
+         <layout class="QGridLayout" name="gridLayout_5" columnstretch="1,1">
+          <item row="0" column="0">
            <widget class="QCheckBox" name="USE_UNIX_EOL">
             <property name="toolTip">
              <string>use strict UNIX line endings on commands for old UNIX servers that can't handle windows line endings correctly</string>
@@ -495,14 +495,14 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="2" colspan="2">
+          <item row="0" column="1">
            <widget class="QCheckBox" name="auto_clear_input_line_checkbox">
             <property name="text">
              <string>Auto clear the input line after you sent text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0" colspan="2">
+          <item row="1" column="0">
            <widget class="QCheckBox" name="show_sent_text_checkbox">
             <property name="toolTip">
              <string>&lt;p&gt;Echo the text you send in the display box.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This can be disabled by the game server if it negotiates to use the telnet ECHO option&lt;/i&gt;&lt;/p&gt;</string>
@@ -512,7 +512,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="2" colspan="2">
+          <item row="1" column="1">
            <widget class="QCheckBox" name="checkBox_runAllKeyBindings">
             <property name="toolTip">
              <string>&lt;p&gt;Check all Key-bindings against key-presses.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Versions of Mudlet prior to &lt;b&gt;3.9.0&lt;/b&gt; would stop checking after the first matching combination of&lt;/i&gt; KeyCode &lt;i&gt;and&lt;/i&gt; KeyModifier &lt;i&gt;was found and then send the command and/or run the script of that Key-binding only.  This&lt;/i&gt; per-profile &lt;i&gt;option tells Mudlet to check and run the remaining matches; but, to retain compatibility with previous versions, defaults to the &lt;b&gt;un&lt;/b&gt;-checked state.&lt;/i&gt;&lt;/p&gt;</string>
@@ -535,14 +535,14 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="1" colspan="3">
+          <item row="2" column="1">
            <widget class="QLineEdit" name="command_separator_lineedit">
             <property name="placeholderText">
              <string>Enter text to separate commands with or leave blank to disable</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0" colspan="3" alignment="Qt::AlignRight">
+          <item row="3" column="0" alignment="Qt::AlignRight">
            <widget class="QLabel" name="label_commandLineMinimumHeight">
             <property name="text">
              <string>Command line minimum height in pixels:</string>
@@ -552,7 +552,7 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="3">
+          <item row="3" column="1" alignment="Qt::AlignLeft">
            <widget class="QSpinBox" name="commandLineMinimumHeight">
             <property name="alignment">
              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -568,27 +568,112 @@
        <item row="1" column="0">
         <widget class="QGroupBox" name="groupBox_spellCheck">
          <property name="title">
-          <string>Spell check</string>
+          <string>Spell checking</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_12">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_57">
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QLabel" name="label_chooseSpellCheckDictionary">
             <property name="text">
              <string>Choose spell check dictionary:</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QListWidget" name="dictList"/>
-          </item>
-          <item row="1" column="0" colspan="2">
-           <widget class="QCheckBox" name="enableSpellCheck">
-            <property name="text">
-             <string>Enable spell check</string>
+          <item>
+           <widget class="QListWidget" name="dictList">
+            <property name="flow">
+             <enum>QListView::TopToBottom</enum>
             </property>
-            <property name="checked">
+            <property name="resizeMode">
+             <enum>QListView::Adjust</enum>
+            </property>
+            <property name="viewMode">
+             <enum>QListView::IconMode</enum>
+            </property>
+            <property name="itemAlignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="sortingEnabled">
              <bool>true</bool>
             </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="groupBox_autoAddWordsFromServerToDictionary">
+            <property name="title">
+             <string>Automatically add words from server</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_autoAddWordsFromServerToDictionary" columnstretch="0,1">
+             <property name="horizontalSpacing">
+              <number>27</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="QWidget" name="widget" native="true">
+               <layout class="QHBoxLayout" name="horizontalLayout_autoAddWordToDictionaryMinLength" stretch="0,1,0">
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="rightMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
+                <item alignment="Qt::AlignLeft">
+                 <widget class="QLabel" name="label_autoAddDictionaryWordMinLength_before">
+                  <property name="text">
+                   <string extracomment="This (QLabel) texts is placed before a QSpinBox that displays a number with another QLabel that finishes a sentence">Minimum length</string>
+                  </property>
+                 </widget>
+                </item>
+                <item alignment="Qt::AlignHCenter">
+                 <widget class="QSpinBox" name="spinBox_autoAddToDictionaryWordLength">
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                  <property name="minimum">
+                   <number>1</number>
+                  </property>
+                  <property name="value">
+                   <number>4</number>
+                  </property>
+                 </widget>
+                </item>
+                <item alignment="Qt::AlignLeft">
+                 <widget class="QLabel" name="label_autoAddDictionaryWordMinLength_after">
+                  <property name="text">
+                   <string extracomment="This (QLabel) texts is after a QSpinBox that displays a number with another QLabel before it that starts a sentence">characters</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QCheckBox" name="checkBox_autoAddWordsToDictionaryWithDigits">
+               <property name="text">
+                <string>Include words containing digits</string>
+               </property>
+               <property name="checked">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
          </layout>
@@ -601,8 +686,8 @@
          </property>
          <property name="sizeHint" stdset="0">
           <size>
-           <width>20</width>
-           <height>26</height>
+           <width>0</width>
+           <height>0</height>
           </size>
          </property>
         </spacer>
