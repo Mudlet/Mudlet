@@ -473,6 +473,14 @@ int TLuaInterpreter::getProfileName(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions:getCommandSeparator
+int TLuaInterpreter::getCommandSeparator(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    lua_pushstring(L, host.getCommandSeparator().toUtf8().constData());
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#raiseGlobalEvent
 int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
 {
@@ -14643,6 +14651,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "clearMapUserDataItem", TLuaInterpreter::clearMapUserDataItem);
     lua_register(pGlobalLua, "setDefaultAreaVisible", TLuaInterpreter::setDefaultAreaVisible);
     lua_register(pGlobalLua, "getProfileName", TLuaInterpreter::getProfileName);
+    lua_register(pGlobalLua, "getCommandSeparator", TLuaInterpreter::getCommandSeparator);
     lua_register(pGlobalLua, "raiseGlobalEvent", TLuaInterpreter::raiseGlobalEvent);
     lua_register(pGlobalLua, "saveProfile", TLuaInterpreter::saveProfile);
 #ifdef QT_TEXTTOSPEECH_LIB

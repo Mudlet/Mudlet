@@ -435,6 +435,7 @@ public:
     static int clearMapUserDataItem(lua_State*);
     static int setDefaultAreaVisible(lua_State*);
     static int getProfileName(lua_State*);
+    static int getCommandSeparator(lua_State*);
     static int raiseGlobalEvent(lua_State*);
     static int setServerEncoding(lua_State*);
     static int getServerEncoding(lua_State*);
