@@ -1457,7 +1457,7 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
         if (hasCustomAppID) {
             qDebug() << "Game using a custom Discord server. Invite URL: " << inviteUrl.toString();
         } else if (hasApplicationId) {
-            qDebug() << "Game using Mudlets Discord server. Invite URL: " << inviteUrl.toString();
+            qDebug() << "Game using Mudlet's Discord server. Invite URL: " << inviteUrl.toString();
         } else {
             qDebug() << "Discord invite URL: " << inviteUrl.toString();
         }
@@ -1465,7 +1465,7 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
         if (hasCustomAppID) {
             qDebug() << "Game is using custom server Discord application ID";
         } else if (hasApplicationId) {
-            qDebug() << "Game is using Mudlets Discord application ID";
+            qDebug() << "Game is using Mudlet's Discord application ID";
         }
     }
 }
@@ -1508,18 +1508,20 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
     auto largeImages = discordInfo.value(QStringLiteral("largeimage"));
     if (largeImages != QJsonValue::Undefined) {
         auto largeImage = largeImages.toArray().first();
+        // TODO: We do not cache this list of icons - perhaps we should as then we can validate requests against it
         if (largeImage != QJsonValue::Undefined) {
-            pMudlet->mDiscord.setSmallImage(this, largeImage.toString());
+            pMudlet->mDiscord.setLargeImage(this, largeImage.toString());
         }
     }
 
     auto largeImageText = discordInfo.value(QStringLiteral("largeimagetext"));
     if (largeImageText != QJsonValue::Undefined) {
-        pMudlet->mDiscord.setSmallImageText(this, largeImageText.toString());
+        pMudlet->mDiscord.setLargeImageText(this, largeImageText.toString());
     }
 
     auto smallImages = discordInfo.value(QStringLiteral("smallimage"));
     if (smallImages != QJsonValue::Undefined) {
+        // TODO: We do not cache this list of icons - perhaps we should as then we can validate requests against it (although both small and large icons share a common pool)
         auto smallImage = smallImages.toArray().first();
         if (smallImage != QJsonValue::Undefined) {
             pMudlet->mDiscord.setSmallImage(this, smallImage.toString());
