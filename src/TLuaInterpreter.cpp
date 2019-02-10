@@ -12391,7 +12391,9 @@ void TLuaInterpreter::ttsBuild()
         return;
     }
 
-    speechUnit = new QTextToSpeech(this);
+    speechUnit = new QTextToSpeech();
+
+    qDebug() << "available engines" << speechUnit->availableEngines().join(", ");
 
     bSpeechBuilt = true;
     bSpeechQueueing = false;
