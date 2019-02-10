@@ -382,69 +382,69 @@ DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 # method has NOT been checked thoroughly though, so YMMV.
 win32 {
     # Use a check explicitly based on where the project file is in the sources
-    !exists("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
+    !exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
         message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
         # Changing the directory here only relates to the command following it
         # and that the change does not persist, note that ';' only works for
         # PowerShell - for cmd.exe the nearest equivalent is '&'
-        system("cd $${_PRO_FILE_PWD_}\.. & git submodule update --init 3rdparty/edbee-lib")
+        system("cd $${PWD}\.. & git submodule update --init 3rdparty/edbee-lib")
     }
 
-    !exists("$${_PRO_FILE_PWD_}/../3rdparty/lcf/lcf-scm-1.rockspec") {
+    !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
-        system("cd $${_PRO_FILE_PWD_}\.. & git submodule update --init 3rdparty/lcf")
+        system("cd $${PWD}\.. & git submodule update --init 3rdparty/lcf")
     }
 } else {
-    !exists("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
+    !exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
         message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
-        system("cd $${_PRO_FILE_PWD_}/.. ; git submodule update --init 3rdparty/edbee-lib")
+        system("cd $${PWD}/.. ; git submodule update --init 3rdparty/edbee-lib")
     }
-    !exists("$${_PRO_FILE_PWD_}/../3rdparty/lcf/lcf-scm-1.rockspec") {
+    !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
-        system("cd $${_PRO_FILE_PWD_}/.. ; git submodule update --init 3rdparty/lcf")
+        system("cd $${PWD}/.. ; git submodule update --init 3rdparty/lcf")
     }
 }
 
 contains( DEFINES, INCLUDE_UPDATER ) {
     win32 {
         # DBLSQD updater - needed for Windows
-        !exists("$${_PRO_FILE_PWD_}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
+        !exists("$${PWD}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
             message("git submodule for optional but wanted Dblsqd updater missing from source code, executing 'git submodule update --init' to get it...")
-            system("cd $${_PRO_FILE_PWD_}\.. & git submodule update --init 3rdparty/dblsqd")
+            system("cd $${PWD}\.. & git submodule update --init 3rdparty/dblsqd")
         }
     } else {
         # DBLSQD updater - needed for Linux and MacOS
-        !exists("$${_PRO_FILE_PWD_}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
+        !exists("$${PWD}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
             message("git submodule for optional but wanted Dblsqd updater missing from source code, executing 'git submodule update --init' to get it...")
-            system("cd $${_PRO_FILE_PWD_}/.. ; git submodule update --init 3rdparty/dblsqd")
+            system("cd $${PWD}/.. ; git submodule update --init 3rdparty/dblsqd")
         }
 
         # Sparkle glue code - only needed for MacOs
         macx {
-            !exists("$${_PRO_FILE_PWD_}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
+            !exists("$${PWD}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
                 message("git submodule for optional but wanted Sparkle glue missing from source code, executing 'git submodule update --init' to get it...")
-                system("cd $${_PRO_FILE_PWD_}/.. ; git submodule update --init 3rdparty/sparkle-glue")
+                system("cd $${PWD}/.. ; git submodule update --init 3rdparty/sparkle-glue")
             }
         }
     }
 }
 
 # Now include the submodules - and abort if the needed one are STILL missing
-exists("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
+exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
     # Include shiny, new (and quite substantial) editor widget
-    include("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri")
+    include("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri")
 } else {
     error("Cannot locate edbee-lib editor widget submodule source code, build abandoned!")
 }
 
-!exists("$${_PRO_FILE_PWD_}/../3rdparty/lcf/lcf-scm-1.rockspec") {
+!exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
     error("Cannot locate lua code formatter submodule source code, build abandoned!")
 }
 
 contains( DEFINES, INCLUDE_UPDATER ) {
     # dblsqd is needed for all update-able platforms:
-    exists("$${_PRO_FILE_PWD_}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
-        include("$${_PRO_FILE_PWD_}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri")
+    exists("$${PWD}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
+        include("$${PWD}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri")
     } else {
         error("Cannot locate Dblsqd updater submodule source code, build abandoned!")
     }
@@ -452,7 +452,7 @@ contains( DEFINES, INCLUDE_UPDATER ) {
     macx {
         # We do not actually have to do anything to include it here - it is
         # pulled in by the Sparkle complation below
-        !exists("$${_PRO_FILE_PWD_}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
+        !exists("$${PWD}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
             error("Cannot locate Sparkle glue library submodule source code, build abandoned!")
         }
     }
