@@ -6957,28 +6957,28 @@ void dlgTriggerEditor::slot_script_main_area_delete_handler()
 
 void dlgTriggerEditor::slot_script_main_area_add_handler()
 {
-    auto createItemList = [](auto * mpScriptsMainArea) {
+    auto createItemList = [=] () {
         auto pItem = new QListWidgetItem;
         pItem->setText(mpScriptsMainArea->lineEdit_script_event_handler_entry->text());
         mpScriptsMainArea->listWidget_script_registered_event_handlers->addItem(pItem);
-        return pItem;
+        //return pItem;
     };
 
     mpScriptsMainArea->trimEventHandlerName();
     if (mIsScriptsMainAreaEditHandler) {
         if (!mpScriptsMainAreaEditHandlerItem) {
             mIsScriptsMainAreaEditHandler = false;
-            auto pItem = createItemList(mpScriptsMainArea);
+            createItemList();
             return;
         }
         QListWidgetItem* pItem = mpScriptsMainArea->listWidget_script_registered_event_handlers->currentItem();
         if (!pItem) {
-            auto pItem = createItemList(mpScriptsMainArea);
+          createItemList();
         }
         mIsScriptsMainAreaEditHandler = false;
         mpScriptsMainAreaEditHandlerItem = nullptr;
     } else {
-        auto pItem = createItemList(mpScriptsMainArea);
+        createItemList();
     }
     mpScriptsMainArea->lineEdit_script_event_handler_entry->clear();
 }
