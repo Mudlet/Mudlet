@@ -1643,6 +1643,8 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         // Lets confirm this:
         Q_ASSERT_X(pC->getType()==TConsole::UserWindow, "mudlet::openWindow(...)", "An existing TConsole was expected to be marked as a User Window type but it isn't");
         pD->update();
+        //do not change the ->show() order! Otherwise, it will automatically minimize the floating/dock window(!!)
+        pC->show();
         pD->show();
         pC->showWindow(name);
 
