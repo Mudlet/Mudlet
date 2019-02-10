@@ -6968,11 +6968,11 @@ void dlgTriggerEditor::slot_script_main_area_add_handler()
         if (!mpScriptsMainAreaEditHandlerItem) {
             mIsScriptsMainAreaEditHandler = false;
             createItemList();
-            return;
-        }
-        QListWidgetItem* pItem = mpScriptsMainArea->listWidget_script_registered_event_handlers->currentItem();
-        if (!pItem) {
-          createItemList();
+        } else {
+            QListWidgetItem* pItem = mpScriptsMainArea->listWidget_script_registered_event_handlers->currentItem();
+            if (!pItem) {
+                createItemList();
+            }
         }
         mIsScriptsMainAreaEditHandler = false;
         mpScriptsMainAreaEditHandlerItem = nullptr;
