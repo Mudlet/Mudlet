@@ -1145,11 +1145,7 @@ bool TTrigger::setupTmpColorTrigger(int ansiFg, int ansiBg)
 
 bool TTrigger::isFilterChain()
 {
-    if ((!mRegexCodeList.empty()) && (hasChildren())) {
-        return true;
-    } else {
-        return false;
-    }
+    return (!mRegexCodeList.empty()) && (hasChildren());
 }
 
 bool TTrigger::registerTrigger()

@@ -738,7 +738,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     notificationAreaMessageBox->hide();
 
 #if !defined(QT_NO_SSL)
-    if (QSslSocket::supportsSsl() && pHost->mSslTsl == true) {
+    if (QSslSocket::supportsSsl() && pHost->mSslTsl) {
         QSslCertificate cert = pHost->mTelnet.getPeerCertificate();
         ssl_issuer_label->setText(cert.issuerInfo(QSslCertificate::CommonName).join(","));
         ssl_issued_label->setText(cert.subjectInfo(QSslCertificate::CommonName).join(","));
@@ -2653,7 +2653,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
                         auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("edbee/")), temporaryDir.path());
                         auto watcher = new QFutureWatcher<bool>;
                         QObject::connect(watcher, &QFutureWatcher<bool>::finished, this, [=]() {
-                            if (future.result() == true) {
+                            if (future.result()) {
                                 populateThemesList();
                             }
 

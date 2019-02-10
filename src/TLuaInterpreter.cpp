@@ -2555,7 +2555,7 @@ int TLuaInterpreter::saveProfile(lua_State* L)
 
     std::tuple<bool, QString, QString> result = host.saveProfile(saveToDir);
 
-    if (std::get<0>(result) == true) {
+    if (std::get<0>(result)) {
         lua_pushboolean(L, true);
         lua_pushstring(L, (std::get<1>(result).toUtf8().constData()));
         return 2;
@@ -12750,7 +12750,7 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     host.raiseEvent(event);
 
-    if (speechQueue.size() == 1 && speechUnit->state() == QTextToSpeech::Ready && bSpeechQueueing == false) {
+    if (speechQueue.size() == 1 && speechUnit->state() == QTextToSpeech::Ready && !bSpeechQueueing) {
         bSpeechQueueing = true;
         TLuaInterpreter::ttsStateChanged(speechUnit->state());
     }

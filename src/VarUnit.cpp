@@ -65,18 +65,12 @@ bool VarUnit::shouldSave(QTreeWidgetItem* p)
 {
     auto var = getWVar(p);
 
-    if (!var || var->getValueType() == 6 || var->isReference()) {
-        return false;
-    }
-    return true;
+    return !(!var || var->getValueType() == 6 || var->isReference());
 }
 
 bool VarUnit::shouldSave(TVar* var)
 {
-    if (var->getValueType() == 6 || var->isReference()) {
-        return false;
-    }
-    return true;
+    return !(var->getValueType() == 6 || var->isReference());
 }
 
 void VarUnit::buildVarTree(QTreeWidgetItem* p, TVar* var, bool showHidden)
