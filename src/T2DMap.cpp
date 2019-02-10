@@ -1161,7 +1161,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
             // draw exit stubs
             QMap<int, QVector3D> unitVectors = mpMap->unitVectors;
-            for (int direction : room->exitStubs) {
+            for (int direction : qAsConst(room->exitStubs)) {
                 QVector3D uDirection = unitVectors[direction];
                 painter.drawLine(rx + rSize * uDirection.x() / 2.0,
                                  ry + rSize * uDirection.y(),

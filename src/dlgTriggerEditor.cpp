@@ -788,7 +788,7 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
         // of this method!
         int idSearch = pItem->data(0, IdRole).toInt();
 
-        for (auto treeWidgetItem : foundItemsList) {
+        for (auto treeWidgetItem : qAsConst(foundItemsList)) {
 
             if (treeWidgetItem->data(0, IdRole).toInt() == idSearch) {
                 slot_show_triggers();
@@ -843,7 +843,7 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
 
         int idSearch = pItem->data(0, IdRole).toInt();
 
-        for (auto treeWidgetItem : foundItemsList) {
+        for (auto treeWidgetItem : qAsConst(foundItemsList)) {
 
             if (treeWidgetItem->data(0, IdRole).toInt() == idSearch) {
                 slot_show_aliases();
@@ -892,7 +892,7 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
 
         int idSearch = pItem->data(0, IdRole).toInt();
 
-        for (auto treeWidgetItem : foundItemsList) {
+        for (auto treeWidgetItem : qAsConst(foundItemsList)) {
 
             if (treeWidgetItem->data(0, IdRole).toInt() == idSearch) {
                 slot_show_scripts();
@@ -945,7 +945,7 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
 
         int idSearch = pItem->data(0, IdRole).toInt();
 
-        for (auto treeWidgetitem : foundItemsList) {
+        for (auto treeWidgetitem : qAsConst(foundItemsList)) {
 
             if (treeWidgetitem->data(0, IdRole).toInt() == idSearch) {
                 slot_show_actions();
@@ -1011,7 +1011,7 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
 
         int idSearch = pItem->data(0, IdRole).toInt();
 
-        for (auto treeWidgetItem : foundItemsList) {
+        for (auto treeWidgetItem : qAsConst(foundItemsList)) {
 
             if (treeWidgetItem->data(0, IdRole).toInt() == idSearch) {
                 slot_show_timers();
@@ -1054,7 +1054,7 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
     case static_cast<int>(EditorViewType::cmKeysView): {
         foundItemsList = treeWidget_keys->findItems(pItem->data(0, NameRole).toString(), Qt::MatchCaseSensitive | Qt::MatchFixedString| Qt::MatchRecursive, 0);
 
-        for (auto treeWidgetItem : foundItemsList) {
+        for (auto treeWidgetItem : qAsConst(foundItemsList)) {
             int idTree = treeWidgetItem->data(0, IdRole).toInt();
             int idSearch = pItem->data(0, IdRole).toInt();
             if (idTree == idSearch) {
