@@ -177,7 +177,6 @@ void mudlet::loadLanguagesMap()
             mLanguageCodeMap.insert(languageKey, make_pair(languageData.first, translatedpc));
         }
     }
-    qDebug() << "mLanguageCodeMap" << mLanguageCodeMap;
  }
 
 mudlet::mudlet()
