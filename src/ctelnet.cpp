@@ -2171,14 +2171,14 @@ void cTelnet::handle_socket_signal_readyRead()
         mWaitingForResponse = false;
     }
 
-    char in_bufferx[100010];
-    char* in_buffer = in_bufferx;
+    char in_buffer[100010];
 
     int amount = socket.read(in_buffer, 100000);
     readSocket(in_buffer, amount);
 }
 
-void cTelnet::readSocket(char*& in_buffer, int amount) {
+void cTelnet::readSocket(char* in_buffer, int amount)
+{
     mpHost->mInsertedMissingLF = false;
 
     char out_buffer[100010];
