@@ -1508,7 +1508,6 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
     auto largeImages = discordInfo.value(QStringLiteral("largeimage"));
     if (largeImages != QJsonValue::Undefined) {
         auto largeImage = largeImages.toArray().first();
-        // TODO: We do not cache this list of icons - perhaps we should as then we can validate requests against it
         if (largeImage != QJsonValue::Undefined) {
             pMudlet->mDiscord.setLargeImage(this, largeImage.toString());
         }
@@ -1521,7 +1520,6 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
 
     auto smallImages = discordInfo.value(QStringLiteral("smallimage"));
     if (smallImages != QJsonValue::Undefined) {
-        // TODO: We do not cache this list of icons - perhaps we should as then we can validate requests against it (although both small and large icons share a common pool)
         auto smallImage = smallImages.toArray().first();
         if (smallImage != QJsonValue::Undefined) {
             pMudlet->mDiscord.setSmallImage(this, smallImage.toString());
