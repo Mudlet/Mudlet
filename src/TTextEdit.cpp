@@ -967,7 +967,6 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
 void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
 {
     event->accept();
-    return;
 }
 
 void TTextEdit::slot_popupMenu()
@@ -1358,7 +1357,6 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     clipboard->setText(text);
     mSelectedRegion = QRegion(0, 0, 0, 0);
     forceUpdate();
-    return;
 }
 
 void TTextEdit::slot_copySelectionToClipboardImage()
@@ -1614,7 +1612,6 @@ void TTextEdit::wheelEvent(QWheelEvent* e)
         return;
     }
     e->ignore();
-    return;
 }
 
 int TTextEdit::imageTopLine()

@@ -340,7 +340,6 @@ void TTreeWidget::dropEvent(QDropEvent* event)
     }
     mIsDropAction = true;
     QTreeWidget::dropEvent(event);
-    return;
 }
 
 void TTreeWidget::beginInsertRows(const QModelIndex& parent, int first, int last)

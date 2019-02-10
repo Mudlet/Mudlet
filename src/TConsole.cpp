@@ -776,7 +776,7 @@ void TConsole::closeEvent(QCloseEvent* event)
             mpHost->modulesToWrite.clear();
             std::tuple<bool, QString, QString> result = mpHost->saveProfile();
 
-            if (std::get<0>(result) == false) {
+            if (!std::get<0>(result)) {
                 QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(std::get<2>(result)));
                 goto ASK;
             } else if (mpHost->mpMap && mpHost->mpMap->mpRoomDB->size() > 0) {
@@ -2063,7 +2063,7 @@ void TConsole::printCommand(QString& msg)
             if (promptEnd < 0) {
                 promptEnd = 0;
             }
-            if (buffer.promptBuffer[lineBeforeNewContent] == true) {
+            if (buffer.promptBuffer[lineBeforeNewContent]) {
                 QPoint P(promptEnd, lineBeforeNewContent);
                 TChar format(mCommandFgColor, mCommandBgColor);
                 buffer.insertInLine(P, msg, format);

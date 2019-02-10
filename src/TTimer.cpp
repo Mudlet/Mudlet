@@ -103,11 +103,7 @@ void TTimer::setTime(QTime time)
 bool TTimer::isOffsetTimer()
 {
     if (mpParent) {
-        if (!mpParent->isFolder()) {
-            return true;
-        } else {
-            return false;
-        }
+        return !mpParent->isFolder();
     } else {
         return false;
     }
