@@ -6957,25 +6957,28 @@ void dlgTriggerEditor::slot_script_main_area_delete_handler()
 
 void dlgTriggerEditor::slot_script_main_area_add_handler()
 {
+    auto createItemList = [](auto * mpScriptsMainArea) {
+        auto pItem = new QListWidgetItem;
+        pItem->setText(mpScriptsMainArea->lineEdit_script_event_handler_entry->text());
+        mpScriptsMainArea->listWidget_script_registered_event_handlers->addItem(pItem);
+        return pItem;
+    };
+
     mpScriptsMainArea->trimEventHandlerName();
     if (mIsScriptsMainAreaEditHandler) {
         if (!mpScriptsMainAreaEditHandlerItem) {
             mIsScriptsMainAreaEditHandler = false;
-            goto LAZY;
+            auto pItem = createItemList(mpScriptsMainArea);
             return;
         }
         QListWidgetItem* pItem = mpScriptsMainArea->listWidget_script_registered_event_handlers->currentItem();
         if (!pItem) {
-            goto LAZY; //why we have to be this lazy too?
+            auto pItem = createItemList(mpScriptsMainArea);
         }
-        pItem->setText(mpScriptsMainArea->lineEdit_script_event_handler_entry->text());
         mIsScriptsMainAreaEditHandler = false;
         mpScriptsMainAreaEditHandlerItem = nullptr;
     } else {
-    LAZY:
-        auto pItem = new QListWidgetItem;
-        pItem->setText(mpScriptsMainArea->lineEdit_script_event_handler_entry->text());
-        mpScriptsMainArea->listWidget_script_registered_event_handlers->addItem(pItem);
+        auto pItem = createItemList(mpScriptsMainArea);
     }
     mpScriptsMainArea->lineEdit_script_event_handler_entry->clear();
 }
