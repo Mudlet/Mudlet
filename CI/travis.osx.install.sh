@@ -8,7 +8,7 @@ set +e
 shopt -s expand_aliases
 #Removed boost as first item as a temporary workaroud to prevent trying to
 #upgrade to boost version 1.68.0 which has not been bottled yet...
-BREWS="cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl ccache pugixml luarocks"
+BREWS="cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl ccache pugixml luarocks tree"
 for i in $BREWS; do
   for RETRIES in $(seq 1 3); do
     echo "Upgrading ${i}"
@@ -57,3 +57,6 @@ gem update cocoapods
 # shellcheck disable=2139
 alias luarocks-5.1="luarocks --lua-dir='$(brew --prefix lua@5.1)'"
 luarocks-5.1 --local install lua-yajl
+
+echo "Qt contents:"
+tree /usr/local/opt/qt
