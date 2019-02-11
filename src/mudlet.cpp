@@ -182,7 +182,6 @@ void mudlet::loadLanguagesMap()
             mLanguageCodeMap.insert(languageKey, make_pair(languageData.first, translatedpc));
         }
     }
-    qDebug() << "mLanguageCodeMap" << mLanguageCodeMap;
  }
 
 mudlet::mudlet()
@@ -402,7 +401,9 @@ mudlet::mudlet()
     mpMainToolBar->widgetForAction(mpActionMultiView)->setObjectName(mpActionMultiView->objectName());
 
     mpActionAbout = new QAction(QIcon(QStringLiteral(":/icons/mudlet_information.png")), tr("About"), this);
-    mpActionAbout->setToolTip(tr("About Mudlet"));
+    mpActionAbout->setToolTip(tr("<p>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</p>",
+                                 // Intentional comment
+                                 "Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation)."));
     mpMainToolBar->addAction(mpActionAbout);
     mpActionAbout->setObjectName(QStringLiteral("about_action"));
     mpMainToolBar->widgetForAction(mpActionAbout)->setObjectName(mpActionAbout->objectName());
@@ -511,8 +512,8 @@ mudlet::mudlet()
     inputLineKeySequence = QKeySequence(Qt::CTRL | Qt::Key_L);
     optionsKeySequence = QKeySequence(Qt::CTRL | Qt::Key_P);
     notepadKeySequence = QKeySequence(Qt::CTRL | Qt::Key_N);
-    packagesKeySequence = QKeySequence(Qt::CTRL | Qt::Key_I);
-    modulesKeySequence = QKeySequence(Qt::CTRL | Qt::Key_O);
+    packagesKeySequence = QKeySequence(Qt::CTRL | Qt::Key_O);
+    modulesKeySequence = QKeySequence(Qt::CTRL | Qt::Key_I);
     multiViewKeySequence = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_V);
     connectKeySequence = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_C);
     disconnectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_D);
@@ -539,12 +540,13 @@ mudlet::mudlet()
 
 #if defined(INCLUDE_UPDATER)
     updater = new Updater(this, mpSettings);
+    connect(updater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
 #if defined(Q_OS_MACOS)
     // ensure that 'Check for updates' is under the Applications menu per convention
     dactionUpdate->setMenuRole(QAction::ApplicationSpecificRole);
 #else
-    connect(updater, &Updater::updateInstalled, this, &mudlet::slot_update_installed);
+    connect(updater, &Updater::signal_updateInstalled, this, &mudlet::slot_update_installed);
 #endif // !Q_OS_MACOS
 #endif // INCLUDE_UPDATER
 
@@ -1682,6 +1684,8 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         // Lets confirm this:
         Q_ASSERT_X(pC->getType()==TConsole::UserWindow, "mudlet::openWindow(...)", "An existing TConsole was expected to be marked as a User Window type but it isn't");
         pD->update();
+        //do not change the ->show() order! Otherwise, it will automatically minimize the floating/dock window(!!)
+        pC->show();
         pD->show();
         pC->showWindow(name);
 
@@ -2836,7 +2840,7 @@ void mudlet::slot_show_connection_dialog()
     connect(pDlg, &dlgConnectionProfiles::signal_establish_connection, this, &mudlet::slot_connection_dlg_finished);
     pDlg->fillout_form();
 
-    connect(pDlg, &QDialog::accepted, [=]() { enableToolbarButtons(); });
+    connect(pDlg, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
     pDlg->setAttribute(Qt::WA_DeleteOnClose);
     pDlg->show();
 }
@@ -4137,6 +4141,66 @@ void mudlet::slot_check_manual_update()
     updater->manuallyCheckUpdates();
 }
 
+// Means to turn-off the hard coded popup delay in QActions provided by:
+// https://stackoverflow.com/a/30126063/4805858
+void mudlet::slot_updateAvailable(const int updateCount)
+{
+    // Removes the normal click to activate "About Mudlet" action and move it
+    // to a new menu which also contains a "goto updater" option
+
+    // First change the existing button:
+    if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
+        mpActionAbout->setIcon(QIcon(":/icons/mudlet_information.png"));
+    } else {
+        mpActionAbout->setIcon(QIcon());
+    }
+    mpActionAbout->setToolTip(tr("<p>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</p>",
+                                 // Intentional comment
+                                 "Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - "
+                                 "please ensure all have the same translation)."));
+
+    // Create a new button (QActions actually turn into QToolButtons when they
+    // are placed on a QToolBar - but we need to generate one ourselves so we
+    // can modify the popupMode away from the delayed one that is hardwared into
+    // the transmuted QAction-to-QToolButton ones):
+    mpButtonAbout = new QToolButton();
+    mpButtonAbout->setIcon(QIcon(QStringLiteral(":/icons/mudlet_important.png")));
+    mpButtonAbout->setToolTip(tr("<p>About Mudlet</p>"
+                                 "<p><i>%n update(s) is/are now available!</i><p>",
+                                 // Intentional comment
+                                 "This is the tooltip text for the 'About' Mudlet main toolbar button when it has been changed by adding a menu which now contains the original 'About Mudlet' action "
+                                 "and a new one to access the manual update process",
+                                 updateCount));
+    mpButtonAbout->setText(tr("About"));
+    mpButtonAbout->setPopupMode(QToolButton::InstantPopup);
+    // Now insert our new button after the current QAction/QToolButton
+    mpMainToolBar->insertWidget(mpActionAbout, mpButtonAbout);
+    // And quickly pull out the old QAction/QToolButton:
+    mpMainToolBar->removeAction(mpActionAbout);
+
+    // Create the new menu
+    QMenu* pUpdateMenu = new QMenu();
+    // Stuff the QAction/QToolButton we just pulled into the new menu
+    pUpdateMenu->insertAction(nullptr, mpActionAbout);
+    // We can then add in the new item to give access the update(s)
+    auto pActionReview = pUpdateMenu->addAction(tr("Review %n update(s)...",
+                                                   // Intentional comment
+                                                   "Review update(s) menu item, %n is the the count of how many updates are available",
+                                                   updateCount),
+                                                this, &mudlet::slot_check_manual_update);
+    pActionReview->setToolTip(tr("<p>Review the update(s) available...</p>",
+                                 // Intentional comment
+                                 "Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here",
+                                 updateCount));
+    // Override the default hide tooltips state:
+    pUpdateMenu->setToolTipsVisible(true);
+    // Screw the menu onto the button
+    mpButtonAbout->setMenu(pUpdateMenu);
+    // And force the button to adopt the current style of the existing buttons
+    // - it doesn't by default:
+    mpButtonAbout->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
+}
+
 void mudlet::slot_update_installed()
 {
 // can't comment out method entirely as moc chokes on it, so leave a stub
@@ -4145,7 +4209,7 @@ void mudlet::slot_update_installed()
     disconnect(dactionUpdate, &QAction::triggered, this, nullptr);
 
     // rejig to restart Mudlet instead
-    QObject::connect(dactionUpdate, &QAction::triggered, [=]() {
+    QObject::connect(dactionUpdate, &QAction::triggered, this, [=]() {
         forceClose();
         QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
     });

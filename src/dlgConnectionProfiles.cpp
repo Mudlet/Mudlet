@@ -459,7 +459,7 @@ void dlgConnectionProfiles::slot_addProfile()
 }
 
 // enables the deletion button once the correct text (profile name) is entered
-void dlgConnectionProfiles::slot_deleteprofile_check(const QString text)
+void dlgConnectionProfiles::slot_deleteprofile_check(const QString& text)
 {
     QString profile = profiles_tree_widget->currentItem()->text();
     if (profile != text) {
@@ -1870,7 +1870,7 @@ bool dlgConnectionProfiles::validateProfile()
 }
 
 // credit: http://www.qtcentre.org/archive/index.php/t-23469.html
-void dlgConnectionProfiles::copyFolder(QString sourceFolder, QString destFolder)
+void dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QString& destFolder)
 {
     QDir sourceDir(sourceFolder);
     if (!sourceDir.exists()) {

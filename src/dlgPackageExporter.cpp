@@ -151,7 +151,7 @@ void dlgPackageExporter::slot_export_package()
     QTreeWidgetItem* top = mpTriggers;
     QList<QTreeWidgetItem*> trigList;
     recurseTree(top, trigList);
-    for (auto item : trigList) {
+    for (auto item : qAsConst(trigList)) {
         if (item->checkState(0) == Qt::Unchecked && triggerMap.contains(item)) {
             triggerMap[item]->exportItem = false;
         } else if (item->checkState(0) == Qt::Checked && triggerMap.contains(item) && triggerMap[item]->mModuleMasterFolder) {
@@ -162,7 +162,7 @@ void dlgPackageExporter::slot_export_package()
     top = mpTimers;
     QList<QTreeWidgetItem*> timerList;
     recurseTree(top, timerList);
-    for (auto item : timerList) {
+    for (auto item : qAsConst(timerList)) {
         if (item->checkState(0) == Qt::Unchecked && timerMap.contains(item)) {
             timerMap[item]->exportItem = false;
         } else if (item->checkState(0) == Qt::Checked && timerMap.contains(item) && timerMap[item]->mModuleMasterFolder) {

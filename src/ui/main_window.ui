@@ -203,7 +203,7 @@
     <string>About Mudlet</string>
    </property>
    <property name="toolTip">
-    <string>&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</string>
+    <string comment="Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).">&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionIRC">

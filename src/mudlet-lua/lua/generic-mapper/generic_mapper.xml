@@ -1288,7 +1288,7 @@ map.defaults = {
 }
 
 local move_queue, lines = {}, {}
-local find_portal, vision_fail, room_detected, random_move, force_portal, find_prompt, downloading, walking
+local find_portal, vision_fail, room_detected, random_move, force_portal, find_prompt, downloading, walking, help_shown
 local mt = getmetatable(map) or {}
 
 local function config()
@@ -2761,7 +2761,7 @@ function map.speedwalk(roomID, walkPath, walkDirs)
     until k &gt; #walkDirs
     if map.configs.use_translation then
         for k, v in ipairs(walkDirs) do
-            walkDirs[k] = map.configs.lang_dirs[v]
+            walkDirs[k] = map.configs.lang_dirs[v] or v
         end
     end
     -- perform walk
@@ -2913,8 +2913,9 @@ function map.eventHandler(event,...)
     elseif event == "sysConnectionEvent" or event == "sysInstall" then
         config()
     elseif event == "mapOpenEvent" then
-        if not map.save.prompt_pattern[map.character or ""] then
+        if not help_shown and not map.save.prompt_pattern[map.character or ""] then
             map.show_help("quick_start")
+            help_shown = true
         end
     elseif event == "mapStop" then
         map.set("mapping", false)

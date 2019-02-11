@@ -473,6 +473,14 @@ int TLuaInterpreter::getProfileName(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCommandSeparator
+int TLuaInterpreter::getCommandSeparator(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    lua_pushstring(L, host.getCommandSeparator().toUtf8().constData());
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#raiseGlobalEvent
 int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
 {
@@ -1579,7 +1587,7 @@ int TLuaInterpreter::getColumnNumber(lua_State* L)
         }
         int result = 0;
         if (windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-            lua_pushnumber(L, host.mpConsole->getColumnNumber());
+            result = host.mpConsole->getColumnNumber();
         } else {
             result = mudlet::self()->getColumnNumber(&host, windowName);
         }
@@ -2547,7 +2555,7 @@ int TLuaInterpreter::saveProfile(lua_State* L)
 
     std::tuple<bool, QString, QString> result = host.saveProfile(saveToDir);
 
-    if (std::get<0>(result) == true) {
+    if (std::get<0>(result)) {
         lua_pushboolean(L, true);
         lua_pushstring(L, (std::get<1>(result).toUtf8().constData()));
         return 2;
@@ -12742,7 +12750,7 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     host.raiseEvent(event);
 
-    if (speechQueue.size() == 1 && speechUnit->state() == QTextToSpeech::Ready && bSpeechQueueing == false) {
+    if (speechQueue.size() == 1 && speechUnit->state() == QTextToSpeech::Ready && !bSpeechQueueing) {
         bSpeechQueueing = true;
         TLuaInterpreter::ttsStateChanged(speechUnit->state());
     }
@@ -14643,6 +14651,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "clearMapUserDataItem", TLuaInterpreter::clearMapUserDataItem);
     lua_register(pGlobalLua, "setDefaultAreaVisible", TLuaInterpreter::setDefaultAreaVisible);
     lua_register(pGlobalLua, "getProfileName", TLuaInterpreter::getProfileName);
+    lua_register(pGlobalLua, "getCommandSeparator", TLuaInterpreter::getCommandSeparator);
     lua_register(pGlobalLua, "raiseGlobalEvent", TLuaInterpreter::raiseGlobalEvent);
     lua_register(pGlobalLua, "saveProfile", TLuaInterpreter::saveProfile);
 #ifdef QT_TEXTTOSPEECH_LIB

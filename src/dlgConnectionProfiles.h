@@ -50,7 +50,7 @@ public slots:
     void slot_save_name();
     void slot_validate_url(const QString &);
     void slot_validate_port(const QString);
-    void slot_deleteprofile_check(const QString);
+    void slot_deleteprofile_check(const QString& text);
 
     void slot_item_clicked(QListWidgetItem*);
     void slot_addProfile();
@@ -64,7 +64,7 @@ public slots:
     void slot_copy_profile();
 
 private:
-    void copyFolder(QString sourceFolder, QString destFolder);
+    void copyFolder(const QString& sourceFolder, const QString& destFolder);
     QString getDescription(const QString& hostUrl, quint16 port, const QString& profile_name);
     bool validateConnect();
     void updateDiscordStatus();

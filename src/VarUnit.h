@@ -57,7 +57,7 @@ public:
     void addSavedVar(TVar*);
     void removeSavedVar(TVar*);
     void addHidden(TVar*, int);
-    void addHidden(QString);
+    void addHidden(const QString&);
     bool isHidden(TVar *var);
     bool isHidden(const QString &fullname);
     void removeHidden(TVar *var);

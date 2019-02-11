@@ -277,7 +277,7 @@ public slots:
     void slot_setTreeWidgetIconSize(int);
     void slot_color_trigger_fg();
     void slot_color_trigger_bg();
-    void slot_updateStatusBar(QString statusText); // For the source code editor
+    void slot_updateStatusBar(const QString& statusText); // For the source code editor
     void slot_profileSaveStarted();
     void slot_profileSaveFinished();
 

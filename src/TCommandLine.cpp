@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2018-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -35,51 +35,23 @@
 TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
 , mpHost(pHost)
+, mpKeyUnit(pHost->getKeyUnit())
 , mpConsole(pConsole)
-, mSelectedText()
-, mSelectionStart(0)
-, mTabCompletion()
 , mTabCompletionCount()
 , mAutoCompletionCount()
 , mUserKeptOnTyping()
+, mHistoryBuffer()
+, mSelectionStart(0)
+, mpHunspell(nullptr)
 , mHunspellSuggestionNumber()
 , mpHunspellSuggestionList()
 {
-    QString path;
-    // This is duplicated (and should be the same as) the code in:
-    // (void) dlgProfilePreferences::initWithHost(Host*)
-#if defined(Q_OS_MACOS)
-    path = QStringLiteral("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
-#elif defined(Q_OS_FREEBSD)
-    if (QFile::exists(QStringLiteral("/usr/local/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
-        path = QLatin1String("/usr/local/share/hunspell/");
-    } else if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
-        path = QLatin1String("/usr/share/hunspell/");
-    } else {
-        path = QLatin1String("./");
-    }
-#elif defined(Q_OS_LINUX)
-    if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
-        path = QLatin1String("/usr/share/hunspell/");
-    } else {
-        path = QLatin1String("./");
-    }
-#else
-    // Probably Windows!
-    path = "./";
-#endif
+    slot_changeSpellDict(mpHost->getSpellDic());
 
-    QString spell_aff = QStringLiteral("%1%2.aff").arg(path, pHost->mSpellDic);
-    QString spell_dic = QStringLiteral("%1%2.dic").arg(path, pHost->mSpellDic);
-    // The man page for hunspell advises Utf8 encoding of the pathFileNames for
-    // use on Windows platforms which can have non ASCII characters...
-    mpHunspell = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
-    mpKeyUnit = mpHost->getKeyUnit();
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
 
-    QFont font = mpHost->mDisplayFont;
-    setFont(font);
+    setFont(mpHost->mDisplayFont);
 
     mRegularPalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor); //QColor(0,0,192));
     mRegularPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
@@ -88,23 +60,16 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
 
     setPalette(mRegularPalette);
 
-    mTabCompletionPalette.setColor(QPalette::Text, QColor(0, 0, 192));
-    mTabCompletionPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
-    mTabCompletionPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    mTabCompletionPalette.setColor(QPalette::Base, QColor(235, 255, 235));
-
-    mAutoCompletionPalette.setColor(QPalette::Text, QColor(0, 0, 192));
-    mAutoCompletionPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
-    mAutoCompletionPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    mAutoCompletionPalette.setColor(QPalette::Base, QColor(255, 235, 235));
-
-
-    mHistoryBuffer = 0;
-    mAutoCompletion = false;
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setCenterOnScroll(false);
     setWordWrapMode(QTextOption::WrapAnywhere);
     setContentsMargins(0, 0, 0, 0);
+
+    // We do NOT want the standard context menu to happen as we generate it
+    // ourself:
+    setContextMenuPolicy(Qt::PreventContextMenu);
+
+    connect(mpHost, &Host::signal_changeSpellDict, this, &TCommandLine::slot_changeSpellDict);
 }
 
 TCommandLine::~TCommandLine()
@@ -165,7 +130,6 @@ bool TCommandLine::event(QEvent* event)
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
                 mTabCompletionTyped.clear();
-                mAutoCompletionTyped.clear();
                 if (mpHost->mAutoClearCommandLineAfterSend) {
                     mHistoryBuffer = -1;
                 } else {
@@ -225,18 +189,19 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
 
-            } else if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
+            }
+
+            if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
                 handleTabCompletion(true);
                 ke->accept();
                 return true;
 
-            } else {
-                // Process as a possible key binding if there are ANY modifiers
-                // other than just the Ctrl one
-                // CHECKME: What about system foreground application switching?
-                return processPotentialKeyBinding(ke);
-
             }
+
+            // Process as a possible key binding if there are ANY modifiers
+            // other than just the Ctrl one
+            // CHECKME: What about system foreground application switching?
+            return processPotentialKeyBinding(ke);
 
         case Qt::Key_unknown:
             qWarning() << "ERROR: key unknown!";
@@ -253,7 +218,6 @@ bool TCommandLine::event(QEvent* event)
 
                 if (mTabCompletionTyped.size() >= 1) {
                     mTabCompletionTyped.chop(1);
-                    mAutoCompletionTyped.chop(1);
                 }
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
@@ -263,12 +227,10 @@ bool TCommandLine::event(QEvent* event)
                 adjustHeight();
 
                 return true;
-            } else {
-                // Process as a possible key binding if there are ANY modifiers
-                // other than <CTRL> and/or <SHIFT>
-                return processPotentialKeyBinding(ke);
-
             }
+            // Process as a possible key binding if there are ANY modifiers
+            // other than <CTRL> and/or <SHIFT>
+            return processPotentialKeyBinding(ke);
 
         case Qt::Key_Delete:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
@@ -280,10 +242,8 @@ bool TCommandLine::event(QEvent* event)
 
                 if (mTabCompletionTyped.size() >= 1) {
                     mTabCompletionTyped.chop(1);
-                    mAutoCompletionTyped.chop(1);
                 } else {
                     mTabCompletionTyped.clear();
-                    mAutoCompletionTyped.clear();
                     mUserKeptOnTyping = false;
                 }
                 mAutoCompletionCount = -1;
@@ -293,11 +253,9 @@ bool TCommandLine::event(QEvent* event)
                 adjustHeight();
                 return true;
 
-            } else {
-                // Process as a possible key binding if there are ANY modifiers
-                return processPotentialKeyBinding(ke);
-
             }
+            // Process as a possible key binding if there are ANY modifiers
+            return processPotentialKeyBinding(ke);
 
         case Qt::Key_Return: // This is the main one (not the keypad)
             if ((ke->modifiers() & allModifiers) == Qt::ControlModifier) {
@@ -312,16 +270,19 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
 
-            } else if ((ke->modifiers() & allModifiers) == Qt::ShiftModifier) {
+            }
+
+            if ((ke->modifiers() & allModifiers) == Qt::ShiftModifier) {
                 textCursor().insertBlock();
                 ke->accept();
                 return true;
 
-            } else if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
+            }
+
+            if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
                 // Do the normal return key stuff only if NO modifiers are used:
                 enterCommand(ke);
                 mAutoCompletionCount = -1;
-                mAutoCompletionTyped.clear();
                 mLastCompletion.clear();
                 mTabCompletionTyped.clear();
                 mUserKeptOnTyping = false;
@@ -336,12 +297,11 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
 
-            } else {
-                // Process as a possible key binding if there are ANY modifiers,
-                // other than just the Shift or just the Control modifiers
-                return processPotentialKeyBinding(ke);
-
             }
+
+            // Process as a possible key binding if there are ANY modifiers,
+            // other than just the Shift or just the Control modifiers
+            return processPotentialKeyBinding(ke);
 
         case Qt::Key_Enter:
             // This is usually the Keypad one, so may come with
@@ -355,7 +315,6 @@ bool TCommandLine::event(QEvent* event)
                 mAutoCompletionCount = -1;
                 mLastCompletion.clear();
                 mTabCompletionTyped.clear();
-                mAutoCompletionTyped.clear();
                 mUserKeptOnTyping = false;
                 if (mpHost->mAutoClearCommandLineAfterSend) {
                     clear();
@@ -367,12 +326,10 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
 
-            } else {
-                // Process as a possible key binding if there are ANY modifiers,
-                // other than just the Keypad modifier
-                return processPotentialKeyBinding(ke);
-
             }
+            // Process as a possible key binding if there are ANY modifiers,
+            // other than just the Keypad modifier
+            return processPotentialKeyBinding(ke);
 
         case Qt::Key_Down:
 #if defined(Q_OS_MACOS)
@@ -385,11 +342,12 @@ bool TCommandLine::event(QEvent* event)
                 moveCursor(QTextCursor::Down, QTextCursor::MoveAnchor);
                 ke->accept();
                 return true;
+            }
 
 #if defined(Q_OS_MACOS)
-            } else if ((ke->modifiers() & allModifiers) == Qt::KeypadModifier) {
+            if ((ke->modifiers() & allModifiers) == Qt::KeypadModifier) {
 #else
-            } else if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
+            if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
 #endif
                 // If EXACTLY Down is pressed without modifiers (special case
                 // for macOs - also sets KeyPad modifier)
@@ -397,13 +355,11 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
 
-            } else {
-                // Process as a possible key binding if there are ANY modifiers,
-                // other than just the Control modifier (or keypad modifier on
-                // macOs)
-                return processPotentialKeyBinding(ke);
-
             }
+            // Process as a possible key binding if there are ANY modifiers,
+            // other than just the Control modifier (or keypad modifier on
+            // macOs)
+            return processPotentialKeyBinding(ke);
 
         case Qt::Key_Up:
 #if defined(Q_OS_MACOS)
@@ -417,10 +373,12 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
 
+            }
+
 #if defined(Q_OS_MACOS)
-            } else if ((ke->modifiers() & allModifiers) == Qt::KeypadModifier) {
+            if ((ke->modifiers() & allModifiers) == Qt::KeypadModifier) {
 #else
-            } else if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
+            if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
 #endif
                 // If EXACTLY Up is pressed without modifiers (special case for
                 // macOs - also sets KeyPad modifier)
@@ -428,22 +386,18 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
 
-            } else {
-                // Process as a possible key binding if there are ANY modifiers,
-                // other than just the Control modifier (or keypad modifier on
-                // macOs)
-                return processPotentialKeyBinding(ke);
-
             }
+
+            // Process as a possible key binding if there are ANY modifiers,
+            // other than just the Control modifier (or keypad modifier on
+            // macOs)
+            return processPotentialKeyBinding(ke);
 
         case Qt::Key_Escape:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
                 // Escape from tab completion mode if used with NO modifiers
                 selectAll();
-                mAutoCompletion = false;
-                mTabCompletion = false;
                 mTabCompletionTyped.clear();
-                mAutoCompletionTyped.clear();
                 mUserKeptOnTyping = false;
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
@@ -456,11 +410,10 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
 
-            } else {
-                // Process as a possible key binding if there are ANY modifiers,
-                return processPotentialKeyBinding(ke);
-
             }
+
+            // Process as a possible key binding if there are ANY modifiers,
+            return processPotentialKeyBinding(ke);
 
         case Qt::Key_PageUp:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
@@ -468,11 +421,10 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
 
-            } else {
-                // Process as a possible key binding if there are ANY modifiers,
-                return processPotentialKeyBinding(ke);
-
             }
+
+            // Process as a possible key binding if there are ANY modifiers,
+            return processPotentialKeyBinding(ke);
 
         case Qt::Key_PageDown:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
@@ -480,11 +432,10 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
 
-            } else {
-                // Process as a possible key binding if there are ANY modifiers,
-                return processPotentialKeyBinding(ke);
-
             }
+
+            // Process as a possible key binding if there are ANY modifiers,
+            return processPotentialKeyBinding(ke);
 
         case Qt::Key_C:
             if (((ke->modifiers() & allModifiers) == Qt::ControlModifier)
@@ -496,28 +447,27 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
 
-            } else {
-                // Process as a possible key binding if there are ANY modifiers,
-                if (processPotentialKeyBinding(ke)) {
-                    return true;
-
-                } else {
-                    processNormalKey(event);
-                    return false;
-
-                }
             }
+
+            // Process as a possible key binding if there are ANY modifiers,
+            if (processPotentialKeyBinding(ke)) {
+                return true;
+
+            }
+
+            processNormalKey(event);
+            return false;
 
         default:
             // Process as a possible key binding if there are ANY modifiers,
             if (processPotentialKeyBinding(ke)) {
                 return true;
 
-            } else {
-                processNormalKey(event);
-                return false;
-
             }
+
+            processNormalKey(event);
+            return false;
+
         }
     }
 
@@ -580,19 +530,19 @@ void TCommandLine::spellCheck()
 
     QTextCursor oldCursor = textCursor();
     QTextCharFormat f;
-    auto cred = QColor(Qt::red);
-    f.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
-    f.setUnderlineColor(cred);
     QTextCursor c = textCursor();
     c.select(QTextCursor::WordUnderCursor);
-
-    if (!Hunspell_spell(mpHunspell, c.selectedText().toLatin1().data())) {
+    QByteArray encodedText = mpHunspellCodec->fromUnicode(c.selectedText());
+    if (!Hunspell_spell(mpHunspell, encodedText.constData())) {
+        // Word is misspelt
+        f.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
+        f.setUnderlineColor(Qt::red);
         f.setFontUnderline(true);
-        c.setCharFormat(f);
     } else {
+        // Word is spelt correctly
         f.setFontUnderline(false);
-        c.setCharFormat(f);
     }
+    c.setCharFormat(f);
     setTextCursor(c);
     f.setFontUnderline(false);
     oldCursor.setCharFormat(f);
@@ -605,7 +555,11 @@ void TCommandLine::slot_popupMenu()
     if (!pA) {
         return;
     }
+#if defined(Q_OS_FREEBSD)
+    QString t = pA->data().toString();
+#else
     QString t = pA->text();
+#endif
     QTextCursor c = cursorForPosition(mPopupPosition);
     c.select(QTextCursor::WordUnderCursor);
 
@@ -617,40 +571,70 @@ void TCommandLine::slot_popupMenu()
 
 void TCommandLine::mousePressEvent(QMouseEvent* event)
 {
+
     if (event->button() == Qt::RightButton) {
+        auto popup = createStandardContextMenu(event->globalPos());
         QTextCursor c = cursorForPosition(event->pos());
         c.select(QTextCursor::WordUnderCursor);
-
-        if (!Hunspell_spell(mpHunspell, c.selectedText().toLatin1().data())) {
+        QByteArray encodedText = mpHunspellCodec->fromUnicode(c.selectedText());
+        if (!Hunspell_spell(mpHunspell, encodedText.constData())) {
+            // The word is NOT in the dictionary:
             char** sl;
-            mHunspellSuggestionNumber = Hunspell_suggest(mpHunspell, &sl, c.selectedText().toLatin1().data());
-            auto popup = new QMenu(this);
-            for (int i = 0; i < mHunspellSuggestionNumber; i++) {
-                QAction* pA;
-                pA = popup->addAction(sl[i]);
-                connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
-            }
-            mpHunspellSuggestionList = sl;
-            mPopupPosition = event->pos();
-            popup->popup(event->globalPos());
-        }
+            auto separator = popup->actions().first();
+            separator = popup->insertSeparator(separator);
+            // separator is now the QAction of, indeed is, a separator:
+            QList<QAction*> spellings;
 
+            // The return value is the count of suggestions:
+            mHunspellSuggestionNumber = Hunspell_suggest(mpHunspell, &sl, encodedText.constData());
+            if (mHunspellSuggestionNumber) {
+                for (int i = 0; i < mHunspellSuggestionNumber; ++i) {
+                    auto pA = new QAction(mpHunspellCodec->toUnicode(sl[i]));
+#if defined(Q_OS_FREEBSD)
+                    // Adding the text afterwards as user data as well as in the
+                    // constructor is to fix a bug(?) in FreeBSD that
+                    // automagically adds a '&' somewhere in the text to be a
+                    // shortcut - but doesn't show it and forgets to remove
+                    // it when asked for the text later:
+                    pA->setData(mpHunspellCodec->toUnicode(sl[i]));
+#endif
+                    connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
+                    spellings << pA;
+                }
+
+            } else {
+                auto pA = new QAction(tr("no suggestions",
+                                         // Intentional comment
+                                         "used when the command spelling checker has no words to suggest"));
+                pA->setEnabled(false);
+                spellings << pA;
+            }
+
+            mpHunspellSuggestionList = sl;
+            popup->insertActions(separator, spellings);
+        }
+        // else the word is in the dictionary - in either case show the context
+        // menu - either the one with the prefixed spellings, or the standard
+        // one:
+
+        mPopupPosition = event->pos();
+        popup->popup(event->globalPos());
         event->accept();
         return;
     }
+
+    // Process any other possible mousePressEvent
     QPlainTextEdit::mousePressEvent(event);
 }
 
 void TCommandLine::enterCommand(QKeyEvent* event)
 {
     QString _t = toPlainText();
-    mAutoCompletion = false;
-    mTabCompletion = false;
     mTabCompletionCount = -1;
     mAutoCompletionCount = -1;
-    mTabCompletionTyped = "";
+    mTabCompletionTyped.clear();
 
-    QStringList _l = _t.split("\n");
+    QStringList _l = _t.split(QChar::LineFeed);
     for (int i = 0; i < _l.size(); i++) {
         mpHost->send(_l[i]);
     }
@@ -722,7 +706,7 @@ void TCommandLine::handleTabCompletion(bool direction)
             return;
         }
         int offset = 0;
-        for (;;) {
+        forever {
             QString tmp = filterList.back();
             filterList.removeAll(tmp);
             filterList.insert(offset, tmp);
@@ -835,5 +819,46 @@ void TCommandLine::historyUp(QKeyEvent* event)
     } else {
         mAutoCompletionCount++;
         handleAutoCompletion();
+    }
+}
+
+void TCommandLine::slot_changeSpellDict(const QString& newDict)
+{
+    // This is duplicated (and should be the same as) the code in:
+    // (void) dlgProfilePreferences::initWithHost(Host*)
+    QString path;
+#if defined(Q_OS_MACOS)
+    path = QStringLiteral("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
+#elif defined(Q_OS_FREEBSD)
+    if (QFile::exists(QStringLiteral("/usr/local/share/hunspell/%1.aff").arg(newDict))) {
+        path = QLatin1String("/usr/local/share/hunspell/");
+    } else if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(newDict))) {
+        path = QLatin1String("/usr/share/hunspell/");
+    } else {
+        path = QLatin1String("./");
+    }
+#elif defined(Q_OS_LINUX)
+    if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(newDict))) {
+        path = QLatin1String("/usr/share/hunspell/");
+    } else {
+        path = QLatin1String("./");
+    }
+#else
+    // Probably Windows!
+    path = "./";
+#endif
+
+    QString spell_aff = QStringLiteral("%1%2.aff").arg(path, newDict);
+    QString spell_dic = QStringLiteral("%1%2.dic").arg(path, newDict);
+    // The man page for hunspell advises Utf8 encoding of the pathFileNames for
+    // use on Windows platforms which can have non ASCII characters...
+    if (mpHunspell) {
+        Hunspell_destroy(mpHunspell);
+    }
+    mpHunspell = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
+    if (mpHunspell) {
+        mHunspellCodecName = QByteArray(Hunspell_get_dic_encoding(mpHunspell));
+        qDebug().noquote().nospace() << "TCommandLine::slot_changeSpellDict(\"" << newDict << "\") INFO - Hunspell dictionary loaded, it uses a \"" << Hunspell_get_dic_encoding(mpHunspell) << "\" encoding...";
+        mpHunspellCodec = QTextCodec::codecForName(mHunspellCodecName);
     }
 }

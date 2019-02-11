@@ -519,13 +519,13 @@ const unsigned int Host::assemblePath()
 {
     unsigned int totalWeight = 0;
     QStringList pathList;
-    for (int i : mpMap->mPathList) {
+    for (int i : qAsConst(mpMap->mPathList)) {
         QString n = QString::number(i);
         pathList.append(n);
     }
     QStringList directionList = mpMap->mDirList;
     QStringList weightList;
-    for (int stepWeight : mpMap->mWeightList) {
+    for (int stepWeight : qAsConst(mpMap->mWeightList)) {
         totalWeight += stepWeight;
         QString n = QString::number(stepWeight);
         weightList.append(n);
@@ -1279,7 +1279,7 @@ void Host::installPackageFonts(const QString &packageName)
 // ensures fonts from all installed packages are loaded in Mudlet
 void Host::refreshPackageFonts()
 {
-    for (const auto& package : mInstalledPackages) {
+    for (const auto& package : qAsConst(mInstalledPackages)) {
         installPackageFonts(package);
     }
 }
@@ -1408,10 +1408,6 @@ QColor Host::getAnsiColor(const int ansiCode, const bool isBackground) const
 // Telnet sub-option comes in and starts with "External.Discord.(Status|Info)"
 void Host::processDiscordGMCP(const QString& packageMessage, const QString& data)
 {
-    if (mDiscordDisableServerSide) {
-        return;
-    }
-
     auto document = QJsonDocument::fromJson(data.toUtf8());
     if (!document.isObject()) {
         return;
@@ -1435,7 +1431,7 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
     bool hasInvite = false;
     auto inviteUrl = discordInfo.value(QStringLiteral("inviteurl"));
     // Will be of form: "https://discord.gg/#####"
-    if (inviteUrl != QJsonValue::Undefined) {
+    if (inviteUrl != QJsonValue::Undefined && !inviteUrl.toString().isEmpty()) {
         hasInvite = true;
     }
 
@@ -1461,7 +1457,7 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
         if (hasCustomAppID) {
             qDebug() << "Game using a custom Discord server. Invite URL: " << inviteUrl.toString();
         } else if (hasApplicationId) {
-            qDebug() << "Game using Mudlets Discord server. Invite URL: " << inviteUrl.toString();
+            qDebug() << "Game using Mudlet's Discord server. Invite URL: " << inviteUrl.toString();
         } else {
             qDebug() << "Discord invite URL: " << inviteUrl.toString();
         }
@@ -1469,13 +1465,17 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
         if (hasCustomAppID) {
             qDebug() << "Game is using custom server Discord application ID";
         } else if (hasApplicationId) {
-            qDebug() << "Game is using Mudlets Discord application ID";
+            qDebug() << "Game is using Mudlet's Discord application ID";
         }
     }
 }
 
 void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
 {
+    if (mDiscordDisableServerSide) {
+        return;
+    }
+
     auto pMudlet = mudlet::self();
     auto gameName = discordInfo.value(QStringLiteral("game"));
     if (gameName != QJsonValue::Undefined) {
@@ -1509,13 +1509,13 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
     if (largeImages != QJsonValue::Undefined) {
         auto largeImage = largeImages.toArray().first();
         if (largeImage != QJsonValue::Undefined) {
-            pMudlet->mDiscord.setSmallImage(this, largeImage.toString());
+            pMudlet->mDiscord.setLargeImage(this, largeImage.toString());
         }
     }
 
     auto largeImageText = discordInfo.value(QStringLiteral("largeimagetext"));
     if (largeImageText != QJsonValue::Undefined) {
-        pMudlet->mDiscord.setSmallImageText(this, largeImageText.toString());
+        pMudlet->mDiscord.setLargeImageText(this, largeImageText.toString());
     }
 
     auto smallImages = discordInfo.value(QStringLiteral("smallimage"));
@@ -1655,5 +1655,19 @@ bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscri
         return false;
     } else {
         return true;
+    }
+}
+
+void Host::setSpellDic(const QString& newDict)
+{
+    QMutexLocker locker(& mLock);
+    bool isChanged = false;
+    if (!newDict.isEmpty() && mSpellDic != newDict) {
+        mSpellDic = newDict;
+        isChanged = true;
+    }
+    locker.unlock();
+    if (isChanged) {
+        emit signal_changeSpellDict(mSpellDic);
     }
 }

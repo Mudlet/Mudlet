@@ -74,7 +74,7 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 {
 }
 
-TTrigger::TTrigger(const QString& name, QStringList regexList, QList<int> regexProperyList, bool isMultiline, Host* pHost)
+TTrigger::TTrigger(const QString& name, const QStringList& regexList, const QList<int>& regexProperyList, bool isMultiline, Host* pHost)
 : Tree<TTrigger>(nullptr)
 , mTriggerContainsPerlRegex( false )
 , mPerlSlashGOption( false )
@@ -1145,11 +1145,7 @@ bool TTrigger::setupTmpColorTrigger(int ansiFg, int ansiBg)
 
 bool TTrigger::isFilterChain()
 {
-    if ((!mRegexCodeList.empty()) && (hasChildren())) {
-        return true;
-    } else {
-        return false;
-    }
+    return (!mRegexCodeList.empty()) && (hasChildren());
 }
 
 bool TTrigger::registerTrigger()

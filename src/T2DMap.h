@@ -207,6 +207,8 @@ public slots:
 
 private:
     void resizeMultiSelectionWidget();
+    std::pair<int, int> getMousePosition();
+    bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
 
     bool mDialogLock;
 
@@ -239,7 +241,6 @@ private:
 
     QPointer<QAction> mpCreateRoomAction;
 
-    std::pair<int, int> getMousePosition();
 
 private slots:
     void slot_createRoom();

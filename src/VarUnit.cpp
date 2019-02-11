@@ -65,18 +65,12 @@ bool VarUnit::shouldSave(QTreeWidgetItem* p)
 {
     auto var = getWVar(p);
 
-    if (!var || var->getValueType() == 6 || var->isReference()) {
-        return false;
-    }
-    return true;
+    return !(!var || var->getValueType() == 6 || var->isReference());
 }
 
 bool VarUnit::shouldSave(TVar* var)
 {
-    if (var->getValueType() == 6 || var->isReference()) {
-        return false;
-    }
-    return true;
+    return !(var->getValueType() == 6 || var->isReference());
 }
 
 void VarUnit::buildVarTree(QTreeWidgetItem* p, TVar* var, bool showHidden)
@@ -211,7 +205,7 @@ void VarUnit::addHidden(TVar* var, int user)
     }
 }
 
-void VarUnit::addHidden(QString var)
+void VarUnit::addHidden(const QString& var)
 {
     hiddenByUser.insert(var);
 }

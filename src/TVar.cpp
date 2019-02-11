@@ -69,7 +69,7 @@ TVar::TVar(TVar* p)
 {
 }
 
-TVar::TVar(TVar* p, const QString kName, const int kt, const QString val, const int vt)
+TVar::TVar(TVar* p, const QString& kName, const int kt, const QString& val, const int vt)
 : hidden(false)
 , kpointer(Q_NULLPTR)
 , vpointer(Q_NULLPTR)
@@ -181,13 +181,13 @@ void TVar::clearNewName()
     nkType = LUA_TNIL; // CHECK: Was 0 but perhaps it should have been -1 (LUA_TNONE ?)
 }
 
-bool TVar::setValue(const QString val)
+bool TVar::setValue(const QString& val)
 {
     value = val;
     return true;
 }
 
-bool TVar::setValue(const QString val, const int t)
+bool TVar::setValue(const QString& val, const int t)
 {
     value = val;
     vType = t;
@@ -200,14 +200,14 @@ bool TVar::setValueType(const int t)
     return true;
 }
 
-bool TVar::setName(const QString n, const int kt)
+bool TVar::setName(const QString& n, const int kt)
 {
     name = n;
     kType = kt;
     return true;
 }
 
-bool TVar::setName(const QString n)
+bool TVar::setName(const QString& n)
 {
     name = n;
     return true;
