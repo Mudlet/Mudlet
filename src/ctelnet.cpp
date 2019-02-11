@@ -2165,19 +2165,24 @@ void cTelnet::slot_processReplayChunk()
 
 void cTelnet::handle_socket_signal_readyRead()
 {
-    mpHost->mInsertedMissingLF = false;
-
     if (mWaitingForResponse) {
         double time = networkLatencyTime.elapsed();
         networkLatency = time / 1000;
         mWaitingForResponse = false;
     }
 
-    char in_bufferx[100010];
-    char* in_buffer = in_bufferx;
-    char out_buffer[100010];
+    char in_buffer[100010];
 
     int amount = socket.read(in_buffer, 100000);
+    processSocketData(in_buffer, amount);
+}
+
+void cTelnet::processSocketData(char* in_buffer, int amount)
+{
+    mpHost->mInsertedMissingLF = false;
+
+    char out_buffer[100010];
+
     in_buffer[amount + 1] = '\0';
     if (amount == -1) {
         return;
