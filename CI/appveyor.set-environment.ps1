@@ -16,7 +16,7 @@ function SetMingwBaseDir([string] $logFile) {
   if(!(Test-Path Env:MINGW_BASE_DIR)){
     $tmp = $Env:QT_BASE_DIR.Split("\\")
     $tmp[-2] = "Tools"
-    $tmp[-1] = $tmp[-1] -replace "_32", "*"
+    $tmp[-1] = $tmp[-1] -replace "_64", "*"
     $tmp = $tmp -join "\" | Resolve-Path
     if($tmp -is [array]){
       $tmp = $tmp[-1]
