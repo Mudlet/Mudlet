@@ -204,10 +204,10 @@ function InstallPython() {
 }
 
 function InstallOpenssl() {
-  DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.0.2o-win32.zip" "openssl-1.0.2o-i386-win32.zip"
-  ExtractZip "openssl-1.0.2o-i386-win32.zip" "openssl-1.0.2o"
+  DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.0.2q-win64.zip" "openssl-1.0.2q-win64.zip"
+  ExtractZip "openssl-1.0.2q-win64.zip" "openssl-1.0.2q"
   Step "installing"
-  exec "XCOPY" @("/S", "/I", "/Q", "openssl-1.0.2o", "$Env:MINGW_BASE_DIR\bin")
+  exec "XCOPY" @("/S", "/I", "/Q", "openssl-1.0.2q", "$Env:MINGW_BASE_DIR\bin")
 }
 
 function InstallHunspell() {
