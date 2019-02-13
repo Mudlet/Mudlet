@@ -197,6 +197,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mErrorPalette.setColor(QPalette::Base, QColor(255, 235, 235));
 
     profiles_tree_widget->setViewMode(QListView::IconMode);
+
+//    groupBox_config->
 }
 
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it

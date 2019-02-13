@@ -292,6 +292,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     auto current = pMudlet->mInterfaceLanguage;
     comboBox_guiLanguage->setCurrentText(pMudlet->mLanguageCodeMap.value(current).first);
     connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
+
+    // configuration directory is still WIP
+    groupBox_config->hide();
 }
 
 void dlgProfilePreferences::disableHostDetails()
@@ -2121,8 +2124,6 @@ void dlgProfilePreferences::slot_logFileNameFormatChange(const int index)
 
 void dlgProfilePreferences::slot_configDirOptionChange(const int index)
 {
-    Q_UNUSED(index);
-
     // Show options to set the config directory if 'Select a
     // directory...' is selected
     bool isShown = index == 1;
@@ -2134,7 +2135,7 @@ void dlgProfilePreferences::slot_configDirOptionChange(const int index)
     case 0:
         // Clear mConfigDirPath if 'Default' is selected
         mConfigDirPath.clear();
-        lineEdit_configDir->setText(QDir::homePath() + "/.config/mudlet");
+        lineEdit_configDir->setText(mudlet::getMudletPath(mudlet::mainPath));
         break;
     case 1:
         // Set mConfigDirPath to the value of lineEdit_configDir if
