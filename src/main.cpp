@@ -189,7 +189,7 @@ int main(int argc, char* argv[])
     spDebugConsole = nullptr;
     unsigned int startupAction = 0;
 
-#if defined(Q_OS_UNIX) && (QT_VERSION < QT_VERSION_CHECK(5, 12, 0))
+#if defined(Q_OS_LINUX) && (QT_VERSION < QT_VERSION_CHECK(5, 12, 0))
     bool enableHighDpiScaling = false;
 
     {
@@ -206,7 +206,7 @@ int main(int argc, char* argv[])
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling, enableHighDpiScaling);
 
     // due to a Qt bug, this only safely works for both non- and HiDPI displays on 5.12+
-#elif defined(Q_OS_UNIX) && (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
+#elif defined(Q_OS_LINUX) && (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
 
