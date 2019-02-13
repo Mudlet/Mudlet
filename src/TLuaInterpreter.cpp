@@ -14712,11 +14712,11 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapSelection", TLuaInterpreter::getMapSelection);
     lua_register(pGlobalLua, "enableClickthrough", TLuaInterpreter::enableClickthrough);
     lua_register(pGlobalLua, "disableClickthrough", TLuaInterpreter::disableClickthrough);
-    lua_register(pGlobalLua, "addWordToProfileDictionary", TLuaInterpreter::addWordToProfileDictionary);
-    lua_register(pGlobalLua, "removeWordFromProfileDictionary", TLuaInterpreter::removeWordFromProfileDictionary);
+    lua_register(pGlobalLua, "addWordToDictionary", TLuaInterpreter::addWordToDictionary);
+    lua_register(pGlobalLua, "removeWordFromDictionary", TLuaInterpreter::removeWordFromDictionary);
     lua_register(pGlobalLua, "spellCheckWord", TLuaInterpreter::spellCheckWord);
     lua_register(pGlobalLua, "spellSuggestWord", TLuaInterpreter::spellSuggestWord);
-    lua_register(pGlobalLua, "getProfileDictionaryWordList", TLuaInterpreter::getProfileDictionaryWordList);
+    lua_register(pGlobalLua, "getUserDictionaryWordList", TLuaInterpreter::getUserDictionaryWordList);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     // prepend profile path to package.path and package.cpath
@@ -15598,7 +15598,7 @@ int TLuaInterpreter::disableClickthrough(lua_State* L)
     return 0;
 }
 
-int TLuaInterpreter::addWordToProfileDictionary(lua_State* L)
+int TLuaInterpreter::addWordToDictionary(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mEnableSpellCheck) {
@@ -15607,17 +15607,27 @@ int TLuaInterpreter::addWordToProfileDictionary(lua_State* L)
         return 2;
     }
 
+    bool hasUserDictionary = false;
+    bool hasSharedDictionary = false;
+    host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
+    if (!hasUserDictionary) {
+        lua_pushnil(L);
+        lua_pushstring(L, "no user dictionary enabled in the preferences for this profile");
+        return 2;
+    }
+
     QString text;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "addWordToProfileDictionary: bad argument #1 type (word as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "addWordToDictionary: bad argument #1 type (word as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     } else {
         text = QString::fromUtf8(lua_tostring(L, 1));
     }
 
-    if (!host.mpConsole->addSingleWordToSet(text)) {
+    QPair<bool, QString> result = host.mpConsole->addSingleWordToSet(text);
+    if (!result.first){
         lua_pushnil(L);
-        lua_pushfstring(L, "the word \"%s\" already seems to be in the profile's own dictionary", text.toUtf8().constData());
+        lua_pushstring(L, result.second.toUtf8().constData());
         return 2;
     } else {
         lua_pushboolean(L, true);
@@ -15625,7 +15635,7 @@ int TLuaInterpreter::addWordToProfileDictionary(lua_State* L)
     }
 }
 
-int TLuaInterpreter::removeWordFromProfileDictionary(lua_State* L)
+int TLuaInterpreter::removeWordFromDictionary(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (!host.mEnableSpellCheck) {
@@ -15634,17 +15644,27 @@ int TLuaInterpreter::removeWordFromProfileDictionary(lua_State* L)
         return 2;
     }
 
+    bool hasUserDictionary = false;
+    bool hasSharedDictionary = false;
+    host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
+    if (!hasUserDictionary) {
+        lua_pushnil(L);
+        lua_pushstring(L, "no user dictionary enabled in the preferences for this profile");
+        return 2;
+    }
+
     QString text;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "removeWordFromProfileDictionary: bad argument #1 type (word as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "removeWordFromDictionary: bad argument #1 type (word as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     } else {
         text = QString::fromUtf8(lua_tostring(L, 1));
     }
 
-    if (!host.mpConsole->removeSingleWordFromSet(text)) {
+    QPair<bool, QString> result = host.mpConsole->removeSingleWordFromSet(text);
+    if (!result.first){
         lua_pushnil(L);
-        lua_pushfstring(L, "the word \"%s\" does not appear to be in the profile's own dictionary", text.toUtf8().constData());
+        lua_pushstring(L, result.second.toUtf8().constData());
         return 2;
     } else {
         lua_pushboolean(L, true);
@@ -15661,6 +15681,9 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
         return 2;
     }
 
+    bool hasUserDictionary = false;
+    bool hasSharedDictionary = false;
+    host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
     QString text;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "spellCheckWord: bad argument #1 type (word as string expected, got %s!)", luaL_typename(L, 1));
@@ -15672,19 +15695,29 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
     bool useProfileDictionary = false;
     if (lua_gettop(L) > 1) {
         if (!lua_isboolean(L, 2)) {
-            lua_pushfstring(L, "spellCheckWord: bad argument #2 type (check profile dictionary as boolean is optional {use 'false' or omit to check against system dictionary}, got %s!)", luaL_typename(L, 2));
+            lua_pushfstring(L, "spellSuggestWord: bad argument #2 type (check profile dictionary as boolean is optional {use 'false' or omit to check against system dictionary}, got %s!)", luaL_typename(L, 2));
             return lua_error(L);
         } else {
+            if (!hasUserDictionary) {
+                lua_pushnil(L);
+                lua_pushstring(L, "no user dictionary enabled in the preferences for this profile");
+                return 2;
+            }
             useProfileDictionary = lua_toboolean(L, 2);
         }
     }
 
+    Hunhandle* handle = nullptr;
+    QByteArray encodedText;
     if (useProfileDictionary) {
-        lua_pushboolean(L, Hunspell_spell(host.mpConsole->getHunspelHandle_profile(), text.toUtf8().constData()));
+        handle = host.mpConsole->getHunspellHandle_user();
+        encodedText = text.toUtf8();
     } else {
-        QByteArray encodedText = host.mpConsole->getHunspellCodec_system()->fromUnicode(text);
-        lua_pushboolean(L, Hunspell_spell(host.mpConsole->getHunspelHandle_system(), encodedText.constData()));
+        handle = host.mpConsole->getHunspellHandle_system();
+        encodedText = host.mpConsole->getHunspellCodec_system()->fromUnicode(text);
     }
+    // CHECKME: Is there any danger of contention here - do we need to get mudlet::mDictionaryReadWriteLock locked for reading if we are accessing the shared user dictionary?
+    lua_pushboolean(L, Hunspell_spell(handle, text.toUtf8().constData()));
     return 1;
 }
 
@@ -15697,6 +15730,9 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
         return 2;
     }
 
+    bool hasUserDictionary = false;
+    bool hasSharedDictionary = false;
+    host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
     QString text;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "spellSuggestWord: bad argument #1 type (word as string expected, got %s!)", luaL_typename(L, 1));
@@ -15711,40 +15747,58 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
             lua_pushfstring(L, "spellSuggestWord: bad argument #2 type (check profile dictionary as boolean is optional {use 'false' or omit to check against system dictionary}, got %s!)", luaL_typename(L, 2));
             return lua_error(L);
         } else {
+            if (!hasUserDictionary) {
+                lua_pushnil(L);
+                lua_pushstring(L, "no user dictionary enabled in the preferences for this profile");
+                return 2;
+            }
             useProfileDictionary = lua_toboolean(L, 2);
         }
     }
 
     char **wordList;
     size_t wordCount = 0;
+    Hunhandle* handle = nullptr;
+    QByteArray encodedText;
     if (useProfileDictionary) {
-        wordCount = Hunspell_suggest(host.mpConsole->getHunspelHandle_profile(), &wordList, text.toUtf8().constData());
+        handle = host.mpConsole->getHunspellHandle_user();
+        encodedText = text.toUtf8();
     } else {
-        QByteArray encodedText = host.mpConsole->getHunspellCodec_system()->fromUnicode(text);
-        wordCount = Hunspell_suggest(host.mpConsole->getHunspelHandle_system(), &wordList, encodedText.constData());
+        handle = host.mpConsole->getHunspellHandle_system();
+        encodedText = host.mpConsole->getHunspellCodec_system()->fromUnicode(text);
     }
+    // CHECKME: Is there any danger of contention here - do we need to get mudlet::mDictionaryReadWriteLock locked for reading if we are accessing the shared user dictionary?
+    wordCount = Hunspell_suggest(handle, &wordList, encodedText.constData());
     lua_newtable(L);
     for (size_t i = 0; i < wordCount; ++i) {
         lua_pushnumber(L, i+1);
         lua_pushstring(L, wordList[i]);
         lua_settable(L, -3);
     }
-    Hunspell_free_list((useProfileDictionary
-                        ? host.mpConsole->getHunspelHandle_profile()
-                        : host.mpConsole->getHunspelHandle_system()),
-                       &wordList, wordCount);
+    Hunspell_free_list(handle, &wordList, wordCount);
     return 1;
 }
 
-int TLuaInterpreter::getProfileDictionaryWordList(lua_State* L)
+int TLuaInterpreter::getUserDictionaryWordList(lua_State* L)
 {
     Host& host = getHostFromLua(L);
+    bool hasUserDictionary = false;
+    bool hasSharedDictionary = false;
+    host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
     if (!host.mEnableSpellCheck) {
         lua_pushnil(L);
         lua_pushstring(L, "spell-checking is not enabled in the preferences for this profile");
         return 2;
     }
 
+    if (!hasUserDictionary) {
+        lua_pushnil(L);
+        lua_pushstring(L, "no user dictionary enabled in the preferences for this profile");
+        return 2;
+    }
+
+    // This may stall if this is accessing the shared user dictionary and that
+    // is being updated by another profile, but it should eventually return...
     QStringList wordList = host.mpConsole->getWordSet().toList();
     int wordCount = wordList.size();
     if (wordCount > 1) {

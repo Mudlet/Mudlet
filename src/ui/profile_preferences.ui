@@ -475,7 +475,7 @@
       <attribute name="title">
        <string>Input line</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_11">
+      <layout class="QGridLayout" name="gridLayout_11" rowstretch="0,1,0">
        <item row="0" column="0">
         <widget class="QGroupBox" name="groupBox_input">
          <property name="enabled">
@@ -576,16 +576,28 @@
          <property name="checked">
           <bool>false</bool>
          </property>
+         <property name="toolTip">
+          <string>&lt;p&gt;This option enables or disables all spell-checking functionality.&lt;p&gt;</string>
+         </property>
          <layout class="QVBoxLayout" name="verticalLayout_2">
           <item>
            <widget class="QLabel" name="label_chooseSpellCheckDictionary">
             <property name="text">
-             <string>Choose spell check dictionary:</string>
+             <string notr="true" extracomment="This text is not for translation as it is replaced by an OS specific text on dialogue construction.">System/Mudlet dictionary:</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="QListWidget" name="dictList">
+            <property name="sizeAdjustPolicy">
+             <enum>QAbstractScrollArea::AdjustToContents</enum>
+            </property>
+            <property name="dragDropMode">
+             <enum>QAbstractItemView::DragDrop</enum>
+            </property>
+            <property name="movement">
+             <enum>QListView::Snap</enum>
+            </property>
             <property name="flow">
              <enum>QListView::TopToBottom</enum>
             </property>
@@ -598,75 +610,47 @@
             <property name="sortingEnabled">
              <bool>true</bool>
             </property>
+            <property name="toolTip">
+             <string>&lt;p&gt;Select one dictionary which will be available on the command line and in the lua sub-system.&lt;p&gt;</string>
+            </property>
            </widget>
           </item>
           <item>
-           <widget class="QGroupBox" name="groupBox_autoAddWordsFromServerToDictionary">
+           <widget class="QGroupBox" name="groupBox_userDictionary">
             <property name="title">
-             <string>Automatically add words from server</string>
+             <string>User dictionary:</string>
             </property>
-            <property name="checkable">
-             <bool>true</bool>
-            </property>
-            <property name="checked">
-             <bool>false</bool>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_autoAddWordsFromServerToDictionary" columnstretch="0,1">
-             <property name="horizontalSpacing">
-              <number>27</number>
-             </property>
-             <item row="0" column="0">
-              <widget class="QWidget" name="widget" native="true">
-               <layout class="QHBoxLayout" name="horizontalLayout_autoAddWordToDictionaryMinLength" stretch="0,1,0">
-                <property name="leftMargin">
-                 <number>0</number>
-                </property>
-                <property name="topMargin">
-                 <number>0</number>
-                </property>
-                <property name="rightMargin">
-                 <number>0</number>
-                </property>
-                <property name="bottomMargin">
-                 <number>0</number>
-                </property>
-                <item alignment="Qt::AlignLeft">
-                 <widget class="QLabel" name="label_autoAddDictionaryWordMinLength_before">
-                  <property name="text">
-                   <string extracomment="This (QLabel) texts is placed before a QSpinBox that displays a number with another QLabel that finishes a sentence">Minimum length</string>
-                  </property>
-                 </widget>
-                </item>
-                <item alignment="Qt::AlignHCenter">
-                 <widget class="QSpinBox" name="spinBox_autoAddToDictionaryWordLength">
-                  <property name="alignment">
-                   <set>Qt::AlignCenter</set>
-                  </property>
-                  <property name="minimum">
-                   <number>1</number>
-                  </property>
-                  <property name="value">
-                   <number>4</number>
-                  </property>
-                 </widget>
-                </item>
-                <item alignment="Qt::AlignLeft">
-                 <widget class="QLabel" name="label_autoAddDictionaryWordMinLength_after">
-                  <property name="text">
-                   <string extracomment="This (QLabel) texts is after a QSpinBox that displays a number with another QLabel before it that starts a sentence">characters</string>
-                  </property>
-                 </widget>
-                </item>
-               </layout>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="QCheckBox" name="checkBox_autoAddWordsToDictionaryWithDigits">
+            <layout class="QHBoxLayout" name="horizontalLayout_userDictionary">
+             <item>
+              <widget class="QRadioButton" name="radioButton_userDictionary_none">
                <property name="text">
-                <string>Include words containing digits</string>
+                <string>None</string>
                </property>
                <property name="checked">
-                <bool>false</bool>
+                <bool>true</bool>
+               </property>
+               <property name="toolTip">
+                <string>&lt;p&gt;A user dictionary will not be used.&lt;p&gt;</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QRadioButton" name="radioButton_userDictionary_profile">
+               <property name="text">
+                <string>Profile</string>
+               </property>
+               <property name="toolTip">
+                <string>&lt;p&gt;A user dictionary specific to this profile will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;p&gt;</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QRadioButton" name="radioButton_userDictionary_common">
+               <property name="text">
+                <string>Shared</string>
+               </property>
+               <property name="toolTip">
+                <string>&lt;p&gt;A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the ll be available on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;p&gt;</string>
                </property>
               </widget>
              </item>

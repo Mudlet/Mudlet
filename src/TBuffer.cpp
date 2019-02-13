@@ -1622,12 +1622,6 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                               "data character and attribute data items!";
             }
 
-            if (isFromServer && !mMudLine.isEmpty() && mpHost->mEnableSpellCheck) {
-                // Add the words in the content to the word list so they can be
-                // inserted into the profile.dic file
-                mpHost->mpConsole->updateWordList(mMudLine);
-            }
-
             if (!lineBuffer.back().isEmpty()) {
                 if (mMudLine.size() > 0) {
                     lineBuffer << mMudLine;

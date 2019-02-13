@@ -148,6 +148,76 @@ void mudlet::loadLanguagesMap()
             {"pt_PT", make_pair(tr("Portuguese", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
     };
 
+    // Primarily use to identify Hunspell dictionaries (some of which are not
+    // useful - the "_med" ones are suppliments and no good for Mudlet) - all
+    // keys are to be lower cased so that the values can be looked up with a
+    // QMap<T1, T2>::value(const T1&) where the parameter has been previously
+    // been converted to all-lower case:
+    // From https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes:
+    // More useful is the cross-referenced (Country <-> Languges):
+    // https://www.unicode.org/cldr/charts/latest/supplemental/language_territory_information.html
+    // Initially populated from the dictionaries provided within the Debian
+    // GNU/Linux distribution:
+    //: In the translation source texts the language is the leading term, with, generatlly, the (primary) country(ies) in the brackets, with a trailing language disabiguation after a '-' Chinese is an exception!
+    mDictionaryLanguageCodeMap = {
+        {QStringLiteral("af"), tr("Afrikaans")},{QStringLiteral("af_za"), tr("Afrikaans (South Africa)")},
+        {QStringLiteral("an"), tr("Aragonese")}, {QStringLiteral("an_es"), tr("Aragonese (Spain)")},
+        {QStringLiteral("ar"), tr("Arabic")}, {QStringLiteral("ar_ae"), tr("Arabic (United Arab Emirates)")}, {QStringLiteral("ar_bh"), tr("Arabic (Bahrain)")}, {QStringLiteral("ar_dz"), tr("Arabic (Algeria)")}, {QStringLiteral("ar_eg"), tr("Arabic (Eygpt)")}, {QStringLiteral("ar_in"), tr("Arabic (India)")}, {QStringLiteral("ar_iq"), tr("Arabic (Iraq)")}, {QStringLiteral("ar_jo"), tr("Arabic (Jordan)")}, {QStringLiteral("ar_kw"), tr("Arabic (Kuwait)")}, {QStringLiteral("ar_lb"), tr("Arabic (Lebanon)")}, {QStringLiteral("ar_ly"), tr("Arabic (Libya)")}, {QStringLiteral("ar_ma"), tr("Arabic (Morocco)")}, {QStringLiteral("ar_om"), tr("Arabic (Oman)")}, {QStringLiteral("ar_qa"), tr("Arabic (Qatar)")}, {QStringLiteral("ar_sa"), tr("Arabic (Saudi Arabia)")}, {QStringLiteral("ar_sd"), tr("Arabic (Sudan)")}, {QStringLiteral("ar_sy"), tr("Arabic (Syria)")}, {QStringLiteral("ar_tn"), tr("Arabic (Tunisia)")}, {QStringLiteral("ar_ye"), tr("Arabic (Yemen)")},
+        {QStringLiteral("be"), tr("Belarusian")}, {QStringLiteral("be_by"), tr("Belarusian (Belarus)")}, {QStringLiteral("be_ru"), tr("Belarusian (Russia)")},
+        {QStringLiteral("bg"), tr("Bulgarian")}, {QStringLiteral("bg_bg"), tr("Bulgarian (Bulgaria)")},
+        {QStringLiteral("bn"), tr("Bangla")}, {QStringLiteral("bn_bd"), tr("Bangla (Bangladesh)")}, {QStringLiteral("bn_in"), tr("Bangla (India)")},
+        {QStringLiteral("bo"), tr("Tibetan")}, {QStringLiteral("bo_cn"), tr("Tibetan (China)")}, {QStringLiteral("bo_in"), tr("Tibetan (India)")},
+        {QStringLiteral("br"), tr("Breton")}, {QStringLiteral("br_fr"), tr("Breton (France)")},
+        {QStringLiteral("bs"), tr("Bosnian")}, {QStringLiteral("bs_ba"), tr("Bosnian (Bosnia/Herzegovina)")}, {QStringLiteral("bs_ba_cyrl"), tr("Bosnian (Bosnia/Herzegovina - Cyrillic)")},
+        {QStringLiteral("ca"), tr("Catalan")}, {QStringLiteral("ca_es"), tr("Catalan (Spain)")}, {QStringLiteral("ca_es-valencia"), tr("Catalan (Spain - Valencian)")},
+        {QStringLiteral("ckb"), tr("Central Kurdish")}, {QStringLiteral("ckb_iq"), tr("Central Kurdish (Iraq)")},
+        {QStringLiteral("cs"), tr("Czech")}, {QStringLiteral("cs_cz"), tr("Czech (Czechia)")},
+        {QStringLiteral("da"), tr("Danish")}, {QStringLiteral("da_dk"), tr("Danish (Denmark)")},
+        {QStringLiteral("de"), tr("German")}, {QStringLiteral("de_at"), tr("German (Austria)")}, {QStringLiteral("de_at_frami"), tr("German (Austria, revised by F M Baumann)")}, {QStringLiteral("de_be"), tr("German (Belgium)")}, {QStringLiteral("de_ch"), tr("German (Switzerland)")}, {QStringLiteral("de_ch_frami"), tr("German (Switzerland, revised by F M Baumann)")}, {QStringLiteral("de_de"), tr("German (Germany/Belgium/Luxemburg)")}, {QStringLiteral("de_de_frami"), tr("German (Germany/Belgium/Luxemburg, revised by F M Baumann)")}, {QStringLiteral("de_li"), tr("German (Liechtenstein)")}, {QStringLiteral("de_lu"), tr("German (Luxembourg)")},
+        {QStringLiteral("el"), tr("Greek")}, {QStringLiteral("el_gr"), tr("Greek (Greece)")},
+        {QStringLiteral("en"), tr("English")}, {QStringLiteral("en_au"), tr("English (Australia)")}, {QStringLiteral("en_ca"), tr("English (Canadia)")}, {QStringLiteral("en_gb"), tr("English (United Kingdom)")}, {QStringLiteral("en_us"), tr("English (United States)")}, {QStringLiteral("en_za"), tr("English (South Africa)")},
+        {QStringLiteral("es"), tr("Spanish")}, {QStringLiteral("es_ar"), tr("Spanish (Argentina)")}, {QStringLiteral("es_bo"), tr("Spanish (Bolivia)")}, {QStringLiteral("es_cl"), tr("Spanish (Chile)")}, {QStringLiteral("es_co"), tr("Spanish (Colombia)")}, {QStringLiteral("es_cr"), tr("Spanish (Costa Rica)")}, {QStringLiteral("es_cu"), tr("Spanish (Cuba)")}, {QStringLiteral("es_do"), tr("Spanish (Dominican Republic)")}, {QStringLiteral("es_ec"), tr("Spanish (Ecuador)")}, {QStringLiteral("es_es"), tr("Spanish (Spain)")}, {QStringLiteral("es_gt"), tr("Spanish (Guatemala)")}, {QStringLiteral("es_hn"), tr("Spanish (Honduras)")}, {QStringLiteral("es_mx"), tr("Spanish (Mexico)")}, {QStringLiteral("es_ni"), tr("Spanish (Nicaragua)")}, {QStringLiteral("es_pa"), tr("Spanish (Panama)")}, {QStringLiteral("es_pe"), tr("Spanish (Peru)")}, {QStringLiteral("es_pr"), tr("Spanish (Puerto Rico)")}, {QStringLiteral("es_py"), tr("Spanish (Paraguay)")}, {QStringLiteral("es_sv"), tr("Spanish (El Savador)")}, {QStringLiteral("es_us"), tr("Spanish (United States)")}, {QStringLiteral("es_uy"), tr("Spanish (Uruguay)")}, {QStringLiteral("es_ve"), tr("Spanish (Venezuela)")},
+        {QStringLiteral("eu"), tr("Basque")}, {QStringLiteral("eu_es"), tr("Basque (Spain)")},{QStringLiteral("eu_fr"), tr("Basque (France)")},
+        {QStringLiteral("fr"), tr("French")}, {QStringLiteral("fr_be"), tr("French (Belgium)")}, {QStringLiteral("fr_ca"), tr("French (Catalan)")}, {QStringLiteral("fr_ch"), tr("French (Switzerland)")}, {QStringLiteral("fr_fr"), tr("French (France)")}, {QStringLiteral("fr_lu"), tr("French (Luxemburg)")}, {QStringLiteral("fr_mc"), tr("French (Monaco)")},
+        {QStringLiteral("gd"), tr("Gaelic")}, {QStringLiteral("gd_gb"), tr("Gaelic (United Kingdom {Scots})")},
+        {QStringLiteral("gl"), tr("Galician")}, {QStringLiteral("gl_es"), tr("Galician (Spain)")},
+        {QStringLiteral("gu"), tr("Gujarati")}, {QStringLiteral("gu_in"), tr("Gujarati (India)")},
+        {QStringLiteral("he"), tr("Hebrew")}, {QStringLiteral("he_il"), tr("Hebrew (Israel)")},
+        {QStringLiteral("hi"), tr("Hindi")}, {QStringLiteral("hi_in"), tr("Hindi (India)")},
+        {QStringLiteral("hr"), tr("Croatian")}, {QStringLiteral("hr_hr"), tr("Croatian (Croatia)")},
+        {QStringLiteral("hu"), tr("Hungarian")}, {QStringLiteral("hu_hu"), tr("Hungarian (Hungary)")},
+        {QStringLiteral("is"), tr("Icelandic")}, {QStringLiteral("is_is"), tr("Icelandic (Iceland)")},
+        {QStringLiteral("it"), tr("Italian")}, {QStringLiteral("it_ch"), tr("Italian (Switzerland)")}, {QStringLiteral("it_it"), tr("Italian (Italy)")},
+        {QStringLiteral("kk"), tr("Kazakh")}, {QStringLiteral("kk_kz"), tr("Kazakh (Kazakhstan)")},
+        {QStringLiteral("kmr"), tr("Kurmanji")}, {QStringLiteral("kmr_latn"), tr("Kurmanji {Latin-alphabet Kurdish}")},
+        {QStringLiteral("ko"), tr("Korean")}, {QStringLiteral("ko_kr"), tr("Korean (South Korea)")},
+        {QStringLiteral("ku"), tr("Kurdish")}, {QStringLiteral("ku_sy"), tr("Kurdish (Syria)")}, {QStringLiteral("ku_tr"), tr("Kurdish (Turkey)")},
+        {QStringLiteral("lo"), tr("Lao")}, {QStringLiteral("lo_la"), tr("Lao (Laos)")},
+        {QStringLiteral("lt"), tr("Lithuanian")}, {QStringLiteral("lt_lt"), tr("Lithuanian (Lithuania)")},
+        {QStringLiteral("ml"), tr("Malayalam")}, {QStringLiteral("ml_in"), tr("Malayalam (India)")},
+        {QStringLiteral("nb"), tr("Norwegian Bokmål")}, {QStringLiteral("nb_no"), tr("Norwegian Bokmål (Norway)")},
+        {QStringLiteral("ne"), tr("Nepali")}, {QStringLiteral("ne_np"), tr("Nepali (Nepal)")},
+        {QStringLiteral("nl"), tr("Dutch")}, {QStringLiteral("nl_be"), tr("Dutch (Belgium)")}, {QStringLiteral("nl_nl"), tr("Dutch (Netherlands)")},
+        {QStringLiteral("nn"), tr("Norwegian Nynorsk")}, {QStringLiteral("nn_no"), tr("Norwegian Nynorsk (Norway)")},
+        {QStringLiteral("oc"), tr("Occitan")},{QStringLiteral("oc_fr"), tr("Occitan (France)")},
+        {QStringLiteral("pl"), tr("Polish")}, {QStringLiteral("pl_pl"), tr("Polish (Poland)")},
+        {QStringLiteral("pt"), tr("Portuguese")}, {QStringLiteral("pt_br"), tr("Portuguese (Brazil)")}, {QStringLiteral("pt_pt"), tr("Portuguese (Portugal)")},
+        {QStringLiteral("ro"), tr("Romanian")}, {QStringLiteral("ro_ro"), tr("Romanian (Romania)")},
+        {QStringLiteral("ru"), tr("Russian")}, {QStringLiteral("ru_ru"), tr("Russian (Russia)")},
+        {QStringLiteral("se"), tr("Northern Sami")}, {QStringLiteral("se_fi"), tr("Northern Sami (Finland)")}, {QStringLiteral("se_no"), tr("Northern Sami (Norway)")}, {QStringLiteral("se_se"), tr("Northern Sami (Sweden)")},
+        {QStringLiteral("si"), tr("Sinhala")}, {QStringLiteral("si_lk"), tr("Sinhala (Sri Lanka)")},
+        {QStringLiteral("sk"), tr("Slovak")}, {QStringLiteral("sk_sk"), tr("Slovak (Slovakia)")},
+        {QStringLiteral("sl"), tr("Slovenian")}, {QStringLiteral("sl_si"), tr("Slovenian (Slovenia)")},
+        {QStringLiteral("sr"), tr("Serbian")}, {QStringLiteral("sr_me"), tr("Serbian (Montenegro)")}, {QStringLiteral("sr_rs"), tr("Serbian (Serbia)")}, {QStringLiteral("sr_latn_rs"), tr("Serbian (Serbia - Latin-alphabet)")},
+        {QStringLiteral("sv"), tr("Swedish")}, {QStringLiteral("sv_se"), tr("Swedish (Sweden)")}, {QStringLiteral("sv_fi"), tr("Swedish (Finland)")},
+        {QStringLiteral("sw"), tr("Swahili")}, {QStringLiteral("sw_ke"), tr("Swahili (Kenya)")}, {QStringLiteral("sw_tz"), tr("Swahili (Tanzania)")},
+        {QStringLiteral("te"), tr("Telugu")}, {QStringLiteral("te_in"), tr("Telugu (India)")},
+        {QStringLiteral("th"), tr("Thai")}, {QStringLiteral("th_th"), tr("Thai (Thailand)")},
+        {QStringLiteral("uk"), tr("Ukrainian")}, {QStringLiteral("uk_ua"), tr("Ukrainian (Ukraine)")},
+        {QStringLiteral("uz"), tr("Uzbek")}, {QStringLiteral("uz_uz"), tr("Uzbek (Uzbekistan)")},
+        {QStringLiteral("vi"), tr("Vietnamese")}, {QStringLiteral("vi_vn"), tr("Vietnamese (Vietnam)")},
+        {QStringLiteral("zh"), tr("Chinese")}, {QStringLiteral("zh_cn"), tr("Chinese (China - simplified)")}, {QStringLiteral("zh_tw"), tr("Chinese (Taiwan - traditional)")}};
+
     QFile file(QStringLiteral(":/translation-stats.json"));
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qWarning() << "translation statistics file isn't available, won't show stats in preferences";
@@ -183,12 +253,23 @@ void mudlet::loadLanguagesMap()
 mudlet::mudlet()
 : QMainWindow()
 , mFontManager()
+, mDiscord()
 , mToolbarIconSize(0)
 , mEditorTreeWidgetIconSize(0)
 , mWindowMinimized(false)
 , mReplaySpeed(1)
 , version(QString("Mudlet ") + QString(APP_VERSION) + QString(APP_BUILD))
 , mpCurrentActiveHost(nullptr)
+, mIsLoadingLayout(false)
+, mHasSavedLayout(false)
+, mpAboutDlg(nullptr)
+, mpModuleDlg(nullptr)
+, mpPackageManagerDlg(nullptr)
+, mShowIconsOnDialogs(true)
+, mShowIconsOnMenuCheckedState(Qt::PartiallyChecked)
+, mEnableFullScreenMode(false)
+, mInterfaceLanguage(QStringLiteral("en_US"))
+, mCopyAsImageTimeout{3}
 , mIsGoingDown(false)
 , mMenuBarVisibility(visibleAlways)
 , mToolbarVisibility(visibleAlways)
@@ -199,21 +280,13 @@ mudlet::mudlet()
 , mpLabelReplaySpeedDisplay(nullptr)
 , mpLabelReplayTime(nullptr)
 , mpTimerReplay(nullptr)
-, mIsLoadingLayout(false)
-, mHasSavedLayout(false)
 , mpToolBarReplay(nullptr)
 , moduleTable(nullptr)
-, mCompactInputLine(false)
-, mpAboutDlg(nullptr)
-, mpModuleDlg(nullptr)
-, mpPackageManagerDlg(nullptr)
 , mshowMapAuditErrors(false)
+, mCompactInputLine(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
-, mDiscord()
-, mShowIconsOnDialogs(true)
-, mCopyAsImageTimeout{3}
-, mInterfaceLanguage(QStringLiteral("en_US"))
+, mHunspell_sharedDictionary(nullptr)
 {
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     mpSettings = getQSettings();
@@ -3426,6 +3499,10 @@ mudlet::~mudlet()
     delete (mpTimerReplay);
     mpTimerReplay = nullptr;
 
+    if (mHunspell_sharedDictionary) {
+        saveDictionary(getMudletPath(mainDataItemPath, QStringLiteral("mudlet")), mWordSet_shared);
+        mHunspell_sharedDictionary = nullptr;
+    }
     mudlet::_self = nullptr;
 }
 
@@ -4308,11 +4385,11 @@ QPair<bool, QStringList> mudlet::getLines(Host* pHost, const QString& windowName
     }
 }
 
-bool mudlet::prepareDictionary(const QString& pathFileBaseName, QSet<QString>& wordSet)
+Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QString>& wordSet)
 {
     // Need to check that the files exist first:
-    QString dictionaryPathFileName(QStringLiteral("%1.dic").arg(pathFileBaseName));
-    QString affixPathFileName(QStringLiteral("%1.aff").arg(pathFileBaseName));
+    QString dictionaryPathFileName(getMudletPath(mudlet::profileDataItemPath, hostName, QStringLiteral("profile.dic")));
+    QString affixPathFileName(getMudletPath(mudlet::profileDataItemPath, hostName, QStringLiteral("profile.aff")));
     QFile dictionary(dictionaryPathFileName);
     QFile affix(affixPathFileName);
     int oldWordCount = 1;
@@ -4326,7 +4403,7 @@ bool mudlet::prepareDictionary(const QString& pathFileBaseName, QSet<QString>& w
         // First update the line count in the list of words
         if (!dictionary.open(QFile::ReadOnly|QFile::Text)) {
             qWarning().nospace().noquote() << "mudlet::prepareDictionary(...) ERROR - failed to open dictionary file (for reading): \"" << dictionaryPathFileName << "\" reason: " << dictionary.errorString();
-            return false;
+            return nullptr;
         }
 
         ds = new QTextStream(&dictionary);
@@ -4361,7 +4438,7 @@ bool mudlet::prepareDictionary(const QString& pathFileBaseName, QSet<QString>& w
 
         if (ds->status() != QTextStream::Ok) {
             qWarning().nospace().noquote() << "mudlet::prepareDictionary(...) ERROR - failed to completely read dictionary file: \"" << dictionaryPathFileName << "\" status: " << ds->status();
-            return false;
+            return nullptr;
         }
 
         delete ds;
@@ -4397,7 +4474,7 @@ bool mudlet::prepareDictionary(const QString& pathFileBaseName, QSet<QString>& w
     // certain other flags:
     if (!dictionary.open(QFile::WriteOnly|QFile::Text)) {
         qWarning().nospace().noquote() << "mudlet::prepareDictionary(...) ERROR - failed to open dictionary file (for writing): \"" << dictionaryPathFileName << "\" reason: " << dictionary.errorString();
-        return false;
+        return nullptr;
     }
 
     ds = new QTextStream(&dictionary);
@@ -4410,7 +4487,7 @@ bool mudlet::prepareDictionary(const QString& pathFileBaseName, QSet<QString>& w
     delete ds;
     if (dictionary.error() != QFile::NoError) {
         qWarning().nospace().noquote() << "mudlet::prepareDictionary(...) ERROR - failed to completely write dictionary file: \"" << dictionaryPathFileName << "\" status: " << dictionary.errorString();
-        return false;
+        return nullptr;
     }
 
     QMultiMap<unsigned int, QString> sortedGraphemeCounts;
@@ -4438,7 +4515,7 @@ bool mudlet::prepareDictionary(const QString& pathFileBaseName, QSet<QString>& w
     // Finally, having got the needed content, write it out:
     if (!affix.open(QFile::WriteOnly|QFile::Text)) {
         qWarning().nospace().noquote() << "mudlet::prepareDictionary(...) ERROR - failed to open affix file (for writing): \"" << affixPathFileName << "\" reason: " << affix.errorString();
-        return false;
+        return nullptr;
     }
 
     as = new QTextStream(&affix);
@@ -4448,7 +4525,7 @@ bool mudlet::prepareDictionary(const QString& pathFileBaseName, QSet<QString>& w
     delete as;
     if (affix.error() != QFile::NoError) {
         qWarning().nospace().noquote() << "mudlet::prepareDictionary(...) ERROR - failed to completely write affix file: \"" << affixPathFileName << "\" status: " << affix.errorString();
-        return false;
+        return nullptr;
     }
     affix.close();
 
@@ -4464,6 +4541,160 @@ bool mudlet::prepareDictionary(const QString& pathFileBaseName, QSet<QString>& w
     // to allow for persistant editing of it:
 
     wordSet = wordList.toSet();
+    return Hunspell_create(affixPathFileName.toUtf8().constData(), dictionaryPathFileName.toUtf8().constData());
+}
+
+Hunhandle* mudlet::prepareSharedDictionary()
+{
+    if (mHunspell_sharedDictionary) {
+        return mHunspell_sharedDictionary;
+    }
+
+    // Need to check that the files exist first:
+    QString dictionaryPathFileName(getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet.dic")));
+    QString affixPathFileName(getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet.aff")));
+    QFile dictionary(dictionaryPathFileName);
+    QFile affix(affixPathFileName);
+    int oldWordCount = 1;
+    QStringList wordList;
+    QHash<QString, unsigned int> graphemeCounts;
+    QStringList affixLines;
+    QTextStream* as = nullptr;
+    QTextStream* ds = nullptr;
+
+    if (dictionary.exists()) {
+        // First update the line count in the list of words
+        if (!dictionary.open(QFile::ReadOnly|QFile::Text)) {
+            qWarning().nospace().noquote() << "mudlet::prepareSharedDictionary(...) ERROR - failed to open dictionary file (for reading): \"" << dictionaryPathFileName << "\" reason: " << dictionary.errorString();
+            return nullptr;
+        }
+
+        ds = new QTextStream(&dictionary);
+        QString dictionaryLine;
+        ds->readLineInto(&dictionaryLine);
+
+        bool isOk = false;
+        oldWordCount = dictionaryLine.toInt(&isOk);
+        do {
+            ds->readLineInto(&dictionaryLine);
+            if (!dictionaryLine.isEmpty()) {
+                // qDebug().nospace().noquote() << "    " << dictionaryLine;
+                wordList << dictionaryLine;
+                QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, dictionaryLine);
+                // The finder will be at the start of the string
+                int startPos = 0;
+                int endPos = graphemeFinder.toNextBoundary();
+                do {
+                    if (endPos > 0) {
+                        QString grapheme(dictionaryLine.mid(startPos, endPos - startPos));
+                        if (graphemeCounts.contains(grapheme)) {
+                            ++graphemeCounts[grapheme];
+                        } else {
+                            graphemeCounts[grapheme] = 1;
+                        }
+                        startPos = endPos;
+                        endPos = graphemeFinder.toNextBoundary();
+                    }
+                } while (endPos > 0);
+            }
+        } while (!ds->atEnd() && ds->status() == QTextStream::Ok);
+
+        if (ds->status() != QTextStream::Ok) {
+            qWarning().nospace().noquote() << "mudlet::prepareSharedDictionary(...) ERROR - failed to completely read dictionary file: \"" << dictionaryPathFileName << "\" status: " << ds->status();
+            return nullptr;
+        }
+
+        delete ds;
+        ds = nullptr;
+        dictionary.close();
+    }
+
+    if (wordList.count() > 1) {
+        // This will use the system default locale - it might be better to use
+        // the Mudlet one...
+        QCollator sorter;
+        sorter.setCaseSensitivity(Qt::CaseSensitive);
+        std::sort(wordList.begin(), wordList.end(), sorter);
+        int dupCount = wordList.removeDuplicates();
+        if (dupCount) {
+            qDebug().nospace().noquote() << "  Removed " << dupCount << " duplicates.";
+        }
+    }
+
+    // We have read, sorted (and deduplicated if it was) the wordlist
+    int wordCount = wordList.count();
+    if (wordCount > oldWordCount) {
+        qDebug().nospace().noquote() << "  Considering an extra " << wordCount - oldWordCount << " words.";
+
+    } else if (wordCount < oldWordCount) {
+        qDebug().nospace().noquote() << "  Considering " << wordCount - oldWordCount << " fewer words.";
+    } else {
+        qDebug().nospace().noquote() << "  No change in the number of words in dictionary.";
+    }
+
+    // (Re)Open the file to write out the cleaned/new contents
+    // QFile::WriteOnly automatically implies QFile::Truncate in the abscence of
+    // certain other flags:
+    if (!dictionary.open(QFile::WriteOnly|QFile::Text)) {
+        qWarning().nospace().noquote() << "mudlet::prepareSharedDictionary(...) ERROR - failed to open dictionary file (for writing): \"" << dictionaryPathFileName << "\" reason: " << dictionary.errorString();
+        return nullptr;
+    }
+
+    ds = new QTextStream(&dictionary);
+    // Ensure the number is at least 1:
+    *ds << qMax(1, wordCount);
+    *ds << QChar(QChar::LineFeed);
+    *ds << wordList.join(QChar::LineFeed).toUtf8();
+    *ds << QChar(QChar::LineFeed);
+    ds->flush();
+    delete ds;
+    if (dictionary.error() != QFile::NoError) {
+        qWarning().nospace().noquote() << "mudlet::prepareSharedDictionary(...) ERROR - failed to completely write dictionary file: \"" << dictionaryPathFileName << "\" status: " << dictionary.errorString();
+        return nullptr;
+    }
+
+    QMultiMap<unsigned int, QString> sortedGraphemeCounts;
+    // Sort the graphemes into a descending order list:
+    if (graphemeCounts.size()) {
+        QHashIterator<QString, unsigned int> itGraphemeCount(graphemeCounts);
+        while (itGraphemeCount.hasNext()) {
+            itGraphemeCount.next();
+            sortedGraphemeCounts.insert(itGraphemeCount.value(), itGraphemeCount.key());
+        }
+    }
+
+    // Generate TRY line:
+    QString tryLine = QStringLiteral("TRY ");
+    QMapIterator<unsigned int, QString> itGrapheme(sortedGraphemeCounts);
+    itGrapheme.toBack();
+    while (itGrapheme.hasPrevious()) {
+        itGrapheme.previous();
+        tryLine.append(itGrapheme.value());
+    }
+
+    affixLines << QStringLiteral("SET UTF-8");
+    affixLines << tryLine;
+
+    // Finally, having got the needed content, write it out:
+    if (!affix.open(QFile::WriteOnly|QFile::Text)) {
+        qWarning().nospace().noquote() << "mudlet::prepareSharedDictionary(...) ERROR - failed to open affix file (for writing): \"" << affixPathFileName << "\" reason: " << affix.errorString();
+        return nullptr;
+    }
+
+    as = new QTextStream(&affix);
+    *as << affixLines.join(QChar::LineFeed).toUtf8();
+    *as << QChar(QChar::LineFeed);
+    as->flush();
+    delete as;
+    if (affix.error() != QFile::NoError) {
+        qWarning().nospace().noquote() << "mudlet::prepareSharedDictionary(...) ERROR - failed to completely write affix file: \"" << affixPathFileName << "\" status: " << affix.errorString();
+        return nullptr;
+    }
+    affix.close();
+
+    mWordSet_shared = wordList.toSet();
+    mHunspell_sharedDictionary = Hunspell_create(affixPathFileName.toUtf8().constData(), dictionaryPathFileName.toUtf8().constData());
+    return mHunspell_sharedDictionary;
 }
 
 bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& wordSet)
@@ -4589,4 +4820,73 @@ bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& word
     affix.close();
 
     return true;
+}
+
+QPair<bool, bool> mudlet::addSingleWordToSet(const QString& word)
+{
+    if (mDictionaryReadWriteLock.tryLockForWrite(100)) {
+        bool isAdded = false;
+        // Got write lock within the timeout:
+        if (!mWordSet_shared.contains(word)) {
+            mWordSet_shared.insert(word);
+            qDebug().noquote().nospace() << "mudlet::addSingleWordToSet(\"" << word << "\") INFO - word added to shared mWordSet.";
+            isAdded = true;
+        };
+        if (Hunspell_add(mHunspell_sharedDictionary, word.toUtf8().constData())) {
+            qDebug().noquote().nospace() << "mudlet::addSingleWordToSet(\"" << word << "\") INFO - word added to shared hunspell dictionary.";
+            isAdded = true;
+        };
+        mDictionaryReadWriteLock.unlock();
+        return qMakePair(true, isAdded);
+
+    }
+
+    // Failed to get lock
+    qDebug() << "mudlet::addSingleWordToSet(\"" << word << "\") ALERT - failed to get a write lock to access mWordSet_shared and shared Hunspell dictionary, aborting...";
+    return qMakePair(false, false);
+}
+
+QPair<bool, bool> mudlet::removeSingleWordFromSet(const QString& word)
+{
+    if (mDictionaryReadWriteLock.tryLockForWrite(100)) {
+        bool isRemoved = false;
+        // Got write lock within the timeout:
+
+        if (mWordSet_shared.remove(word)) {
+            qDebug().noquote().nospace() << "mudlet::removeSingleWordFromSet(\"" << word << "\") INFO - word removed from shared mWordSet.";
+            isRemoved = true;
+        };
+        if (Hunspell_remove(mHunspell_sharedDictionary, word.toUtf8().constData())) {
+            qDebug().noquote().nospace() << "mudlet::removeSingleWordFromSet(\"" << word << "\") INFO - word removed from shared hunspell dictionary.";
+            isRemoved = true;
+        };
+        mDictionaryReadWriteLock.unlock();
+        return qMakePair(true, isRemoved);
+    }
+
+    // Failed to get lock
+    qDebug() << "mudlet::removeSingleWordFromSet(\"" << word << "\") ALERT - failed to get a write lock to access mWordSet_shared and shared Hunspell dictionary, aborting...";
+    return qMakePair(false, false);
+}
+
+QSet<QString> mudlet::getWordSet()
+{
+    bool gotWordSet = false;
+    QSet<QString> wordSet;
+    do {
+        if (mDictionaryReadWriteLock.tryLockForRead(100)) {
+            // Got read lock within the timeout:
+            wordSet = mWordSet_shared;
+            // Ensure we make a deep copy of it so the caller is not affected by
+            // other profiles' edits after we unlock.
+            wordSet.detach();
+            // Now we can unlock it:
+            mDictionaryReadWriteLock.unlock();
+            gotWordSet = true;
+        } else {
+            qDebug() << "mudlet::getWordSet() ALERT - failed to get a read lock to access mWordSet_shared, retrying...";
+        }
+    } while (!gotWordSet);
+
+    return wordSet;
 }

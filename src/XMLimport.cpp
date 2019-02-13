@@ -808,13 +808,9 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mMapStrongHighlight = (attributes().value("mMapStrongHighlight") == "yes");
     pHost->mLogStatus = (attributes().value("mLogStatus") == "yes");
     pHost->mEnableSpellCheck = (attributes().value("mEnableSpellCheck") == "yes");
-    pHost->mAutoAddServerWordsToDictionary = (attributes().value("mAutoAddServerWordsToDictionary") == "yes");
-    if (attributes().hasAttribute(QLatin1String("mMinimumAutoAddWordLength"))) {
-        pHost->mMinimumAutoAddWordLength = attributes().value("mMinimumAutoAddWordLength").toInt();
-    } else {
-        pHost->mMinimumAutoAddWordLength = 4;
-    }
-    pHost->mAutoAddWordsWithDigits = (attributes().value("mAutoAddWordsWithDigits") == "yes");
+    bool enableUserDictionary = (attributes().value("mEnableUserDictionary") == "yes");
+    bool useSharedDictionary = (attributes().value("mUseSharedDictionary") == "yes");
+    pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     pHost->mShowInfo = (attributes().value("mShowInfo") == "yes");
     pHost->mAcceptServerGUI = (attributes().value("mAcceptServerGUI") == "yes");
     pHost->mMapperUseAntiAlias = (attributes().value("mMapperUseAntiAlias") == "yes");

@@ -180,6 +180,10 @@ private:
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
 
     QString mLogDirPath;
+    // Needed to remember the state on construction so that we can sent the same
+    // flag back for Host::mUseSharedDictionary even if we turn-off
+    // Host::mEnableUserDictionary:
+    bool mUseSharedDictionary;
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

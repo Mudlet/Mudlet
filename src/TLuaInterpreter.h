@@ -493,11 +493,11 @@ public:
     static int setDiscordGame(lua_State*);
     static int getPlayerRoom(lua_State*);
     static int getMapSelection(lua_State*);
-    static int addWordToProfileDictionary(lua_State*);
-    static int removeWordFromProfileDictionary(lua_State*);
+    static int addWordToDictionary(lua_State*);
+    static int removeWordFromDictionary(lua_State*);
     static int spellCheckWord(lua_State*);
     static int spellSuggestWord(lua_State*);
-    static int getProfileDictionaryWordList(lua_State*);
+    static int getUserDictionaryWordList(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 

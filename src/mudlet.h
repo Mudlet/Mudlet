@@ -46,6 +46,7 @@
 #include <QPointer>
 #include <QProxyStyle>
 #include <QQueue>
+#include <QReadWriteLock>
 #include <QSettings>
 #include <QTextOption>
 #include <QTime>
@@ -57,6 +58,9 @@
 #include <QGamepad>
 #endif
 #include "post_guard.h"
+
+#include <hunspell/hunspell.hxx>
+#include <hunspell/hunspell.h>
 
 #include <assert.h>
 
@@ -363,14 +367,19 @@ public:
     QList<QString> getAvailableTranslationCodes() const { return mTranslatorsMap.keys(); }
     QPair<bool, QStringList> getLines(Host* pHost, const QString& windowName, const int lineFrom, const int lineTo);
     void setEnableFullScreenMode(const bool);
+
     // Both of these revises the contents of the .aff file: the first will
     // handle a .dic file that has been updated externally/manually (to add
     // or remove words) - it also puts the contents of the .dic file into the
     // supplied second argument; the second will replace the .dic file with just
     // the words in the supplied second argument and is to be used at the end of
     // a session to store away the user's changes:
-    bool prepareDictionary(const QString&, QSet<QString>&);
+    Hunhandle* prepareProfileDictionary(const QString&, QSet<QString>&);
+    Hunhandle* prepareSharedDictionary();
     bool saveDictionary(const QString&, QSet<QString>&);
+    QPair<bool, bool> addSingleWordToSet(const QString&);
+    QPair<bool, bool> removeSingleWordFromSet(const QString&);
+    QSet<QString> getWordSet();
 
 
 #if defined(INCLUDE_UPDATER)
@@ -398,6 +407,9 @@ public:
     // translations done high enough will get a gold star to hide the last few percent
     // as well as encourage translators to maintain it;
     const int mTranslationStar = 95;
+
+    // A different version of the above intended for Dictionary identification - it might be possible to merge them:
+    QHash<QString, QString>mDictionaryLanguageCodeMap;
 
 public slots:
     void processEventLoopHack_timerRun();
@@ -598,6 +610,14 @@ private:
     QList<QPointer<QTranslator>> mTranslatorsLoadedList;
     void loadTranslationFile(const QString& translationFileName, const QString &filePath, QString &languageCode);
     void loadLanguagesMap();
+
+    // Points to the common mudlet dictionary handle once a profile has
+    // requested it, then gets closed at termination of the application.
+    Hunhandle* mHunspell_sharedDictionary;
+    // The collection of words in the above:
+    QSet<QString> mWordSet_shared;
+    // Prevent problems when updating the dictionary:
+    QReadWriteLock mDictionaryReadWriteLock;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

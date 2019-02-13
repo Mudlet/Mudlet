@@ -134,9 +134,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mMapStrongHighlight(false)
 , mLogStatus(false)
 , mEnableSpellCheck(true)
-, mAutoAddServerWordsToDictionary(false)
-, mAutoAddWordsWithDigits(false)
-, mMinimumAutoAddWordLength(4)
 , mDiscordDisableServerSide(true)
 , mDiscordAccessFlags(DiscordLuaAccessEnabled | DiscordSetSubMask)
 , mLineSize(10.0)
@@ -175,6 +172,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mSGRCodeHasColSpaceId(false)
 , mServerMayRedefineColors(false)
 , mSpellDic()
+, mEnableUserDictionary(false)
+, mUseSharedDictionary(false)
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
@@ -1672,5 +1671,31 @@ void Host::setSpellDic(const QString& newDict)
     locker.unlock();
     if (isChanged && mpConsole) {
         mpConsole->setSystemSpellDictionary(newDict);
+    }
+}
+
+// When called from dlgProfilePreferences the second flag will only be changed
+// if necessary:
+void Host::setUserDictionaryOptions(const bool useDictionary, const bool useShared)
+{
+    QMutexLocker locker(& mLock);
+    bool isChanged = false;
+    if (mEnableUserDictionary != useDictionary) {
+        mEnableUserDictionary = useDictionary;
+        isChanged = true;
+    }
+
+    if (mUseSharedDictionary != useShared) {
+        mUseSharedDictionary = useShared;
+        isChanged = true;
+    }
+    locker.unlock();
+
+    // During start-up this gets called for the default_host profile - but that
+    // has a null mpConsole:
+    if (isChanged && mpConsole) {
+        // This will propogate the changes in the two flags to the main
+        // TConsole's copies of them:
+        mpConsole->setProfileSpellDictionary();
     }
 }

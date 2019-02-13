@@ -397,9 +397,11 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mMapStrongHighlight") = pHost->mMapStrongHighlight ? "yes" : "no";
     host.append_attribute("mLogStatus") = pHost->mLogStatus ? "yes" : "no";
     host.append_attribute("mEnableSpellCheck") = pHost->mEnableSpellCheck ? "yes" : "no";
-    host.append_attribute("mAutoAddServerWordsToDictionary") = pHost->mAutoAddServerWordsToDictionary ? "yes" : "no";
-    host.append_attribute("mMinimumAutoAddWordLength") = QString::number(pHost->mMinimumAutoAddWordLength).toUtf8().constData();;
-    host.append_attribute("mAutoAddWordsWithDigits") = pHost->mAutoAddWordsWithDigits ? "yes" : "no";
+    bool enableUserDictionary;
+    bool useSharedDictionary;
+    mpHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
+    host.append_attribute("mEnableUserDictionary") = enableUserDictionary ? "yes" : "no";
+    host.append_attribute("mUseSharedDictionary") = useSharedDictionary ? "yes" : "no";
     host.append_attribute("mShowInfo") = pHost->mShowInfo ? "yes" : "no";
     host.append_attribute("mAcceptServerGUI") = pHost->mAcceptServerGUI ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
