@@ -32,6 +32,7 @@
 #endif // defined(Q_OS_WIN32) && ! defined(INCLUDE_UPDATER)
 #include <QPainter>
 #include <QSplashScreen>
+#include <QScreen>
 #include "post_guard.h"
 
 
@@ -188,9 +189,24 @@ int main(int argc, char* argv[])
     spDebugConsole = nullptr;
     unsigned int startupAction = 0;
 
+#if defined(Q_OS_UNIX) && (QT_VERSION < QT_VERSION_CHECK(5, 12, 0))
+    bool enableHighDpiScaling = false;
+
+    {
+        // it's not possible to get any screen information before a QApplication
+        // is created, and it's also not possible to set the HiDPI option after its been
+        // created. Hence, create a fake one to get screen info.
+        QApplication fakeApp(argc, argv);
+        qDebug() << "desktop DPI: " << fakeApp.desktop()->screen()->devicePixelRatio();
+        if (fakeApp.desktop()->screen()->devicePixelRatio() > 1) {
+            enableHighDpiScaling = true;
+        }
+    }
+
+    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling, enableHighDpiScaling);
+
     // due to a Qt bug, this only safely works for both non- and HiDPI displays on 5.12+
-    // 5.6 - 5.11 make the application blow up in size on non-HiDPI displays
-#if defined (Q_OS_UNIX) && (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
+#elif defined(Q_OS_UNIX) && (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
 
