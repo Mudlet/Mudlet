@@ -4324,7 +4324,7 @@ bool mudlet::prepareDictionary(const QString& pathFileBaseName, QSet<QString>& w
 
     if (dictionary.exists()) {
         // First update the line count in the list of words
-        if (!dictionary.open(QFile::ReadOnly|QFile::ExistingOnly|QFile::Text)) {
+        if (!dictionary.open(QFile::ReadOnly|QFile::Text)) {
             qWarning().nospace().noquote() << "mudlet::prepareDictionary(...) ERROR - failed to open dictionary file (for reading): \"" << dictionaryPathFileName << "\" reason: " << dictionary.errorString();
             return false;
         }
@@ -4473,7 +4473,7 @@ bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& word
     QString affixPathFileName(QStringLiteral("%1.aff").arg(pathFileBaseName));
     QFile dictionary(dictionaryPathFileName);
     QFile affix(affixPathFileName);
-    if (!dictionary.open(QFile::ReadOnly|QFile::ExistingOnly|QFile::Text)) {
+    if (!dictionary.open(QFile::ReadOnly|QFile::Text)) {
         qWarning().nospace().noquote() << "mudlet::saveDictionary(...) ERROR - failed to open dictionary file (for reading): \"" << dictionaryPathFileName << "\" reason: " << dictionary.errorString();
         return false;
     }

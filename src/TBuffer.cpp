@@ -26,6 +26,7 @@
 #include "TConsole.h"
 
 #include "pre_guard.h"
+#include <QTextBoundaryFinder>
 #include <QTextCodec>
 #include <QRegularExpression>
 #include "post_guard.h"

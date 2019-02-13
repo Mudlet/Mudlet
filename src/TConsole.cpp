@@ -43,6 +43,7 @@
 #include <QRegularExpression>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QTextBoundaryFinder>
 #include <QTextCodec>
 #include "post_guard.h"
 

@@ -47,6 +47,7 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QCollator>
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QVector>

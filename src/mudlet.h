@@ -69,6 +69,7 @@ class QPushButton;
 class QTableWidget;
 class QTableWidgetItem;
 class QTextEdit;
+class QToolButton;
 class QTimer;
 
 class Host;
