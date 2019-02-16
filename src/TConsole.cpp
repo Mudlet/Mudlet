@@ -560,8 +560,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         // So, this SHOULD be the main profile mUpperPane - Slysven
         connect(mudlet::self(), &mudlet::signal_profileMapReloadRequested, this, &TConsole::slot_reloadMap, Qt::UniqueConnection);
         connect(this, &TConsole::signal_newDataAlert, mudlet::self(), &mudlet::slot_newDataOnHost, Qt::UniqueConnection);
-        connect(mudlet::self(), SIGNAL(signal_moveConfigDirRequested(QString, QString)), this, SLOT(slot_closeFiles()));
-        connect(mudlet::self(), SIGNAL(signal_moveConfigDirCompleted(QString, QString)), this, SLOT(slot_openFiles()));
+        connect(mudlet::self(), &mudlet::signal_moveConfigDirRequested, this, &TConsole::slot_closeFiles);
+        connect(mudlet::self(), &mudlet::signal_moveConfigDirCompleted, this, &TConsole::slot_openFiles);
 
         // For some odd reason the first seems to get connected twice - the
         // last flag prevents multiple ones being made

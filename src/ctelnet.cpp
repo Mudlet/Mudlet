@@ -158,9 +158,8 @@ cTelnet::cTelnet(Host* pH)
 
     mpDownloader = new QNetworkAccessManager(this);
     connect(mpDownloader, &QNetworkAccessManager::finished, this, &cTelnet::replyFinished);
-
-    connect(mudlet::self(), SIGNAL(signal_moveConfigDirRequested(QString, QString)), this, SLOT(slot_closeFiles()));
-    connect(mudlet::self(), SIGNAL(signal_moveConfigDirCompleted(QString, QString)), this, SLOT(slot_openFiles(QString, QString)));
+    connect(mudlet::self(), &mudlet::signal_moveConfigDirRequested, this, &cTelnet::slot_closeFiles);
+    connect(mudlet::self(), &mudlet::signal_moveConfigDirCompleted, this, &cTelnet::slot_openFiles);
 }
 
 void cTelnet::reset()

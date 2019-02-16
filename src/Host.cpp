@@ -212,7 +212,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
                     {"Google",     "https://www.google.com/search?q="}
     });
 
-    auto optin = readProfileData(QStringLiteral("discordserveroptin"));
+    auto optin = readProfileData(QStringLiteral("DiscordServerOptIn"));
     if (!optin.isEmpty()) {
         mDiscordDisableServerSide = optin.toInt() == Qt::Unchecked ? true : false;
     }
@@ -1246,7 +1246,7 @@ QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& 
 // Similar to the above, a convenience for reading profile data for this host.
 QString Host::readProfileData(const QString& item)
 {
-    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, getName(), item));
+    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, getName(), item.toLower()));
     bool success = file.open(QIODevice::ReadOnly);
     QString ret;
     if (success) {

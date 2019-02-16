@@ -292,9 +292,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     auto current = pMudlet->mInterfaceLanguage;
     comboBox_guiLanguage->setCurrentText(pMudlet->mLanguageCodeMap.value(current).first);
     connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
-
-    // configuration directory is still WIP
-    groupBox_config->hide();
 }
 
 void dlgProfilePreferences::disableHostDetails()

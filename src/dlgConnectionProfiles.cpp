@@ -197,8 +197,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mErrorPalette.setColor(QPalette::Base, QColor(255, 235, 235));
 
     profiles_tree_widget->setViewMode(QListView::IconMode);
-
-//    groupBox_config->
 }
 
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it
@@ -559,8 +557,8 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
     } else {
         // For backwards compatibility's sake, if the INI file does not contain
         // the item, read the item from a separate item file in the profile's
-        // data item path.
-        QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
+        // data item path with the all-lowercase name
+        QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item.toLower()));
 
         bool success = file.open(QIODevice::ReadOnly);
         QString ret;
@@ -586,16 +584,16 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
     }
 
     if (mCurrentQSettings) {
-        mCurrentQSettings->setValue(QStringLiteral("url"), host_name_entry->text());
-        mCurrentQSettings->setValue(QStringLiteral("port"), port_entry->text().trimmed());
-        mCurrentQSettings->setValue(QStringLiteral("login"), login_entry->text());
-        mCurrentQSettings->setValue(QStringLiteral("password"), character_password_entry->text());
-        mCurrentQSettings->setValue(QStringLiteral("autologin"), QString::number(autologin_checkBox->checkState()));
-        mCurrentQSettings->setValue(QStringLiteral("description"), mud_description_textedit->toPlainText());
-        mCurrentQSettings->setValue(QStringLiteral("website"), website_entry->text());
-        mCurrentQSettings->setValue(QStringLiteral("autoreconnect"), QString::number(auto_reconnect->checkState()));
-        mCurrentQSettings->setValue(QStringLiteral("discordserveroptin"), QString::number(discord_optin_checkBox->checkState()));
-        mCurrentQSettings->setValue(QStringLiteral("ssl_tsl"), QString::number(port_ssl_tsl->checkState()));
+        mCurrentQSettings->setValue(QStringLiteral("Url"), host_name_entry->text());
+        mCurrentQSettings->setValue(QStringLiteral("Port"), port_entry->text().trimmed());
+        mCurrentQSettings->setValue(QStringLiteral("Login"), login_entry->text());
+        mCurrentQSettings->setValue(QStringLiteral("Password"), character_password_entry->text());
+        mCurrentQSettings->setValue(QStringLiteral("Autologin"), QString::number(autologin_checkBox->checkState()));
+        mCurrentQSettings->setValue(QStringLiteral("Description"), mud_description_textedit->toPlainText());
+        mCurrentQSettings->setValue(QStringLiteral("Website"), website_entry->text());
+        mCurrentQSettings->setValue(QStringLiteral("AutoReconnect"), QString::number(auto_reconnect->checkState()));
+        mCurrentQSettings->setValue(QStringLiteral("DiscordServerOptIn"), QString::number(discord_optin_checkBox->checkState()));
+        mCurrentQSettings->setValue(QStringLiteral("Ssl_Tsl"), QString::number(port_ssl_tsl->checkState()));
     }
 
     if (mCurrentQSettings->status() == QSettings::NoError) {
@@ -697,7 +695,7 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                  * -- end translation --
                  */
     } else if (mCurrentQSettings) {
-        return readProfileData(profile_name, "description");
+        return readProfileData(profile_name, QStringLiteral("Description"));
     } else {
         return QString();
     }
@@ -725,7 +723,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     // Set mCurrentQSettings to the currently selected profile's INI file.
     mCurrentQSettings = getProfileSettings(profile);
 
-    QString host_url = readProfileData(profile, QStringLiteral("url"));
+    QString host_url = readProfileData(profile, QStringLiteral("Url"));
     if (host_url.isEmpty()) {
         // Host to connect to, see below for port
         if (profile_name == QStringLiteral("Avalon.de")) {
@@ -789,8 +787,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     host_name_entry->setText(host_url);
 
 
-    QString host_port = readProfileData(profile, QStringLiteral("port"));
-    QString val = readProfileData(profile, QStringLiteral("ssl_tsl"));
+    QString host_port = readProfileData(profile, QStringLiteral("Port"));
+    QString val = readProfileData(profile, QStringLiteral("Ssl_Tsl"));
     if (val.toInt() == Qt::Checked) {
         port_ssl_tsl->setChecked(true);
     } else {
@@ -895,20 +893,20 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
 
     port_entry->setText(host_port);
 
-    val = readProfileData(profile, QStringLiteral("password"));
+    val = readProfileData(profile, QStringLiteral("Password"));
     character_password_entry->setText(val);
 
-    val = readProfileData(profile, QStringLiteral("login"));
+    val = readProfileData(profile, QStringLiteral("Login"));
     login_entry->setText(val);
 
-    val = readProfileData(profile, QStringLiteral("autologin"));
+    val = readProfileData(profile, QStringLiteral("Autologin"));
     if (val.toInt() == Qt::Checked) {
         autologin_checkBox->setChecked(true);
     } else {
         autologin_checkBox->setChecked(false);
     }
 
-    val = readProfileData(profile, QStringLiteral("autoreconnect"));
+    val = readProfileData(profile, QStringLiteral("AutoReconnect"));
     if (!val.isEmpty() && val.toInt() == Qt::Checked) {
         auto_reconnect->setChecked(true);
     } else {
@@ -921,7 +919,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     // since an update to a Mudlet version supporting Discord - so a toint()
     // will return 0 - which just happens to be Qt::Unchecked() but lets not
     // rely on that...
-    val = readProfileData(profile, QStringLiteral("discordserveroptin"));
+    val = readProfileData(profile, QStringLiteral("DiscordServerOptIn"));
     if ((!val.isEmpty()) && val.toInt() == Qt::Checked) {
         discord_optin_checkBox->setChecked(true);
     } else {
@@ -932,7 +930,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
 
     mud_description_textedit->setPlainText(getDescription(host_url, host_port.toUInt(), profile_name));
 
-    val = readProfileData(profile, QStringLiteral("website"));
+    val = readProfileData(profile, QStringLiteral("Website"));
     if (val.isEmpty()) {
         if (profile_name == QStringLiteral("Avalon.de")) {
             val = QStringLiteral("<center><a href='http://avalon.mud.de'>http://avalon.mud.de</a></center>");
@@ -1681,13 +1679,13 @@ void dlgConnectionProfiles::slot_connectToServer()
         if (host_name_entry->text().trimmed().size() > 0) {
             pHost->setUrl(host_name_entry->text().trimmed());
         } else {
-            mCurrentQSettings->setValue(QStringLiteral("url"), pHost->getUrl());
+            mCurrentQSettings->setValue(QStringLiteral("Url"), pHost->getUrl());
         }
 
         if (port_entry->text().trimmed().size() > 0) {
             pHost->setPort(port_entry->text().trimmed().toInt());
         } else {
-            mCurrentQSettings->setValue(QStringLiteral("port"), QString::number(pHost->getPort()));
+            mCurrentQSettings->setValue(QStringLiteral("Port"), QString::number(pHost->getPort()));
         }
 
         pHost->mSslTsl = port_ssl_tsl->isChecked();
@@ -1695,13 +1693,13 @@ void dlgConnectionProfiles::slot_connectToServer()
         if (character_password_entry->text().trimmed().size() > 0) {
             pHost->setPass(character_password_entry->text().trimmed());
         } else {
-            mCurrentQSettings->setValue(QStringLiteral("password"), pHost->getPass());
+            mCurrentQSettings->setValue(QStringLiteral("Password"), pHost->getPass());
         }
 
         if (login_entry->text().trimmed().size() > 0) {
             pHost->setLogin(login_entry->text().trimmed());
         } else {
-            mCurrentQSettings->setValue(QStringLiteral("login"), pHost->getLogin());
+            mCurrentQSettings->setValue(QStringLiteral("Login"), pHost->getLogin());
         }
 
         // This settings also need to be configured, note that the only time not to
