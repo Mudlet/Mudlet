@@ -1192,73 +1192,76 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="109"/>
       <source>Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Debug Console</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="767"/>
       <source>Save profile?</source>
-      <translation type="unfinished"/>
+      <translation>Save profile?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="767"/>
       <source>Do you want to save the profile %1?</source>
-      <translation type="unfinished"/>
+      <translation>Do you want to save the profile %1?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="780"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>Couldn&apos;t save profile</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="780"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Sorry, couldn&apos;t save your profile - got the following error: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="853"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {2 of 2}).</comment>
-      <translation type="unfinished"/>
+      <translation>logfile</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="888"/>
       <source>Logging has started. Log file is %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Logging has started. Log file is %1
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="898"/>
       <source>Logging has been stopped. Log file is %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Logging has been stopped. Log file is %1
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="943"/>
       <source>Mudlet MUD Client version: %1%2</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet MUD Client version: %1%2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="945"/>
       <source>Mudlet, log from %1 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, log from %1 profile</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="981"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1002"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.
 </source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1011"/>
       <source>Log session ending at %1.</source>
-      <translation type="unfinished"/>
+      <translation>Log session ending at %1.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1012"/>
@@ -1545,13 +1548,14 @@ yajl.* Lua functions won&apos;t be available.
       <location filename="../src/TLuaInterpreter.cpp" line="14966"/>
       <location filename="../src/TLuaInterpreter.cpp" line="14982"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14976"/>
       <source>[ ERROR ] - LuaGlobal.lua compile error - please report!
 Error from Lua: </source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - LuaGlobal.lua compile error - please report!
+Error from Lua: </translation>
     </message>
   </context>
   <context>
@@ -1559,209 +1563,228 @@ Error from Lua: </source>
     <message>
       <location filename="../src/TMap.cpp" line="208"/>
       <source>RoomID=%1 does not exist, can not set AreaID=%2 for non-existing room!</source>
-      <translation type="unfinished"/>
+      <translation>RoomID=%1 does not exist, can not set AreaID=%2 for non-existing room!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="219"/>
       <source>AreaID=%2 does not exist, can not set RoomID=%1 to non-existing area!</source>
-      <translation type="unfinished"/>
+      <translation>AreaID=%2 does not exist, can not set RoomID=%1 to non-existing area!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="437"/>
       <source>[ INFO ]  - Auditing of a loaded/imported/downloaded map starting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Auditing of a loaded/imported/downloaded map starting...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="463"/>
       <source>[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="466"/>
       <source>[ INFO ] - Converting old style label id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Converting old style label id: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="471"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="474"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label with id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - CONVERTING: cannot convert old style label with id: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="503"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="510"/>
       <source>[  OK  ]  - Map loaded successfully (%1s).</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Map loaded successfully (%1s).</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="997"/>
       <source>n</source>
       <comment>This translation converts the direction that DIR_NORTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>n</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="998"/>
       <source>ne</source>
       <comment>This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>ne</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="999"/>
       <source>e</source>
       <comment>This translation converts the direction that DIR_EAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>e</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1000"/>
       <source>se</source>
       <comment>This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>se</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1001"/>
       <source>s</source>
       <comment>This translation converts the direction that DIR_SOUTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>s</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1002"/>
       <source>sw</source>
       <comment>This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>sw</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1003"/>
       <source>w</source>
       <comment>This translation converts the direction that DIR_WEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>w</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1004"/>
       <source>nw</source>
       <comment>This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>nw</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1005"/>
       <source>up</source>
       <comment>This translation converts the direction that DIR_UP codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>up</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1006"/>
       <source>down</source>
       <comment>This translation converts the direction that DIR_DOWN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>down</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1007"/>
       <source>in</source>
       <comment>This translation converts the direction that DIR_IN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>in</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1008"/>
       <source>out</source>
       <comment>This translation converts the direction that DIR_OUT codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>out</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1047"/>
       <source>[ ALERT ] - Saving map in a format {%1} that is different than the one it was
 loaded as {%2}. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Saving map in a format {%1} that is different than the one it was
+loaded as {%2}. This may be an issue if you want to share the resulting
+map with others relying on the original format.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="185"/>
       <source>[MAP ERROR:]%1
 </source>
-      <translation type="unfinished"/>
+      <translation>[MAP ERROR:]%1
+</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1031"/>
       <source>[ ERROR ] - The format {%1} you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version {%2}.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - The format {%1} you are trying to save the map with is too new
+for this version of Mudlet. Supported formats are only up to version {%2}.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1057"/>
       <source>[ WARN ]  - Saving map in a format {%1} different from the
 recommended format {%2} for this version of Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Saving map in a format {%1} different from the
+recommended format {%2} for this version of Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1088"/>
       <source>[ ALERT ] - Map User data has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Map user data has been lost in saved map file.  Re-save in a
+format of at least 17 to preserve it before quitting!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1167"/>
       <source>[ ALERT ] - User data for this area has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - User data for this area has been lost in saved map file.  Re-save in a
+format of at least 17 to preserve it before quitting!
+</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1171"/>
       <source>[ ALERT ] - Area User data has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!
 Areas id affected: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Area user data has been lost in saved map file.  Re-save in a
+format of at least 17 to preserve it before quitting!
+Area id affected: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1174"/>
       <source>, </source>
-      <translation type="unfinished"/>
+      <translation>, </translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1406"/>
       <location filename="../src/TMap.cpp" line="1696"/>
       <source>[ ERROR ] - Unable to open (for reading) map file: &quot;%1&quot;!</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Unable to open map file for reading: &quot;%1&quot;!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1415"/>
       <source>[ ERROR ] - Map file is too new, its file format (%1) is higher than this version of
 Mudlet can handle (%2)!  The file is:
 &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Map file is too new, its file format (%1) is higher than this version of
+Mudlet can handle (%2)!  The file is:
+&quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1422"/>
       <source>[ INFO ]  - You will need to upgrade your Mudlet or find a map file saved in an
 older format.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - You will need to upgrade your Mudlet or find a map file saved in an
+older format.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1429"/>
       <source>[ ALERT ] - Map file is really old, it&apos;s file format (%1) is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try!  The file is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Map file is really old, its file format (%1) is so ancient that
+this version of Mudlet may not gain enough information from
+it but it will try!  The file is: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1436"/>
       <source>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
 There is so much data that it DOES NOT have that you could be
 better off starting again...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
+There is so much data that it DOES NOT have that you could be
+better off starting again...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1445"/>
       <source>[ INFO ]  - Reading map (format version:%1) file:
 &quot;%2&quot;,
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Reading map (format version:%1) file:
+&quot;%2&quot;,
+Please wait...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1446"/>
