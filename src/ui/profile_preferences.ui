@@ -2650,6 +2650,9 @@
          <property name="enabled">
           <bool>false</bool>
          </property>
+         <property name="toolTip">
+          <string>Option to use a custom location for your Mudlet profiles is coming soon</string>
+         </property>
          <property name="title">
           <string>Configuration options</string>
          </property>
