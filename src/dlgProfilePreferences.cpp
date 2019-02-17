@@ -440,6 +440,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     ircNick->setText(dlgIRC::readIrcNickName(pHost));
 
     dictList->setSelectionMode(QAbstractItemView::SingleSelection);
+    dictList->clear();
+    // Disable sorting whilst populating the widget:
+    dictList->setSortingEnabled(false);
     groupBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
     bool useUserDictionary = false;
     pHost->getUserDictionaryOptions(useUserDictionary, mUseSharedDictionary);
@@ -465,47 +468,80 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     QString path;
     // This is duplicated (and should be the same as) the code in:
     // (void)TConsole::setSystemSpellDictionary(const QString& newDict)
+    // On the first run for a profile this will be the "English (American)"
+    // dictionary "en_US".
     const QString& currentDictionary = pHost->getSpellDic();
-    // Tweak the label for the provided spelling dictionaries depending on where
-    // they come from:
-    QString dictionarySourceText_mudlet = tr("Mudlet dictionaries:", "On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on \*nix systems where we do not find the system ones.");
-    QString dictionarySourceText_system = tr("System dictionaries:", "On \*nix systems where we find the system ones we use them.");
 #if defined(Q_OS_MACOS)
     path = QStringLiteral("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
-    label_chooseSpellCheckDictionary->setText(dictionarySourceText_mudlet);
+    mudlet::self()->mUsingMudletDictionaries = true;
 #elif defined(Q_OS_FREEBSD)
     if (QFile::exists(QStringLiteral("/usr/local/share/hunspell/%1.aff").arg(currentDictionary))) {
         path = QLatin1String("/usr/local/share/hunspell/");
-        label_chooseSpellCheckDictionary->setText(dictionarySourceText_system);
+        mudlet::self()->mUsingMudletDictionaries = false;
     } else if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(currentDictionary))) {
         path = QLatin1String("/usr/share/hunspell/");
-        label_chooseSpellCheckDictionary->setText(dictionarySourceText_system);
+        mudlet::self()->mUsingMudletDictionaries = false;
+    } else if (QFile::exists(QStringLiteral("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
+        // From debug or release subdirectory of a shadow build directory alongside the ./src one:
+        path = QStringLiteral("%1/../../src/").arg(QCoreApplication::applicationDirPath());
+        mudlet::self()->mUsingMudletDictionaries = true;
+    } else if (QFile::exists(QStringLiteral("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
+        // From shadow build directory alongside the ./src one:
+        path = QStringLiteral("%1/../src/").arg(QCoreApplication::applicationDirPath());
+        mudlet::self()->mUsingMudletDictionaries = true;
     } else {
-        path = QLatin1String("./");
-        label_chooseSpellCheckDictionary->setText(dictionarySourceText_mudlet);
+        // From build within ./src
+        path = QStringLiteral("%1/").arg(QCoreApplication::applicationDirPath());
+        mudlet::self()->mUsingMudletDictionaries = true;
     }
 #elif defined(Q_OS_LINUX)
     if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(currentDictionary))) {
         path = QLatin1String("/usr/share/hunspell/");
-        label_chooseSpellCheckDictionary->setText(dictionarySourceText_system);
+        mudlet::self()->mUsingMudletDictionaries = false;
+    } else if (QFile::exists(QStringLiteral("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
+        // From debug or release subdirectory of a shadow build directory alongside the ./src one:
+        path = QStringLiteral("%1/../../src/").arg(QCoreApplication::applicationDirPath());
+        mudlet::self()->mUsingMudletDictionaries = true;
+    } else if (QFile::exists(QStringLiteral("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
+        // From shadow build directory alongside the ./src one:
+        path = QStringLiteral("%1/../src/").arg(QCoreApplication::applicationDirPath());
+        mudlet::self()->mUsingMudletDictionaries = true;
     } else {
-        path = QLatin1String("./");
-        label_chooseSpellCheckDictionary->setText(dictionarySourceText_mudlet);
+        // From build within ./src
+        path = QStringLiteral("%1/").arg(QCoreApplication::applicationDirPath());
+        mudlet::self()->mUsingMudletDictionaries = true;
     }
 #else
     // Probably Windows!
-    path = "./";
-    label_chooseSpellCheckDictionary->setText(dictionarySourceText_mudlet);
+    if (QFile::exists(QStringLiteral("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
+        // From debug or release subdirectory of a shadow build directory alongside the ./src one:
+        path = QStringLiteral("%1/../../src/").arg(QCoreApplication::applicationDirPath());
+    } else if (QFile::exists(QStringLiteral("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
+        // From shadow build directory alongside the ./src one:
+        path = QStringLiteral("%1/../src/").arg(QCoreApplication::applicationDirPath());
+    } else {
+        // From build within ./src
+        path = QStringLiteral("%1/").arg(QCoreApplication::applicationDirPath());
+    }
+    mudlet::self()->mUsingMudletDictionaries = true;
 #endif
+
+    // Tweak the label for the provided spelling dictionaries depending on where
+    // they come from:
+    if (mudlet::self()->mUsingMudletDictionaries) {
+        label_chooseSpellCheckDictionary->setText(tr("Mudlet dictionaries:", "On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones."));
+    } else {
+        label_chooseSpellCheckDictionary->setText(tr("System dictionaries:", "On *nix systems where we find the system ones we use them."));
+    }
 
     QDir dir(path);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
     // QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
-    // Use the affix file as that will eliminate supplimental dictionaries:
+    // Use the affix file as that may eliminate supplimental dictionaries:
     QRegularExpression rex(QStringLiteral(R"(\.aff$)"));
     entries = entries.filter(rex);
     // Don't emit signals - like (void) QListWidget::currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
-    // whilst populating the widget it prevokes noise about:
+    // whilst populating the widget, it reduces noise about:
     // "qt.accessibility.core: Cannot create accessible child interface for object:  QListWidget(0x############, name = "dictList")  index:  ##
     dictList->blockSignals(true);
     if (entries.count()) {
@@ -515,7 +551,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             entries[i].remove(QLatin1String(".aff"), Qt::CaseInsensitive);
 
             if (entries.at(i).endsWith(QStringLiteral("med"), Qt::CaseInsensitive)) {
-                // Skip medical supplimental dictionaries
+                // Skip medical dictionaries - there may be others  we also want to hide:
                 continue;
             }
 
@@ -539,9 +575,17 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             }
         }
 
+        // Reenable sorting now we have populated the widget:
+        dictList->setSortingEnabled(false);
+        // Actually do the sort:
+        dictList->sortItems();
+
         if (scrollToItem) {
+            // As the selection mode is set to
+            // QAbstractItemView::SingleSelection this also selects this item:
+            dictList->setCurrentItem(scrollToItem);
+            // And scroll to it:
             dictList->scrollToItem(scrollToItem);
-            scrollToItem->setSelected(true);
         }
 
     } else {

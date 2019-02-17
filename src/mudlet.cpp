@@ -444,6 +444,7 @@ mudlet::mudlet()
 , mEnableFullScreenMode(false)
 , mInterfaceLanguage(QStringLiteral("en_US"))
 , mCopyAsImageTimeout{3}
+, mUsingMudletDictionaries(false)
 , mIsGoingDown(false)
 , mMenuBarVisibility(visibleAlways)
 , mToolbarVisibility(visibleAlways)
@@ -4999,20 +5000,16 @@ bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& word
 QPair<bool, bool> mudlet::addSingleWordToSet(const QString& word)
 {
     if (mDictionaryReadWriteLock.tryLockForWrite(100)) {
-        bool isAdded = false;
         // Got write lock within the timeout:
+        bool isAdded = false;
+        Hunspell_add(mHunspell_sharedDictionary, word.toUtf8().constData());
         if (!mWordSet_shared.contains(word)) {
             mWordSet_shared.insert(word);
             qDebug().noquote().nospace() << "mudlet::addSingleWordToSet(\"" << word << "\") INFO - word added to shared mWordSet.";
             isAdded = true;
         };
-        if (Hunspell_add(mHunspell_sharedDictionary, word.toUtf8().constData())) {
-            qDebug().noquote().nospace() << "mudlet::addSingleWordToSet(\"" << word << "\") INFO - word added to shared hunspell dictionary.";
-            isAdded = true;
-        };
         mDictionaryReadWriteLock.unlock();
         return qMakePair(true, isAdded);
-
     }
 
     // Failed to get lock
@@ -5023,15 +5020,11 @@ QPair<bool, bool> mudlet::addSingleWordToSet(const QString& word)
 QPair<bool, bool> mudlet::removeSingleWordFromSet(const QString& word)
 {
     if (mDictionaryReadWriteLock.tryLockForWrite(100)) {
-        bool isRemoved = false;
         // Got write lock within the timeout:
-
+        bool isRemoved = false;
+        Hunspell_remove(mHunspell_sharedDictionary, word.toUtf8().constData());
         if (mWordSet_shared.remove(word)) {
             qDebug().noquote().nospace() << "mudlet::removeSingleWordFromSet(\"" << word << "\") INFO - word removed from shared mWordSet.";
-            isRemoved = true;
-        };
-        if (Hunspell_remove(mHunspell_sharedDictionary, word.toUtf8().constData())) {
-            qDebug().noquote().nospace() << "mudlet::removeSingleWordFromSet(\"" << word << "\") INFO - word removed from shared hunspell dictionary.";
             isRemoved = true;
         };
         mDictionaryReadWriteLock.unlock();

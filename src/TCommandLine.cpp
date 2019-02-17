@@ -614,17 +614,27 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
                 action_removeWord = new QAction(tr("Remove from user dictionary"));
                 action_removeWord->setEnabled(false);
 //                }
-                action_dictionarySeparatorLine = new QAction(tr("▼Main▼ │ dictionary suggestions │ ▲User▲",
-                                                                     // Intentional separator
-                                                                     "This line is shown in the list of spelling suggestions on the profile's command-"
-                                                                     "line context menu to clearly divide up where the suggestions for correct "
-                                                                     "spellings are coming from.  The precise format might be modified as long as it "
-                                                                     "is clear that the entries below this line in the menu come from the spelling "
-                                                                     "dictionary that the user has chosen in the profile setting which is either "
-                                                                     "provided as part of the OS (all but Windows) or we have bundled with Mudlet "
-                                                                     "(Windows OS); the entries about this line are the ones that the user has "
-                                                                     "personally added, or, if the profile is so configured, captured from the "
-                                                                     "text that the server has previously sent."));
+                if (mudlet::self()->mUsingMudletDictionaries) {
+                    action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲",
+                                                                         // Intentional separator
+                                                                         "This line is shown in the list of spelling suggestions on the profile's command-"
+                                                                         "line context menu to clearly divide up where the suggestions for correct "
+                                                                         "spellings are coming from.  The precise format might be modified as long as it "
+                                                                         "is clear that the entries below this line in the menu come from the spelling "
+                                                                         "dictionary that the user has chosen in the profile setting which we have "
+                                                                         "bundled with Mudlet; the entries about this line are the ones that the user "
+                                                                         "has personally added."));
+                } else {
+                    action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲",
+                                                                         // Intentional separator
+                                                                         "This line is shown in the list of spelling suggestions on the profile's command-"
+                                                                         "line context menu to clearly divide up where the suggestions for correct "
+                                                                         "spellings are coming from.  The precise format might be modified as long as it "
+                                                                         "is clear that the entries below this line in the menu come from the spelling "
+                                                                         "dictionary that the user has chosen in the profile setting which is provided "
+                                                                         "as part of the OS; the entries about this line are the ones that the user has "
+                                                                         "personally added."));
+                }
                 action_dictionarySeparatorLine->setEnabled(false);
             }
 

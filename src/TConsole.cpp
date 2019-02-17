@@ -2629,19 +2629,17 @@ QPair<bool, QString> TConsole::addSingleWordToSet(const QString& word)
     }
 
     if (!mUseSharedDictionary) {
+        // The return value from this function is unclear - it does not seems to
+        // indicate anything useful
+        Hunspell_add(mpHunspell_profile, word.toUtf8().constData());
         if (!mWordSet_profile.contains(word)) {
             mWordSet_profile.insert(word);
             qDebug().noquote().nospace() << "TConsole::addSingleWordToSet(\"" << word << "\") INFO - word added to profile mWordSet.";
             result.first = true;
-        }
-        if (Hunspell_add(mpHunspell_profile, word.toUtf8().constData())) {
-            qDebug().noquote().nospace() << "TConsole::addSingleWordToSet(\"" << word << "\") INFO - word added to loaded profile hunspell dictionary.";
-            result.first = true;
-        }
-
-        if (!result.first) {
+        } else {
             result.second = errMsg.arg(word);
         }
+
     } else {
         auto pMudlet = mudlet::self();
         QPair<bool, bool> sharedDictionaryResult = pMudlet->addSingleWordToSet(word);
@@ -2671,17 +2669,16 @@ QPair<bool, QString> TConsole::removeSingleWordFromSet(const QString& word)
     }
 
     if (!mUseSharedDictionary) {
+        // The return value from this function is unclear - it does not seems to
+        // indicate anything useful
+        Hunspell_remove(mpHunspell_profile, word.toUtf8().constData());
         if (mWordSet_profile.remove(word)) {
-            qDebug().noquote().nospace() << "TConsole::removeSingleWordFromSet(\"" << word << "\") INFO - word removed from mWordSet.";
+            qDebug().noquote().nospace() << "TConsole::removeSingleWordFromSet(\"" << word << "\") INFO - word removed from profile mWordSet.";
             result.first = true;
-        };
-        if (Hunspell_remove(mpHunspell_profile, word.toUtf8().constData())) {
-            qDebug().noquote().nospace() << "TConsole::removeSingleWordFromSet(\"" << word << "\") INFO - word removed from loaded profile hunspell dictionary.";
-            result.first = true;
-        };
-        if (!result.first) {
+        } else {
             result.second = errMsg.arg(word);
         }
+
     } else {
         auto pMudlet = mudlet::self();
         QPair<bool, bool> sharedDictionaryResult = pMudlet->removeSingleWordFromSet(word);
@@ -2710,25 +2707,60 @@ void TConsole::setSystemSpellDictionary(const QString& newDict)
         // This is duplicated (and should be the same as) the code in:
         // (void) dlgProfilePreferences::initWithHost(Host*)
         QString path;
+        const QString& currentDictionary = mpHost->getSpellDic();
 #if defined(Q_OS_MACOS)
         path = QStringLiteral("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
+        mudlet::self()->mUsingMudletDictionaries = true;
 #elif defined(Q_OS_FREEBSD)
-        if (QFile::exists(QStringLiteral("/usr/local/share/hunspell/%1.aff").arg(newDict))) {
+        if (QFile::exists(QStringLiteral("/usr/local/share/hunspell/%1.aff").arg(currentDictionary))) {
             path = QLatin1String("/usr/local/share/hunspell/");
-        } else if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(newDict))) {
+            mudlet::self()->mUsingMudletDictionaries = false;
+        } else if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(currentDictionary))) {
             path = QLatin1String("/usr/share/hunspell/");
+            mudlet::self()->mUsingMudletDictionaries = false;
+        } else if (QFile::exists(QStringLiteral("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
+            // From debug or release subdirectory of a shadow build directory alongside the ./src one:
+            path = QStringLiteral("%1/../../src/").arg(QCoreApplication::applicationDirPath());
+            mudlet::self()->mUsingMudletDictionaries = true;
+        } else if (QFile::exists(QStringLiteral("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
+            // From shadow build directory alongside the ./src one:
+            path = QStringLiteral("%1/../src/").arg(QCoreApplication::applicationDirPath());
+            mudlet::self()->mUsingMudletDictionaries = true;
         } else {
-            path = QLatin1String("./");
+            // From build within ./src
+            path = QStringLiteral("%1/").arg(QCoreApplication::applicationDirPath());
+            mudlet::self()->mUsingMudletDictionaries = true;
         }
 #elif defined(Q_OS_LINUX)
-        if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(newDict))) {
+        if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(currentDictionary))) {
             path = QLatin1String("/usr/share/hunspell/");
+            mudlet::self()->mUsingMudletDictionaries = false;
+        } else if (QFile::exists(QStringLiteral("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
+            // From debug or release subdirectory of a shadow build directory alongside the ./src one:
+            path = QStringLiteral("%1/../../src/").arg(QCoreApplication::applicationDirPath());
+            mudlet::self()->mUsingMudletDictionaries = true;
+        } else if (QFile::exists(QStringLiteral("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
+            // From shadow build directory alongside the ./src one:
+            path = QStringLiteral("%1/../src/").arg(QCoreApplication::applicationDirPath());
+            mudlet::self()->mUsingMudletDictionaries = true;
         } else {
-            path = QLatin1String("./");
+            // From build within ./src
+            path = QStringLiteral("%1/").arg(QCoreApplication::applicationDirPath());
+            mudlet::self()->mUsingMudletDictionaries = true;
         }
 #else
         // Probably Windows!
-        path = "./";
+        if (QFile::exists(QStringLiteral("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
+            // From debug or release subdirectory of a shadow build directory alongside the ./src one:
+            path = QStringLiteral("%1/../../src/").arg(QCoreApplication::applicationDirPath());
+        } else if (QFile::exists(QStringLiteral("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
+            // From shadow build directory alongside the ./src one:
+            path = QStringLiteral("%1/../src/").arg(QCoreApplication::applicationDirPath());
+        } else {
+            // From build within ./src
+            path = QStringLiteral("%1/").arg(QCoreApplication::applicationDirPath());
+        }
+        mudlet::self()->mUsingMudletDictionaries = true;
 #endif
 
         QString spell_aff = QStringLiteral("%1%2.aff").arg(path, newDict);
@@ -2766,7 +2798,7 @@ void TConsole::setProfileSpellDictionary()
             // Want to use per profile dictionary, is it loaded?
             if (!mpHunspell_profile) {
                 // No - so load it
-                qDebug() << "TCommandLine::setProfileSpellDictionary() INFO - Preparing profile's own Hunspell dictionary...";
+                qDebug() << "TConsole::setProfileSpellDictionary() INFO - Preparing profile's own Hunspell dictionary...";
                 mpHunspell_profile = mudlet::self()->prepareProfileDictionary(mpHost->getName(), mWordSet_profile);
             }
             // Else no need to load it

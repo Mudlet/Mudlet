@@ -14716,7 +14716,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "removeWordFromDictionary", TLuaInterpreter::removeWordFromDictionary);
     lua_register(pGlobalLua, "spellCheckWord", TLuaInterpreter::spellCheckWord);
     lua_register(pGlobalLua, "spellSuggestWord", TLuaInterpreter::spellSuggestWord);
-    lua_register(pGlobalLua, "getUserDictionaryWordList", TLuaInterpreter::getUserDictionaryWordList);
+    lua_register(pGlobalLua, "getDictionaryWordList", TLuaInterpreter::getDictionaryWordList);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     // prepend profile path to package.path and package.cpath
@@ -15598,6 +15598,7 @@ int TLuaInterpreter::disableClickthrough(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Text_Functions#addWordToDictionary
 int TLuaInterpreter::addWordToDictionary(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -15635,6 +15636,7 @@ int TLuaInterpreter::addWordToDictionary(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Text_Functions#removeWordFromDictionary
 int TLuaInterpreter::removeWordFromDictionary(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -15672,6 +15674,7 @@ int TLuaInterpreter::removeWordFromDictionary(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Text_Functions#spellCheckWord
 int TLuaInterpreter::spellCheckWord(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -15692,24 +15695,24 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
         text = QString::fromUtf8(lua_tostring(L, 1));
     }
 
-    bool useProfileDictionary = false;
+    bool useUserDictionary = false;
     if (lua_gettop(L) > 1) {
         if (!lua_isboolean(L, 2)) {
             lua_pushfstring(L, "spellSuggestWord: bad argument #2 type (check profile dictionary as boolean is optional {use 'false' or omit to check against system dictionary}, got %s!)", luaL_typename(L, 2));
             return lua_error(L);
         } else {
-            if (!hasUserDictionary) {
+            useUserDictionary = lua_toboolean(L, 2);
+            if (useUserDictionary && !hasUserDictionary) {
                 lua_pushnil(L);
                 lua_pushstring(L, "no user dictionary enabled in the preferences for this profile");
                 return 2;
             }
-            useProfileDictionary = lua_toboolean(L, 2);
         }
     }
 
     Hunhandle* handle = nullptr;
     QByteArray encodedText;
-    if (useProfileDictionary) {
+    if (useUserDictionary) {
         handle = host.mpConsole->getHunspellHandle_user();
         encodedText = text.toUtf8();
     } else {
@@ -15721,6 +15724,7 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Text_Functions#spellSuggestWord
 int TLuaInterpreter::spellSuggestWord(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -15741,18 +15745,18 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
         text = QString::fromUtf8(lua_tostring(L, 1));
     }
 
-    bool useProfileDictionary = false;
+    bool useUserDictionary = false;
     if (lua_gettop(L) > 1) {
         if (!lua_isboolean(L, 2)) {
             lua_pushfstring(L, "spellSuggestWord: bad argument #2 type (check profile dictionary as boolean is optional {use 'false' or omit to check against system dictionary}, got %s!)", luaL_typename(L, 2));
             return lua_error(L);
         } else {
-            if (!hasUserDictionary) {
+            useUserDictionary = lua_toboolean(L, 2);
+            if (useUserDictionary && !hasUserDictionary) {
                 lua_pushnil(L);
                 lua_pushstring(L, "no user dictionary enabled in the preferences for this profile");
                 return 2;
             }
-            useProfileDictionary = lua_toboolean(L, 2);
         }
     }
 
@@ -15760,7 +15764,7 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
     size_t wordCount = 0;
     Hunhandle* handle = nullptr;
     QByteArray encodedText;
-    if (useProfileDictionary) {
+    if (useUserDictionary) {
         handle = host.mpConsole->getHunspellHandle_user();
         encodedText = text.toUtf8();
     } else {
@@ -15779,7 +15783,8 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
     return 1;
 }
 
-int TLuaInterpreter::getUserDictionaryWordList(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Text_Functions#getDictionaryWordList
+int TLuaInterpreter::getDictionaryWordList(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     bool hasUserDictionary = false;

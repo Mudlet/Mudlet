@@ -411,6 +411,12 @@ public:
     // A different version of the above intended for Dictionary identification - it might be possible to merge them:
     QHash<QString, QString>mDictionaryLanguageCodeMap;
 
+    // This is used to keep track of where the main dictionary files are located
+    // will be true if they are ones bundled with Mudlet, false if provided by
+    // the system
+    bool mUsingMudletDictionaries;
+
+
 public slots:
     void processEventLoopHack_timerRun();
     void slot_mapper();
