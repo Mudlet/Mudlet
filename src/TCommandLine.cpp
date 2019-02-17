@@ -668,7 +668,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
                     // automagically adds a '&' somewhere in the text to be a
                     // shortcut - but doesn't show it and forgets to remove
                     // it when asked for the text later:
-                    pA->setData(code->toUnicode(mpHunspellSystemSuggestionsList[i]));
+                    pA->setData(codec->toUnicode(mpHunspellSystemSuggestionsList[i]));
 #endif
                     connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
                     spellings_system << pA;
@@ -692,7 +692,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
                         // automagically adds a '&' somewhere in the text to be a
                         // shortcut - but doesn't show it and forgets to remove
                         // it when asked for the text later:
-                        pA->setData(code->toUnicode(mpHunspellProfileSuggestionsList[i]));
+                        pA->setData(codec->toUnicode(mpHunspellProfileSuggestionsList[i]));
 #endif
                         connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
                         spellings_profile << pA;
