@@ -650,7 +650,7 @@
                 <string>Shared</string>
                </property>
                <property name="toolTip">
-                <string>&lt;p&gt;A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the ll be available on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;p&gt;</string>
+                <string>&lt;p&gt;A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;p&gt;</string>
                </property>
               </widget>
              </item>

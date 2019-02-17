@@ -500,7 +500,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     QDir dir(path);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
+    // QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
+    // Use the affix file as that will eliminate supplimental dictionaries:
+    QRegularExpression rex(QStringLiteral(R"(\.aff$)"));
     entries = entries.filter(rex);
     // Don't emit signals - like (void) QListWidget::currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
     // whilst populating the widget it prevokes noise about:
@@ -510,7 +512,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         QListWidgetItem* scrollToItem = nullptr;
         for (int i = 0, total = entries.size(); i < total; ++i) {
             // This is a file name and to support macOs platforms should not be case sensitive:
-            entries[i].remove(QLatin1String(".dic"), Qt::CaseInsensitive);
+            entries[i].remove(QLatin1String(".aff"), Qt::CaseInsensitive);
 
             if (entries.at(i).endsWith(QStringLiteral("med"), Qt::CaseInsensitive)) {
                 // Skip medical supplimental dictionaries
@@ -519,8 +521,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
             auto item = new QListWidgetItem();
             item->setTextAlignment(Qt::AlignCenter);
-            if (mudlet::self()->mDictionaryLanguageCodeMap.contains(entries.at(i).toLower())) {
-                item->setText(mudlet::self()->mDictionaryLanguageCodeMap.value(entries.at(i).toLower(), tr("%1 - unrecognised").arg(entries.at(i))));
+            auto key = entries.at(i).toLower();
+            // In some cases '-' will be used as a separator and in others '_' so convert all to one form:
+            key.replace(QLatin1String("-"), QLatin1String("_"));
+            if (mudlet::self()->mDictionaryLanguageCodeMap.contains(key)) {
+                item->setText(mudlet::self()->mDictionaryLanguageCodeMap.value(key));
                 item->setToolTip(tr("<p>From the dictionary file <tt>%1.dic</tt> (and its companion affix <tt>.aff</tt> file).</p>").arg(dir.absoluteFilePath(entries.at(i))));
             } else {
                 item->setText(tr("%1 - not recognised").arg(entries.at(i)));
