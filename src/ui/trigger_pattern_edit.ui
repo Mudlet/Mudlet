@@ -73,6 +73,16 @@
     </widget>
    </item>
    <item>
+    <widget class="QComboBox" name="comboBox_patternType">
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>33</height>
+      </size>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QPushButton" name="pushButton_fgColor">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -149,16 +159,6 @@
    </item>
    <item>
     <widget class="QLineEdit" name="lineEdit_pattern">
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>33</height>
-      </size>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QComboBox" name="comboBox_patternType">
      <property name="maximumSize">
       <size>
        <width>16777215</width>

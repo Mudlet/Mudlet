@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,9 +22,24 @@
 
 #include "dlgTriggerPatternEdit.h"
 
+#include "pre_guard.h"
+#include <QAction>
+#include "post_guard.h"
 
-dlgTriggerPatternEdit::dlgTriggerPatternEdit(QWidget* pF) : QWidget(pF), mRow()
+dlgTriggerPatternEdit::dlgTriggerPatternEdit(QWidget* pF)
+: QWidget(pF)
+, mRow()
 {
     // init generated dialog
     setupUi(this);
+
+    mAction_typeIndication = new QAction(this);
+    lineEdit_pattern->addAction(mAction_typeIndication, QLineEdit::TrailingPosition);
+
+    connect(comboBox_patternType, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerPatternEdit::slot_triggerTypeComboBoxChanged);
+}
+
+void dlgTriggerPatternEdit::slot_triggerTypeComboBoxChanged(const int index)
+{
+    mAction_typeIndication->setIcon(comboBox_patternType->itemIcon(index));
 }
