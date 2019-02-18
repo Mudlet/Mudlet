@@ -613,20 +613,62 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     lay1->setContentsMargins(0, 0, 0, 0);
     lay1->setSpacing(0);
     mpScrollArea->setWidget(HpatternList);
+
+    QPixmap pixMap_subString(256, 256);
+    pixMap_subString.fill(Qt::black);
+    QIcon icon_subString(pixMap_subString);
+
+    QPixmap pixMap_perl_regex(256, 256);
+    pixMap_perl_regex.fill(Qt::blue);
+    QIcon icon_perl_regex(pixMap_perl_regex);
+
+    QPixmap pixMap_begin_of_line_substring(256, 256);
+    pixMap_begin_of_line_substring.fill(Qt::red);
+    QIcon icon_begin_of_line_substring(pixMap_begin_of_line_substring);
+
+    QPixmap pixMap_exact_match(256,256);
+    pixMap_exact_match.fill(Qt::green);
+    QIcon icon_exact_match(pixMap_exact_match);
+
+    QPixmap pixMap_lua_function(256, 256);
+    pixMap_lua_function.fill(Qt::cyan);
+    QIcon icon_lua_function(pixMap_lua_function);
+
+    QPixmap pixMap_line_spacer(256, 256);
+    pixMap_line_spacer.fill(Qt::magenta);
+    QIcon icon_line_spacer(pixMap_line_spacer);
+
+    QPixmap pixMap_color_trigger(256, 256);
+    pixMap_color_trigger.fill(Qt::lightGray);
+    QIcon icon_color_trigger(pixMap_color_trigger);
+
+    QPixmap pixMap_prompt(256, 256);
+    pixMap_prompt.fill(Qt::yellow);
+    QIcon icon_prompt(pixMap_prompt);
+
+    QStringList patternList;
+    patternList << tr("substring")
+                << tr("perl regex")
+                << tr("begin of line substring")
+                << tr("exact match")
+                << tr("lua function")
+                << tr("line spacer")
+                << tr("color trigger")
+                << tr("prompt");
+
     for (int i = 0; i < 50; i++) {
         auto pItem = new dlgTriggerPatternEdit(HpatternList);
-        QStringList _patternList;
-        _patternList << "substring"
-                     << "perl regex"
-                     << "begin of line substring"
-                     << "exact match"
-                     << "Lua function"
-                     << "line spacer"
-                     << "color trigger"
-                     << "prompt";
         QComboBox* pBox = pItem->comboBox_patternType;
-        pBox->addItems(_patternList);
+        pBox->addItems(patternList);
         pBox->setItemData(0, QVariant(i));
+        pBox->setItemIcon(0, icon_subString);
+        pBox->setItemIcon(1, icon_perl_regex);
+        pBox->setItemIcon(2, icon_begin_of_line_substring);
+        pBox->setItemIcon(3, icon_exact_match);
+        pBox->setItemIcon(4, icon_lua_function);
+        pBox->setItemIcon(5, icon_line_spacer);
+        pBox->setItemIcon(6, icon_color_trigger);
+        pBox->setItemIcon(7, icon_prompt);
         connect(pBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerEditor::slot_setupPatternControls);
         connect(pItem->pushButton_fgColor, &QAbstractButton::pressed, this, &dlgTriggerEditor::slot_color_trigger_fg);
         connect(pItem->pushButton_bgColor, &QAbstractButton::pressed, this, &dlgTriggerEditor::slot_color_trigger_bg);
