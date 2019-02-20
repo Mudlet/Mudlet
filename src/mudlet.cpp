@@ -4256,6 +4256,7 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
     case qtTranslationsPath:
         return QLibraryInfo::location(QLibraryInfo::TranslationsPath);
     case hunspellDictionaryPath:
+        // Added for 3.18.0 when user dictionary capability added
 #if defined(Q_OS_MACOS)
         mudlet::self()->mUsingMudletDictionaries = true;
         return QStringLiteral("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
@@ -4302,7 +4303,7 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         if (QFile::exists(QStringLiteral("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory alongside the ./src one:
             return QStringLiteral("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(QStringLiteral("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
+        } else if (QFile::exists(QStringLiteral("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From shadow build directory alongside the ./src one:
             return QStringLiteral("%1/../src/").arg(QCoreApplication::applicationDirPath());
         } else {
