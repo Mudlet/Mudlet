@@ -469,7 +469,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // dictionary "en_US".
     const QString& currentDictionary = pHost->getSpellDic();
     // This will also set mudlet::mUsingMudletDictionaries as appropriate:
-    QString path = mudlet::getMudletPath(hunspellDictionaryPath, currentDictionary);
+    QString path = mudlet::getMudletPath(mudlet::hunspellDictionaryPath, currentDictionary);
 
     // Tweak the label for the provided spelling dictionaries depending on where
     // they come from:
