@@ -355,7 +355,13 @@ public:
         // when saving/resyncing packages/modules - ends in a '/'
         moduleBackupsPath,
         // Returns path to Qt's own translation files
-        qtTranslationsPath
+        qtTranslationsPath,
+        // Takes one extra argument - a (dictionary) language code that should
+        // match a hunspell affix file name e.g. "en_US" in the default case
+        // to yield "en_US.aff" that is searched for in one or more OS dependent
+        // places - returns the path ending in a '/' to use to get the
+        // dictionaries from:
+        hunspellDictionaryPath
     };
     static QString getMudletPath(mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
     // Used to enable "emergency" control recovery action - if Mudlet is
@@ -377,8 +383,8 @@ public:
     Hunhandle* prepareProfileDictionary(const QString&, QSet<QString>&);
     Hunhandle* prepareSharedDictionary();
     bool saveDictionary(const QString&, QSet<QString>&);
-    QPair<bool, bool> addSingleWordToSet(const QString&);
-    QPair<bool, bool> removeSingleWordFromSet(const QString&);
+    QPair<bool, bool> addWordToSet(const QString&);
+    QPair<bool, bool> removeWordFromSet(const QString&);
     QSet<QString> getWordSet();
 
 
@@ -510,6 +516,12 @@ private:
     void initEdbee();
     void goingDown() { mIsGoingDown = true; }
     void loadTranslators();
+    bool scanDictionaryFile(QFile&, int&, QHash<QString, unsigned int>&, QStringList&);
+    int scanWordList(QStringList&, QHash<QString, unsigned int>&);
+    bool overwriteDictionaryFile(QFile&, const QStringList&);
+    bool overwriteAffixFile(QFile&, QHash<QString, unsigned int>&);
+    int getDictionaryWordCount(QFile&);
+
 
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;

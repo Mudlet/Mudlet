@@ -465,66 +465,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
     checkBox_useWideAmbiguousEastAsianGlyphs->setCheckState(pHost->getWideAmbiguousEAsianGlyphsControlState());
 
-    QString path;
-    // This is duplicated (and should be the same as) the code in:
-    // (void)TConsole::setSystemSpellDictionary(const QString& newDict)
     // On the first run for a profile this will be the "English (American)"
     // dictionary "en_US".
     const QString& currentDictionary = pHost->getSpellDic();
-#if defined(Q_OS_MACOS)
-    path = QStringLiteral("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
-    mudlet::self()->mUsingMudletDictionaries = true;
-#elif defined(Q_OS_FREEBSD)
-    if (QFile::exists(QStringLiteral("/usr/local/share/hunspell/%1.aff").arg(currentDictionary))) {
-        path = QLatin1String("/usr/local/share/hunspell/");
-        mudlet::self()->mUsingMudletDictionaries = false;
-    } else if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(currentDictionary))) {
-        path = QLatin1String("/usr/share/hunspell/");
-        mudlet::self()->mUsingMudletDictionaries = false;
-    } else if (QFile::exists(QStringLiteral("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
-        // From debug or release subdirectory of a shadow build directory alongside the ./src one:
-        path = QStringLiteral("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        mudlet::self()->mUsingMudletDictionaries = true;
-    } else if (QFile::exists(QStringLiteral("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
-        // From shadow build directory alongside the ./src one:
-        path = QStringLiteral("%1/../src/").arg(QCoreApplication::applicationDirPath());
-        mudlet::self()->mUsingMudletDictionaries = true;
-    } else {
-        // From build within ./src
-        path = QStringLiteral("%1/").arg(QCoreApplication::applicationDirPath());
-        mudlet::self()->mUsingMudletDictionaries = true;
-    }
-#elif defined(Q_OS_LINUX)
-    if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(currentDictionary))) {
-        path = QLatin1String("/usr/share/hunspell/");
-        mudlet::self()->mUsingMudletDictionaries = false;
-    } else if (QFile::exists(QStringLiteral("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
-        // From debug or release subdirectory of a shadow build directory alongside the ./src one:
-        path = QStringLiteral("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        mudlet::self()->mUsingMudletDictionaries = true;
-    } else if (QFile::exists(QStringLiteral("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
-        // From shadow build directory alongside the ./src one:
-        path = QStringLiteral("%1/../src/").arg(QCoreApplication::applicationDirPath());
-        mudlet::self()->mUsingMudletDictionaries = true;
-    } else {
-        // From build within ./src
-        path = QStringLiteral("%1/").arg(QCoreApplication::applicationDirPath());
-        mudlet::self()->mUsingMudletDictionaries = true;
-    }
-#else
-    // Probably Windows!
-    if (QFile::exists(QStringLiteral("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
-        // From debug or release subdirectory of a shadow build directory alongside the ./src one:
-        path = QStringLiteral("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-    } else if (QFile::exists(QStringLiteral("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
-        // From shadow build directory alongside the ./src one:
-        path = QStringLiteral("%1/../src/").arg(QCoreApplication::applicationDirPath());
-    } else {
-        // From build within ./src
-        path = QStringLiteral("%1/").arg(QCoreApplication::applicationDirPath());
-    }
-    mudlet::self()->mUsingMudletDictionaries = true;
-#endif
+    // This will also set mudlet::mUsingMudletDictionaries as appropriate:
+    QString path = mudlet::getMudletPath(hunspellDictionaryPath, currentDictionary);
 
     // Tweak the label for the provided spelling dictionaries depending on where
     // they come from:
@@ -576,7 +521,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         }
 
         // Reenable sorting now we have populated the widget:
-        dictList->setSortingEnabled(false);
+        dictList->setSortingEnabled(true);
         // Actually do the sort:
         dictList->sortItems();
 

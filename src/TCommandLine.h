@@ -90,10 +90,10 @@ private:
     QString mTabCompletionOld;
     QPoint mPopupPosition;
     QString mSpellCheckedWord;
-    int mHunspellSystemDictionarySuggestionsCount;
-    int mHunspellProfileDictionarySuggestionsCount;
-    char** mpHunspellSystemSuggestionsList;
-    char** mpHunspellProfileSuggestionsList;
+    int mSystemDictionarySuggestionsCount;
+    int mUserDictionarySuggestionsCount;
+    char** mpSystemSuggestionsList;
+    char** mpUserSuggestionsList;
 };
 
 #endif // MUDLET_TCOMMANDLINE_H

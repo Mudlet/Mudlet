@@ -5095,8 +5095,8 @@ QString TBuffer::processSupportsRequest(const QString& elements)
     return result.join(QLatin1String(" "));
 }
 
-// Count the graphemes in a QString - returning it's length in terms of those:
-unsigned int TBuffer::graphemeLength(const QString& text)
+// Count the graphemes in a QString - returning its length in terms of those:
+int TBuffer::graphemeLength(const QString& text)
 {
     if (text.isEmpty()) {
         return 0;
@@ -5104,7 +5104,7 @@ unsigned int TBuffer::graphemeLength(const QString& text)
 
     QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, text);
     int pos = graphemeFinder.toNextBoundary();
-    unsigned int count = 0;
+    int count = 0;
     while (pos > 0) {
         ++count;
         pos = graphemeFinder.toNextBoundary();

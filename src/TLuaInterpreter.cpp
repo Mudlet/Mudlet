@@ -15625,7 +15625,7 @@ int TLuaInterpreter::addWordToDictionary(lua_State* L)
         text = QString::fromUtf8(lua_tostring(L, 1));
     }
 
-    QPair<bool, QString> result = host.mpConsole->addSingleWordToSet(text);
+    QPair<bool, QString> result = host.mpConsole->addWordToSet(text);
     if (!result.first){
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
@@ -15663,7 +15663,7 @@ int TLuaInterpreter::removeWordFromDictionary(lua_State* L)
         text = QString::fromUtf8(lua_tostring(L, 1));
     }
 
-    QPair<bool, QString> result = host.mpConsole->removeSingleWordFromSet(text);
+    QPair<bool, QString> result = host.mpConsole->removeWordFromSet(text);
     if (!result.first){
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
@@ -15808,7 +15808,7 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
     int wordCount = wordList.size();
     if (wordCount > 1) {
         QCollator sorter;
-        sorter.setCaseSensitivity(Qt::CaseSensitive);
+        sorter.setCaseSensitivity(Qt::CaseInsensitive);
         std::sort(wordList.begin(), wordList.end(), sorter);
     }
 

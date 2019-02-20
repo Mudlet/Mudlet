@@ -2620,10 +2620,10 @@ void TConsole::slot_reloadMap(QList<QString> profilesList)
     pHost->postMessage(outcomeMsg);
 }
 
-QPair<bool, QString> TConsole::addSingleWordToSet(const QString& word)
+QPair<bool, QString> TConsole::addWordToSet(const QString& word)
 {
     QString errMsg = QStringLiteral("the word \"%1\" already seems to be in the user dictionary");
-    QPair<bool, QString> result = qMakePair(false, QString());
+    QPair<bool, QString> result{};
     if (!mEnableUserDictionary) {
         return qMakePair(false, QLatin1String("a user dictionary is not enable for this profile"));
     }
@@ -2634,7 +2634,7 @@ QPair<bool, QString> TConsole::addSingleWordToSet(const QString& word)
         Hunspell_add(mpHunspell_profile, word.toUtf8().constData());
         if (!mWordSet_profile.contains(word)) {
             mWordSet_profile.insert(word);
-            qDebug().noquote().nospace() << "TConsole::addSingleWordToSet(\"" << word << "\") INFO - word added to profile mWordSet.";
+            qDebug().noquote().nospace() << "TConsole::addWordToSet(\"" << word << "\") INFO - word added to profile mWordSet.";
             result.first = true;
         } else {
             result.second = errMsg.arg(word);
@@ -2642,10 +2642,10 @@ QPair<bool, QString> TConsole::addSingleWordToSet(const QString& word)
 
     } else {
         auto pMudlet = mudlet::self();
-        QPair<bool, bool> sharedDictionaryResult = pMudlet->addSingleWordToSet(word);
+        QPair<bool, bool> sharedDictionaryResult = pMudlet->addWordToSet(word);
         while (!sharedDictionaryResult.first) {
-            qDebug() << "TConsole::addSingleWordToSet(...) ALERT - failed to get a write lock to access mWordSet_shared and loaded shared hunspell dictionary, retrying...";
-            sharedDictionaryResult = pMudlet->addSingleWordToSet(word);
+            qDebug() << "TConsole::addWordToSet(...) ALERT - failed to get a write lock to access mWordSet_shared and loaded shared hunspell dictionary, retrying...";
+            sharedDictionaryResult = pMudlet->addWordToSet(word);
         }
 
         if (sharedDictionaryResult.second) {
@@ -2660,10 +2660,10 @@ QPair<bool, QString> TConsole::addSingleWordToSet(const QString& word)
     return result;
 }
 
-QPair<bool, QString> TConsole::removeSingleWordFromSet(const QString& word)
+QPair<bool, QString> TConsole::removeWordFromSet(const QString& word)
 {
     QString errMsg = QStringLiteral("the word \"%1\" does not seem to be in the user dictionary");
-    QPair<bool, QString> result = qMakePair(false, QString());
+    QPair<bool, QString> result{};
     if (!mEnableUserDictionary) {
         return qMakePair(false, QLatin1String("a user dictionary is not enable for this profile"));
     }
@@ -2673,7 +2673,7 @@ QPair<bool, QString> TConsole::removeSingleWordFromSet(const QString& word)
         // indicate anything useful
         Hunspell_remove(mpHunspell_profile, word.toUtf8().constData());
         if (mWordSet_profile.remove(word)) {
-            qDebug().noquote().nospace() << "TConsole::removeSingleWordFromSet(\"" << word << "\") INFO - word removed from profile mWordSet.";
+            qDebug().noquote().nospace() << "TConsole::removeWordFromSet(\"" << word << "\") INFO - word removed from profile mWordSet.";
             result.first = true;
         } else {
             result.second = errMsg.arg(word);
@@ -2681,10 +2681,10 @@ QPair<bool, QString> TConsole::removeSingleWordFromSet(const QString& word)
 
     } else {
         auto pMudlet = mudlet::self();
-        QPair<bool, bool> sharedDictionaryResult = pMudlet->removeSingleWordFromSet(word);
+        QPair<bool, bool> sharedDictionaryResult = pMudlet->removeWordFromSet(word);
         while (!sharedDictionaryResult.first) {
-            qDebug() << "TConsole::removeSingleWordFromSet(...) ALERT - failed to get a write lock to access mWordSet_shared and loaded shared hunspell dictionary, retrying...";
-            sharedDictionaryResult = pMudlet->removeSingleWordFromSet(word);
+            qDebug() << "TConsole::removeWordFromSet(...) ALERT - failed to get a write lock to access mWordSet_shared and loaded shared hunspell dictionary, retrying...";
+            sharedDictionaryResult = pMudlet->removeWordFromSet(word);
         }
 
         if (sharedDictionaryResult.second) {
@@ -2701,81 +2701,26 @@ QPair<bool, QString> TConsole::removeSingleWordFromSet(const QString& word)
 
 void TConsole::setSystemSpellDictionary(const QString& newDict)
 {
-    if (!newDict.isEmpty() && mSpellDic != newDict) {
-        mSpellDic = newDict;
+    if (newDict.isEmpty() || mSpellDic == newDict) {
+        return;
+    }
 
-        // This is duplicated (and should be the same as) the code in:
-        // (void) dlgProfilePreferences::initWithHost(Host*)
-        QString path;
-        const QString& currentDictionary = mpHost->getSpellDic();
-#if defined(Q_OS_MACOS)
-        path = QStringLiteral("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
-        mudlet::self()->mUsingMudletDictionaries = true;
-#elif defined(Q_OS_FREEBSD)
-        if (QFile::exists(QStringLiteral("/usr/local/share/hunspell/%1.aff").arg(currentDictionary))) {
-            path = QLatin1String("/usr/local/share/hunspell/");
-            mudlet::self()->mUsingMudletDictionaries = false;
-        } else if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(currentDictionary))) {
-            path = QLatin1String("/usr/share/hunspell/");
-            mudlet::self()->mUsingMudletDictionaries = false;
-        } else if (QFile::exists(QStringLiteral("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
-            // From debug or release subdirectory of a shadow build directory alongside the ./src one:
-            path = QStringLiteral("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-            mudlet::self()->mUsingMudletDictionaries = true;
-        } else if (QFile::exists(QStringLiteral("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
-            // From shadow build directory alongside the ./src one:
-            path = QStringLiteral("%1/../src/").arg(QCoreApplication::applicationDirPath());
-            mudlet::self()->mUsingMudletDictionaries = true;
-        } else {
-            // From build within ./src
-            path = QStringLiteral("%1/").arg(QCoreApplication::applicationDirPath());
-            mudlet::self()->mUsingMudletDictionaries = true;
-        }
-#elif defined(Q_OS_LINUX)
-        if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(currentDictionary))) {
-            path = QLatin1String("/usr/share/hunspell/");
-            mudlet::self()->mUsingMudletDictionaries = false;
-        } else if (QFile::exists(QStringLiteral("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
-            // From debug or release subdirectory of a shadow build directory alongside the ./src one:
-            path = QStringLiteral("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-            mudlet::self()->mUsingMudletDictionaries = true;
-        } else if (QFile::exists(QStringLiteral("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
-            // From shadow build directory alongside the ./src one:
-            path = QStringLiteral("%1/../src/").arg(QCoreApplication::applicationDirPath());
-            mudlet::self()->mUsingMudletDictionaries = true;
-        } else {
-            // From build within ./src
-            path = QStringLiteral("%1/").arg(QCoreApplication::applicationDirPath());
-            mudlet::self()->mUsingMudletDictionaries = true;
-        }
-#else
-        // Probably Windows!
-        if (QFile::exists(QStringLiteral("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
-            // From debug or release subdirectory of a shadow build directory alongside the ./src one:
-            path = QStringLiteral("%1/../../src/").arg(QCoreApplication::applicationDirPath());
-        } else if (QFile::exists(QStringLiteral("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), currentDictionary))) {
-            // From shadow build directory alongside the ./src one:
-            path = QStringLiteral("%1/../src/").arg(QCoreApplication::applicationDirPath());
-        } else {
-            // From build within ./src
-            path = QStringLiteral("%1/").arg(QCoreApplication::applicationDirPath());
-        }
-        mudlet::self()->mUsingMudletDictionaries = true;
-#endif
+    mSpellDic = newDict;
 
-        QString spell_aff = QStringLiteral("%1%2.aff").arg(path, newDict);
-        QString spell_dic = QStringLiteral("%1%2.dic").arg(path, newDict);
-        // The man page for hunspell advises Utf8 encoding of the pathFileNames for
-        // use on Windows platforms which can have non ASCII characters...
-        if (mpHunspell_system) {
-            Hunspell_destroy(mpHunspell_system);
-        }
-        mpHunspell_system = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
-        if (mpHunspell_system) {
-            mHunspellCodecName_system = QByteArray(Hunspell_get_dic_encoding(mpHunspell_system));
-            qDebug().noquote().nospace() << "TCommandLine::setSystemSpellDictionary(\"" << newDict << "\") INFO - System Hunspell dictionary loaded for profile, it uses a \"" << Hunspell_get_dic_encoding(mpHunspell_system) << "\" encoding...";
-            mpHunspellCodec_system = QTextCodec::codecForName(mHunspellCodecName_system);
-        }
+    QString path = mudlet::getMudletPath(hunspellDictionaryPath, mpHost->getSpellDic());
+
+    QString spell_aff = QStringLiteral("%1%2.aff").arg(path, newDict);
+    QString spell_dic = QStringLiteral("%1%2.dic").arg(path, newDict);
+    // The man page for hunspell advises Utf8 encoding of the pathFileNames for
+    // use on Windows platforms which can have non ASCII characters...
+    if (mpHunspell_system) {
+        Hunspell_destroy(mpHunspell_system);
+    }
+    mpHunspell_system = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
+    if (mpHunspell_system) {
+        mHunspellCodecName_system = QByteArray(Hunspell_get_dic_encoding(mpHunspell_system));
+        qDebug().noquote().nospace() << "TCommandLine::setSystemSpellDictionary(\"" << newDict << "\") INFO - System Hunspell dictionary loaded for profile, it uses a \"" << Hunspell_get_dic_encoding(mpHunspell_system) << "\" encoding...";
+        mpHunspellCodec_system = QTextCodec::codecForName(mHunspellCodecName_system);
     }
 }
 
@@ -2813,7 +2758,7 @@ void TConsole::setProfileSpellDictionary()
 const QSet<QString>& TConsole::getWordSet() const
 {
     if (!mEnableUserDictionary) {
-        QSet<QString>();
+        return QSet<QString>();
     }
 
     if (!mUseSharedDictionary) {

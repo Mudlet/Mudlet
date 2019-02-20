@@ -42,10 +42,10 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
 , mUserKeptOnTyping()
 , mHistoryBuffer()
 , mSelectionStart(0)
-, mHunspellSystemDictionarySuggestionsCount()
-, mHunspellProfileDictionarySuggestionsCount()
-, mpHunspellSystemSuggestionsList()
-, mpHunspellProfileSuggestionsList()
+, mSystemDictionarySuggestionsCount()
+, mUserDictionarySuggestionsCount()
+, mpSystemSuggestionsList()
+, mpUserSuggestionsList()
 {
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -578,10 +578,10 @@ void TCommandLine::slot_popupMenu()
     c.removeSelectedText();
     c.insertText(t);
     c.clearSelection();
-    Hunspell_free_list(mpHost->mpConsole->getHunspellHandle_system(), &mpHunspellSystemSuggestionsList, mHunspellSystemDictionarySuggestionsCount);
+    Hunspell_free_list(mpHost->mpConsole->getHunspellHandle_system(), &mpSystemSuggestionsList, mSystemDictionarySuggestionsCount);
     Hunhandle* userDictionaryHandle = mpHost->mpConsole->getHunspellHandle_user();
     if (userDictionaryHandle) {
-        Hunspell_free_list(userDictionaryHandle, &mpHunspellProfileSuggestionsList, mHunspellProfileDictionarySuggestionsCount);
+        Hunspell_free_list(userDictionaryHandle, &mpUserSuggestionsList, mUserDictionarySuggestionsCount);
     }
 }
 
@@ -663,22 +663,21 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
                 }
             }
 
-            // The return value is the count of suggestions:
-            mHunspellSystemDictionarySuggestionsCount = Hunspell_suggest(handle_system, &mpHunspellSystemSuggestionsList, encodedText.constData());
+            mSystemDictionarySuggestionsCount = Hunspell_suggest(handle_system, &mpSystemSuggestionsList, encodedText.constData());
             if (handle_profile) {
-                mHunspellProfileDictionarySuggestionsCount = Hunspell_suggest(handle_profile, &mpHunspellProfileSuggestionsList, encodedText.constData());
+                mUserDictionarySuggestionsCount = Hunspell_suggest(handle_profile, &mpUserSuggestionsList, encodedText.constData());
             }
 
-            if (mHunspellSystemDictionarySuggestionsCount) {
-                for (int i = 0; i < mHunspellSystemDictionarySuggestionsCount; ++i) {
-                    auto pA = new QAction(codec->toUnicode(mpHunspellSystemSuggestionsList[i]));
+            if (mSystemDictionarySuggestionsCount) {
+                for (int i = 0; i < mSystemDictionarySuggestionsCount; ++i) {
+                    auto pA = new QAction(codec->toUnicode(mpSystemSuggestionsList[i]));
 #if defined(Q_OS_FREEBSD)
                     // Adding the text afterwards as user data as well as in the
                     // constructor is to fix a bug(?) in FreeBSD that
                     // automagically adds a '&' somewhere in the text to be a
                     // shortcut - but doesn't show it and forgets to remove
                     // it when asked for the text later:
-                    pA->setData(codec->toUnicode(mpHunspellSystemSuggestionsList[i]));
+                    pA->setData(codec->toUnicode(mpSystemSuggestionsList[i]));
 #endif
                     connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
                     spellings_system << pA;
@@ -693,16 +692,16 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             }
 
             if (handle_profile) {
-                if (mHunspellProfileDictionarySuggestionsCount) {
-                    for (int i = 0; i < mHunspellProfileDictionarySuggestionsCount; ++i) {
-                        auto pA = new QAction(codec->toUnicode(mpHunspellProfileSuggestionsList[i]));
+                if (mUserDictionarySuggestionsCount) {
+                    for (int i = 0; i < mUserDictionarySuggestionsCount; ++i) {
+                        auto pA = new QAction(codec->toUnicode(mpUserSuggestionsList[i]));
 #if defined(Q_OS_FREEBSD)
                         // Adding the text afterwards as user data as well as in the
                         // constructor is to fix a bug(?) in FreeBSD that
                         // automagically adds a '&' somewhere in the text to be a
                         // shortcut - but doesn't show it and forgets to remove
                         // it when asked for the text later:
-                        pA->setData(codec->toUnicode(mpHunspellProfileSuggestionsList[i]));
+                        pA->setData(codec->toUnicode(mpUserSuggestionsList[i]));
 #endif
                         connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
                         spellings_profile << pA;
@@ -965,7 +964,7 @@ void TCommandLine::slot_removeWord()
         return;
     }
 
-    mpHost->mpConsole->removeSingleWordFromSet(mSpellCheckedWord);
+    mpHost->mpConsole->removeWordFromSet(mSpellCheckedWord);
 }
 
 void TCommandLine::slot_addWord()
@@ -974,5 +973,5 @@ void TCommandLine::slot_addWord()
         return;
     }
 
-    mpHost->mpConsole->addSingleWordToSet(mSpellCheckedWord);
+    mpHost->mpConsole->addWordToSet(mSpellCheckedWord);
 }

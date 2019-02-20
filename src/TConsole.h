@@ -185,8 +185,8 @@ public:
 
     void toggleLogging(bool);
     ConsoleType getType() const { return mType; }
-    QPair<bool, QString> addSingleWordToSet(const QString&);
-    QPair<bool, QString> removeSingleWordFromSet(const QString&);
+    QPair<bool, QString> addWordToSet(const QString&);
+    QPair<bool, QString> removeWordFromSet(const QString&);
     void setSystemSpellDictionary(const QString&);
     void setProfileSpellDictionary();
     const QString& getSystemSpellDictionary() const { return mSpellDic; }
@@ -331,9 +331,8 @@ private:
     bool mUseSharedDictionary;
 
     // Three handles, one for the dictionary the user choses from the system
-    // one created by the mudlet class for all profile and the third for a per
-    // profile one - the last pair built by the user (and possibly from the text
-    // received from the mud):
+    // one created by the mudlet class for all profiles and the third for a per
+    // profile one - the last pair are built by the user and/or lua functions:
     Hunhandle* mpHunspell_system;
     Hunhandle* mpHunspell_shared;
     Hunhandle* mpHunspell_profile;
@@ -343,10 +342,10 @@ private:
     QTextCodec* mpHunspellCodec_system;
     // To update the profile dictionary we actually have to track all the words
     // in it so we loaded the contents into this on startup and adjust it as we
-    // go. Then, at the end of a session we will psudo-munch the revised
-    // contents to update the profile.dic and profile.aff files - this member is
-    // for the per profile option only as the shared one is held by the mudlet
-    // singleton class:
+    // go. Then, at the end of a session we will put the revised contents
+    // back into the user's ".dic" file and regenerate the needed pair of lines
+    // for the ".aff" file - this member is for the per profile option only as
+    // the shared one is held by the mudlet singleton class:
     QSet<QString> mWordSet_profile;
 };
 
