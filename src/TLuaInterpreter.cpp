@@ -15602,12 +15602,6 @@ int TLuaInterpreter::disableClickthrough(lua_State* L)
 int TLuaInterpreter::addWordToDictionary(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    if (!host.mEnableSpellCheck) {
-        lua_pushnil(L);
-        lua_pushstring(L, "spell-checking is not enabled in the preferences for this profile");
-        return 2;
-    }
-
     bool hasUserDictionary = false;
     bool hasSharedDictionary = false;
     host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
@@ -15640,12 +15634,6 @@ int TLuaInterpreter::addWordToDictionary(lua_State* L)
 int TLuaInterpreter::removeWordFromDictionary(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    if (!host.mEnableSpellCheck) {
-        lua_pushnil(L);
-        lua_pushstring(L, "spell-checking is not enabled in the preferences for this profile");
-        return 2;
-    }
-
     bool hasUserDictionary = false;
     bool hasSharedDictionary = false;
     host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
@@ -15678,12 +15666,6 @@ int TLuaInterpreter::removeWordFromDictionary(lua_State* L)
 int TLuaInterpreter::spellCheckWord(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    if (!host.mEnableSpellCheck) {
-        lua_pushnil(L);
-        lua_pushstring(L, "spell-checking is not enabled in the preferences for this profile");
-        return 2;
-    }
-
     bool hasUserDictionary = false;
     bool hasSharedDictionary = false;
     host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
@@ -15717,6 +15699,12 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
         encodedText = text.toUtf8();
     } else {
         handle = host.mpConsole->getHunspellHandle_system();
+        if (!handle) {
+            lua_pushnil(L);
+            lua_pushstring(L, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to check your word");
+            return 2;
+        }
+
         encodedText = host.mpConsole->getHunspellCodec_system()->fromUnicode(text);
     }
     // CHECKME: Is there any danger of contention here - do we need to get mudlet::mDictionaryReadWriteLock locked for reading if we are accessing the shared user dictionary?
@@ -15728,12 +15716,6 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
 int TLuaInterpreter::spellSuggestWord(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    if (!host.mEnableSpellCheck) {
-        lua_pushnil(L);
-        lua_pushstring(L, "spell-checking is not enabled in the preferences for this profile");
-        return 2;
-    }
-
     bool hasUserDictionary = false;
     bool hasSharedDictionary = false;
     host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
@@ -15769,6 +15751,12 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
         encodedText = text.toUtf8();
     } else {
         handle = host.mpConsole->getHunspellHandle_system();
+        if (!handle) {
+            lua_pushnil(L);
+            lua_pushstring(L, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to make suggestions for your word");
+            return 2;
+        }
+
         encodedText = host.mpConsole->getHunspellCodec_system()->fromUnicode(text);
     }
     // CHECKME: Is there any danger of contention here - do we need to get mudlet::mDictionaryReadWriteLock locked for reading if we are accessing the shared user dictionary?
@@ -15790,12 +15778,6 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
     bool hasUserDictionary = false;
     bool hasSharedDictionary = false;
     host.getUserDictionaryOptions(hasUserDictionary, hasSharedDictionary);
-    if (!host.mEnableSpellCheck) {
-        lua_pushnil(L);
-        lua_pushstring(L, "spell-checking is not enabled in the preferences for this profile");
-        return 2;
-    }
-
     if (!hasUserDictionary) {
         lua_pushnil(L);
         lua_pushstring(L, "no user dictionary enabled in the preferences for this profile");

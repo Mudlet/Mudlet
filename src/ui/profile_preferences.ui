@@ -567,28 +567,34 @@
        </item>
        <item row="1" column="0">
         <widget class="QGroupBox" name="groupBox_spellCheck">
+         <property name="toolTip">
+          <string notr="true"/>
+         </property>
          <property name="title">
           <string>Spell checking</string>
          </property>
          <property name="checkable">
-          <bool>true</bool>
+          <bool>false</bool>
          </property>
          <property name="checked">
           <bool>false</bool>
          </property>
-         <property name="toolTip">
-          <string>&lt;p&gt;This option enables or disables all spell-checking functionality.&lt;p&gt;</string>
-         </property>
          <layout class="QVBoxLayout" name="verticalLayout_2">
           <item>
-           <widget class="QLabel" name="label_chooseSpellCheckDictionary">
+           <widget class="QCheckBox" name="checkBox_spellCheck">
+            <property name="toolTip">
+             <string>&lt;p&gt;This option controls spell-checking on the command line in the main console for this profile.&lt;/p&gt;&lt;p&gt;&lt;i&gt;The dictionary selected below will be available to the lua sub-system whether this is checked or not.&lt;/i&gt;&lt;/p&gt;</string>
+            </property>
             <property name="text">
-             <string notr="true" extracomment="This text is not for translation as it is replaced by an OS specific text on dialogue construction.">System/Mudlet dictionary:</string>
+             <string>System/Mudlet dictionary:</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="QListWidget" name="dictList">
+            <property name="toolTip">
+             <string>&lt;p&gt;Select one dictionary which will be available on the command line and in the lua sub-system.&lt;/p&gt;</string>
+            </property>
             <property name="sizeAdjustPolicy">
              <enum>QAbstractScrollArea::AdjustToContents</enum>
             </property>
@@ -610,9 +616,6 @@
             <property name="sortingEnabled">
              <bool>true</bool>
             </property>
-            <property name="toolTip">
-             <string>&lt;p&gt;Select one dictionary which will be available on the command line and in the lua sub-system.&lt;p&gt;</string>
-            </property>
            </widget>
           </item>
           <item>
@@ -623,34 +626,34 @@
             <layout class="QHBoxLayout" name="horizontalLayout_userDictionary">
              <item>
               <widget class="QRadioButton" name="radioButton_userDictionary_none">
+               <property name="toolTip">
+                <string>&lt;p&gt;A user dictionary will not be used on the main console command line. Lua commands that target a user dictionary will return &lt;tt&gt;nil&lt;/t&gt; and &lt;i&gt;an error message&lt;/i&gt;.&lt;/p&gt;&lt;p&gt;It will still, however, be possible to access the main dictionary selected above.&lt;/p&gt;</string>
+               </property>
                <property name="text">
                 <string>None</string>
                </property>
                <property name="checked">
                 <bool>true</bool>
                </property>
-               <property name="toolTip">
-                <string>&lt;p&gt;A user dictionary will not be used.&lt;p&gt;</string>
-               </property>
               </widget>
              </item>
              <item>
               <widget class="QRadioButton" name="radioButton_userDictionary_profile">
+               <property name="toolTip">
+                <string>&lt;p&gt;A user dictionary specific to this profile will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</string>
+               </property>
                <property name="text">
                 <string>Profile</string>
-               </property>
-               <property name="toolTip">
-                <string>&lt;p&gt;A user dictionary specific to this profile will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;p&gt;</string>
                </property>
               </widget>
              </item>
              <item>
               <widget class="QRadioButton" name="radioButton_userDictionary_common">
+               <property name="toolTip">
+                <string>&lt;p&gt;A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</string>
+               </property>
                <property name="text">
                 <string>Shared</string>
-               </property>
-               <property name="toolTip">
-                <string>&lt;p&gt;A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;p&gt;</string>
                </property>
               </widget>
              </item>

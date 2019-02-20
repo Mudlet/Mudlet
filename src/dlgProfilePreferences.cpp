@@ -443,7 +443,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     dictList->clear();
     // Disable sorting whilst populating the widget:
     dictList->setSortingEnabled(false);
-    groupBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
+    checkBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
     bool useUserDictionary = false;
     pHost->getUserDictionaryOptions(useUserDictionary, mUseSharedDictionary);
     // Always set the true radio button first - avoids any problems with
@@ -474,9 +474,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // Tweak the label for the provided spelling dictionaries depending on where
     // they come from:
     if (mudlet::self()->mUsingMudletDictionaries) {
-        label_chooseSpellCheckDictionary->setText(tr("Mudlet dictionaries:", "On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones."));
+        checkBox_spellCheck->setText(tr("Mudlet dictionaries:", "On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones."));
     } else {
-        label_chooseSpellCheckDictionary->setText(tr("System dictionaries:", "On *nix systems where we find the system ones we use them."));
+        checkBox_spellCheck->setText(tr("System dictionaries:", "On *nix systems where we find the system ones we use them."));
     }
 
     QDir dir(path);
@@ -1043,7 +1043,7 @@ void dlgProfilePreferences::clearHostDetails()
     ircNick->clear();
 
     dictList->clear();
-    groupBox_spellCheck->setChecked(false);
+    checkBox_spellCheck->setChecked(false);
     checkBox_echoLuaErrors->setChecked(false);
 
     groupBox_downloadMapOptions->setVisible(false);
@@ -2165,7 +2165,7 @@ void dlgProfilePreferences::slot_save_and_exit()
             pHost->setSpellDic(dictList->currentItem()->data(Qt::UserRole).toString());
         }
 
-        pHost->mEnableSpellCheck = groupBox_spellCheck->isChecked();
+        pHost->mEnableSpellCheck = checkBox_spellCheck->isChecked();
         if (radioButton_userDictionary_none->isChecked()) {
             // Disable using which ever dictionary was previously in use:
             pHost->setUserDictionaryOptions(false, mUseSharedDictionary);

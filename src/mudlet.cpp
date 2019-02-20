@@ -4835,7 +4835,7 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
     if (wordCount > oldWordCount) {
         qDebug().nospace().noquote() << "  Considered an extra " << wordCount - oldWordCount << " words.";
     } else if (wordCount < oldWordCount) {
-        qDebug().nospace().noquote() << "  Considered " << wordCount - oldWordCount << " fewer words.";
+        qDebug().nospace().noquote() << "  Considered " << oldWordCount - wordCount << " fewer words.";
     } else {
         qDebug().nospace().noquote() << "  No change in the number of words in dictionary.";
     }
@@ -4894,7 +4894,7 @@ Hunhandle* mudlet::prepareSharedDictionary()
         qDebug().nospace().noquote() << "  Considered an extra " << wordCount - oldWordCount << " words.";
 
     } else if (wordCount < oldWordCount) {
-        qDebug().nospace().noquote() << "  Considered " << wordCount - oldWordCount << " fewer words.";
+        qDebug().nospace().noquote() << "  Considered " << oldWordCount - wordCount << " fewer words.";
     } else {
         qDebug().nospace().noquote() << "  No change in the number of words in dictionary.";
     }
@@ -4934,7 +4934,7 @@ bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& word
     if (wordCount > oldWordCount) {
         qDebug().nospace().noquote() << "  Saved an extra " << wordCount - oldWordCount << " words in dictionary.";
     } else if (wordCount < oldWordCount) {
-        qDebug().nospace().noquote() << "  Saved " << wordCount - oldWordCount << " fewer words in dictionary.";
+        qDebug().nospace().noquote() << "  Saved " << oldWordCount - wordCount  << " fewer words in dictionary.";
     } else {
         qDebug().nospace().noquote() << "  No change in the number of words saved in dictionary.";
     }
