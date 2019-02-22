@@ -136,7 +136,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     mpMap->customEnvColors[271] = mpHost->mLightWhite_2;
     mpMap->customEnvColors[272] = mpHost->mLightBlack_2;
     if (mpHost) {
-        qDebug()<<"dlgMapper::dlgMapper(...) INFO constructor called, mpHost->getName(): " << mpHost->getName();
+        qDebug()<<"dlgMapper::dlgMapper(...) INFO constructor called, mpMap->mProfileName: " << mpMap->mProfileName;
         mp2dMap->init();
     } else {
         qDebug()<<"dlgMapper::dlgMapper(...) INFO constructor called, mpHost is null";
@@ -223,7 +223,7 @@ void dlgMapper::choseRoom(QListWidgetItem* pT)
         if (pR->name == txt) {
             qDebug() << "found room id=" << i;
             mpMap->mTargetID = i;
-            if (!mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mpHost->getName()), i)) {
+            if (!mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), i)) {
                 mpHost->mpConsole->printSystemMessage(tr("Cannot find a path to this room.\n"));
             } else {
                 mpMap->mpHost->startSpeedWalk();
@@ -314,7 +314,7 @@ void dlgMapper::resetAreaComboBoxToPlayerRoomArea()
         return;
     }
 
-    TRoom* pR = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(pHost->getName()));
+    TRoom* pR = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
     if (pR) {
         int playerRoomArea = pR->getArea();
         TArea* pA = mpMap->mpRoomDB->getArea(playerRoomArea);
