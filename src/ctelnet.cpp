@@ -58,7 +58,7 @@ QDataStream replayStream;
 QFile replayFile;
 
 
-cTelnet::cTelnet(Host* pH)
+cTelnet::cTelnet(Host* pH, const QString& profileName)
 : mResponseProcessed(true)
 , networkLatency()
 , mAlertOnNewData(true)
@@ -74,6 +74,7 @@ cTelnet::cTelnet(Host* pH)
 , mMCCP_version_1(false)
 , mMCCP_version_2(false)
 , mpProgressDialog()
+, mProfileName(profileName)
 , hostPort()
 , networkLatencyMin()
 , networkLatencyMax()
@@ -128,7 +129,7 @@ cTelnet::cTelnet(Host* pH)
 
     // initialize the socket after the Host initialisation is complete so we can access mSslTsl
     QTimer::singleShot(0, this, [this]() {
-        qDebug() << mpHost->getName();
+        qDebug() << mProfileName;
         if (mpHost->mSslTsl) {
             connect(&socket, &QSslSocket::encrypted, this, &cTelnet::handle_socket_signal_connected);
         } else {
@@ -1345,7 +1346,7 @@ void cTelnet::processTelnetCommand(const string& command)
                     return;
                 }
 
-                mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), fileName);
+                mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
 
                 QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
                 mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
@@ -1550,7 +1551,7 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
     mpHost->mLuaInterpreter.setAtcpTable(var, arg);
     if (var.startsWith(QLatin1String("RoomNum"))) {
         if (mpHost->mpMap) {
-            mpHost->mpMap->mRoomIdHash[mpHost->getName()] = arg.toInt();
+            mpHost->mpMap->mRoomIdHash[mProfileName] = arg.toInt();
             if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
                 mpHost->mpMap->mpM->update();
                 mpHost->mpMap->mpMapper->mp2dMap->update();
@@ -1624,7 +1625,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
             return;
         }
 
-        mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), fileName);
+        mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
 
         QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
         mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);

@@ -180,6 +180,7 @@ public:
 
     void toggleLogging(bool);
     ConsoleType getType() const { return mType; }
+    void setProfileName(const QString&);
 
 
     QPointer<Host> mpHost;
@@ -261,7 +262,7 @@ public:
     QLineEdit* networkLatency;
     QPoint P_begin;
     QPoint P_end;
-    QString profile_name;
+    QString mProfileName;
     TSplitter* splitter;
     bool mIsPromptLine;
     QToolButton* logButton;
