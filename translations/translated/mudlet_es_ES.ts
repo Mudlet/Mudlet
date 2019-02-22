@@ -449,7 +449,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2699"/>
       <source>Move</source>
       <comment>Menu option to move a room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Mover</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2700"/>
@@ -482,7 +482,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2711"/>
       <source>Spread</source>
       <comment>Menu option to space out rooms in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Esparcir</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2712"/>
@@ -493,7 +493,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2715"/>
       <source>Shrink</source>
       <comment>Menu option to move rooms closer in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Encoger</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2716"/>
@@ -710,7 +710,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="3051"/>
       <location filename="../src/T2DMap.cpp" line="4676"/>
       <source>Solid line</source>
-      <translation type="unfinished"/>
+      <translation>Línea sólida</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3052"/>
@@ -2044,7 +2044,7 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="275"/>
       <source>Warning: When setting the Area for Room (Id: %1) it did not have a current area!</source>
-      <translation type="unfinished"/>
+      <translation>Advertencia: Al establecer el Área de Habitación (Id: %1) no tiene un área actual!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="955"/>
