@@ -504,7 +504,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2719"/>
       <source>Lock</source>
       <comment>Menu option to lock a room for speed walks in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Bloquear</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2720"/>
@@ -515,7 +515,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2723"/>
       <source>Unlock</source>
       <comment>Menu option to unlock a room for speed walks in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Desbloquear</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2724"/>
@@ -526,7 +526,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2727"/>
       <source>Weight</source>
       <comment>Menu option to set a room weight in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Peso</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2728"/>
@@ -548,7 +548,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2735"/>
       <source>Symbol</source>
       <comment>Menu option to set symbol(s) to mark rooms in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Símbolo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2736"/>
@@ -559,7 +559,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2739"/>
       <source>Move to</source>
       <comment>Menu option to move rooms elsewhere in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Mover a</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2740"/>
@@ -581,34 +581,34 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2747"/>
       <source>Custom exit lines</source>
       <comment>Menu option to create custom exit lines in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Líneas de salida personalizadas</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2754"/>
       <source>Custom exit lines are not shown and are not editable in grid mode</source>
-      <translation type="unfinished"/>
+      <translation>Las líneas de salida personalizadas no se muestran y no son editables en el modo de cuadrícula</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2757"/>
       <source>Replace an exit line with a custom line</source>
-      <translation type="unfinished"/>
+      <translation>Sustituir una línea de salida por una línea personalizada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2761"/>
       <source>Create label</source>
       <comment>Menu option to add text or image to the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Crear etiqueta</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2762"/>
       <source>Create labels to show text or images.</source>
-      <translation type="unfinished"/>
+      <translation>Crear etiquetas para mostrar texto o imágenes.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2765"/>
       <source>Set location</source>
       <comment>Menu option to assign player location in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Establecer ubicación</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2767"/>
@@ -624,7 +624,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2798"/>
       <source>Move</source>
       <comment>Menu option to move a label in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Mover</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2799"/>
@@ -646,7 +646,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2818"/>
       <source>Add point</source>
       <comment>Menu option to add a point to a custom line in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Añadir punto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2825"/>
@@ -688,7 +688,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2851"/>
       <source>Properties</source>
       <comment>Menu option to adjust a custom line in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Propiedades</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2854"/>
@@ -699,7 +699,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2857"/>
       <source>Delete line</source>
       <comment>Menu option to delete a custom line in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Borrar línea</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2858"/>
@@ -837,7 +837,7 @@ selected rooms:</source>
       <location filename="../src/T2DMap.cpp" line="2219"/>
       <source>no text</source>
       <comment>Default text if a label is created in mapper with no text</comment>
-      <translation type="unfinished"/>
+      <translation>sin texto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1506"/>
@@ -850,51 +850,51 @@ selected rooms:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="2215"/>
       <source>Enter label text.</source>
-      <translation type="unfinished"/>
+      <translation>Introducir texto de la etiqueta.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2222"/>
       <source>Background color</source>
-      <translation type="unfinished"/>
+      <translation>Color del fondo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2223"/>
       <source>Foreground color</source>
-      <translation type="unfinished"/>
+      <translation>Color de primer plano</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2641"/>
       <source>Undo</source>
       <comment>Menu option to undo drawing the last segment of a line in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Deshacer</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2649"/>
       <source>Properties</source>
       <comment>Menu option to change properties of a line in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Propiedades</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2655"/>
       <source>Finish</source>
       <comment>Menu option to finish drawing a line in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Finalizar</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2677"/>
       <source>Create new map</source>
-      <translation type="unfinished"/>
+      <translation>Crear nuevo mapa</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2680"/>
       <source>Load map</source>
-      <translation type="unfinished"/>
+      <translation>Cargar mapa</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2693"/>
       <source>Create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Crear habitación</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3673"/>
@@ -908,7 +908,11 @@ the selected rooms,
 centered on the
 highlighted room by a
 factor of:</source>
-      <translation type="unfinished"/>
+      <translation>Aumentar el espaciado de
+las habitaciones seleccionadas,
+centradas en la habitación
+resaltada por un factor
+de:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3735"/>
@@ -1289,7 +1293,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="378"/>
       <source>Record a replay.</source>
-      <translation type="unfinished"/>
+      <translation>Graba una repetición.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="389"/>
@@ -1309,17 +1313,17 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="455"/>
       <source>Search buffer.</source>
-      <translation type="unfinished"/>
+      <translation>Búfer de búsqueda.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="463"/>
       <source>Earlier search result.</source>
-      <translation type="unfinished"/>
+      <translation>Resultado de la búsqueda anterior.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="474"/>
       <source>Later search result.</source>
-      <translation type="unfinished"/>
+      <translation>Resultado de la búsqueda posterior.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1007"/>
@@ -1455,7 +1459,7 @@ this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="14827"/>
       <location filename="../src/TLuaInterpreter.cpp" line="14922"/>
       <source>Lua error:</source>
-      <translation type="unfinished"/>
+      <translation>Error de Lua:</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14749"/>
@@ -2131,17 +2135,17 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1306"/>
       <source>%1 (open)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (abierto)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1309"/>
       <source>%1 (closed)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (cerrado)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1312"/>
       <source>%1 (locked)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (bloqueado)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1315"/>
