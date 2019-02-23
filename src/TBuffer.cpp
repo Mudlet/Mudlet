@@ -4096,19 +4096,13 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
         s.append(QStringLiteral("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); \">%1").arg(timeBuffer.at(row).left(13)));
     }
 
-    // Pad out a partial first line:
     if (spacePadding > 0) {
         // used for "copy HTML", this is the first line of selection (because of
         // the padding needed)
-        if (firstSpan) {
-            // Must skip the close of the preceding span as there isn't one
-            firstSpan = false;
-        } else {
-            s.append(QLatin1String("</span>"));
-        }
+        firstSpan = false;
 
-        s.append(QStringLiteral("<span>%1").arg(QString(spacePadding, QChar::Space)));
         // Pad out with spaces to the right so a partial first line lines up
+        s.append(QStringLiteral("<span>%1").arg(QString(spacePadding, QChar::Space)));
     }
 
     for (auto cookedPos = static_cast<unsigned long>(pos); pos < lastPos; ++cookedPos, ++pos) {
