@@ -4085,7 +4085,8 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     // This combination of color values (black on black) cannot usefully be used in practice
     // - so use as initialization values
 
-    // Assume we are on the first line until told otherwise:
+    // Assume we are on the first line until told otherwise - and we will need
+    // to NOT close a previous <span ...>:
     bool firstSpan = true;
     // If times stamps are to be shown AND the first line is a partial
     // then we need:
@@ -4094,12 +4095,25 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     if (showTimeStamp && !timeBuffer.at(row).isEmpty()) {
         // TODO: formatting according to TTextEdit.cpp: if( i2 < timeOffset ) - needs updating if we allow the colours to be user set:
         s.append(QStringLiteral("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); \">%1").arg(timeBuffer.at(row).left(13)));
+        // Set the current idea of what the formatting is so we can spot if it
+        // changes:
+        currentFgColor = QColor(200,150,0);
+        currentBgColor = QColor(22,22,22);
+        currentFlags = TChar::None;
+        // We are no longer before the first span - so we need to flag that
+        // there will be one to close:
+        firstSpan = false;
     }
 
     if (spacePadding > 0) {
         // used for "copy HTML", this is the first line of selection (because of
         // the padding needed)
-        firstSpan = false;
+        if (firstSpan) {
+            // Must skip the close of the preceding span as there isn't one
+            firstSpan = false;
+        } else {
+            s.append(QLatin1String("</span>"));
+        }
 
         // Pad out with spaces to the right so a partial first line lines up
         s.append(QStringLiteral("<span>%1").arg(QString(spacePadding, QChar::Space)));
@@ -4131,15 +4145,9 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
                               currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
                               currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline ) // remainder is arg 9
                               ? QStringLiteral(" text-decoration:%1%2%3")
-                                .arg(currentFlags & TChar::Underline
-                                     ? QLatin1String(" undeline")
-                                     : QString(),
-                                     currentFlags & TChar::StrikeOut
-                                     ? QLatin1String(" line-through")
-                                     : QString(),
-                                     currentFlags & TChar::Overline
-                                     ? QLatin1String(" overline")
-                                     : QString())
+                                .arg(currentFlags & TChar::Underline ? QLatin1String(" underline") : QString(),
+                                     currentFlags & TChar::StrikeOut ? QLatin1String(" line-through") : QString(),
+                                     currentFlags & TChar::Overline ? QLatin1String(" overline") : QString())
                               : QString()));
             } else {
                 s.append(QStringLiteral("<span style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
@@ -4149,7 +4157,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
                               currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
                               currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline ) // remainder is arg 9
                               ? QStringLiteral(" text-decoration:%1%2%3")
-                                .arg(currentFlags & TChar::Underline ? QLatin1String(" undeline") : QString(),
+                                .arg(currentFlags & TChar::Underline ? QLatin1String(" underline") : QString(),
                                      currentFlags & TChar::StrikeOut ? QLatin1String(" line-through") : QString(),
                                      currentFlags & TChar::Overline ? QLatin1String(" overline") : QString())
                               : QString()));
