@@ -1448,7 +1448,7 @@ this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="14920"/>
       <location filename="../src/TLuaInterpreter.cpp" line="14974"/>
       <source>no error message available from Lua</source>
-      <translation type="unfinished"/>
+      <translation>no hay mensaje de error disponible de Lua</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14746"/>
