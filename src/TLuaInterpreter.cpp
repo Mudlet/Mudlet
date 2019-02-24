@@ -13784,7 +13784,7 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
     if (mpHost->mEchoLuaErrors) {
         // ensure the Lua error is on a line of it's own and is not prepended to the previous line
         if (mpHost->mpConsole->buffer.size() > 0 && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
-            mpHost->postMessage(QChar::LineFeed);
+            mpHost->postMessage(QStringLiteral("\n"));
         }
 
         mpHost->postMessage(QStringLiteral("[  LUA  ] - object: <%1> function:<%2>\n<%3>").arg(name, function, e.c_str()));
