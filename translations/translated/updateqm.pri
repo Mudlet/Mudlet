@@ -3,7 +3,7 @@
 TS_FILES += $$files(mudlet_*.ts)
 
 # The American translation is plurals only and has to be done separately (by
-# hand) so is not to be include in the built-in Qt TRANSLATIONS variable as the
+# hand) so is not to be included in the built-in Qt TRANSLATIONS variable as the
 # default processing of it will not have the needed extra `-pluralonly`
 TS_FILES -= mudlet_en_US.ts
 
