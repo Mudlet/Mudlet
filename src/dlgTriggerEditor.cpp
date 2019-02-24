@@ -4952,12 +4952,20 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
             }
             // Use operator[] so we have write access to the array/list member:
             dlgTriggerPatternEdit* pPatternItem = mTriggerPatternEdit[i];
-            pPatternItem->comboBox_patternType->setCurrentIndex(propertyList.at(i));
-            setupPatternControls(propertyList.at(i), pPatternItem);
-            if (propertyList.at(i) == REGEX_PROMPT ) {
+            int pType = propertyList.at(i);
+            if (!pType) {
+                // If the control is for the default (0) case nudge the setting
+                // up and down so that it copies the coloure icon for the
+                // subString type across into the QLineEdit:
+                pPatternItem->comboBox_patternType->setCurrentIndex(1);
+                setupPatternControls(1, pPatternItem);
+            }
+            pPatternItem->comboBox_patternType->setCurrentIndex(pType);
+            setupPatternControls(pType, pPatternItem);
+            if (pType == REGEX_PROMPT ) {
                 pPatternItem->lineEdit_pattern->clear();
 
-            } else if (propertyList.at(i) == REGEX_COLOR_PATTERN) {
+            } else if (pType == REGEX_COLOR_PATTERN) {
                 pPatternItem->lineEdit_pattern->setText(patternList.at(i));
                 if (pT->mColorPatternList.at(i)) {
                     if (pT->mColorPatternList.at(i)->ansiFg == TTrigger::scmIgnored) {
@@ -5015,6 +5023,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
             mTriggerPatternEdit[i]->pushButton_fgColor->hide();
             mTriggerPatternEdit[i]->pushButton_bgColor->hide();
             mTriggerPatternEdit[i]->pushButton_prompt->hide();
+            // Nudge the type up and down so that the appropriate (coloured) icon is copied across to the QLineEdit:
+            mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(1);
             mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(0);
         }
         // Scroll to the last used pattern:
