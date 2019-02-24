@@ -283,7 +283,7 @@ public:
     QLineEdit* networkLatency;
     QPoint P_begin;
     QPoint P_end;
-    QString profile_name;
+    QString mProfileName;
     TSplitter* splitter;
     bool mIsPromptLine;
     QToolButton* logButton;

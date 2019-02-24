@@ -93,7 +93,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mTriggerEngineMode(false)
 , mWrapAt(100)
 , networkLatency(new QLineEdit)
-, profile_name(mpHost ? mpHost->getName() : QStringLiteral("debug console"))
+, mProfileName(mpHost ? mpHost->getName() : QStringLiteral("debug console"))
 , mIsPromptLine(false)
 , mUserAgreedToCloseConsole(false)
 , mpBufferSearchBox(new QLineEdit)
@@ -585,7 +585,7 @@ TConsole::~TConsole()
         mpHunspell_profile = nullptr;
         // Need to commit any changes to personal dictionary
         qDebug() << "TCommandLine::~TConsole(...) INFO - Saving profile's own Hunspell dictionary...";
-        mudlet::self()->saveDictionary(mudlet::self()->getMudletPath(mudlet::profileDataItemPath, profile_name, QStringLiteral("profile")), mWordSet_profile);
+        mudlet::self()->saveDictionary(mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mProfileName, QStringLiteral("profile")), mWordSet_profile);
     }
 }
 
@@ -756,7 +756,7 @@ void TConsole::closeEvent(QCloseEvent* event)
         }
     }
 
-    if (profile_name != "default_host") {
+    if (mProfileName != QLatin1String("default_host")) {
         TEvent conCloseEvent;
         conCloseEvent.mArgumentList.append(QLatin1String("sysExitEvent"));
         conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -769,9 +769,9 @@ void TConsole::closeEvent(QCloseEvent* event)
 
             if (mpHost->mpMap->mpRoomDB->size() > 0) {
                 QDir dir_map;
-                QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
+                QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
                 // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (3 of 6)
-                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, profile_name, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
+                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
                 if (!dir_map.exists(directory_map)) {
                     dir_map.mkpath(directory_map);
                 }
@@ -787,9 +787,9 @@ void TConsole::closeEvent(QCloseEvent* event)
         }
     }
 
-    if (profile_name != "default_host" && !mUserAgreedToCloseConsole) {
+    if (mProfileName != "default_host" && !mUserAgreedToCloseConsole) {
     ASK:
-        int choice = QMessageBox::question(this, tr("Save profile?"), tr("Do you want to save the profile %1?").arg(profile_name), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+        int choice = QMessageBox::question(this, tr("Save profile?"), tr("Do you want to save the profile %1?").arg(mProfileName), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
         if (choice == QMessageBox::Cancel) {
             event->setAccepted(false);
             event->ignore();
@@ -806,9 +806,9 @@ void TConsole::closeEvent(QCloseEvent* event)
                 goto ASK;
             } else if (mpHost->mpMap && mpHost->mpMap->mpRoomDB->size() > 0) {
                 QDir dir_map;
-                QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
+                QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
                 // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (4 of 6)
-                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, profile_name, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
+                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
                 if (!dir_map.exists(directory_map)) {
                     dir_map.mkpath(directory_map);
                 }
@@ -866,7 +866,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
         QString logFileName;
         // If no log directory is set, default to Mudlet's replay and log files path
         if (mpHost->mLogDir == nullptr || mpHost->mLogDir.isEmpty()) {
-            directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
+            directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, mProfileName);
         } else {
             directoryLogFile = mpHost->mLogDir;
         }
@@ -967,7 +967,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
             // switches away from the ASCII default
             logStream << "  <meta name='generator' content='" << tr("Mudlet MUD Client version: %1%2").arg(APP_VERSION, APP_BUILD) << "'>\n";
             // Nice to identify what made the file!
-            logStream << "  <title>" << tr("Mudlet, log from %1 profile").arg(profile_name) << "</title>\n";
+            logStream << "  <title>" << tr("Mudlet, log from %1 profile").arg(mProfileName) << "</title>\n";
             // Web-page title
             logStream << "  <style type='text/css'>\n";
             logStream << "   <!-- body { font-family: '" << fontsList.join("', '") << "'; font-size: 100%; line-height: 1.125em; white-space: nowrap; color:rgb("
@@ -1073,7 +1073,7 @@ void TConsole::slot_toggleReplayRecording()
     }
     mRecordReplay = !mRecordReplay;
     if (mRecordReplay) {
-        QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
+        QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, mProfileName);
         // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (5 of 6)
         QString mLogFileName = QStringLiteral("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
         QDir dirLogFile;
@@ -1520,11 +1520,11 @@ bool TConsole::saveMap(const QString& location, int saveVersion)
 {
     QDir dir_map;
     QString filename_map;
-    QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
+    QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
 
     if (location.isEmpty()) {
         // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (6 of 6)
-        filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, profile_name, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
+        filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
     } else {
         filename_map = location;
     }
@@ -2734,7 +2734,7 @@ void TConsole::setProfileSpellDictionary()
             mpHunspell_profile = nullptr;
             // Need to commit any changes to personal dictionary
             qDebug() << "TConsole::setProfileSpellDictionary() INFO - Saving profile's own Hunspell dictionary...";
-            mudlet::self()->saveDictionary(mudlet::self()->getMudletPath(mudlet::profileDataItemPath, profile_name, QStringLiteral("profile")), mWordSet_profile);
+            mudlet::self()->saveDictionary(mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mProfileName, QStringLiteral("profile")), mWordSet_profile);
         }
         // Nothing else to do if not using the shared one
 

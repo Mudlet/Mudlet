@@ -5096,7 +5096,7 @@ QString TBuffer::processSupportsRequest(const QString& elements)
 }
 
 // Count the graphemes in a QString - returning its length in terms of those:
-int TBuffer::graphemeLength(const QString& text)
+int TBuffer::lengthInGraphemes(const QString& text)
 {
     if (text.isEmpty()) {
         return 0;
