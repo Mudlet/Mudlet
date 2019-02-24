@@ -1202,10 +1202,10 @@ bool TTrigger::setScript(const QString& script)
 
 bool TTrigger::compileScript()
 {
-    mFuncName = QString("Trigger") + QString::number(mID);
-    QString code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    mFuncName = QStringLiteral("Trigger%1").arg(QString::number(mID));
+    QString code = QStringLiteral("function %1()\n%2\nend\n").arg(mFuncName, mScript);
     QString error;
-    if (mpLua->compile(code, error, QString("Trigger: ") + getName())) {
+    if (mpLua->compile(code, error, QStringLiteral("Trigger: %1").arg(getName()))) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;
