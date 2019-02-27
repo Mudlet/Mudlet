@@ -50,6 +50,7 @@
 #include <QTextOption>
 #include <QTime>
 #include <QTimer>
+#include <QToolButton>
 #include "edbee/models/textautocompleteprovider.h"
 #include <QShortcut>
 #include <QKeySequence>
