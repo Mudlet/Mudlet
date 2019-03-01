@@ -370,7 +370,7 @@ void cTelnet::connectIt(const QString& address, int port)
 }
 
 
-void cTelnet::disconnect()
+void cTelnet::disconnectIt()
 {
     mDontReconnect = true;
     socket.disconnectFromHost();

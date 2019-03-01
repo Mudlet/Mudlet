@@ -1032,10 +1032,10 @@ void mudlet::slot_close_profile_requested(int tab)
     if (pH->mSslTsl) {
         pH->mTelnet.abortConnection();
     } else {
-        pH->mTelnet.disconnect();
+        pH->mTelnet.disconnectIt();
     }
 #else
-    pH->mTelnet.disconnect();
+    pH->mTelnet.disconnectIt();
 #endif
 
     pH->stopAllTriggers();
@@ -1112,7 +1112,7 @@ void mudlet::slot_close_profile()
                 pH->closingDown();
 
                 // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-                pH->mTelnet.disconnect();
+                pH->mTelnet.disconnectIt();
 
                 mpCurrentActiveHost->mpEditorDialog->close();
                 for (auto consoleName : hostConsoleMap.keys()) {
@@ -2477,7 +2477,7 @@ void mudlet::closeEvent(QCloseEvent* event)
     foreach (TConsole* pC, mConsoleMap) {
         if (pC->mpHost->getName() != QStringLiteral("default_host")) {
             // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-            pC->mpHost->mTelnet.disconnect();
+            pC->mpHost->mTelnet.disconnectIt();
 
             // close script-editor
             if (pC->mpHost->mpEditorDialog) {
@@ -2519,7 +2519,7 @@ void mudlet::forceClose()
         console->mUserAgreedToCloseConsole = true;
 
         if (host->getName() != QStringLiteral("default_host")) {
-            host->mTelnet.disconnect();
+            host->mTelnet.disconnectIt();
             // close script-editor
             if (host->mpEditorDialog) {
                 host->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -3131,7 +3131,7 @@ void mudlet::slot_disconnect()
     if (!pHost) {
         return;
     }
-    pHost->mTelnet.disconnect();
+    pHost->mTelnet.disconnectIt();
 }
 
 void mudlet::slot_replay()

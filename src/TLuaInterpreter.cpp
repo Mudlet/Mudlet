@@ -5264,7 +5264,7 @@ int TLuaInterpreter::getMudletLuaDefaultPaths(lua_State* L)
 int TLuaInterpreter::disconnect(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    host.mTelnet.disconnect();
+    host.mTelnet.disconnectIt();
     return 0;
 }
 
