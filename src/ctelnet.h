@@ -166,10 +166,10 @@ public:
     bool isATCPEnabled() const { return enableATCP; }
     bool isGMCPEnabled() const { return enableGMCP; }
     bool isChannel102Enabled() const { return enableChannel102; }
-
     void requestDiscordInfo();
-
     QString decodeOption(const unsigned char) const;
+    QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
+
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;
