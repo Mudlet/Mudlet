@@ -664,8 +664,8 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
         // Ideally we should base the matching on only the ANSI code but not
         // all parts of the text come from the Server and can be determined to
         // have come from a decoded ANSI code number:
-        if (  ((pCT->ansiFg == scmIgnored)||((pCT->ansiFg == scmDefault) && mpHost->mpConsole->mFgColor == (*it).foreground())||(pCT->mFgColor == (*it).foreground()))
-            &&((pCT->ansiBg == scmIgnored)||((pCT->ansiBg == scmDefault) && mpHost->mpConsole->mBgColor == (*it).foreground())||(pCT->mBgColor == (*it).background()))) {
+        if (((pCT->ansiFg == scmIgnored)||((pCT->ansiFg == scmDefault) && mpHost->mpConsole->mFgColor == (*it).foreground())||(pCT->mFgColor == (*it).foreground()))
+            &&((pCT->ansiBg == scmIgnored)||((pCT->ansiBg == scmDefault) && mpHost->mpConsole->mBgColor == (*it).background())||(pCT->mBgColor == (*it).background()))) {
 
             if (matchBegin == -1) {
                 matchBegin = pos;
@@ -1202,10 +1202,10 @@ bool TTrigger::setScript(const QString& script)
 
 bool TTrigger::compileScript()
 {
-    mFuncName = QString("Trigger") + QString::number(mID);
-    QString code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    mFuncName = QStringLiteral("Trigger%1").arg(QString::number(mID));
+    QString code = QStringLiteral("function %1()\n%2\nend\n").arg(mFuncName, mScript);
     QString error;
-    if (mpLua->compile(code, error, QString("Trigger: ") + getName())) {
+    if (mpLua->compile(code, error, QStringLiteral("Trigger: %1").arg(getName()))) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;

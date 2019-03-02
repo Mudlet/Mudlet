@@ -162,7 +162,7 @@ cTelnet::cTelnet(Host* pH)
 
 void cTelnet::reset()
 {
-    //prepare option variables
+    //reset telnet options state
     for (int i = 0; i < 256; i++) {
         myOptionState[i] = false;
         hisOptionState[i] = false;
@@ -175,6 +175,7 @@ void cTelnet::reset()
     insb = false;
     // Ensure we do not think that the game server is echoing for us:
     mpHost->mIsRemoteEchoingActive = false;
+    mGA_Driver = false;
     command = "";
     mMudData = "";
 }
