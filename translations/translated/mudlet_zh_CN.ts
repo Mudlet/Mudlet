@@ -450,7 +450,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2699"/>
       <source>Move</source>
       <comment>Menu option to move a room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>移动</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2700"/>
@@ -472,7 +472,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2707"/>
       <source>Color</source>
       <comment>Menu option to change a room color in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>颜色</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2708"/>
@@ -483,7 +483,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2711"/>
       <source>Spread</source>
       <comment>Menu option to space out rooms in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>展开</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2712"/>
@@ -494,7 +494,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2715"/>
       <source>Shrink</source>
       <comment>Menu option to move rooms closer in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>收缩</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2716"/>
@@ -505,7 +505,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2719"/>
       <source>Lock</source>
       <comment>Menu option to lock a room for speed walks in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>锁定</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2720"/>
@@ -516,7 +516,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2723"/>
       <source>Unlock</source>
       <comment>Menu option to unlock a room for speed walks in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>解锁​​​​</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2724"/>
@@ -527,7 +527,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2727"/>
       <source>Weight</source>
       <comment>Menu option to set a room weight in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>权重</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2728"/>
@@ -538,7 +538,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2731"/>
       <source>Exits</source>
       <comment>Menu option to set exits for a room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>出口</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2732"/>
@@ -549,7 +549,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2735"/>
       <source>Symbol</source>
       <comment>Menu option to set symbol(s) to mark rooms in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>符号</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2736"/>
@@ -560,7 +560,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2739"/>
       <source>Move to</source>
       <comment>Menu option to move rooms elsewhere in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>移动至</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2740"/>
@@ -571,7 +571,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2743"/>
       <source>Area</source>
       <comment>Menu option to set the area ID of a room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>区域</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2744"/>
@@ -582,7 +582,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2747"/>
       <source>Custom exit lines</source>
       <comment>Menu option to create custom exit lines in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>自定义出口线</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2754"/>
