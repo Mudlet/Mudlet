@@ -72,9 +72,7 @@ private:
     void updateDiscordStatus();
     bool validateProfile();
 
-    bool validName;
-    bool validUrl;
-    bool validPort;
+    bool validProfile;
 
     QStringList mProfileList;
     QPalette mRegularPalette;
