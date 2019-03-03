@@ -225,7 +225,6 @@ Host::~Host()
     }
     mIsGoingDown = true;
     mIsClosingDown = true;
-    mTelnet.disconnect();
     mErrorLogStream.flush();
     mErrorLogFile.close();
 }

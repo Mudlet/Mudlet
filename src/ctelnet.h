@@ -130,7 +130,7 @@ public:
     cTelnet(Host* pH);
     ~cTelnet();
     void connectIt(const QString& address, int port);
-    void disconnect();
+    void disconnectIt();
     void abortConnection();
     bool sendData(QString& data);
     void setATCPVariables(const QByteArray&);
@@ -166,10 +166,10 @@ public:
     bool isATCPEnabled() const { return enableATCP; }
     bool isGMCPEnabled() const { return enableGMCP; }
     bool isChannel102Enabled() const { return enableChannel102; }
-
     void requestDiscordInfo();
-
     QString decodeOption(const unsigned char) const;
+    QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
+
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;

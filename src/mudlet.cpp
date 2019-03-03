@@ -1032,10 +1032,10 @@ void mudlet::slot_close_profile_requested(int tab)
     if (pH->mSslTsl) {
         pH->mTelnet.abortConnection();
     } else {
-        pH->mTelnet.disconnect();
+        pH->mTelnet.disconnectIt();
     }
 #else
-    pH->mTelnet.disconnect();
+    pH->mTelnet.disconnectIt();
 #endif
 
     pH->stopAllTriggers();
@@ -1072,6 +1072,11 @@ void mudlet::slot_close_profile_requested(int tab)
         mpIrcClientMap[pH]->deleteLater();
     }
 
+    // Wait for disconnection to complete
+    while (pH->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
+        QApplication::processEvents();
+    }
+
     mConsoleMap[pH]->close();
     if (mTabMap.contains(pH->getName())) {
         mpTabBar->removeTab(tab);
@@ -1098,6 +1103,7 @@ void mudlet::slot_close_profile_requested(int tab)
     }
 }
 
+// Not currently used - may not be properly functional anymore!
 void mudlet::slot_close_profile()
 {
     if (mpCurrentActiveHost) {
@@ -1112,7 +1118,7 @@ void mudlet::slot_close_profile()
                 pH->closingDown();
 
                 // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-                pH->mTelnet.disconnect();
+                pH->mTelnet.disconnectIt();
 
                 mpCurrentActiveHost->mpEditorDialog->close();
                 for (auto consoleName : hostConsoleMap.keys()) {
@@ -1145,6 +1151,11 @@ void mudlet::slot_close_profile()
                 if (mpIrcClientMap.contains(pH)) {
                     mpIrcClientMap[pH]->setAttribute(Qt::WA_DeleteOnClose);
                     mpIrcClientMap[pH]->deleteLater();
+                }
+
+                // Wait for disconnection to complete
+                while (pH->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
+                    QApplication::processEvents();
                 }
 
                 mConsoleMap[pH]->close();
@@ -2477,7 +2488,7 @@ void mudlet::closeEvent(QCloseEvent* event)
     foreach (TConsole* pC, mConsoleMap) {
         if (pC->mpHost->getName() != QStringLiteral("default_host")) {
             // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-            pC->mpHost->mTelnet.disconnect();
+            pC->mpHost->mTelnet.disconnectIt();
 
             // close script-editor
             if (pC->mpHost->mpEditorDialog) {
@@ -2489,6 +2500,11 @@ void mudlet::closeEvent(QCloseEvent* event)
                 pC->mpHost->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
                 pC->mpHost->mpNotePad->close();
                 pC->mpHost->mpNotePad = nullptr;
+            }
+
+            // Wait for disconnection to complete
+            while (pC->mpHost->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
+                QApplication::processEvents();
             }
 
             // close console
@@ -2519,7 +2535,7 @@ void mudlet::forceClose()
         console->mUserAgreedToCloseConsole = true;
 
         if (host->getName() != QStringLiteral("default_host")) {
-            host->mTelnet.disconnect();
+            host->mTelnet.disconnectIt();
             // close script-editor
             if (host->mpEditorDialog) {
                 host->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -2535,6 +2551,11 @@ void mudlet::forceClose()
 
             if (mpIrcClientMap.contains(host)) {
                 mpIrcClientMap.value(host)->close();
+            }
+
+            // Wait for disconnection to complete
+            while (host->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
+                QApplication::processEvents();
             }
         }
 
@@ -3131,7 +3152,7 @@ void mudlet::slot_disconnect()
     if (!pHost) {
         return;
     }
-    pHost->mTelnet.disconnect();
+    pHost->mTelnet.disconnectIt();
 }
 
 void mudlet::slot_replay()
