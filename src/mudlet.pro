@@ -529,8 +529,7 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp \
-    wcwidth.cpp
+    XMLimport.cpp
 
 HEADERS += \
     ActionUnit.h \
@@ -608,7 +607,7 @@ HEADERS += \
     VarUnit.h \
     XMLexport.h \
     XMLimport.h \
-    wcwidth.h
+    widechar_width.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.

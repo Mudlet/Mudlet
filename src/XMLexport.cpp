@@ -1162,7 +1162,7 @@ QStringList XMLexport::remapAnsiToColorNumber(const QStringList & patternList, c
                     } else if (match.captured(2) == QLatin1String("IGNORE")) {
                         // Ignore is NOT handled by old system but use -2 (the value
                         // we use internally)
-                        isFgOk = true;
+                        isBgOk = true;
                         bg = -2;
                     } else {
                         bg = match.captured(2).toInt(&isBgOk);

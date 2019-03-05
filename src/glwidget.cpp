@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2014, 2016, 2019 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -358,13 +359,13 @@ void GLWidget::paintGL()
         return;
     }
     float px, py, pz;
-    if (mRID != mpMap->mRoomIdHash.value(mpMap->mpHost->getName()) && mShiftMode) {
+    if (mRID != mpMap->mRoomIdHash.value(mpMap->mProfileName) && mShiftMode) {
         mShiftMode = false;
     }
 
     int ox, oy, oz;
     if (!mShiftMode) {
-        mRID = mpMap->mRoomIdHash.value(mpMap->mpHost->getName());
+        mRID = mpMap->mRoomIdHash.value(mpMap->mProfileName);
         TRoom* pRID = mpMap->mpRoomDB->getRoom(mRID);
         if (!pRID) {
             glClearDepth(1.0);
@@ -2191,7 +2192,7 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         updateGL();
         if (mpMap->mpRoomDB->getRoom(mTarget)) {
             mpMap->mTargetID = mTarget;
-            if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mpHost->getName()), mpMap->mTargetID)) {
+            if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
                 mpMap->mpHost->startSpeedWalk();
             }
             //            else

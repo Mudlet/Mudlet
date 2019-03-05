@@ -5265,7 +5265,7 @@ int TLuaInterpreter::getMudletLuaDefaultPaths(lua_State* L)
 int TLuaInterpreter::disconnect(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    host.mTelnet.disconnect();
+    host.mTelnet.disconnectIt();
     return 0;
 }
 
@@ -11726,23 +11726,22 @@ int TLuaInterpreter::getTime(lua_State* L)
 {
     int n = lua_gettop(L);
     bool return_string = false;
-    QString fmt = "yyyy.MM.dd hh:mm:ss.zzz";
+    QString format = QStringLiteral("yyyy.MM.dd hh:mm:ss.zzz");
     QString tm;
     if (n > 0) {
         return_string = lua_toboolean(L, 1);
         if (n > 1) {
             if (!lua_isstring(L, 2)) {
-                lua_pushstring(L, "getTime: wrong argument type");
-                lua_error(L);
-                return 1;
+                lua_pushfstring(L, "getTime: bad argument #2 (custom time format as string expected, got %s)", luaL_typename(L, 2));
+                return lua_error(L);
             } else {
-                fmt = lua_tostring(L, 2);
+                format = lua_tostring(L, 2);
             }
         }
     }
     QDateTime time = QDateTime::currentDateTime();
     if (return_string) {
-        tm = time.toString(fmt);
+        tm = time.toString(format);
         lua_pushstring(L, tm.toLatin1().data());
     } else {
         QDate dt = time.date();
@@ -11814,9 +11813,8 @@ int TLuaInterpreter::appendCmdLine(lua_State* L)
 {
     string luaSendText;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "appendCmdLine(): wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "appendCmdLine: bad argument #1 (text to append as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -11874,9 +11872,8 @@ int TLuaInterpreter::installModule(lua_State* L)
 {
     string modName;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "installModule: wrong first argument (should be a path to module)");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "installModule: bad argument #1 (module location as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         modName = lua_tostring(L, 1);
     }
@@ -11893,9 +11890,8 @@ int TLuaInterpreter::uninstallModule(lua_State* L)
 {
     string modName;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "uninstallModule: wrong first argument (should be a module name)");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "uninstallModule: bad argument #1 (module name as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         modName = lua_tostring(L, 1);
     }
@@ -11912,9 +11908,8 @@ int TLuaInterpreter::reloadModule(lua_State* L)
 {
     string modName;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "reloadModule(): wrong first argument (should be a module name)");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "reloadModule: bad argument #1 (module name as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         modName = lua_tostring(L, 1);
     }
@@ -11986,17 +11981,15 @@ int TLuaInterpreter::registerAnonymousEventHandler(lua_State* L)
 {
     string event;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "registerAnonymousEventHandler(): wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "registerAnonymousEventHandler: bad argument #1 (event name as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         event = lua_tostring(L, 1);
     }
     string func;
     if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "registerAnonymousEventHandler(): wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "registerAnonymousEventHandler: bad argument #2 (function name as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         func = lua_tostring(L, 2);
     }
@@ -12044,9 +12037,8 @@ int TLuaInterpreter::printCmdLine(lua_State* L)
 {
     string luaSendText;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "printCmdLine: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "printCmdLine: bad argument #1 (text to set on command line as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         luaSendText = lua_tostring(L, 1);
     }
@@ -12220,13 +12212,13 @@ int TLuaInterpreter::getIrcChannels(lua_State* L)
 int TLuaInterpreter::getIrcConnectedHost(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
-    QString cHostName = "";
-    QString error = "no client active";
+    QString cHostName;
+    QString error = QStringLiteral("no client active");
     if (mudlet::self()->mpIrcClientMap.contains(pHost)) {
         cHostName = mudlet::self()->mpIrcClientMap.value(pHost)->getConnectedHost();
 
         if (cHostName.isEmpty()) {
-            error = "not yet connected";
+            error = QStringLiteral("not yet connected");
         }
     }
 
@@ -12331,7 +12323,7 @@ int TLuaInterpreter::setIrcChannels(lua_State* L)
             // key at index -2 and value at index -1
             if (lua_type(L, -1) == LUA_TSTRING) {
                 QString c = lua_tostring(L, -1);
-                if (!c.isEmpty() && (c.startsWith("#") || c.startsWith("&") || c.startsWith("+"))) {
+                if (!c.isEmpty() && (c.startsWith(QLatin1String("#")) || c.startsWith(QLatin1String("&")) || c.startsWith(QLatin1String("+")))) {
                     newchannels << c;
                 }
             }
@@ -13784,7 +13776,7 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
 {
     // Log error to Editor's Errors TConsole:
     if (mpHost->mpEditorDialog) {
-        mpHost->mpEditorDialog->mpErrorConsole->print(QLatin1String("[ERROR:]"), QColor(Qt::blue), QColor(Qt::black));
+        mpHost->mpEditorDialog->mpErrorConsole->print(QStringLiteral("[ERROR:]"), QColor(Qt::blue), QColor(Qt::black));
         mpHost->mpEditorDialog->mpErrorConsole->print(QStringLiteral(" object:<%1> function:<%2>\n").arg(name, function), QColor(Qt::green), QColor(Qt::black));
         mpHost->mpEditorDialog->mpErrorConsole->print(QStringLiteral("        <%1>\n").arg(e.c_str()), QColor(Qt::red), QColor(Qt::black));
     }
@@ -13793,7 +13785,7 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
     if (mpHost->mEchoLuaErrors) {
         // ensure the Lua error is on a line of it's own and is not prepended to the previous line
         if (mpHost->mpConsole->buffer.size() > 0 && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
-            mpHost->postMessage("\n");
+            mpHost->postMessage(QStringLiteral("\n"));
         }
 
         mpHost->postMessage(QStringLiteral("[  LUA  ] - object: <%1> function:<%2>\n<%3>").arg(name, function, e.c_str()));

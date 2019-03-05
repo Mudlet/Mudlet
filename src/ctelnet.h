@@ -6,7 +6,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
- *   Copyright (C) 2015, 2017-2018 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2017-2019 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -127,10 +127,10 @@ class cTelnet : public QObject
 
 public:
     Q_DISABLE_COPY(cTelnet)
-    cTelnet(Host* pH);
+    cTelnet(Host* pH, const QString&);
     ~cTelnet();
     void connectIt(const QString& address, int port);
-    void disconnect();
+    void disconnectIt();
     void abortConnection();
     bool sendData(QString& data);
     void setATCPVariables(const QByteArray&);
@@ -166,10 +166,10 @@ public:
     bool isATCPEnabled() const { return enableATCP; }
     bool isGMCPEnabled() const { return enableGMCP; }
     bool isChannel102Enabled() const { return enableChannel102; }
-
     void requestDiscordInfo();
-
     QString decodeOption(const unsigned char) const;
+    QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
+
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;
@@ -182,6 +182,8 @@ public:
     QNetworkAccessManager* mpDownloader;
     QProgressDialog* mpProgressDialog;
     QString mServerPackage;
+    QString mProfileName;
+
 
 public slots:
     void setDownloadProgress(qint64, qint64);
@@ -206,6 +208,7 @@ signals:
 private:
     cTelnet() = default;
 
+    void processSocketData(char *data, int size);
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();

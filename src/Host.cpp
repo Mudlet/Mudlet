@@ -42,7 +42,7 @@
 #include "post_guard.h"
 
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
-: mTelnet(this)
+: mTelnet(this, hostname)
 , mpConsole(nullptr)
 , mLuaInterpreter(this, id)
 , commandLineMinimumHeight(30)
@@ -70,7 +70,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mLF_ON_GA(true)
 , mNoAntiAlias(false)
 , mpEditorDialog(nullptr)
-, mpMap(new TMap(this))
+, mpMap(new TMap(this, hostname))
 , mpNotePad(nullptr)
 , mPrintCommand(true)
 , mIsRemoteEchoingActive(false)
@@ -227,7 +227,6 @@ Host::~Host()
     }
     mIsGoingDown = true;
     mIsClosingDown = true;
-    mTelnet.disconnect();
     mErrorLogStream.flush();
     mErrorLogFile.close();
 }
@@ -1697,5 +1696,29 @@ void Host::setUserDictionaryOptions(const bool useDictionary, const bool useShar
         // This will propogate the changes in the two flags to the main
         // TConsole's copies of them:
         mpConsole->setProfileSpellDictionary();
+    }
+}
+
+// This does not take care of any QMaps or other containers that the mudlet
+// and HostManager classes have that use the name of this profile as a key,
+// however it should ensure that other classes get updated:
+void Host::setName(const QString& newName)
+{
+    int currentPlayerRoom;
+    if (mpMap) {
+        currentPlayerRoom = mpMap->mRoomIdHash.take(mHostName);
+    }
+
+    QMutexLocker locker(& mLock);
+    mHostName = newName;
+    locker.unlock();
+
+    mTelnet.mProfileName = newName;
+    if (mpMap) {
+        mpMap->mProfileName = newName;
+        mpMap->mRoomIdHash.insert(newName, currentPlayerRoom);
+    }
+    if (mpConsole) {
+        mpConsole->setProfileName(newName);
     }
 }

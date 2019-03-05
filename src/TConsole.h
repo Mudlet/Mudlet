@@ -202,6 +202,7 @@ public:
                    : mpHunspell_profile)
                 : nullptr; }
     const QSet<QString>& getWordSet() const;
+    void setProfileName(const QString&);
 
 
     QPointer<Host> mpHost;

@@ -1259,7 +1259,7 @@ void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFrom
     // method is only used on the "main" console so no need to filter depending
     // on TConsole types:
 
-    emit signal_newDataAlert(mpHost->getName());
+    emit signal_newDataAlert(mProfileName);
 }
 
 void TConsole::runTriggers(int line)
@@ -1641,7 +1641,7 @@ bool TConsole::importMap(const QString& location, QString* errMsg)
     if (!fileInfo.filePath().isEmpty()) {
         if (fileInfo.isRelative()) {
             // Resolve the name relative to the profile home directory:
-            filePathNameString = QDir::cleanPath(mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), fileInfo.filePath()));
+            filePathNameString = QDir::cleanPath(mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileInfo.filePath()));
         } else {
             if (fileInfo.exists()) {
                 filePathNameString = fileInfo.canonicalFilePath(); // Cannot use cannonical path if file doesn't exist!
@@ -2601,9 +2601,8 @@ void TConsole::slot_reloadMap(QList<QString> profilesList)
         return;
     }
 
-    QString ourName = pHost->getName();
-    if (!profilesList.contains(ourName)) {
-        qDebug() << "TConsole::slot_reloadMap(" << profilesList << ") request received but we:" << ourName << "are not mentioned - so we are ignoring it...!";
+    if (!profilesList.contains(mProfileName)) {
+        qDebug() << "TConsole::slot_reloadMap(" << profilesList << ") request received but we:" << mProfileName << "are not mentioned - so we are ignoring it...!";
         return;
     }
 
@@ -2767,3 +2766,16 @@ const QSet<QString>& TConsole::getWordSet() const
         return mudlet::self()->getWordSet();
     }
 }
+
+void TConsole::setProfileName(const QString& newName)
+{
+    mProfileName = newName;
+    if (mType != MainConsole) {
+        return;
+    }
+
+    for (auto pC : mSubConsoleMap) {
+        pC->setProfileName(newName);
+    }
+}
+

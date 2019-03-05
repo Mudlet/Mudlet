@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -284,7 +284,7 @@ bool TRoomDB::__removeRoom(int id)
 bool TRoomDB::removeRoom(int id)
 {
     if (rooms.contains(id) && id > 0) {
-        if (mpMap->mRoomIdHash.value(mpMap->mpHost->getName()) == id) {
+        if (mpMap->mRoomIdHash.value(mpMap->mProfileName) == id) {
             // Now we store mRoomId for each profile, we must remove any where
             // this room was used
             QList<QString> profilesWithUserInThisRoom = mpMap->mRoomIdHash.keys(id);

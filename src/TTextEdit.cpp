@@ -30,7 +30,7 @@
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "mudlet.h"
-#include "wcwidth.h"
+#include "widechar_width.h"
 
 #include "pre_guard.h"
 #include <QtEvents>
@@ -62,6 +62,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mpHost(pH)
 , mpScrollBar(nullptr)
 , mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
+, mUseOldUnicode8(false)
 {
     mLastClickTimer.start();
     if (pC->getType() != TConsole::CentralDebugConsole) {
@@ -128,6 +129,10 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     setMouseTracking(true); // test fix for MAC
     setEnabled(true);       //test fix for MAC
 
+    QVersionNumber runTimeVersion = QVersionNumber::fromString(QLatin1String(qVersion()));
+    if (runTimeVersion.majorVersion() == 5 && runTimeVersion.minorVersion() < 11) {
+        mUseOldUnicode8 = true;
+    }
     connect(mpHost, &Host::signal_changeIsAmbigousWidthGlyphsToBeWide, this, &TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide, Qt::UniqueConnection);
 }
 
@@ -501,21 +506,44 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
         // character.
         // mk_wcwidth_cjk does the same except it returns 2 instead of 1 for
         // characters that have an "ambiguous" East Asian width:
-        switch (mWideAmbigousWidthGlyphs ? mk_wcwidth_cjk(unicode) : mk_wcwidth(unicode)) {
+        // replaced by wide_wcwidth which returns 1 or 2 or a number of
+        // (negative) special values:
+        // mWideAmbigousWidthGlyphs
+        switch (widechar_wcwidth(unicode)) {
         case 2: // Draw as wide
             charWidth = 2;
             break;
         case 1: // Draw as normal/narrow
             charWidth = 1;
             break;
-        case 0: // Control or Combining Diacritial - should not occur:
-            qWarning() << "TTextEdit::drawGrapheme(...) WARN - trying to draw UCS4 character which should be zero width and not a base character: " << unicode;
+        case widechar_nonprint:     // -1 = The character is not printable.
+            qDebug().nospace().noquote() << "TTextEdit::drawGrapheme(...) WARN - trying to draw a Unicode character which is unprintable, codepoint number: U+" << QString::number(unicode, 16) << ".";
+            charWidth = 1;
+            break;
+        case widechar_combining:    // -2 = The character is a zero-width combiner.
+            qWarning().nospace().noquote() << "TTextEdit::drawGrapheme(...) WARN - trying to draw a Unicode character which is a zero width combiner, codepoint number: U+" << QString::number(unicode, 16) << ".";
             charWidth = 1; // Previous code treated this as a normal width character
             break;
-        default: // case -1: is an error condition detected in the lower code
-            qWarning() << "TTextEdit::drawGrapheme(...) WARN - trying to draw UCS4 character which should be an error: " << unicode;
+        case widechar_ambiguous:    // -3 = The character is East-Asian ambiguous width.
+            charWidth = mWideAmbigousWidthGlyphs ? 2 : 1;
+            break;
+        case widechar_private_use:  // -4 = The character is for private use - we cannot know for certain what width to used
+            charWidth = 1;
+            qDebug().nospace().noquote() << "TTextEdit::drawGrapheme(...) WARN - trying to draw a Private User Character, we cannot know how wide it is, codepoint number: U+" << QString::number(unicode, 16) << ".";
+            break;
+        case widechar_unassigned:   // -5 = The character is unassigned.
+            qWarning().nospace().noquote() << "TTextEdit::drawGrapheme(...) WARN - trying to draw a Unicode character which was not previously assigned and we do not know how wide it is, codepoint number: U+" << QString::number(unicode, 16) << ".";
             charWidth = 1; // Previous code treated this as a normal width character
             break;
+        case widechar_widened_in_9: // -6 = Width is 1 in Unicode 8, 2 in Unicode 9+.
+            if (mUseOldUnicode8) {
+                charWidth = 1;
+            } else {
+                charWidth = 2;
+            }
+            break;
+        default:
+            Q_UNREACHABLE(); // Got an uncoded return value from widechar_wcwidth(...)
         }
     }
 
