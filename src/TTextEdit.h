@@ -161,6 +161,9 @@ private:
     QPointer<QAction> mpContextMenuAnalyser;
     bool mWideAmbigousWidthGlyphs;
     std::chrono::high_resolution_clock::time_point mCopyImageStartTime;
+    // Set in constructor for run-time Qt versions less than 5.11 which only
+    // supports up to Unicode 8.0:
+    bool mUseOldUnicode8;
 };
 
 #endif // MUDLET_TTEXTEDIT_H

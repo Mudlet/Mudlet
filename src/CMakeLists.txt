@@ -95,7 +95,6 @@ set(mudlet_SRCS
     TTrigger.cpp
     TVar.cpp
     VarUnit.cpp
-    wcwidth.cpp
     XMLexport.cpp
     XMLimport.cpp
 )
@@ -206,7 +205,7 @@ set(mudlet_HDRS
     TTrigger.h
     TVar.h
     VarUnit.h
-    wcwidth.h
+    widechar_width.h
     XMLimport.h
 )
 
