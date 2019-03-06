@@ -43,6 +43,7 @@
 #include <QScrollBar>
 #include <QTextBoundaryFinder>
 #include <QToolTip>
+#include <QVersionNumber>
 #include "post_guard.h"
 #include <chrono>
 
