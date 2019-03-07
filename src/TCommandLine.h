@@ -47,6 +47,8 @@ public:
     TCommandLine(Host*, TConsole*, QWidget*);
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
+    void recheckWholeLine();
+    void clearMarksOnWholeLine();
 
 
     QPalette mRegularPalette;
@@ -94,6 +96,7 @@ private:
     int mUserDictionarySuggestionsCount;
     char** mpSystemSuggestionsList;
     char** mpUserSuggestionsList;
+    void spellCheckWord(QTextCursor& c);
 };
 
 #endif // MUDLET_TCOMMANDLINE_H

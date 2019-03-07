@@ -521,41 +521,9 @@ void TCommandLine::spellCheck()
     }
 
     QTextCursor oldCursor = textCursor();
-    QTextCharFormat f;
     QTextCursor c = textCursor();
-    c.select(QTextCursor::WordUnderCursor);
-    QByteArray encodedText = mpHost->mpConsole->getHunspellCodec_system()->fromUnicode(c.selectedText());
-    if (!Hunspell_spell(mpHost->mpConsole->getHunspellHandle_system(), encodedText.constData())) {
-        // Word is not in selected system dictionary
-        Hunhandle* userDictionaryhandle = mpHost->mpConsole->getHunspellHandle_user();
-        if (userDictionaryhandle) {
-            if (Hunspell_spell(userDictionaryhandle, c.selectedText().toUtf8().constData())) {
-                // We are using a user dictionary and it does contain this word - so
-                // use a different underline, on many systems the spell-check underline is
-                // a wavy line but on macOs it is a dotted line - so use dash underline
-                f.setUnderlineStyle(QTextCharFormat::DashUnderline);
-                f.setUnderlineColor(Qt::cyan);
-            } else {
-                // The word is not in it either:
-                f.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
-                f.setUnderlineColor(Qt::red);
-            }
-        } else {
-            // The word is not in the main dictionary and that is all we are using:
-            f.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
-            f.setUnderlineColor(Qt::red);
-        }
-
-        // Don't use this it overwrites the previous setUnderlinesStyle, see
-        // https://www.qtcentre.org/threads/13229-QTextCharFormat-WaveUnderline-doesn-t-work !
-        // f.setFontUnderline(true);
-
-    } else {
-        // Word is spelt correctly
-        f.setFontUnderline(false);
-    }
-    c.setCharFormat(f);
-    setTextCursor(c);
+    spellCheckWord(c);
+    QTextCharFormat f;
     f.setFontUnderline(false);
     oldCursor.setCharFormat(f);
     setTextCursor(oldCursor);
@@ -583,6 +551,9 @@ void TCommandLine::slot_popupMenu()
     if (userDictionaryHandle) {
         Hunspell_free_list(userDictionaryHandle, &mpUserSuggestionsList, mUserDictionarySuggestionsCount);
     }
+
+    // Call the function again so that the replaced word gets rechecked:
+    spellCheck();
 }
 
 void TCommandLine::mousePressEvent(QMouseEvent* event)
@@ -974,4 +945,79 @@ void TCommandLine::slot_addWord()
     }
 
     mpHost->mpConsole->addWordToSet(mSpellCheckedWord);
+}
+
+void TCommandLine::spellCheckWord(QTextCursor& c)
+{
+    QTextCharFormat f;
+    c.select(QTextCursor::WordUnderCursor);
+    QByteArray encodedText = mpHost->mpConsole->getHunspellCodec_system()->fromUnicode(c.selectedText());
+    if (!Hunspell_spell(mpHost->mpConsole->getHunspellHandle_system(), encodedText.constData())) {
+        // Word is not in selected system dictionary
+        Hunhandle* userDictionaryhandle = mpHost->mpConsole->getHunspellHandle_user();
+        if (userDictionaryhandle) {
+            if (Hunspell_spell(userDictionaryhandle, c.selectedText().toUtf8().constData())) {
+                // We are using a user dictionary and it does contain this word - so
+                // use a different underline, on many systems the spell-check underline is
+                // a wavy line but on macOs it is a dotted line - so use dash underline
+                f.setUnderlineStyle(QTextCharFormat::DashUnderline);
+                f.setUnderlineColor(Qt::cyan);
+            } else {
+                // The word is not in it either:
+                f.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
+                f.setUnderlineColor(Qt::red);
+            }
+        } else {
+            // The word is not in the main dictionary and that is all we are using:
+            f.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
+            f.setUnderlineColor(Qt::red);
+        }
+
+    } else {
+        // Word is spelt correctly
+        f.setFontUnderline(false);
+    }
+    c.setCharFormat(f);
+    setTextCursor(c);
+}
+
+void TCommandLine::recheckWholeLine()
+{
+    if (!mpHost || !mpHost->mEnableSpellCheck) {
+        return;
+    }
+
+    // Save the current position
+    QTextCursor oldCursor = textCursor();
+
+    QTextCharFormat f;
+    QTextCursor c = textCursor();
+    // Move Cursor AND selection anchor to start:
+    c.movePosition(QTextCursor::Start);
+    // In case the first character is something other than the begining of a
+    // word
+    c.movePosition(QTextCursor::NextWord);
+    c.movePosition(QTextCursor::PreviousWord);
+    // Now select the word
+    c.movePosition(QTextCursor::EndOfWord, QTextCursor::KeepAnchor);
+    while (c.hasSelection()) {
+        spellCheckWord(c);
+        c.movePosition(QTextCursor::NextWord);
+        c.movePosition(QTextCursor::EndOfWord, QTextCursor::KeepAnchor);
+    }
+    // Jump back to where we started
+    setTextCursor(oldCursor);
+}
+
+void TCommandLine::clearMarksOnWholeLine()
+{
+    QTextCursor oldCursor = textCursor();
+    QTextCharFormat f;
+    QTextCursor c = textCursor();
+    c.select(QTextCursor::Document);
+    c.setCharFormat(f);
+    setTextCursor(c);
+    f.setFontUnderline(false);
+    oldCursor.setCharFormat(f);
+    setTextCursor(oldCursor);
 }
