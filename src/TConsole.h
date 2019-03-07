@@ -203,6 +203,7 @@ public:
                 : nullptr; }
     QSet<QString> getWordSet() const;
     void setProfileName(const QString&);
+    bool isUsingSharedDictionary() const { return mUseSharedDictionary; }
 
 
     QPointer<Host> mpHost;

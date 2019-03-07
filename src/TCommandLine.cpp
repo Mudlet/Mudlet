@@ -679,9 +679,16 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
                     }
 
                 } else {
-                    auto pA = new QAction(tr("no suggestions (profile)",
-                                             // Intentional comment
-                                             "used when the command spelling checker using the profile's own dictionary has no words to suggest"));
+                    QAction* pA = nullptr;
+                    if (mpConsole->isUsingSharedDictionary()) {
+                        pA = new QAction(tr("no suggestions (shared)",
+                                                 // Intentional comment
+                                                 "used when the command spelling checker using the dictionary shared between profile has no words to suggest"));
+                    } else {
+                        pA = new QAction(tr("no suggestions (profile)",
+                                                 // Intentional comment
+                                                 "used when the command spelling checker using the profile's own dictionary has no words to suggest"));
+                    }
                     pA->setEnabled(false);
                     spellings_profile << pA;
                 }
@@ -936,6 +943,8 @@ void TCommandLine::slot_removeWord()
     }
 
     mpHost->mpConsole->removeWordFromSet(mSpellCheckedWord);
+    // Redo spell check to update underlining
+    spellCheck();
 }
 
 void TCommandLine::slot_addWord()
@@ -945,6 +954,8 @@ void TCommandLine::slot_addWord()
     }
 
     mpHost->mpConsole->addWordToSet(mSpellCheckedWord);
+    // Redo spell check to update underlining
+    spellCheck();
 }
 
 void TCommandLine::spellCheckWord(QTextCursor& c)
