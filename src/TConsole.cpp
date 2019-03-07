@@ -2723,6 +2723,7 @@ void TConsole::setSystemSpellDictionary(const QString& newDict)
     }
 }
 
+// NOTE: mEnabledUserDictionary has been wedged on (it will never be false)
 void TConsole::setProfileSpellDictionary()
 {
     // Determine and copy the configuration settings from the Host instance:

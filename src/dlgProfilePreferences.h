@@ -182,7 +182,8 @@ private:
     QString mLogDirPath;
     // Needed to remember the state on construction so that we can sent the same
     // flag back for Host::mUseSharedDictionary even if we turn-off
-    // Host::mEnableUserDictionary:
+    // Host::mEnableUserDictionary: - although, following review THAT has been
+    // disallowed...
     bool mUseSharedDictionary;
 };
 

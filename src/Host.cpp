@@ -172,7 +172,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mSGRCodeHasColSpaceId(false)
 , mServerMayRedefineColors(false)
 , mSpellDic()
-, mEnableUserDictionary(false)
+// DISABLED: - Prevent "None" option for user dictionary - changed to true and not changed anywhere else
+, mEnableUserDictionary(true)
 , mUseSharedDictionary(false)
 {
     // mLogStatus = mudlet::self()->mAutolog;
@@ -1675,8 +1676,11 @@ void Host::setSpellDic(const QString& newDict)
 
 // When called from dlgProfilePreferences the second flag will only be changed
 // if necessary:
-void Host::setUserDictionaryOptions(const bool useDictionary, const bool useShared)
+// DISABLED: - Prevent "None" option for user dictionary - modified to prevent original useDictionary argument from being false:
+void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useShared)
 {
+    Q_UNUSED(_useDictionary);
+    bool useDictionary = true;
     QMutexLocker locker(& mLock);
     bool isChanged = false;
     if (mEnableUserDictionary != useDictionary) {

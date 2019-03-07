@@ -535,7 +535,7 @@
           <item>
            <widget class="QCheckBox" name="checkBox_spellCheck">
             <property name="toolTip">
-             <string>&lt;p&gt;This option controls spell-checking on the command line in the main console for this profile.&lt;/p&gt;&lt;p&gt;&lt;i&gt;The dictionary selected below will be available to the lua sub-system whether this is checked or not.&lt;/i&gt;&lt;/p&gt;</string>
+             <string>&lt;p&gt;This option controls spell-checking on the command line in the main console for this profile.&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>System/Mudlet dictionary:</string>
