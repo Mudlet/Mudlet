@@ -4698,6 +4698,8 @@ bool mudlet::scanDictionaryFile(QFile& dict, int& oldWC, QHash<QString, unsigned
             qDebug().nospace().noquote() << "  Removed " << dupCount << " duplicates.";
         }
     }
+
+    return true;
 }
 
 // Returns false on significant failure (where the caller will have to bail out)

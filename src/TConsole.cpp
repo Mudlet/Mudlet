@@ -2754,7 +2754,7 @@ void TConsole::setProfileSpellDictionary()
     }
 }
 
-const QSet<QString>& TConsole::getWordSet() const
+QSet<QString> TConsole::getWordSet() const
 {
     if (!mEnableUserDictionary) {
         return QSet<QString>();

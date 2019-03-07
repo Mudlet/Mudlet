@@ -201,7 +201,7 @@ public:
                    ? mpHunspell_shared
                    : mpHunspell_profile)
                 : nullptr; }
-    const QSet<QString>& getWordSet() const;
+    QSet<QString> getWordSet() const;
     void setProfileName(const QString&);
 
 

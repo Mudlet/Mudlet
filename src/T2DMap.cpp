@@ -66,8 +66,8 @@ const QString& key_icon_line_dashDotDot = QStringLiteral(":/icons/dash-dot-dot-l
 const QString& key_dialog_ok_apply = QStringLiteral("dialog-ok-apply");
 const QString& key_dialog_cancel = QStringLiteral("dialog-cancel");
 
-const QString& key_icon_dialog_ok_apply = QStringLiteral(":\icons\dialog-ok-apply.png");
-const QString& key_icon_dialog_cancel = QStringLiteral(":\icons\dialog-cancel.png");
+const QString& key_icon_dialog_ok_apply = QStringLiteral(":/icons/dialog-ok-apply.png");
+const QString& key_icon_dialog_cancel = QStringLiteral(":/icons/dialog-cancel.png");
 
 // replacement parameter supplied at points of use:
 const QString& key_styleSheet_backgroundColor = QStringLiteral("background-color: %1");

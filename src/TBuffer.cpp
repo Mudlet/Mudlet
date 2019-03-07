@@ -1034,8 +1034,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             size_t spanStart = localBufferPosition;
             size_t spanEnd = spanStart;
             while (spanEnd < localBufferLength
-                   && (((spanStart < spanEnd) && cParameterInitial.indexOf(localBuffer[spanEnd]) >= 0)
-                      ||(spanStart == spanEnd) && cParameter.indexOf(localBuffer[spanEnd]) >= 0)) {
+                   && ((((spanStart < spanEnd) && cParameterInitial.indexOf(localBuffer[spanEnd]) >= 0))
+                      ||((spanStart == spanEnd) && cParameter.indexOf(localBuffer[spanEnd]) >= 0))) {
                 ++spanEnd;
             }
 
