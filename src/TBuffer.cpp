@@ -26,6 +26,7 @@
 #include "TConsole.h"
 
 #include "pre_guard.h"
+#include <QTextBoundaryFinder>
 #include <QTextCodec>
 #include <QRegularExpression>
 #include "post_guard.h"
@@ -1033,8 +1034,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             size_t spanStart = localBufferPosition;
             size_t spanEnd = spanStart;
             while (spanEnd < localBufferLength
-                   && (((spanStart < spanEnd) && cParameterInitial.indexOf(localBuffer[spanEnd]) >= 0)
-                      ||(spanStart == spanEnd) && cParameter.indexOf(localBuffer[spanEnd]) >= 0)) {
+                   && ((((spanStart < spanEnd) && cParameterInitial.indexOf(localBuffer[spanEnd]) >= 0))
+                      ||((spanStart == spanEnd) && cParameter.indexOf(localBuffer[spanEnd]) >= 0))) {
                 ++spanEnd;
             }
 
@@ -5094,4 +5095,21 @@ QString TBuffer::processSupportsRequest(const QString& elements)
     }
 
     return result.join(QLatin1String(" "));
+}
+
+// Count the graphemes in a QString - returning its length in terms of those:
+int TBuffer::lengthInGraphemes(const QString& text)
+{
+    if (text.isEmpty()) {
+        return 0;
+    }
+
+    QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, text);
+    int pos = graphemeFinder.toNextBoundary();
+    int count = 0;
+    while (pos > 0) {
+        ++count;
+        pos = graphemeFinder.toNextBoundary();
+    }
+    return count;
 }

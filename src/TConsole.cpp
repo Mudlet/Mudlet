@@ -40,8 +40,10 @@
 #include "pre_guard.h"
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QRegularExpression>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QTextBoundaryFinder>
 #include <QTextCodec>
 #include "post_guard.h"
 
@@ -90,8 +92,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mSystemMessageFgColor(QColor(Qt::red))
 , mTriggerEngineMode(false)
 , mWrapAt(100)
-, mProfileName(mpHost ? mpHost->getName() : QStringLiteral("debug console"))
 , networkLatency(new QLineEdit)
+, mProfileName(mpHost ? mpHost->getName() : QStringLiteral("debug console"))
 , mIsPromptLine(false)
 , mUserAgreedToCloseConsole(false)
 , mpBufferSearchBox(new QLineEdit)
@@ -101,6 +103,10 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mSearchQuery()
 , mpButtonMainLayer(nullptr)
 , mType(type)
+, mSpellDic()
+, mpHunspell_system(nullptr)
+, mpHunspell_shared(nullptr)
+, mpHunspell_profile(nullptr)
 {
     auto ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
@@ -546,7 +552,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layerCommandLine->setPalette(__pal);
 
     changeColors();
-    if (mType & (MainConsole|Buffer)) {
+    if (mType == MainConsole) {
         // During first use where mIsDebugConsole IS true mudlet::self() is null
         // then - but we rely on that flag to avoid having to also test for a
         // non-null mudlet::self() - the connect(...) will produce a debug
@@ -557,6 +563,29 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         connect(this, &TConsole::signal_newDataAlert, mudlet::self(), &mudlet::slot_newDataOnHost, Qt::UniqueConnection);
         // For some odd reason the first seems to get connected twice - the
         // last flag prevents multiple ones being made
+
+        // Load up the spelling dictionary from the system:
+        setSystemSpellDictionary(mpHost->getSpellDic());
+
+        // Load up the spelling dictionary for the profile - needs to handle the
+        // absence of files for the first run in a new profile or from an older
+        // Mudlet version:
+        setProfileSpellDictionary();
+    }
+}
+
+TConsole::~TConsole()
+{
+    if (mpHunspell_system) {
+        Hunspell_destroy(mpHunspell_system);
+        mpHunspell_system = nullptr;
+    }
+    if (mpHunspell_profile) {
+        Hunspell_destroy(mpHunspell_profile);
+        mpHunspell_profile = nullptr;
+        // Need to commit any changes to personal dictionary
+        qDebug() << "TCommandLine::~TConsole(...) INFO - Saving profile's own Hunspell dictionary...";
+        mudlet::self()->saveDictionary(mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mProfileName, QStringLiteral("profile")), mWordSet_profile);
     }
 }
 
@@ -2590,6 +2619,155 @@ void TConsole::slot_reloadMap(QList<QString> profilesList)
     pHost->postMessage(outcomeMsg);
 }
 
+QPair<bool, QString> TConsole::addWordToSet(const QString& word)
+{
+    QString errMsg = QStringLiteral("the word \"%1\" already seems to be in the user dictionary");
+    QPair<bool, QString> result{};
+    if (!mEnableUserDictionary) {
+        return qMakePair(false, QLatin1String("a user dictionary is not enable for this profile"));
+    }
+
+    if (!mUseSharedDictionary) {
+        // The return value from this function is unclear - it does not seems to
+        // indicate anything useful
+        Hunspell_add(mpHunspell_profile, word.toUtf8().constData());
+        if (!mWordSet_profile.contains(word)) {
+            mWordSet_profile.insert(word);
+            qDebug().noquote().nospace() << "TConsole::addWordToSet(\"" << word << "\") INFO - word added to profile mWordSet.";
+            result.first = true;
+        } else {
+            result.second = errMsg.arg(word);
+        }
+
+    } else {
+        auto pMudlet = mudlet::self();
+        QPair<bool, bool> sharedDictionaryResult = pMudlet->addWordToSet(word);
+        while (!sharedDictionaryResult.first) {
+            qDebug() << "TConsole::addWordToSet(...) ALERT - failed to get a write lock to access mWordSet_shared and loaded shared hunspell dictionary, retrying...";
+            sharedDictionaryResult = pMudlet->addWordToSet(word);
+        }
+
+        if (sharedDictionaryResult.second) {
+            // Successfully added word:
+            result.first = true;
+        } else {
+            // Word already present
+            result.second = errMsg.arg(word);
+        }
+    }
+
+    return result;
+}
+
+QPair<bool, QString> TConsole::removeWordFromSet(const QString& word)
+{
+    QString errMsg = QStringLiteral("the word \"%1\" does not seem to be in the user dictionary");
+    QPair<bool, QString> result{};
+    if (!mEnableUserDictionary) {
+        return qMakePair(false, QLatin1String("a user dictionary is not enable for this profile"));
+    }
+
+    if (!mUseSharedDictionary) {
+        // The return value from this function is unclear - it does not seems to
+        // indicate anything useful
+        Hunspell_remove(mpHunspell_profile, word.toUtf8().constData());
+        if (mWordSet_profile.remove(word)) {
+            qDebug().noquote().nospace() << "TConsole::removeWordFromSet(\"" << word << "\") INFO - word removed from profile mWordSet.";
+            result.first = true;
+        } else {
+            result.second = errMsg.arg(word);
+        }
+
+    } else {
+        auto pMudlet = mudlet::self();
+        QPair<bool, bool> sharedDictionaryResult = pMudlet->removeWordFromSet(word);
+        while (!sharedDictionaryResult.first) {
+            qDebug() << "TConsole::removeWordFromSet(...) ALERT - failed to get a write lock to access mWordSet_shared and loaded shared hunspell dictionary, retrying...";
+            sharedDictionaryResult = pMudlet->removeWordFromSet(word);
+        }
+
+        if (sharedDictionaryResult.second) {
+            // Successfully added word:
+            result.first = true;
+        } else {
+            // Word already present
+            result.second = errMsg.arg(word);
+        }
+    }
+
+    return result;
+}
+
+void TConsole::setSystemSpellDictionary(const QString& newDict)
+{
+    if (newDict.isEmpty() || mSpellDic == newDict) {
+        return;
+    }
+
+    mSpellDic = newDict;
+
+    QString path = mudlet::getMudletPath(mudlet::hunspellDictionaryPath, mpHost->getSpellDic());
+
+    QString spell_aff = QStringLiteral("%1%2.aff").arg(path, newDict);
+    QString spell_dic = QStringLiteral("%1%2.dic").arg(path, newDict);
+    // The man page for hunspell advises Utf8 encoding of the pathFileNames for
+    // use on Windows platforms which can have non ASCII characters...
+    if (mpHunspell_system) {
+        Hunspell_destroy(mpHunspell_system);
+    }
+    mpHunspell_system = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
+    if (mpHunspell_system) {
+        mHunspellCodecName_system = QByteArray(Hunspell_get_dic_encoding(mpHunspell_system));
+        qDebug().noquote().nospace() << "TCommandLine::setSystemSpellDictionary(\"" << newDict << "\") INFO - System Hunspell dictionary loaded for profile, it uses a \"" << Hunspell_get_dic_encoding(mpHunspell_system) << "\" encoding...";
+        mpHunspellCodec_system = QTextCodec::codecForName(mHunspellCodecName_system);
+    }
+}
+
+// NOTE: mEnabledUserDictionary has been wedged on (it will never be false)
+void TConsole::setProfileSpellDictionary()
+{
+    // Determine and copy the configuration settings from the Host instance:
+    mpHost->getUserDictionaryOptions(mEnableUserDictionary, mUseSharedDictionary);
+    if (!mEnableUserDictionary) {
+        if (mpHunspell_profile) {
+            Hunspell_destroy(mpHunspell_profile);
+            mpHunspell_profile = nullptr;
+            // Need to commit any changes to personal dictionary
+            qDebug() << "TConsole::setProfileSpellDictionary() INFO - Saving profile's own Hunspell dictionary...";
+            mudlet::self()->saveDictionary(mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mProfileName, QStringLiteral("profile")), mWordSet_profile);
+        }
+        // Nothing else to do if not using the shared one
+
+    } else {
+        if (!mUseSharedDictionary) {
+            // Want to use per profile dictionary, is it loaded?
+            if (!mpHunspell_profile) {
+                // No - so load it
+                qDebug() << "TConsole::setProfileSpellDictionary() INFO - Preparing profile's own Hunspell dictionary...";
+                mpHunspell_profile = mudlet::self()->prepareProfileDictionary(mpHost->getName(), mWordSet_profile);
+            }
+            // Else no need to load it
+
+        } else {
+            // Want to use the shared dictionary - this will open it if needed:
+            mpHunspell_shared = mudlet::self()->prepareSharedDictionary();
+        }
+    }
+}
+
+QSet<QString> TConsole::getWordSet() const
+{
+    if (!mEnableUserDictionary) {
+        return QSet<QString>();
+    }
+
+    if (!mUseSharedDictionary) {
+        return mWordSet_profile;
+    } else {
+        return mudlet::self()->getWordSet();
+    }
+}
+
 void TConsole::setProfileName(const QString& newName)
 {
     mProfileName = newName;
@@ -2601,3 +2779,4 @@ void TConsole::setProfileName(const QString& newName)
         pC->setProfileName(newName);
     }
 }
+

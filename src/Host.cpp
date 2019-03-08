@@ -27,6 +27,7 @@
 
 #include "LuaInterface.h"
 #include "TConsole.h"
+#include "TCommandLine.h"
 #include "TEvent.h"
 #include "TMap.h"
 #include "TRoomDB.h"
@@ -132,7 +133,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mFgColor_2(Qt::lightGray)
 , mBgColor_2(Qt::black)
 , mMapStrongHighlight(false)
-, mSpellDic(QLatin1String("en_US"))
 , mLogStatus(false)
 , mEnableSpellCheck(true)
 , mDiscordDisableServerSide(true)
@@ -172,6 +172,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mWideAmbigousWidthGlyphs(false)
 , mSGRCodeHasColSpaceId(false)
 , mServerMayRedefineColors(false)
+, mSpellDic()
+// DISABLED: - Prevent "None" option for user dictionary - changed to true and not changed anywhere else
+, mEnableUserDictionary(true)
+, mUseSharedDictionary(false)
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
@@ -1666,8 +1670,56 @@ void Host::setSpellDic(const QString& newDict)
         isChanged = true;
     }
     locker.unlock();
-    if (isChanged) {
-        emit signal_changeSpellDict(mSpellDic);
+    if (isChanged && mpConsole) {
+        mpConsole->setSystemSpellDictionary(newDict);
+    }
+}
+
+// When called from dlgProfilePreferences the second flag will only be changed
+// if necessary:
+// DISABLED: - Prevent "None" option for user dictionary - modified to prevent original useDictionary argument from being false:
+void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useShared)
+{
+    Q_UNUSED(_useDictionary);
+    bool useDictionary = true;
+    QMutexLocker locker(& mLock);
+    bool isChanged = false;
+    // Copy the value while we have the lock:
+    bool isSpellCheckingEnabled = mEnableSpellCheck;
+    if (mEnableUserDictionary != useDictionary) {
+        mEnableUserDictionary = useDictionary;
+        isChanged = true;
+    }
+
+    if (mUseSharedDictionary != useShared) {
+        mUseSharedDictionary = useShared;
+        isChanged = true;
+    }
+    locker.unlock();
+
+    // During start-up this gets called for the default_host profile - but that
+    // has a null mpConsole:
+    if (mpConsole) {
+        if (isChanged) {
+            // This will propogate the changes in the two flags to the main
+            // TConsole's copies of them - although setProfileSpellDictionary() is
+            // also called in the main TConsole constructor:
+            mpConsole->setProfileSpellDictionary();
+        }
+
+        // This also needs to handle the spell checking against the system/mudlet
+        // bundled dictionary being switched on or off. Given that if it has
+        // been disabled the spell checking code won't run we need to clear any
+        // highlights in the TCommandLine instance that may have been present when
+        // spell checking is turned on or off:
+        if (isSpellCheckingEnabled) {
+            // Now enabled - so recheck the whole command line with whichever
+            // dictionaries are active:
+            mpConsole->mpCommandLine->recheckWholeLine();
+        } else {
+            // Or it is now disabled so clear any spelling marks:
+            mpConsole->mpCommandLine->clearMarksOnWholeLine();
+        }
     }
 }
 

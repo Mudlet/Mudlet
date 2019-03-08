@@ -20,8 +20,12 @@
 #ifndef UPDATER_H
 #define UPDATER_H
 
+// FreeBSD does not support the updater and these missing files upset
+// clang-tidy / Clazy when they are run in an environment without them:
+#if defined (INCLUDE_UPDATER)
 #include "dblsqd/feed.h"
 #include "dblsqd/update_dialog.h"
+#endif
 
 #ifdef Q_OS_MACOS
 #include "../3rdparty/sparkle-glue/AutoUpdater.h"
