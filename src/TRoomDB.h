@@ -51,7 +51,7 @@ public:
     bool removeRoom(int);
     void removeRoom(QSet<int>&);
     bool removeArea(int id);
-    bool removeArea(QString name);
+    bool removeArea(const QString& name);
     void removeArea(TArea*);
     bool addArea(int id);
     int addArea(QString name);
