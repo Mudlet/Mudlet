@@ -1180,7 +1180,37 @@ LUA_LCF.depends = mudlet
 macx {
     # Copy mudlet-lua into the .app bundle
     # the location is relative to src.pro, so just use mudlet-lua
-    APP_MUDLET_LUA_FILES.files = mudlet-lua en_US.aff en_US.dic
+    APP_MUDLET_LUA_FILES.files = \
+        mudlet-lua \
+        de_AT_frami.aff \
+        de_AT_frami.dic \
+        de_CH_frami.aff \
+        de_CH_frami.dic \
+        de_DE_frami.aff \
+        de_DE_frami.dic \
+        el_GR.aff \
+        el_GR.dic \
+        en_GB.aff \
+        en_GB.dic \
+        en_US.aff \
+        en_US.dic \
+        es_ES.aff \
+        es_ES.dic \
+        fr.aff \
+        fr.dic \
+        it_IT.aff \
+        it_IT.dic \
+        nl_NL.aff \
+        nl_NL.dic \
+        pl_PL.aff \
+        pl_PL.dic \
+        pt_PT.aff \
+        pt_PT.dic \
+        pt_BR.aff \
+        pt_BR.dic \
+        ru_RU.dic \
+        ru_RU.aff
+
     APP_MUDLET_LUA_FILES.path  = Contents/Resources
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_FILES
 
