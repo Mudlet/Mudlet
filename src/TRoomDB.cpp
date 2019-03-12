@@ -31,11 +31,11 @@
 #include "post_guard.h"
 
 
-TRoomDB::TRoomDB( TMap * pMap )
-: mpMap( pMap )
-, mpTempRoomDeletionSet( nullptr )
-, mUnnamedAreaName( tr( "Unnamed Area" ) )
-, mDefaultAreaName( tr( "Default Area" ) )
+TRoomDB::TRoomDB(TMap* pMap)
+: mpMap(pMap)
+, mpTempRoomDeletionSet(nullptr)
+, mUnnamedAreaName(tr("Unnamed Area"))
+, mDefaultAreaName(tr("Default Area"))
 {
     // Ensure the default area is created, the area/areaName items that get
     // created here will get blown away when a map is loaded but that is expected...
@@ -47,8 +47,8 @@ TRoom* TRoomDB::getRoom(int id)
     if (id < 0) {
         return nullptr;
     }
-    auto i = rooms.find(id);
-    if (i != rooms.end() && i.key() == id) {
+    const auto i = rooms.constFind(id);
+    if (i != rooms.constEnd() && i.key() == id) {
         return i.value();
     }
     return nullptr;
@@ -59,11 +59,11 @@ bool TRoomDB::addRoom(int id)
     if (!rooms.contains(id) && id > 0) {
         rooms[id] = new TRoom(this);
         rooms[id]->setId(id);
-        // there is no point to update the entranceMap here, as the room has no exit information
+        // there is no point in updating the entranceMap here, as the room has no exit information
         return true;
     } else {
         if (id <= 0) {
-            QString error = QString("illegal room id=%1. roomID must be > 0").arg(id);
+            QString error = QStringLiteral("addRoom: illegal room id=%1. roomID must be > 0").arg(id);
             mpMap->logError(error);
         }
         return false;
@@ -359,7 +359,7 @@ bool TRoomDB::removeArea(int id)
     return false;
 }
 
-bool TRoomDB::removeArea(QString name)
+bool TRoomDB::removeArea(const QString& name)
 {
     if (areaNamesMap.values().contains(name)) {
         return removeArea(areaNamesMap.key(name)); // i.e. call the removeArea(int) method
