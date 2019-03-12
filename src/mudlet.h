@@ -212,7 +212,7 @@ public:
     void doAutoLogin(const QString&);
     bool deselect(Host* pHost, const QString& name);
     void stopSounds();
-    void playSound(QString s, int);
+    void playSound(const QString &s, int);
     int getColumnCount(Host* pHost, QString& name);
     int getRowCount(Host* pHost, QString& name);
     QStringList getAvailableFonts();

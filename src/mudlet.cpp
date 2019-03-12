@@ -3861,7 +3861,7 @@ void mudlet::stopSounds()
     }
 }
 
-void mudlet::playSound(QString s, int soundVolume)
+void mudlet::playSound(const QString& s, int soundVolume)
 {
     QPointer<Host> pHost = getActiveHost();
     if (!pHost) {
@@ -3888,7 +3888,7 @@ void mudlet::playSound(QString s, int soundVolume)
 
         if (!pPlayer) {
             /* It (should) be impossible to ever reach this */
-            pHost->postMessage("\n[  ERROR  ]  - Unable to create new QMediaPlayer object\n");
+            TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("Play sound: unable to create new QMediaPlayer object\n") >> 0;
             return;
         }
 
