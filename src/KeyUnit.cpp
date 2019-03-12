@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2018-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -152,6 +152,27 @@ bool KeyUnit::disableKey(const QString& name)
         found = true;
     }
     return found;
+}
+
+QPair<bool, Qt::KeyboardModifiers> KeyUnit::getKeyModifiers(const QString& name) const
+{
+    QMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
+        return {true, it.value()->getKeyModifiers()};
+    }
+
+    return {false, Qt::NoModifier};
+}
+
+bool KeyUnit::setKeyModifiers(const QString& name, const Qt::KeyboardModifiers modifiers)
+{
+    QMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
+    while (it != mLookupTable.cend() && it.key() == name) {
+        it.value()->setKeyModifiers(modifiers);
+        return true;
+    }
+
+    return false;
 }
 
 bool KeyUnit::killKey(QString& name)
@@ -330,45 +351,12 @@ int KeyUnit::getNewID()
     return ++mMaxID;
 }
 
-QString KeyUnit::getKeyName(int keyCode, int modifierCode)
+QString KeyUnit::getKeyName(const int keyCode)
 {
-    QString name;
-    /*
-     Qt::NoModifier      0x00000000 No modifier key is pressed.
-     Qt::ShiftModifier   0x02000000 A Shift key on the keyboard is pressed.
-     Qt::ControlModifier 0x04000000 A Ctrl key on the keyboard is pressed.
-     Qt::AltModifier     0x08000000 An Alt key on the keyboard is pressed.
-     Qt::MetaModifier    0x10000000 A Meta key on the keyboard is pressed.
-     Qt::KeypadModifier  0x20000000 A keypad button is pressed.
-     Qt::GroupSwitchModifier 0x40000000 X11 only. A Mode_switch key on the keyboard is pressed.
-    */
-    if (modifierCode == 0x00000000) {
-        name += "no modifiers + ";
-    }
-    if (modifierCode & 0x02000000) {
-        name += "shift + ";
-    }
-    if (modifierCode & 0x04000000) {
-        name += "control + ";
-    }
-    if (modifierCode & 0x08000000) {
-        name += "alt + ";
-    }
-    if (modifierCode & 0x10000000) {
-        name += "meta + ";
-    }
-    if (modifierCode & 0x20000000) {
-        name += "keypad + ";
-    }
-    if (modifierCode & 0x40000000) {
-        name += "groupswitch + ";
-    }
-    if (mKeys.contains(keyCode)) {
-        name += mKeys[keyCode];
-        return name;
-    } else {
-        return QString("undefined key");
-    }
+    return mKeys.value(keyCode, tr("Unknown key (0x%1)",
+                                   // Intentional comment
+                                   "This text is part of the display of the keybinding and is shown if the actual key is not one that is known with a specific name.")
+                       .arg(keyCode, 0, 16, QLatin1Char('0')));
 }
 
 void KeyUnit::initStats()

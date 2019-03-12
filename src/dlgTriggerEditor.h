@@ -268,9 +268,9 @@ public slots:
     void slot_script_main_area_delete_handler();
     void slot_script_main_area_add_handler();
     void slot_script_main_area_edit_handler(QListWidgetItem*);
-    void slot_grab_key();
+    void slot_key_grab(const bool);
     bool event(QEvent* event) override;
-    void grab_key_callback(int key, int modifier);
+    void slot_key_grab_callback(const int, const Qt::KeyboardModifiers);
     void slot_profileSaveAction();
     void slot_profileSaveAsAction();
     void slot_setToolBarIconSize(int);

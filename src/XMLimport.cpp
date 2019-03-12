@@ -1509,7 +1509,7 @@ int XMLimport::readKeyGroup(TKey* pParent)
             } else if (name() == "keyCode") {
                 pT->mKeyCode = readElementText().toInt();
             } else if (name() == "keyModifier") {
-                pT->mKeyModifier = readElementText().toInt();
+                pT->mKeyModifier = Qt::KeyboardModifiers(readElementText().toInt());
             } else if (name() == "KeyGroup" || name() == "Key") {
                 readKeyGroup(pT);
             } else {

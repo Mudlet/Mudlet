@@ -320,11 +320,18 @@ mudlet.key = {
 }
 
 mudlet.keymodifier = {
-  ["None"]                     = 0x00000000,
-  ["Shift"]                    = 0x02000000,
-  ["Control"]                  = 0x04000000,
-  ["Alt"]                      = 0x08000000,
-  ["Meta"]                     = 0x10000000,
-  ["Keypad"]                   = 0x20000000,
-  ["GroupSwitch"]              = 0x40000000,
+  ["None"]                     = 0x00000000, -- Qt::NoModifier
+  ["Shift"]                    = 0x02000000, -- Qt::ShiftModifier
+  ["Control"]                  = 0x04000000, -- Qt::ControlModifier
+  ["Alt"]                      = 0x08000000, -- Qt::AltModifier
+  ["Meta"]                     = 0x10000000, -- Qt::MetaModifier
+  ["Keypad"]                   = 0x20000000, -- Qt::KeypadModifier
+  ["GroupSwitch"]              = 0x40000000, -- Qt::GroupSwitchModifier (X11 only)
+  -- From Qt Documentation:
+  -- Note: On macOS, the ControlModifier value corresponds to the Command keys
+  --   on the keyboard, and the MetaModifier value corresponds to the Control
+  --   keys. The KeypadModifier value will also be set when an arrow key is
+  --   pressed as the arrow keys are considered part of the keypad.
+  -- Note: On Windows Keyboards, Qt::MetaModifier and Qt::Key_Meta are mapped
+  --   to the Windows key.
 }

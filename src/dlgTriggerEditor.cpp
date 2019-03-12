@@ -70,11 +70,14 @@ const QString msgInfoAddTimer = "Check the manual for <a href='http://wiki.mudle
 const QString msgInfoAddButton = "To add a new button: <b>1.</b> Add a new group to define a new Button bar in case you don't have any."
                                  "<b>2.</b> Add new buttons to a button bar."
                                  "Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.";
-
-const QString msgInfoAddKey = "To add a new key binding <b>1.</b> add a new key <b>2.</b> click on <u><b>grab key</b></u> and then press your key combination. <b><u>NOTE:</u></b> If you want to bind "
-                              "a key combination you must hold down the modifier keys (e.g. control, shift etc.) down before clicking on grab key. "
-                              "<b>3.</b> Define a command that is executed when the key is hit. <b>4. <u>Activate</u></b> the new key binding."
-                              "Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.";
+const QString msgInfoAddKey = "<p>To add a new key binding:"
+                              "<ol><li><b>1.</b> add a new key</li>"
+                              "<li><b>2.</b> click on <b><tt>Click to grab key</tt></b> and then press your key combination. "
+                              "<i>NOTE: If you want to bind a key combination you must hold down the modifier keys (e.g. <tt>Control</tt>, <tt>Shift</tt> etc.) down before clicking on grab key.</i></li>"
+                              "<li><b>3.</b> define a command that is executed when the key is hit.</li>"
+                              "<li><b>4. <u>Activate</u></b> the new key binding.</li>"
+                              "<li><b>5.</b> if you wish to adjust the modifiers subsequently you may click on the check boxes but be aware that some modifiers may not be available on all operating systems or may be used for some keys on an operating system outside of a user's control.</ol></p>"
+                              "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>";
 
 const QString msgInfoAddVar = "Add a new variable (can be a string, integer, boolean -- delete a variable to set it to nil).";
 
@@ -93,6 +96,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 , mpCurrentTriggerItem(nullptr)
 , mpCurrentAliasItem(nullptr)
 , mpCurrentVarItem(nullptr)
+, mIsGrabKey(false)
 , mpHost(pH)
 , mpSourceEditorDocument(nullptr)
 , mpSourceEditorEdbee(nullptr)
@@ -117,7 +121,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     statusBar->setSizeGripEnabled(true);
     setStatusBar(statusBar);
     statusBar->show();
-    mIsGrabKey = false;
     auto pVB1 = new QVBoxLayout(mainArea);
 
     // system message area
@@ -158,7 +161,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpKeysMainArea = new dlgKeysMainArea(mainArea);
     mpKeysMainArea->setSizePolicy(sizePolicy8);
     pVB1->addWidget(mpKeysMainArea);
-    connect(mpKeysMainArea->pushButton_key_grabKey, &QAbstractButton::pressed, this, &dlgTriggerEditor::slot_grab_key);
+    connect(mpKeysMainArea->pushButton_key_grabKey, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_key_grab);
 
     mpVarsMainArea = new dlgVarsMainArea(mainArea);
     mpVarsMainArea->setSizePolicy(sizePolicy8);
@@ -3427,11 +3430,11 @@ void dlgTriggerEditor::addKey(bool isFolder)
     saveKey();
     QString name;
     if (isFolder) {
-        name = "New Key Group";
+        name = tr("New Key Group", "text used as a name for a new key group until the user changes it");
     } else {
-        name = "New Key";
+        name = tr("New Key", "text used as a name for a new key item until the user changes it");
     }
-    QString script = "";
+    QString script;
     QStringList nameL;
     nameL << name;
 
@@ -3478,8 +3481,8 @@ void dlgTriggerEditor::addKey(bool isFolder)
     }
 
     pT->setName(name);
-    pT->setKeyCode(-1);
-    pT->setKeyModifiers(-1);
+    pT->setKeyCode(Qt::Key_unknown);
+    pT->setKeyModifiers(Qt::NoModifier);
     pT->setScript(script);
     pT->setIsFolder(isFolder);
     pT->setIsActive(false);
@@ -3497,7 +3500,7 @@ void dlgTriggerEditor::addKey(bool isFolder)
         pParent->setExpanded(true);
     }
     mpKeysMainArea->lineEdit_key_command->clear();
-    mpKeysMainArea->lineEdit_key_binding->setText("no key chosen");
+    mpKeysMainArea->label_key_binding_value->setText(tr("no key chosen"));
     clearDocument(mpSourceEditorEdbee); // New Key
     mpCurrentKeyItem = pNewItem;
     treeWidget_keys->setCurrentItem(pNewItem);
@@ -4696,11 +4699,11 @@ void dlgTriggerEditor::saveKey()
 
     QString name = mpKeysMainArea->lineEdit_key_name->text();
     if (name.isEmpty()) {
-        name = mpKeysMainArea->lineEdit_key_binding->text();
+        name = mpKeysMainArea->label_key_binding_value->text();
     }
     QString command = mpKeysMainArea->lineEdit_key_command->text();
     QString script = mpSourceEditorEdbeeDocument->text();
-
+    Qt::KeyboardModifiers modifiers = mpKeysMainArea->getModifiers();
 
     int triggerID = pItem->data(0, Qt::UserRole).toInt();
     TKey* pT = mpHost->getKeyUnit()->getKey(triggerID);
@@ -4709,6 +4712,7 @@ void dlgTriggerEditor::saveKey()
         pT->setName(name);
         pT->setCommand(command);
         pT->setScript(script);
+        pT->setKeyModifiers(modifiers);
 
         QIcon icon;
         if (pT->isFolder()) {
@@ -5111,11 +5115,11 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem* pItem)
     mpSourceEditorArea->show();
     clearEditorNotification();
     mpKeysMainArea->lineEdit_key_command->clear();
-    mpKeysMainArea->lineEdit_key_binding->clear();
+    mpKeysMainArea->label_key_binding_value->clear();
     mpKeysMainArea->lineEdit_key_name->clear();
     clearDocument(mpSourceEditorEdbee); // Key Select
 
-    mpKeysMainArea->lineEdit_key_binding->setText(pItem->text(0));
+    mpKeysMainArea->label_key_binding_value->setText(pItem->text(0));
     int ID = pItem->data(0, Qt::UserRole).toInt();
     TKey* pT = mpHost->getKeyUnit()->getKey(ID);
     if (pT) {
@@ -5124,8 +5128,9 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem* pItem)
         mpKeysMainArea->lineEdit_key_command->clear();
         mpKeysMainArea->lineEdit_key_command->setText(command);
         mpKeysMainArea->lineEdit_key_name->setText(name);
-        QString keyName = mpHost->getKeyUnit()->getKeyName(pT->getKeyCode(), pT->getKeyModifiers());
-        mpKeysMainArea->lineEdit_key_binding->setText(keyName);
+        QString keyName = mpHost->getKeyUnit()->getKeyName(pT->getKeyCode());
+        mpKeysMainArea->label_key_binding_value->setText(keyName);
+        mpKeysMainArea->setModifiers(pT->getKeyModifiers());
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
 
@@ -6671,8 +6676,7 @@ void dlgTriggerEditor::slot_show_keys()
             mpSystemMessageArea->notificationAreaIconLabelInformation->show();
             mpSystemMessageArea->notificationAreaIconLabelError->hide();
             mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
-            QString msg = "To make a new key binding click on the 'Add' icon above.";
-            mpSystemMessageArea->notificationAreaMessageBox->setText(msg);
+            mpSystemMessageArea->notificationAreaMessageBox->setText(msgInfoAddKey);
         }
     }
 
@@ -7751,8 +7755,7 @@ bool dlgTriggerEditor::eventFilter(QObject*, QEvent* event)
 {
     if (event->type() == QEvent::KeyPress) {
         auto *keyEvent = static_cast<QKeyEvent *>(event);
-        switch (keyEvent->key())
-        {
+        switch (keyEvent->key()) {
         case Qt::Key_Up:
         case Qt::Key_Down:
         case Qt::Key_Left:
@@ -7774,8 +7777,12 @@ bool dlgTriggerEditor::event(QEvent* event)
             auto * ke = static_cast<QKeyEvent*>(event);
             QList<QAction*> actionList = toolBar->actions();
             switch (ke->key()) {
-            case 0x01000000:
+            case Qt::Key_Escape:
                 mIsGrabKey = false;
+                mpKeysMainArea->pushButton_key_grabKey->setChecked(false);
+                mpKeysMainArea->pushButton_key_grabKey->setText(tr("Press\nto\ngrab\nkey"));
+                // Restore cursor after aborted grab:
+                setCursor(QCursor(Qt::ArrowCursor));
                 for (auto& action : actionList) {
                     if (action->text() == "Save Item") {
                         action->setShortcut(tr("Ctrl+S"));
@@ -7784,17 +7791,24 @@ bool dlgTriggerEditor::event(QEvent* event)
                     }
                 }
                 QCoreApplication::instance()->removeEventFilter(this);
+                // This is the default and is redundant:
                 ke->accept();
                 return true;
-            case 0x01000020:
-            case 0x01000021:
-            case 0x01000022:
-            case 0x01000023:
-            case 0x01001103:
+
+            case Qt::Key_Shift:
+            case Qt::Key_Control: // On macOS, this corresponds to the Command keys.
+            case Qt::Key_Meta: // On macOS, this corresponds to the Control keys. On Windows keyboards, this key is mapped to the Windows key.
+            case Qt::Key_Alt:
+            case Qt::Key_AltGr: // On Windows, when the KeyDown (KeyPress ?) event for this key is sent, the Ctrl+Alt modifiers are also set.
                 break;
+
             default:
-                grab_key_callback(ke->key(), ke->modifiers());
+                slot_key_grab_callback(ke->key(), ke->modifiers());
                 mIsGrabKey = false;
+                // Restore cursor to indicate end of grab
+                setCursor(QCursor(Qt::ArrowCursor));
+                mpKeysMainArea->pushButton_key_grabKey->setChecked(false);
+                mpKeysMainArea->pushButton_key_grabKey->setText(tr("Press\nto\ngrab\nkey..."));
                 for (auto& action : actionList) {
                     if (action->text() == "Save Item") {
                         action->setShortcut(tr("Ctrl+S"));
@@ -7812,9 +7826,21 @@ bool dlgTriggerEditor::event(QEvent* event)
 }
 
 
-void dlgTriggerEditor::slot_grab_key()
+void dlgTriggerEditor::slot_key_grab(const bool state)
 {
+    if (!state) {
+        // Only respond to the action that would lock the button down - we
+        // release it when we grab the key
+        return;
+    }
+
     mIsGrabKey = true;
+    // Theoretically we would lock the button down and disable it during the
+    // grab - but we need it to hold the keyboard focus until the key is grabbed
+    // and disabling it prevents that...
+    mpKeysMainArea->pushButton_key_grabKey->setText(tr("Press\nthe\nkey\nto\ngrab..."));
+    // Change cursor to indicate a grab is in progress:
+    setCursor(QCursor(Qt::ForbiddenCursor));
     QList<QAction*> actionList = toolBar->actions();
     for (auto& action : actionList) {
         if (action->text() == "Save Item") {
@@ -7826,22 +7852,24 @@ void dlgTriggerEditor::slot_grab_key()
     QCoreApplication::instance()->installEventFilter(this);
 }
 
-void dlgTriggerEditor::grab_key_callback(int key, int modifier)
+void dlgTriggerEditor::slot_key_grab_callback(const int key, const Qt::KeyboardModifiers mods)
 {
     KeyUnit* pKeyUnit = mpHost->getKeyUnit();
     if (!pKeyUnit) {
         return;
     }
-    QString keyName = pKeyUnit->getKeyName(key, modifier);
+
+    QString keyName = pKeyUnit->getKeyName(key);
     QString name = keyName;
-    mpKeysMainArea->lineEdit_key_binding->setText(name);
+    mpKeysMainArea->label_key_binding_value->setText(name);
+    mpKeysMainArea->setModifiers(mods);
     QTreeWidgetItem* pItem = treeWidget_keys->currentItem();
     if (pItem) {
         int triggerID = pItem->data(0, Qt::UserRole).toInt();
         TKey* pT = mpHost->getKeyUnit()->getKey(triggerID);
         if (pT) {
             pT->setKeyCode(key);
-            pT->setKeyModifiers(modifier);
+            pT->setKeyModifiers(mods);
         }
     }
 }

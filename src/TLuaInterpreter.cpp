@@ -2399,6 +2399,63 @@ int TLuaInterpreter::killKey(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getKeyModifiers
+int TLuaInterpreter::getKeyModifiers(lua_State* L)
+{
+    QString keyName;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "getKeyModifiers: bad argument #1 type (key name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        keyName = QString::fromUtf8(lua_tostring(L, 1));
+    }
+    Host& host = getHostFromLua(L);
+    QPair<bool, Qt::KeyboardModifiers> result = host.getKeyUnit()->getKeyModifiers(keyName);
+    if (!result.first) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "key \"%s\" not found", keyName.toUtf8().constData());
+        return 2;
+    } else {
+        lua_pushnumber(L, result.second);
+        return 1;
+    }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setKeyModifiers
+int TLuaInterpreter::setKeyModifiers(lua_State* L)
+{
+    QString keyName;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setKeyModifiers: bad argument #1 type (key name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        keyName = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    Qt::KeyboardModifiers keyModifiers = Qt::NoModifier;
+    if (!lua_isnumber(L, 2)) {
+        lua_pushfstring(L, "setKeyModifiers: bad argument #2 type (key modifiers as number expect, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    } else {
+        // This seems a bit odd but the value returned from lua_tointeger(...)
+        // may not be the integer type of a system (it could be longer) - and
+        // that confuses things when trying to convert an int to a QFlag-ged
+        // type like the Qt::keyboardModifier one:
+        keyModifiers = Qt::KeyboardModifiers(static_cast<int>(lua_tointeger(L, 2)));
+    }
+
+    Host& host = getHostFromLua(L);
+    bool result = host.getKeyUnit()->setKeyModifiers(keyName, keyModifiers);
+    if (!result) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "key \"%s\" not found", keyName.toUtf8().constData());
+        return 2;
+    } else {
+        lua_pushboolean(L, true);
+        return 1;
+    }
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableAlias
 int TLuaInterpreter::enableAlias(lua_State* L)
 {
@@ -7130,13 +7187,18 @@ int TLuaInterpreter::permKey(lua_State* L)
         parentGroup = QString::fromUtf8(lua_tostring(L, argIndex));
     }
 
-    int keyModifier = Qt::NoModifier;
+    Qt::KeyboardModifiers keyModifiers = Qt::NoModifier;
     if (lua_gettop(L) > 4) {
         if (!lua_isnumber(L, ++argIndex) && !lua_isnil(L, argIndex)) {
             lua_pushfstring(L, "permKey: bad argument #%d type (key modifier as number is optional, got %s!)", argIndex, luaL_typename(L, argIndex));
             return lua_error(L);
         } else {
-            keyModifier = lua_tointeger(L, argIndex);
+            // This seems a bit odd but the value returned from
+            // lua_tointeger(...) may not be the integer type of a system (it
+            // could be longer) - and that confuses things when trying to
+            // convert an int to a QFlag-ged type like the Qt::keyboardModifier
+            // one:
+            keyModifiers = Qt::KeyboardModifiers(static_cast<int>(lua_tointeger(L, argIndex)));
         }
     }
 
@@ -7159,7 +7221,7 @@ int TLuaInterpreter::permKey(lua_State* L)
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     // FIXME: The script in the luaFunction could fail to compile - although this will still create a key (which will error each time it is encountered)
-    int keyID = pLuaInterpreter->startPermKey(keyName, parentGroup, keyCode, keyModifier, luaFunction);
+    int keyID = pLuaInterpreter->startPermKey(keyName, parentGroup, keyCode, keyModifiers, luaFunction);
     lua_pushnumber(L, keyID);
     return 1;
 }
@@ -7168,13 +7230,18 @@ int TLuaInterpreter::permKey(lua_State* L)
 int TLuaInterpreter::tempKey(lua_State* L)
 {
     uint_fast8_t argIndex = 0;
-    int keyModifier = Qt::NoModifier;
+    Qt::KeyboardModifiers keyModifiers = Qt::NoModifier;
     if (lua_gettop(L) > 2) {
         if (!lua_isnumber(L, ++argIndex) && !lua_isnil(L, argIndex)) {
             lua_pushfstring(L, "tempKey: bad argument #%d type (key modifier as number is optional, got %s!)", argIndex, luaL_typename(L, argIndex));
             return lua_error(L);
         } else {
-            keyModifier = lua_tointeger(L, argIndex);
+            // This seems a bit odd but the value returned from
+            // lua_tointeger(...) may not be the integer type of a system (it
+            // could be longer) - and that confuses things when trying to
+            // convert an int to a QFlag-ged type like the Qt::keyboardModifier
+            // one:
+            keyModifiers = Qt::KeyboardModifiers(static_cast<int>(lua_tointeger(L, argIndex)));
         }
     }
 
@@ -7196,7 +7263,7 @@ int TLuaInterpreter::tempKey(lua_State* L)
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    int timerID = pLuaInterpreter->startTempKey(keyModifier, keyCode, luaFunction);
+    int timerID = pLuaInterpreter->startTempKey(keyModifiers, keyCode, luaFunction);
     lua_pushnumber(L, timerID);
     return 1;
 }
@@ -14709,6 +14776,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "spellCheckWord", TLuaInterpreter::spellCheckWord);
     lua_register(pGlobalLua, "spellSuggestWord", TLuaInterpreter::spellSuggestWord);
     lua_register(pGlobalLua, "getDictionaryWordList", TLuaInterpreter::getDictionaryWordList);
+    lua_register(pGlobalLua, "getKeyModifiers", TLuaInterpreter::getKeyModifiers);
+    lua_register(pGlobalLua, "setKeyModifiers", TLuaInterpreter::setKeyModifiers);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     // prepend profile path to package.path and package.cpath
@@ -15087,7 +15156,7 @@ int TLuaInterpreter::startTempAlias(const QString& regex, const QString& functio
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startPermKey(QString& name, QString& parent, int& keycode, int& modifier, QString& function)
+int TLuaInterpreter::startPermKey(QString& name, QString& parent, const int& keycode, const Qt::KeyboardModifiers& modifiers, QString& function)
 {
     TKey* pT;
 
@@ -15101,7 +15170,7 @@ int TLuaInterpreter::startPermKey(QString& name, QString& parent, int& keycode, 
         pT = new TKey(pP, mpHost);
     }
     pT->setKeyCode(keycode);
-    pT->setKeyModifiers(modifier);
+    pT->setKeyModifiers(modifiers);
     pT->setIsFolder(false);
     pT->setIsActive(true);
     pT->setTemporary(false);
@@ -15115,12 +15184,12 @@ int TLuaInterpreter::startPermKey(QString& name, QString& parent, int& keycode, 
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempKey(int& modifier, int& keycode, QString& function)
+int TLuaInterpreter::startTempKey(const Qt::KeyboardModifiers& modifiers, const int& keycode, QString& function)
 {
     TKey* pT;
     pT = new TKey("a", mpHost);
     pT->setKeyCode(keycode);
-    pT->setKeyModifiers(modifier);
+    pT->setKeyModifiers(modifiers);
     pT->setIsFolder(false);
     pT->setIsActive(true);
     pT->setTemporary(true);

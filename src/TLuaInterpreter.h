@@ -114,7 +114,7 @@ public:
 
     int startTempTimer(double, const QString&);
     int startTempAlias(const QString&, const QString&);
-    int startTempKey(int&, int&, QString&);
+    int startTempKey(const Qt::KeyboardModifiers&, const int&, QString&);
     int startTempTrigger(const QString& regex, const QString& function, int expiryCount = -1);
     int startTempBeginOfLineTrigger(const QString&, const QString&, int expiryCount = -1);
     int startTempExactMatchTrigger(const QString&, const QString&, int expiryCount = -1);
@@ -128,7 +128,7 @@ public:
     int startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
     int startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     int startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
-    int startPermKey(QString&, QString&, int&, int&, QString&);
+    int startPermKey(QString&, QString&, const int&, const Qt::KeyboardModifiers&, QString&);
 
     static int getCustomLines(lua_State*);
     static int addCustomLine(lua_State*);
@@ -498,6 +498,8 @@ public:
     static int spellCheckWord(lua_State*);
     static int spellSuggestWord(lua_State*);
     static int getDictionaryWordList(lua_State*);
+    static int getKeyModifiers(lua_State*);
+    static int setKeyModifiers(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 

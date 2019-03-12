@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>600</width>
-    <height>100</height>
+    <height>173</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -16,7 +16,7 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
-  <layout class="QGridLayout" name="gridLayout">
+  <layout class="QGridLayout" name="gridLayout" columnstretch="0,1,0">
    <item row="0" column="0">
     <widget class="QLabel" name="label_key_name">
      <property name="text">
@@ -52,9 +52,9 @@
     </widget>
    </item>
    <item row="2" column="0">
-    <widget class="QLabel" name="label_key_binding">
+    <widget class="QLabel" name="label_key_binding_label">
      <property name="text">
-      <string>Key Binding:</string>
+      <string>Key:</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -62,53 +62,110 @@
     </widget>
    </item>
    <item row="2" column="1">
-    <widget class="QLineEdit" name="lineEdit_key_binding">
-     <property name="palette">
-      <palette>
-       <active>
-        <colorrole role="Base">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>225</red>
-           <green>232</green>
-           <blue>255</blue>
-          </color>
-         </brush>
-        </colorrole>
-       </active>
-       <inactive>
-        <colorrole role="Base">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>225</red>
-           <green>232</green>
-           <blue>255</blue>
-          </color>
-         </brush>
-        </colorrole>
-       </inactive>
-       <disabled>
-        <colorrole role="Base">
-         <brush brushstyle="SolidPattern">
-          <color alpha="255">
-           <red>244</red>
-           <green>244</green>
-           <blue>244</blue>
-          </color>
-         </brush>
-        </colorrole>
-       </disabled>
-      </palette>
+    <widget class="QLabel" name="label_key_binding_value">
+     <property name="frameShape">
+      <enum>QFrame::Box</enum>
      </property>
-     <property name="readOnly">
+     <property name="frameShadow">
+      <enum>QFrame::Plain</enum>
+     </property>
+     <property name="text">
+      <string>no key chosen</string>
+     </property>
+     <property name="scaledContents">
       <bool>true</bool>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <property name="textInteractionFlags">
+      <set>Qt::NoTextInteraction</set>
      </property>
     </widget>
    </item>
-   <item row="2" column="2">
-    <widget class="QPushButton" name="pushButton_key_grabKey">
+   <item row="3" column="1">
+    <widget class="QFrame" name="frame_modifiers">
+     <property name="frameShape">
+      <enum>QFrame::Box</enum>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_modifiers">
+      <item row="1" column="2">
+       <widget class="QCheckBox" name="checkBox_modifier_group">
+        <property name="text">
+         <string>Group</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QCheckBox" name="checkBox_modifier_alt">
+        <property name="text">
+         <string extracomment="This will be changed to &quot;Control&quot; on the MacOs platform.">Alt</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QCheckBox" name="checkBox_modifier_shift">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="text">
+         <string>Shift</string>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QCheckBox" name="checkBox_modifier_meta">
+        <property name="text">
+         <string extracomment="This will be changed to &quot;Windows&quot; on the Windows platform.">Meta</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QCheckBox" name="checkBox_modifier_keypad">
+        <property name="text">
+         <string>Keypad</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QCheckBox" name="checkBox_modifier_control">
+        <property name="text">
+         <string extracomment="This will be changed to &quot;Command&quot; on the MacOs platform.">Control</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="3" column="0" alignment="Qt::AlignRight">
+    <widget class="QLabel" name="label_key_modifiers_label">
      <property name="text">
-      <string>Grab New Key</string>
+      <string>Modifiers:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="2" rowspan="2">
+    <widget class="QPushButton" name="pushButton_key_grabKey">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>Click
+to
+grab
+key</string>
+     </property>
+     <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
      </property>
     </widget>
    </item>

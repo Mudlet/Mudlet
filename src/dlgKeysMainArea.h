@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -34,6 +35,22 @@ class dlgKeysMainArea : public QWidget, public Ui::keybindings_main_area
 public:
     Q_DISABLE_COPY(dlgKeysMainArea)
     dlgKeysMainArea(QWidget*);
+    void setModifiers(const Qt::KeyboardModifiers modifiers);
+    Qt::KeyboardModifiers getModifiers() const;
+
+
+signals:
+    void signal_modifierKeyToggled(const Qt::KeyboardModifier, const bool);
+
+
+private slots:
+    void slot_modifierKeyToggled_shift(const bool);
+    void slot_modifierKeyToggled_control(const bool);
+    void slot_modifierKeyToggled_alt(const bool);
+    void slot_modifierKeyToggled_meta(const bool);
+    void slot_modifierKeyToggled_keypad(const bool);
+    void slot_modifierKeyToggled_group(const bool);
+
 };
 
 #endif // MUDLET_DLGKEYSMAINAREA_H

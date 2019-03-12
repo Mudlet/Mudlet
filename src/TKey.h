@@ -47,8 +47,8 @@ public:
     void setName(const QString & name);
     int getKeyCode() { return mKeyCode; }
     void setKeyCode(int code) { mKeyCode = code; }
-    int getKeyModifiers() { return mKeyModifier; }
-    void setKeyModifiers(int code) { mKeyModifier = code; }
+    Qt::KeyboardModifiers getKeyModifiers() { return mKeyModifier; }
+    void setKeyModifiers(const Qt::KeyboardModifiers code) { mKeyModifier = code; }
     void enableKey(const QString& name);
     void disableKey(const QString& name);
     void compile();
@@ -79,7 +79,7 @@ private:
       Qt::KeypadModifier 0x20000000 A keypad button is pressed. */
 
     int mKeyCode;
-    int mKeyModifier;
+    Qt::KeyboardModifiers mKeyModifier;
 
     QString mRegexCode;
     QRegularExpression mRegex;

@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2018-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,6 +24,7 @@
 
 
 #include "pre_guard.h"
+#include <QApplication>
 #include <QMap>
 #include <QMutex>
 #include <QPointer>
@@ -38,6 +39,7 @@ class TKey;
 
 class KeyUnit
 {
+    Q_DECLARE_TR_FUNCTIONS(KeyUnit) // Needed so we can use tr() even though KeyUnit is NOT derived from QObject
     friend class XMLexport;
     friend class XMLimport;
 
@@ -56,13 +58,15 @@ public:
     TKey* findKey(QString & name);
     bool enableKey(const QString& name);
     bool disableKey(const QString& name);
+    QPair<bool, Qt::KeyboardModifiers> getKeyModifiers(const QString&) const;
+    bool setKeyModifiers(const QString&, const Qt::KeyboardModifiers);
     bool killKey(QString& name);
     bool registerKey(TKey* pT);
     void unregisterKey(TKey* pT);
     void reParentKey(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
     QString assembleReport();
     int getNewID();
-    QString getKeyName(int keyCode, int modifier);
+    QString getKeyName(const int keyCode);
     void setupKeyNames();
     void uninstall(const QString&);
     void _uninstall(TKey* pChild, const QString& packageName);
