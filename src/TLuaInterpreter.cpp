@@ -13776,19 +13776,19 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
 {
     // Log error to Editor's Errors TConsole:
     if (mpHost->mpEditorDialog) {
-        mpHost->mpEditorDialog->mpErrorConsole->print(QStringLiteral("[ERROR:]"), QColor(Qt::blue), QColor(Qt::black));
-        mpHost->mpEditorDialog->mpErrorConsole->print(QStringLiteral(" object:<%1> function:<%2>\n").arg(name, function), QColor(Qt::green), QColor(Qt::black));
+        mpHost->mpEditorDialog->mpErrorConsole->print(QStringLiteral("[%1:]").arg(tr("ERROR")), QColor(Qt::blue), QColor(Qt::black));
+        mpHost->mpEditorDialog->mpErrorConsole->print(QStringLiteral(" %1:<%2> %3:<%4>\n").arg(tr("object"), name, tr("function"), function), QColor(Qt::green), QColor(Qt::black));
         mpHost->mpEditorDialog->mpErrorConsole->print(QStringLiteral("        <%1>\n").arg(e.c_str()), QColor(Qt::red), QColor(Qt::black));
     }
 
     // Log error to Profile's Main TConsole:
     if (mpHost->mEchoLuaErrors) {
-        // ensure the Lua error is on a line of it's own and is not prepended to the previous line
+        // ensure the Lua error is on a line of its own and is not prepended to the previous line
         if (mpHost->mpConsole->buffer.size() > 0 && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
             mpHost->postMessage(QStringLiteral("\n"));
         }
 
-        mpHost->postMessage(QStringLiteral("[  LUA  ] - object: <%1> function:<%2>\n<%3>").arg(name, function, e.c_str()));
+        mpHost->postMessage(QStringLiteral("[  LUA  ] - %1: <%2> %3:<%4>\n<%5>").arg(tr("object"), name, tr("function"), function, e.c_str()));
     }
 }
 
