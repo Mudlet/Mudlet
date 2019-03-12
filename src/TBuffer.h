@@ -252,7 +252,7 @@ public:
 
 private:
     void shrinkBuffer();
-    int calcWrapPos(int line, int begin, int end);
+    int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
     bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);

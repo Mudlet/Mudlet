@@ -3385,18 +3385,19 @@ void TBuffer::appendBuffer(const TBuffer& chunk)
     append(QString(QChar::LineFeed), 0, 1, Qt::black, Qt::black, TChar::None);
 }
 
-int TBuffer::calcWrapPos(int line, int begin, int end)
+int TBuffer::calculateWrapPosition(int lineNumber, int begin, int end)
 {
-    const QString lineBreaks = ",.- \n";
-    if (lineBuffer.size() < line) {
+    const QString lineBreaks = QStringLiteral("- \n");
+    if (lineBuffer.size() < lineNumber) {
         return 0;
     }
-    int lineSize = static_cast<int>(lineBuffer[line].size()) - 1;
+    int lineSize = static_cast<int>(lineBuffer[lineNumber].size()) - 1;
     if (lineSize < end) {
         end = lineSize;
     }
+    const auto line = lineBuffer[lineNumber];
     for (int i = end; i >= begin; --i) {
-        if (lineBreaks.indexOf(lineBuffer[line].at(i)) > -1) {
+        if (lineBreaks.indexOf(line.at(i)) > -1) {
             return i;
         }
     }
@@ -3457,7 +3458,7 @@ inline int TBuffer::wrap(int startLine)
         }
         for (int i2 = 0, total = static_cast<int>(buffer[i].size()); i2 < total;) {
             if (length - i2 > mWrapAt - indent) {
-                wrapPos = calcWrapPos(i, i2, i2 + mWrapAt - indent);
+                wrapPos = calculateWrapPosition(i, i2, i2 + mWrapAt - indent);
                 lastSpace = qMax(0, wrapPos);
             } else {
                 lastSpace = 0;
@@ -3590,45 +3591,45 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
     QStringList tempList;
     int lineCount = 0;
 
-    for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
-        if (i > startLine) {
+    for (int line = startLine, total = static_cast<int>(buffer.size()); line < total; ++line) {
+        if (line > startLine) {
             break; //only wrap one line of text
         }
         std::deque<TChar> newLine;
         QString lineText;
 
         int indent = 0;
-        if (static_cast<int>(buffer[i].size()) >= screenWidth) {
-            for (int i3 = 0; i3 < indentSize; ++i3) {
+        if (static_cast<int>(buffer[line].size()) >= screenWidth) {
+            for (int prependSpaces = 0; prependSpaces < indentSize; ++prependSpaces) {
                 TChar pSpace = format;
                 newLine.push_back(pSpace);
-                lineText.append(" ");
+                lineText.append(QChar::Space);
             }
             indent = indentSize;
         }
         int lastSpace = -1;
         int wrapPos = -1;
-        auto length = static_cast<int>(buffer[i].size());
+        auto lineLength = static_cast<int>(buffer[line].size());
 
-        for (int i2 = 0, total = static_cast<int>(buffer[i].size()); i2 < total;) {
-            if (length - i2 > screenWidth - indent) {
-                wrapPos = calcWrapPos(i, i2, i2 + screenWidth - indent);
+        for (int characterPosition = 0, total = static_cast<int>(buffer[line].size()); characterPosition < total;) {
+            if (lineLength - characterPosition > screenWidth - indent) {
+                wrapPos = calculateWrapPosition(line, characterPosition, characterPosition + screenWidth - indent);
                 lastSpace = qMax(-1, wrapPos);
             } else {
                 lastSpace = -1;
             }
             for (int i3 = 0, total = screenWidth - indent; i3 < total; ++i3) {
                 if (lastSpace > 0) {
-                    if (i2 >= lastSpace) {
-                        i2++;
+                    if (characterPosition >= lastSpace) {
+                        characterPosition++;
                         break;
                     }
                 }
-                if (i2 >= static_cast<int>(buffer[i].size())) {
+                if (characterPosition >= static_cast<int>(buffer[line].size())) {
                     break;
                 }
-                if (lineBuffer[i][i2] == QChar('\n')) {
-                    i2++;
+                if (lineBuffer[line][characterPosition] == QChar::LineFeed) {
+                    characterPosition++;
 
                     if (newLine.empty()) {
                         tempList.append(QString());
@@ -3640,9 +3641,9 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
                     }
                     goto OPT_OUT_CLEAN;
                 }
-                newLine.push_back(buffer[i][i2]);
-                lineText.append(lineBuffer[i].at(i2));
-                i2++;
+                newLine.push_back(buffer[line][characterPosition]);
+                lineText.append(lineBuffer[line].at(characterPosition));
+                characterPosition++;
             }
             queue.push(newLine);
             tempList.append(lineText);
