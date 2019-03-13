@@ -460,7 +460,8 @@ please wait...</source>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when NO rooms are selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the current player&apos;s room.</comment>
-      <translation type="unfinished"/>
+      <translation>Комната%1Идентификатор:%1%2 Позиция%1на%1Карте: (%3,%4,%5) ‑%1текущая позиция игрока
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2139"/>
