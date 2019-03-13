@@ -5360,128 +5360,128 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="756"/>
       <source>Entered number is invalid, set the number of the room northwest of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Введен недопустимый номер, установите номер комнаты к северо-западу от этой комнаты, станет синим для допустимого числа.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="767"/>
       <location filename="../src/dlgRoomExits.cpp" line="1372"/>
       <source>Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Установите номер комнаты к северо-западу от этой комнаты, будет синим для допустимого числа или красным для недопустимого.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="810"/>
       <source>Entered number is invalid, set the number of the room north of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Введен недопустимый номер, установите номер комнаты к северу от этой комнаты, станет синим для допустимого числа.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="820"/>
       <location filename="../src/dlgRoomExits.cpp" line="1406"/>
       <source>Set the number of the room north of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Установите номер комнаты к северу от этой комнаты, будет синим для допустимого числа или красным для недопустимого.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="862"/>
       <source>Entered number is invalid, set the number of the room northeast of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Введен недопустимый номер, установите номер комнаты к северо-востоку от этой комнаты, станет синим для допустимого числа.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="872"/>
       <location filename="../src/dlgRoomExits.cpp" line="1437"/>
       <source>Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Установите номер комнаты к северо-востоку от этой комнаты, будет синим для допустимого числа или красным для недопустимого.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="914"/>
       <source>Entered number is invalid, set the number of the room up from this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Введен недопустимый номер, установите номер комнаты вверх от этой комнаты, станет синим для действительного номера.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="924"/>
       <location filename="../src/dlgRoomExits.cpp" line="1468"/>
       <source>Set the number of the room up from this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Установите номер комнаты вверх от этой комнаты, будет синим для действительного номера или красным для недействительного.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="966"/>
       <source>Entered number is invalid, set the number of the room west of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Введен недопустимый номер, установите номер комнаты к западу от этой комнаты, станет синим для допустимого числа.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="976"/>
       <location filename="../src/dlgRoomExits.cpp" line="1499"/>
       <source>Set the number of the room west of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Установите номер комнаты к западу от этой комнаты, будет синим для допустимого числа или красным для недопустимого.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1018"/>
       <source>Entered number is invalid, set the number of the room east of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Введен недопустимый номер, установите номер комнаты к востоку от этой комнаты, станет синим для действительного числа.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1028"/>
       <location filename="../src/dlgRoomExits.cpp" line="1530"/>
       <source>Set the number of the room east of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Установите номер комнаты к востоку от этой комнаты, будет синим для действительного числа или красным для недопустимого.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1070"/>
       <source>Entered number is invalid, set the number of the room down from this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Введен недопустимый номер, задайте номер комнаты вниз от этой комнаты, станет синим для действительного номера.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1080"/>
       <location filename="../src/dlgRoomExits.cpp" line="1561"/>
       <source>Set the number of the room down from this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Установите номер комнаты вниз от этой комнаты, будет синим для действительного номера или красным для недействительного.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1122"/>
       <source>Entered number is invalid, set the number of the room southwest of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Введен недопустимый номер, установите номер комнаты к юго-западу от этой комнаты, станет синим для действительного числа.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1132"/>
       <location filename="../src/dlgRoomExits.cpp" line="1592"/>
       <source>Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Установите номер комнаты к юго-западу от этой комнаты, будет синим для действительного числа или красным для недействительных.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1174"/>
       <source>Entered number is invalid, set the number of the room south of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Введен недопустимый номер, установите номер комнаты к югу от этой комнаты, станет синим для допустимого числа.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1184"/>
       <location filename="../src/dlgRoomExits.cpp" line="1623"/>
       <source>Set the number of the room south of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Установите номер комнаты к югу от этой комнаты, будет синим для допустимого числа или красным для недопустимого.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1226"/>
       <source>Entered number is invalid, set the number of the room southeast of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Введен недопустимый номер, установите номер комнаты к юго-востоку от этой комнаты, станет синим для действительного числа.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1236"/>
       <location filename="../src/dlgRoomExits.cpp" line="1654"/>
       <source>Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Установите номер комнаты к юго-востоку от этой комнаты, будет синим для действительного числа или красным для недопустимого.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1278"/>
       <source>Entered number is invalid, set the number of the room in from this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Введен недопустимый номер, задайте номер комнаты в из этой комнаты, станет синим для действительного номера.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1288"/>
       <location filename="../src/dlgRoomExits.cpp" line="1685"/>
       <source>Set the number of the room in from this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Установите номер комнаты в из этой комнаты, будет синим для действительного номера или красным для недействительного.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1330"/>
       <source>Entered number is invalid, set the number of the room out from this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Введен недопустимый номер, установите номер комнаты из этой комнаты, станет синим для действительного номера.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1340"/>
@@ -6097,7 +6097,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4819"/>
       <source>A Go-Ahead (GA) signal from the game is required to make this feature work</source>
-      <translation type="unfinished"/>
+      <translation>Для работы этой функции требуется сигнал Go-Ahead (GA) от игры</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5007"/>
@@ -6178,7 +6178,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7175"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7180"/>
       <source>You have to choose an item for export first. Please select a tree item and then click on export again.</source>
-      <translation type="unfinished"/>
+      <translation>Сначала необходимо выбрать элемент для экспорта. Выберите элемент и снова нажмите на экспорт.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7064"/>
@@ -6204,7 +6204,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7315"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7320"/>
       <source>You have to chose an item for export first. Please select a tree item and then click on export again.</source>
-      <translation type="unfinished"/>
+      <translation>Сначала необходимо выбрать элемент для экспорта. Выберите элемент и снова нажмите на экспорт.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7209"/>
@@ -6783,7 +6783,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="259"/>
       <source>&lt;p&gt;Show or hide the game map.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Показать или скрыть карту игры.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="267"/>
@@ -7553,12 +7553,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="244"/>
       <source>English (South Africa)</source>
-      <translation type="unfinished"/>
+      <translation>Английский (Южная Африка)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="245"/>
       <source>English (Zimbabwe)</source>
-      <translation type="unfinished"/>
+      <translation>Английский (Зимбабве)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="246"/>
@@ -7568,32 +7568,32 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="247"/>
       <source>Spanish (Argentina)</source>
-      <translation type="unfinished"/>
+      <translation>Испанский (Аргентина)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="248"/>
       <source>Spanish (Bolivia)</source>
-      <translation type="unfinished"/>
+      <translation>Испанский (Боливия)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="249"/>
       <source>Spanish (Chile)</source>
-      <translation type="unfinished"/>
+      <translation>Испанский (Чили)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="250"/>
       <source>Spanish (Colombia)</source>
-      <translation type="unfinished"/>
+      <translation>Испанский (Колумбия)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="251"/>
       <source>Spanish (Costa Rica)</source>
-      <translation type="unfinished"/>
+      <translation>Испанский (Коста-Рика)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="252"/>
       <source>Spanish (Cuba)</source>
-      <translation type="unfinished"/>
+      <translation>Испанский (Куба)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="253"/>
@@ -7658,22 +7658,22 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="265"/>
       <source>Spanish (United States)</source>
-      <translation type="unfinished"/>
+      <translation>Испанский (США)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="266"/>
       <source>Spanish (Uruguay)</source>
-      <translation type="unfinished"/>
+      <translation>Испанский (Уругвай)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="267"/>
       <source>Spanish (Venezuela)</source>
-      <translation type="unfinished"/>
+      <translation>Испанский (Венесуэла)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="268"/>
       <source>Basque</source>
-      <translation type="unfinished"/>
+      <translation>Баскский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="269"/>
