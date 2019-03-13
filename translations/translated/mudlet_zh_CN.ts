@@ -478,7 +478,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2183"/>
       <source>render time: %1S mO: (%2,%3,%4)</source>
       <comment>This is debug information that is not expected to be seen in release versions, %1 is a decimal time period and %2-%4 are the x,y and z coordinates at the center of the view (but y will be negative compared to previous room related ones as it represents the real coordinate system for this widget which has y increasing in a downward direction!)</comment>
-      <translation type="unfinished"/>
+      <translation>渲染时间: %1S mO: (%2,%3,%4)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2292"/>
@@ -490,13 +490,13 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2293"/>
       <source>Text Label</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>文本标签</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2294"/>
       <source>Image Label</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>图片标签</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2298"/>
@@ -520,31 +520,31 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2310"/>
       <source>Select image</source>
       <comment>2D Mapper create label file dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>选择图像</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2317"/>
       <source>Draw label as background or on top of everything?</source>
       <comment>2D Mapper create label dialog text</comment>
-      <translation type="unfinished"/>
+      <translation>是否作为背景或在所有内容顶部绘制标签？</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2318"/>
       <source>Background</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>背景</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2319"/>
       <source>Foreground</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>前景</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2563"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
-      <translation type="unfinished"/>
+      <translation>拖拽选择多个房间或标签，释放完成选择……</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2714"/>
@@ -556,7 +556,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2715"/>
       <source>Undo last point</source>
       <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>撤销上一个点</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2722"/>
@@ -574,7 +574,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2725"/>
       <source>Change the properties of this line</source>
       <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>改变这条线的属性</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2728"/>
@@ -586,7 +586,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2729"/>
       <source>Finish drawing this line</source>
       <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>完成绘制这条线</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2750"/>
@@ -610,139 +610,139 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2772"/>
       <source>Move</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>移动</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2773"/>
       <source>Move room</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>移动房间</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2776"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>删除</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2777"/>
       <source>Delete room</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>删除房间</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2780"/>
       <source>Color</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>颜色</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2781"/>
       <source>Change room color</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>改变房间颜色</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2784"/>
       <source>Spread</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>展开</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2785"/>
       <source>Increase map X-Y spacing for the selected group of rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>增加地图X-Y间距为选定的集团的房间</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2788"/>
       <source>Shrink</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>收缩</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2789"/>
       <source>Decrease map X-Y spacing for the selected group of rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>减少选定房间组的 map X Y 间距</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2792"/>
       <source>Lock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>锁定</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2793"/>
       <source>Lock room for speed walks</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>为快速行走锁定房间</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2796"/>
       <source>Unlock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>解锁​​​​</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2797"/>
       <source>Unlock room for speed walks</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>为快速行走解锁房间</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2800"/>
       <source>Weight</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>权重</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2801"/>
       <source>Set room weight</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>设置房间权重</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2804"/>
       <source>Exits</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>出口</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2805"/>
       <source>Set room exits</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>设置房间出口</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2808"/>
       <source>Symbol</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>符号</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2809"/>
       <source>Set one or more symbols or letters to mark special rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>设置一个或多个符号或字符来标记特殊房间</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2812"/>
       <source>Move to</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>移动至</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2813"/>
       <source>Move selected group to a given position</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>移动选中的组到特定的位置</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2816"/>
       <source>Area</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>区域</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2817"/>
@@ -760,13 +760,13 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2822"/>
       <source>Replace an exit line with a custom line</source>
       <comment>2D Mapper context menu (room) item tooltip (enabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>用自定义线替换出口线</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2826"/>
       <source>Custom exit lines are not shown and are not editable in grid mode</source>
       <comment>2D Mapper context menu (room) item tooltip (disabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>自定义的出口线不可见且不可在网格模式中编辑</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2830"/>
@@ -790,7 +790,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2836"/>
       <source>Set player current location to here</source>
       <comment>2D Mapper context menu (room) item tooltip (enabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>将角色的当前位置设置在此处</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2840"/>
@@ -802,25 +802,25 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2867"/>
       <source>Move</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>移动</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2868"/>
       <source>Move label</source>
       <comment>2D Mapper context menu item (label) tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>移动标签</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2870"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>删除</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2871"/>
       <source>Delete label</source>
       <comment>2D Mapper context menu (label) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>删除标签</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2887"/>
@@ -832,13 +832,13 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2894"/>
       <source>Divide segment by adding a new point mid-way along</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>通过在中途添加新点以划分线段</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2897"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state, i.e must do the suggested action first)</comment>
-      <translation type="unfinished"/>
+      <translation>先选择点，再在线段中间添加新点朝向房间</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2901"/>
@@ -850,19 +850,19 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2908"/>
       <source>Merge pair of segments by removing this point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state but will be able to be done again on this item)</comment>
-      <translation type="unfinished"/>
+      <translation>通过移除此点合并线段对</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2912"/>
       <source>Remove last segment by removing this point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state but is the last time this action can be done on this item)</comment>
-      <translation type="unfinished"/>
+      <translation>通过移除此点移除上个线段</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2923"/>
       <source>Select a point first, then remove it</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state, user will need to do something before it can be used)</comment>
-      <translation type="unfinished"/>
+      <translation>先选择一个点, 然后将其删除</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2927"/>
@@ -886,26 +886,26 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2936"/>
       <source>Delete all of this custom line</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>删除所有此自定义线</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3400"/>
       <source>Move the selection, centered on
 the highlighted room (%1) to:</source>
       <comment>Use linefeeds as necessary to format text into a reasonable rectangle of text, %1 is a room number</comment>
-      <translation type="unfinished"/>
+      <translation>移动选择，将中心从高亮房间 (%1) 移至:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3424"/>
       <source>OK</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation type="unfinished"/>
+      <translation>好</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3429"/>
       <source>Cancel</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation type="unfinished"/>
+      <translation>取消</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3518"/>
@@ -913,7 +913,7 @@ the highlighted room (%1) to:</source>
       <location filename="../src/T2DMap.cpp" line="3589"/>
       <source>Enter room symbol</source>
       <comment>Title for room symbol selection/entry dialog (used in three places)</comment>
-      <translation type="unfinished"/>
+      <translation>输入房间符号</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3520"/>
@@ -952,13 +952,13 @@ for all of the %n selected room(s):</source>
       <location filename="../src/T2DMap.cpp" line="3726"/>
       <source>OK</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation type="unfinished"/>
+      <translation>好</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3731"/>
       <source>Cancel</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation type="unfinished"/>
+      <translation>取消</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3788"/>
@@ -1046,20 +1046,20 @@ rooms:</source>
       <location filename="../src/T2DMap.cpp" line="4093"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) or the ;;s as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet 地图 (*.dat);;Xml 地图数据 (*.xml);;所有文件 (*)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4941"/>
       <location filename="../src/T2DMap.cpp" line="4975"/>
       <source>Left-click to add point, right-click to undo/change/finish...</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
-      <translation type="unfinished"/>
+      <translation>单击左键添加端点，单击右键 撤销／修改／结束...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4986"/>
       <source>Left-click and drag a square for the size and position of your label</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
-      <translation type="unfinished"/>
+      <translation>单击左键并拖动一个方形可以设置标签大小和位置</translation>
     </message>
   </context>
   <context>
@@ -6961,7 +6961,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/mapper.ui" line="502"/>
       <source>Area:</source>
-      <translation type="unfinished"/>
+      <translation>区域:</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="571"/>
@@ -6971,7 +6971,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/mapper.ui" line="600"/>
       <source>Exits</source>
-      <translation type="unfinished"/>
+      <translation>出口</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="629"/>
@@ -10012,7 +10012,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="790"/>
       <source>Weight:</source>
-      <translation type="unfinished"/>
+      <translation>权重:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="866"/>
