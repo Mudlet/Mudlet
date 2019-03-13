@@ -3688,7 +3688,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="58"/>
       <source>Basic ANSI Colors [0-15] - click a button to select that color number directly:</source>
-      <translation type="unfinished"/>
+      <translation>Основные цвета ANSI [0-15] - нажмите кнопку, чтобы выбрать этот номер цвета напрямую:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="240"/>
@@ -4859,7 +4859,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="746"/>
       <source>2D Map Room Symbol scaling factor:</source>
-      <translation type="unfinished"/>
+      <translation>Коэффициент масштабирования обозначений комнат на 2D карте:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="877"/>
@@ -5884,7 +5884,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="657"/>
       <source>prompt</source>
-      <translation type="unfinished"/>
+      <translation>строка состояния</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1218"/>
@@ -6110,7 +6110,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4818"/>
       <source>match on the prompt line (disabled)</source>
-      <translation type="unfinished"/>
+      <translation>матч на строку состояния (отключено)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4819"/>
