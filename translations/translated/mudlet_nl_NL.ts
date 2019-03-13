@@ -899,13 +899,13 @@ the highlighted room (%1) to:</source>
       <location filename="../src/T2DMap.cpp" line="3424"/>
       <source>OK</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3429"/>
       <source>Cancel</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation type="unfinished"/>
+      <translation>Annuleren</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3518"/>
@@ -952,13 +952,13 @@ for all of the %n selected room(s):</source>
       <location filename="../src/T2DMap.cpp" line="3726"/>
       <source>OK</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3731"/>
       <source>Cancel</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation type="unfinished"/>
+      <translation>Annuleren</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3788"/>
