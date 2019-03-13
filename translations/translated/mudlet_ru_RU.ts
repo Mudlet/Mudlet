@@ -4978,7 +4978,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2064"/>
       <source>Map copied, now signalling other profiles to reload it.</source>
-      <translation type="unfinished"/>
+      <translation>Карта скопирована, теперь сигнализироваем другим профилям, чтобы перезагрузить ее.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2100"/>
@@ -5739,7 +5739,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="379"/>
       <source>Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Сохраняет выбранный триггер, скрипт, алиас и т. д., вызывая новые изменения вступить в силу, но не сохраняет на диск...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="382"/>
@@ -8719,7 +8719,12 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="4402"/>
       <source>&lt;p&gt;Review the update(s) available...&lt;/p&gt;</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>&lt;p&gt;Проверить доступные обновления...&lt;/p&gt;</numerusform>
+        <numerusform>&lt;p&gt;Проверить доступные обновления...&lt;/p&gt;</numerusform>
+        <numerusform>&lt;p&gt;Проверить доступные обновления...&lt;/p&gt;</numerusform>
+        <numerusform>&lt;p&gt;Проверить доступные обновления...&lt;/p&gt;</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4493"/>
@@ -9345,7 +9350,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1429"/>
       <source>These preferences set how you want a particular color to be represented visually in the main display:</source>
-      <translation type="unfinished"/>
+      <translation>Эти параметры показывают, каким образом определенный цвет должен быть представлен визуально в главном дисплее:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1439"/>
@@ -10104,7 +10109,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1692"/>
       <location filename="../src/ui/room_exits.ui" line="2057"/>
       <source>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Предотвратить создание маршрута через этот выход, эквивалентный бесконечному весу выхода.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="83"/>
@@ -10125,7 +10130,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="93"/>
       <source>&lt;p&gt;Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Установите номер комнаты к северо-западу от этой комнаты, будет синим для допустимого числа или красным для недопустимого.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="119"/>
@@ -10182,17 +10187,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="233"/>
       <source>&lt;p&gt;Set the number of the room north of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Установите номер комнаты к северу от этой комнаты, будет синим для допустимого числа или красным для недопустимого.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="373"/>
       <source>&lt;p&gt;Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Установите номер комнаты к северо-востоку от этой комнаты, будет синим для допустимого числа или красным для недопустимого.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="513"/>
       <source>&lt;p&gt;Set the number of the room up from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Установите номер комнаты вверх от этой комнаты, будет синим для допустимого числа или красным для недопустимого.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="558"/>
@@ -10251,12 +10256,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1298"/>
       <source>&lt;p&gt;Set the number of the room south of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Установите номер комнаты к югу от этой комнаты, будет синим для допустимого числа или красным для недопустимого.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1438"/>
       <source>&lt;p&gt;Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Установите номер комнаты к юго-востоку от этой комнаты, будет синим для допустимого числа или красным для недопустимого.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1578"/>
