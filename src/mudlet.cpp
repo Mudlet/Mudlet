@@ -225,7 +225,7 @@ void mudlet::loadLanguagesMap()
                                   {QStringLiteral("en_bs"), tr("English (Bahamas)")},
                                   {QStringLiteral("en_bw"), tr("English (Botswana)")},
                                   {QStringLiteral("en_bz"), tr("English (Belize)")},
-                                  {QStringLiteral("en_ca"), tr("English (Canadia)")},
+                                  {QStringLiteral("en_ca"), tr("English (Canada)")},
                                   {QStringLiteral("en_dk"), tr("English (Denmark)")},
                                   {QStringLiteral("en_gb"), tr("English (United Kingdom)")},
                                   {QStringLiteral("en_gb_ise"), tr("English (United Kingdom - 'ise' not 'ize')", "This dictionary prefers the British 'ise' form over the American 'ize' one.")},
