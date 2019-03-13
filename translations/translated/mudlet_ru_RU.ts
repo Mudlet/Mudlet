@@ -2340,7 +2340,11 @@ does not exist.  The exit will be removed (but the destination room
 Id will be stored in the room user data under a key:
 &quot;%4&quot;)
 and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМАНИЕ ] - Комната с идентификатором: %1 имеет выход &quot;%2&quot; в: %3 но эта комната не существует. Выход будет удалён
+(но идентификатор назначенной комнаты будет храниться в
+данных комнаты пользователя под ключом:
+&quot;%4&quot;)
+Выход будет преобразован в любой другой возможный.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1557"/>
