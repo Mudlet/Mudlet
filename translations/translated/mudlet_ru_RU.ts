@@ -750,7 +750,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2817"/>
       <source>Set room&apos;s area number</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Задать ID области этих комнат</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2820"/>
@@ -1260,42 +1260,42 @@ rooms:</source>
     <message>
       <location filename="../src/TCommandLine.cpp" line="583"/>
       <source>Add to user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>Добавить в свой словарь</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="585"/>
       <source>Remove from user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>Удалить из своего словаря</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="589"/>
       <source>▼Mudlet▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which we have bundled with Mudlet; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼Mudlet▼ │ предложения словаря │ Свой ▲▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="599"/>
       <source>▼System▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which is provided as part of the OS; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼ Система ▼ │ предложения словаря │ ▲ Свой ▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="658"/>
       <source>no suggestions (system)</source>
       <comment>used when the command spelling checker using the selected system dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>нет предложений (система)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="684"/>
       <source>no suggestions (shared)</source>
       <comment>used when the command spelling checker using the dictionary shared between profile has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>нет предложений (из профилей)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="688"/>
       <source>no suggestions (profile)</source>
       <comment>used when the command spelling checker using the profile&apos;s own dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>нет предложений (профиль)</translation>
     </message>
   </context>
   <context>
@@ -4554,7 +4554,9 @@ Count</source>
       <source>SSL connections require the URL of the Game server.
 
 %1</source>
-      <translation type="unfinished"/>
+      <translation>SSL-соединения требуют URL сервера игры.
+
+%1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1875"/>
@@ -5069,23 +5071,23 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="481"/>
       <source>Mudlet dictionaries:</source>
       <comment>On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones.</comment>
-      <translation type="unfinished"/>
+      <translation>Словари Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="483"/>
       <source>System dictionaries:</source>
       <comment>On *nix systems where we find the system ones we use them.</comment>
-      <translation type="unfinished"/>
+      <translation>Системные словари:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="514"/>
       <source>&lt;p&gt;From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Из файла словаря &lt;tt&gt;%1.dic&lt;/tt&gt; (и его сопутствующий файл &lt;tt&gt;.aff&lt;/tt&gt;).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="516"/>
       <source>%1 - not recognised</source>
-      <translation type="unfinished"/>
+      <translation>%1 - не распознан</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="517"/>
@@ -5095,7 +5097,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="542"/>
       <source>No Hunspell dictionary files found, spell-checking will not be available.</source>
-      <translation type="unfinished"/>
+      <translation>Файлы словаря Hunspell не найдены, проверка орфографии будет недоступна.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1797"/>
@@ -5829,37 +5831,37 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="650"/>
       <source>substring</source>
-      <translation type="unfinished"/>
+      <translation>подстрока</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="651"/>
       <source>perl regex</source>
-      <translation type="unfinished"/>
+      <translation>регулярное выражение</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="652"/>
       <source>begin of line substring</source>
-      <translation type="unfinished"/>
+      <translation>начало подстроки</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="653"/>
       <source>exact match</source>
-      <translation type="unfinished"/>
+      <translation>точное совпадение</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="654"/>
       <source>lua function</source>
-      <translation type="unfinished"/>
+      <translation>lua функция</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="655"/>
       <source>line spacer</source>
-      <translation type="unfinished"/>
+      <translation>линия прокладки</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="656"/>
       <source>color trigger</source>
-      <translation type="unfinished"/>
+      <translation>цветной триггер</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="657"/>
@@ -6080,7 +6082,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4663"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
-      <translation type="unfinished"/>
+      <translation>Выбранные переменные будут сохранены и загружены вместе с вашим профилем.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4815"/>
@@ -7140,32 +7142,32 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="162"/>
       <source>Afrikaans</source>
       <extracomment>In the translation source texts the language is the leading term, with, generally, the (primary) country(ies) in the brackets, with a trailing language disabiguation after a &apos;-&apos; Chinese is an exception!</extracomment>
-      <translation type="unfinished"/>
+      <translation>Африкаанс</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="163"/>
       <source>Afrikaans (South Africa)</source>
-      <translation type="unfinished"/>
+      <translation>Африкаанс (Южная Африка)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="164"/>
       <source>Aragonese</source>
-      <translation type="unfinished"/>
+      <translation>Арагонский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="165"/>
       <source>Aragonese (Spain)</source>
-      <translation type="unfinished"/>
+      <translation>Арагонский (Испания)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="166"/>
       <source>Arabic</source>
-      <translation type="unfinished"/>
+      <translation>Арабский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="167"/>
       <source>Arabic (United Arab Emirates)</source>
-      <translation type="unfinished"/>
+      <translation>Арабский (Объединенные Арабские Эмираты)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="168"/>
