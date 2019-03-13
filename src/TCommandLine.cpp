@@ -546,8 +546,11 @@ void TCommandLine::slot_popupMenu()
     c.removeSelectedText();
     c.insertText(t);
     c.clearSelection();
-    Hunspell_free_list(mpHost->mpConsole->getHunspellHandle_system(), &mpSystemSuggestionsList, mSystemDictionarySuggestionsCount);
-    Hunhandle* userDictionaryHandle = mpHost->mpConsole->getHunspellHandle_user();
+    auto systemDictionaryHandle = mpHost->mpConsole->getHunspellHandle_system();
+    if (systemDictionaryHandle) {
+        Hunspell_free_list(mpHost->mpConsole->getHunspellHandle_system(), &mpSystemSuggestionsList, mSystemDictionarySuggestionsCount);
+    }
+    auto userDictionaryHandle = mpHost->mpConsole->getHunspellHandle_user();
     if (userDictionaryHandle) {
         Hunspell_free_list(userDictionaryHandle, &mpUserSuggestionsList, mUserDictionarySuggestionsCount);
     }
@@ -568,7 +571,6 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             auto codec = mpHost->mpConsole->getHunspellCodec_system();
             auto handle_system = mpHost->mpConsole->getHunspellHandle_system();
             auto handle_profile = mpHost->mpConsole->getHunspellHandle_user();
-            QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
             bool haveAddOption = false;
             bool haveRemoveOption = false;
             QAction* action_addWord = nullptr;
@@ -611,32 +613,41 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
             QList<QAction*> spellings_system;
             QList<QAction*> spellings_profile;
-            if (!Hunspell_spell(handle_system, encodedText.constData())) {
-                // The word is NOT in the main system dictionary:
-                if (handle_profile) {
-                    // Have a user dictionary so check it:
-                    if (!Hunspell_spell(handle_profile, mSpellCheckedWord.toUtf8().constData())) {
-                        // The word is NOT in the profile one either - so enable add option
-                        haveAddOption = true;
-                    } else {
-                        // However the word is in the profile one - so enable remove option
-                        haveRemoveOption = true;
-                    }
+            if (handle_system && codec) {
+                QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
 
-                    if (haveAddOption) {
-                        action_addWord->setEnabled(true);
-                        connect(action_addWord, &QAction::triggered, this, &TCommandLine::slot_addWord);
-                    }
-                    if (haveRemoveOption) {
-                        action_removeWord->setEnabled(true);
-                        connect(action_removeWord, &QAction::triggered, this, &TCommandLine::slot_removeWord);
+                if (!Hunspell_spell(handle_system, encodedText.constData())) {
+                    // The word is NOT in the main system dictionary:
+                    if (handle_profile) {
+                        // Have a user dictionary so check it:
+                        if (!Hunspell_spell(handle_profile, mSpellCheckedWord.toUtf8().constData())) {
+                            // The word is NOT in the profile one either - so enable add option
+                            haveAddOption = true;
+                        } else {
+                            // However the word is in the profile one - so enable remove option
+                            haveRemoveOption = true;
+                        }
+
+                        if (haveAddOption) {
+                            action_addWord->setEnabled(true);
+                            connect(action_addWord, &QAction::triggered, this, &TCommandLine::slot_addWord);
+                        }
+                        if (haveRemoveOption) {
+                            action_removeWord->setEnabled(true);
+                            connect(action_removeWord, &QAction::triggered, this, &TCommandLine::slot_removeWord);
+                        }
                     }
                 }
+
+                mSystemDictionarySuggestionsCount = Hunspell_suggest(handle_system, &mpSystemSuggestionsList, encodedText.constData());
+            } else {
+                mSystemDictionarySuggestionsCount = 0;
             }
 
-            mSystemDictionarySuggestionsCount = Hunspell_suggest(handle_system, &mpSystemSuggestionsList, encodedText.constData());
             if (handle_profile) {
-                mUserDictionarySuggestionsCount = Hunspell_suggest(handle_profile, &mpUserSuggestionsList, encodedText.constData());
+                mUserDictionarySuggestionsCount = Hunspell_suggest(handle_profile, &mpUserSuggestionsList, mSpellCheckedWord.toUtf8().constData());
+            } else {
+                mUserDictionarySuggestionsCount = 0;
             }
 
             if (mSystemDictionarySuggestionsCount) {
@@ -960,10 +971,19 @@ void TCommandLine::slot_addWord()
 
 void TCommandLine::spellCheckWord(QTextCursor& c)
 {
+    if (!mpHost||!mpHost->mEnableSpellCheck) {
+        return;
+    }
+
+    Hunhandle* systemDictionaryHandle = mpHost->mpConsole->getHunspellHandle_system();
+    if (!systemDictionaryHandle) {
+        return;
+    }
+
     QTextCharFormat f;
     c.select(QTextCursor::WordUnderCursor);
     QByteArray encodedText = mpHost->mpConsole->getHunspellCodec_system()->fromUnicode(c.selectedText());
-    if (!Hunspell_spell(mpHost->mpConsole->getHunspellHandle_system(), encodedText.constData())) {
+    if (!Hunspell_spell(systemDictionaryHandle, encodedText.constData())) {
         // Word is not in selected system dictionary
         Hunhandle* userDictionaryhandle = mpHost->mpConsole->getHunspellHandle_user();
         if (userDictionaryhandle) {
