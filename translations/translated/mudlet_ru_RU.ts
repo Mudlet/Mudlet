@@ -2235,7 +2235,10 @@ exit to: %3 but that room does not exist.  The exit will
 be removed (but the destination room id will be stored in
 the room user data under a key:
 &quot;%4&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМАНИЕ ] - Комната с идентификатором: %1 имеет специальный выход &quot;%2&quot; с выходом в: %3 но эта комната не существует.  Выход будет удалён
+(но идентификатор назначенной комнаты будет храниться в
+данных комнаты пользователя под ключом:
+&quot;%4&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1257"/>
@@ -2244,7 +2247,10 @@ that was to room with an invalid room: %3 that does not exist.
 The exit will be removed (the bad destination room id will be stored in the
 room user data under a key:
 &quot;%4&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМАНИЕ ] - Комната с идентификатором: %1 имеет специальный выход &quot;%2&quot; что имеет выход в: %3 но этой комнаты не существует.  Выход будет удалён
+(но идентификатор назначенной комнаты будет храниться в
+данных комнаты пользователя под ключом:
+&quot;%4&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1303"/>
@@ -2324,7 +2330,8 @@ were removed: %2.</source>
       <location filename="../src/TRoom.cpp" line="1480"/>
       <source>[ INFO ]  - In room with id: %1 correcting exit &quot;%2&quot; that was to room with
 an exit to invalid room: %3 to now go to: %4.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФОРМАЦИЯ] - В комнате с ID: %1 исправленный выход &quot;%2&quot; что был направлен
+в неправильную комнату: %3 теперь направлен в: %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1500"/>
