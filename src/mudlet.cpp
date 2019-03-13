@@ -167,7 +167,7 @@ void mudlet::loadLanguagesMap()
                                   {QStringLiteral("ar_ae"), tr("Arabic (United Arab Emirates)")},
                                   {QStringLiteral("ar_bh"), tr("Arabic (Bahrain)")},
                                   {QStringLiteral("ar_dz"), tr("Arabic (Algeria)")},
-                                  {QStringLiteral("ar_eg"), tr("Arabic (Eygpt)")},
+                                  {QStringLiteral("ar_eg"), tr("Arabic (Egypt)")},
                                   {QStringLiteral("ar_in"), tr("Arabic (India)")},
                                   {QStringLiteral("ar_iq"), tr("Arabic (Iraq)")},
                                   {QStringLiteral("ar_jo"), tr("Arabic (Jordan)")},
