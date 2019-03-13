@@ -1856,7 +1856,8 @@ format of at least 17 to preserve it before quitting!
       <source>[ ALERT ] - Area User data has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!
 Areas id affected: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ПРЕДУПРЕЖДЕНИЕ ] - Пользовательские данные для этой зоны было потеряны в файле карты. Пересохраните в формате как минимум 17й версии, чтобы избежать потерь, перед выходом!
+Идентификатор зоны: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1175"/>
@@ -1868,7 +1869,8 @@ Areas id affected: %1.</source>
       <source>[ ERROR ] - Map file is too new, its file format (%1) is higher than this version of
 Mudlet can handle (%2)!  The file is:
 &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ОЩИБКА ] - Файл карты слишком новый, формат этого файла (%1) выше, чем может обрабатывать эта версия Mudlet (%2)! Файл:
+&quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1423"/>
