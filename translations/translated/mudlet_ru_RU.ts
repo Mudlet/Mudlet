@@ -949,7 +949,9 @@ with a new symbol to use for all the rooms:</source>
       <source>The symbol is &quot;%1&quot; in the selected room,
 delete this to clear the symbol or replace
 it with a new symbol for this room:This is for when applying a new room symbol to one room. Use line feeds to format text into a reasonable rectangle.</source>
-      <translation type="unfinished"/>
+      <translation>&quot;%1&quot; - символ в выбранной комнате,
+удалите это чтобы очистить символ или заменить
+его новым символом для этой комнаты: Это значение используется при применении нового символа комнаты к одной комнате. Используйте ввод по линиям для форматирования текста в приемлемый прямоугольник.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3591"/>
