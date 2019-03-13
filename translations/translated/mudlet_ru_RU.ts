@@ -756,7 +756,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2820"/>
       <source>Custom exit line</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Пользовательская линия выхода</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2822"/>
@@ -798,7 +798,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2840"/>
       <source>Can only set location when exactly one room is selected</source>
       <comment>2D Mapper context menu (room) item tooltip (disabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Можно задать расположение только в том случае, если выбрана ровно одна комната</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2867"/>
@@ -922,7 +922,16 @@ the highlighted room (%1) to:</source>
       <source>Enter the symbol to use
 for this/these %n room(s):</source>
       <comment>this is for when applying a new room symbol to one or more rooms and none have a symbol at present; use line feeds to format text into a reasonable rectangle, %n is the number of rooms involved</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Введите символ, чтобы использовать
+для этой %n комнаты:</numerusform>
+        <numerusform>Введите символ, чтобы использовать
+для этих %n комнат:</numerusform>
+        <numerusform>Введите символ, чтобы использовать
+для этих %n комнат:</numerusform>
+        <numerusform>Введите символ, чтобы использовать
+для этих %n комнат:</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3537"/>
@@ -3249,7 +3258,16 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTrigger.cpp" line="1047"/>
       <source>Trigger name=%1 will fire %n more time(s).
 </source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Триггер=%1 сработает ещё %n раз.
+</numerusform>
+        <numerusform>Триггер=%1 сработает ещё %n раз.
+</numerusform>
+        <numerusform>Триггер=%1 сработает ещё %n раз.
+</numerusform>
+        <numerusform>Триггер=%1 сработает ещё %n раз.
+</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -4448,7 +4466,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1059"/>
       <source>This profile is currently loaded - close it before changing the connection parameters.</source>
-      <translation type="unfinished"/>
+      <translation>Данный профиль загружен - закройте его перед изменением параметров подключения.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1790"/>
@@ -5795,7 +5813,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="442"/>
       <source>Shows/Hides the errors console in the bottom right of this editor.</source>
-      <translation type="unfinished"/>
+      <translation>Показать/скрыть консоль ошибок в правом нижнем углу этого редактора.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="445"/>
@@ -6632,7 +6650,8 @@ less likely to be useful for normal use of this application:
       <location filename="../src/main.cpp" line="268"/>
       <source>Report bugs to: https://github.com/Mudlet/Mudlet/issues.
 </source>
-      <translation type="unfinished"/>
+      <translation>Об ошибках сообщайте: https://github.com/Mudlet/Mudlet/issues.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="269"/>
@@ -6854,7 +6873,7 @@ Starting... Have fun!
       <location filename="../src/ui/main_window.ui" line="206"/>
       <source>&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Информируйте себя об этой версии Mudlet, людей, которые сделали его и лицензии, под которой вы можете поделиться им.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="211"/>
@@ -8031,7 +8050,7 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="339"/>
       <source>Shtokavian (former state of Yugoslavia)</source>
       <comment>This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state with a (withdrawn from ISO 3166) state indication</comment>
-      <translation type="unfinished"/>
+      <translation>Штокавианский (бывшее государство Югославии)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="340"/>
@@ -8191,67 +8210,67 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="371"/>
       <source>Turkmen</source>
-      <translation type="unfinished"/>
+      <translation>Туркменский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="372"/>
       <source>Turkmen (Turkmenistan)</source>
-      <translation type="unfinished"/>
+      <translation>Туркменский (Туркменистан)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="373"/>
       <source>Tswana</source>
-      <translation type="unfinished"/>
+      <translation>Тсвана</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="374"/>
       <source>Tswana (Botswana)</source>
-      <translation type="unfinished"/>
+      <translation>Тсвана (Ботсвана)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="375"/>
       <source>Tswana (South Africa)</source>
-      <translation type="unfinished"/>
+      <translation>Тсвана (Южная Африка)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="376"/>
       <source>Tsonga</source>
-      <translation type="unfinished"/>
+      <translation>Цонга</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="377"/>
       <source>Tsonga (South Africa)</source>
-      <translation type="unfinished"/>
+      <translation>Цонга (Южная Африка)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="378"/>
       <source>Ukrainian</source>
-      <translation type="unfinished"/>
+      <translation>Украинский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="379"/>
       <source>Ukrainian (Ukraine)</source>
-      <translation type="unfinished"/>
+      <translation>Украинский (Украина)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="380"/>
       <source>Uzbek</source>
-      <translation type="unfinished"/>
+      <translation>Узбекский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="381"/>
       <source>Uzbek (Uzbekistan)</source>
-      <translation type="unfinished"/>
+      <translation>Узбекский (Узбекистан)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="382"/>
       <source>Venda</source>
-      <translation type="unfinished"/>
+      <translation>Венда</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="383"/>
       <source>Vietnamese</source>
-      <translation type="unfinished"/>
+      <translation>Вьетнамский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="384"/>
@@ -8459,7 +8478,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="617"/>
       <source>Package Manager - allows you to install xmls, .mpackages</source>
-      <translation type="unfinished"/>
+      <translation>Менеджер пакетов - позволяет установить xml, .mpackage</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="622"/>
@@ -8507,7 +8526,7 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="4368"/>
       <source>&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Информируйте себя об этой версии Mudlet, людей, которые сделали его и лицензии, под которой вы можете поделиться им.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="665"/>
@@ -8678,13 +8697,23 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="4379"/>
       <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
       <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>&lt;p&gt;О Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n обновление теперь доступно!&lt;/i&gt;&lt;p&gt;</numerusform>
+        <numerusform>&lt;p&gt;О Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n обновлений теперь доступно!&lt;/i&gt;&lt;p&gt;</numerusform>
+        <numerusform>&lt;p&gt;О Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n обновлений теперь доступно!&lt;/i&gt;&lt;p&gt;</numerusform>
+        <numerusform>&lt;p&gt;О Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n обновлений теперь доступно!&lt;/i&gt;&lt;p&gt;</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="4397"/>
       <source>Review %n update(s)...</source>
       <comment>Review update(s) menu item, %n is the the count of how many updates are available</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Проверить %n обновление/й...</numerusform>
+        <numerusform>Проверить %n обновлений...</numerusform>
+        <numerusform>Проверить %n обновлений...</numerusform>
+        <numerusform>Проверить %n обновлений...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="4402"/>
