@@ -479,127 +479,127 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2183"/>
       <source>render time: %1S mO: (%2,%3,%4)</source>
       <comment>This is debug information that is not expected to be seen in release versions, %1 is a decimal time period and %2-%4 are the x,y and z coordinates at the center of the view (but y will be negative compared to previous room related ones as it represents the real coordinate system for this widget which has y increasing in a downward direction!)</comment>
-      <translation type="unfinished"/>
+      <translation>время обработки: %1S mO: (%2,%3,%4)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2292"/>
       <source>Text label or image label?</source>
       <comment>2D Mapper create label dialog text</comment>
-      <translation type="unfinished"/>
+      <translation>Метка текста или метка изображения?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2293"/>
       <source>Text Label</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Метка с текстом</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2294"/>
       <source>Image Label</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Метка с изображением</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2298"/>
       <source>Enter label text.</source>
       <comment>2D Mapper create label dialog title/text</comment>
-      <translation type="unfinished"/>
+      <translation>Введите текст метки.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2305"/>
       <source>Background color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет фона</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2306"/>
       <source>Foreground color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2310"/>
       <source>Select image</source>
       <comment>2D Mapper create label file dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Выбрать изображение</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2317"/>
       <source>Draw label as background or on top of everything?</source>
       <comment>2D Mapper create label dialog text</comment>
-      <translation type="unfinished"/>
+      <translation>Отобразить метку в качестве фона или поверх всего?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2318"/>
       <source>Background</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Задний план</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2319"/>
       <source>Foreground</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Передний план</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2563"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
-      <translation type="unfinished"/>
+      <translation>Зажмите кнопку мыши, чтобы выбрать несколько комнат или меток; отпустите кнопку мыши, чтобы закончить...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2714"/>
       <source>Undo</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>Отменить</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2715"/>
       <source>Undo last point</source>
       <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Отменить последний пункт</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2722"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)</comment>
-      <translation type="unfinished"/>
+      <translation>Свойства</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2724"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)</comment>
-      <translation type="unfinished"/>
+      <translation>свойства...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2725"/>
       <source>Change the properties of this line</source>
       <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Изменить свойства этой линии</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2728"/>
       <source>Finish</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>Завершить</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2729"/>
       <source>Finish drawing this line</source>
       <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Закончить рисование</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2750"/>
       <source>Create new map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>Создать новую карту</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2753"/>
       <source>Load map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>Загрузить карту</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2766"/>
@@ -611,139 +611,139 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2772"/>
       <source>Move</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Переместить</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2773"/>
       <source>Move room</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Подвинуть комнату</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2776"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Удалить</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2777"/>
       <source>Delete room</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Удалить комнату</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2780"/>
       <source>Color</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2781"/>
       <source>Change room color</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Изменить цвет</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2784"/>
       <source>Spread</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Распространить</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2785"/>
       <source>Increase map X-Y spacing for the selected group of rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Увеличить X-Y интервал карты для выбранных групп комнат</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2788"/>
       <source>Shrink</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Сжать</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2789"/>
       <source>Decrease map X-Y spacing for the selected group of rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Уменьшить X-Y интервал карты для выбранных групп комнат</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2792"/>
       <source>Lock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Заблокировать</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2793"/>
       <source>Lock room for speed walks</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Закрыть комнату для быстрого перемещения</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2796"/>
       <source>Unlock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Разблокировать</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2797"/>
       <source>Unlock room for speed walks</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Открыть комнату для быстрого перемещения</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2800"/>
       <source>Weight</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Вес</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2801"/>
       <source>Set room weight</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Введите вес комнаты</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2804"/>
       <source>Exits</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Выходы</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2805"/>
       <source>Set room exits</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Введите выходы из комнаты</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2808"/>
       <source>Symbol</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Символ</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2809"/>
       <source>Set one or more symbols or letters to mark special rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Назначить один или несколько символов или букв, чтобы отметить особые комнаты</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2812"/>
       <source>Move to</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Переместить в</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2813"/>
       <source>Move selected group to a given position</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Перенести выбранную группу в заданную позицию</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2816"/>
       <source>Area</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Область</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2817"/>
@@ -761,37 +761,37 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2822"/>
       <source>Replace an exit line with a custom line</source>
       <comment>2D Mapper context menu (room) item tooltip (enabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Заменить стандартный выход с линией</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2826"/>
       <source>Custom exit lines are not shown and are not editable in grid mode</source>
       <comment>2D Mapper context menu (room) item tooltip (disabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Пользовательские линии выхода не отображаются и не редактируюемы в режиме сетки</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2830"/>
       <source>Create Label</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Добавить метку</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2831"/>
       <source>Create labels to show text or images</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Создать метки для отображения текста или изображения</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2834"/>
       <source>Set location</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Установить местоположение</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2836"/>
       <source>Set player current location to here</source>
       <comment>2D Mapper context menu (room) item tooltip (enabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Установить текущее местоположение игрока здесь</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2840"/>
@@ -803,110 +803,110 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2867"/>
       <source>Move</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>Переместить</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2868"/>
       <source>Move label</source>
       <comment>2D Mapper context menu item (label) tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Переместить метку</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2870"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>Удалить</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2871"/>
       <source>Delete label</source>
       <comment>2D Mapper context menu (label) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Удалить метку</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2887"/>
       <source>Add point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Добавить точку</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2894"/>
       <source>Divide segment by adding a new point mid-way along</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Разделить сегмент путем добавления новой точки в середине</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2897"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state, i.e must do the suggested action first)</comment>
-      <translation type="unfinished"/>
+      <translation>Сначала выберите точку, затем добавьте новую точку посередине вдоль сегмента в направлении комнаты</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2901"/>
       <source>Remove point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Удалить точку</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2908"/>
       <source>Merge pair of segments by removing this point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state but will be able to be done again on this item)</comment>
-      <translation type="unfinished"/>
+      <translation>Объединить пару сегментов путем удаления этой точки</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2912"/>
       <source>Remove last segment by removing this point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state but is the last time this action can be done on this item)</comment>
-      <translation type="unfinished"/>
+      <translation>Удалить последний сегмент путем удаления этой точки</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2923"/>
       <source>Select a point first, then remove it</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state, user will need to do something before it can be used)</comment>
-      <translation type="unfinished"/>
+      <translation>Сначала выберите точку, а затем удалите её</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2927"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)</comment>
-      <translation type="unfinished"/>
+      <translation>Свойства</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2931"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise</comment>
-      <translation type="unfinished"/>
+      <translation>свойства...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2935"/>
       <source>Delete line</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Удалить линию</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2936"/>
       <source>Delete all of this custom line</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Удалить всю линию</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3400"/>
       <source>Move the selection, centered on
 the highlighted room (%1) to:</source>
       <comment>Use linefeeds as necessary to format text into a reasonable rectangle of text, %1 is a room number</comment>
-      <translation type="unfinished"/>
+      <translation>Переместить выделенное по центру подсвеченной комнаты (%1), чтобы:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3424"/>
       <source>OK</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3429"/>
       <source>Cancel</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation type="unfinished"/>
+      <translation>Отменить</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3518"/>
@@ -914,7 +914,7 @@ the highlighted room (%1) to:</source>
       <location filename="../src/T2DMap.cpp" line="3589"/>
       <source>Enter room symbol</source>
       <comment>Title for room symbol selection/entry dialog (used in three places)</comment>
-      <translation type="unfinished"/>
+      <translation>Введите символ для комнаты</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3520"/>
@@ -953,13 +953,13 @@ for all of the %n selected room(s):</source>
       <location filename="../src/T2DMap.cpp" line="3726"/>
       <source>OK</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3731"/>
       <source>Cancel</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation type="unfinished"/>
+      <translation>Отменить</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3788"/>
@@ -1058,20 +1058,20 @@ rooms:</source>
       <location filename="../src/T2DMap.cpp" line="4093"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) or the ;;s as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet карта (*.dat); Карта Xml-данные (*.xml); Любой файл (*)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4941"/>
       <location filename="../src/T2DMap.cpp" line="4975"/>
       <source>Left-click to add point, right-click to undo/change/finish...</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
-      <translation type="unfinished"/>
+      <translation>Нажмите левую кнопку, чтобы добавить точку, щелкните правой кнопкой мыши для отмены/изменения/конца...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4986"/>
       <source>Left-click and drag a square for the size and position of your label</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
-      <translation type="unfinished"/>
+      <translation>Щелкните и перетащите квадрат для размера и положения метки</translation>
     </message>
   </context>
   <context>
@@ -6405,7 +6405,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="52"/>
       <source>key (string)</source>
-      <translation type="unfinished"/>
+      <translation>ключ (текст)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="53"/>
@@ -7379,7 +7379,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="210"/>
       <source>German</source>
-      <translation type="unfinished"/>
+      <translation>Немецкий (German)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="211"/>
@@ -7429,7 +7429,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="220"/>
       <source>Greek</source>
-      <translation type="unfinished"/>
+      <translation>Греческий (Greek)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="221"/>
@@ -7439,7 +7439,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="222"/>
       <source>English</source>
-      <translation type="unfinished"/>
+      <translation>Английский (English)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="223"/>
@@ -7560,7 +7560,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="246"/>
       <source>Spanish</source>
-      <translation type="unfinished"/>
+      <translation>Испанский (Spanish)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="247"/>
@@ -7685,7 +7685,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="271"/>
       <source>French</source>
-      <translation type="unfinished"/>
+      <translation>Французский (French)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="272"/>
@@ -7806,7 +7806,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="295"/>
       <source>Italian</source>
-      <translation type="unfinished"/>
+      <translation>Итальянский (Italian)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="296"/>
@@ -7916,7 +7916,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="317"/>
       <source>Dutch</source>
-      <translation type="unfinished"/>
+      <translation>Голландский (Dutch)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="318"/>
@@ -7956,7 +7956,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="325"/>
       <source>Polish</source>
-      <translation type="unfinished"/>
+      <translation>Польский (Polish)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="326"/>
@@ -7966,7 +7966,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="327"/>
       <source>Portuguese</source>
-      <translation type="unfinished"/>
+      <translation>Португальский (Portuguese)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="328"/>
@@ -7991,7 +7991,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="332"/>
       <source>Russian</source>
-      <translation type="unfinished"/>
+      <translation>Русский (Russian)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="333"/>
@@ -8283,7 +8283,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="390"/>
       <source>Chinese</source>
-      <translation type="unfinished"/>
+      <translation>Китайский (Chinese)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="391"/>
