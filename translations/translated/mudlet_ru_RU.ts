@@ -7748,63 +7748,63 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="283"/>
       <source>Gujarati (India)</source>
-      <translation type="unfinished"/>
+      <translation>Гуджарати (Индия)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="284"/>
       <source>Hebrew</source>
-      <translation type="unfinished"/>
+      <translation>Иврит</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="285"/>
       <source>Hebrew (Israel)</source>
-      <translation type="unfinished"/>
+      <translation>Иврит (Израиль)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="286"/>
       <source>Hindi</source>
-      <translation type="unfinished"/>
+      <translation>Хинди</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="287"/>
       <source>Hindi (India)</source>
-      <translation type="unfinished"/>
+      <translation>Хинди (Индия)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="288"/>
       <source>Croatian</source>
-      <translation type="unfinished"/>
+      <translation>Хорватский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="289"/>
       <source>Croatian (Croatia)</source>
-      <translation type="unfinished"/>
+      <translation>Хорватский (Хорватия)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="290"/>
       <source>Hungarian</source>
-      <translation type="unfinished"/>
+      <translation>Венгерский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="291"/>
       <source>Hungarian (Hungary)</source>
-      <translation type="unfinished"/>
+      <translation>Венгерский (Венгрия)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="292"/>
       <source>Interlingue</source>
       <comment>formerly known as Occidental, and not to be mistaken for Interlingua</comment>
-      <translation type="unfinished"/>
+      <translation>Интерлинг</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="293"/>
       <source>Icelandic</source>
-      <translation type="unfinished"/>
+      <translation>Исландский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="294"/>
       <source>Icelandic (Iceland)</source>
-      <translation type="unfinished"/>
+      <translation>Исландский (Исландия)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="295"/>
@@ -7814,27 +7814,27 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="296"/>
       <source>Italian (Switzerland)</source>
-      <translation type="unfinished"/>
+      <translation>Итальянский (Швейцария)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="297"/>
       <source>Italian (Italy)</source>
-      <translation type="unfinished"/>
+      <translation>Итальянский (Италия)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="298"/>
       <source>Kazakh</source>
-      <translation type="unfinished"/>
+      <translation>Казахский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="299"/>
       <source>Kazakh (Kazakhstan)</source>
-      <translation type="unfinished"/>
+      <translation>Казахский (Казахстан)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="300"/>
       <source>Kurmanji</source>
-      <translation type="unfinished"/>
+      <translation>Курманджи</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="301"/>
@@ -7844,77 +7844,77 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="302"/>
       <source>Korean</source>
-      <translation type="unfinished"/>
+      <translation>Корейский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="303"/>
       <source>Korean (South Korea)</source>
-      <translation type="unfinished"/>
+      <translation>Корейский (Южная Корея)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="304"/>
       <source>Kurdish</source>
-      <translation type="unfinished"/>
+      <translation>Курдский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="305"/>
       <source>Kurdish (Syria)</source>
-      <translation type="unfinished"/>
+      <translation>Курдский (Сирия)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="306"/>
       <source>Kurdish (Turkey)</source>
-      <translation type="unfinished"/>
+      <translation>Курдский (Турция)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="307"/>
       <source>Lao</source>
-      <translation type="unfinished"/>
+      <translation>Лаосский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="308"/>
       <source>Lao (Laos)</source>
-      <translation type="unfinished"/>
+      <translation>Лаосский (Лаос)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="309"/>
       <source>Lithuanian</source>
-      <translation type="unfinished"/>
+      <translation>Литовский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="310"/>
       <source>Lithuanian (Lithuania)</source>
-      <translation type="unfinished"/>
+      <translation>Литовский (Литва)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="311"/>
       <source>Malayalam</source>
-      <translation type="unfinished"/>
+      <translation>Малаялам</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="312"/>
       <source>Malayalam (India)</source>
-      <translation type="unfinished"/>
+      <translation>Малаялам (Индия)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="313"/>
       <source>Norwegian Bokmål</source>
-      <translation type="unfinished"/>
+      <translation>Норвежский букмол</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="314"/>
       <source>Norwegian Bokmål (Norway)</source>
-      <translation type="unfinished"/>
+      <translation>Норвежский букмол (Норвегия)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="315"/>
       <source>Nepali</source>
-      <translation type="unfinished"/>
+      <translation>Непальский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="316"/>
       <source>Nepali (Nepal)</source>
-      <translation type="unfinished"/>
+      <translation>Непальский (Непал)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="317"/>
@@ -7924,37 +7924,37 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="318"/>
       <source>Dutch (Aruba)</source>
-      <translation type="unfinished"/>
+      <translation>Голландский (Аруба)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="319"/>
       <source>Dutch (Belgium)</source>
-      <translation type="unfinished"/>
+      <translation>Голландский (Бельгия)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="320"/>
       <source>Dutch (Netherlands)</source>
-      <translation type="unfinished"/>
+      <translation>Голландский (Нидерланды)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="321"/>
       <source>Norwegian Nynorsk</source>
-      <translation type="unfinished"/>
+      <translation>Норвежский Нюнорск</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="322"/>
       <source>Norwegian Nynorsk (Norway)</source>
-      <translation type="unfinished"/>
+      <translation>Норвежский Нюнорск (Норвегия)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="323"/>
       <source>Occitan</source>
-      <translation type="unfinished"/>
+      <translation>Окситанский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="324"/>
       <source>Occitan (France)</source>
-      <translation type="unfinished"/>
+      <translation>Окситанский (Франция)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="325"/>
@@ -7964,7 +7964,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="326"/>
       <source>Polish (Poland)</source>
-      <translation type="unfinished"/>
+      <translation>Польский (Польша)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="327"/>
@@ -7974,22 +7974,22 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="328"/>
       <source>Portuguese (Brazil)</source>
-      <translation type="unfinished"/>
+      <translation>Португальский (Бразилия)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="329"/>
       <source>Portuguese (Portugal)</source>
-      <translation type="unfinished"/>
+      <translation>Португальский (Португалия)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="330"/>
       <source>Romanian</source>
-      <translation type="unfinished"/>
+      <translation>Румынский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="331"/>
       <source>Romanian (Romania)</source>
-      <translation type="unfinished"/>
+      <translation>Румынский (Румыния)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="332"/>
@@ -7999,17 +7999,17 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="333"/>
       <source>Russian (Russia)</source>
-      <translation type="unfinished"/>
+      <translation>Русский (Россия)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="334"/>
       <source>Northern Sami</source>
-      <translation type="unfinished"/>
+      <translation>Северносаамский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="335"/>
       <source>Northern Sami (Finland)</source>
-      <translation type="unfinished"/>
+      <translation>Северносаамский (Финляндия)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="336"/>
@@ -8261,27 +8261,27 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="385"/>
       <source>Vietnamese (DauCu varient - old-style diacritics)</source>
-      <translation type="unfinished"/>
+      <translation>Вьетнамский (DauCu Varient - старостильная диакритика)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="386"/>
       <source>Vietnamese (DauMoi varient - new-style diacritics)</source>
-      <translation type="unfinished"/>
+      <translation>Вьетнамский (DauMoi вариант - новый-стиль диакритики)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="387"/>
       <source>Walloon</source>
-      <translation type="unfinished"/>
+      <translation>Валлонский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="388"/>
       <source>Xhosa</source>
-      <translation type="unfinished"/>
+      <translation>Хоса</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="389"/>
       <source>Yiddish</source>
-      <translation type="unfinished"/>
+      <translation>Идиш</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="390"/>
@@ -8291,17 +8291,17 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="391"/>
       <source>Chinese (China - simplified)</source>
-      <translation type="unfinished"/>
+      <translation>Китайский (Китай - упрощенный)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="392"/>
       <source>Chinese (Taiwan - traditional)</source>
-      <translation type="unfinished"/>
+      <translation>Китайский (Тайвань - традиционный)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="393"/>
       <source>Zulu</source>
-      <translation type="unfinished"/>
+      <translation>Зулу</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="419"/>
@@ -9155,37 +9155,37 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="532"/>
       <source>Spell checking</source>
-      <translation type="unfinished"/>
+      <translation>Проверка орфографии</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="538"/>
       <source>&lt;p&gt;This option controls spell-checking on the command line in the main console for this profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Эта опция управляет проверкой орфографии в командной строке главной консоля этого профайла.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="541"/>
       <source>System/Mudlet dictionary:</source>
-      <translation type="unfinished"/>
+      <translation>Словарь системы/Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="548"/>
       <source>&lt;p&gt;Select one dictionary which will be available on the command line and in the lua sub-system.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Выберите один словарь, который будет доступен в командной строке и в подсистеме lua.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="576"/>
       <source>User dictionary:</source>
-      <translation type="unfinished"/>
+      <translation>Свой словарь:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="582"/>
       <source>&lt;p&gt;A user dictionary will not be used on the main console command line. Lua commands that target a user dictionary will return &lt;tt&gt;nil&lt;/t&gt; and &lt;i&gt;an error message&lt;/i&gt;.&lt;/p&gt;&lt;p&gt;It will still, however, be possible to access the main dictionary selected above.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Пользовательский (свой) словарь не будет использован в командной строке основного консоля. Луа команды, которые задают пользовательский словарь, вернут &lt;tt&gt;nil&lt;/t&gt; и &lt;i&gt;сообщение об ошибке&lt;/i&gt;.&lt;/p&gt;&lt;p&gt;Будет по-прежнему, однако, можно получить доступ к основному словарю, выбранному выше.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="585"/>
       <source>None</source>
-      <translation type="unfinished"/>
+      <translation>Ни одного</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="595"/>
@@ -9195,7 +9195,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="598"/>
       <source>Profile</source>
-      <translation type="unfinished"/>
+      <translation>Профиль</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="605"/>
@@ -9205,7 +9205,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="608"/>
       <source>Shared</source>
-      <translation type="unfinished"/>
+      <translation>Общий</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="729"/>
