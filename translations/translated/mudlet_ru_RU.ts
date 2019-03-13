@@ -2247,7 +2247,7 @@ that was to room with an invalid room: %3 that does not exist.
 The exit will be removed (the bad destination room id will be stored in the
 room user data under a key:
 &quot;%4&quot;).</source>
-      <translation>[ ВНИМАНИЕ ] - Комната с идентификатором: %1 имеет специальный выход &quot;%2&quot; что имеет выход в: %3 но этой комнаты не существует.  Выход будет удалён
+      <translation>[ ИНФОРМАЦИЯ ] - Комната с идентификатором: %1 имеет специальный выход &quot;%2&quot; что имеет выход в: %3 но этой комнаты не существует.  Выход будет удалён
 (но идентификатор назначенной комнаты будет храниться в
 данных комнаты пользователя под ключом:
 &quot;%4&quot;).</translation>
@@ -2351,7 +2351,8 @@ and the exit will be turned into a stub.</source>
       <source>[ ALERT ] - Room with id: %1 has an exit &quot;%2&quot; to: %3 but also
 has a stub exit!  As a real exit precludes a stub, the latter will
 be removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ПРЕДУПРЕЖДЕНИЕ ] - Комната с ID: %1 имеет выход &quot;%2&quot; в: %3 , но также
+имеет какой-то выход! Реальный выход исключает его, и позже он будет удален.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1623"/>
@@ -2360,7 +2361,11 @@ room: %3 that does not exist.  The exit will be removed (the bad destination
 room id will be stored in the room user data under a key:
 &quot;%4&quot;)
 and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФОРМАЦИЯ ] - Комната с идентификатором: %1 с выходом &quot;%2&quot; что имеет выход в неправильную комнату: %3 которой не существует. Выход будет удалён
+(но идентификатор назначенной комнаты будет храниться в
+данных комнаты пользователя под ключом:
+&quot;%4&quot;)
+Выход будет сгенерирован в любой другой возможный.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1650"/>
