@@ -237,7 +237,6 @@ private:
     QTextEncoder* outgoingDataEncoder;
     QString hostName;
     int hostPort;
-    bool hostSslTsl;
     double networkLatencyMin;
     double networkLatencyMax;
     bool mWaitingForResponse;
