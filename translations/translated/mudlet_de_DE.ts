@@ -5907,17 +5907,17 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="650"/>
       <source>substring</source>
-      <translation type="unfinished"/>
+      <translation>Ausschnitt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="651"/>
       <source>perl regex</source>
-      <translation type="unfinished"/>
+      <translation>Perl-Regex</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="652"/>
       <source>begin of line substring</source>
-      <translation type="unfinished"/>
+      <translation>Zeilenanfang</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="653"/>
