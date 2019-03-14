@@ -5922,12 +5922,12 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="653"/>
       <source>exact match</source>
-      <translation type="unfinished"/>
+      <translation>Genauer Treffer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="654"/>
       <source>lua function</source>
-      <translation type="unfinished"/>
+      <translation>Lua-Funktion</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="655"/>
