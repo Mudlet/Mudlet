@@ -485,7 +485,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2292"/>
       <source>Text label or image label?</source>
       <comment>2D Mapper create label dialog text</comment>
-      <translation type="unfinished"/>
+      <translation>Text oder Bild?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2293"/>
@@ -755,7 +755,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2820"/>
       <source>Custom exit line</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Benutzerdefinierte Ausgangslinie</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2822"/>
@@ -773,7 +773,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2830"/>
       <source>Create Label</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Label erstellen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2831"/>
@@ -797,7 +797,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2840"/>
       <source>Can only set location when exactly one room is selected</source>
       <comment>2D Mapper context menu (room) item tooltip (disabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Kann die Position nur setzen, wenn genau ein Raum gewählt ist</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2867"/>
@@ -1268,42 +1268,42 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TCommandLine.cpp" line="583"/>
       <source>Add to user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>Dem Benutzerwörterbuch hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="585"/>
       <source>Remove from user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>Aus Benutzerwörterbuch entfernen</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="589"/>
       <source>▼Mudlet▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which we have bundled with Mudlet; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼ Mudlet ▼ │ Wörterbuchvorschläge │ ▲ Benutzer ▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="599"/>
       <source>▼System▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which is provided as part of the OS; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼ System ▼ │ Wörterbuchvorschläge │ ▲ Benutzer ▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="658"/>
       <source>no suggestions (system)</source>
       <comment>used when the command spelling checker using the selected system dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>Keine Vorschläge (System)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="684"/>
       <source>no suggestions (shared)</source>
       <comment>used when the command spelling checker using the dictionary shared between profile has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>keine Vorschläge (gemeinsam)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="688"/>
       <source>no suggestions (profile)</source>
       <comment>used when the command spelling checker using the profile&apos;s own dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>keine Vorschläge (Profil)</translation>
     </message>
   </context>
   <context>
