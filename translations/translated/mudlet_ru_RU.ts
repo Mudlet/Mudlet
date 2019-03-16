@@ -3280,7 +3280,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTrigger.cpp" line="1047"/>
       <source>Trigger name=%1 will fire %n more time(s).
 </source>
-      <translation>
+      <translation type="unfinished">
         <numerusform>Триггер=%1 сработает ещё %n раз.
 </numerusform>
         <numerusform>Триггер=%1 сработает ещё %n раз.
@@ -8730,8 +8730,8 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="4397"/>
       <source>Review %n update(s)...</source>
       <comment>Review update(s) menu item, %n is the the count of how many updates are available</comment>
-      <translation>
-        <numerusform>Проверить %n обновление/й...</numerusform>
+      <translation type="unfinished">
+        <numerusform>Проверить %n обновление...</numerusform>
         <numerusform>Проверить %n обновлений...</numerusform>
         <numerusform>Проверить %n обновлений...</numerusform>
         <numerusform>Проверить %n обновлений...</numerusform>
