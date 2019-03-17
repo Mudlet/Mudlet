@@ -922,7 +922,12 @@ den markierten Raum (%1), verschieben nach:</translation>
       <source>Enter the symbol to use
 for this/these %n room(s):</source>
       <comment>this is for when applying a new room symbol to one or more rooms and none have a symbol at present; use line feeds to format text into a reasonable rectangle, %n is the number of rooms involved</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Wähle das Symbol, das für 
+diesen Raum zu verwenden ist:</numerusform>
+        <numerusform>Wähle das Symbol, das für 
+diese %n Räume zu verwenden ist:</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3537"/>
@@ -8118,88 +8123,88 @@ Starte... Viel Spaß!
       <location filename="../src/mudlet.cpp" line="338"/>
       <source>Shtokavian</source>
       <comment>This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state without a state indication</comment>
-      <translation type="unfinished"/>
+      <translation>Shtokavian</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="339"/>
       <source>Shtokavian (former state of Yugoslavia)</source>
       <comment>This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state with a (withdrawn from ISO 3166) state indication</comment>
-      <translation type="unfinished"/>
+      <translation>Shtokavian (ehemaliger Staat Jugoslawiens)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="340"/>
       <source>Sinhala</source>
-      <translation type="unfinished"/>
+      <translation>Sinhala</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="341"/>
       <source>Sinhala (Sri Lanka)</source>
-      <translation type="unfinished"/>
+      <translation>Sinhala (Sri Lanka)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="342"/>
       <source>Slovak</source>
-      <translation type="unfinished"/>
+      <translation>Slovakisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="343"/>
       <source>Slovak (Slovakia)</source>
-      <translation type="unfinished"/>
+      <translation>Slowakisch (Slowakei)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="344"/>
       <source>Slovenian</source>
-      <translation type="unfinished"/>
+      <translation>Slowenisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="345"/>
       <source>Slovenian (Slovenia)</source>
-      <translation type="unfinished"/>
+      <translation>Slowenisch (Slowenien)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="346"/>
       <source>Somali</source>
-      <translation type="unfinished"/>
+      <translation>Somali</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="347"/>
       <source>Somali (Somalia)</source>
-      <translation type="unfinished"/>
+      <translation>Somali (Somalia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="348"/>
       <source>Albanian</source>
-      <translation type="unfinished"/>
+      <translation>Albanisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="349"/>
       <source>Albanian (Albania)</source>
-      <translation type="unfinished"/>
+      <translation>Albanisch (Albanien)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="350"/>
       <source>Serbian</source>
-      <translation type="unfinished"/>
+      <translation>Serbisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="351"/>
       <source>Serbian (Montenegro)</source>
-      <translation type="unfinished"/>
+      <translation>Serbisch (Montenegro)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="352"/>
       <source>Serbian (Serbia)</source>
-      <translation type="unfinished"/>
+      <translation>Serbisch (Serbien)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="353"/>
       <source>Serbian (Serbia - Latin-alphabet)</source>
-      <translation type="unfinished"/>
+      <translation>Serbisch (Serbien - lateinisches Alphabet)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="354"/>
       <source>Serbian (former state of Yugoslavia)</source>
-      <translation type="unfinished"/>
+      <translation>Serbisch (ehemaliger Staat Jugoslawien)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="355"/>
