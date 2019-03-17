@@ -8354,27 +8354,27 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="385"/>
       <source>Vietnamese (DauCu varient - old-style diacritics)</source>
-      <translation type="unfinished"/>
+      <translation>Vietnamesisch (DauCu Variante - alte Diakritika)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="386"/>
       <source>Vietnamese (DauMoi varient - new-style diacritics)</source>
-      <translation type="unfinished"/>
+      <translation>Vietnamesisch (DauMoi Variante - neue Diakritika)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="387"/>
       <source>Walloon</source>
-      <translation type="unfinished"/>
+      <translation>Wallonisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="388"/>
       <source>Xhosa</source>
-      <translation type="unfinished"/>
+      <translation>Xhosa</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="389"/>
       <source>Yiddish</source>
-      <translation type="unfinished"/>
+      <translation>Jiddisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="390"/>
@@ -8384,17 +8384,17 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="391"/>
       <source>Chinese (China - simplified)</source>
-      <translation type="unfinished"/>
+      <translation>Chinesisch (China - vereinfacht)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="392"/>
       <source>Chinese (Taiwan - traditional)</source>
-      <translation type="unfinished"/>
+      <translation>Chinesisch (Taiwan - traditionell)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="393"/>
       <source>Zulu</source>
-      <translation type="unfinished"/>
+      <translation>Zulu</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="419"/>
@@ -8771,13 +8771,19 @@ Starte... Viel Spaß!
       <location filename="../src/mudlet.cpp" line="4379"/>
       <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
       <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>&lt;p&gt;Über Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;Eine neue Version ist jetzt verfügbar!&lt;/i&gt;&lt;p&gt;</numerusform>
+        <numerusform>&lt;p&gt;Über Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n neue Versionen sind jetzt verfügbar!&lt;/i&gt;&lt;p&gt;</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="4397"/>
       <source>Review %n update(s)...</source>
       <comment>Review update(s) menu item, %n is the the count of how many updates are available</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Prüfe die neue Version...</numerusform>
+        <numerusform>Prüfe %n neue Versionen...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="4402"/>
