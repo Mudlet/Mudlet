@@ -5937,7 +5937,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="655"/>
       <source>line spacer</source>
-      <translation type="unfinished"/>
+      <translation>Zeilenabstandshalter</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="656"/>
@@ -7240,92 +7240,92 @@ Starte... Viel Spaß!
       <location filename="../src/mudlet.cpp" line="162"/>
       <source>Afrikaans</source>
       <extracomment>In the translation source texts the language is the leading term, with, generally, the (primary) country(ies) in the brackets, with a trailing language disabiguation after a &apos;-&apos; Chinese is an exception!</extracomment>
-      <translation type="unfinished"/>
+      <translation>Afrikaans</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="163"/>
       <source>Afrikaans (South Africa)</source>
-      <translation type="unfinished"/>
+      <translation>Afrikaans (Südafrika)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="164"/>
       <source>Aragonese</source>
-      <translation type="unfinished"/>
+      <translation>Aragonese</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="165"/>
       <source>Aragonese (Spain)</source>
-      <translation type="unfinished"/>
+      <translation>Aragon (Spanien)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="166"/>
       <source>Arabic</source>
-      <translation type="unfinished"/>
+      <translation>Arabisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="167"/>
       <source>Arabic (United Arab Emirates)</source>
-      <translation type="unfinished"/>
+      <translation>Arabisch (Vereinigte Arabische Emirate)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="168"/>
       <source>Arabic (Bahrain)</source>
-      <translation type="unfinished"/>
+      <translation>Arabisch (Bahrain)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="169"/>
       <source>Arabic (Algeria)</source>
-      <translation type="unfinished"/>
+      <translation>Arabisch (Algerien)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="170"/>
       <source>Arabic (Eygpt)</source>
-      <translation type="unfinished"/>
+      <translation>Arabisch (Ägypten)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="171"/>
       <source>Arabic (India)</source>
-      <translation type="unfinished"/>
+      <translation>Arabisch (Indien)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="172"/>
       <source>Arabic (Iraq)</source>
-      <translation type="unfinished"/>
+      <translation>Arabisch (Irak)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="173"/>
       <source>Arabic (Jordan)</source>
-      <translation type="unfinished"/>
+      <translation>Arabisch (Jordanien)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="174"/>
       <source>Arabic (Kuwait)</source>
-      <translation type="unfinished"/>
+      <translation>Arabisch (Kuwait)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="175"/>
       <source>Arabic (Lebanon)</source>
-      <translation type="unfinished"/>
+      <translation>Arabisch (Libanon)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="176"/>
       <source>Arabic (Libya)</source>
-      <translation type="unfinished"/>
+      <translation>Arabisch (Libyen)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="177"/>
       <source>Arabic (Morocco)</source>
-      <translation type="unfinished"/>
+      <translation>Arabisch (Marokko)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="178"/>
       <source>Arabic (Oman)</source>
-      <translation type="unfinished"/>
+      <translation>Arabisch (Oman)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="179"/>
       <source>Arabic (Qatar)</source>
-      <translation type="unfinished"/>
+      <translation>Arabisch (Katar)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="180"/>
