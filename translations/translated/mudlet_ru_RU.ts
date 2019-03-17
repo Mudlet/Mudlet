@@ -1591,7 +1591,7 @@ Some functions may not be available.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14765"/>
       <source>[  OK  ]  - Lua module rex_pcre loaded.</source>
-      <translation>[ ОК ] - модуль Луа rex_pcre загружен.</translation>
+      <translation>[  OK  ] - модуль Луа rex_pcre загружен.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14776"/>
@@ -1603,7 +1603,7 @@ Some functions may not be available.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14780"/>
       <source>[  OK  ]  - Lua module zip loaded.</source>
-      <translation>[ ОК ] - модуль Луа zip загружен.</translation>
+      <translation>[  OK  ] - модуль Луа zip загружен.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14791"/>
@@ -1617,7 +1617,7 @@ Probably will not be able to access Mudlet Lua code.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14796"/>
       <source>[  OK  ]  - Lua module lfs loaded.</source>
-      <translation>[ ОК ] - модуль Луа lfs загружен.</translation>
+      <translation>[  OK  ] - модуль Луа lfs загружен.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14807"/>
@@ -1631,7 +1631,7 @@ Database support will not be available.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14812"/>
       <source>[  OK  ]  - Lua module sqlite3 loaded.</source>
-      <translation>[ ОК ] - модуль Луа sqlite3 загружен.</translation>
+      <translation>[  OK  ] - модуль Луа sqlite3 загружен.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14824"/>
@@ -1645,7 +1645,7 @@ utf8 .* функции Lua не будут доступны.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14829"/>
       <source>[  OK  ]  - Lua module utf8 loaded.</source>
-      <translation>[ ОК ] - модуль Луа utf8 загружен.</translation>
+      <translation>[  OK  ] - модуль Луа utf8 загружен.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14841"/>
@@ -1659,7 +1659,7 @@ yajl.* Функции Lua будут&apos; не доступны.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14846"/>
       <source>[  OK  ]  - Lua module yajl loaded.</source>
-      <translation>[ ОК ] - модуль Луа yajl загружен.</translation>
+      <translation>[  OK  ] - модуль Луа yajl загружен.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14936"/>
@@ -3528,14 +3528,14 @@ and this one cannot read it, you need a newer Mudlet!</source>
       <location filename="../src/ctelnet.cpp" line="543"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2
 </source>
-      <translation>[ ИНФО ]  - IP-адрес %1 был найден. Это: %2
+      <translation>[ ИНФО ] - IP-адрес %1 был найден. Это: %2
 </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="544"/>
       <source>[ INFO ]  - Trying to connect to %1: %2 ...
 </source>
-      <translation>[ ИНФО ]  - Идёт подключение к %1: %2 ...
+      <translation>[ ИНФО ] - Идёт подключение к %1: %2 ...
 </translation>
     </message>
     <message>
@@ -3562,12 +3562,12 @@ or your nameservers are not working properly.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="412"/>
       <source>[ INFO ]  - A secure connection has been established successfully.</source>
-      <translation>[ ИНФО ]  - Защищенное соединение установлено успешно.</translation>
+      <translation>[ ИНФО ] - Защищенное соединение установлено успешно.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="414"/>
       <source>[ INFO ]  - A connection has been established successfully.</source>
-      <translation>[ ИНФО ]  - Соединение установлено успешно.</translation>
+      <translation>[ ИНФО ] - Соединение установлено успешно.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="452"/>
@@ -3677,7 +3677,7 @@ Try again when it has finished.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="2036"/>
       <source>Cannot read file &quot;%1&quot;, error message was: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Не удается прочитать файл &quot;%1&quot;, сообщение об ошибке было: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2039"/>
@@ -5866,7 +5866,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="560"/>
       <source>If checked then what is searched for must match the case precisely otherwise case is ignored.</source>
-      <translation type="unfinished"/>
+      <translation>Если отмечено, то что ищется, должно точно соответствовать регистру. Иначе регистр игнорируется.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="650"/>
@@ -6143,7 +6143,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="5007"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5009"/>
       <source>fault</source>
-      <translation type="unfinished"/>
+      <translation>сбой</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5460"/>
@@ -6514,7 +6514,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your key or key group. This will be displayed in the key tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Выберите хорошее, (в идеале уникальное) имя для ключа или группы ключей. Оно будет показано в списке ключей.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="50"/>
