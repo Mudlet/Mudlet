@@ -3376,7 +3376,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your button, menu or toolbar. This will be displayed in the buttons tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Выберите хорошее, (в идеале уникальное) имя для кнопки, меню или панели кнопок. Это будет показано в списке кнопок.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="115"/>
@@ -3456,7 +3456,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="266"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game if it is pressed. (Optional)&lt;/p&gt;&lt;p&gt;If this is a &lt;i&gt;push-down&lt;/i&gt; button then this is sent only when the button goes from the &lt;i&gt;up&lt;/i&gt; to &lt;i&gt;down&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Введите одну или несколько команд, которые вы хотите чтобы кнопка послала в игру когда она нажата. (Необязательно)&lt;/p&gt;&lt;p&gt;Если это кнопка &lt;i&gt;с нажатием&lt;/i&gt;, то она отправляется только тогда, когда кнопка переходит из состояния &lt;i&gt;вверх&lt;/i&gt; в состояние &lt;i&gt;вниз&lt;/i&gt; .&lt;/p&gt;&lt;p&gt;Для отправки более сложных команд, которые могут зависеть от переменных в этом профиле скрипт Lua должен быть введен &lt;i&gt;вместо&lt;/i&gt; в области редактора ниже. Все, что вводится здесь, буквально, просто отправляется на игровой сервер.&lt;/p&gt;&lt;p&gt;Можно использовать как это &lt;i&gt;и&lt;/i&gt; скрипт Lua - команда тут будет отправлена &lt;b&gt;до того, как будет запущен скрипт&lt;/b&gt; .&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="283"/>
@@ -3484,7 +3484,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="57"/>
       <source>choose a unique name for your alias; it will show in the tree and is needed for scripting.</source>
-      <translation type="unfinished"/>
+      <translation>выберите уникальное имя для псевдонима; оно будет показано в списке и должно быть указано в сценариях.</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="76"/>
