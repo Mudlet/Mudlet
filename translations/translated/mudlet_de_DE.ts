@@ -7932,82 +7932,82 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="301"/>
       <source>Kurmanji {Latin-alphabet Kurdish}</source>
-      <translation type="unfinished"/>
+      <translation>Kurmanji (Kurdisch mit lateinischem Alphabet)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="302"/>
       <source>Korean</source>
-      <translation type="unfinished"/>
+      <translation>Koreanisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="303"/>
       <source>Korean (South Korea)</source>
-      <translation type="unfinished"/>
+      <translation>Koreanisch (Südkorea)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="304"/>
       <source>Kurdish</source>
-      <translation type="unfinished"/>
+      <translation>Kurdisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="305"/>
       <source>Kurdish (Syria)</source>
-      <translation type="unfinished"/>
+      <translation>Kurdisch (Syrien)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="306"/>
       <source>Kurdish (Turkey)</source>
-      <translation type="unfinished"/>
+      <translation>Kurdisch (Türkei)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="307"/>
       <source>Lao</source>
-      <translation type="unfinished"/>
+      <translation>Lao</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="308"/>
       <source>Lao (Laos)</source>
-      <translation type="unfinished"/>
+      <translation>Lao (Laos)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="309"/>
       <source>Lithuanian</source>
-      <translation type="unfinished"/>
+      <translation>Litauisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="310"/>
       <source>Lithuanian (Lithuania)</source>
-      <translation type="unfinished"/>
+      <translation>Litauisch (Litauen)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="311"/>
       <source>Malayalam</source>
-      <translation type="unfinished"/>
+      <translation>Malayalam</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="312"/>
       <source>Malayalam (India)</source>
-      <translation type="unfinished"/>
+      <translation>Malayalam (Indien)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="313"/>
       <source>Norwegian Bokmål</source>
-      <translation type="unfinished"/>
+      <translation>Norwegisch Bokmål</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="314"/>
       <source>Norwegian Bokmål (Norway)</source>
-      <translation type="unfinished"/>
+      <translation>Norwegisch Bokmål (Norwegen)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="315"/>
       <source>Nepali</source>
-      <translation type="unfinished"/>
+      <translation>Nepalisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="316"/>
       <source>Nepali (Nepal)</source>
-      <translation type="unfinished"/>
+      <translation>Nepalisch (Nepal)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="317"/>
@@ -8017,37 +8017,37 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="318"/>
       <source>Dutch (Aruba)</source>
-      <translation type="unfinished"/>
+      <translation>Niederländisch (Aruba)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="319"/>
       <source>Dutch (Belgium)</source>
-      <translation type="unfinished"/>
+      <translation>Niederländisch (Belgien)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="320"/>
       <source>Dutch (Netherlands)</source>
-      <translation type="unfinished"/>
+      <translation>Niederländisch (Niederlande)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="321"/>
       <source>Norwegian Nynorsk</source>
-      <translation type="unfinished"/>
+      <translation>Norwegisch Nynorsk</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="322"/>
       <source>Norwegian Nynorsk (Norway)</source>
-      <translation type="unfinished"/>
+      <translation>Norwegisch Nynorsk (Norwegen)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="323"/>
       <source>Occitan</source>
-      <translation type="unfinished"/>
+      <translation>Okzitanisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="324"/>
       <source>Occitan (France)</source>
-      <translation type="unfinished"/>
+      <translation>Okzitanisch (Frankreich)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="325"/>
@@ -8057,7 +8057,7 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="326"/>
       <source>Polish (Poland)</source>
-      <translation type="unfinished"/>
+      <translation>Polnisch (Polen)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="327"/>
@@ -8067,22 +8067,22 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="328"/>
       <source>Portuguese (Brazil)</source>
-      <translation type="unfinished"/>
+      <translation>Portugiesisch (Brasilien)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="329"/>
       <source>Portuguese (Portugal)</source>
-      <translation type="unfinished"/>
+      <translation>Portugiesisch (Portugal)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="330"/>
       <source>Romanian</source>
-      <translation type="unfinished"/>
+      <translation>Rumänisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="331"/>
       <source>Romanian (Romania)</source>
-      <translation type="unfinished"/>
+      <translation>Rumänisch (Rumänien)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="332"/>
@@ -8092,27 +8092,27 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="333"/>
       <source>Russian (Russia)</source>
-      <translation type="unfinished"/>
+      <translation>Russisch (Russland)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="334"/>
       <source>Northern Sami</source>
-      <translation type="unfinished"/>
+      <translation>Nord-Sami</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="335"/>
       <source>Northern Sami (Finland)</source>
-      <translation type="unfinished"/>
+      <translation>Nord-Sami (Finnland)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="336"/>
       <source>Northern Sami (Norway)</source>
-      <translation type="unfinished"/>
+      <translation>Nord-Sami (Norwegen)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="337"/>
       <source>Northern Sami (Sweden)</source>
-      <translation type="unfinished"/>
+      <translation>Nord-Sami (Schweden)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="338"/>
