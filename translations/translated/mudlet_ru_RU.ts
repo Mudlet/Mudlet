@@ -5756,7 +5756,8 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="377"/>
       <source>Saves the selected item. (Ctrl+S)&lt;/p&gt;Saving causes any changes to the item to take effect.
 It will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить выбранный элемент. (Ctrl+S)&lt;/p&gt;Сохранение приводит к тому, что любые изменения в элементе вступают в силу.
+Он не будет сохранен на диске, поэтому изменения будут потеряны в случае сбоя компьютера/программы (но "Сохранить Профиль" справа будет безопасным).</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="379"/>
