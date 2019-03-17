@@ -8789,7 +8789,10 @@ Starte... Viel Spaß!
       <location filename="../src/mudlet.cpp" line="4402"/>
       <source>&lt;p&gt;Review the update(s) available...&lt;/p&gt;</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>&lt;p&gt;Prüfe die neue Version...&lt;/p&gt;</numerusform>
+        <numerusform>&lt;p&gt;Prüfe die neue Versionen...&lt;/p&gt;</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4493"/>
@@ -9254,27 +9257,27 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="532"/>
       <source>Spell checking</source>
-      <translation type="unfinished"/>
+      <translation>Rechtschreibprüfung</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="538"/>
       <source>&lt;p&gt;This option controls spell-checking on the command line in the main console for this profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Diese Option steuert die Rechtschreibprüfung der Befehlszeile in der Hauptkonsole für dieses Profil.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="541"/>
       <source>System/Mudlet dictionary:</source>
-      <translation type="unfinished"/>
+      <translation>System-/Mudlet -Wörterbuch:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="548"/>
       <source>&lt;p&gt;Select one dictionary which will be available on the command line and in the lua sub-system.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle ein Wörterbuch, das in der Befehlszeile und im Lua-Subsystem verfügbar sein wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="576"/>
       <source>User dictionary:</source>
-      <translation type="unfinished"/>
+      <translation>Benutzerwörterbuch:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="582"/>
