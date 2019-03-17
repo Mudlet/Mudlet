@@ -147,7 +147,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.17.1
+VERSION = 3.18.0
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -607,7 +607,9 @@ HEADERS += \
     VarUnit.h \
     XMLexport.h \
     XMLimport.h \
-    widechar_width.h
+    widechar_width.h \
+    ../3rdparty/discord/rpc/include/discord_register.h \
+    ../3rdparty/discord/rpc/include/discord_rpc.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.
@@ -1384,4 +1386,14 @@ DISTFILES += \
     ../mudlet.svg \
     ../README.md \
     ../translations/translated/CMakeLists.txt \
-    ../translations/translated/generate-translation-stats.lua
+    ../translations/translated/generate-translation-stats.lua \
+    ../COMMITMENT \
+    ../.crowdin.yml \
+    ../.gitignore \
+    ../.gitmodules \
+    ../translations/translated/updateqm.pri \
+    ../CI/mudlet-deploy-key.enc \
+    ../CI/copy-non-qt-win-dependencies.ps1 \
+    ../CI/mudlet-deploy-key-windows.ppk \
+    ../CI/qt-silent-install.qs \
+    ../CI/travis.compile.sh

@@ -3816,6 +3816,11 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         TConsole* pC = host.mpConsole;
+        if (Q_UNLIKELY(!pC)) {
+            lua_pushboolean(L, false);
+            lua_pushstring(L, "mudlet error: main window does not exist");
+            return 2;
+        }
         pC->mFormatCurrent.setTextFormat(QColor(colorComponents.at(3), colorComponents.at(4), colorComponents.at(5)),
                                          QColor(colorComponents.at(0), colorComponents.at(1), colorComponents.at(2)),
                                          flags);

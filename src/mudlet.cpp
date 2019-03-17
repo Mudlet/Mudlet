@@ -167,7 +167,7 @@ void mudlet::loadLanguagesMap()
                                   {QStringLiteral("ar_ae"), tr("Arabic (United Arab Emirates)")},
                                   {QStringLiteral("ar_bh"), tr("Arabic (Bahrain)")},
                                   {QStringLiteral("ar_dz"), tr("Arabic (Algeria)")},
-                                  {QStringLiteral("ar_eg"), tr("Arabic (Eygpt)")},
+                                  {QStringLiteral("ar_eg"), tr("Arabic (Egypt)")},
                                   {QStringLiteral("ar_in"), tr("Arabic (India)")},
                                   {QStringLiteral("ar_iq"), tr("Arabic (Iraq)")},
                                   {QStringLiteral("ar_jo"), tr("Arabic (Jordan)")},
@@ -225,7 +225,7 @@ void mudlet::loadLanguagesMap()
                                   {QStringLiteral("en_bs"), tr("English (Bahamas)")},
                                   {QStringLiteral("en_bw"), tr("English (Botswana)")},
                                   {QStringLiteral("en_bz"), tr("English (Belize)")},
-                                  {QStringLiteral("en_ca"), tr("English (Canadia)")},
+                                  {QStringLiteral("en_ca"), tr("English (Canada)")},
                                   {QStringLiteral("en_dk"), tr("English (Denmark)")},
                                   {QStringLiteral("en_gb"), tr("English (United Kingdom)")},
                                   {QStringLiteral("en_gb_ise"), tr("English (United Kingdom - 'ise' not 'ize')", "This dictionary prefers the British 'ise' form over the American 'ize' one.")},
@@ -265,6 +265,8 @@ void mudlet::loadLanguagesMap()
                                   {QStringLiteral("es_us"), tr("Spanish (United States)")},
                                   {QStringLiteral("es_uy"), tr("Spanish (Uruguay)")},
                                   {QStringLiteral("es_ve"), tr("Spanish (Venezuela)")},
+                                  {QStringLiteral("et"), tr("Estonian")},
+                                  {QStringLiteral("et_ee"), tr("Estonian (Estonia)")},
                                   {QStringLiteral("eu"), tr("Basque")},
                                   {QStringLiteral("eu_es"), tr("Basque (Spain)")},
                                   {QStringLiteral("eu_fr"), tr("Basque (France)")},
@@ -289,6 +291,8 @@ void mudlet::loadLanguagesMap()
                                   {QStringLiteral("hr_hr"), tr("Croatian (Croatia)")},
                                   {QStringLiteral("hu"), tr("Hungarian")},
                                   {QStringLiteral("hu_hu"), tr("Hungarian (Hungary)")},
+                                  {QStringLiteral("hy"), tr("Armenian")},
+                                  {QStringLiteral("hy_am"), tr("Armenian (Armenia)")},
                                   {QStringLiteral("ie"), tr("Interlingue", "formerly known as Occidental, and not to be mistaken for Interlingua")},
                                   {QStringLiteral("is"), tr("Icelandic")},
                                   {QStringLiteral("is_is"), tr("Icelandic (Iceland)")},
@@ -3861,7 +3865,7 @@ void mudlet::stopSounds()
     }
 }
 
-void mudlet::playSound(QString s, int soundVolume)
+void mudlet::playSound(const QString& s, int soundVolume)
 {
     QPointer<Host> pHost = getActiveHost();
     if (!pHost) {
@@ -3888,7 +3892,7 @@ void mudlet::playSound(QString s, int soundVolume)
 
         if (!pPlayer) {
             /* It (should) be impossible to ever reach this */
-            pHost->postMessage("\n[  ERROR  ]  - Unable to create new QMediaPlayer object\n");
+            TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("Play sound: unable to create new QMediaPlayer object\n") >> 0;
             return;
         }
 

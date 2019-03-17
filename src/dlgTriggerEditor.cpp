@@ -7201,11 +7201,11 @@ void dlgTriggerEditor::exportTriggerToClipboard()
         if (pT) {
             name = pT->getName();
         } else {
-            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
     } else {
-        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
     XMLexport writer(pT);
@@ -7224,11 +7224,11 @@ void dlgTriggerEditor::exportTimerToClipboard()
         if (pT) {
             name = pT->getName();
         } else {
-            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
     } else {
-        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
     XMLexport writer(pT);
@@ -7247,11 +7247,11 @@ void dlgTriggerEditor::exportAliasToClipboard()
         if (pT) {
             name = pT->getName();
         } else {
-            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
     } else {
-        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
     XMLexport writer(pT);
@@ -7270,11 +7270,11 @@ void dlgTriggerEditor::exportActionToClipboard()
         if (pT) {
             name = pT->getName();
         } else {
-            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
     } else {
-        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
     XMLexport writer(pT);
@@ -7293,11 +7293,11 @@ void dlgTriggerEditor::exportScriptToClipboard()
         if (pT) {
             name = pT->getName();
         } else {
-            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
     } else {
-        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
     XMLexport writer(pT);
@@ -7316,12 +7316,12 @@ void dlgTriggerEditor::exportKeyToClipboard()
         if (pT) {
             name = pT->getName();
         } else {
-            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
 
     } else {
-        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
     XMLexport writer(pT);

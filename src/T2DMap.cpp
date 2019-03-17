@@ -138,7 +138,7 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.setHeaderLabels(headerLabels);
     mMultiSelectionListWidget.setToolTip(tr("<p>Click on a line to select or deselect that room number (with the given name if the "
                                                  "rooms are named) to add or remove the room from the selection.  Click on the "
-                                                 "relevant header to sort by that method.  Note that the name column willl only "
+                                                 "relevant header to sort by that method.  Note that the name column will only "
                                                  "show if at least one of the rooms has a name.</p>"));
     mMultiSelectionListWidget.setUniformRowHeights(true);
     mMultiSelectionListWidget.setItemsExpandable(false);

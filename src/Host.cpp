@@ -172,7 +172,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mWideAmbigousWidthGlyphs(false)
 , mSGRCodeHasColSpaceId(false)
 , mServerMayRedefineColors(false)
-, mSpellDic()
+, mSpellDic(QStringLiteral("en_US"))
 // DISABLED: - Prevent "None" option for user dictionary - changed to true and not changed anywhere else
 , mEnableUserDictionary(true)
 , mUseSharedDictionary(false)
