@@ -1966,7 +1966,7 @@ QPair<int, QString> TConsole::select(const QString& text, const int numOfMatch)
                 P_end.setY(0);
                 return qMakePair(-1,
                                  QStringLiteral("there is not %1 of the text \"%2\" in the selected line")
-                                         .arg(QString::number(numOfMatch), numOfMatch > 1 ? QStringLiteral("%1 instances").arg(numOfMatch) : QStringLiteral("an instance"), text));
+                                         .arg(numOfMatch > 1 ? QStringLiteral("%1 instances").arg(numOfMatch) : QStringLiteral("an instance"), text));
             }
         }
     }
