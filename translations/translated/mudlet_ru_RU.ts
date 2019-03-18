@@ -5065,7 +5065,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="131"/>
       <source>&lt;p&gt;Select a directory where logs will be saved.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Выберите папку, в которую будут сохранены журналы.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="132"/>
