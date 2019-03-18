@@ -98,6 +98,8 @@ int speechState = QTextToSpeech::Ready;
 QString speechCurrent;
 #endif // QT_TEXTTOSPEECH_LIB
 
+const QString cMainConsoleName(QStringLiteral("main"));
+
 TLuaInterpreter::TLuaInterpreter(Host* pH, int id) : mpHost(pH), mHostID(id), purgeTimer(this)
 {
     pGlobalLua = nullptr;
@@ -546,52 +548,50 @@ int TLuaInterpreter::resetProfile(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectString
 int TLuaInterpreter::selectString(lua_State* L)
 {
-    Host& host = getHostFromLua(L);
-
-    int s = 1;
-    QString windowName; // only for 3 argument case, will be null if not assigned to which is different from being empty
+    int s = 0;
+    QString windowName = cMainConsoleName;
     if (lua_gettop(L) > 2) {
-        if (!lua_isstring(L, s)) {
-            lua_pushfstring(L, R"(selectString: bad argument #%d type (window name as string, is optional {defaults to "main" if omitted}, got %s!))", s, luaL_typename(L, s));
-            lua_error(L);
-            return 1;
-        } else {
-            // We cannot yet properly handle non-ASCII windows names but we will eventually!
-            windowName = QString::fromUtf8(lua_tostring(L, s));
-            if (windowName == QLatin1String("main")) {
-                // This matches the identifier for the main window - so make it
-                // appear so by emptying it...
-                windowName.clear();
-            }
-            s++;
+        if (!lua_isstring(L, ++s)) {
+            lua_pushfstring(L,
+                            R"(selectString: bad argument #%d (window name as string is optional {omit for \"%s\" console}, got %s!)",
+                            s,
+                            cMainConsoleName.toUtf8().constData(),
+                            luaL_typename(L, s));
+            return lua_error(L);
         }
+
+        windowName = QString::fromUtf8(lua_tostring(L, s));
     }
 
     QString searchText;
-    if (!lua_isstring(L, s)) {
+    if (!lua_isstring(L, ++s)) {
         lua_pushfstring(L, "selectString: bad argument #%d type (text to select as string expected, got %s!)", s, luaL_typename(L, s));
-        lua_error(L);
-        return 1;
-    } else {
-        searchText = QString::fromUtf8(lua_tostring(L, s));
-        // CHECK: Do we need to qualify this for a non-blank string?
-        s++;
+        return lua_error(L);
     }
 
+    searchText = QString::fromUtf8(lua_tostring(L, s));
+    if (searchText.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "an empty string is not selectable");
+        return 2;
+    }
+
+    Host& host = getHostFromLua(L);
     qint64 numOfMatch = 0;
-    if (!lua_isnumber(L, s)) {
+    if (!lua_isnumber(L, ++s)) {
         lua_pushfstring(L, "selectString: bad argument #%d type (match count as number {1 for first} expected, got %s!)", s, luaL_typename(L, s));
-        lua_error(L);
-        return 1;
-    } else {
-        numOfMatch = lua_tointeger(L, s);
+        return lua_error(L);
+    }
+    numOfMatch = lua_tointeger(L, s);
+
+    QPair<int, QString> result = host.mpConsole->select(windowName, searchText, numOfMatch);
+    if (result.first == -2) {
+        lua_pushnil(L);
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
     }
 
-    if (windowName.isEmpty()) {
-        lua_pushnumber(L, host.mpConsole->select(searchText, numOfMatch));
-    } else {
-        lua_pushnumber(L, mudlet::self()->selectString(&host, windowName, searchText, numOfMatch));
-    }
+    lua_pushnumber(L, result.first);
     return 1;
 }
 

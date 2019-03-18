@@ -51,6 +51,7 @@
 using namespace std;
 
 const QString TConsole::cmLuaLineVariable("line");
+const QString cMainConsoleName(QStringLiteral("main"));
 
 TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 : QWidget(parent)
@@ -1934,35 +1935,39 @@ bool TConsole::moveCursor(int x, int y)
     }
 }
 
-int TConsole::select(const QString& text, int numOfMatch)
+// Previously -1 was used as a general error including the string not being
+// found - now it is only used for that case, any other returns -2 and an
+// error message for the lua caller:
+QPair<int, QString> TConsole::select(const QString& text, const int numOfMatch)
 {
     if (mUserCursor.y() < 0) {
-        return -1;
+        return qMakePair(-2, QStringLiteral("unable to select anything, the current line is set to be before the first one"));
     }
     if (mUserCursor.y() >= buffer.size()) {
-        return -1;
+        return qMakePair(-2, QStringLiteral("unable to select anything, the current line is set to be after the last one"));
     }
 
     if (mudlet::debugMode) {
-        TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "\nline under current user cursor: " >> 0;
-        TDebug(QColor(Qt::red), QColor(Qt::black)) << mUserCursor.y() << "#:" >> 0;
-        TDebug(QColor(Qt::gray), QColor(Qt::black)) << buffer.line(mUserCursor.y()) << "\n" >> 0;
+        TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << QStringLiteral("\nline under current user cursor: ") >> 0;
+        TDebug(QColor(Qt::red), QColor(Qt::black)) << QStringLiteral("%1#:").arg(mUserCursor.y()) >> 0;
+        TDebug(QColor(Qt::gray), QColor(Qt::black)) << QStringLiteral("%1\n").arg(buffer.line(mUserCursor.y())) >> 0;
     }
 
     int begin = -1;
-    for (int i = 0; i < numOfMatch; i++) {
-        QString li = buffer.line(mUserCursor.y());
-        if (li.size() < 1) {
-            continue;
-        }
-        begin = li.indexOf(text, begin + 1);
+    QString li = buffer.line(mUserCursor.y());
+    if (!li.isEmpty()) {
+        for (int i = 0; i < numOfMatch; i++) {
+            begin = li.indexOf(text, begin + 1);
 
-        if (begin == -1) {
-            P_begin.setX(0);
-            P_begin.setY(0);
-            P_end.setX(0);
-            P_end.setY(0);
-            return -1;
+            if (begin == -1) {
+                P_begin.setX(0);
+                P_begin.setY(0);
+                P_end.setX(0);
+                P_end.setY(0);
+                return qMakePair(-1,
+                                 QStringLiteral("there is not %1 of the text \"%2\" in the selected line")
+                                         .arg(QString::number(numOfMatch), numOfMatch > 1 ? QStringLiteral("%1 instances").arg(numOfMatch) : QStringLiteral("an instance"), text));
+            }
         }
     }
 
@@ -1973,11 +1978,29 @@ int TConsole::select(const QString& text, int numOfMatch)
     P_end.setY(mUserCursor.y());
 
     if (mudlet::debugMode) {
-        TDebug(QColor(Qt::darkRed), QColor(Qt::black)) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y()
-                                                       << ") selectedText = " << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\n"
+        TDebug(QColor(Qt::darkRed), QColor(Qt::black)) << QStringLiteral("P_begin(%1/%2), P_end(%3/%4) selectedText:\n\"%5\"\n")
+                                                                  .arg(QString::number(P_begin.x()),
+                                                                       QString::number(P_begin.y()),
+                                                                       QString::number(P_end.x()),
+                                                                       QString::number(P_end.y()),
+                                                                       buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()))
                 >> 0;
     }
-    return begin;
+    return qMakePair(begin, QString());
+}
+
+QPair<int, QString> TConsole::select(const QString& name, const QString& text, const int numOfMatch)
+{
+    if (name.isEmpty() || name == cMainConsoleName) {
+        return select(text, numOfMatch);
+    }
+
+    auto pC = mSubConsoleMap.value(name);
+    if (pC) {
+        return pC->select(text, numOfMatch);
+    }
+
+    return qMakePair(-2, QStringLiteral("window \"%s\" not found").arg(name));
 }
 
 bool TConsole::selectSection(int from, int to)

@@ -2538,20 +2538,6 @@ void mudlet::setBgColor(Host* pHost, const QString& name, int r, int g, int b)
     }
 }
 
-int mudlet::selectString(Host* pHost, const QString& name, const QString& text, int num)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return -1;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        return pC->select(text, num);
-    } else {
-        return -1;
-    }
-}
-
 int mudlet::selectSection(Host* pHost, const QString& name, int f, int t)
 {
     if (!pHost || !pHost->mpConsole) {

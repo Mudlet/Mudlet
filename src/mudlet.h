@@ -157,7 +157,6 @@ public:
     void deleteLine(Host*, const QString& name);
     bool insertText(Host*, const QString& windowName, const QString&);
     void replace(Host*, const QString& name, const QString&);
-    int selectString(Host*, const QString& name, const QString& what, int);
     int selectSection(Host*, const QString& name, int, int);
     void setLink(Host* pHost, const QString& name, QStringList& linkFunction, QStringList&);
     std::tuple<bool, QString, int, int> getSelection(Host* pHost, const QString& name);
