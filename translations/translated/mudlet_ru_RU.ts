@@ -4271,12 +4271,12 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="652"/>
       <source>&lt;h2&gt;&lt;u&gt;lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;lua - Луа 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Авторское право © 1994 — 2017 Lua.org, PUC-Rio.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="655"/>
       <source>&lt;h2&gt;&lt;u&gt;lua_yajl - Lua 5.1 interface to yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Brian Maher &amp;lt;maherb at brimworks dot com&amp;gt;&lt;br&gt;Copyright © 2009 Brian Maher&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;lua_yajl - Lua 5.1 интерфейс для yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Автор: Брайан Маер &amp;lt;maherb at brimworks dot com&amp;gt;&lt;br&gt;Авторское право © 2009 Брайан Маер&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="660"/>
@@ -4291,7 +4291,7 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="668"/>
       <source>The &lt;b&gt;edbee-lib&lt;/b&gt; widget itself incorporates other components with licences that must be noted as well, they are:</source>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;edbe-lib&lt;/b&gt; сам по себе включает в себя другие компоненты с лицензиями, которые также должны быть отмечены:</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="670"/>
@@ -4980,7 +4980,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2030"/>
       <source>Could not copy the map - failed to work out which map file we just saved the map as!</source>
-      <translation type="unfinished"/>
+      <translation>Не удалось скопировать карту - не удалось выяснить, в файл мы только что сохранили карту!</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2042"/>
