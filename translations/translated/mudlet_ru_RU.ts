@@ -5826,7 +5826,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="438"/>
       <source>Generates a statistics summary display on the main profile console.</source>
-      <translation type="unfinished"/>
+      <translation>Генерирует сводку статистики на главном окне.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="441"/>
