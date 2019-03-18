@@ -10802,7 +10802,8 @@ Without this option, the pattern matching will stop after the first successful m
       <location filename="../src/ui/triggers_main_area.ui" line="1467"/>
       <source>highlight the capture groups if there are any
 otherwise highlight the entire match</source>
-      <translation type="unfinished"/>
+      <translation>Выделить захваченные группы, если есть какие-то
+в противном случае выделите весь матч</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1471"/>
