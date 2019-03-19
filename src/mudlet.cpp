@@ -1334,22 +1334,18 @@ void mudlet::unregisterTimer(TTimer* pTT)
         return;
     }
 
-    if (mHostTimerMap.contains(pHost)) {
-        if (mHostTimerMap.value(pHost).contains(pQT)) {
-            // Be paranoid - ensure that the timer does not fire again:
-            pTT->stop();
+    Q_ASSERT_X(mHostTimerMap.contains(pHost), "mudlet::unregisterTimer(...)", "the mHostTimerMap does not contain the Host instance that the TTimer seems to belong to");
+    if (mHostTimerMap.value(pHost).contains(pQT)) {
+        // Be paranoid - ensure that the timer does not fire again:
+        pTT->stop();
 
 //            qDebug().nospace().noquote() << "mudlet::unregisterTimer(...) INFO - unregistering a Timer \"" << pTT->getName() << "\" for profile \"" << pHost->getName() << "\".";
-            mHostTimerMap[pHost].remove(pQT);
-        }
-        if (mHostTimerMap.value(pHost).isEmpty()) {
-            mHostTimerMap.remove(pHost);
-        }
+        mHostTimerMap[pHost].remove(pQT);
     }
 
     // This message (and it's previous form:
     // "MUDLET CRITICAL ERROR: trying to unregister Timer but it is not
-    // registered!") were somewhat bogus because such an unregestered Timer is
+    // registered!") were somewhat bogus because such an unregistered Timer is
     // created every time that XMLimport::importPackage is run and the package
     // does not contain any Timer items.
     if (!pTT->knownUnregistered()) {
@@ -1370,10 +1366,7 @@ void mudlet::registerTimer(TTimer* pTT)
         return;
     }
 
-    if (!mHostTimerMap.contains(pHost)) {
-        QMap <QTimer*, TTimer*> newTimerMap;
-        mHostTimerMap.insert(pHost, newTimerMap);
-    }
+    Q_ASSERT_X(mHostTimerMap.contains(pHost), "mudlet::registerTimer(...)", "the mHostTimerMap does not contain the Host instance that the TTimer seems to belong to");
 
     if (!mHostTimerMap.value(pHost).contains(pQT)) {
         mHostTimerMap[pHost][pQT] = pTT;
@@ -1390,13 +1383,12 @@ void mudlet::clearHostTimerMap(Host* pHost)
         return;
     }
 
-    if (Q_LIKELY(mHostTimerMap.contains(pHost))) {
-        QMap<QTimer*, TTimer*> hostTimerMap = mHostTimerMap.take(pHost);
+    Q_ASSERT_X(mHostTimerMap.contains(pHost), "mudlet::clearHostTimerMap(...)", "the mHostTimerMap does not contain the Host instance that the TTimer seems to belong to");
+    QMap<QTimer*, TTimer*> hostTimerMap = mHostTimerMap.take(pHost);
 
-// This will silence a warning whilst the following line is commented out:
-        Q_UNUSED(hostTimerMap);
-//        qDebug().nospace().noquote() << "mudlet::clearHostTimerMap(...) INFO - removed QTimer<==>TTimer map, containing " << hostTimerMap.size() << " entries, for profile \"" << pHost->getName() << "\".";
-    }
+// This will silence a warning whilst the line following it is commented out:
+    Q_UNUSED(hostTimerMap);
+//  qDebug().nospace().noquote() << "mudlet::clearHostTimerMap(...) INFO - removed QTimer<==>TTimer map, containing " << hostTimerMap.size() << " entries, for profile \"" << pHost->getName() << "\".";
 }
 
 void mudlet::disableToolbarButtons()
