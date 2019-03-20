@@ -471,7 +471,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->addAction(mProfileSaveAsAction);
     toolBar->addAction(mProfileSaveAction);
 
-    connect(button_displayAllVariables, &QAbstractButton::toggled, this, &dlgTriggerEditor::slot_toggleHiddenVariables);
+    connect(checkBox_displayAllVariables, &QAbstractButton::toggled, this, &dlgTriggerEditor::slot_toggleHiddenVariables);
 
     connect(mpVarsMainArea->checkBox_variable_hidden, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_toggleHiddenVar);
 
@@ -6574,7 +6574,7 @@ void dlgTriggerEditor::changeView(int view)
     mpKeysMainArea->hide();
     mpVarsMainArea->hide();
     // hiding this for some reason shifts focus to the search box
-    button_displayAllVariables->hide();
+    checkBox_displayAllVariables->hide();
 
     clearEditorNotification();
     treeWidget_triggers->hide();
@@ -6685,8 +6685,8 @@ void dlgTriggerEditor::slot_show_vars()
     repopulateVars();
     mpCurrentVarItem = nullptr;
     mpSourceEditorArea->show();
-    button_displayAllVariables->show();
-    button_displayAllVariables->setChecked(showHiddenVars);
+    checkBox_displayAllVariables->show();
+    checkBox_displayAllVariables->setChecked(showHiddenVars);
     QTreeWidgetItem* pI = treeWidget_variables->topLevelItem(0);
     if (pI) {
         if (pI->childCount() > 0) {
@@ -6711,8 +6711,8 @@ void dlgTriggerEditor::show_vars()
     changeView(static_cast<int>(EditorViewType::cmVarsView));
     mpCurrentVarItem = nullptr;
     mpSourceEditorArea->show();
-    button_displayAllVariables->show();
-    button_displayAllVariables->setChecked(showHiddenVars);
+    checkBox_displayAllVariables->show();
+    checkBox_displayAllVariables->setChecked(showHiddenVars);
     QTreeWidgetItem* pI = treeWidget_variables->topLevelItem(0);
     if (pI) {
         if (pI->childCount() > 0) {
@@ -7502,7 +7502,7 @@ void dlgTriggerEditor::slot_paste_xml()
         selectTriggerByID(importedItemID);
         treeWidget_triggers->setAnimated(animated);
 
-        // set the focus because hiding button_displayAllVariables in changeView
+        // set the focus because hiding checkBox_displayAllVariables in changeView
         // changes the focus to the search box for some reason. This thus breaks
         // successive pastes because you'll now be pasting into the search box
         treeWidget_triggers->setFocus();
