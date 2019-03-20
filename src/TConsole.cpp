@@ -1941,16 +1941,17 @@ bool TConsole::moveCursor(int x, int y)
 QPair<int, QString> TConsole::select(const QString& text, const int numOfMatch)
 {
     if (mUserCursor.y() < 0) {
-        return qMakePair(-2, QStringLiteral("unable to select anything, the current line is set to be before the first one"));
+        return qMakePair(-1, QStringLiteral("invalid current line (%1), it is less than the first one in the buffer (0)").arg(QString::number(mUserCursor.y())));
     }
     if (mUserCursor.y() >= buffer.size()) {
-        return qMakePair(-2, QStringLiteral("unable to select anything, the current line is set to be after the last one"));
+        return qMakePair(-1, QStringLiteral("invalid current line (%1), it is greater than the last one in the buffer (%2)").arg(QString::number(mUserCursor.y()), QString::number(buffer.size() - 1)));
     }
 
     if (mudlet::debugMode) {
-        TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << QStringLiteral("\nline under current user cursor: ") >> 0;
-        TDebug(QColor(Qt::red), QColor(Qt::black)) << QStringLiteral("%1#:").arg(mUserCursor.y()) >> 0;
-        TDebug(QColor(Qt::gray), QColor(Qt::black)) << QStringLiteral("%1\n").arg(buffer.line(mUserCursor.y())) >> 0;
+        TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << QStringLiteral("\nLine under current user cursor: ") >> 0;
+        TDebug(QColor(Qt::red), QColor(Qt::black)) << QStringLiteral("#%1:\n\"").arg(mUserCursor.y()) >> 0;
+        TDebug(QColor(Qt::gray), QColor(Qt::black)) << QStringLiteral("%1").arg(buffer.line(mUserCursor.y())) >> 0;
+        TDebug(QColor(Qt::red), QColor(Qt::black)) << QStringLiteral("\"\n") >> 0;
     }
 
     int begin = -1;
@@ -1978,11 +1979,10 @@ QPair<int, QString> TConsole::select(const QString& text, const int numOfMatch)
     P_end.setY(mUserCursor.y());
 
     if (mudlet::debugMode) {
-        TDebug(QColor(Qt::darkRed), QColor(Qt::black)) << QStringLiteral("P_begin(%1/%2), P_end(%3/%4) selectedText:\n\"%5\"\n")
+        TDebug(QColor(Qt::darkRed), QColor(Qt::black)) << QStringLiteral("P_begin(%1/%2), P_end(%3/%2) selectedText:\n\"%4\"\n")
                                                                   .arg(QString::number(P_begin.x()),
                                                                        QString::number(P_begin.y()),
                                                                        QString::number(P_end.x()),
-                                                                       QString::number(P_end.y()),
                                                                        buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()))
                 >> 0;
     }
@@ -2000,7 +2000,7 @@ QPair<int, QString> TConsole::select(const QString& name, const QString& text, c
         return pC->select(text, numOfMatch);
     }
 
-    return qMakePair(-2, QStringLiteral("window \"%s\" not found").arg(name));
+    return qMakePair(-1, QStringLiteral("window \"%s\" not found").arg(name));
 }
 
 bool TConsole::selectSection(int from, int to)

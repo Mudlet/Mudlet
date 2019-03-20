@@ -571,8 +571,8 @@ int TLuaInterpreter::selectString(lua_State* L)
 
     searchText = QString::fromUtf8(lua_tostring(L, s));
     if (searchText.isEmpty()) {
-        lua_pushnil(L);
-        lua_pushstring(L, "an empty string is not selectable");
+        lua_pushnumber(L, -1);
+        lua_pushstring(L, "it is not possible to select an empty string");
         return 2;
     }
 
@@ -585,13 +585,12 @@ int TLuaInterpreter::selectString(lua_State* L)
     numOfMatch = lua_tointeger(L, s);
 
     QPair<int, QString> result = host.mpConsole->select(windowName, searchText, numOfMatch);
-    if (result.first == -2) {
-        lua_pushnil(L);
+    lua_pushnumber(L, result.first);
+    if (result.first == -1) {
         lua_pushstring(L, result.second.toUtf8().constData());
         return 2;
     }
 
-    lua_pushnumber(L, result.first);
     return 1;
 }
 
