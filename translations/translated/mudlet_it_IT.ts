@@ -3481,7 +3481,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1352"/>
       <location filename="../src/ctelnet.cpp" line="1631"/>
       <source>downloading game GUI from server</source>
-      <translation type="unfinished"/>
+      <translation>download GUI del gioco dal server</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1352"/>
@@ -3506,7 +3506,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1777"/>
       <source>LUA</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>LUA</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1788"/>
@@ -3524,13 +3524,13 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1810"/>
       <source>INFO</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>INFO</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1821"/>
       <source>OK</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2010"/>
@@ -4539,7 +4539,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="422"/>
       <source>! Connecting %1...</source>
-      <translation type="unfinished"/>
+      <translation>Connessione a %1 in corso...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="427"/>
@@ -4581,7 +4581,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="14"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>Esportatore package</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="21"/>
@@ -4646,12 +4646,12 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="87"/>
       <source>Package name</source>
-      <translation type="unfinished"/>
+      <translation>Nome pacchetto</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="87"/>
       <source>Package name:</source>
-      <translation type="unfinished"/>
+      <translation>Nome pacchetto:</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="91"/>
@@ -4750,7 +4750,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1129"/>
       <source>Profile preferences</source>
-      <translation type="unfinished"/>
+      <translation>Preferenze profilo</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1795"/>
@@ -5689,7 +5689,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="441"/>
       <source>errors</source>
-      <translation type="unfinished"/>
+      <translation>errori</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="442"/>
@@ -5740,17 +5740,17 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="652"/>
       <source>begin of line substring</source>
-      <translation type="unfinished"/>
+      <translation>inizio della frase</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="653"/>
       <source>exact match</source>
-      <translation type="unfinished"/>
+      <translation>corrispondenza esatta</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="654"/>
       <source>lua function</source>
-      <translation type="unfinished"/>
+      <translation>funzione lua</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="655"/>
@@ -5765,7 +5765,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="657"/>
       <source>prompt</source>
-      <translation type="unfinished"/>
+      <translation>prompt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1218"/>
@@ -5892,7 +5892,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2081"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2086"/>
       <source>Event Handler</source>
-      <translation type="unfinished"/>
+      <translation>Gestore eventi</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1488"/>
@@ -6773,17 +6773,17 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="264"/>
       <source>Package manager</source>
-      <translation type="unfinished"/>
+      <translation>Gestione pacchetti</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="272"/>
       <source>Module manager</source>
-      <translation type="unfinished"/>
+      <translation>Gestione moduli</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="280"/>
       <source>Package exporter (experimental)</source>
-      <translation type="unfinished"/>
+      <translation>Esportatore di pacchetti (sperimentale)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="288"/>
@@ -8412,7 +8412,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="923"/>
       <source>Priority</source>
-      <translation type="unfinished"/>
+      <translation>Priorità</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="923"/>
@@ -8437,12 +8437,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="1134"/>
       <source>Load Mudlet Module</source>
-      <translation type="unfinished"/>
+      <translation>Carica modulo Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1141"/>
       <source>Load Mudlet Module:</source>
-      <translation type="unfinished"/>
+      <translation>Carica modulo Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1141"/>
@@ -8455,12 +8455,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="1209"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>Importa pacchetto Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1216"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>Importa package di Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1619"/>
@@ -8501,7 +8501,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="3414"/>
       <source>Select Replay</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona Replay</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3416"/>
@@ -9079,7 +9079,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="598"/>
       <source>Profile</source>
-      <translation type="unfinished"/>
+      <translation>Profilo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="605"/>
@@ -9211,7 +9211,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1446"/>
       <source>ANSI Color Number 0</source>
-      <translation type="unfinished"/>
+      <translation>Colori ANSI Numero 0</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1459"/>
@@ -9222,7 +9222,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1466"/>
       <source>ANSI Color Number 8</source>
-      <translation type="unfinished"/>
+      <translation>Colori ANSI Numero 8</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1479"/>
@@ -9233,7 +9233,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1486"/>
       <source>ANSI Color Number 1</source>
-      <translation type="unfinished"/>
+      <translation>Colori ANSI Numero 1</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1499"/>
@@ -9244,7 +9244,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1506"/>
       <source>ANSI Color Number 9</source>
-      <translation type="unfinished"/>
+      <translation>Colori ANSI Numero 9</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1519"/>
@@ -9255,7 +9255,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1526"/>
       <source>ANSI Color Number 2</source>
-      <translation type="unfinished"/>
+      <translation>Colori ANSI Numero 2</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1539"/>
@@ -9266,7 +9266,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1546"/>
       <source>ANSI Color Number 10</source>
-      <translation type="unfinished"/>
+      <translation>Colori ANSI Numero 10</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1559"/>
@@ -9277,7 +9277,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1566"/>
       <source>ANSI Color Number 3</source>
-      <translation type="unfinished"/>
+      <translation>Colori ANSI Numero 3</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1579"/>
@@ -9288,7 +9288,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1586"/>
       <source>ANSI Color Number 11</source>
-      <translation type="unfinished"/>
+      <translation>Colori ANSI Numero 11</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1599"/>
@@ -9299,7 +9299,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1606"/>
       <source>ANSI Color Number 4</source>
-      <translation type="unfinished"/>
+      <translation>Colori ANSI Numero 4</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1619"/>
@@ -9310,7 +9310,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1626"/>
       <source>ANSI Color Number 12</source>
-      <translation type="unfinished"/>
+      <translation>Colori ANSI Numero 12</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1639"/>
@@ -9321,7 +9321,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1646"/>
       <source>ANSI Color Number 5</source>
-      <translation type="unfinished"/>
+      <translation>Colori ANSI Numero 5</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1659"/>
@@ -9332,7 +9332,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1666"/>
       <source>ANSI Color Number 13</source>
-      <translation type="unfinished"/>
+      <translation>Colori ANSI Numero 13</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1679"/>
@@ -9343,7 +9343,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1686"/>
       <source>ANSI Color Number 6</source>
-      <translation type="unfinished"/>
+      <translation>Colori ANSI Numero 6</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1699"/>
@@ -9354,7 +9354,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1706"/>
       <source>ANSI Color Number 14</source>
-      <translation type="unfinished"/>
+      <translation>Colori ANSI Numero 14</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1719"/>
@@ -9365,7 +9365,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1726"/>
       <source>ANSI Color Number 7</source>
-      <translation type="unfinished"/>
+      <translation>Colori ANSI Numero 7</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1739"/>
@@ -9376,7 +9376,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1746"/>
       <source>ANSI Color Number 15</source>
-      <translation type="unfinished"/>
+      <translation>Colori ANSI Numero 15</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1759"/>
@@ -9488,52 +9488,52 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2813"/>
       <source>SSL</source>
-      <translation type="unfinished"/>
+      <translation>SSL</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2918"/>
       <source>Accept self-signed certificates</source>
-      <translation type="unfinished"/>
+      <translation>Accetta certificati autofirmati</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2928"/>
       <source>Accept expired certificates</source>
-      <translation type="unfinished"/>
+      <translation>Accetta certificati scaduti</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2822"/>
       <source>Secure connection</source>
-      <translation type="unfinished"/>
+      <translation>Connessione sicura</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2835"/>
       <source>Certificate</source>
-      <translation type="unfinished"/>
+      <translation>Certificato</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2895"/>
       <source>Serial:</source>
-      <translation type="unfinished"/>
+      <translation>Seriale:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2844"/>
       <source>Issuer:</source>
-      <translation type="unfinished"/>
+      <translation>Emittente:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2861"/>
       <source>Issued to:</source>
-      <translation type="unfinished"/>
+      <translation>Rilasciato a:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2878"/>
       <source>Expires:</source>
-      <translation type="unfinished"/>
+      <translation>Scadenza:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2938"/>
       <source>Accept all certificate errors       (unsecure)</source>
-      <translation type="unfinished"/>
+      <translation>Accettare tutti gli errori del certificato (sconsigliato)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1842"/>
@@ -9700,7 +9700,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2566"/>
       <source>Hide timer</source>
-      <translation type="unfinished"/>
+      <translation>Nascondi timer</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2589"/>
@@ -10552,7 +10552,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="574"/>
       <source>choose file:</source>
-      <translation type="unfinished"/>
+      <translation>scegli file:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="922"/>
