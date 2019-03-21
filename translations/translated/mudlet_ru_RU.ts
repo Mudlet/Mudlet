@@ -4339,7 +4339,7 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="670"/>
       <source>&lt;h2&gt;&lt;u&gt;Onigmo (Oniguruma-mod) LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;Copyright © 2011-2014 K.Takata &amp;lt;kentkt AT csc DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Onigmo (Oniguruma-мод) лицензия&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;Copyright © 2011-2014 K.Takata &amp;lt;kentkt AT csc DOT jp&amp;gt;&lt;br&gt;Все права защищены.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="675"/>
@@ -4369,7 +4369,7 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="703"/>
       <source>&lt;h4&gt;bspatch.c and bsdiff.c, from bsdiff 4.3 &lt;a href=&quot;http://www.daemonology.net/bsdiff/&quot;&gt;http://www.daemonology.net/bsdiff&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2003-2005 Colin Percival.&lt;/h3&gt;&lt;h4&gt;sais.c and sais.c, from sais-lite (2010/08/07) &lt;a href=&quot;https://sites.google.com/site/yuta256/sais&quot;&gt;https://sites.google.com/site/yuta256/sais&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2008-2010 Yuta Mori.&lt;/h3&gt;&lt;h4&gt;SUDSAVerifier.m:&lt;/h4&gt;&lt;h3&gt;Copyright © 2011 Mark Hamlin.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h4&gt;bspatch.c and bsdiff.c, from bsdiff 4.3 &lt;a href=&quot;http://www.daemonology.net/bsdiff/&quot;&gt;http://www.daemonology.net/bsdiff&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2003-2005 Colin Percival.&lt;/h3&gt;&lt;h4&gt;sais.c and sais.c, from sais-lite (2010/08/07) &lt;a href=&quot;https://sites.google.com/site/yuta256/sais&quot;&gt;https://sites.google.com/site/yuta256/sais&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2008-2010 Yuta Mori.&lt;/h3&gt;&lt;h4&gt;SUDSAVerifier.m:&lt;/h4&gt;&lt;h3&gt;Copyright © 2011 Mark Hamlin.&lt;br&gt;Все права защищены.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="711"/>
@@ -5126,7 +5126,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="136"/>
       <source>&lt;p&gt;Set a custom name for your log. (New logs are appended if a log file of the same name already exists).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Установите имя для вашего журнала. (Новые журналы добавляются, если файл журнала уже существует).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="157"/>
@@ -5394,7 +5394,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="223"/>
       <location filename="../src/dlgRoomExits.cpp" line="1939"/>
       <source>Prevent a route being created via this exit, equivalent to an infinite exit weight.</source>
-      <translation type="unfinished"/>
+      <translation>Предотвратить создание маршрута через этот выход, эквивалентный бесконечному весу выхода.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="229"/>
@@ -8631,7 +8631,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="965"/>
       <source>Checking this box will cause the module to be saved and &lt;i&gt;resynchronised&lt;/i&gt; across all sessions that share it when the &lt;i&gt;Save Profile&lt;/i&gt; button is clicked in the Editor or if it is saved at the end of the session.</source>
-      <translation type="unfinished"/>
+      <translation>Установка этого флажка приведет к тому, что модуль будет сохранен и &lt;i&gt;будет ресинхронизирован&lt;/i&gt; во всех сеансах, которые совместно используют его, когда кнопка &lt;i&gt;Сохранить профиль&lt;/i&gt; нажата в редакторе или когда профиль будет сохранен в конце сеанса.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1025"/>
@@ -10385,7 +10385,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2010"/>
       <source>&lt;p&gt;Click on an item to edit/change it, to DELETE a Special Exit set its Exit Room ID to zero.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Нажмите на элемент, чтобы отредактировать/изменить его, чтобы УДАЛИТЬ специальный выход установите его ID комнаты выхода на ноль.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2048"/>
@@ -10400,17 +10400,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2084"/>
       <source>&lt;p&gt;Green (Open) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Зелёный (открытый) символ дверцы будет нарисан на двухмерной карте (но не в данный момент).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2093"/>
       <source>&lt;p&gt;Orange (Closed) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Оранжевая (закрытая) дверца будет нарисана на двухмерной карте (но не в данный момент).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2102"/>
       <source>&lt;p&gt;Red (Locked) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Красный (заблокированный) символ дверцы будет нарисирован на двухмерной карте (но не в данный момент).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2111"/>
@@ -10794,7 +10794,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="157"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your trigger or trigger group. This will be displayed in the trigger tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Выберите хорошее, (в идеале уникальное) имя для триггера или группы триггеров. Оно будет показано в списке всех триггеров.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="183"/>
