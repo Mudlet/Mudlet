@@ -951,7 +951,20 @@ more of the selected %n room(s), delete this to
 clear it from all selected rooms or replace
 with a new symbol to use for all the rooms:</source>
       <comment>This is for when applying a new room symbol to one or more rooms and some have the SAME symbol (others may have none) at present, %n is the total number of rooms involved and is at least two. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Единственный используемый символ - &quot;%1&quot; в выбранной %nой комнате. Удалите его чтобы 
+очистить его из всех выбранных комн или замените
+на новый символ, чтобы использовать его для всех комнат:</numerusform>
+        <numerusform>Единственный используемый символ - &quot;%1&quot; в выбранных %n комнат. Удалите его чтобы 
+очистить его из всех выбранных комн или замените
+на новый символ, чтобы использовать его для всех комнат:</numerusform>
+        <numerusform>Единственный используемый символ - &quot;%1&quot; в выбранных %n комнат. Удалите его чтобы 
+очистить его из всех выбранных комн или замените
+на новый символ, чтобы использовать его для всех комнат:</numerusform>
+        <numerusform>Единственный используемый символ - &quot;%1&quot; в выбранных %n комнат. Удалите его чтобы 
+очистить его из всех выбранных комн или замените
+на новый символ, чтобы использовать его для всех комнат:</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3548"/>
@@ -970,7 +983,28 @@ it with a new symbol for this room:This is for when applying a new room symbol t
  • enter a space to clear any existing symbols
 for all of the %n selected room(s):</source>
       <comment>Use line feeds to format text into a reasonable rectangle if needed, %n is the number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Выберите:
+• существующий символ из списка ниже (отсортировано по частоте использования)
+• введите одну или больше графем (&quot;видимых символов&quot;) как новый символ
+• введите пробел для очистки любых существующих символов
+для %nой выбранной комнате:</numerusform>
+        <numerusform>Выберите:
+• существующий символ из списка ниже (отсортировано по частоте использования)
+• введите одну или больше графем (&quot;видимых символов&quot;) как новый символ
+• введите пробел для очистки любых существующих символов
+для всех из %n выбранных комнат:</numerusform>
+        <numerusform>Выберите:
+• существующий символ из списка ниже (отсортировано по частоте использования)
+• введите одну или больше графем (&quot;видимых символов&quot;) как новый символ
+• введите пробел для очистки любых существующих символов
+для всех из %n выбранных комнат:</numerusform>
+        <numerusform>Выберите:
+• существующий символ из списка ниже (отсортировано по частоте использования)
+• введите одну или больше графем (&quot;видимых символов&quot;) как новый символ
+• введите пробел для очистки любых существующих символов
+для всех из %n выбранных комнат:</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3726"/>
