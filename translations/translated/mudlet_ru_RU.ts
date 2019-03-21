@@ -2016,7 +2016,7 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation>[ТРЕВОГА ] - по крайней мере, одна штука была обнаружена при последней операции с картой 
+      <translation>[ ВНИМ ] - по крайней мере, одна штука была обнаружена при последней операции с картой 
 , рекомендуется пересмотреть протокол в
 файле:
 &quot;%1&quot;
@@ -2085,7 +2085,7 @@ in main console!</source>
     <message>
       <location filename="../src/TMap.cpp" line="2380"/>
       <source>[ ALERT ] - Map download was canceled, on user&apos;s request.</source>
-      <translation>[ПРЕДУПРЕЖДЕНИЕ]-Загрузка карты отменена, по требованию пользователя&apos;.</translation>
+      <translation>[ ВНИМ ] - Загрузка карты отменена, по требованию пользователя&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2399"/>
@@ -2098,21 +2098,21 @@ in main console!</source>
       <location filename="../src/TMap.cpp" line="2413"/>
       <source>[ ALERT ] - Map download failed, error reported was:
 %1.</source>
-      <translation>[ТРЕВОГА]-Не удалось загрузить карту, сообщение об ошибке:
+      <translation>[ ВНИМ ] - Не удалось загрузить карту, сообщение об ошибке:
 %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2421"/>
       <source>[ ALERT ] - Map download failed, unable to open destination file:
 %1.</source>
-      <translation>[ ТРЕВОГА]-Не удалось загрузить карту, невозможно открыть целевой файл:
+      <translation>[ ВНИМ ] - Не удалось загрузить карту, невозможно открыть целевой файл:
 %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2426"/>
       <source>[ ALERT ] - Map download failed, unable to write destination file:
 %1.</source>
-      <translation>[ТРЕВОГА]-Не удалось загрузить карту, невозможно записать файл назначения:
+      <translation>[ ВНИМ ] - Не удалось загрузить карту, невозможно записать файл назначения:
 %1.</translation>
     </message>
     <message>
@@ -2394,7 +2394,7 @@ and the exit will be turned into a stub.</source>
       <source>[ ALERT ] - Room with id: %1 has an exit &quot;%2&quot; to: %3 but also
 has a stub exit!  As a real exit precludes a stub, the latter will
 be removed.</source>
-      <translation>[ ПРЕДУПРЕЖДЕНИЕ ] - Комната с ID: %1 имеет выход &quot;%2&quot; в: %3 , но также
+      <translation>[ ВНИМ ] - Комната с ID: %1 имеет выход &quot;%2&quot; в: %3 , но также
 имеет какой-то выход! Реальный выход исключает его, и позже он будет удален.</translation>
     </message>
     <message>
@@ -2694,7 +2694,7 @@ first will also gain a suffix in this manner.
     <message>
       <location filename="../src/TRoomDB.cpp" line="1214"/>
       <source>[ ALERT ] - An empty area name was detected in the Map file!</source>
-      <translation>[ ТРЕВОГА]-В файле карты обнаружено пустое имя Зоны!</translation>
+      <translation>[ ВНИМ ] - В файле карты обнаружено пустое имя Зоны!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1217"/>
@@ -3686,7 +3686,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1799"/>
       <source>ALERT</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation>ТРЕВОГА</translation>
+      <translation>ВНИМ</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1810"/>
