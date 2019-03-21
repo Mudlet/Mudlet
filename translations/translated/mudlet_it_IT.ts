@@ -343,7 +343,7 @@ attendere prego...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="676"/>
       <source>No map or no valid position.</source>
-      <translation type="unfinished"/>
+      <translation>Nessuna mappa o nessuna posizione valida.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2108"/>
@@ -355,12 +355,12 @@ attendere prego...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2767"/>
       <source>Create a new room here</source>
-      <translation type="unfinished"/>
+      <translation>Crea una nuova stanza qui</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2932"/>
       <source>Change the properties of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>Modificare le proprietà di questa riga personalizzata</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3129"/>
@@ -378,7 +378,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="3131"/>
       <location filename="../src/T2DMap.cpp" line="4796"/>
       <source>Dash line</source>
-      <translation type="unfinished"/>
+      <translation>Linea tratteggiata</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3132"/>
@@ -436,7 +436,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2302"/>
       <source>no text</source>
       <comment>Default text if a label is created in mapper with no text</comment>
-      <translation type="unfinished"/>
+      <translation>nessun testo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1541"/>
@@ -562,13 +562,13 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2722"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)</comment>
-      <translation type="unfinished"/>
+      <translation>Proprietà</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2724"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)</comment>
-      <translation type="unfinished"/>
+      <translation>proprietà...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2725"/>
@@ -610,7 +610,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2772"/>
       <source>Move</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Sposta</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2773"/>
@@ -718,7 +718,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2808"/>
       <source>Symbol</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Simbolo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2809"/>
@@ -772,7 +772,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2830"/>
       <source>Create Label</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Crea Etichetta</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2831"/>
@@ -784,7 +784,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2834"/>
       <source>Set location</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Imposta posizione</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2836"/>
@@ -802,7 +802,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2867"/>
       <source>Move</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>Sposta</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2868"/>
@@ -826,7 +826,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2887"/>
       <source>Add point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Aggiungi punto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2894"/>
@@ -844,7 +844,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2901"/>
       <source>Remove point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Rimuovi punto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2908"/>
@@ -868,13 +868,13 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2927"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)</comment>
-      <translation type="unfinished"/>
+      <translation>Proprietà</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2931"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise</comment>
-      <translation type="unfinished"/>
+      <translation>proprietà...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2935"/>
@@ -1247,24 +1247,24 @@ rooms:</source>
     <message>
       <location filename="../src/TCommandLine.cpp" line="583"/>
       <source>Add to user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi al dizionario utente</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="585"/>
       <source>Remove from user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>Rimuovi dal dizionario utente</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="589"/>
       <source>▼Mudlet▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which we have bundled with Mudlet; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼ Mudlet ▼ │ suggerimenti dizionario │ ▲ Utente ▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="599"/>
       <source>▼System▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which is provided as part of the OS; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼ Sistema ▼ │ suggerimenti dizionario │ ▲ Utente ▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="658"/>
@@ -1377,7 +1377,8 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="2584"/>
       <source>No search results, sorry!
 </source>
-      <translation type="unfinished"/>
+      <translation>Nessun risultato di ricerca, mi dispiace!
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="369"/>
@@ -1542,7 +1543,7 @@ this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="14838"/>
       <location filename="../src/TLuaInterpreter.cpp" line="14933"/>
       <source>Lua error:</source>
-      <translation type="unfinished"/>
+      <translation>Errore Lua:</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14760"/>
