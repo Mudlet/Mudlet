@@ -1624,7 +1624,7 @@ yajl.* Lua functions won&apos;t be available.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14940"/>
       <source>[  OK  ]  - Lua code formatter loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[OK] - Modulo Lua code formatter caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14973"/>
@@ -1858,12 +1858,12 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1653"/>
       <source>No map found. Would you like to download the map or start your own?</source>
-      <translation type="unfinished"/>
+      <translation>Nessuna mappa trovata. Vuoi scaricare la mappa o iniziarne una nuova?</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1654"/>
       <source>Download the map</source>
-      <translation type="unfinished"/>
+      <translation>Scarica la mappa</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1655"/>
@@ -10488,7 +10488,7 @@ or LUA script</source>
       <location filename="../src/ui/trigger_editor.ui" line="428"/>
       <location filename="../src/ui/trigger_editor.ui" line="724"/>
       <source>1</source>
-      <translation type="unfinished"/>
+      <translation>1</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="451"/>
@@ -10567,7 +10567,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1123"/>
       <source>filter</source>
-      <translation type="unfinished"/>
+      <translation>filtro</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="157"/>
