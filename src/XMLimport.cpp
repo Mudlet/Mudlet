@@ -24,7 +24,6 @@
 
 
 #include "dlgColorTrigger.h"
-#include "dlgTriggerEditor.h"
 #include "LuaInterface.h"
 #include "TConsole.h"
 #include "TMap.h"
@@ -229,13 +228,11 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
 }
 
 // returns the type of item and ID of the first (root) element
-pair<int, int> XMLimport::importFromClipboard()
+pair<dlgTriggerEditor::EditorViewType, int> XMLimport::importFromClipboard()
 {
     QString xml;
     QClipboard* clipboard = QApplication::clipboard();
-
-    int packageType = 0;
-    pair<int, int> result;
+    pair<dlgTriggerEditor::EditorViewType, int> result;
 
     xml = clipboard->text(QClipboard::Clipboard);
 
@@ -543,9 +540,9 @@ void XMLimport::readUnknownMapElement()
 }
 
 // returns the type of item and ID of the first (root) element
-pair<int, int> XMLimport::readPackage()
+pair<dlgTriggerEditor::EditorViewType, int> XMLimport::readPackage()
 {
-    int objectType = 0;
+    dlgTriggerEditor::EditorViewType objectType = dlgTriggerEditor::EditorViewType::cmUnknownView;
     int rootItemID = -1;
     while (!atEnd()) {
         readNext();
@@ -556,27 +553,27 @@ pair<int, int> XMLimport::readPackage()
             if (name() == "HostPackage") {
                 readHostPackage();
             } else if (name() == "TriggerPackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmTriggerView);
+                objectType = dlgTriggerEditor::EditorViewType::cmTriggerView;
                 rootItemID = readTriggerPackage();
             } else if (name() == "TimerPackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmTimerView);
+                objectType = dlgTriggerEditor::EditorViewType::cmTimerView;
                 rootItemID = readTimerPackage();
             } else if (name() == "AliasPackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmAliasView);
+                objectType = dlgTriggerEditor::EditorViewType::cmAliasView;
                 rootItemID = readAliasPackage();
             } else if (name() == "ActionPackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmActionView);
+                objectType = dlgTriggerEditor::EditorViewType::cmActionView;
                 rootItemID = readActionPackage();
             } else if (name() == "ScriptPackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmScriptView);
+                objectType = dlgTriggerEditor::EditorViewType::cmScriptView;
                 rootItemID = readScriptPackage();
             } else if (name() == "KeyPackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmKeysView);
+                objectType = dlgTriggerEditor::EditorViewType::cmKeysView;
                 rootItemID = readKeyPackage();
             } else if (name() == "HelpPackage") {
                 readHelpPackage();
             } else if (name() == "VariablePackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmVarsView);
+                objectType = dlgTriggerEditor::EditorViewType::cmVarsView;
                 readVariablePackage();
             } else {
                 readUnknownPackage();

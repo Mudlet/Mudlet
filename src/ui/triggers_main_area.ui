@@ -6,32 +6,11 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>592</width>
-    <height>230</height>
+    <width>559</width>
+    <height>385</height>
    </rect>
   </property>
-  <property name="sizePolicy">
-   <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-    <horstretch>1</horstretch>
-    <verstretch>0</verstretch>
-   </sizepolicy>
-  </property>
-  <property name="minimumSize">
-   <size>
-    <width>0</width>
-    <height>230</height>
-   </size>
-  </property>
-  <property name="maximumSize">
-   <size>
-    <width>16777215</width>
-    <height>240</height>
-   </size>
-  </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2">
-   <property name="spacing">
-    <number>0</number>
-   </property>
+  <layout class="QVBoxLayout" name="verticalLayout_main_area" stretch="0,1,0">
    <property name="leftMargin">
     <number>0</number>
    </property>
@@ -55,8 +34,8 @@
      <property name="autoFillBackground">
       <bool>true</bool>
      </property>
-     <layout class="QGridLayout" name="gridLayout_top">
-      <item row="0" column="0">
+     <layout class="QHBoxLayout" name="horizontalLayout_widget_top" stretch="0,1,0,1">
+      <item>
        <widget class="QLabel" name="label_trigger_name">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
@@ -81,7 +60,7 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="1">
+      <item>
        <widget class="QLineEdit" name="lineEdit_trigger_name">
         <property name="maximumSize">
          <size>
@@ -94,7 +73,7 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="2">
+      <item>
        <widget class="QLabel" name="label_trigger_command">
         <property name="text">
          <string>Command:</string>
@@ -107,7 +86,7 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="3">
+      <item>
        <widget class="QLineEdit" name="lineEdit_trigger_command">
         <property name="minimumSize">
          <size>
@@ -124,24 +103,15 @@
     </widget>
    </item>
    <item>
-    <widget class="QWidget" name="widget" native="true">
+    <widget class="QWidget" name="widget_middle" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>120</height>
-      </size>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout">
+     <layout class="QHBoxLayout" name="horizontalLayout_widget_middle" stretch="1,0">
       <property name="spacing">
-       <number>1</number>
-      </property>
-      <property name="leftMargin">
        <number>0</number>
       </property>
       <property name="topMargin">
@@ -154,9 +124,29 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="QWidget" name="patternArea" native="true">
+       <widget class="QScrollArea" name="scrollArea">
+        <property name="sizeAdjustPolicy">
+         <enum>QAbstractScrollArea::AdjustToContents</enum>
+        </property>
+        <property name="widgetResizable">
+         <bool>true</bool>
+        </property>
+        <widget class="QWidget" name="widget_scrollArea">
+         <property name="geometry">
+          <rect>
+           <x>0</x>
+           <y>0</y>
+           <width>359</width>
+           <height>197</height>
+          </rect>
+         </property>
+        </widget>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="widget_middleRight" native="true">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
@@ -164,352 +154,15 @@
         <property name="autoFillBackground">
          <bool>true</bool>
         </property>
-        <layout class="QHBoxLayout" name="horizontalLayout_3">
-         <property name="spacing">
-          <number>0</number>
-         </property>
-         <property name="leftMargin">
-          <number>0</number>
-         </property>
+        <layout class="QVBoxLayout" name="verticalLayout_widget_middleRight" stretch="0,0,0">
          <property name="topMargin">
-          <number>0</number>
-         </property>
-         <property name="rightMargin">
           <number>0</number>
          </property>
          <property name="bottomMargin">
           <number>0</number>
          </property>
-         <item>
-          <widget class="QScrollArea" name="scrollArea">
-           <property name="widgetResizable">
-            <bool>true</bool>
-           </property>
-           <widget class="QWidget" name="widget_scrollArea">
-            <property name="geometry">
-             <rect>
-              <x>0</x>
-              <y>0</y>
-              <width>453</width>
-              <height>125</height>
-             </rect>
-            </property>
-           </widget>
-          </widget>
-         </item>
-         <item>
-          <widget class="QWidget" name="widget_4" native="true">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="autoFillBackground">
-            <bool>true</bool>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayout_5">
-            <property name="spacing">
-             <number>0</number>
-            </property>
-            <property name="leftMargin">
-             <number>1</number>
-            </property>
-            <property name="topMargin">
-             <number>1</number>
-            </property>
-            <property name="rightMargin">
-             <number>1</number>
-            </property>
-            <property name="bottomMargin">
-             <number>1</number>
-            </property>
-            <item>
-             <widget class="QGroupBox" name="checkBox_stayOpen">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="toolTip">
-               <string>Keep firing the script for x more lines, after the trigger or chain has matched.</string>
-              </property>
-              <property name="autoFillBackground">
-               <bool>true</bool>
-              </property>
-              <property name="title">
-               <string>fire length</string>
-              </property>
-              <property name="checkable">
-               <bool>false</bool>
-              </property>
-              <property name="checked">
-               <bool>false</bool>
-              </property>
-              <layout class="QHBoxLayout" name="horizontalLayout">
-               <property name="spacing">
-                <number>5</number>
-               </property>
-               <property name="leftMargin">
-                <number>5</number>
-               </property>
-               <property name="topMargin">
-                <number>5</number>
-               </property>
-               <property name="rightMargin">
-                <number>0</number>
-               </property>
-               <property name="bottomMargin">
-                <number>5</number>
-               </property>
-               <item>
-                <widget class="QSpinBox" name="spinBox_stayOpen">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="toolTip">
-                  <string>Within how many lines must all condition be true to fire the trigger?</string>
-                 </property>
-                 <property name="maximum">
-                  <number>1000</number>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLabel" name="label_6">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="text">
-                  <string>more lines</string>
-                 </property>
-                 <property name="scaledContents">
-                  <bool>true</bool>
-                 </property>
-                 <property name="wordWrap">
-                  <bool>true</bool>
-                 </property>
-                 <property name="indent">
-                  <number>0</number>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
-             <widget class="QGroupBox" name="soundTrigger">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="toolTip">
-               <string>play a wave sound file if the trigger fires</string>
-              </property>
-              <property name="title">
-               <string>play sound</string>
-              </property>
-              <property name="checkable">
-               <bool>true</bool>
-              </property>
-              <property name="checked">
-               <bool>false</bool>
-              </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_6">
-               <property name="spacing">
-                <number>0</number>
-               </property>
-               <property name="leftMargin">
-                <number>5</number>
-               </property>
-               <property name="topMargin">
-                <number>5</number>
-               </property>
-               <property name="rightMargin">
-                <number>9</number>
-               </property>
-               <property name="bottomMargin">
-                <number>5</number>
-               </property>
-               <item>
-                <widget class="QLabel" name="label_16">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>0</width>
-                   <height>11</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string>choose file:</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLineEdit" name="lineEdit_soundFile">
-                 <property name="maximumSize">
-                  <size>
-                   <width>1</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font>
-                   <pointsize>6</pointsize>
-                  </font>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QPushButton" name="pushButtonSound">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>0</width>
-                   <height>16</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>16777215</width>
-                   <height>16</height>
-                  </size>
-                 </property>
-                 <property name="text">
-                  <string/>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
-             <spacer name="verticalSpacer">
-              <property name="orientation">
-               <enum>Qt::Vertical</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>20</width>
-                <height>40</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-           </layout>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QWidget" name="widget_3" native="true">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>65</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>65</height>
-      </size>
-     </property>
-     <property name="autoFillBackground">
-      <bool>true</bool>
-     </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_2">
-      <property name="spacing">
-       <number>0</number>
-      </property>
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
-       <number>1</number>
-      </property>
-      <item>
-       <widget class="QWidget" name="widget_13" native="true">
-        <property name="autoFillBackground">
-         <bool>true</bool>
-        </property>
-        <layout class="QGridLayout" name="gridLayout_5">
-         <property name="leftMargin">
-          <number>1</number>
-         </property>
-         <property name="topMargin">
-          <number>1</number>
-         </property>
-         <property name="rightMargin">
-          <number>1</number>
-         </property>
-         <property name="bottomMargin">
-          <number>1</number>
-         </property>
-         <property name="spacing">
-          <number>1</number>
-         </property>
-         <item row="0" column="0">
-          <widget class="QGroupBox" name="checkBox_multlinetrigger">
+         <item alignment="Qt::AlignTop">
+          <widget class="QGroupBox" name="groupBox_stayOpen">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
              <horstretch>0</horstretch>
@@ -529,13 +182,74 @@
             </size>
            </property>
            <property name="toolTip">
-            <string>&lt;p&gt;The trigger will only fire if all conditions on the list have been met within the specified line delta, and captures will be saved in &lt;span style=&quot; font-style:italic;&quot;&gt;multimatches&lt;/span&gt; instead of &lt;span style=&quot; font-style:italic;&quot;&gt;matches&lt;/span&gt;. If this option is not set the trigger will fire if any conditon on the list has been met.&lt;/p&gt;</string>
+            <string>&lt;p&gt;Keep firing the script for this many more lines, after the trigger or chain has matched.&lt;/p&gt;</string>
            </property>
            <property name="autoFillBackground">
             <bool>true</bool>
            </property>
            <property name="title">
-            <string>multiline / AND Trigger</string>
+            <string>fire length (extra lines)</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+           <property name="checkable">
+            <bool>false</bool>
+           </property>
+           <property name="checked">
+            <bool>false</bool>
+           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout">
+            <item>
+             <widget class="QSpinBox" name="spinBox_stayOpen">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="toolTip">
+               <string>&lt;p&gt;How many more line after the one that fired the trigger should be passed to children?&lt;/p&gt;</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+              <property name="maximum">
+               <number>1000</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="groupBox_soundTrigger">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>92</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>&lt;p&gt;Play a sound file if the trigger fires.&lt;/p&gt;</string>
+           </property>
+           <property name="title">
+            <string>play sound</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
            </property>
            <property name="checkable">
             <bool>true</bool>
@@ -543,26 +257,11 @@
            <property name="checked">
             <bool>false</bool>
            </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_4">
-            <property name="spacing">
-             <number>0</number>
-            </property>
-            <property name="leftMargin">
-             <number>5</number>
-            </property>
-            <property name="topMargin">
-             <number>9</number>
-            </property>
-            <property name="rightMargin">
-             <number>3</number>
-            </property>
-            <property name="bottomMargin">
-             <number>9</number>
-            </property>
-            <item>
-             <widget class="QLabel" name="label_3">
+           <layout class="QGridLayout" name="gridLayout_groupBox_soundTrigger">
+            <item row="0" column="0" colspan="2">
+             <widget class="QPushButton" name="pushButtonSound">
               <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
@@ -570,47 +269,84 @@
               <property name="minimumSize">
                <size>
                 <width>0</width>
-                <height>25</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>line delta</string>
-              </property>
-              <property name="scaledContents">
-               <bool>true</bool>
-              </property>
-              <property name="wordWrap">
-               <bool>true</bool>
-              </property>
-              <property name="indent">
-               <number>0</number>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QSpinBox" name="spinBox_linemargin">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>15</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
+                <height>22</height>
                </size>
               </property>
               <property name="toolTip">
-               <string>Within how many lines must all condition be true to fire the trigger?</string>
+               <string comment="This is the button used to select a sound file to be played when a trigger fires." extracomment="Please ensure the text used here is duplicated within the tooltip for the QLineEdit that displays the file name selected.">&lt;p&gt;Use this to open a file selection dialogue to find a sound file to play when the trigger fires.&lt;/p&gt;
+&lt;p&gt;&lt;i&gt;Cancelling from the file dialogue will not make any changes; to clear the file use the clear button to the right of the file name display.&lt;/i&gt;&lt;/p&gt;</string>
+              </property>
+              <property name="text">
+               <string>Choose file...</string>
               </property>
              </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLineEdit" name="lineEdit_soundFile">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>22</height>
+               </size>
+              </property>
+              <property name="cursor">
+               <cursorShape>ForbiddenCursor</cursorShape>
+              </property>
+              <property name="focusPolicy">
+               <enum>Qt::NoFocus</enum>
+              </property>
+              <property name="toolTip">
+               <string comment="This is the tooltip for the QLineEdit that shows - but does not permit changing - the sound file used for a trigger." extracomment="Please ensure that the text used for &quot;Choose file ,,,&quot; here is the same as is used for the button that it refers to.">&lt;p&gt;This displays the file selected to play when the trigger fires. To change this used the &lt;i&gt;Choose file...&lt;/i&gt; button or to remove it use the clear button.&lt;/p&gt;</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="placeholderText">
+               <string>no file</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QToolButton" name="toolButton_clearSoundFile">
+              <property name="minimumSize">
+               <size>
+                <width>22</width>
+                <height>22</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>&lt;p&gt;Click to remove a sound file set for this trigger.&lt;/p&gt;</string>
+              </property>
+              <property name="icon">
+               <iconset resource="../mudlet.qrc">
+                <normaloff>:/icons/edit-clear-locationbar-rtl-green.png</normaloff>:/icons/edit-clear-locationbar-rtl-green.png</iconset>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="widget" native="true">
+           <layout class="QVBoxLayout" name="verticalLayout">
+            <item>
+             <spacer name="verticalSpacer_middleRight">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>1</height>
+               </size>
+              </property>
+             </spacer>
             </item>
            </layout>
           </widget>
@@ -618,20 +354,119 @@
         </layout>
        </widget>
       </item>
-      <item>
-       <widget class="QWidget" name="widget_12" native="true">
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="widget_bottom" native="true">
+     <property name="autoFillBackground">
+      <bool>true</bool>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_widget_bottom" stretch="1,1,1,1">
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <item alignment="Qt::AlignTop">
+       <widget class="QGroupBox" name="groupBox_multiLineTrigger">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
         <property name="minimumSize">
          <size>
-          <width>150</width>
+          <width>0</width>
           <height>0</height>
          </size>
         </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="toolTip">
+         <string>&lt;p&gt;The trigger will only fire if &lt;u&gt;all&lt;/u&gt; conditions on the list have been met within the specified line delta, and captures will be saved in &lt;tt&gt;multimatches&lt;/tt&gt; instead of &lt;tt&gt;matches&lt;/tt&gt;.&lt;/p&gt;
+&lt;p&gt;If this option is &lt;b&gt;not&lt;/b&gt; set the trigger will fire if &lt;u&gt;any&lt;/u&gt; condition on the list have been met.&lt;/p&gt;</string>
+        </property>
+        <property name="autoFillBackground">
+         <bool>true</bool>
+        </property>
+        <property name="title">
+         <string>AND / Multi-line</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_groupBox_multiLineTrigger">
+         <item>
+          <widget class="QLabel" name="label_lineMargin">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>line delta</string>
+           </property>
+           <property name="scaledContents">
+            <bool>true</bool>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+           <property name="indent">
+            <number>0</number>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="spinBox_lineMargin">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>15</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Within how many lines must all condition be true to fire the trigger?</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_filterTrigger">
         <property name="baseSize">
          <size>
           <width>0</width>
@@ -641,23 +476,23 @@
         <property name="autoFillBackground">
          <bool>true</bool>
         </property>
-        <layout class="QGridLayout" name="gridLayout_9">
-         <property name="leftMargin">
-          <number>5</number>
-         </property>
-         <property name="topMargin">
-          <number>1</number>
-         </property>
-         <property name="rightMargin">
-          <number>3</number>
-         </property>
-         <property name="bottomMargin">
-          <number>1</number>
-         </property>
-         <item row="0" column="0">
-          <widget class="QGroupBox" name="filterTrigger">
+        <property name="title">
+         <string>only pass matches</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_groupBox_filterTrigger">
+         <item alignment="Qt::AlignTop">
+          <widget class="QLabel" name="label_filterTrigger">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -668,209 +503,54 @@
              <height>0</height>
             </size>
            </property>
-           <property name="toolTip">
-            <string>&lt;p&gt;Only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters)&lt;/p&gt;</string>
-           </property>
-           <property name="title">
-            <string>filter</string>
-           </property>
-           <property name="checkable">
-            <bool>true</bool>
-           </property>
-           <property name="checked">
-            <bool>false</bool>
-           </property>
-           <layout class="QGridLayout" name="gridLayout_6">
-            <property name="leftMargin">
-             <number>5</number>
-            </property>
-            <property name="topMargin">
-             <number>5</number>
-            </property>
-            <property name="rightMargin">
-             <number>1</number>
-            </property>
-            <property name="bottomMargin">
-             <number>1</number>
-            </property>
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_15">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>only pass matches to children as trigger input</string>
-              </property>
-              <property name="scaledContents">
-               <bool>true</bool>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-              </property>
-              <property name="wordWrap">
-               <bool>true</bool>
-              </property>
-              <property name="indent">
-               <number>0</number>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item>
-       <widget class="QWidget" name="widget_11" native="true">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="autoFillBackground">
-         <bool>true</bool>
-        </property>
-        <layout class="QVBoxLayout" name="verticalLayout_9">
-         <property name="spacing">
-          <number>0</number>
-         </property>
-         <property name="leftMargin">
-          <number>5</number>
-         </property>
-         <property name="topMargin">
-          <number>1</number>
-         </property>
-         <property name="rightMargin">
-          <number>5</number>
-         </property>
-         <property name="bottomMargin">
-          <number>1</number>
-         </property>
-         <item>
-          <widget class="QGroupBox" name="perlSlashGOption">
-           <property name="minimumSize">
+           <property name="maximumSize">
             <size>
-             <width>0</width>
-             <height>0</height>
+             <width>16777215</width>
+             <height>16777215</height>
             </size>
            </property>
-           <property name="toolTip">
-            <string>Choose this option if you want to include all possible matches of the pattern in the line.
-Without this option, the pattern matching will stop after the first successful match.</string>
+           <property name="text">
+            <string>Do not pass whole line to children.</string>
            </property>
-           <property name="title">
-            <string>match all</string>
-           </property>
-           <property name="checkable">
+           <property name="scaledContents">
             <bool>true</bool>
            </property>
-           <property name="checked">
-            <bool>false</bool>
+           <property name="alignment">
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
            </property>
-           <layout class="QGridLayout" name="gridLayout_7">
-            <property name="leftMargin">
-             <number>5</number>
-            </property>
-            <property name="topMargin">
-             <number>5</number>
-            </property>
-            <property name="rightMargin">
-             <number>1</number>
-            </property>
-            <property name="bottomMargin">
-             <number>1</number>
-            </property>
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_17">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="toolTip">
-               <string/>
-              </property>
-              <property name="text">
-               <string>match all occurences of the pattern in the line</string>
-              </property>
-              <property name="scaledContents">
-               <bool>true</bool>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-              </property>
-              <property name="wordWrap">
-               <bool>true</bool>
-              </property>
-              <property name="indent">
-               <number>0</number>
-              </property>
-             </widget>
-            </item>
-           </layout>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+           <property name="indent">
+            <number>0</number>
+           </property>
           </widget>
          </item>
         </layout>
        </widget>
       </item>
       <item>
-       <widget class="QWidget" name="widget_10" native="true">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
+       <widget class="QGroupBox" name="groupBox_perlSlashGOption">
         <property name="autoFillBackground">
          <bool>true</bool>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_3">
-         <property name="leftMargin">
-          <number>5</number>
-         </property>
-         <property name="topMargin">
-          <number>1</number>
-         </property>
-         <property name="rightMargin">
-          <number>5</number>
-         </property>
-         <property name="bottomMargin">
-          <number>1</number>
-         </property>
-         <item>
-          <widget class="QGroupBox" name="colorizerTrigger">
+        <property name="title">
+         <string>match all</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_groupBox_perlSlashGOption">
+         <item alignment="Qt::AlignTop">
+          <widget class="QLabel" name="label_perlSlashGOption">
            <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
@@ -888,124 +568,85 @@ Without this option, the pattern matching will stop after the first successful m
             </size>
            </property>
            <property name="toolTip">
-            <string>highlight the capture groups if there are any
-otherwise highlight the entire match</string>
+            <string/>
            </property>
-           <property name="title">
-            <string>highlight</string>
+           <property name="text">
+            <string>Match all occurences of the pattern in the line.</string>
            </property>
-           <property name="checkable">
+           <property name="scaledContents">
             <bool>true</bool>
            </property>
-           <property name="checked">
+           <property name="alignment">
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+           <property name="indent">
+            <number>0</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_triggerColorizer">
+        <property name="autoFillBackground">
+         <bool>true</bool>
+        </property>
+        <property name="title">
+         <string>highlight</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_triggerColorizer">
+         <item>
+          <widget class="QPushButton" name="pushButtonBgColor">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Fg Color</string>
+           </property>
+           <property name="flat">
             <bool>false</bool>
            </property>
-           <layout class="QGridLayout" name="gridLayout">
-            <property name="leftMargin">
-             <number>5</number>
-            </property>
-            <property name="topMargin">
-             <number>5</number>
-            </property>
-            <property name="rightMargin">
-             <number>0</number>
-            </property>
-            <property name="bottomMargin">
-             <number>5</number>
-            </property>
-            <property name="spacing">
-             <number>5</number>
-            </property>
-            <item row="0" column="1">
-             <widget class="QPushButton" name="pushButtonFgColor">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="font">
-               <font>
-                <family>Lucida Grande</family>
-               </font>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_9">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>13</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>fg color</string>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="1">
-             <widget class="QPushButton" name="pushButtonBgColor">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="font">
-               <font>
-                <pointsize>13</pointsize>
-               </font>
-              </property>
-              <property name="text">
-               <string/>
-              </property>
-              <property name="flat">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="0">
-             <widget class="QLabel" name="label_10">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>13</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>bg color</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButtonFgColor">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Bg Color</string>
+           </property>
           </widget>
          </item>
         </layout>
@@ -1016,6 +657,8 @@ otherwise highlight the entire match</string>
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../mudlet.qrc"/>
+ </resources>
  <connections/>
 </ui>
