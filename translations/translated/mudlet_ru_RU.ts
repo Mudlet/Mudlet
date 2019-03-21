@@ -1563,7 +1563,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2616"/>
       <source>[ WARN ]  - ... System Map reload request failed.</source>
-      <translation>[ ПРЕДУПРЕЖДЕНИЕ] -... Сбой запроса на перезагрузку системной карты.</translation>
+      <translation>[ ВНИМ ] - ... Сбой запроса на перезагрузку системной карты.</translation>
     </message>
   </context>
   <context>
@@ -1571,7 +1571,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9780"/>
       <source>[ WARN ]  - Lua command setAreaUserData() used - it is currently flagged as experimental!</source>
-      <translation>[ WARN]-использована команда Lua setAreaUserData () - она в настоящее время помечена как экспериментальная!</translation>
+      <translation>[ ВНИМ ] - использована команда Lua setAreaUserData() - она в настоящее время помечена как экспериментальная!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9781"/>
@@ -2248,12 +2248,12 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1116"/>
       <source>[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}</source>
-      <translation>[ПРЕДУПРЕЖДЕНИЕ]-В комнате ID:%1 удаление недопустимого (особого) выхода в %2 { без имени!}</translation>
+      <translation>[ ВНИМ ] - В комнате ID:%1 удаление недопустимого (особого) выхода в %2 {без имени!}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1120"/>
       <source>[ WARN ]  - Room had an invalid (special) exit to %1 {with no name!} it was removed.</source>
-      <translation>[ WARN]-В комнате был недопустимый (специальный) выход %1 { без имени!} он был удален.</translation>
+      <translation>[ ВНИМ ] - В комнате был недопустимый (специальный) выход %1 {без имени!} он был удален.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1130"/>
@@ -2278,7 +2278,7 @@ exit to: %3 but that room does not exist.  The exit will
 be removed (but the destination room id will be stored in
 the room user data under a key:
 &quot;%4&quot;).</source>
-      <translation>[ ВНИМАНИЕ ] - Комната с идентификатором: %1 имеет специальный выход &quot;%2&quot; с выходом в: %3 но эта комната не существует.  Выход будет удалён
+      <translation>[ ВНИМ ] - Комната с идентификатором: %1 имеет специальный выход &quot;%2&quot; с выходом в: %3 но эта комната не существует.  Выход будет удалён
 (но идентификатор назначенной комнаты будет храниться в
 данных комнаты пользователя под ключом:
 &quot;%4&quot;).</translation>
@@ -2383,7 +2383,7 @@ does not exist.  The exit will be removed (but the destination room
 Id will be stored in the room user data under a key:
 &quot;%4&quot;)
 and the exit will be turned into a stub.</source>
-      <translation>[ ВНИМАНИЕ ] - Комната с идентификатором: %1 имеет выход &quot;%2&quot; в: %3 но эта комната не существует. Выход будет удалён
+      <translation>[ ВНИМ ] - Комната с идентификатором: %1 имеет выход &quot;%2&quot; в: %3 но эта комната не существует. Выход будет удалён
 (но идентификатор назначенной комнаты будет храниться в
 данных комнаты пользователя под ключом:
 &quot;%4&quot;)
@@ -2428,12 +2428,13 @@ It had a weight, this is recorded as user data with key:
       <location filename="../src/TRoom.cpp" line="1677"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but
 it has not been possible to salvage this, it has been lost!</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - Была пользовательская линия выхода, связанная с недопустимым выходом, но
+это не удалось спасти, она была потеряна!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1682"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but it has not been possible to salvage this, it has been lost!</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - Была пользовательская линия выхода, связанная с недопустимым выходом, но это не удалось спасти, она была потеряна!</translation>
     </message>
   </context>
   <context>
@@ -3715,7 +3716,8 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="2028"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress.
 Try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - Невозможно выполнить повтор, возможно, уже выполняется другой.
+Повторите попытку, когда он будет завершен.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2036"/>
@@ -3726,7 +3728,8 @@ Try again when it has finished.</source>
       <location filename="../src/ctelnet.cpp" line="2039"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Невозможно прочитать файл &quot;%1&quot;,
+сообщение об ошибке было: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2067"/>
@@ -4697,7 +4700,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="376"/>
       <source>[Error] MSGLIMIT requires &lt;limit&gt; to be a whole number greater than zero!</source>
-      <translation type="unfinished"/>
+      <translation>[Error] MSGLIMIT требует &lt;limit&gt;, чтобы быть целым числом больше нуля!</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="406"/>
@@ -8799,7 +8802,8 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="4493"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - Невозможно выполнить повтор, возможно, уже выполняется другой.
+Повторите попытку, когда он будет завершен.</translation>
     </message>
   </context>
   <context>
