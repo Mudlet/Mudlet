@@ -366,7 +366,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="3129"/>
       <location filename="../src/T2DMap.cpp" line="4794"/>
       <source>Solid line</source>
-      <translation type="unfinished"/>
+      <translation>Linea continua</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3130"/>
@@ -417,12 +417,12 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="3700"/>
       <source>Delete color</source>
       <comment>Deletes an environment colour</comment>
-      <translation type="unfinished"/>
+      <translation>Elimina il colore</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3718"/>
       <source>Define new color</source>
-      <translation type="unfinished"/>
+      <translation>Definisci un nuovo colore</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4032"/>
@@ -520,7 +520,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2310"/>
       <source>Select image</source>
       <comment>2D Mapper create label file dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Seleziona immagine</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2317"/>
@@ -592,19 +592,19 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2750"/>
       <source>Create new map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>Crea nuova mappa</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2753"/>
       <source>Load map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>Carica mappa</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2766"/>
       <source>Create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Crea Stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2772"/>
@@ -670,7 +670,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2792"/>
       <source>Lock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Blocca</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2793"/>
@@ -682,7 +682,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2796"/>
       <source>Unlock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Sblocca</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2797"/>
@@ -899,7 +899,7 @@ the highlighted room (%1) to:</source>
       <location filename="../src/T2DMap.cpp" line="3424"/>
       <source>OK</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3429"/>
@@ -952,7 +952,7 @@ for all of the %n selected room(s):</source>
       <location filename="../src/T2DMap.cpp" line="3726"/>
       <source>OK</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3731"/>
@@ -1554,7 +1554,7 @@ Some functions may not be available.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14765"/>
       <source>[  OK  ]  - Lua module rex_pcre loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[OK] - Modulo Lua rex_pcre caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14776"/>
@@ -1565,7 +1565,7 @@ Some functions may not be available.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14780"/>
       <source>[  OK  ]  - Lua module zip loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[OK] - Modulo Lua zip caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14791"/>
@@ -1577,7 +1577,7 @@ Probably will not be able to access Mudlet Lua code.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14796"/>
       <source>[  OK  ]  - Lua module lfs loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[OK] - Modulo Lua lfs caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14807"/>
@@ -1589,7 +1589,7 @@ Database support will not be available.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14812"/>
       <source>[  OK  ]  - Lua module sqlite3 loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[OK] - Modulo Lua sqlite3 caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14824"/>
@@ -1601,7 +1601,7 @@ utf8.* Lua functions won&apos;t be available.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14829"/>
       <source>[  OK  ]  - Lua module utf8 loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[OK] - Modulo Lua utf8 caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14841"/>
@@ -1613,7 +1613,7 @@ yajl.* Lua functions won&apos;t be available.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14846"/>
       <source>[  OK  ]  - Lua module yajl loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[OK] - Modulo Lua yajl caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14936"/>
