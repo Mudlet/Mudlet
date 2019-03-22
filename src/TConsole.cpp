@@ -1983,9 +1983,7 @@ int TConsole::select(const QString& text, int numOfMatch)
 bool TConsole::selectSection(int from, int to)
 {
     if (mudlet::debugMode) {
-        if (mudlet::debugMode) {
-            TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "\nselectSection(" << from << "," << to << "): line under current user cursor: " << buffer.line(mUserCursor.y()) << "\n" >> 0;
-        }
+        TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "\nselectSection(" << from << "," << to << "): line under current user cursor: " << buffer.line(mUserCursor.y()) << "\n" >> 0;
     }
     if (from < 0) {
         return false;
