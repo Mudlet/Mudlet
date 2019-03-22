@@ -113,9 +113,8 @@ void KeyUnit::reenableAllTriggers()
 TKey* KeyUnit::findKey(QString& name)
 {
     QMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
-        TKey* pT = it.value();
-        return pT;
+    if (it != mLookupTable.cend() && it.key() == name) {
+        return it.value();
     }
     return nullptr;
 }
