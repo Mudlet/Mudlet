@@ -1300,7 +1300,7 @@ void mudlet::slot_timer_fires()
 
     // Search through the Host instances to see which one has a QTimer that is
     // the one that went off:
-    QMutableMapIterator<Host*, QMap<QTimer*, TTimer*>> itHostTimerMap(mHostTimerMap);
+    QMapIterator<Host*, QMap<QTimer*, TTimer*>> itHostTimerMap(mHostTimerMap);
     while (itHostTimerMap.hasNext()) {
         itHostTimerMap.next();
         if (itHostTimerMap.value().contains(pQT)) {
@@ -1358,6 +1358,7 @@ void mudlet::registerTimer(TTimer* pTT)
     auto pQT = pTT->getQTimer();
     if (Q_UNLIKELY(!pTT || !pQT)) {
         qWarning() << "mudlet::registerTimer(...) ERROR - TTimer or QTimer pointer was a nullpt, aborting!";
+        return;
     }
 
     auto pHost = pTT->getHost();
