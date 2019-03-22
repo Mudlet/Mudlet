@@ -70,7 +70,7 @@ color_table = {
   cadet_blue                = { 95, 158, 160 },
   CadetBlue                 = { 95, 158, 160 },
   chartreuse                = { 127, 255, 0 },
-  chocolate                 = { 210, 105, 30 },f
+  chocolate                 = { 210, 105, 30 },
   coral                     = { 255, 127, 80 },
   cornflower_blue           = { 100, 149, 237 },
   CornflowerBlue            = { 100, 149, 237 },
@@ -788,7 +788,7 @@ if rex then
   _Echos = {
     Patterns = {
       Hex = {
-        [[(\x5c?(?:#|\|c)[0-9a-fA-F]{6}?(?:,[0-9a-fA-F]{6})?)|(\|r)]],
+        [[(\x5c?(?:#|\|c)[0-9a-fA-F]{6}?(?:,[0-9a-fA-F]{6})?)|(\|r|#r)]],
         rex.new [[(?#|\|c)(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?]],
       },
       Decimal = {
