@@ -2008,7 +2008,7 @@ int TMap::createMapLabelID(int area)
     if (mapLabels.contains(area)) {
         QList<int> idList = mapLabels[area].keys();
         int id = 0;
-        while (id >= 0) {
+        while (true) {
             if (!idList.contains(id)) {
                 return id;
             }
