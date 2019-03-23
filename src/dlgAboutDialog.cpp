@@ -681,7 +681,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
                           "All rights reserved.</h3>"));
 
     QString QsLogHeader(tr("<h2><u>Qt-Components, QsLog</u></h2>"
-                           "<h3>(<span style=\"color:red\"><u>https://bitbucket.org/razvapetru/qt-components [broken link]</u></span></a>"
+                           "<h3>(<span style=\"color:red\"><u>https://bitbucket.org/razvapetru/qt-components [broken link]</u></span></h3>"
                            "<small><a href=\"https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components\"> {&quot;Wayback Machine&quot; archived version}</a></small>)<br>"
                            "Copyright © 2013, Razvan Petru<br>"
                            "All rights reserved.</h3>"));
