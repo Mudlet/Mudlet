@@ -1918,7 +1918,7 @@ void dlgProfilePreferences::copyMap()
     QSetIterator<Host*> itActiveHost(activeHosts);
     while (itActiveHost.hasNext()) {
         Host* pOtherHost = itActiveHost.next();
-        if (pOtherHost != pHost) {
+        if (pOtherHost && (pOtherHost != pHost)) {
             const auto otherHostName = pOtherHost->getName();
             if (toProfilesRoomIdMap.contains(otherHostName)) {
                 activeOtherHostMap.insert(otherHostName, pOtherHost);
