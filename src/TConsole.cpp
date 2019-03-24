@@ -649,7 +649,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
         QString n = "WindowResizeEvent";
         pLua->call(func, n);
 
-        TEvent mudletEvent;
+        TEvent mudletEvent {};
         mudletEvent.mArgumentList.append(QLatin1String("sysWindowResizeEvent"));
         mudletEvent.mArgumentList.append(QString::number(x - mMainFrameLeftWidth - mMainFrameRightWidth));
         mudletEvent.mArgumentList.append(QString::number(y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height()));
@@ -757,7 +757,7 @@ void TConsole::closeEvent(QCloseEvent* event)
     }
 
     if (mProfileName != QLatin1String("default_host")) {
-        TEvent conCloseEvent;
+        TEvent conCloseEvent {};
         conCloseEvent.mArgumentList.append(QLatin1String("sysExitEvent"));
         conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(conCloseEvent);
@@ -2216,7 +2216,7 @@ void TConsole::createMapper(int x, int y, int width, int height)
 
         mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
 
-        TEvent mapOpenEvent;
+        TEvent mapOpenEvent {};
         mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
         mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(mapOpenEvent);

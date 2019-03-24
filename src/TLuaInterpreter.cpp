@@ -149,7 +149,7 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply* reply)
     }
 
     QString localFileName = downloadMap.value(reply);
-    TEvent event;
+    TEvent event {};
     if (reply->error() != QNetworkReply::NoError) {
         event.mArgumentList << QLatin1String("sysDownloadError");
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -412,7 +412,7 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    TEvent event;
+    TEvent event {};
 
     int n = lua_gettop(L);
     // We go from the top of the stack down, because luaL_ref will
@@ -494,7 +494,7 @@ int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
         return 1;
     }
 
-    TEvent event;
+    TEvent event {};
 
     for (int i = 1; i <= n; ++i) {
         // The sending profile of the event does not receive the event if
@@ -3478,7 +3478,7 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
         lua_remove(L, 1);
     }
 
-    TEvent event;
+    TEvent event {};
     int n = lua_gettop(L);
     // Iterate from the top down thru the stack because luaL_ref requires
     // the object (table or function in our case) to be on top
@@ -12447,7 +12447,7 @@ int TLuaInterpreter::ttsSetRate(lua_State* L)
 
     speechUnit->setRate(rate);
 
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("ttsRateChanged"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(rate));
@@ -12482,7 +12482,7 @@ int TLuaInterpreter::ttsSetPitch(lua_State* L)
 
     speechUnit->setPitch(pitch);
 
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("ttsPitchChanged"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(pitch));
@@ -12517,7 +12517,7 @@ int TLuaInterpreter::ttsSetVolume(lua_State* L)
 
     speechUnit->setVolume(volume);
 
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("ttsVolumeChanged"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(volume));
@@ -12605,7 +12605,7 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
             speechUnit->setVoice(voice);
             lua_pushboolean(L, true);
 
-            TEvent event;
+            TEvent event {};
             event.mArgumentList.append(QLatin1String("ttsVoiceChanged"));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             event.mArgumentList.append(voice.name());
@@ -12645,7 +12645,7 @@ int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
 
     speechUnit->setVoice(speechVoices.at(index));
 
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("ttsVoiceChanged"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(speechVoices[index].name());
@@ -12661,7 +12661,7 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 {
     if (state != speechState) {
         speechState = state;
-        TEvent event;
+        TEvent event {};
         switch (state) {
         case QTextToSpeech::Paused:
             event.mArgumentList.append(QLatin1String("ttsSpeechPaused"));
@@ -12738,7 +12738,7 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
 
     speechQueue.insert(index, inputText);
 
-    TEvent event;
+    TEvent event {};
     Host& host = getHostFromLua(L);
     event.mArgumentList.append(QLatin1String("ttsSpeechQueued"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -13255,7 +13255,7 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
     lua_rawset(L, -3);
     lua_pop(L, 1);
 
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(var);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(arg);
@@ -13391,7 +13391,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
     }
 
     for (int k = 0, total = tokenList.size(); k < total; ++k) {
-        TEvent event;
+        TEvent event {};
         token.append(".");
         token.append(tokenList[k]);
         event.mArgumentList.append(token);
@@ -13559,7 +13559,7 @@ void TLuaInterpreter::setChannel102Table(int& var, int& arg)
     lua_rawset(L, -3);
     lua_pop(L, 1);
 
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("channel102Message"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(var));
