@@ -5144,7 +5144,7 @@ int TLuaInterpreter::setAppStyleSheet(lua_State* L)
     int n = lua_gettop(L);
     if (n) {
         if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L, "setAppStyleSheet: bad argument #%d type (style sheet as string expected {may be omitted to remove existing stylesheet}, got %s!)", s, luaL_typename(L, s));
+            lua_pushfstring(L, "setAppStyleSheet: bad argument #%d type (style sheet as string expected, got %s!)", s, luaL_typename(L, s));
             return lua_error(L);
         }
         styleSheet = QString::fromUtf8(lua_tostring(L, s));
@@ -5167,7 +5167,7 @@ int TLuaInterpreter::setAppStyleSheet(lua_State* L)
     event.mArgumentList.append(host.getName());
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     qApp->setStyleSheet(styleSheet);
-    mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+    mudlet::self()->getHostManager().postInterHostEvent(nullptr, event, true);
     lua_pushboolean(L, true);
     return 1;
 }
