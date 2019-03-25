@@ -1663,11 +1663,22 @@ void mudlet::clearHostTimerMap(Host* pHost)
     }
 
     Q_ASSERT_X(mHostTimerMap.contains(pHost), "mudlet::clearHostTimerMap(...)", "the mHostTimerMap does not contain the Host instance that the TTimer seems to belong to");
-    QMap<QTimer*, TTimer*> hostTimerMap = mHostTimerMap.take(pHost);
+    auto hostTimerMap = mHostTimerMap.value(pHost);
+//    qDebug().nospace().noquote() << "mudlet::clearHostTimerMap(...) INFO - clearing QTimer<==>TTimer map, containing " << hostTimerMap.size() << " entries, for profile \"" << pHost->getName() << "\".";
+    // Remove all the timers register for that host in it's QMap- BUT DON'T
+    // remove the container itself - as we may be resetting the profile not
+    // closing it:
+    for (auto timer : hostTimerMap) {
+        delete timer;
+    }
+}
 
-// This will silence a warning whilst the line following it is commented out:
-    Q_UNUSED(hostTimerMap);
-//  qDebug().nospace().noquote() << "mudlet::clearHostTimerMap(...) INFO - removed QTimer<==>TTimer map, containing " << hostTimerMap.size() << " entries, for profile \"" << pHost->getName() << "\".";
+// Like the above but also removes the Host's QMap<QTimer*, TTimer*> entry
+// in the mudlet::mHostTimerMap map:
+void mudlet::removeHostTimerMap(Host* pHost)
+{
+    clearHostTimerMap(pHost);
+    mHostTimerMap.remove(pHost);
 }
 
 void mudlet::disableToolbarButtons()

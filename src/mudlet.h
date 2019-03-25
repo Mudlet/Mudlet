@@ -116,6 +116,7 @@ public:
     void registerTimer(TTimer*);
     void unregisterTimer(TTimer*);
     void clearHostTimerMap(Host*);
+    void removeHostTimerMap(Host*);
     void forceClose();
     bool saveWindowLayout();
     bool loadWindowLayout();

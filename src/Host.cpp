@@ -230,6 +230,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
 Host::~Host()
 {
+    mudlet::self()->removeHostTimerMap(this);
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
     }
