@@ -26,6 +26,7 @@
 #include <QMultiMap>
 #include <QMutex>
 #include <QPointer>
+#include <QSet>
 #include <QString>
 #include "post_guard.h"
 
@@ -33,7 +34,7 @@
 
 class Host;
 class TTimer;
-
+class QTimer;
 
 class TimerUnit
 {
@@ -45,7 +46,7 @@ public:
     void removeAllTempTimers();
     std::list<TTimer*> getTimerRootNodeList() { return mTimerRootNodeList; }
     TTimer* getTimer(int id);
-    TTimer* findTimer(const QString& name);
+    QList<TTimer*> findTimer(const QString&);
     void compileAll();
     bool enableTimer(const QString&);
     bool disableTimer(const QString&);
@@ -61,6 +62,7 @@ public:
     int getNewID();
     void uninstall(const QString&);
     void _uninstall(TTimer* pChild, const QString& packageName);
+    void changeHostName(const QString&);
 
 
     QMultiMap<QString, TTimer*> mLookupTable;
@@ -69,6 +71,13 @@ public:
     int statsTriggerTotal;
     int statsTempTriggers;
     QList<TTimer*> uninstallList;
+
+    // This will contain all the QTimers associated with the TTimer instances
+    // it is needed so that should mpHost be renamed we can update them to have
+    // the correct name (which is needed when they fire so the mudlet class
+    // knows when profile they belong to and where to find the TTimer that they
+    // are part of):
+    QSet<QTimer*> mQTimerSet;
 
 private:
     TimerUnit() = default;
@@ -84,7 +93,7 @@ private:
     std::list<TTimer*> mTimerRootNodeList;
     int mMaxID;
     bool mModuleMember;
-    std::list<TTimer*> mCleanupList;
+    QSet<TTimer*> mCleanupSet;
 };
 
 #endif // MUDLET_TIMERUNIT_H

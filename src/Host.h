@@ -179,7 +179,12 @@ public:
     void registerAnonymousEventHandler(const QString& name, const QString& fun);
     void unregisterEventHandler(const QString&, TScript*);
     void raiseEvent(const TEvent& event);
-    void resetProfile();
+    // This disables all the triggers/timers/keys in preparation to resetting
+    // them:
+    void resetProfile_phase1();
+    // This actually does the bulk of the reset but must wait until the profile
+    // is quiescent:
+    void resetProfile_phase2();
     std::tuple<bool, QString, QString> saveProfile(const QString& saveLocation = QString(), const QString& saveName = QString(), bool syncModules = false);
     std::tuple<bool, QString, QString> saveProfileAs(const QString& fileName);
     void stopAllTriggers();

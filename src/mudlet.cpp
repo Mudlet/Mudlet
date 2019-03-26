@@ -1576,99 +1576,41 @@ void mudlet::slot_timer_fires()
         return;
     }
 
-    // Search through the Host instances to see which one has a QTimer that is
-    // the one that went off:
-    QMapIterator<Host*, QMap<QTimer*, TTimer*>> itHostTimerMap(mHostTimerMap);
-    while (itHostTimerMap.hasNext()) {
-        itHostTimerMap.next();
-        if (itHostTimerMap.value().contains(pQT)) {
-            auto pTT = itHostTimerMap.value().value(pQT);
-            pTT->execute();
-            if (pTT->checkRestart()) {
-                pTT->start();
-            }
-
-            // Okay now we've found it we are done:
-            return;
-        }
+    // Pull the Host* and TTimer::id from the properties:
+    QString hostName(pQT->property(TTimer::scmProperty_HostName).toString());
+    if (hostName.isEmpty()) {
+        qWarning().nospace().noquote() << "mudlet::slot_timer_fires() INFO - Host name is empty - so TTimer has probably been deleted.";
+        pQT->deleteLater();
+        return;
     }
 
-    qWarning() << "mudlet::slot_timer_fires() ERROR - Timer not registered - automatically deleting it!";
+    Host* pHost = mHostManager.getHost(hostName);
+    Q_ASSERT_X(pHost, "mudlet::slot_timer_fires()", "Unable to deduce Host pointer from data in QTimer");
+    int id = pQT->property(TTimer::scmProperty_TTimerId).toInt();
+    if (!id) {
+        qWarning().nospace().noquote() << "mudlet::slot_timer_fires() INFO - TTimer ID is zero - so TTimer has probably been deleted.";
+        pQT->deleteLater();
+        return;
+    }
+    TTimer* pTT = pHost->getTimerUnit()->getTimer(id);
+    if (pTT) {
+        qDebug().nospace().noquote() << "mudlet::slot_timer_fires() INFO - Host: \"" << hostName << "\" QTimer firing for TTimer Id:" << id;
+        qDebug().nospace().noquote() << "    (objectName:\"" << pQT->objectName() << "\")";
+        pTT->execute();
+        if (pTT->checkRestart()) {
+            pTT->start();
+        }
+
+        // Okay now we've found it we are done:
+        return;
+    }
+
+    qWarning().nospace().noquote() << "mudlet::slot_timer_fires() ERROR - Timer not registered, it seems to have been called: \"" << pQT->objectName() << "\" - automatically deleting it!";
     // Clean up any bogus ones:
     pQT->stop();
     pQT->deleteLater();
 }
 
-// This is called by the TTimer destructor:
-void mudlet::unregisterTimer(TTimer* pTT)
-{
-    if (Q_UNLIKELY(!pTT)) {
-        return;
-    }
-
-    auto pQT = pTT->getQTimer();
-    auto pHost = pTT->getHost();
-    if (Q_UNLIKELY(!pQT||!pHost)) {
-        return;
-    }
-
-    Q_ASSERT_X(mHostTimerMap.contains(pHost), "mudlet::unregisterTimer(...)", "the mHostTimerMap does not contain the Host instance that the TTimer seems to belong to");
-    if (mHostTimerMap.value(pHost).contains(pQT)) {
-        // Be paranoid - ensure that the timer does not fire again:
-        pTT->stop();
-
-//            qDebug().nospace().noquote() << "mudlet::unregisterTimer(...) INFO - unregistering a Timer \"" << pTT->getName() << "\" for profile \"" << pHost->getName() << "\".";
-        mHostTimerMap[pHost].remove(pQT);
-    }
-
-    // This message (and it's previous form:
-    // "MUDLET CRITICAL ERROR: trying to unregister Timer but it is not
-    // registered!") were somewhat bogus because such an unregistered Timer is
-    // created every time that XMLimport::importPackage is run and the package
-    // does not contain any Timer items.
-    if (!pTT->knownUnregistered()) {
-        qWarning() << "mudlet::unregisterTimer(...) ERROR - trying to unregister TTimer  \"" << pTT->getName() << "\" for profile \"" << pHost->getName() << "\" but it is not registered.";
-    }
-}
-
-void mudlet::registerTimer(TTimer* pTT)
-{
-    auto pQT = pTT->getQTimer();
-    if (Q_UNLIKELY(!pTT || !pQT)) {
-        qWarning() << "mudlet::registerTimer(...) ERROR - TTimer or QTimer pointer was a nullpt, aborting!";
-        return;
-    }
-
-    auto pHost = pTT->getHost();
-    if (Q_UNLIKELY(!pHost)) {
-        qWarning() << "mudlet::registerTimer(...) ERROR - TTimer pointed to had a Host nullpt, aborting!";
-        return;
-    }
-
-    Q_ASSERT_X(mHostTimerMap.contains(pHost), "mudlet::registerTimer(...)", "the mHostTimerMap does not contain the Host instance that the TTimer seems to belong to");
-
-    if (!mHostTimerMap.value(pHost).contains(pQT)) {
-        mHostTimerMap[pHost][pQT] = pTT;
-        connect(pQT, &QTimer::timeout, this, &mudlet::slot_timer_fires);
-//        qDebug().nospace().noquote() << "mudlet::registerTimer(...) INFO - registering a Timer \"" << pTT->getName() << "\" for profile \"" << pHost->getName() << "\".";
-    } else {
-        qWarning() << "mudlet::registerTimer(...) ERROR - QTimer is already registered for Host \"" << pHost->getName() << "\", not registering again!";
-    }
-}
-
-void mudlet::clearHostTimerMap(Host* pHost)
-{
-    if (Q_UNLIKELY(!pHost)) {
-        return;
-    }
-
-    Q_ASSERT_X(mHostTimerMap.contains(pHost), "mudlet::clearHostTimerMap(...)", "the mHostTimerMap does not contain the Host instance that the TTimer seems to belong to");
-    QMap<QTimer*, TTimer*> hostTimerMap = mHostTimerMap.take(pHost);
-
-// This will silence a warning whilst the line following it is commented out:
-    Q_UNUSED(hostTimerMap);
-//  qDebug().nospace().noquote() << "mudlet::clearHostTimerMap(...) INFO - removed QTimer<==>TTimer map, containing " << hostTimerMap.size() << " entries, for profile \"" << pHost->getName() << "\".";
-}
 
 void mudlet::disableToolbarButtons()
 {

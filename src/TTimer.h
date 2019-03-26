@@ -60,8 +60,7 @@ public:
     void setCommand(const QString& cmd) { mCommand = cmd; }
     QString getScript() { return mScript; }
     bool setScript(const QString& script);
-    bool canBeUnlocked(TTimer*);
-    bool registerTimer();
+    bool canBeUnlocked();
     bool setIsActive(bool);
     void stop();
     void start();
@@ -76,8 +75,9 @@ public:
     bool isOffsetTimer();
     QPointer<Host> getHost() { return mpHost; }
     QTimer* getQTimer() { return mpQTimer; }
-    void setKnownUnregistered() { mKnownToBeUnregistered = true; }
-    bool knownUnregistered() { return mKnownToBeUnregistered; }
+    // Override the Tree version as we need to insert the id number as a
+    // property into the mQTimer as well:
+    void setID(const int);
 
 
     // specifies whenever the payload is Lua code as a string
@@ -85,6 +85,9 @@ public:
     bool mRegisteredAnonymousLuaFunction;
     bool exportItem;
     bool mModuleMasterFolder;
+
+    static const char* scmProperty_HostName;
+    static const char* scmProperty_TTimerId;
 
 private:
     TTimer() = default;
@@ -100,10 +103,6 @@ private:
     // Renamed to reduce confusion:
     QTimer* mpQTimer;
     bool mModuleMember;
-    //TLuaInterpreter *  mpLua;
-    // Used in XMLimport::package to mark an unused Timer that was created there
-    // and which can be removed without reporting that it was unregistered.
-    bool mKnownToBeUnregistered;
 };
 
 #endif // MUDLET_TTIMER_H
