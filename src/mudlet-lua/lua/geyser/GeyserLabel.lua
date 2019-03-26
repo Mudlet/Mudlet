@@ -464,7 +464,11 @@ function Geyser.Label:new (cons, container)
   me:echo()
 
   -- Set up mouse hover as the callback if we have one
+<<<<<<< HEAD
   if cons.nestflyout then
+=======
+  if cons.nestflyout and cons.nestable then
+>>>>>>> 49a48e45fb7d43967e99ac7a53129b5fc9f58536
     --echo("setting hover to doNestClick")
     setLabelOnEnter(me.name, "doNestClick", me.name)
   end
