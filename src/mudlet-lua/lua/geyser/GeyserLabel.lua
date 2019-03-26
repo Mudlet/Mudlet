@@ -463,6 +463,11 @@ function Geyser.Label:new (cons, container)
   Geyser.Color.applyColors(me)
   me:echo()
 
+  -- Set up mouse hover as the callback if we have one
+  if cons.nestflyout and cons.nestable then
+    --echo("setting hover to doNestClick")
+    setLabelOnEnter(me.name, "doNestClick", me.name)
+  end
   -- Set up the callback if we have one
   if cons.nestable then
     --echo("setting callback to doNestClick")
