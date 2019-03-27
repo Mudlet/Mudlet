@@ -5138,12 +5138,38 @@ int TLuaInterpreter::echoUserWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setAppStyleSheet
 int TLuaInterpreter::setAppStyleSheet(lua_State* L)
 {
-    if (lua_isstring(L, 1)) {
-        string stylesheet = lua_tostring(L, 1);
-        qApp->setStyleSheet(stylesheet.c_str());
+    QString styleSheet;
+    QString tag;
+    int s = 0;
+    int n = lua_gettop(L);
+    if (n) {
+        if (!lua_isstring(L, ++s)) {
+            lua_pushfstring(L, "setAppStyleSheet: bad argument #%d type (style sheet as string expected, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
+        }
+        styleSheet = QString::fromUtf8(lua_tostring(L, s));
     }
 
-    return 0;
+    if (n > 1) {
+        if (!lua_isstring(L, ++s)) {
+            lua_pushfstring(L, "setAppStyleSheet: bad argument #%d type (tag as string is optional, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
+        }
+        tag = QString::fromUtf8(lua_tostring(L, s));
+    }
+
+    Host& host = getHostFromLua(L);
+    TEvent event;
+    event.mArgumentList.append(QLatin1String("sysAppStyleSheetChange"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(tag);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(host.getName());
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    qApp->setStyleSheet(styleSheet);
+    mudlet::self()->getHostManager().postInterHostEvent(nullptr, event, true);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // this was an internal only function used by the package system, but it was

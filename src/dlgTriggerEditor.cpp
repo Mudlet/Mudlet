@@ -471,7 +471,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->addAction(mProfileSaveAsAction);
     toolBar->addAction(mProfileSaveAction);
 
-    connect(button_displayAllVariables, &QAbstractButton::toggled, this, &dlgTriggerEditor::slot_toggleHiddenVariables);
+    connect(checkBox_displayAllVariables, &QAbstractButton::toggled, this, &dlgTriggerEditor::slot_toggleHiddenVariables);
 
     connect(mpVarsMainArea->checkBox_variable_hidden, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_toggleHiddenVar);
 
@@ -5665,7 +5665,6 @@ void dlgTriggerEditor::fillout_form()
 
     mNeedUpdateData = false;
     mpTriggerBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Triggers")));
-    mpTriggerBaseItem->setBackground(0, QColor(255, 254, 215, 255));
     mpTriggerBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/tools-wizard.png")));
     treeWidget_triggers->insertTopLevelItem( 0, mpTriggerBaseItem );
     std::list<TTrigger *> baseNodeList = mpHost->getTriggerUnit()->getTriggerRootNodeList();
@@ -5747,7 +5746,6 @@ void dlgTriggerEditor::fillout_form()
     mpTriggerBaseItem->setExpanded(true);
 
     mpTimerBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Timers")));
-    mpTimerBaseItem->setBackground(0, QColor(255, 254, 215, 255));
     mpTimerBaseItem->setIcon( 0, QPixmap(QStringLiteral(":/icons/chronometer.png")));
     treeWidget_timers->insertTopLevelItem( 0, mpTimerBaseItem );
     mpTriggerBaseItem->setExpanded( true );
@@ -5809,7 +5807,6 @@ void dlgTriggerEditor::fillout_form()
     mpTimerBaseItem->setExpanded(true);
 
     mpScriptsBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Scripts")));
-    mpScriptsBaseItem->setBackground(0, QColor(255, 254, 215, 255));
     mpScriptsBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/accessories-text-editor.png")));
     treeWidget_scripts->insertTopLevelItem(0, mpScriptsBaseItem);
     mpScriptsBaseItem->setExpanded(true);
@@ -5861,7 +5858,6 @@ void dlgTriggerEditor::fillout_form()
     mpScriptsBaseItem->setExpanded(true);
 
     mpAliasBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Aliases - Input Triggers")));
-    mpAliasBaseItem->setBackground(0, QColor(255, 254, 215, 255));
     mpAliasBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/system-users.png")));
     treeWidget_aliases->insertTopLevelItem(0, mpAliasBaseItem);
     mpAliasBaseItem->setExpanded(true);
@@ -5930,7 +5926,6 @@ void dlgTriggerEditor::fillout_form()
     mpAliasBaseItem->setExpanded(true);
 
     mpActionBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Buttons")));
-    mpActionBaseItem->setBackground(0, QColor(255, 254, 215, 255));
     mpActionBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/bookmarks.png")));
     treeWidget_actions->insertTopLevelItem(0, mpActionBaseItem);
     mpActionBaseItem->setExpanded(true);
@@ -5991,7 +5986,6 @@ void dlgTriggerEditor::fillout_form()
     mpActionBaseItem->setExpanded(true);
 
     mpKeyBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Key Bindings")));
-    mpKeyBaseItem->setBackground(0, QColor(255, 254, 215, 255));
     mpKeyBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/preferences-desktop-keyboard.png")));
     treeWidget_keys->insertTopLevelItem(0, mpKeyBaseItem);
     mpKeyBaseItem->setExpanded(true);
@@ -6065,7 +6059,6 @@ void dlgTriggerEditor::repopulateVars()
     treeWidget_variables->setUpdatesEnabled(false);
     mpVarBaseItem = new QTreeWidgetItem(QStringList(tr("Variables")));
     mpVarBaseItem->setTextAlignment(0, Qt::AlignLeft | Qt::AlignVCenter);
-    mpVarBaseItem->setBackground(0, QColor(255, 254, 215, 255));
     mpVarBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/variables.png")));
     treeWidget_variables->clear();
     mpCurrentVarItem = nullptr;
@@ -6574,7 +6567,7 @@ void dlgTriggerEditor::changeView(int view)
     mpKeysMainArea->hide();
     mpVarsMainArea->hide();
     // hiding this for some reason shifts focus to the search box
-    button_displayAllVariables->hide();
+    checkBox_displayAllVariables->hide();
 
     clearEditorNotification();
     treeWidget_triggers->hide();
@@ -6685,8 +6678,8 @@ void dlgTriggerEditor::slot_show_vars()
     repopulateVars();
     mpCurrentVarItem = nullptr;
     mpSourceEditorArea->show();
-    button_displayAllVariables->show();
-    button_displayAllVariables->setChecked(showHiddenVars);
+    checkBox_displayAllVariables->show();
+    checkBox_displayAllVariables->setChecked(showHiddenVars);
     QTreeWidgetItem* pI = treeWidget_variables->topLevelItem(0);
     if (pI) {
         if (pI->childCount() > 0) {
@@ -6711,8 +6704,8 @@ void dlgTriggerEditor::show_vars()
     changeView(static_cast<int>(EditorViewType::cmVarsView));
     mpCurrentVarItem = nullptr;
     mpSourceEditorArea->show();
-    button_displayAllVariables->show();
-    button_displayAllVariables->setChecked(showHiddenVars);
+    checkBox_displayAllVariables->show();
+    checkBox_displayAllVariables->setChecked(showHiddenVars);
     QTreeWidgetItem* pI = treeWidget_variables->topLevelItem(0);
     if (pI) {
         if (pI->childCount() > 0) {
@@ -7502,7 +7495,7 @@ void dlgTriggerEditor::slot_paste_xml()
         selectTriggerByID(importedItemID);
         treeWidget_triggers->setAnimated(animated);
 
-        // set the focus because hiding button_displayAllVariables in changeView
+        // set the focus because hiding checkBox_displayAllVariables in changeView
         // changes the focus to the search box for some reason. This thus breaks
         // successive pastes because you'll now be pasting into the search box
         treeWidget_triggers->setFocus();
