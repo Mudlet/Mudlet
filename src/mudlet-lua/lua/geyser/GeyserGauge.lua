@@ -96,11 +96,38 @@ end
 -- @param cssback Style sheet for the back label
 -- @param cssText Style sheet for the text label
 function Geyser.Gauge:setStyleSheet(css, cssback, cssText)
-  self.front:setStyleSheet(css)
-  self.back:setStyleSheet(cssback or css)
+  print("setting stylesheet for gauge "..self.name)
+  self.frontstylesheet = css
+  self.front:setStyleSheet(self.frontstylesheet)
+
+  self.backstylesheet = cssback or css
+  self.back:setStyleSheet(self.backstylesheet)
   if cssText ~= nil then
-    self.text:setStyleSheet(cssText)
+    self.textstylesheet = cssText
+    self.text:setStyleSheet(self.textstylesheet)
+  else
+    self.textstylesheet = nil
+    self.text:setStyleSheet("")
   end
+
+  -- optimisation: set empty stylesheets to nil so sysAppStyleSheetChange
+  -- events don't trigger many setLabelStyleSheet calls
+  if self.frontstylesheet == "" then
+    self.frontstylesheet = nil
+  end
+  if self.backstylesheet == "" then
+    self.backstylesheet = nil
+  end
+  if self.textstylesheet == "" then
+    self.textstylesheet = nil
+  end
+end
+
+function Geyser.Gauge:updatestylesheet()
+  print("reloading stylesheet for gauge "..self.name)
+  if self.frontstylesheet then self.front:setStyleSheet(self.frontstylesheet) end
+  if self.backstylesheet then self.back:setStyleSheet(self.backstylesheet) end
+  if self.textstylesheet then self.text:setStyleSheet(self.textstylesheet) end
 end
 
 --- Sets the gauge to no longer intercept mouse events
@@ -168,7 +195,7 @@ function Geyser.Gauge:new (cons, container)
 
   -- Set clickthrough if included in constructor
   if cons.clickthrough then me:enableClickthrough() end
-  
+
   --print("  New in " .. self.name .. " : " .. me.name)
   return me
 end

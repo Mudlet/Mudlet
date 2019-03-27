@@ -81,7 +81,13 @@ end
 --- Sets a tiled background image for this label.
 -- @param imageFileName The image to use for a background image.
 function Geyser.Label:setTiledBackgroundImage (imageFileName)
-  self:setStyleSheet("background-image: url(" .. imageFileName .. ");")
+  self.stylesheet = "background-image: url(" .. imageFileName .. ");"
+  self:setStyleSheet(self.stylesheet)
+end
+
+function Geyser.Label:updatestylesheet ()
+  print("reloading stylesheet for label "..self.name)
+  if self.stylesheet then self:setStyleSheet(self.stylesheet) end
 end
 
 --- Sets a callback to be used when this label is clicked. When this
@@ -157,7 +163,12 @@ end
 --- Sets the style sheet of the label
 -- @param css The style sheet string
 function Geyser.Label:setStyleSheet(css)
+  print("setting stylesheet for label "..self.name)
+  self.stylesheet = css
   setLabelStyleSheet(self.name, css)
+  -- optimisation: set empty stylesheets to nil so sysAppStyleSheetChange
+  -- events don't trigger many setLabelStyleSheet calls
+  if self.stylesheet == "" then self.stylesheet = nil end
 end
 
 --- Returns the Geyser object associated with the label name
@@ -526,10 +537,10 @@ function Geyser.Label:new (cons, container)
   if me.onLeave then
     me:setOnLeave(me.onLeave, me.args)
   end
-  
+
   -- Set clickthrough if included in constructor
   if cons.clickthrough then me:enableClickthrough() end
-  
+
   --print("  New in " .. self.name .. " : " .. me.name)
   return me
 end
