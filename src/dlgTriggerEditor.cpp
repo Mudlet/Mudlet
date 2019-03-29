@@ -471,7 +471,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->addAction(mProfileSaveAsAction);
     toolBar->addAction(mProfileSaveAction);
 
-    connect(button_displayAllVariables, &QAbstractButton::toggled, this, &dlgTriggerEditor::slot_toggleHiddenVariables);
+    connect(checkBox_displayAllVariables, &QAbstractButton::toggled, this, &dlgTriggerEditor::slot_toggleHiddenVariables);
 
     connect(mpVarsMainArea->checkBox_variable_hidden, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_toggleHiddenVar);
 
@@ -613,20 +613,62 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     lay1->setContentsMargins(0, 0, 0, 0);
     lay1->setSpacing(0);
     mpScrollArea->setWidget(HpatternList);
+
+    QPixmap pixMap_subString(256, 256);
+    pixMap_subString.fill(Qt::black);
+    QIcon icon_subString(pixMap_subString);
+
+    QPixmap pixMap_perl_regex(256, 256);
+    pixMap_perl_regex.fill(Qt::blue);
+    QIcon icon_perl_regex(pixMap_perl_regex);
+
+    QPixmap pixMap_begin_of_line_substring(256, 256);
+    pixMap_begin_of_line_substring.fill(Qt::red);
+    QIcon icon_begin_of_line_substring(pixMap_begin_of_line_substring);
+
+    QPixmap pixMap_exact_match(256,256);
+    pixMap_exact_match.fill(Qt::green);
+    QIcon icon_exact_match(pixMap_exact_match);
+
+    QPixmap pixMap_lua_function(256, 256);
+    pixMap_lua_function.fill(Qt::cyan);
+    QIcon icon_lua_function(pixMap_lua_function);
+
+    QPixmap pixMap_line_spacer(256, 256);
+    pixMap_line_spacer.fill(Qt::magenta);
+    QIcon icon_line_spacer(pixMap_line_spacer);
+
+    QPixmap pixMap_color_trigger(256, 256);
+    pixMap_color_trigger.fill(Qt::lightGray);
+    QIcon icon_color_trigger(pixMap_color_trigger);
+
+    QPixmap pixMap_prompt(256, 256);
+    pixMap_prompt.fill(Qt::yellow);
+    QIcon icon_prompt(pixMap_prompt);
+
+    QStringList patternList;
+    patternList << tr("substring")
+                << tr("perl regex")
+                << tr("begin of line substring")
+                << tr("exact match")
+                << tr("lua function")
+                << tr("line spacer")
+                << tr("color trigger")
+                << tr("prompt");
+
     for (int i = 0; i < 50; i++) {
         auto pItem = new dlgTriggerPatternEdit(HpatternList);
-        QStringList _patternList;
-        _patternList << "substring"
-                     << "perl regex"
-                     << "begin of line substring"
-                     << "exact match"
-                     << "Lua function"
-                     << "line spacer"
-                     << "color trigger"
-                     << "prompt";
         QComboBox* pBox = pItem->comboBox_patternType;
-        pBox->addItems(_patternList);
+        pBox->addItems(patternList);
         pBox->setItemData(0, QVariant(i));
+        pBox->setItemIcon(0, icon_subString);
+        pBox->setItemIcon(1, icon_perl_regex);
+        pBox->setItemIcon(2, icon_begin_of_line_substring);
+        pBox->setItemIcon(3, icon_exact_match);
+        pBox->setItemIcon(4, icon_lua_function);
+        pBox->setItemIcon(5, icon_line_spacer);
+        pBox->setItemIcon(6, icon_color_trigger);
+        pBox->setItemIcon(7, icon_prompt);
         connect(pBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerEditor::slot_setupPatternControls);
         connect(pItem->pushButton_fgColor, &QAbstractButton::pressed, this, &dlgTriggerEditor::slot_color_trigger_fg);
         connect(pItem->pushButton_bgColor, &QAbstractButton::pressed, this, &dlgTriggerEditor::slot_color_trigger_bg);
@@ -4910,12 +4952,20 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
             }
             // Use operator[] so we have write access to the array/list member:
             dlgTriggerPatternEdit* pPatternItem = mTriggerPatternEdit[i];
-            pPatternItem->comboBox_patternType->setCurrentIndex(propertyList.at(i));
-            setupPatternControls(propertyList.at(i), pPatternItem);
-            if (propertyList.at(i) == REGEX_PROMPT ) {
+            int pType = propertyList.at(i);
+            if (!pType) {
+                // If the control is for the default (0) case nudge the setting
+                // up and down so that it copies the coloure icon for the
+                // subString type across into the QLineEdit:
+                pPatternItem->comboBox_patternType->setCurrentIndex(1);
+                setupPatternControls(1, pPatternItem);
+            }
+            pPatternItem->comboBox_patternType->setCurrentIndex(pType);
+            setupPatternControls(pType, pPatternItem);
+            if (pType == REGEX_PROMPT ) {
                 pPatternItem->lineEdit_pattern->clear();
 
-            } else if (propertyList.at(i) == REGEX_COLOR_PATTERN) {
+            } else if (pType == REGEX_COLOR_PATTERN) {
                 pPatternItem->lineEdit_pattern->setText(patternList.at(i));
                 if (pT->mColorPatternList.at(i)) {
                     if (pT->mColorPatternList.at(i)->ansiFg == TTrigger::scmIgnored) {
@@ -4973,6 +5023,8 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
             mTriggerPatternEdit[i]->pushButton_fgColor->hide();
             mTriggerPatternEdit[i]->pushButton_bgColor->hide();
             mTriggerPatternEdit[i]->pushButton_prompt->hide();
+            // Nudge the type up and down so that the appropriate (coloured) icon is copied across to the QLineEdit:
+            mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(1);
             mTriggerPatternEdit[i]->comboBox_patternType->setCurrentIndex(0);
         }
         // Scroll to the last used pattern:
@@ -5613,7 +5665,6 @@ void dlgTriggerEditor::fillout_form()
 
     mNeedUpdateData = false;
     mpTriggerBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Triggers")));
-    mpTriggerBaseItem->setBackground(0, QColor(255, 254, 215, 255));
     mpTriggerBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/tools-wizard.png")));
     treeWidget_triggers->insertTopLevelItem( 0, mpTriggerBaseItem );
     std::list<TTrigger *> baseNodeList = mpHost->getTriggerUnit()->getTriggerRootNodeList();
@@ -5695,7 +5746,6 @@ void dlgTriggerEditor::fillout_form()
     mpTriggerBaseItem->setExpanded(true);
 
     mpTimerBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Timers")));
-    mpTimerBaseItem->setBackground(0, QColor(255, 254, 215, 255));
     mpTimerBaseItem->setIcon( 0, QPixmap(QStringLiteral(":/icons/chronometer.png")));
     treeWidget_timers->insertTopLevelItem( 0, mpTimerBaseItem );
     mpTriggerBaseItem->setExpanded( true );
@@ -5757,7 +5807,6 @@ void dlgTriggerEditor::fillout_form()
     mpTimerBaseItem->setExpanded(true);
 
     mpScriptsBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Scripts")));
-    mpScriptsBaseItem->setBackground(0, QColor(255, 254, 215, 255));
     mpScriptsBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/accessories-text-editor.png")));
     treeWidget_scripts->insertTopLevelItem(0, mpScriptsBaseItem);
     mpScriptsBaseItem->setExpanded(true);
@@ -5809,7 +5858,6 @@ void dlgTriggerEditor::fillout_form()
     mpScriptsBaseItem->setExpanded(true);
 
     mpAliasBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Aliases - Input Triggers")));
-    mpAliasBaseItem->setBackground(0, QColor(255, 254, 215, 255));
     mpAliasBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/system-users.png")));
     treeWidget_aliases->insertTopLevelItem(0, mpAliasBaseItem);
     mpAliasBaseItem->setExpanded(true);
@@ -5878,7 +5926,6 @@ void dlgTriggerEditor::fillout_form()
     mpAliasBaseItem->setExpanded(true);
 
     mpActionBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Buttons")));
-    mpActionBaseItem->setBackground(0, QColor(255, 254, 215, 255));
     mpActionBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/bookmarks.png")));
     treeWidget_actions->insertTopLevelItem(0, mpActionBaseItem);
     mpActionBaseItem->setExpanded(true);
@@ -5939,7 +5986,6 @@ void dlgTriggerEditor::fillout_form()
     mpActionBaseItem->setExpanded(true);
 
     mpKeyBaseItem = new QTreeWidgetItem(static_cast<QTreeWidgetItem*>(nullptr), QStringList(tr("Key Bindings")));
-    mpKeyBaseItem->setBackground(0, QColor(255, 254, 215, 255));
     mpKeyBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/preferences-desktop-keyboard.png")));
     treeWidget_keys->insertTopLevelItem(0, mpKeyBaseItem);
     mpKeyBaseItem->setExpanded(true);
@@ -6013,7 +6059,6 @@ void dlgTriggerEditor::repopulateVars()
     treeWidget_variables->setUpdatesEnabled(false);
     mpVarBaseItem = new QTreeWidgetItem(QStringList(tr("Variables")));
     mpVarBaseItem->setTextAlignment(0, Qt::AlignLeft | Qt::AlignVCenter);
-    mpVarBaseItem->setBackground(0, QColor(255, 254, 215, 255));
     mpVarBaseItem->setIcon(0, QPixmap(QStringLiteral(":/icons/variables.png")));
     treeWidget_variables->clear();
     mpCurrentVarItem = nullptr;
@@ -6522,7 +6567,7 @@ void dlgTriggerEditor::changeView(int view)
     mpKeysMainArea->hide();
     mpVarsMainArea->hide();
     // hiding this for some reason shifts focus to the search box
-    button_displayAllVariables->hide();
+    checkBox_displayAllVariables->hide();
 
     clearEditorNotification();
     treeWidget_triggers->hide();
@@ -6633,8 +6678,8 @@ void dlgTriggerEditor::slot_show_vars()
     repopulateVars();
     mpCurrentVarItem = nullptr;
     mpSourceEditorArea->show();
-    button_displayAllVariables->show();
-    button_displayAllVariables->setChecked(showHiddenVars);
+    checkBox_displayAllVariables->show();
+    checkBox_displayAllVariables->setChecked(showHiddenVars);
     QTreeWidgetItem* pI = treeWidget_variables->topLevelItem(0);
     if (pI) {
         if (pI->childCount() > 0) {
@@ -6659,8 +6704,8 @@ void dlgTriggerEditor::show_vars()
     changeView(static_cast<int>(EditorViewType::cmVarsView));
     mpCurrentVarItem = nullptr;
     mpSourceEditorArea->show();
-    button_displayAllVariables->show();
-    button_displayAllVariables->setChecked(showHiddenVars);
+    checkBox_displayAllVariables->show();
+    checkBox_displayAllVariables->setChecked(showHiddenVars);
     QTreeWidgetItem* pI = treeWidget_variables->topLevelItem(0);
     if (pI) {
         if (pI->childCount() > 0) {
@@ -7145,11 +7190,11 @@ void dlgTriggerEditor::exportTriggerToClipboard()
         if (pT) {
             name = pT->getName();
         } else {
-            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
     } else {
-        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
     XMLexport writer(pT);
@@ -7168,11 +7213,11 @@ void dlgTriggerEditor::exportTimerToClipboard()
         if (pT) {
             name = pT->getName();
         } else {
-            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
     } else {
-        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
     XMLexport writer(pT);
@@ -7191,11 +7236,11 @@ void dlgTriggerEditor::exportAliasToClipboard()
         if (pT) {
             name = pT->getName();
         } else {
-            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
     } else {
-        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
     XMLexport writer(pT);
@@ -7214,11 +7259,11 @@ void dlgTriggerEditor::exportActionToClipboard()
         if (pT) {
             name = pT->getName();
         } else {
-            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
     } else {
-        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
     XMLexport writer(pT);
@@ -7237,11 +7282,11 @@ void dlgTriggerEditor::exportScriptToClipboard()
         if (pT) {
             name = pT->getName();
         } else {
-            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
     } else {
-        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
     XMLexport writer(pT);
@@ -7260,12 +7305,12 @@ void dlgTriggerEditor::exportKeyToClipboard()
         if (pT) {
             name = pT->getName();
         } else {
-            QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+            QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
             return;
         }
 
     } else {
-        QMessageBox::warning(this, tr("Export Package:"), tr("You have to chose an item for export first. Please select a tree item and then click on export again."));
+        QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
     XMLexport writer(pT);
@@ -7450,7 +7495,7 @@ void dlgTriggerEditor::slot_paste_xml()
         selectTriggerByID(importedItemID);
         treeWidget_triggers->setAnimated(animated);
 
-        // set the focus because hiding button_displayAllVariables in changeView
+        // set the focus because hiding checkBox_displayAllVariables in changeView
         // changes the focus to the search box for some reason. This thus breaks
         // successive pastes because you'll now be pasting into the search box
         treeWidget_triggers->setFocus();

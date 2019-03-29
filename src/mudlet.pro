@@ -147,7 +147,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.17.1
+VERSION = 3.18.0
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -529,8 +529,7 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp \
-    wcwidth.cpp
+    XMLimport.cpp
 
 HEADERS += \
     ActionUnit.h \
@@ -608,7 +607,9 @@ HEADERS += \
     VarUnit.h \
     XMLexport.h \
     XMLimport.h \
-    wcwidth.h
+    widechar_width.h \
+    ../3rdparty/discord/rpc/include/discord_register.h \
+    ../3rdparty/discord/rpc/include/discord_rpc.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.
@@ -1181,7 +1182,37 @@ LUA_LCF.depends = mudlet
 macx {
     # Copy mudlet-lua into the .app bundle
     # the location is relative to src.pro, so just use mudlet-lua
-    APP_MUDLET_LUA_FILES.files = mudlet-lua en_US.aff en_US.dic
+    APP_MUDLET_LUA_FILES.files = \
+        mudlet-lua \
+        de_AT_frami.aff \
+        de_AT_frami.dic \
+        de_CH_frami.aff \
+        de_CH_frami.dic \
+        de_DE_frami.aff \
+        de_DE_frami.dic \
+        el_GR.aff \
+        el_GR.dic \
+        en_GB.aff \
+        en_GB.dic \
+        en_US.aff \
+        en_US.dic \
+        es_ES.aff \
+        es_ES.dic \
+        fr.aff \
+        fr.dic \
+        it_IT.aff \
+        it_IT.dic \
+        nl_NL.aff \
+        nl_NL.dic \
+        pl_PL.aff \
+        pl_PL.dic \
+        pt_PT.aff \
+        pt_PT.dic \
+        pt_BR.aff \
+        pt_BR.dic \
+        ru_RU.dic \
+        ru_RU.aff
+
     APP_MUDLET_LUA_FILES.path  = Contents/Resources
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_FILES
 
@@ -1355,4 +1386,14 @@ DISTFILES += \
     ../mudlet.svg \
     ../README.md \
     ../translations/translated/CMakeLists.txt \
-    ../translations/translated/generate-translation-stats.lua
+    ../translations/translated/generate-translation-stats.lua \
+    ../COMMITMENT \
+    ../.crowdin.yml \
+    ../.gitignore \
+    ../.gitmodules \
+    ../translations/translated/updateqm.pri \
+    ../CI/mudlet-deploy-key.enc \
+    ../CI/copy-non-qt-win-dependencies.ps1 \
+    ../CI/mudlet-deploy-key-windows.ppk \
+    ../CI/qt-silent-install.qs \
+    ../CI/travis.compile.sh

@@ -53,10 +53,14 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 , mFontSize(10)
 , mpHost(pHost)
 , mpMenu(nullptr)
+, mUseSharedDictionary(false)
 {
     // init generated dialog
     setupUi(this);
- 
+
+// DISABLED: - Prevent "None" option for user dictionary
+    radioButton_userDictionary_none->hide();
+
     QPixmap holdPixmap;
 
     holdPixmap = *(this->notificationAreaIconLabelWarning->pixmap());
@@ -439,47 +443,105 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     ircNick->setText(dlgIRC::readIrcNickName(pHost));
 
     dictList->setSelectionMode(QAbstractItemView::SingleSelection);
-    enableSpellCheck->setChecked(pHost->mEnableSpellCheck);
+    dictList->clear();
+    // Disable sorting whilst populating the widget:
+    dictList->setSortingEnabled(false);
+    checkBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
+    bool useUserDictionary = false;
+    pHost->getUserDictionaryOptions(useUserDictionary, mUseSharedDictionary);
+    // Always set the true radio button first - avoids any problems with
+    // exclusivity of radio buttons:
+// DISABLED: - Prevent "None" option for user dictionary
+//    if (useUserDictionary) {
+        if (mUseSharedDictionary) {
+            radioButton_userDictionary_common->setChecked(true);
+            radioButton_userDictionary_profile->setChecked(false);
+        } else {
+            radioButton_userDictionary_profile->setChecked(true);
+            radioButton_userDictionary_common->setChecked(false);
+        }
+        radioButton_userDictionary_none->setChecked(false);
+//    } else {
+//        radioButton_userDictionary_none->setChecked(true);
+//        radioButton_userDictionary_profile->setChecked(false);
+//        radioButton_userDictionary_common->setChecked(false);
+//    }
     checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
     checkBox_useWideAmbiguousEastAsianGlyphs->setCheckState(pHost->getWideAmbiguousEAsianGlyphsControlState());
 
-    QString path;
-    // This is duplicated (and should be the same as) the code in:
-    // TCommandLine::TCommandLine(Host*, TConsole*, QWidget*)
-#if defined(Q_OS_MACOS)
-    path = QStringLiteral("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
-#elif defined(Q_OS_FREEBSD)
-    if (QFile::exists(QStringLiteral("/usr/local/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
-        path = QLatin1String("/usr/local/share/hunspell/");
-    } else if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
-        path = QLatin1String("/usr/share/hunspell/");
+    // On the first run for a profile this will be the "English (American)"
+    // dictionary "en_US".
+    const QString& currentDictionary = pHost->getSpellDic();
+    // This will also set mudlet::mUsingMudletDictionaries as appropriate:
+    QString path = mudlet::getMudletPath(mudlet::hunspellDictionaryPath, currentDictionary);
+
+    // Tweak the label for the provided spelling dictionaries depending on where
+    // they come from:
+    if (mudlet::self()->mUsingMudletDictionaries) {
+        checkBox_spellCheck->setText(tr("Mudlet dictionaries:", "On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones."));
     } else {
-        path = QLatin1String("./");
+        checkBox_spellCheck->setText(tr("System dictionaries:", "On *nix systems where we find the system ones we use them."));
     }
-#elif defined(Q_OS_LINUX)
-    if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
-        path = QLatin1String("/usr/share/hunspell/");
-    } else {
-        path = QLatin1String("./");
-    }
-#else
-    // Probably Windows!
-    path = "./";
-#endif
 
     QDir dir(path);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
+    // QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
+    // Use the affix file as that may eliminate supplimental dictionaries:
+    QRegularExpression rex(QStringLiteral(R"(\.aff$)"));
     entries = entries.filter(rex);
-    for (int i = 0; i < entries.size(); i++) {
-        // This is a file name and to support macOs platforms should not be case sensitive:
-        entries[i].remove(QLatin1String(".dic"), Qt::CaseInsensitive);
-        auto item = new QListWidgetItem(entries[i]);
-        dictList->addItem(item);
-        if (entries[i] == pHost->mSpellDic) {
-            item->setSelected(true);
+    // Don't emit signals - like (void) QListWidget::currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
+    // whilst populating the widget, it reduces noise about:
+    // "qt.accessibility.core: Cannot create accessible child interface for object:  QListWidget(0x############, name = "dictList")  index:  ##
+    dictList->blockSignals(true);
+    if (entries.count()) {
+        QListWidgetItem* scrollToItem = nullptr;
+        for (int i = 0, total = entries.size(); i < total; ++i) {
+            // This is a file name and to support macOs platforms should not be case sensitive:
+            entries[i].remove(QLatin1String(".aff"), Qt::CaseInsensitive);
+
+            if (entries.at(i).endsWith(QStringLiteral("med"), Qt::CaseInsensitive)) {
+                // Skip medical dictionaries - there may be others  we also want to hide:
+                continue;
+            }
+
+            auto item = new QListWidgetItem();
+            item->setTextAlignment(Qt::AlignCenter);
+            auto key = entries.at(i).toLower();
+            // In some cases '-' will be used as a separator and in others '_' so convert all to one form:
+            key.replace(QLatin1String("-"), QLatin1String("_"));
+            if (mudlet::self()->mDictionaryLanguageCodeMap.contains(key)) {
+                item->setText(mudlet::self()->mDictionaryLanguageCodeMap.value(key));
+                item->setToolTip(tr("<p>From the dictionary file <tt>%1.dic</tt> (and its companion affix <tt>.aff</tt> file).</p>").arg(dir.absoluteFilePath(entries.at(i))));
+            } else {
+                item->setText(tr("%1 - not recognised").arg(entries.at(i)));
+                item->setToolTip(tr("<p>Mudlet does not recognise the code \"%1\", please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!</p>"
+                                    "<p>The file <tt>%2.dic</tt> (and its companion affix <tt>.aff</tt> file) is still usable.</p>").arg(entries.at(i), dir.absoluteFilePath(entries.at(i))));
+            }
+            item->setData(Qt::UserRole, entries.at(i));
+            dictList->addItem(item);
+            if (entries.at(i) == currentDictionary) {
+                scrollToItem = item;
+            }
         }
+
+        // Reenable sorting now we have populated the widget:
+        dictList->setSortingEnabled(true);
+        // Actually do the sort:
+        dictList->sortItems();
+
+        if (scrollToItem) {
+            // As the selection mode is set to
+            // QAbstractItemView::SingleSelection this also selects this item:
+            dictList->setCurrentItem(scrollToItem);
+            // And scroll to it:
+            dictList->scrollToItem(scrollToItem);
+        }
+
+    } else {
+        dictList->setEnabled(false);
+        dictList->setToolTip(tr("No Hunspell dictionary files found, spell-checking will not be available."));
     }
+    dictList->blockSignals(false);
 
     if (!pHost->getMmpMapLocation().isEmpty()) {
         groupBox_downloadMapOptions->setVisible(true);
@@ -985,7 +1047,7 @@ void dlgProfilePreferences::clearHostDetails()
     ircNick->clear();
 
     dictList->clear();
-    enableSpellCheck->setChecked(false);
+    checkBox_spellCheck->setChecked(false);
     checkBox_echoLuaErrors->setChecked(false);
 
     groupBox_downloadMapOptions->setVisible(false);
@@ -2103,11 +2165,20 @@ void dlgProfilePreferences::slot_save_and_exit()
     mudlet* pMudlet = mudlet::self();
     Host* pHost = mpHost;
     if (pHost) {
-        if (dictList->currentItem()) {
-            pHost->setSpellDic(dictList->currentItem()->text());
+        if (dictList->isEnabled() && dictList->currentItem()) {
+            pHost->setSpellDic(dictList->currentItem()->data(Qt::UserRole).toString());
         }
 
-        pHost->mEnableSpellCheck = enableSpellCheck->isChecked();
+        pHost->mEnableSpellCheck = checkBox_spellCheck->isChecked();
+// DISABLED: - Prevent "None" option for user dictionary
+//        if (radioButton_userDictionary_none->isChecked()) {
+            // Disable using which ever dictionary was previously in use:
+//            pHost->setUserDictionaryOptions(false, mUseSharedDictionary);
+/*        } else */ if (radioButton_userDictionary_common->isChecked()) {
+            pHost->setUserDictionaryOptions(true, true);
+        } else {
+            pHost->setUserDictionaryOptions(true, false);
+        }
         pHost->mWrapAt = wrap_at_spinBox->value();
         pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
         pHost->mPrintCommand = show_sent_text_checkbox->isChecked();

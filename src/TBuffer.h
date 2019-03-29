@@ -182,6 +182,7 @@ public:
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
     void encodingChanged(const QString &);
+    static int lengthInGraphemes(const QString& text);
 
 
     std::deque<TChar> bufferLine;
@@ -251,7 +252,7 @@ public:
 
 private:
     void shrinkBuffer();
-    int calcWrapPos(int line, int begin, int end);
+    int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
     bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);

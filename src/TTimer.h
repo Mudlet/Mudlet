@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia,com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -73,6 +74,12 @@ public:
     void killTimer();
 
     bool isOffsetTimer();
+    QPointer<Host> getHost() { return mpHost; }
+    QTimer* getQTimer() { return mpQTimer; }
+    void setKnownUnregistered() { mKnownToBeUnregistered = true; }
+    bool knownUnregistered() { return mKnownToBeUnregistered; }
+
+
     // specifies whenever the payload is Lua code as a string
     // or a function
     bool mRegisteredAnonymousLuaFunction;
@@ -81,6 +88,7 @@ public:
 
 private:
     TTimer() = default;
+
     QString mName;
     QString mScript;
     QTime mTime;
@@ -89,9 +97,13 @@ private:
     QPointer<Host> mpHost;
     bool mNeedsToBeCompiled;
     QMutex mLock;
-    QTimer* mpTimer;
+    // Renamed to reduce confusion:
+    QTimer* mpQTimer;
     bool mModuleMember;
     //TLuaInterpreter *  mpLua;
+    // Used in XMLimport::package to mark an unused Timer that was created there
+    // and which can be removed without reporting that it was unregistered.
+    bool mKnownToBeUnregistered;
 };
 
 #endif // MUDLET_TTIMER_H

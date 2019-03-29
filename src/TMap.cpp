@@ -40,9 +40,10 @@
 #include <QProgressDialog>
 #include "post_guard.h"
 
-TMap::TMap(Host* pH)
+TMap::TMap(Host* pH, const QString& profileName)
 : mpRoomDB(new TRoomDB(this))
 , mpHost(pH)
+, mProfileName(profileName)
 , m2DPanMode(false)
 , mLeftDown(false)
 , mRightDown(false)
@@ -584,7 +585,7 @@ QList<int> TMap::detectRoomCollisions(int id)
 bool TMap::gotoRoom(int r)
 {
     mTargetID = r;
-    return findPath(mRoomIdHash.value(mpHost->getName()), r);
+    return findPath(mRoomIdHash.value(mProfileName), r);
 }
 
 // As can be seen this only sets the target and start point for a path find
@@ -1182,7 +1183,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         // location
         ofs << mRoomIdHash;
     } else {
-        ofs << mRoomIdHash.value(mpHost->getName());
+        ofs << mRoomIdHash.value(mProfileName);
     }
 
     ofs << mapLabels.size(); //anzahl der areas
@@ -1384,7 +1385,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
 
 bool TMap::restore(QString location, bool downloadIfNotFound)
 {
-    qDebug() << "TMap::restore(" << location << ") INFO: restoring map of Profile:" << mpHost->getName() << " URL:" << mpHost->getUrl();
+    qDebug() << "TMap::restore(" << location << ") INFO: restoring map of Profile:" << mProfileName << " URL:" << mpHost->getUrl();
 
     QElapsedTimer _time;
     _time.start();
@@ -1392,7 +1393,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
     QStringList entries;
 
     if (location.isEmpty()) {
-        folder = mudlet::getMudletPath(mudlet::profileMapsPath, mpHost->getName());
+        folder = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
         QDir dir(folder);
         dir.setSorting(QDir::Time);
         entries = dir.entryList(QDir::Files, QDir::Time);
@@ -1566,7 +1567,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         } else if (mVersion >= 12) {
             int oldRoomId;
             ifs >> oldRoomId;
-            mRoomIdHash[mpHost->getName()] = oldRoomId;
+            mRoomIdHash[mProfileName] = oldRoomId;
         }
 
         if (mVersion >= 11) {
@@ -2005,8 +2006,9 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
 int TMap::createMapLabelID(int area)
 {
     if (mapLabels.contains(area)) {
-        QList<int> idList = mapLabels[area].keys();
+        const QList<int> idList = mapLabels.value(area).keys();
         int id = 0;
+        // protect against integer overflow
         while (id >= 0) {
             if (!idList.contains(id)) {
                 return id;
@@ -2169,7 +2171,7 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
                        "\"%1\"\n"
                        "- look for the (last) report with the title:\n"
                        "\"%2\".")
-                    .arg(mudlet::getMudletPath(mudlet::profileLogErrorsFilePath, mpHost->getName()), title));
+                    .arg(mudlet::getMudletPath(mudlet::profileLogErrorsFilePath, mProfileName), title));
     } else if (mIsFileViewingRecommended && mudlet::self()->showMapAuditErrors()) {
         postMessage(tr("[ INFO ]  - The equivalent to the above information about that last map\n"
                        "operation has been saved for review as the most recent report in\n"
@@ -2177,7 +2179,7 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
                        "\"%1\"\n"
                        "- look for the (last) report with the title:\n"
                        "\"%2\".")
-                    .arg(mudlet::getMudletPath(mudlet::profileLogErrorsFilePath, mpHost->getName()), title));
+                    .arg(mudlet::getMudletPath(mudlet::profileLogErrorsFilePath, mProfileName), title));
     }
 
     mIsFileViewingRecommended = false;
@@ -2224,7 +2226,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     }
 
     if (localFileName.isEmpty()) {
-        mLocalMapFileName = mudlet::getMudletPath(mudlet::profileXmlMapPathFileName, pHost->getName());
+        mLocalMapFileName = mudlet::getMudletPath(mudlet::profileXmlMapPathFileName, mProfileName);
     } else {
         mLocalMapFileName = localFileName;
     }
@@ -2253,7 +2255,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     mpNetworkReply = mpNetworkAccessManager->get(QNetworkRequest(QUrl(url)));
     // Using zero for both min and max values should cause the bar to oscillate
     // until the first update
-    mpProgressDialog = new QProgressDialog(tr("Downloading XML map file for use in %1...").arg(pHost->getName()), tr("Abort"), 0, 0);
+    mpProgressDialog = new QProgressDialog(tr("Downloading XML map file for use in %1...").arg(mProfileName), tr("Abort"), 0, 0);
     mpProgressDialog->setWindowTitle(tr("Map download"));
     mpProgressDialog->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_map_download.png")));
     mpProgressDialog->setMinimumWidth(300);
@@ -2313,7 +2315,7 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
         // This is the local import case - which has not got a progress dialog
         // until now:
         isLocalImport = true;
-        mpProgressDialog = new QProgressDialog(tr("Importing XML map file for use in %1...").arg(pHost->getName()), QString(), 0, 0);
+        mpProgressDialog = new QProgressDialog(tr("Importing XML map file for use in %1...").arg(mProfileName), QString(), 0, 0);
         mpProgressDialog->setWindowTitle(tr("Map import"));
         mpProgressDialog->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_map_download.png")));
         mpProgressDialog->setMinimumWidth(300);

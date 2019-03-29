@@ -75,7 +75,7 @@ endif()
 # To insure consistency please ensure the SAME of the first two values are also
 # assigned to the "VERSION" and "BUILD" variables in the native qmake project
 # file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 3.17.1)
+set(APP_VERSION 3.18.0)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
   SET(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
@@ -214,10 +214,10 @@ endif()
 
 file(GLOB_RECURSE lua_files RELATIVE "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/lua/" "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/lua/*.lua")
 list(LENGTH lua_files lua_file_count)
-if(lua_file_count EQUAL 26)
+if(lua_file_count EQUAL 27)
   message(STATUS "Found Mudlet & Geyser lua files")
 else()
-  message(WARNING "Found ${lua_file_count} Mudlet & Geyser lua files but 26 were expected:")
+  message(WARNING "Found ${lua_file_count} Mudlet & Geyser lua files but 27 were expected:")
   foreach(lua_file ${lua_files})
     message(STATUS "    ${lua_file}")
   endforeach(lua_file)

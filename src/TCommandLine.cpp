@@ -42,12 +42,11 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
 , mUserKeptOnTyping()
 , mHistoryBuffer()
 , mSelectionStart(0)
-, mpHunspell(nullptr)
-, mHunspellSuggestionNumber()
-, mpHunspellSuggestionList()
+, mSystemDictionarySuggestionsCount()
+, mUserDictionarySuggestionsCount()
+, mpSystemSuggestionsList()
+, mpUserSuggestionsList()
 {
-    slot_changeSpellDict(mpHost->getSpellDic());
-
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
 
@@ -68,13 +67,6 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
     // We do NOT want the standard context menu to happen as we generate it
     // ourself:
     setContextMenuPolicy(Qt::PreventContextMenu);
-
-    connect(mpHost, &Host::signal_changeSpellDict, this, &TCommandLine::slot_changeSpellDict);
-}
-
-TCommandLine::~TCommandLine()
-{
-    Hunspell_destroy(mpHunspell);
 }
 
 void TCommandLine::processNormalKey(QEvent* event)
@@ -524,26 +516,14 @@ void TCommandLine::adjustHeight()
 
 void TCommandLine::spellCheck()
 {
-    if (!mpHost->mEnableSpellCheck) {
+    if (!mpHost || !mpHost->mEnableSpellCheck) {
         return;
     }
 
     QTextCursor oldCursor = textCursor();
-    QTextCharFormat f;
     QTextCursor c = textCursor();
-    c.select(QTextCursor::WordUnderCursor);
-    QByteArray encodedText = mpHunspellCodec->fromUnicode(c.selectedText());
-    if (!Hunspell_spell(mpHunspell, encodedText.constData())) {
-        // Word is misspelt
-        f.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
-        f.setUnderlineColor(Qt::red);
-        f.setFontUnderline(true);
-    } else {
-        // Word is spelt correctly
-        f.setFontUnderline(false);
-    }
-    c.setCharFormat(f);
-    setTextCursor(c);
+    spellCheckWord(c);
+    QTextCharFormat f;
     f.setFontUnderline(false);
     oldCursor.setCharFormat(f);
     setTextCursor(oldCursor);
@@ -552,7 +532,7 @@ void TCommandLine::spellCheck()
 void TCommandLine::slot_popupMenu()
 {
     auto* pA = qobject_cast<QAction*>(sender());
-    if (!pA) {
+    if (!mpHost || !pA) {
         return;
     }
 #if defined(Q_OS_FREEBSD)
@@ -566,7 +546,17 @@ void TCommandLine::slot_popupMenu()
     c.removeSelectedText();
     c.insertText(t);
     c.clearSelection();
-    Hunspell_free_list(mpHunspell, &mpHunspellSuggestionList, mHunspellSuggestionNumber);
+    auto systemDictionaryHandle = mpHost->mpConsole->getHunspellHandle_system();
+    if (systemDictionaryHandle) {
+        Hunspell_free_list(mpHost->mpConsole->getHunspellHandle_system(), &mpSystemSuggestionsList, mSystemDictionarySuggestionsCount);
+    }
+    auto userDictionaryHandle = mpHost->mpConsole->getHunspellHandle_user();
+    if (userDictionaryHandle) {
+        Hunspell_free_list(userDictionaryHandle, &mpUserSuggestionsList, mUserDictionarySuggestionsCount);
+    }
+
+    // Call the function again so that the replaced word gets rechecked:
+    spellCheck();
 }
 
 void TCommandLine::mousePressEvent(QMouseEvent* event)
@@ -574,48 +564,183 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
     if (event->button() == Qt::RightButton) {
         auto popup = createStandardContextMenu(event->globalPos());
-        QTextCursor c = cursorForPosition(event->pos());
-        c.select(QTextCursor::WordUnderCursor);
-        QByteArray encodedText = mpHunspellCodec->fromUnicode(c.selectedText());
-        if (!Hunspell_spell(mpHunspell, encodedText.constData())) {
-            // The word is NOT in the dictionary:
-            char** sl;
-            auto separator = popup->actions().first();
-            separator = popup->insertSeparator(separator);
-            // separator is now the QAction of, indeed is, a separator:
-            QList<QAction*> spellings;
+        if (mpHost->mEnableSpellCheck) {
+            QTextCursor c = cursorForPosition(event->pos());
+            c.select(QTextCursor::WordUnderCursor);
+            mSpellCheckedWord = c.selectedText();
+            auto codec = mpHost->mpConsole->getHunspellCodec_system();
+            auto handle_system = mpHost->mpConsole->getHunspellHandle_system();
+            auto handle_profile = mpHost->mpConsole->getHunspellHandle_user();
+            bool haveAddOption = false;
+            bool haveRemoveOption = false;
+            QAction* action_addWord = nullptr;
+            QAction* action_removeWord = nullptr;
+            QAction* action_dictionarySeparatorLine = nullptr;
+            if (handle_profile) {
+                // TODO: Make icons for these?
+//                if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
+//                    action_addWord = new QAction(QIcon(QPixmap(QStringLiteral(":/icons/dictionary-add-word.png"))), tr("Add to user dictionary"));
+//                    action_removeWord = new QAction(QIcon(QPixmap(QStringLiteral(":/icons/dictionary-remove-word.png"))), tr("Remove from user dictionary"));
+//                } else {
+                action_addWord = new QAction(tr("Add to user dictionary"));
+                action_addWord->setEnabled(false);
+                action_removeWord = new QAction(tr("Remove from user dictionary"));
+                action_removeWord->setEnabled(false);
+//                }
+                if (mudlet::self()->mUsingMudletDictionaries) {
+                    action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲",
+                                                                         // Intentional separator
+                                                                         "This line is shown in the list of spelling suggestions on the profile's command-"
+                                                                         "line context menu to clearly divide up where the suggestions for correct "
+                                                                         "spellings are coming from.  The precise format might be modified as long as it "
+                                                                         "is clear that the entries below this line in the menu come from the spelling "
+                                                                         "dictionary that the user has chosen in the profile setting which we have "
+                                                                         "bundled with Mudlet; the entries about this line are the ones that the user "
+                                                                         "has personally added."));
+                } else {
+                    action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲",
+                                                                         // Intentional separator
+                                                                         "This line is shown in the list of spelling suggestions on the profile's command-"
+                                                                         "line context menu to clearly divide up where the suggestions for correct "
+                                                                         "spellings are coming from.  The precise format might be modified as long as it "
+                                                                         "is clear that the entries below this line in the menu come from the spelling "
+                                                                         "dictionary that the user has chosen in the profile setting which is provided "
+                                                                         "as part of the OS; the entries about this line are the ones that the user has "
+                                                                         "personally added."));
+                }
+                action_dictionarySeparatorLine->setEnabled(false);
+            }
 
-            // The return value is the count of suggestions:
-            mHunspellSuggestionNumber = Hunspell_suggest(mpHunspell, &sl, encodedText.constData());
-            if (mHunspellSuggestionNumber) {
-                for (int i = 0; i < mHunspellSuggestionNumber; ++i) {
-                    auto pA = new QAction(mpHunspellCodec->toUnicode(sl[i]));
+            QList<QAction*> spellings_system;
+            QList<QAction*> spellings_profile;
+            if (handle_system && codec) {
+                QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
+
+                if (!Hunspell_spell(handle_system, encodedText.constData())) {
+                    // The word is NOT in the main system dictionary:
+                    if (handle_profile) {
+                        // Have a user dictionary so check it:
+                        if (!Hunspell_spell(handle_profile, mSpellCheckedWord.toUtf8().constData())) {
+                            // The word is NOT in the profile one either - so enable add option
+                            haveAddOption = true;
+                        } else {
+                            // However the word is in the profile one - so enable remove option
+                            haveRemoveOption = true;
+                        }
+
+                        if (haveAddOption) {
+                            action_addWord->setEnabled(true);
+                            connect(action_addWord, &QAction::triggered, this, &TCommandLine::slot_addWord);
+                        }
+                        if (haveRemoveOption) {
+                            action_removeWord->setEnabled(true);
+                            connect(action_removeWord, &QAction::triggered, this, &TCommandLine::slot_removeWord);
+                        }
+                    }
+                }
+
+                mSystemDictionarySuggestionsCount = Hunspell_suggest(handle_system, &mpSystemSuggestionsList, encodedText.constData());
+            } else {
+                mSystemDictionarySuggestionsCount = 0;
+            }
+
+            if (handle_profile) {
+                mUserDictionarySuggestionsCount = Hunspell_suggest(handle_profile, &mpUserSuggestionsList, mSpellCheckedWord.toUtf8().constData());
+            } else {
+                mUserDictionarySuggestionsCount = 0;
+            }
+
+            if (mSystemDictionarySuggestionsCount) {
+                for (int i = 0; i < mSystemDictionarySuggestionsCount; ++i) {
+                    auto pA = new QAction(codec->toUnicode(mpSystemSuggestionsList[i]));
 #if defined(Q_OS_FREEBSD)
                     // Adding the text afterwards as user data as well as in the
                     // constructor is to fix a bug(?) in FreeBSD that
                     // automagically adds a '&' somewhere in the text to be a
                     // shortcut - but doesn't show it and forgets to remove
                     // it when asked for the text later:
-                    pA->setData(mpHunspellCodec->toUnicode(sl[i]));
+                    pA->setData(codec->toUnicode(mpSystemSuggestionsList[i]));
 #endif
                     connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
-                    spellings << pA;
+                    spellings_system << pA;
                 }
 
             } else {
-                auto pA = new QAction(tr("no suggestions",
+                auto pA = new QAction(tr("no suggestions (system)",
                                          // Intentional comment
-                                         "used when the command spelling checker has no words to suggest"));
+                                         "used when the command spelling checker using the selected system dictionary has no words to suggest"));
                 pA->setEnabled(false);
-                spellings << pA;
+                spellings_system << pA;
             }
 
-            mpHunspellSuggestionList = sl;
-            popup->insertActions(separator, spellings);
+            if (handle_profile) {
+                if (mUserDictionarySuggestionsCount) {
+                    for (int i = 0; i < mUserDictionarySuggestionsCount; ++i) {
+                        auto pA = new QAction(codec->toUnicode(mpUserSuggestionsList[i]));
+#if defined(Q_OS_FREEBSD)
+                        // Adding the text afterwards as user data as well as in the
+                        // constructor is to fix a bug(?) in FreeBSD that
+                        // automagically adds a '&' somewhere in the text to be a
+                        // shortcut - but doesn't show it and forgets to remove
+                        // it when asked for the text later:
+                        pA->setData(codec->toUnicode(mpUserSuggestionsList[i]));
+#endif
+                        connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
+                        spellings_profile << pA;
+                    }
+
+                } else {
+                    QAction* pA = nullptr;
+                    if (mpConsole->isUsingSharedDictionary()) {
+                        pA = new QAction(tr("no suggestions (shared)",
+                                                 // Intentional comment
+                                                 "used when the command spelling checker using the dictionary shared between profile has no words to suggest"));
+                    } else {
+                        pA = new QAction(tr("no suggestions (profile)",
+                                                 // Intentional comment
+                                                 "used when the command spelling checker using the profile's own dictionary has no words to suggest"));
+                    }
+                    pA->setEnabled(false);
+                    spellings_profile << pA;
+                }
+            }
+
+           /*
+            * Build up the extra context menu items from the BOTTOM up, so that
+            * the top of the context menu looks like:
+            *
+            * profile dictionary suggestions
+            * --------- separator_aboveDictionarySeparatorLine
+            * \/ System dictionary suggestions /\ Profile  <== Text
+            * --------- separator_aboveSystemDictionarySuggestions
+            * system dictionary suggestions
+            * --------- separator_aboveAddAndRemove
+            * Add word action
+            * Remove word action
+            * --------- separator_aboveStandardMenu
+            *
+            * The insertAction[s](...)/(Separator(...)) insert their things
+            * second argument (or generated by themself) before the first (or
+            * only) argument given.
+            */
+
+            auto separator_aboveStandardMenu = popup->insertSeparator(popup->actions().first());
+            if (handle_profile) {
+                popup->insertAction(separator_aboveStandardMenu, action_removeWord);
+                popup->insertAction(action_removeWord, action_addWord);
+                auto separator_aboveAddAndRemove = popup->insertSeparator(action_addWord);
+                popup->insertActions(separator_aboveAddAndRemove, spellings_system);
+                auto separator_aboveSystemDictionarySuggestions = popup->insertSeparator(spellings_system.first());
+                popup->insertAction(separator_aboveSystemDictionarySuggestions, action_dictionarySeparatorLine);
+                auto separator_aboveDictionarySeparatorLine = popup->insertSeparator(action_dictionarySeparatorLine);
+                popup->insertActions(separator_aboveDictionarySeparatorLine, spellings_profile);
+            } else {
+                popup->insertActions(separator_aboveStandardMenu, spellings_system);
+            }
+            // else the word is in the dictionary - in either case show the context
+            // menu - either the one with the prefixed spellings, or the standard
+            // one:
         }
-        // else the word is in the dictionary - in either case show the context
-        // menu - either the one with the prefixed spellings, or the standard
-        // one:
 
         mPopupPosition = event->pos();
         popup->popup(event->globalPos());
@@ -822,43 +947,108 @@ void TCommandLine::historyUp(QKeyEvent* event)
     }
 }
 
-void TCommandLine::slot_changeSpellDict(const QString& newDict)
+void TCommandLine::slot_removeWord()
 {
-    // This is duplicated (and should be the same as) the code in:
-    // (void) dlgProfilePreferences::initWithHost(Host*)
-    QString path;
-#if defined(Q_OS_MACOS)
-    path = QStringLiteral("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
-#elif defined(Q_OS_FREEBSD)
-    if (QFile::exists(QStringLiteral("/usr/local/share/hunspell/%1.aff").arg(newDict))) {
-        path = QLatin1String("/usr/local/share/hunspell/");
-    } else if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(newDict))) {
-        path = QLatin1String("/usr/share/hunspell/");
-    } else {
-        path = QLatin1String("./");
+    if (mSpellCheckedWord.isEmpty()) {
+        return;
     }
-#elif defined(Q_OS_LINUX)
-    if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(newDict))) {
-        path = QLatin1String("/usr/share/hunspell/");
-    } else {
-        path = QLatin1String("./");
-    }
-#else
-    // Probably Windows!
-    path = "./";
-#endif
 
-    QString spell_aff = QStringLiteral("%1%2.aff").arg(path, newDict);
-    QString spell_dic = QStringLiteral("%1%2.dic").arg(path, newDict);
-    // The man page for hunspell advises Utf8 encoding of the pathFileNames for
-    // use on Windows platforms which can have non ASCII characters...
-    if (mpHunspell) {
-        Hunspell_destroy(mpHunspell);
+    mpHost->mpConsole->removeWordFromSet(mSpellCheckedWord);
+    // Redo spell check to update underlining
+    spellCheck();
+}
+
+void TCommandLine::slot_addWord()
+{
+    if (mSpellCheckedWord.isEmpty()) {
+        return;
     }
-    mpHunspell = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
-    if (mpHunspell) {
-        mHunspellCodecName = QByteArray(Hunspell_get_dic_encoding(mpHunspell));
-        qDebug().noquote().nospace() << "TCommandLine::slot_changeSpellDict(\"" << newDict << "\") INFO - Hunspell dictionary loaded, it uses a \"" << Hunspell_get_dic_encoding(mpHunspell) << "\" encoding...";
-        mpHunspellCodec = QTextCodec::codecForName(mHunspellCodecName);
+
+    mpHost->mpConsole->addWordToSet(mSpellCheckedWord);
+    // Redo spell check to update underlining
+    spellCheck();
+}
+
+void TCommandLine::spellCheckWord(QTextCursor& c)
+{
+    if (!mpHost||!mpHost->mEnableSpellCheck) {
+        return;
     }
+
+    Hunhandle* systemDictionaryHandle = mpHost->mpConsole->getHunspellHandle_system();
+    if (!systemDictionaryHandle) {
+        return;
+    }
+
+    QTextCharFormat f;
+    c.select(QTextCursor::WordUnderCursor);
+    QByteArray encodedText = mpHost->mpConsole->getHunspellCodec_system()->fromUnicode(c.selectedText());
+    if (!Hunspell_spell(systemDictionaryHandle, encodedText.constData())) {
+        // Word is not in selected system dictionary
+        Hunhandle* userDictionaryhandle = mpHost->mpConsole->getHunspellHandle_user();
+        if (userDictionaryhandle) {
+            if (Hunspell_spell(userDictionaryhandle, c.selectedText().toUtf8().constData())) {
+                // We are using a user dictionary and it does contain this word - so
+                // use a different underline, on many systems the spell-check underline is
+                // a wavy line but on macOs it is a dotted line - so use dash underline
+                f.setUnderlineStyle(QTextCharFormat::DashUnderline);
+                f.setUnderlineColor(Qt::cyan);
+            } else {
+                // The word is not in it either:
+                f.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
+                f.setUnderlineColor(Qt::red);
+            }
+        } else {
+            // The word is not in the main dictionary and that is all we are using:
+            f.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
+            f.setUnderlineColor(Qt::red);
+        }
+
+    } else {
+        // Word is spelt correctly
+        f.setFontUnderline(false);
+    }
+    c.setCharFormat(f);
+    setTextCursor(c);
+}
+
+void TCommandLine::recheckWholeLine()
+{
+    if (!mpHost || !mpHost->mEnableSpellCheck) {
+        return;
+    }
+
+    // Save the current position
+    QTextCursor oldCursor = textCursor();
+
+    QTextCharFormat f;
+    QTextCursor c = textCursor();
+    // Move Cursor AND selection anchor to start:
+    c.movePosition(QTextCursor::Start);
+    // In case the first character is something other than the begining of a
+    // word
+    c.movePosition(QTextCursor::NextWord);
+    c.movePosition(QTextCursor::PreviousWord);
+    // Now select the word
+    c.movePosition(QTextCursor::EndOfWord, QTextCursor::KeepAnchor);
+    while (c.hasSelection()) {
+        spellCheckWord(c);
+        c.movePosition(QTextCursor::NextWord);
+        c.movePosition(QTextCursor::EndOfWord, QTextCursor::KeepAnchor);
+    }
+    // Jump back to where we started
+    setTextCursor(oldCursor);
+}
+
+void TCommandLine::clearMarksOnWholeLine()
+{
+    QTextCursor oldCursor = textCursor();
+    QTextCharFormat f;
+    QTextCursor c = textCursor();
+    c.select(QTextCursor::Document);
+    c.setCharFormat(f);
+    setTextCursor(c);
+    f.setFontUnderline(false);
+    oldCursor.setCharFormat(f);
+    setTextCursor(oldCursor);
 }

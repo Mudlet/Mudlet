@@ -1036,6 +1036,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
 
     profile_history->setEnabled(static_cast<bool>(profile_history->count()));
 
+    const QString profileLoadedMessage = tr("This profile is currently loaded - close it before changing the connection parameters.");
+
     QStringList loadedProfiles = mudlet::self()->getHostManager().getHostList();
     if (loadedProfiles.contains(profile_name)) {
         profile_name_entry->setReadOnly(true);
@@ -1055,7 +1057,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         notificationAreaIconLabelError->hide();
         notificationAreaIconLabelInformation->show();
         notificationAreaMessageBox->show();
-        notificationAreaMessageBox->setText(tr("This profile is currently loaded - you will need to disconnect before changing the connection parameters."));
+        notificationAreaMessageBox->setText(profileLoadedMessage);
     } else {
         profile_name_entry->setReadOnly(false);
         host_name_entry->setReadOnly(false);
@@ -1069,7 +1071,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         host_name_entry->setPalette(mRegularPalette);
         port_entry->setPalette(mRegularPalette);
 
-        if (notificationAreaMessageBox->text() == tr("This profile is currently loaded - you will need to disconnect before changing the connection parameters.")) {
+        if (notificationAreaMessageBox->text() == profileLoadedMessage) {
             notificationArea->hide();
             notificationAreaIconLabelWarning->hide();
             notificationAreaIconLabelError->hide();

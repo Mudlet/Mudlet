@@ -23,49 +23,7 @@
    <iconset resource="../mudlet.qrc">
     <normaloff>:/icons/mudlet_configure.png</normaloff>:/icons/mudlet_configure.png</iconset>
   </property>
-  <layout class="QGridLayout" name="gridLayout_19">
-   <item row="1" column="0">
-    <widget class="QWidget" name="widget_bottom" native="true">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <layout class="QHBoxLayout" name="horizontalLayout">
-      <item>
-       <spacer name="horizontalSpacer_bottom">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>444</width>
-          <height>21</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item>
-       <widget class="QPushButton" name="closeButton">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>Save</string>
-        </property>
-        <property name="icon">
-         <iconset>
-          <normaloff>:/icons/icons/dialog-close.png</normaloff>:/icons/icons/dialog-close.png</iconset>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
+  <layout class="QGridLayout" name="gridLayout_main">
    <item row="0" column="0">
     <widget class="QTabWidget" name="tabWidget">
      <property name="enabled">
@@ -96,256 +54,13 @@
       <attribute name="title">
        <string>General</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_16">
-       <item row="3" column="0">
-        <widget class="QGroupBox" name="groupBox_protocols">
-         <property name="title">
-          <string>Game protocols</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_13">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="mEnableGMCP">
-            <property name="toolTip">
-             <string>&lt;p&gt;Enables GMCP - note that if you have MSDP enabled as well, some servers will prefer one over the other&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Enable GMCP</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QCheckBox" name="mEnableMSDP">
-            <property name="toolTip">
-             <string>&lt;p&gt;Enables MSDP - note that if you have GMCP enabled as well, some servers will prefer one over the other&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Enable MSDP</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="need_reconnect_for_data_protocol">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
-            </property>
-            <property name="mouseTracking">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Please reconnect to your game for the change to take effect</string>
-            </property>
-            <property name="textFormat">
-             <enum>Qt::AutoText</enum>
-            </property>
-            <property name="wordWrap">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QGroupBox" name="groupBox_miscellaneous">
-         <property name="title">
-          <string>Misc</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout">
-          <item>
-           <widget class="QCheckBox" name="mAlertOnNewData">
-            <property name="text">
-             <string>Toolbar notification if Mudlet is minimized and new data arrives</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="mFORCE_SAVE_ON_EXIT">
-            <property name="text">
-             <string>Force auto save on exit</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="acceptServerGUI">
-            <property name="text">
-             <string>Allow server to install script packages</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <widget class="QGroupBox" name="groupBox_logOptions">
-         <property name="title">
-          <string>Log options</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_6">
-          <item row="0" column="0" colspan="4">
-           <widget class="QCheckBox" name="mIsToLogInHtml">
-            <property name="toolTip">
-             <string>&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extention '.html') which can convey color, font and other formatting information rather than a plain text (file extension '.txt') format.  If changed whilst logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Save log files in HTML format instead of plain text</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0" colspan="4">
-           <widget class="QCheckBox" name="mIsLoggingTimestamps">
-            <property name="text">
-             <string>Add timestamps at the beginning of log lines</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0" alignment="Qt::AlignRight">
-           <widget class="QLabel" name="label_whereToLog">
-            <property name="text">
-             <string>Save log files in:</string>
-            </property>
-            <property name="buddy">
-             <cstring>pushButton_whereToLog</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QLineEdit" name="lineEdit_logFileFolder">
-            <property name="readOnly">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="2">
-           <widget class="QPushButton" name="pushButton_whereToLog">
-            <property name="text">
-             <string>Browse...</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="3">
-           <widget class="QPushButton" name="pushButton_resetLogDir">
-            <property name="text">
-             <string>Reset</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0" alignment="Qt::AlignRight">
-           <widget class="QLabel" name="label_logFileNameFormat">
-            <property name="text">
-             <string>Log format:</string>
-            </property>
-            <property name="buddy">
-             <cstring>comboBox_logFileNameFormat</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1" colspan="3">
-           <widget class="QComboBox" name="comboBox_logFileNameFormat"/>
-          </item>
-          <item row="4" column="0" alignment="Qt::AlignRight">
-           <widget class="QLabel" name="label_logFileName">
-            <property name="text">
-             <string>Log name:</string>
-            </property>
-            <property name="buddy">
-             <cstring>lineEdit_logFileName</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="1" colspan="2">
-           <widget class="QLineEdit" name="lineEdit_logFileName">
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="3">
-           <widget class="QLabel" name="label_logFileNameExtension">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string>.txt</string>
-            </property>
-            <property name="buddy">
-             <cstring>lineEdit_logFileName</cstring>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QGroupBox" name="groupBox_encoding">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
-         <property name="title">
-          <string>Language &amp;&amp; data encoding</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_20">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_guiLanguage">
-            <property name="text">
-             <string>Interface language:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QComboBox" name="comboBox_guiLanguage">
-            <property name="toolTip">
-             <string>&lt;p&gt;Can you help translate Mudlet? &lt;span style=&quot;font-weight:600;&quot;&gt;bit.ly/translate-mudlet&lt;/span&gt;&lt;/p&gt;</string>
-            </property>
-            <item>
-             <property name="text">
-              <string>English</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QLabel" name="label_encoding">
-            <property name="text">
-             <string>Server data encoding:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="3">
-           <widget class="QComboBox" name="comboBox_encoding">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
-            <property name="toolTip">
-             <string>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren't showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;Note: While this will allow Mudlet to show text in other languages, internalisation is still in development so triggers or Lua code won't work yet.&lt;/p&gt;</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0" colspan="4">
-           <widget class="QLabel" name="label_languageChangeWarning">
-            <property name="font">
-             <font>
-              <pointsize>8</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>Please restart Mudlet to apply the new language</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
+      <layout class="QGridLayout" name="gridLayout_tab_general">
        <item row="0" column="0">
         <widget class="QGroupBox" name="groupBox_iconsAndToolbars">
          <property name="title">
           <string>Icon sizes</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_4">
+         <layout class="QGridLayout" name="gridLayout_groupBox_iconsAndToolbars">
           <item row="0" column="0" alignment="Qt::AlignRight">
            <widget class="QLabel" name="label_mainIconSize">
             <property name="text">
@@ -450,8 +165,251 @@
          </layout>
         </widget>
        </item>
+       <item row="1" column="0">
+        <widget class="QGroupBox" name="groupBox_encoding">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="title">
+          <string>Language &amp;&amp; data encoding</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_groupBox_encoding">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_guiLanguage">
+            <property name="text">
+             <string>Interface language:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="comboBox_guiLanguage">
+            <property name="toolTip">
+             <string>&lt;p&gt;Can you help translate Mudlet? &lt;span style=&quot;font-weight:600;&quot;&gt;bit.ly/translate-mudlet&lt;/span&gt;&lt;/p&gt;</string>
+            </property>
+            <item>
+             <property name="text">
+              <string>English</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="label_encoding">
+            <property name="text">
+             <string>Server data encoding:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QComboBox" name="comboBox_encoding">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="toolTip">
+             <string>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren't showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;Note: While this will allow Mudlet to show text in other languages, internalisation is still in development so triggers or Lua code won't work yet.&lt;/p&gt;</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0" colspan="4">
+           <widget class="QLabel" name="label_languageChangeWarning">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Please restart Mudlet to apply the new language</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QGroupBox" name="groupBox_miscellaneous">
+         <property name="title">
+          <string>Misc</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout">
+          <item>
+           <widget class="QCheckBox" name="mAlertOnNewData">
+            <property name="text">
+             <string>Toolbar notification if Mudlet is minimized and new data arrives</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="mFORCE_SAVE_ON_EXIT">
+            <property name="text">
+             <string>Force auto save on exit</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="acceptServerGUI">
+            <property name="text">
+             <string>Allow server to install script packages</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QGroupBox" name="groupBox_protocols">
+         <property name="title">
+          <string>Game protocols</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_groupBox_protocols">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="mEnableGMCP">
+            <property name="toolTip">
+             <string>&lt;p&gt;Enables GMCP - note that if you have MSDP enabled as well, some servers will prefer one over the other&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable GMCP</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="mEnableMSDP">
+            <property name="toolTip">
+             <string>&lt;p&gt;Enables MSDP - note that if you have GMCP enabled as well, some servers will prefer one over the other&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable MSDP</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="need_reconnect_for_data_protocol">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="mouseTracking">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Please reconnect to your game for the change to take effect</string>
+            </property>
+            <property name="textFormat">
+             <enum>Qt::AutoText</enum>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QGroupBox" name="groupBox_logOptions">
+         <property name="title">
+          <string>Log options</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_groupBox_logOptions">
+          <item row="0" column="0" colspan="4">
+           <widget class="QCheckBox" name="mIsToLogInHtml">
+            <property name="toolTip">
+             <string>&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extention '.html') which can convey color, font and other formatting information rather than a plain text (file extension '.txt') format.  If changed whilst logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Save log files in HTML format instead of plain text</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0" colspan="4">
+           <widget class="QCheckBox" name="mIsLoggingTimestamps">
+            <property name="text">
+             <string>Add timestamps at the beginning of log lines</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_whereToLog">
+            <property name="text">
+             <string>Save log files in:</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_whereToLog</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="lineEdit_logFileFolder">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <widget class="QPushButton" name="pushButton_whereToLog">
+            <property name="text">
+             <string>Browse...</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="3">
+           <widget class="QPushButton" name="pushButton_resetLogDir">
+            <property name="text">
+             <string>Reset</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_logFileNameFormat">
+            <property name="text">
+             <string>Log format:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_logFileNameFormat</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1" colspan="3">
+           <widget class="QComboBox" name="comboBox_logFileNameFormat"/>
+          </item>
+          <item row="4" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_logFileName">
+            <property name="text">
+             <string>Log name:</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_logFileName</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1" colspan="2">
+           <widget class="QLineEdit" name="lineEdit_logFileName">
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="3">
+           <widget class="QLabel" name="label_logFileNameExtension">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string>.txt</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_logFileName</cstring>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
        <item row="5" column="0">
-        <spacer name="verticalSpacer">
+        <spacer name="verticalSpacer_general">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
@@ -475,7 +433,7 @@
       <attribute name="title">
        <string>Input line</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_11">
+      <layout class="QGridLayout" name="gridLayout_tab_inputline" rowstretch="0,1,0">
        <item row="0" column="0">
         <widget class="QGroupBox" name="groupBox_input">
          <property name="enabled">
@@ -484,8 +442,8 @@
          <property name="title">
           <string>Input</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_5" columnstretch="1,1,1,1">
-          <item row="0" column="0" colspan="2">
+         <layout class="QGridLayout" name="gridLayout_groupBox_input" columnstretch="1,1">
+          <item row="0" column="0">
            <widget class="QCheckBox" name="USE_UNIX_EOL">
             <property name="toolTip">
              <string>use strict UNIX line endings on commands for old UNIX servers that can't handle windows line endings correctly</string>
@@ -495,14 +453,14 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="2" colspan="2">
+          <item row="0" column="1">
            <widget class="QCheckBox" name="auto_clear_input_line_checkbox">
             <property name="text">
              <string>Auto clear the input line after you sent text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0" colspan="2">
+          <item row="1" column="0">
            <widget class="QCheckBox" name="show_sent_text_checkbox">
             <property name="toolTip">
              <string>&lt;p&gt;Echo the text you send in the display box.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This can be disabled by the game server if it negotiates to use the telnet ECHO option&lt;/i&gt;&lt;/p&gt;</string>
@@ -512,7 +470,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="2" colspan="2">
+          <item row="1" column="1">
            <widget class="QCheckBox" name="checkBox_runAllKeyBindings">
             <property name="toolTip">
              <string>&lt;p&gt;Check all Key-bindings against key-presses.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Versions of Mudlet prior to &lt;b&gt;3.9.0&lt;/b&gt; would stop checking after the first matching combination of&lt;/i&gt; KeyCode &lt;i&gt;and&lt;/i&gt; KeyModifier &lt;i&gt;was found and then send the command and/or run the script of that Key-binding only.  This&lt;/i&gt; per-profile &lt;i&gt;option tells Mudlet to check and run the remaining matches; but, to retain compatibility with previous versions, defaults to the &lt;b&gt;un&lt;/b&gt;-checked state.&lt;/i&gt;&lt;/p&gt;</string>
@@ -535,14 +493,14 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="1" colspan="3">
+          <item row="2" column="1">
            <widget class="QLineEdit" name="command_separator_lineedit">
             <property name="placeholderText">
              <string>Enter text to separate commands with or leave blank to disable</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0" colspan="3" alignment="Qt::AlignRight">
+          <item row="3" column="0" alignment="Qt::AlignRight">
            <widget class="QLabel" name="label_commandLineMinimumHeight">
             <property name="text">
              <string>Command line minimum height in pixels:</string>
@@ -552,7 +510,7 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="3">
+          <item row="3" column="1" alignment="Qt::AlignLeft">
            <widget class="QSpinBox" name="commandLineMinimumHeight">
             <property name="alignment">
              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -567,28 +525,91 @@
        </item>
        <item row="1" column="0">
         <widget class="QGroupBox" name="groupBox_spellCheck">
-         <property name="title">
-          <string>Spell check</string>
+         <property name="toolTip">
+          <string notr="true"/>
          </property>
-         <layout class="QGridLayout" name="gridLayout_12">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_57">
+         <property name="title">
+          <string>Spell checking</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QCheckBox" name="checkBox_spellCheck">
+            <property name="toolTip">
+             <string>&lt;p&gt;This option controls spell-checking on the command line in the main console for this profile.&lt;/p&gt;</string>
+            </property>
             <property name="text">
-             <string>Choose spell check dictionary:</string>
+             <string>System/Mudlet dictionary:</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QListWidget" name="dictList"/>
-          </item>
-          <item row="1" column="0" colspan="2">
-           <widget class="QCheckBox" name="enableSpellCheck">
-            <property name="text">
-             <string>Enable spell check</string>
+          <item>
+           <widget class="QListWidget" name="dictList">
+            <property name="toolTip">
+             <string>&lt;p&gt;Select one dictionary which will be available on the command line and in the lua sub-system.&lt;/p&gt;</string>
             </property>
-            <property name="checked">
+            <property name="sizeAdjustPolicy">
+             <enum>QAbstractScrollArea::AdjustToContents</enum>
+            </property>
+            <property name="dragDropMode">
+             <enum>QAbstractItemView::DragDrop</enum>
+            </property>
+            <property name="movement">
+             <enum>QListView::Snap</enum>
+            </property>
+            <property name="flow">
+             <enum>QListView::TopToBottom</enum>
+            </property>
+            <property name="resizeMode">
+             <enum>QListView::Adjust</enum>
+            </property>
+            <property name="viewMode">
+             <enum>QListView::IconMode</enum>
+            </property>
+            <property name="sortingEnabled">
              <bool>true</bool>
             </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="groupBox_userDictionary">
+            <property name="title">
+             <string>User dictionary:</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_userDictionary">
+             <item>
+              <widget class="QRadioButton" name="radioButton_userDictionary_none">
+               <property name="toolTip">
+                <string>&lt;p&gt;A user dictionary will not be used on the main console command line. Lua commands that target a user dictionary will return &lt;tt&gt;nil&lt;/t&gt; and &lt;i&gt;an error message&lt;/i&gt;.&lt;/p&gt;&lt;p&gt;It will still, however, be possible to access the main dictionary selected above.&lt;/p&gt;</string>
+               </property>
+               <property name="text">
+                <string>None</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QRadioButton" name="radioButton_userDictionary_profile">
+               <property name="toolTip">
+                <string>&lt;p&gt;A user dictionary specific to this profile will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</string>
+               </property>
+               <property name="text">
+                <string>Profile</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QRadioButton" name="radioButton_userDictionary_common">
+               <property name="toolTip">
+                <string>&lt;p&gt;A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</string>
+               </property>
+               <property name="text">
+                <string>Shared</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
          </layout>
@@ -601,8 +622,8 @@
          </property>
          <property name="sizeHint" stdset="0">
           <size>
-           <width>20</width>
-           <height>26</height>
+           <width>0</width>
+           <height>0</height>
           </size>
          </property>
         </spacer>
@@ -619,7 +640,7 @@
       <attribute name="title">
        <string>Main display</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_17">
+      <layout class="QGridLayout" name="gridLayout_tab_display">
        <item row="0" column="0">
         <widget class="QGroupBox" name="groupBox_font">
          <property name="sizePolicy">
@@ -631,7 +652,7 @@
          <property name="title">
           <string>Font</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_9">
+         <layout class="QGridLayout" name="gridLayout_groupBox_font">
           <item row="0" column="0">
            <widget class="QLabel" name="label_30">
             <property name="text">
@@ -883,15 +904,15 @@
          <property name="title">
           <string>Word wrapping</string>
          </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <layout class="QHBoxLayout" name="horizontalLayout_groupBox_wrapping">
           <item>
-           <widget class="QFrame" name="frame">
+           <widget class="QFrame" name="frame_wrap_at">
             <property name="frameShape">
              <enum>QFrame::NoFrame</enum>
             </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_3">
+            <layout class="QHBoxLayout" name="horizontalLayout_wrap_at">
              <item>
-              <widget class="QLabel" name="label_20">
+              <widget class="QLabel" name="label_wrap_at_spinBox">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                  <horstretch>0</horstretch>
@@ -933,13 +954,13 @@
            </widget>
           </item>
           <item>
-           <widget class="QFrame" name="frame_2">
+           <widget class="QFrame" name="frame_indent_wrapped">
             <property name="frameShape">
              <enum>QFrame::NoFrame</enum>
             </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_5">
+            <layout class="QHBoxLayout" name="horizontalLayout_frame_indent_wrapped">
              <item>
-              <widget class="QLabel" name="label_24">
+              <widget class="QLabel" name="label_indent_wrapped_spinBox">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                  <horstretch>0</horstretch>
@@ -988,7 +1009,7 @@
          <property name="title">
           <string>Double-click</string>
          </property>
-         <layout class="QHBoxLayout" name="horizontalLayout_6">
+         <layout class="QHBoxLayout" name="horizontalLayout_doubleclick_ignore">
           <item>
            <widget class="QLabel" name="doubleclick_ignore_label">
             <property name="text">
@@ -1017,7 +1038,7 @@
          <property name="title">
           <string>Display options</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_10">
+         <layout class="QGridLayout" name="gridLayout_groupBox_displayOptions">
           <item row="0" column="0">
            <widget class="QCheckBox" name="checkBox_USE_IRE_DRIVER_BUGFIX">
             <property name="toolTip">
@@ -1172,15 +1193,15 @@
       <attribute name="title">
        <string>Editor</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_26">
+      <layout class="QGridLayout" name="gridLayout_tab_codeEditor">
        <item row="0" column="0">
         <widget class="QGroupBox" name="groupbox_codeEditorThemeSelection">
          <property name="title">
           <string>Theme</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_25" columnstretch="2,1">
+         <layout class="QGridLayout" name="gridLayout_groupbox_codeEditorThemeSelection" columnstretch="2,1">
           <item row="0" column="0" colspan="2">
-           <widget class="QFrame" name="frame_3">
+           <widget class="QFrame" name="frame_edbeePreviewWidget">
             <property name="minimumSize">
              <size>
               <width>500</width>
@@ -1193,7 +1214,7 @@
             <property name="frameShadow">
              <enum>QFrame::Raised</enum>
             </property>
-            <layout class="QGridLayout" name="gridLayout_27">
+            <layout class="QGridLayout" name="gridLayout_frame_edbeePreviewWidget">
              <property name="leftMargin">
               <number>0</number>
              </property>
@@ -1272,13 +1293,13 @@
       <attribute name="title">
        <string>Color view</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_2">
+      <layout class="QGridLayout" name="gridLayout_tab_displayColors">
        <item row="0" column="0">
         <widget class="QGroupBox" name="groupBox_displayColors">
          <property name="title">
           <string>Select your color preferences</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_21">
+         <layout class="QGridLayout" name="gridLayout_groupBox_displayColors">
           <item row="0" column="0">
            <widget class="QLabel" name="label_foreground_color">
             <property name="text">
@@ -1771,13 +1792,13 @@
       <attribute name="title">
        <string>Mapper</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_24">
+      <layout class="QGridLayout" name="gridLayout_tab_mapper">
        <item row="0" column="0">
         <widget class="QGroupBox" name="groupBox_mapFiles">
          <property name="title">
           <string>Map files</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_3">
+         <layout class="QGridLayout" name="gridLayout_groupBox_mapFiles">
           <item row="0" column="0">
            <widget class="QLabel" name="label_saveMap">
             <property name="text">
@@ -1815,7 +1836,7 @@
           <item row="1" column="2">
            <widget class="QCheckBox" name="checkBox_reportMapIssuesOnScreen">
             <property name="toolTip">
-             <string>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands.&lt;/p&gt;&lt;p&gt;However if significant problems are found the report can be quite extensive, particular for larger maps. In order to reduce the amount of on-screen messages this option (if not set) will cause most of the text to not be displayed - except for a suggestion to review the '&lt;b&gt;&lt;i&gt;./log/errors.txt&lt;/i&gt;&lt;/b&gt;' file in the specific profile's directory which will contain the equivelent details and can be referred to if other manual changes are felt necessary.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This file is appended to and each report it contains should be date and time stamped and (unlike the on-screen version that reports issues as they occur) is sorted so that issues specific to a particular map area or room are collected in one part in each report.&lt;/i&gt;&lt;/p&gt;</string>
+             <string>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands. However if significant problems are found the report can be quite extensive, in particular for larger maps. In order to reduce the amount of on-screen messages this option (if not set) will cause most of the text to not be displayed - except for a suggestion to review the report file.&lt;/i&gt;&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Report map issues on screen</string>
@@ -1922,7 +1943,7 @@
          <property name="title">
           <string>Map download</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_23">
+         <layout class="QGridLayout" name="gridLayout_groupBox_downloadMapOptions">
           <item row="0" column="0">
            <widget class="QLabel" name="label_11">
             <property name="toolTip">
@@ -1957,7 +1978,7 @@
          <property name="title">
           <string>Map backups</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_8">
+         <layout class="QGridLayout" name="gridLayout_groupBox_mapBackups">
           <item row="0" column="0">
            <widget class="QLabel" name="label_13">
             <property name="text">
@@ -1993,14 +2014,7 @@
          <property name="title">
           <string>Map view</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_22">
-          <item row="2" column="0" alignment="Qt::AlignRight">
-           <widget class="QLabel" name="label_mapSymbolsFont">
-            <property name="text">
-             <string>2D Map Room Symbol Font</string>
-            </property>
-           </widget>
-          </item>
+         <layout class="QGridLayout" name="gridLayout_groupBox_mapOptions">
           <item row="0" column="0">
            <widget class="QCheckBox" name="mMapperUseAntiAlias">
             <property name="toolTip">
@@ -2010,9 +2024,6 @@
              <string>Use high quality graphics in 2D view</string>
             </property>
            </widget>
-          </item>
-          <item row="2" column="1" alignment="Qt::AlignLeft">
-           <widget class="QFontComboBox" name="fontComboBox_mapSymbols"/>
           </item>
           <item row="0" column="1">
            <widget class="QCheckBox" name="checkBox_showDefaultArea">
@@ -2027,14 +2038,24 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
+          <item row="1" column="0" alignment="Qt::AlignRight">
+           <widget class="QLabel" name="label_mapSymbolsFont">
+            <property name="text">
+             <string>2D Map Room Symbol Font</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1" alignment="Qt::AlignLeft">
+           <widget class="QFontComboBox" name="fontComboBox_mapSymbols"/>
+          </item>
+          <item row="2" column="0">
            <widget class="QCheckBox" name="checkBox_isOnlyMapSymbolFontToBeUsed">
             <property name="text">
              <string>Only use symbols (glyphs) from chosen font</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
+          <item row="2" column="1">
            <widget class="QPushButton" name="pushButton_showGlyphUsage">
             <property name="text">
              <string>Show symbol usage...</string>
@@ -2063,13 +2084,13 @@
       <attribute name="title">
        <string>Mapper colors</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_18">
+      <layout class="QGridLayout" name="gridLayout_tab_mapperColors">
        <item row="0" column="0">
         <widget class="QGroupBox" name="groupBox_mapperColors">
          <property name="title">
           <string>Select your color preferences for the map display</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_14">
+         <layout class="QGridLayout" name="gridLayout_groupBox_mapperColors">
           <item row="0" column="0" colspan="2">
            <widget class="QLabel" name="label_39">
             <property name="text">
@@ -2408,13 +2429,13 @@
       <attribute name="title">
        <string>Special Options</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_30">
+      <layout class="QGridLayout" name="gridLayout_tab_specialOptions">
        <item row="0" column="0" colspan="2">
         <widget class="QGroupBox" name="groupBox_specialOptions">
          <property name="title">
           <string>Special options needed for some older game drivers (needs client restart to take effect)</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_4">
+         <layout class="QVBoxLayout" name="verticalLayout_older_game_options">
           <item>
            <widget class="QCheckBox" name="mFORCE_MCCP_OFF">
             <property name="text">
@@ -2479,7 +2500,33 @@
          <property name="title">
           <string>Discord privacy</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_7" columnstretch="2,1,1,1">
+         <layout class="QGridLayout" name="gridLayout_groupBox_discordPrivacy" columnstretch="2,1,1,1">
+          <item row="0" column="0" colspan="2">
+           <widget class="QComboBox" name="comboBox_discordLargeIconPrivacy">
+            <item>
+             <property name="text">
+              <string>Don't hide large icon or tooltip</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Hide large icon tooltip</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Hide large icon and tooltip</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="0" column="2" colspan="2">
+           <widget class="QCheckBox" name="checkBox_discordServerAccessToDetail">
+            <property name="text">
+             <string>Hide detail</string>
+            </property>
+           </widget>
+          </item>
           <item row="1" column="0" colspan="2">
            <widget class="QComboBox" name="comboBox_discordSmallIconPrivacy">
             <item>
@@ -2499,10 +2546,37 @@
             </item>
            </widget>
           </item>
+          <item row="1" column="2" colspan="2">
+           <widget class="QCheckBox" name="checkBox_discordServerAccessToState">
+            <property name="text">
+             <string>Hide state</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_discordServerAccessToPartyInfo">
+            <property name="text">
+             <string>Hide party details</string>
+            </property>
+           </widget>
+          </item>
           <item row="2" column="2" colspan="2">
            <widget class="QCheckBox" name="checkBox_discordServerAccessToTimerInfo">
             <property name="text">
              <string>Hide timer</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="3">
+           <widget class="QCheckBox" name="checkBox_discordLuaAPI">
+            <property name="toolTip">
+             <string>&lt;p&gt;Allow Lua to set Discord status&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable Lua API</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
@@ -2514,7 +2588,7 @@
             <property name="toolTip">
              <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
             </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_7">
+            <layout class="QHBoxLayout" name="horizontalLayout_discordUser">
              <item>
               <widget class="QLabel" name="label_discordUserName">
                <property name="text">
@@ -2576,59 +2650,6 @@
             </layout>
            </widget>
           </item>
-          <item row="0" column="0" colspan="2">
-           <widget class="QComboBox" name="comboBox_discordLargeIconPrivacy">
-            <item>
-             <property name="text">
-              <string>Don't hide large icon or tooltip</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Hide large icon tooltip</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Hide large icon and tooltip</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-          <item row="3" column="0" colspan="3">
-           <widget class="QCheckBox" name="checkBox_discordLuaAPI">
-            <property name="toolTip">
-             <string>&lt;p&gt;Allow Lua to set Discord status&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Enable Lua API</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="2" colspan="2">
-           <widget class="QCheckBox" name="checkBox_discordServerAccessToState">
-            <property name="text">
-             <string>Hide state</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0" colspan="2">
-           <widget class="QCheckBox" name="checkBox_discordServerAccessToPartyInfo">
-            <property name="text">
-             <string>Hide party details</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2" colspan="2">
-           <widget class="QCheckBox" name="checkBox_discordServerAccessToDetail">
-            <property name="text">
-             <string>Hide detail</string>
-            </property>
-           </widget>
-          </item>
          </layout>
         </widget>
        </item>
@@ -2637,7 +2658,14 @@
          <property name="title">
           <string>IRC client options</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_28" rowstretch="0,0">
+         <layout class="QGridLayout" name="gridLayout_groupBox_ircOptions" rowstretch="0,0">
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblIrcHostName">
+            <property name="text">
+             <string>Server address:</string>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="1">
            <widget class="QLineEdit" name="ircHostName">
             <property name="inputMethodHints">
@@ -2655,31 +2683,13 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="3">
-           <widget class="QLineEdit" name="ircChannels">
+          <item row="0" column="3">
+           <widget class="QLineEdit" name="ircHostPort">
+            <property name="inputMethodHints">
+             <set>Qt::ImhDigitsOnly</set>
+            </property>
             <property name="placeholderText">
-             <string>#channel1 #channel2 #etc...</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QLineEdit" name="ircNick">
-            <property name="placeholderText">
-             <string>MudletUser123</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="lblIrcHostName">
-            <property name="text">
-             <string>Server address:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <widget class="QLabel" name="lblIrcChannels">
-            <property name="text">
-             <string>Auto-join channels: </string>
+             <string>6667</string>
             </property>
            </widget>
           </item>
@@ -2690,13 +2700,24 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="3">
-           <widget class="QLineEdit" name="ircHostPort">
-            <property name="inputMethodHints">
-             <set>Qt::ImhDigitsOnly</set>
-            </property>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="ircNick">
             <property name="placeholderText">
-             <string>6667</string>
+             <string>MudletUser123</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QLabel" name="lblIrcChannels">
+            <property name="text">
+             <string>Auto-join channels: </string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QLineEdit" name="ircChannels">
+            <property name="placeholderText">
+             <string>#channel1 #channel2 #etc...</string>
             </property>
            </widget>
           </item>
@@ -2708,7 +2729,7 @@
          <property name="title">
           <string>Mudlet updates</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_29">
+         <layout class="QGridLayout" name="gridLayout_groupBox_updates">
           <item row="0" column="0">
            <widget class="QCheckBox" name="checkbox_noAutomaticUpdates">
             <property name="text">
@@ -2724,7 +2745,7 @@
          <property name="title">
           <string>Search Engine</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_3">
+         <layout class="QVBoxLayout" name="verticalLayout_searchEngineSelection">
           <item>
            <widget class="QComboBox" name="search_engine_combobox"/>
           </item>
@@ -2736,8 +2757,8 @@
          <property name="title">
           <string>Other Special options</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_15">
-          <item row="0" column="0" colspan="2">
+         <layout class="QGridLayout" name="gridLayout_groupBox_debug">
+          <item row="0" column="0">
            <widget class="QCheckBox" name="checkBox_showIconsOnMenus">
             <property name="text">
              <string>Show icons on menus</string>
@@ -2753,7 +2774,7 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="2">
+          <item row="0" column="1">
            <widget class="QCheckBox" name="checkBox_expectCSpaceIdInColonLessMColorCode">
             <property name="toolTip">
              <string>&lt;p&gt;Some MUDs use a flawed interpretation of the ANSI Set Graphics Rendition (&lt;b&gt;SGR&lt;/b&gt;) code sequences for 16M color mode which only uses semi-colons and not colons to separate parameter elements i.e. instead of using a code in the form: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Unused&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance Color Space (0=CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;where the &lt;i&gt;Color Space Id&lt;/i&gt; is expected to be an empty string to specify the usual (default) case and all of the &lt;i&gt;Parameter Elements&lt;/i&gt; (the &quot;2&quot; and the values in the &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt;s) may, technically, be omitted; they use: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;or: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;/p&gt;&lt;p&gt;It is not possible to reliably detect the difference between these two so checking this option causes Mudlet to expect the last one with the additional (but empty!) parameter.&lt;/p&gt;</string>
@@ -2766,7 +2787,7 @@
          </layout>
         </widget>
        </item>
-       <item row="6" column="0">
+       <item row="5" column="0">
         <spacer name="verticalSpacer_specialOptions">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -2785,29 +2806,139 @@
       <attribute name="title">
        <string>Security</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_20">
-       <item row="2" column="0">
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeType">
-          <enum>QSizePolicy::Expanding</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item row="1" column="0">
+      <layout class="QGridLayout" name="gridLayout_tab_security">
+       <item row="0" column="0">
         <widget class="QGroupBox" name="groupBox_ssl">
          <property name="title">
           <string>SSL</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_30">
+         <layout class="QGridLayout" name="gridLayout_groupBox_ssl">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="checkBox_ssl">
+            <property name="toolTip">
+             <string extracomment="Enable SSL / TLS for this game"/>
+            </property>
+            <property name="text">
+             <string>Secure connection</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0" colspan="2">
+           <widget class="QGroupBox" name="groupBox_ssl_certificate">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="title">
+             <string>Certificate</string>
+            </property>
+            <layout class="QGridLayout" name="gridLayout_groupBox_ssl_certificate" columnstretch="0,1">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label">
+               <property name="layoutDirection">
+                <enum>Qt::LeftToRight</enum>
+               </property>
+               <property name="text">
+                <string>Issuer:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLabel" name="ssl_issuer_label">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_2">
+               <property name="text">
+                <string>Issued to:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLabel" name="ssl_issued_label">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="label_3">
+               <property name="text">
+                <string>Expires:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QLabel" name="ssl_expires_label">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="0">
+              <widget class="QLabel" name="label_7">
+               <property name="text">
+                <string>Serial:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="1">
+              <widget class="QLabel" name="ssl_serial_label">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="checkBox_self_signed">
+            <property name="toolTip">
+             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
+            </property>
+            <property name="text">
+             <string>Accept self-signed certificates</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QCheckBox" name="checkBox_expired">
+            <property name="toolTip">
+             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
+            </property>
+            <property name="text">
+             <string>Accept expired certificates</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_ignore_all">
+            <property name="toolTip">
+             <string extracomment="Ignore all SSL/TLS errors - this negates the point of a secure connection, use carefully"/>
+            </property>
+            <property name="text">
+             <string>Accept all certificate errors       (unsecure)</string>
+            </property>
+           </widget>
+          </item>
           <item row="4" column="0" colspan="2">
            <widget class="QFrame" name="notificationArea">
             <property name="sizePolicy">
@@ -2917,7 +3048,7 @@
             <property name="midLineWidth">
              <number>3</number>
             </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_4">
+            <layout class="QHBoxLayout" name="horizontalLayout_notificationArea">
              <property name="spacing">
               <number>0</number>
              </property>
@@ -4735,137 +4866,69 @@
             </layout>
            </widget>
           </item>
-          <item row="2" column="0">
-           <widget class="QCheckBox" name="checkBox_self_signed">
-            <property name="toolTip">
-             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
-            </property>
-            <property name="text">
-             <string>Accept self-signed certificates</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QCheckBox" name="checkBox_expired">
-            <property name="toolTip">
-             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
-            </property>
-            <property name="text">
-             <string>Accept expired certificates</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="checkBox_ssl">
-            <property name="toolTip">
-             <string extracomment="Enable SSL / TLS for this game"/>
-            </property>
-            <property name="text">
-             <string>Secure connection</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0" colspan="2">
-           <widget class="QGroupBox" name="groupBox_ssl_certificate">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="title">
-             <string>Certificate</string>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_16" columnstretch="0,1,0,0">
-             <item row="2" column="1" colspan="3">
-              <widget class="QLabel" name="ssl_expires_label">
-               <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1" colspan="3">
-              <widget class="QLabel" name="ssl_issued_label">
-               <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1" colspan="3">
-              <widget class="QLabel" name="ssl_issuer_label">
-               <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="1" colspan="3">
-              <widget class="QLabel" name="ssl_serial_label">
-               <property name="text">
-                <string/>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="0">
-              <widget class="QLabel" name="label_7">
-               <property name="text">
-                <string>Serial:</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="0">
-              <widget class="QLabel" name="label">
-               <property name="layoutDirection">
-                <enum>Qt::LeftToRight</enum>
-               </property>
-               <property name="text">
-                <string>Issuer:</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="label_2">
-               <property name="text">
-                <string>Issued to:</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="0">
-              <widget class="QLabel" name="label_3">
-               <property name="text">
-                <string>Expires:</string>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item row="3" column="0" colspan="2">
-           <widget class="QCheckBox" name="checkBox_ignore_all">
-            <property name="toolTip">
-             <string extracomment="Ignore all SSL/TLS errors - this negates the point of a secure connection, use carefully"/>
-            </property>
-            <property name="text">
-             <string>Accept all certificate errors       (unsecure)</string>
-            </property>
-           </widget>
-          </item>
          </layout>
         </widget>
        </item>
+       <item row="1" column="0">
+        <spacer name="verticalSpacer_security">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Expanding</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
       </layout>
      </widget>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QWidget" name="widget_bottom" native="true">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <spacer name="horizontalSpacer_bottom">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>444</width>
+          <height>21</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="closeButton">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>Save</string>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>:/icons/icons/dialog-close.png</normaloff>:/icons/icons/dialog-close.png</iconset>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
   </layout>

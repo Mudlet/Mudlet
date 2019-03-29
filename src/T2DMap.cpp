@@ -66,8 +66,8 @@ const QString& key_icon_line_dashDotDot = QStringLiteral(":/icons/dash-dot-dot-l
 const QString& key_dialog_ok_apply = QStringLiteral("dialog-ok-apply");
 const QString& key_dialog_cancel = QStringLiteral("dialog-cancel");
 
-const QString& key_icon_dialog_ok_apply = QStringLiteral(":\icons\dialog-ok-apply.png");
-const QString& key_icon_dialog_cancel = QStringLiteral(":\icons\dialog-cancel.png");
+const QString& key_icon_dialog_ok_apply = QStringLiteral(":/icons/dialog-ok-apply.png");
+const QString& key_icon_dialog_cancel = QStringLiteral(":/icons/dialog-cancel.png");
 
 // replacement parameter supplied at points of use:
 const QString& key_styleSheet_backgroundColor = QStringLiteral("background-color: %1");
@@ -138,7 +138,7 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.setHeaderLabels(headerLabels);
     mMultiSelectionListWidget.setToolTip(tr("<p>Click on a line to select or deselect that room number (with the given name if the "
                                                  "rooms are named) to add or remove the room from the selection.  Click on the "
-                                                 "relevant header to sort by that method.  Note that the name column willl only "
+                                                 "relevant header to sort by that method.  Note that the name column will only "
                                                  "show if at least one of the rooms has a name.</p>"));
     mMultiSelectionListWidget.setUniformRowHeights(true);
     mMultiSelectionListWidget.setItemsExpandable(false);
@@ -326,7 +326,7 @@ void T2DMap::slot_switchArea(const QString& newAreaName)
         return;
     }
 
-    int playerRoomId = mpMap->mRoomIdHash.value(pHost->getName());
+    int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
     TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(playerRoomId);
     int playerAreaID = -2; // Cannot be valid (but -1 can be)!
     if (pPlayerRoom) {
@@ -666,7 +666,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     QList<int> exitList;
     QList<int> oneWayExits;
-    TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpHost->getName()));
+    TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
     if (!pPlayerRoom) {
         painter.save();
         painter.fillRect(0, 0, width(), height(), Qt::transparent);
@@ -680,7 +680,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     int ox;
     int oy;
-    if (mRoomID != mpMap->mRoomIdHash.value(mpHost->getName()) && mShiftMode) {
+    if (mRoomID != mpMap->mRoomIdHash.value(mpMap->mProfileName) && mShiftMode) {
         mShiftMode = false;
     }
     TArea* playerArea;
@@ -696,7 +696,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         if (!mpMap->mpRoomDB->getArea(playerAreaID)) {
             return;
         }
-        mRoomID = mpMap->mRoomIdHash.value(mpHost->getName());
+        mRoomID = mpMap->mRoomIdHash.value(mpMap->mProfileName);
         playerRoom = mpMap->mpRoomDB->getRoom(mRoomID);
         if (!playerRoom) {
             return;
@@ -1535,7 +1535,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 mTarget = currentAreaRoom;
                 if (mpMap->mpRoomDB->getRoom(mTarget)) {
                     mpMap->mTargetID = mTarget;
-                    if (mpMap->findPath(mpMap->mRoomIdHash.value(mpHost->getName()), mpMap->mTargetID)) {
+                    if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
                         mpHost->startSpeedWalk();
                     } else {
                         QString msg = tr("Mapper: Cannot find a path to this room using known exits.\n");
@@ -1633,7 +1633,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 painter.setPen(roomIdPen);
             }
 
-            if (mShiftMode && currentAreaRoom == mpMap->mRoomIdHash.value(mpHost->getName())) {
+            if (mShiftMode && currentAreaRoom == mpMap->mRoomIdHash.value(mpMap->mProfileName)) {
                 float roomRadius = (1.2 * mRoomWidth) / 2;
                 QPointF roomCenter = QPointF(rx, ry);
                 QRadialGradient gradient(roomCenter, roomRadius);
@@ -1885,7 +1885,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                     mTarget = it.key();
                     if (mpMap->mpRoomDB->getRoom(mTarget)) {
                         mpMap->mTargetID = mTarget;
-                        if (mpMap->findPath(mpMap->mRoomIdHash.value(mpHost->getName()), mpMap->mTargetID)) {
+                        if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
                             mpHost->startSpeedWalk();
                         } else {
                             QString msg = tr("Mapper: Cannot find a path to this room using known exits.\n");
@@ -1926,7 +1926,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                     mTarget = it.key();
                     if (mpMap->mpRoomDB->getRoom(mTarget)) {
                         mpMap->mTargetID = mTarget;
-                        if (mpMap->findPath(mpMap->mRoomIdHash.value(mpHost->getName()), mpMap->mTargetID)) {
+                        if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
                             mpMap->mpHost->startSpeedWalk();
                         } else {
                             QString msg = tr("Mapper: Cannot find a path to this room using known exits.\n");
@@ -2743,7 +2743,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
         }
 
         if (!mLabelHighlighted && mCustomLineSelectedRoom == 0) {
-            auto playerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpHost->getName()));
+            auto playerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
             auto pArea = mpMap->mpRoomDB->getArea(mAreaID);
 
             if (!playerRoom || !pArea) {
@@ -3329,7 +3329,7 @@ void T2DMap::slot_setPlayerLocation()
     int _newRoomId = *(mMultiSelectionSet.constBegin());
     if (mpMap->mpRoomDB->getRoom(_newRoomId)) {
         // No need to check it is a DIFFERENT room - that is taken care of by en/dis-abling the control
-        mpMap->mRoomIdHash[mpHost->getName()] = _newRoomId;
+        mpMap->mRoomIdHash[mpMap->mProfileName] = _newRoomId;
         mpMap->mNewMove = true;
         TEvent manualSetEvent;
         manualSetEvent.mArgumentList.append(QLatin1String("sysManualLocationSetEvent"));
@@ -4089,7 +4089,7 @@ void T2DMap::slot_loadMap() {
     QString fileName = QFileDialog::getOpenFileName(
                            this,
                            tr("Load Mudlet map"),
-                           mudlet::getMudletPath(mudlet::profileMapsPath, mpHost->getName()),
+                           mudlet::getMudletPath(mudlet::profileMapsPath, mpMap->mProfileName),
                            tr("Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)",
                               // Intentional comment to separate arguments
                               "Do not change extensions (in braces) or the ;;s as they are used programmatically"));
@@ -4120,8 +4120,7 @@ void T2DMap::slot_newMap()
     mpHost->mpMap->setRoomCoordinates(roomID, 0, 0, 0);
     mpHost->mpMap->mMapGraphNeedsUpdate = true;
 
-    auto room = mpHost->mpMap->mpRoomDB->getRoom(roomID);
-    mpHost->mpMap->mRoomIdHash[mpHost->getName()] = roomID;
+    mpHost->mpMap->mRoomIdHash[mpMap->mProfileName] = roomID;
     mpHost->mpMap->mNewMove = true;
     if (mpHost->mpMap->mpM) {
         mpHost->mpMap->mpM->update();

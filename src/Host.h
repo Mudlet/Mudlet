@@ -89,7 +89,7 @@ public:
 
     QString            getName()                        { QMutexLocker locker(& mLock); return mHostName; }
     QString            getCommandSeparator()            { QMutexLocker locker(& mLock); return mCommandSeparator; }
-    void               setName(const QString& s )       { QMutexLocker locker(& mLock); mHostName = s; }
+    void               setName(const QString& s );
     QString            getUrl()                         { QMutexLocker locker(& mLock); return mUrl; }
     void               setUrl(const QString& s )        { QMutexLocker locker(& mLock); mUrl = s; }
     QString            getUserDefinedName()             { QMutexLocker locker(& mLock); return mUserDefinedName; }
@@ -121,6 +121,8 @@ public:
     const QString&     getDiscordApplicationID();
     void               setSpellDic(const QString&);
     const QString&     getSpellDic() { QMutexLocker locker(& mLock); return mSpellDic; }
+    void               setUserDictionaryOptions(const bool useDictionary, const bool useShared);
+    void               getUserDictionaryOptions(bool& useDictionary, bool& useShared) { QMutexLocker locker(& mLock); useDictionary = mEnableUserDictionary; useShared = mUseSharedDictionary; }
 
     void closingDown();
     bool isClosingDown();
@@ -511,9 +513,14 @@ private:
     bool mServerMayRedefineColors;
 
     // Was public but hidden to prevent it being changed without going through
-    // the process to signal to existing uses that they need to change
-    // dictionaries:
+    // the process to signal to users that they need to change dictionaries:
     QString mSpellDic;
+    // These are hidden to prevent them being changed directly, they are also
+    // mirrored/cached in the main TConsole's instance so they do not need to be
+    // looked up directly by that class:
+    bool mEnableUserDictionary;
+    bool mUseSharedDictionary;
+
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
     void updateModuleZips() const;

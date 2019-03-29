@@ -401,6 +401,9 @@ END : {
         int b2 = mFgColor.blue();
         int total = captureList.size();
         TConsole* pC = mpHost->mpConsole;
+        if (Q_UNLIKELY(!pC)) {
+            return true;
+        }
         pC->deselect();
         auto its = captureList.begin();
         auto iti = posList.begin();
@@ -478,6 +481,9 @@ bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QStri
             int g2 = mFgColor.green();
             int b2 = mFgColor.blue();
             TConsole* pC = mpHost->mpConsole;
+            if (Q_UNLIKELY(!pC)) {
+                return true;
+            }
             auto its = captureList.begin();
             for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
                 int begin = *iti;
@@ -594,6 +600,9 @@ bool TTrigger::match_substring(const QString& toMatch, const QString& regex, int
             int g2 = mFgColor.green();
             int b2 = mFgColor.blue();
             TConsole* pC = mpHost->mpConsole;
+            if (Q_UNLIKELY(!pC)) {
+                return true;
+            }
             pC->deselect();
             auto its = captureList.begin();
             for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
@@ -701,6 +710,9 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
             int g2 = mFgColor.green();
             int b2 = mFgColor.blue();
             TConsole* pC = mpHost->mpConsole;
+            if (Q_UNLIKELY(!pC)) {
+                return true;
+            }
             pC->deselect();
             auto its = captureList.begin();
             for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
@@ -827,6 +839,9 @@ bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, in
             int g2 = mFgColor.green();
             int b2 = mFgColor.blue();
             TConsole* pC = mpHost->mpConsole;
+            if (Q_UNLIKELY(!pC)) {
+                return true;
+            }
             auto its = captureList.begin();
             for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
                 int begin = *iti;

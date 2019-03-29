@@ -70,14 +70,15 @@ void TToolBar::resizeEvent(QResizeEvent* e)
 
 void TToolBar::moveEvent(QMoveEvent* e)
 {
+    if (!mpTAction) {
+        return;
+    }
+    
     if (!mudlet::self()->mIsLoadingLayout) {
         mudlet::self()->setToolbarLayoutUpdated(mpTAction->mpHost, this);
     }
 
     if (mRecordMove) {
-        if (!mpTAction) {
-            return;
-        }
         mpTAction->mPosX = e->pos().x();
         mpTAction->mPosY = e->pos().y();
     }

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -26,6 +26,7 @@
 #include "dlgColorTrigger.h"
 #include "dlgTriggerEditor.h"
 #include "LuaInterface.h"
+#include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "VarUnit.h"
@@ -196,6 +197,8 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
             mpTimer->enableTimer(mpTimer->getID());
         } else {
             mpHost->getTimerUnit()->unregisterTimer(mpTimer);
+            // Set flag so that it can be silently deleted:
+            mpTimer->setKnownUnregistered();
             delete mpTimer;
         }
 
@@ -515,7 +518,7 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
     }
 
     if (pT->id > 0) {
-        if ((++(*roomCount) % 100 == 0)) {
+        if (++(*roomCount) % 100 == 0) {
             mpHost->mpMap->reportStringToProgressDialog(tr("Parsing room data [count: %1]...").arg(*roomCount));
         }
         areamRoomMultiHash.insert(pT->area, pT->id);
@@ -807,6 +810,9 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mMapStrongHighlight = (attributes().value("mMapStrongHighlight") == "yes");
     pHost->mLogStatus = (attributes().value("mLogStatus") == "yes");
     pHost->mEnableSpellCheck = (attributes().value("mEnableSpellCheck") == "yes");
+    bool enableUserDictionary = (attributes().value("mEnableUserDictionary") == "yes");
+    bool useSharedDictionary = (attributes().value("mUseSharedDictionary") == "yes");
+    pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     pHost->mShowInfo = (attributes().value("mShowInfo") == "yes");
     pHost->mAcceptServerGUI = (attributes().value("mAcceptServerGUI") == "yes");
     pHost->mMapperUseAntiAlias = (attributes().value("mMapperUseAntiAlias") == "yes");
@@ -1030,7 +1036,7 @@ void XMLimport::readHostPackage(Host* pHost)
             } else if (name() == "mLightWhite2") {
                 pHost->mLightWhite_2.setNamedColor(readElementText());
             } else if (name() == "mSpellDic") {
-                pHost->mSpellDic = readElementText();
+                pHost->setSpellDic(readElementText());
             } else if (name() == "mLineSize" || name() == "mRoomSize") {
                 // These two have been dropped from the Xml format as these are
                 // duplicates of attributes that were being incorrected read in
@@ -1229,7 +1235,7 @@ int XMLimport::readTimerGroup(TTimer* pParent)
         }
     }
 
-    mudlet::self()->registerTimer(pT, pT->mpTimer);
+    mudlet::self()->registerTimer(pT);
 
     if (!pT->mpParent && pT->shouldBeActive()) {
         pT->setIsActive(true);
