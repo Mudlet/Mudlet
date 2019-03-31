@@ -469,7 +469,6 @@ function Geyser.Label:new (cons, container)
   end
   -- Set up the callback if we have one
   if cons.nestable then
-    --echo("setting callback to doNestShow")
     setLabelClickCallback(me.name, "doNestShow", me.name)
   end
   if me.clickCallback then
