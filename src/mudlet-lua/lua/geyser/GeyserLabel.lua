@@ -410,7 +410,7 @@ end
 --- Internal function when a parent nest element is clicked
 --- to lay out the nested elements within
 -- @param label The name of the label to use
-function doNestClick(label)
+function doNestShow(label)
   Geyser.Label:displayNest(label)
 end
 
@@ -465,13 +465,12 @@ function Geyser.Label:new (cons, container)
 
   -- Set up mouse hover as the callback if we have one
   if cons.nestflyout then
-    --echo("setting hover to doNestClick")
-    setLabelOnEnter(me.name, "doNestClick", me.name)
+    setLabelOnEnter(me.name, "doNestShow", me.name)
   end
   -- Set up the callback if we have one
   if cons.nestable then
-    --echo("setting callback to doNestClick")
-    setLabelClickCallback(me.name, "doNestClick", me.name)
+    --echo("setting callback to doNestShow")
+    setLabelClickCallback(me.name, "doNestShow", me.name)
   end
   if me.clickCallback then
     if type(me.clickArgs) == "string" or type(me.clickArgs) == "number" then
