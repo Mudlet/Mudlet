@@ -72,6 +72,7 @@ public:
     void enableTimer(int);
     void disableTimer(int);
     void killTimer();
+    int remainingTime() const;
 
     bool isOffsetTimer();
     QPointer<Host> getHost() { return mpHost; }
