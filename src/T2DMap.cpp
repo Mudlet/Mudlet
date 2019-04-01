@@ -134,7 +134,7 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
     QStringList headerLabels;
-    headerLabels << tr("Id") << tr("Name");
+    headerLabels << tr("ID", "Room ID in the mapper widget") << tr("Name", "Room name in the mapper widget");
     mMultiSelectionListWidget.setHeaderLabels(headerLabels);
     mMultiSelectionListWidget.setToolTip(tr("<p>Click on a line to select or deselect that room number (with the given name if the "
                                                  "rooms are named) to add or remove the room from the selection.  Click on the "
