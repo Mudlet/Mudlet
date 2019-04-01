@@ -134,7 +134,7 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
     QStringList headerLabels;
-    headerLabels << tr("Room Id") << tr("Room Name");
+    headerLabels << tr("Id") << tr("Name");
     mMultiSelectionListWidget.setHeaderLabels(headerLabels);
     mMultiSelectionListWidget.setToolTip(tr("<p>Click on a line to select or deselect that room number (with the given name if the "
                                                  "rooms are named) to add or remove the room from the selection.  Click on the "
@@ -5019,10 +5019,8 @@ void T2DMap::resizeMultiSelectionWidget()
 {
     int newWidth;
     if (mIsSelectionUsingNames) {
-        if (width() <= 300) { // 0 - 300 => 0 - 200
-            newWidth = 2 * width() / 3;
-        } else if (width() <= 600) { // 300 - 600 => 200 - 300
-            newWidth = 100 + width() / 3;
+        if (width() <= 999) { // 0 - 300 => 0 - 200
+            newWidth = 160;
         } else { // 600+ => 300
             newWidth = 300;
         }
