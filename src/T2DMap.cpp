@@ -3331,7 +3331,7 @@ void T2DMap::slot_setPlayerLocation()
         // No need to check it is a DIFFERENT room - that is taken care of by en/dis-abling the control
         mpMap->mRoomIdHash[mpMap->mProfileName] = _newRoomId;
         mpMap->mNewMove = true;
-        TEvent manualSetEvent;
+        TEvent manualSetEvent {};
         manualSetEvent.mArgumentList.append(QLatin1String("sysManualLocationSetEvent"));
         manualSetEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         manualSetEvent.mArgumentList.append(QString::number(_newRoomId));
@@ -3343,7 +3343,7 @@ void T2DMap::slot_setPlayerLocation()
 
 void T2DMap::slot_userAction(QString uniqueName)
 {
-    TEvent event;
+    TEvent event {};
     QStringList userEvent = mUserActions[uniqueName];
     event.mArgumentList.append(userEvent[0]);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);

@@ -3372,7 +3372,7 @@ void mudlet::createMapper(bool loadDefaultMap)
     loadWindowLayout();
 
     check_for_mappingscript();
-    TEvent mapOpenEvent;
+    TEvent mapOpenEvent {};
     mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
     mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     pHost->raiseEvent(mapOpenEvent);
@@ -3698,7 +3698,7 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, int historyVer
 
     packagesToInstallList.clear();
 
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     pHost->raiseEvent(event);
@@ -3974,7 +3974,7 @@ void mudlet::playSound(const QString& s, int soundVolume)
 
     connect(pPlayer, &QMediaPlayer::stateChanged, [=](QMediaPlayer::State state) {
         if (state == QMediaPlayer::StoppedState) {
-            TEvent soundFinished;
+            TEvent soundFinished {};
             soundFinished.mArgumentList.append("sysSoundFinished");
             soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().fileName());
@@ -4170,7 +4170,7 @@ void mudlet::slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButto
     if (!pH) {
         return;
     }
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysGamepadButtonPress"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
@@ -4188,7 +4188,7 @@ void mudlet::slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadBut
     if (!pH) {
         return;
     }
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysGamepadButtonRelease"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
@@ -4204,7 +4204,7 @@ void mudlet::slot_gamepadConnected(int deviceId)
     if (!pH) {
         return;
     }
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysGamepadConnected"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
@@ -4218,7 +4218,7 @@ void mudlet::slot_gamepadDisconnected(int deviceId)
     if (!pH) {
         return;
     }
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysGamepadDisconnected"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
@@ -4232,7 +4232,7 @@ void mudlet::slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis ax
     if (!pH) {
         return;
     }
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysGamepadAxisMove"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
