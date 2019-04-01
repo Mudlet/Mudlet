@@ -5021,7 +5021,7 @@ void T2DMap::resizeMultiSelectionWidget()
     if (mIsSelectionUsingNames) {
         if (width() <= 999) { // 0 - 300 => 0 - 200
             newWidth = 160;
-        } else { // 600+ => 300
+        } else { // 999+ => 300
             newWidth = 300;
         }
     } else {
