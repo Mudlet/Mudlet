@@ -5022,7 +5022,7 @@ void T2DMap::resizeMultiSelectionWidget()
         if (width() <= 750) {
             newWidth = 160;
         } else if (width() <= 890) { // 750-890 => 160-300
-            newWidth = width()-750;
+            newWidth = 160+width()-750;
         } else { // 890+ => 300
             newWidth = 300;
         }
