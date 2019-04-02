@@ -8038,13 +8038,13 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="338"/>
       <source>Shtokavian</source>
       <comment>This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state without a state indication</comment>
-      <translation type="unfinished"/>
+      <translation>波斯尼亚文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="339"/>
       <source>Shtokavian (former state of Yugoslavia)</source>
       <comment>This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state with a (withdrawn from ISO 3166) state indication</comment>
-      <translation type="unfinished"/>
+      <translation>波斯尼亚文（南斯拉夫形）</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="340"/>
@@ -8320,7 +8320,7 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="419"/>
       <source>%1 (%2% done)</source>
       <comment>%1 is the language name, %2 is the amount of texts in percent that is translated in Mudlet</comment>
-      <translation type="unfinished"/>
+      <translation>%1(%2已完成)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="462"/>
@@ -9138,7 +9138,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="187"/>
       <source>&lt;p&gt;Can you help translate Mudlet? &lt;span style=&quot;font-weight:600;&quot;&gt;bit.ly/translate-mudlet&lt;/span&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;你能帮忙翻译Mudlet吗？&lt;span style=&quot;font-weight:600;&quot;&gt;bit.ly/translate-mudlet&lt;/span&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="191"/>
@@ -9148,7 +9148,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="199"/>
       <source>Server data encoding:</source>
-      <translation type="unfinished"/>
+      <translation>服务器数据编码格式：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="221"/>
