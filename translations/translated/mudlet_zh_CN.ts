@@ -8796,27 +8796,27 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="237"/>
       <source>Toolbar notification if Mudlet is minimized and new data arrives</source>
-      <translation type="unfinished"/>
+      <translation>在Mudlet最小化时如果有新数据送到，则工具栏提示</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="244"/>
       <source>Force auto save on exit</source>
-      <translation type="unfinished"/>
+      <translation>退出时强制自动保存</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="251"/>
       <source>Allow server to install script packages</source>
-      <translation type="unfinished"/>
+      <translation>允许服务器安装脚本包</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="261"/>
       <source>Game protocols</source>
-      <translation type="unfinished"/>
+      <translation>游戏协议</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="270"/>
       <source>Enable GMCP</source>
-      <translation type="unfinished"/>
+      <translation>启用GMCP</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="280"/>
