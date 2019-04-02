@@ -6756,7 +6756,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="190"/>
       <source>&lt;p&gt;Opens a free form text editor window for the active profile that is saved between sessions.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;打开一个随意形式的文本编辑窗口来在不同的会话间保存当前的配置。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="198"/>
