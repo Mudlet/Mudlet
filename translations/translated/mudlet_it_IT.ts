@@ -395,17 +395,17 @@ attendere prego...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="3407"/>
       <source>x coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>coordinata x (era %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3408"/>
       <source>y coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>coordinata y (era %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3409"/>
       <source>z coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>coordinata z (era %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3576"/>
@@ -502,7 +502,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2298"/>
       <source>Enter label text.</source>
       <comment>2D Mapper create label dialog title/text</comment>
-      <translation type="unfinished"/>
+      <translation>Inserisci il testo dell'etichetta.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2305"/>
@@ -580,7 +580,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2728"/>
       <source>Finish</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>Fine</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2729"/>
@@ -658,7 +658,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2788"/>
       <source>Shrink</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Riduci</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2789"/>
@@ -694,7 +694,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2800"/>
       <source>Weight</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Peso</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2801"/>
@@ -730,7 +730,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2812"/>
       <source>Move to</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Sposta in</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2813"/>
@@ -754,7 +754,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2820"/>
       <source>Custom exit line</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Linea di uscita personalizzata</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2822"/>
@@ -880,7 +880,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2935"/>
       <source>Delete line</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Elimina linea</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2936"/>
@@ -913,7 +913,7 @@ the highlighted room (%1) to:</source>
       <location filename="../src/T2DMap.cpp" line="3589"/>
       <source>Enter room symbol</source>
       <comment>Title for room symbol selection/entry dialog (used in three places)</comment>
-      <translation type="unfinished"/>
+      <translation>Inserisci il simbolo della stanza</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3520"/>
@@ -1383,7 +1383,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="369"/>
       <source>Show Time Stamps.</source>
-      <translation type="unfinished"/>
+      <translation>Mostra Data / Ora.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="380"/>
@@ -1520,7 +1520,7 @@ this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="11506"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>Gioca a %1</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14755"/>
@@ -1934,12 +1934,12 @@ the file:
     <message>
       <location filename="../src/TMap.cpp" line="2257"/>
       <source>Abort</source>
-      <translation type="unfinished"/>
+      <translation>Annulla</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2258"/>
       <source>Map download</source>
-      <translation type="unfinished"/>
+      <translation>Download mappa</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2285"/>
