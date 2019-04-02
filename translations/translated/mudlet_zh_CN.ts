@@ -6492,7 +6492,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your key or key group. This will be displayed in the key tree.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;为你的按钮, 菜单或工具栏选择一个好的名字 (最好是唯一的, 但不是必须唯一). 名字将显示在按钮树上.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;为你的按键或按键组选择一个好的名字 (最好是唯一的, 但不是必须唯一). 名字将显示在按键树上.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="50"/>
