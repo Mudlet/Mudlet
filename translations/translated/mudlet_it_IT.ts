@@ -4296,12 +4296,12 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="84"/>
       <source>White (Light gray)</source>
-      <translation type="unfinished"/>
+      <translation>Bianco (grigio chiaro)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="86"/>
       <source>Light black (Dark gray)</source>
-      <translation type="unfinished"/>
+      <translation>Nero chiaro (Grigio scuro)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="87"/>
@@ -4746,7 +4746,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="877"/>
       <source>Profile preferences - %1</source>
-      <translation type="unfinished"/>
+      <translation>Preferenze profilo - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1129"/>
@@ -5054,25 +5054,25 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="3139"/>
       <source>Large icon</source>
       <comment>Discord Rich Presence large icon</comment>
-      <translation type="unfinished"/>
+      <translation>Icone grandi</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3140"/>
       <source>Detail</source>
       <comment>Discord Rich Presence detail</comment>
-      <translation type="unfinished"/>
+      <translation>Dettagli</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3142"/>
       <source>Small icon</source>
       <comment>Discord Rich Presence small icon</comment>
-      <translation type="unfinished"/>
+      <translation>Icone piccole</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3143"/>
       <source>State</source>
       <comment>Discord Rich Presence state</comment>
-      <translation type="unfinished"/>
+      <translation>Stato</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3145"/>
