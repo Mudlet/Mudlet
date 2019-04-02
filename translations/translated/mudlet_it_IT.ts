@@ -2582,7 +2582,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1195"/>
       <source>Copy as image</source>
-      <translation type="unfinished"/>
+      <translation>Copia come immagine</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1198"/>
@@ -2648,7 +2648,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1773"/>
       <source>{tab}</source>
       <comment>Unicode U+0009 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{tab}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1774"/>
@@ -3145,7 +3145,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2226"/>
       <source>Byte</source>
       <comment>5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Byte</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2169"/>
@@ -3383,7 +3383,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="110"/>
       <source>Type:</source>
-      <translation type="unfinished"/>
+      <translation>Tipo:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="124"/>
@@ -3596,27 +3596,27 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="252"/>
       <source>Red (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Rosso (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="262"/>
       <source>Green (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Verde (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="272"/>
       <source>Blue (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Blu (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="282"/>
       <source>16 + 36 x R + 6 x G + B =</source>
-      <translation type="unfinished"/>
+      <translation>16 + 36 x R + 6 x V + B =</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="343"/>
       <source>[16]</source>
-      <translation type="unfinished"/>
+      <translation>[16]</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="353"/>
@@ -3641,7 +3641,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="414"/>
       <source>[232]</source>
-      <translation type="unfinished"/>
+      <translation>[232]</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="424"/>
@@ -3722,17 +3722,17 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2308"/>
       <source>Profile history:</source>
-      <translation type="unfinished"/>
+      <translation>Cronologia profilo:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2328"/>
       <source>load newest profile</source>
-      <translation type="unfinished"/>
+      <translation>carica il profilo più recente</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2333"/>
       <source>load oldest profile</source>
-      <translation type="unfinished"/>
+      <translation>carica il profilo più vecchio</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2356"/>
@@ -3767,12 +3767,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2392"/>
       <source>With this enabled, Mudlet will automatically start and connect on this profile when it is launched</source>
-      <translation type="unfinished"/>
+      <translation>Con questa opzione abilitata, quando Mudlet si connetterà automaticamente a questo profilo all'avvio</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2398"/>
       <source>Open profile on Mudlet start</source>
-      <translation type="unfinished"/>
+      <translation>Apri profilo all'avvio di Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2408"/>
@@ -3782,7 +3782,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2463"/>
       <source>Informational</source>
-      <translation type="unfinished"/>
+      <translation>Informazioni</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2490"/>
@@ -4216,7 +4216,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="52"/>
       <source>More colors</source>
-      <translation type="unfinished"/>
+      <translation>Altri colori</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="54"/>
@@ -4236,7 +4236,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="64"/>
       <source>Default</source>
-      <translation type="unfinished"/>
+      <translation>Predefinito</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="66"/>
