@@ -7077,85 +7077,85 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="136"/>
       <source>English [American]</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>英文[美国]</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="137"/>
       <source>English [British]</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>英文[英国]</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="138"/>
       <source>Chinese [Simplified]</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>中文[简体]</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="139"/>
       <source>Chinese [Traditional]</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>中文[繁體]</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="140"/>
       <source>Dutch</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>荷兰文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="141"/>
       <source>French</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>法文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="142"/>
       <source>German</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>德文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="143"/>
       <source>Greek</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>希腊文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="144"/>
       <source>Italian</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>意大利文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="145"/>
       <source>Polish</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>波兰文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="146"/>
       <source>Russian</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>俄文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="147"/>
       <source>Spanish</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>西班牙文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="148"/>
       <source>Portuguese</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>葡萄牙文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="162"/>
       <source>Afrikaans</source>
       <extracomment>In the translation source texts the language is the leading term, with, generally, the (primary) country(ies) in the brackets, with a trailing language disabiguation after a &apos;-&apos; Chinese is an exception!</extracomment>
-      <translation type="unfinished"/>
+      <translation>南非荷兰文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="163"/>
@@ -8758,12 +8758,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="90"/>
       <source>Icon size in tree views:</source>
-      <translation type="unfinished"/>
+      <translation>树状视图的图标尺寸：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="110"/>
       <source>Show menu bar:</source>
-      <translation type="unfinished"/>
+      <translation>显示菜单栏：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="121"/>
@@ -8775,7 +8775,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="126"/>
       <location filename="../src/ui/profile_preferences.ui" line="155"/>
       <source>Until a profile is loaded</source>
-      <translation type="unfinished"/>
+      <translation>直到载入配置</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="131"/>
@@ -8786,7 +8786,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="139"/>
       <source>Show main toolbar</source>
-      <translation type="unfinished"/>
+      <translation>显示主工具栏</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="231"/>
@@ -9128,12 +9128,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="174"/>
       <source>Language &amp;&amp; data encoding</source>
-      <translation type="unfinished"/>
+      <translation>文字 &amp;&amp; 数据编码</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="180"/>
       <source>Interface language:</source>
-      <translation type="unfinished"/>
+      <translation>界面文字：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="187"/>
