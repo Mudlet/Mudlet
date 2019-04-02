@@ -9108,7 +9108,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="209"/>
       <source>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren&apos;t showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;Note: While this will allow Mudlet to show text in other languages, internalisation is still in development so triggers or Lua code won&apos;t work yet.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;如果你在玩非英文的游戏时看到用�来代替了文本，或是象&lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt;这样的特殊字母没有&apos;能正确显示——就试着更改编码到UTF-8或你的游戏建议的某个编码。&lt;/p&gt;&lt;p&gt;注意：在允许Mudlet用其它文字显示文本时，如果仍然用这种编码进行开发，有可能会使触发器或Lua代码无法&apos;工作。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="267"/>
