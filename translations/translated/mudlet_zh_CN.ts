@@ -4766,12 +4766,12 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="87"/>
       <source>Package name</source>
-      <translation type="unfinished"/>
+      <translation>包名</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="87"/>
       <source>Package name:</source>
-      <translation type="unfinished"/>
+      <translation>包名：</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="91"/>
@@ -6802,12 +6802,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="275"/>
       <source>&lt;p&gt;Install and remove (share- &amp; sync-able) collections of Mudlet lua items (modules).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;安装和移除（可共享和同步的）Mudlet Lua项的合集（模块）。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="283"/>
       <source>&lt;p&gt;Gather and bundle up collections of Mudlet Lua items and other reasources into a module.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;收集并打包Mudlet Lua项的合集以及其它资源到模块中去。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="291"/>
@@ -7049,7 +7049,11 @@ Starting... Have fun!
 &lt;i&gt;Note: &lt;b&gt;.zip&lt;/b&gt; and &lt;b&gt;.mpackage&lt;/b&gt; modules are currently unable to be synced, only &lt;b&gt;.xml&lt;/b&gt; packages are able to be synchronized across profiles at the moment.&lt;/i&gt;&lt;/p&gt;
 &lt;p&gt;For each save operation, modules are backed up to a directory, &lt;i&gt;moduleBackups&lt;/i&gt;, within your Mudlet profile directory.&lt;/p&gt;
 &lt;/body&gt;&lt;/html&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;模块是一种在不同会话间使用通用包的方法——而不是为每个配置安装的包。&lt;/p&gt;
+&lt;/p&gt;模块按照优先级顺序载入（1会在2前载入，依次类推），有同样优先级的模块则按字母顺序载入。&lt;/p&gt;&lt;p&gt;&lt;b&gt;&lt;i&gt;同步&lt;/i&gt;&lt;/b&gt;选项，如果可用的话，则点击后，配置&lt;/b&gt;中的模块&lt;b&gt;会保存&lt;b&gt;到硬盘中&lt;/b&gt;，然后重新载入到也使用了同样包含此模块的文件的所有配置中去。要让不同的配置使用同样的模块，则通过本模块管理器给每个配置进行安装（当前已在前台的配置是打开的）。&lt;/p&gt;&lt;p&gt;
+&lt;i&gt;注意：&lt;b&gt;.zip&lt;/b&gt;和&lt;b&gt;.mpackage&lt;/b&gt;模块当前还不能同步，只有&lt;b&gt;.xml&lt;/b&gt;包目前能够在配置间同步。&lt;/p&gt;&lt;/p&gt;
+&lt;p&gt;每个保存操作，都会在目录中对模块进行备份。
+&lt;i&gt;模块的备份&lt;/i&gt;，在你的Mudlet配置目录中。&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="128"/>
@@ -8547,7 +8551,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="923"/>
       <source>Module Location</source>
-      <translation type="unfinished"/>
+      <translation>模块位置</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="965"/>
