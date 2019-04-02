@@ -3888,12 +3888,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2398"/>
       <source>Open profile on Mudlet start</source>
-      <translation type="unfinished"/>
+      <translation>在Mudlet启动时开启此配置</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2408"/>
       <source>Reconnect automatically</source>
-      <translation type="unfinished"/>
+      <translation>自动重连</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2463"/>
@@ -4479,7 +4479,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1059"/>
       <source>This profile is currently loaded - close it before changing the connection parameters.</source>
-      <translation type="unfinished"/>
+      <translation>本配置当前已加载——在修改连接参数前先关闭它。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1790"/>
@@ -6701,12 +6701,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="95"/>
       <source>Toolbox</source>
-      <translation type="unfinished"/>
+      <translation>工具箱</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="109"/>
       <source>Options</source>
-      <translation type="unfinished"/>
+      <translation>选项</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="116"/>
@@ -6721,7 +6721,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="132"/>
       <source>Games</source>
-      <translation type="unfinished"/>
+      <translation>游戏</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="147"/>
@@ -8332,7 +8332,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="533"/>
       <source>Connect to a game</source>
-      <translation type="unfinished"/>
+      <translation>接入游戏</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="541"/>
@@ -8478,7 +8478,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="628"/>
       <source>Replay</source>
-      <translation type="unfinished"/>
+      <translation>回放</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="633"/>
