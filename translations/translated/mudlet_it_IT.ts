@@ -6140,13 +6140,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7581"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>Importa package di Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7588"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7602"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>Importa package di Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7588"/>
@@ -6158,7 +6158,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7602"/>
       <source>Package %1 is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>Il pacchetto %1 è già installato.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7728"/>
@@ -6208,7 +6208,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7908"/>
       <source>choose sound file</source>
-      <translation type="unfinished"/>
+      <translation>scegli il file audio</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7908"/>
@@ -6602,7 +6602,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="132"/>
       <source>Games</source>
-      <translation type="unfinished"/>
+      <translation>Giochi</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="147"/>
@@ -6973,13 +6973,13 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="140"/>
       <source>Dutch</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Olandese (Dutch)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="141"/>
       <source>French</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Francese (French)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="142"/>
@@ -6991,25 +6991,25 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="143"/>
       <source>Greek</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Greco</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="144"/>
       <source>Italian</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Italiano (Italian)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="145"/>
       <source>Polish</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Polacco (Polish)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="146"/>
       <source>Russian</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Russo (Russian)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="147"/>
@@ -7267,7 +7267,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="210"/>
       <source>German</source>
-      <translation type="unfinished"/>
+      <translation>Tedesco</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="211"/>
