@@ -6,7 +6,7 @@
     <message>
       <location filename="../src/discord.cpp" line="134"/>
       <source>via Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>con Mudlet</translation>
     </message>
   </context>
   <context>
@@ -37,14 +37,14 @@ attendere prego...</translation>
     <message>
       <location filename="../src/Host.cpp" line="1487"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>Gioca a %1</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1489"/>
       <location filename="../src/Host.cpp" line="1495"/>
       <source>%1 at %2:%3</source>
       <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
-      <translation type="unfinished"/>
+      <translation>%1 a %2:%3</translation>
     </message>
   </context>
   <context>
