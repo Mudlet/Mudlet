@@ -6858,7 +6858,7 @@ Starting... Have fun!
       <location filename="../src/ui/main_window.ui" line="206"/>
       <source>&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;告知你自己Mudlet的版本号、谁创造了它、你在什么协议下可以分享它。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="211"/>
@@ -6873,7 +6873,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="227"/>
       <source>Load replay</source>
-      <translation type="unfinished"/>
+      <translation>载入回放</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="243"/>
@@ -6883,7 +6883,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="248"/>
       <source>Live help chat</source>
-      <translation type="unfinished"/>
+      <translation>在线帮助聊天</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="256"/>
@@ -6913,7 +6913,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="296"/>
       <source>Compact input line</source>
-      <translation type="unfinished"/>
+      <translation>简洁的输入行</translation>
     </message>
   </context>
   <context>
@@ -8488,7 +8488,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="634"/>
       <source>Disconnects you from the game and connects once again</source>
-      <translation type="unfinished"/>
+      <translation>从游戏中断开，然后再连接一次</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="639"/>
@@ -8511,7 +8511,7 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="4368"/>
       <source>&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;告知你自己Mudlet的版本号、谁创造了它、你在什么协议下可以分享它。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="665"/>
@@ -8590,7 +8590,7 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="1653"/>
       <location filename="../src/mudlet.cpp" line="3828"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;载入Mudlet的回放。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1877"/>
@@ -8631,13 +8631,13 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="3664"/>
       <location filename="../src/mudlet.cpp" line="3683"/>
       <source>Compact input line</source>
-      <translation type="unfinished"/>
+      <translation>简洁的输入行</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3668"/>
       <location filename="../src/mudlet.cpp" line="3686"/>
       <source>Standard input line</source>
-      <translation type="unfinished"/>
+      <translation>标准输入行</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3730"/>
