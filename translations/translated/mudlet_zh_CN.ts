@@ -6842,7 +6842,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="195"/>
       <source>API Reference</source>
-      <translation type="unfinished"/>
+      <translation>API参考文档</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="235"/>
@@ -6903,7 +6903,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="280"/>
       <source>Package exporter (experimental)</source>
-      <translation type="unfinished"/>
+      <translation>包输出（实验阶段）</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="288"/>
@@ -9858,7 +9858,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2576"/>
       <source>Enable Lua API</source>
-      <translation type="unfinished"/>
+      <translation>启用Lua API</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2608"/>
