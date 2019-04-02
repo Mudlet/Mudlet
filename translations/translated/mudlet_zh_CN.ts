@@ -6670,7 +6670,12 @@ certain conditions; select the
 &apos;About&apos; item for details.
 
 </source>
-      <translation type="unfinished"/>
+      <translation>
+
+Mudlet不承担使用责任！
+这是免费软件，在给定的条件下乐见你进行分发；详细信息见&apos;关于&apos;项。
+
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="365"/>
