@@ -4530,7 +4530,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1121"/>
       <source>Check to enable Discord integration</source>
-      <translation type="unfinished"/>
+      <translation>勾选以启用整合的Discord</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1765"/>
