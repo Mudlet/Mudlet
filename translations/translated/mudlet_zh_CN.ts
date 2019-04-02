@@ -6751,7 +6751,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="174"/>
       <source>&lt;p&gt;Configure setting for the Mudlet application globally and for the current profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;设定Mudlet应用的全局环境和当前的配置。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="182"/>
@@ -8748,12 +8748,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="61"/>
       <source>Icon sizes</source>
-      <translation type="unfinished"/>
+      <translation>图标尺寸</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="67"/>
       <source>Icon size toolbars:</source>
-      <translation type="unfinished"/>
+      <translation>工具栏上的图标尺寸：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="90"/>
