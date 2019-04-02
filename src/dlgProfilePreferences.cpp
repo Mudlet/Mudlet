@@ -58,9 +58,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // init generated dialog
     setupUi(this);
 
-// DISABLED: - Prevent "None" option for user dictionary
-    radioButton_userDictionary_none->hide();
-
     QPixmap holdPixmap;
 
     holdPixmap = *(this->notificationAreaIconLabelWarning->pixmap());
