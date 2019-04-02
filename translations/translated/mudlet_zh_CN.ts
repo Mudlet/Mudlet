@@ -6731,7 +6731,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="150"/>
       <source>&lt;p&gt;Configure connection details of, and make a connection to, game servers.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;配置游戏服务器的连接细节并接入。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="158"/>
@@ -6878,7 +6878,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="243"/>
       <source>Check for updates...</source>
-      <translation type="unfinished"/>
+      <translation>检查更新……</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="248"/>
