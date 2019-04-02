@@ -8888,22 +8888,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="449"/>
       <source>use strict UNIX line endings on commands for old UNIX servers that can&apos;t handle windows line endings correctly</source>
-      <translation type="unfinished"/>
+      <translation>在命令中使用精确的UNIX行尾来适应老式UNIX服务器，这将不能&apos;正确地处理Windows行尾。</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="452"/>
       <source>Strict UNIX line endings</source>
-      <translation type="unfinished"/>
+      <translation>精确的UNIX行尾</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="469"/>
       <source>Show the text you sent</source>
-      <translation type="unfinished"/>
+      <translation>显示你送出的文本</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="459"/>
       <source>Auto clear the input line after you sent text</source>
-      <translation type="unfinished"/>
+      <translation>在你送出文本后自动清空输入行</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="479"/>
@@ -9159,7 +9159,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="466"/>
       <source>&lt;p&gt;Echo the text you send in the display box.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This can be disabled by the game server if it negotiates to use the telnet ECHO option&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;在显示窗口回显你送出的文本。&lt;/p&gt;&lt;p&gt;&lt;i&gt;如果游戏服务器协议使用了 telnet ECHO ，则此功能可能会失效。&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="476"/>
