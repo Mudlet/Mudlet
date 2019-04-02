@@ -6699,7 +6699,11 @@ All data has been loaded successfully.
 Starting... Have fun!
 
 </source>
-      <translation type="unfinished"/>
+      <translation>完成。
+所有的数据已成功载入。
+启动……玩得开心！
+
+</translation>
     </message>
   </context>
   <context>
