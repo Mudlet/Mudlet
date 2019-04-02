@@ -5805,7 +5805,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="438"/>
       <source>Generates a statistics summary display on the main profile console.</source>
-      <translation type="unfinished"/>
+      <translation>生成统计结果并显示在主配置控制台。</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="441"/>
@@ -5825,7 +5825,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="446"/>
       <source>Activates Debug Messages -&gt; system will be &lt;b&gt;&lt;i&gt;slower&lt;/i&gt;&lt;/b&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>启动调试信息-&gt;系统会&lt;b&gt;&lt;i&gt;变慢&lt;/i&gt;&lt;/b&gt;。</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="447"/>
@@ -6492,7 +6492,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your key or key group. This will be displayed in the key tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;为你的按钮, 菜单或工具栏选择一个好的名字 (最好是唯一的, 但不是必须唯一). 名字将显示在按钮树上.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="50"/>
