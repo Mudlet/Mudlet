@@ -8473,7 +8473,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="623"/>
       <source>Module Manager - allows you to install xmls, .mpackages that are syncronized across multiple profile (good for scripts that you use on several profiles)</source>
-      <translation type="unfinished"/>
+      <translation>模块管理器——允许你安装XML、.mpackages来在多个配置文件中同步（适用于你在不同配置中使用的脚本）</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="628"/>
