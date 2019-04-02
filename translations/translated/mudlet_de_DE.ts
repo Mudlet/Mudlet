@@ -749,7 +749,7 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2817"/>
       <source>Set room&apos;s area number</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Bereichsnummer des Raumes festlegen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2820"/>
@@ -936,14 +936,31 @@ more of the selected %n room(s), delete this to
 clear it from all selected rooms or replace
 with a new symbol to use for all the rooms:</source>
       <comment>This is for when applying a new room symbol to one or more rooms and some have the SAME symbol (others may have none) at present, %n is the total number of rooms involved and is at least two. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Das einzige verwendete Symbol in 
+einem oder mehreren der 
+ausgewählten Räume ist &quot;%1&quot;. 
+Lösche dieses, um es in allen 
+ausgewählten Räumen zu löschen,
+oder ersetze es mit einem neuen 
+Symbol für alle Räume:</numerusform>
+        <numerusform>Das einzige verwendete Symbol in 
+einem oder mehreren der 
+ausgewählten Räume ist &quot;%1&quot;. 
+Lösche dieses, um es in allen 
+ausgewählten Räumen zu löschen,
+oder ersetze es mit einem neuen 
+Symbol für alle Räume:</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3548"/>
       <source>The symbol is &quot;%1&quot; in the selected room,
 delete this to clear the symbol or replace
 it with a new symbol for this room:This is for when applying a new room symbol to one room. Use line feeds to format text into a reasonable rectangle.</source>
-      <translation type="unfinished"/>
+      <translation>Das Symbol im gewählten Raume ist &quot;%1&quot;. 
+Lösche dieses, um es zu entfernen, oder ersetze es
+mit einem neuen Symbol für diesen Raum:</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3591"/>
@@ -5162,7 +5179,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="514"/>
       <source>&lt;p&gt;From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Aus der Wörterbuchdatei &lt;tt&gt;%1.dic&lt;/tt&gt; (und der begleitenden Affix &lt;tt&gt;.aff&lt;/tt&gt; Datei).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="516"/>
@@ -6583,7 +6600,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="35"/>
       <source>&lt;p&gt;It seems that you don&apos;t have any &lt;a href=&quot;http://wiki.mudlet.org/w/Mapping_script&quot;&gt;mapping scripts&lt;/a&gt; installed yet - the mapper needs you to have one for your game, so it can track where you are and autowalk you. You can either make one yourself, or import an existing one that someone else made.&lt;/p&gt;&lt;p&gt;Would you like to see if any are available?&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Es scheint, dass noch keine &lt;a href=&quot;http://wiki.mudlet.org/w/Mapping_script&quot;&gt;Kartenskripte&lt;/a&gt; installiert sind - Der Mapper braucht eins für dieses Spiel, um deine Bewegungen zu verfolgen und dich automatisch bewegen zu können. Du kannst entweder selbst eins erstellen oder ein vorhandenes importieren, das jemand anderes erstellt hat.&lt;/p&gt;&lt;p&gt;Würdest du gerne prüfen, ob welche zur Verfügung stehen?&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="86"/>
@@ -9297,22 +9314,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="595"/>
       <source>&lt;p&gt;A user dictionary specific to this profile will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Das Benutzerwörterbuch wird spezifisch für dieses Profil genutzt. Dies wird in der Befehlszeile angezeigt (Wörter aus dem Wörterbuch werden blau unterstrichen) und ist im Lua-Subsystem verfügbar.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="598"/>
       <source>Profile</source>
-      <translation type="unfinished"/>
+      <translation>Profil</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="605"/>
       <source>&lt;p&gt;A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Das Benutzerwörterbuch wird von allen Profilen gemeinsam genutzt (wenn sie diese Option ausgewählt haben). Dies wird in der Befehlszeile angezeigt (Wörter aus dem Wörterbuch werden blau unterstrichen) und ist im Lua-Subsystem verfügbar.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="608"/>
       <source>Shared</source>
-      <translation type="unfinished"/>
+      <translation>Gemeinsam genutzt</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="729"/>
