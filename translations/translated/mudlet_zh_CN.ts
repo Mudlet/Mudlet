@@ -8821,7 +8821,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="280"/>
       <source>Enable MSDP</source>
-      <translation type="unfinished"/>
+      <translation>启用MSDP</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="298"/>
@@ -8837,7 +8837,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="323"/>
       <source>Save log files in HTML format instead of plain text</source>
-      <translation type="unfinished"/>
+      <translation>用HTML格式来代替纯文本保存日志文件</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="330"/>
@@ -9113,12 +9113,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="267"/>
       <source>&lt;p&gt;Enables GMCP - note that if you have MSDP enabled as well, some servers will prefer one over the other&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;启用GMCP——注意如果你也启用了MSDP，一些服务器会用它喜欢的那种覆盖另一种&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="277"/>
       <source>&lt;p&gt;Enables MSDP - note that if you have GMCP enabled as well, some servers will prefer one over the other&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;启用MSDP——注意如果你也启用了GMCP，一些服务器会用它喜欢的那种覆盖另一种&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="320"/>
