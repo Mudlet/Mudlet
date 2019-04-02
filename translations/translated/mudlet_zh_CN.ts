@@ -3596,7 +3596,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1352"/>
       <location filename="../src/ctelnet.cpp" line="1631"/>
       <source>downloading game GUI from server</source>
-      <translation type="unfinished"/>
+      <translation>正从服务器中下载游戏GUI</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1352"/>
@@ -4789,7 +4789,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="130"/>
       <source>&lt;p&gt;Location which will be used to store log files - matching logs will be appended to.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;用来储存日志文件的位置——一致的日志会添加上。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="138"/>
@@ -4895,7 +4895,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1819"/>
       <source>Loading map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>正载入地图——请稍等……</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1824"/>
@@ -6680,14 +6680,15 @@ Mudlet不承担使用责任！
     <message>
       <location filename="../src/main.cpp" line="365"/>
       <source>Locating profiles... </source>
-      <translation type="unfinished"/>
+      <translation>正在找出配置文件…… </translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="390"/>
       <source>Done.
 
 Loading font files... </source>
-      <translation type="unfinished"/>
+      <translation>完成。
+正载入字体文件…… </translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="457"/>
@@ -8842,12 +8843,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="330"/>
       <source>Add timestamps at the beginning of log lines</source>
-      <translation type="unfinished"/>
+      <translation>在日志行开头添加日期戳</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="337"/>
       <source>Save log files in:</source>
-      <translation type="unfinished"/>
+      <translation>保存日志文件到：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="354"/>
@@ -9123,7 +9124,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="320"/>
       <source>&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extention &apos;.html&apos;) which can convey color, font and other formatting information rather than a plain text (file extension &apos;.txt&apos;) format.  If changed whilst logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;勾选的话会导致以日期戳命名的日志文件成为HTML（文件名后缀是&apos;.html&apos;) ，这会传达颜色、字体以及其它格式信息，而纯文本（文件名后缀&apos;.txt&apos;) 格式则不会。如果修改后记录已经在进行，则有必要停止并重新记录，以便设定能在新日志文件中起效。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="174"/>
