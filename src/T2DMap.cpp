@@ -3547,7 +3547,7 @@ void T2DMap::slot_setSymbol()
                                                     .arg(usedSymbols.keys().first())
                                                   : tr("The symbol is \"%1\" in the selected room,\n"
                                                        "delete this to clear the symbol or replace\n"
-                                                       "it with a new symbol for this room:"
+                                                       "it with a new symbol for this room:",
                                                        // Intentional comment to separate arguments!
                                                        "This is for when applying a new room symbol to one room. "
                                                        "Use line feeds to format text into a reasonable rectangle.")
