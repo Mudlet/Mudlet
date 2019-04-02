@@ -10427,7 +10427,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your script or script group. This will be displayed in the script tree.&lt;/p&gt;&lt;p&gt;If a function withn the script is to be used to handle events entered in the list below &lt;b&gt;&lt;u&gt;it must have the same name as is entered here.&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;为你的脚本或脚本组选择一个好的名字 (最好是唯一的, 但不是必须唯一). 名字将显示在脚本树上.&lt;/p&gt;&lt;p&gt;如果输入在列表下方的脚本中的某个函数是用来处理事件的&lt;b&gt;&lt;u&gt;则它的名字必须和在这输入的是一样的。&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="88"/>
@@ -10504,7 +10504,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your timer, offset-timer or timer group. This will be displayed in the timer tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;为你的定时器、分支定时器或定时器组选择一个好的名字 (最好是唯一的, 但不是必须唯一). 名字将显示在定时器树上.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="73"/>
@@ -10689,7 +10689,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="157"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your trigger or trigger group. This will be displayed in the trigger tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;为你的触发器或触发器组选择一个好的名字 (最好是唯一的, 但不是必须唯一). 名字将显示在触发器树上.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="183"/>
