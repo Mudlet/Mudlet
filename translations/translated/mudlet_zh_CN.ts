@@ -9554,7 +9554,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1756"/>
       <source>Server allowed to redefine these colors</source>
-      <translation type="unfinished"/>
+      <translation>允许服务器重定义这些颜色</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1780"/>
