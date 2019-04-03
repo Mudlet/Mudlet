@@ -220,12 +220,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     if (!optin.isEmpty()) {
         mDiscordDisableServerSide = optin.toInt() == Qt::Unchecked ? true : false;
     }
-
-    if (mHostName != QStringLiteral("default_host")) {
-        Q_ASSERT_X(!mudlet::self()->mHostTimerMap.contains(this), "Host::Host(...)", "the mudlet class mHostTimerMap already contains this Host instance");
-        QMap<QTimer*, TTimer*> hostTimerMap;
-        mudlet::self()->mHostTimerMap.insert(this, hostTimerMap);
-    }
 }
 
 Host::~Host()
@@ -377,7 +371,7 @@ void Host::reloadModule(const QString& reloadModuleName)
 void Host::resetProfile()
 {
     getTimerUnit()->stopAllTriggers();
-    mudlet::self()->clearHostTimerMap(this);
+    mudlet::self()->mTimerMap.clear();
     getTimerUnit()->removeAllTempTimers();
     getTriggerUnit()->removeAllTempTriggers();
     getKeyUnit()->removeAllTempKeys();
