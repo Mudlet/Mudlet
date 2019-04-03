@@ -8382,12 +8382,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="621"/>
       <source>Package Manager - allows you to install xmls, .mpackages</source>
-      <translation type="unfinished"/>
+      <translation>Gestione Pacchetti: consente di installare xmls, .mpackages</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="626"/>
       <source>Module Manager</source>
-      <translation type="unfinished"/>
+      <translation>Gestione Moduli</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="627"/>
@@ -8456,7 +8456,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="927"/>
       <source>Sync</source>
-      <translation type="unfinished"/>
+      <translation>Sincronizza</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="927"/>
@@ -8520,7 +8520,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="3345"/>
       <source>Map - %1</source>
-      <translation type="unfinished"/>
+      <translation>Mappa - %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3353"/>
@@ -8535,7 +8535,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="3435"/>
       <source>%1 - notes</source>
-      <translation type="unfinished"/>
+      <translation>%1 - note</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3485"/>
@@ -8777,7 +8777,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="381"/>
       <source>Log name:</source>
-      <translation type="unfinished"/>
+      <translation>Nome registro:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="401"/>
