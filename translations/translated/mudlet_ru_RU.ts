@@ -2288,7 +2288,7 @@ in main console!</source>
       <source>[ INFO ]  - In room with id: %1 correcting special exit &quot;%2&quot; that
 was to room with an exit to invalid room: %3 to now go
 to: %4.</source>
-      <translation>[ ИНФОРМАЦИЯ]-В комнате с ID: %1 исправлен особый выход &quot;%2&quot; ,
+      <translation>[ ИНФО ]  - В комнате с ID: %1 исправлен особый выход &quot;%2&quot; ,
 -помещение с выходом в недопустимую комнату: %3 до
 до %4.</translation>
     </message>
@@ -2311,7 +2311,7 @@ that was to room with an invalid room: %3 that does not exist.
 The exit will be removed (the bad destination room id will be stored in the
 room user data under a key:
 &quot;%4&quot;).</source>
-      <translation>[ ИНФОРМАЦИЯ ] - Комната с идентификатором: %1 имеет специальный выход &quot;%2&quot; что имеет выход в: %3 но этой комнаты не существует.  Выход будет удалён
+      <translation>[ ИНФО ]  - Комната с идентификатором: %1 имеет специальный выход &quot;%2&quot; что имеет выход в: %3 но этой комнаты не существует.  Выход будет удалён
 (но идентификатор назначенной комнаты будет храниться в
 данных комнаты пользователя под ключом:
 &quot;%4&quot;).</translation>
@@ -2345,7 +2345,7 @@ room user data under a key:
       <location filename="../src/TRoom.cpp" line="1319"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus door items that were removed:
 %2.</source>
-      <translation>[ Информация]-В комнате с id: %1 обнаружена одна или несколько избыточных  дверей, которые были удалены:
+      <translation>[ ИНФО ]  - В комнате с id: %1 обнаружена одна или несколько избыточных  дверей, которые были удалены:
 %2.</translation>
     </message>
     <message>
@@ -2357,7 +2357,7 @@ room user data under a key:
       <location filename="../src/TRoom.cpp" line="1342"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus weight items that were removed:
 %2.</source>
-      <translation>[ Информация]-В комнате с id: %1 обнаружена одна или несколько избыточных  дверей, которые были удалены:
+      <translation>[ ИНФО ]  - В комнате с id: %1 обнаружена одна или несколько избыточных  дверей, которые были удалены:
 %2.</translation>
     </message>
     <message>
@@ -2369,7 +2369,7 @@ room user data under a key:
       <location filename="../src/TRoom.cpp" line="1365"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus exit lock items that were removed:
 %2.</source>
-      <translation>[ Информация]-В комнате с id: %1 обнаружена одна или несколько избыточных  запертых дверей, которые были удалены:
+      <translation>[ ИНФО ]  - В комнате с id: %1 обнаружена одна или несколько избыточных  запертых дверей, которые были удалены:
 %2.</translation>
     </message>
     <message>
@@ -2387,14 +2387,14 @@ were removed: %2.</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1457"/>
       <source>[ INFO ]  - Room had one or more surplus custom line elements that were removed: %1.</source>
-      <translation>[ ИНФОРМАЦИЯ ]  - В комнате найдена одна или более избыточных пользовательских элементов строки, которые
+      <translation>[ ИНФО ]  - В комнате найдена одна или более избыточных пользовательских элементов строки, которые
 были удалены: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1480"/>
       <source>[ INFO ]  - In room with id: %1 correcting exit &quot;%2&quot; that was to room with
 an exit to invalid room: %3 to now go to: %4.</source>
-      <translation>[ ИНФОРМАЦИЯ] - В комнате с ID: %1 исправленный выход &quot;%2&quot; что был направлен
+      <translation>[ ИНФО ]  - В комнате с ID: %1 исправленный выход &quot;%2&quot; что был направлен
 в неправильную комнату: %3 теперь направлен в: %4.</translation>
     </message>
     <message>
@@ -2551,12 +2551,12 @@ Old ==&gt; New</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="781"/>
       <source>[ INFO ]  - The area with this bad id was renumbered to: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Область с этим плохим идентификатором была изменена на %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="782"/>
       <source>[ INFO ]  - This area was renumbered from the bad id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Эта область была перенумерована с неверного идентификатора: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="825"/>
@@ -2585,12 +2585,12 @@ out what new id numbers to use.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="864"/>
       <source>[ INFO ]  - This room with the bad id was renumbered to: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Комната с плохим идентификатором был перенумерована на %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="865"/>
       <source>[ INFO ]  - This room was renumbered from the bad id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Комната была перенумерован с плохого идентификатора: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="901"/>
