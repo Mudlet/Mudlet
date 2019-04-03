@@ -5090,7 +5090,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="481"/>
       <source>Mudlet dictionaries:</source>
       <comment>On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones.</comment>
-      <translation type="unfinished"/>
+      <translation>Mudlet词典：</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="483"/>
@@ -8049,7 +8049,7 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="339"/>
       <source>Shtokavian (former state of Yugoslavia)</source>
       <comment>This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state with a (withdrawn from ISO 3166) state indication</comment>
-      <translation>波斯尼亚文（南斯拉夫形）</translation>
+      <translation>波斯尼亚文（南斯拉夫）</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="340"/>
@@ -8917,7 +8917,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="489"/>
       <source>Command separator:</source>
-      <translation type="unfinished"/>
+      <translation>命令分隔符:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="499"/>
@@ -8927,7 +8927,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="506"/>
       <source>Command line minimum height in pixels:</source>
-      <translation type="unfinished"/>
+      <translation>命令行最小高度像素：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="641"/>
@@ -9173,12 +9173,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="532"/>
       <source>Spell checking</source>
-      <translation type="unfinished"/>
+      <translation>拼写检查</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="538"/>
       <source>&lt;p&gt;This option controls spell-checking on the command line in the main console for this profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;本选项管理的是本配置中在主窗口命令行的拼写检查。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="541"/>
