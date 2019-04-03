@@ -372,7 +372,7 @@ void TTimer::killTimer()
     mpQTimer->stop();
 }
 
-int TTimer::remainingTime() const
+int TTimer::remainingTime()
 {
     return mpQTimer->remainingTime();
 }

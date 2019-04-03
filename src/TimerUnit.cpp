@@ -328,6 +328,15 @@ bool TimerUnit::killTimer(const QString& name)
     return false;
 }
 
+int TimerUnit::remainingTime(const QString& name)
+{
+    for (auto timer : mTimerRootNodeList) {
+        if (timer->getName() == name) {
+                return timer->remainingTime();
+        }
+    }
+    return -1;
+}
 int TimerUnit::getNewID()
 {
     return ++mMaxID;

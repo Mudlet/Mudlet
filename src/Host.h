@@ -163,6 +163,7 @@ public:
     void enableKey(const QString&);
     void disableKey(const QString&);
     bool killTimer(const QString&);
+    int remainingTime(const QString&);
     bool killTrigger(const QString&);
     double stopStopWatch(int);
     bool resetStopWatch(int);

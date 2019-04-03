@@ -268,6 +268,7 @@ public:
     static int enableTimer(lua_State* L);
     static int disableTimer(lua_State* L);
     static int killTimer(lua_State* L);
+    static int remainingTime(lua_State* L);
     static int moveCursor(lua_State* L);
     static int insertHTML(lua_State* L);
     static int insertText(lua_State* L);
