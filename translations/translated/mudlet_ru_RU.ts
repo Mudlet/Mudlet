@@ -1585,12 +1585,12 @@ will NOT persist between sessions as the relevent data IS NOT SAVED.
 
 To avoid filling the screen up with repeated messages, this is your only warning about
 this command...!</source>
-      <translation>[ ИНФОРМАЦИЯ]-Для  полной функциональности указанная выше команда запрашивает ревизию в формате файла карты
+      <translation>[ ИНФО ]  - Для  полной функциональности указанная выше команда запрашивает ревизию в формате файла карты
 и, несмотря на то, что она закодировано, НЕ включена, поэтому действие&apos;с кодом
 не будет сохраняться между сеансами, так как релевантные данные не были сохранены.
 
 Чтобы не заполнять экран повторными сообщениями, это единственное предупреждение о
-этой команде ...!</translation>
+этой команде...!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9872"/>
@@ -1778,7 +1778,7 @@ Error from Lua: </source>
     <message>
       <location filename="../src/TMap.cpp" line="467"/>
       <source>[ INFO ] - Converting old style label id: %1.</source>
-      <translation>[ INFO ] - Преобразование метки старого стиля: %1.</translation>
+      <translation>[ ИНФО ] - Преобразование метки старого стиля: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="472"/>
@@ -1941,8 +1941,7 @@ Mudlet can handle (%2)!  The file is:
       <location filename="../src/TMap.cpp" line="1423"/>
       <source>[ INFO ]  - You will need to upgrade your Mudlet or find a map file saved in an
 older format.</source>
-      <translation>[ ИНФОРМАЦИЯ]-Необходимо обновить Mudlet или предоставьте файл карты, сохраненный в старом формате
-.</translation>
+      <translation>[ ИНФО ]  - Необходимо обновить Mudlet или предоставьте файл карты, сохраненный в старом формате.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1430"/>
@@ -1958,16 +1957,16 @@ it but it will try!  The file is: &quot;%2&quot;.</source>
       <source>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
 There is so much data that it DOES NOT have that you could be
 better off starting again...</source>
-      <translation>[ Информация ] - вы, возможно, желаете подарить этот файл карты в музей Mudlet!
-Существует так много данных, которых Музей не имеет, может быть
-лучше начать снова ...</translation>
+      <translation>[ ИНФО ]  - вы, возможно, желаете подарить этот файл карты в музей Mudlet!
+Существует так много данных, которых музей не имеет, может быть
+лучше начать снова...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1446"/>
       <source>[ INFO ]  - Reading map (format version:%1) file:
 &quot;%2&quot;,
 please wait...</source>
-      <translation>[ИНФОРМАЦИЯ] - Чтение карты (версия формата:%1) файл:
+      <translation>[ ИНФО ]  - Чтение карты (версия формата:%1) файл:
 &quot;%2&quot;,
 , пожалуйста, подождите...</translation>
     </message>
@@ -1975,14 +1974,14 @@ please wait...</source>
       <location filename="../src/TMap.cpp" line="1554"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
-      <translation>[ ИНФОРМАЦИЯ]-Не найдена область по умолчанию (для комнат, не назначенных зоне
-), добавляется зарезервированный ID -1.</translation>
+      <translation>[ ИНФО ]  - Не найдена область по умолчанию (для комнат, не назначенных 
+зоне), добавляется зарезервированный ID -1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1638"/>
       <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
-      <translation>[ИНФОРМАЦИЯ] - Успешно прочитан файл карты (%1s), проверяем некоторые детали согласования
+      <translation>[ ИНФО ]  - Успешно прочитан файл карты (%1s), проверяем некоторые детали согласования
 ...</translation>
     </message>
     <message>
@@ -2053,7 +2052,7 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation>[Информация] - Эквивалент вышеуказанной информации о последней операции карты
+      <translation>[ ИНФО ]  - Эквивалент вышеуказанной информации о последней операции карты
 сохранён для просмотра в качестве последнего отчета в
 файл:
 &quot;%1&quot;
@@ -2140,7 +2139,7 @@ in main console!</source>
     <message>
       <location filename="../src/TMap.cpp" line="2434"/>
       <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
-      <translation>[ ИНФОРМАЦИЯ]-... карта загружена и размещена, теперь анализируем информацию ...</translation>
+      <translation>[ ИНФО ]  - ... карта загружена и размещена, теперь анализируем информацию ...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2460"/>
@@ -2281,7 +2280,7 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="1130"/>
       <source>[ INFO ]  - In room id:%1 patching {internal fixup} of (special) exit to
 %2, was: &quot;%3&quot; now: &quot;%4&quot;.</source>
-      <translation>[ИНФОРМАЦИЯ] - В комнате ID:%1 , исправлен {internal fixup} (специальный) выход на
+      <translation>[ ИНФО ]  - В комнате ID:%1 , исправлен {internal fixup} (специальный) выход на
 %2, было: &quot;%3&quot; сейчас: &quot;%4&quot;.</translation>
     </message>
     <message>
@@ -2352,7 +2351,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1326"/>
       <source>[ INFO ]  - Room had one or more surplus door items that were removed:%1.</source>
-      <translation>[ INFO]-В помещении было удалено одно или несколько помеченных на удаленных элементов дверей:%1.</translation>
+      <translation>[ ИНФО ] - В помещении было удалено одно или несколько помеченных на удаленных элементов дверей:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1342"/>
@@ -2364,7 +2363,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1349"/>
       <source>[ INFO ]  - Room had one or more surplus weight items that were removed: %1.</source>
-      <translation>[ INFO]-В помещении было удалено одно или несколько помеченных на удаленных элементов дверей:%1.</translation>
+      <translation>[ ИНФО ] - В помещении было удалено одно или несколько помеченных на удаленных элементов дверей:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1365"/>
@@ -2376,7 +2375,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1372"/>
       <source>[ INFO ]  - Room had one or more surplus exit lock items that were removed: %1.</source>
-      <translation>[ INFO]-В помещении было удалено одно или несколько помеченных на удаленных элементов запертых дверей:%1.</translation>
+      <translation>[ ИНФО ] - В помещении было удалено одно или несколько помеченных на удаленных элементов запертых дверей:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1451"/>
@@ -2426,7 +2425,7 @@ room: %3 that does not exist.  The exit will be removed (the bad destination
 room id will be stored in the room user data under a key:
 &quot;%4&quot;)
 and the exit will be turned into a stub.</source>
-      <translation>[ ИНФОРМАЦИЯ ] - Комната с идентификатором: %1 с выходом &quot;%2&quot; что имеет выход в неправильную комнату: %3 которой не существует. Выход будет удалён
+      <translation>[ ИНФО ] - Комната с идентификатором: %1 с выходом &quot;%2&quot; что имеет выход в неправильную комнату: %3 которой не существует. Выход будет удалён
 (но идентификатор назначенной комнаты будет храниться в
 данных комнаты пользователя под ключом:
 &quot;%4&quot;)
