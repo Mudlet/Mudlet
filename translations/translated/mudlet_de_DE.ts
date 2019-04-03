@@ -398,7 +398,11 @@ Bitte warten...</translation>
 delete this to clear the symbol or replace
 it with a new symbol for this room:</source>
       <comment>This is for when applying a new room symbol to one room. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Das einzige verwendete Symbol im
+ausgewählten Raum ist &quot;%1&quot;. 
+Lösche dieses, um es im ausgewählten 
+Raum zu löschen, oder ersetze es mit 
+einem neuen Symbol für diesen Raum:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3576"/>
@@ -435,13 +439,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="137"/>
       <source>ID</source>
       <comment>Room ID in the mapper widget</comment>
-      <translation type="unfinished"/>
+      <translation>ID</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="137"/>
       <source>Name</source>
       <comment>Room name in the mapper widget</comment>
-      <translation type="unfinished"/>
+      <translation>Name</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="139"/>
@@ -1574,7 +1578,7 @@ Damit der Bildschirm sich nicht mit wiederholten Nachrichten füllt, ist dies de
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13810"/>
       <source>ERROR</source>
-      <translation type="unfinished"/>
+      <translation>FEHLER</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13811"/>
@@ -1588,7 +1592,7 @@ Damit der Bildschirm sich nicht mit wiederholten Nachrichten füllt, ist dies de
       <location filename="../src/TLuaInterpreter.cpp" line="13822"/>
       <source>function</source>
       <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>Funktion</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14786"/>
@@ -10946,7 +10950,7 @@ Ansonsten den kompletten Treffer hervorheben.</translation>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="128"/>
       <source>Variable name ...</source>
-      <translation type="unfinished"/>
+      <translation>Name der Variable ...</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="150"/>
