@@ -8932,7 +8932,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="641"/>
       <source>Main display</source>
-      <translation type="unfinished"/>
+      <translation>主要显示</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="653"/>
@@ -8952,12 +8952,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="692"/>
       <source>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </source>
-      <translation type="unfinished"/>
+      <translation>在字体上使用抗锯齿。要是你使用的是高分辨率且是大字体时，可以用来平滑字体。注意用在低分辨率和小字号上的话，字体会变得模糊。 </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="695"/>
       <source>Enable anti-aliasing</source>
-      <translation type="unfinished"/>
+      <translation>启用抗锯齿</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="711"/>
@@ -9213,17 +9213,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="598"/>
       <source>Profile</source>
-      <translation type="unfinished"/>
+      <translation>单个配置</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="605"/>
       <source>&lt;p&gt;A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;可用于在所有配置中共享的用户词典（要选择此项）。这将用在命令行（里面的单词将会显示为带有青色虚线的下划线）和Lua分系统中。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="608"/>
       <source>Shared</source>
-      <translation type="unfinished"/>
+      <translation>共享的</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="729"/>
