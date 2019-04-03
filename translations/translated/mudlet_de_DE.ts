@@ -466,7 +466,8 @@ einem neuen Symbol für diesen Raum:</translation>
       <source>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and non-breaking hyphens which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. %2 is the (text) name of the area, %3 is the number for it, %4 to %9 are pairs (min &lt;-&gt; max) of extremes for each of x,y and z coordinates</comment>
-      <translation type="unfinished"/>
+      <translation>Bereich:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2122"/>
@@ -981,7 +982,18 @@ Symbol für alle Räume:</numerusform>
  • enter a space to clear any existing symbols
 for all of the %n selected room(s):</source>
       <comment>Use line feeds to format text into a reasonable rectangle if needed, %n is the number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Wähle:
+ • ein existierendes Symbol aus der Liste unten (sortiert nach Häufigkeit der Nutzung)
+ • tippe ein oder mehrere Grapheme (&quot;sichtbare Zeichen&quot;) als neues Symbol
+ • tippe ein Leerzeichen, um die bestehenden Symbole zu entfernen
+für den ausgewählten Raum:</numerusform>
+        <numerusform>Wähle:
+ • ein existierendes Symbol aus der Liste unten (sortiert nach Häufigkeit der Nutzung)
+ • tippe ein oder mehrere Grapheme (&quot;sichtbare Zeichen&quot;) als neues Symbol
+ • tippe ein Leerzeichen, um die bestehenden Symbole zu entfernen
+für alle %n ausgewählten Räume:</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3726"/>
@@ -3776,7 +3788,10 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
 &lt;li&gt;click the &lt;i&gt;Default&lt;/i&gt; or &lt;i&gt;Ignore&lt;/i&gt; buttons at the bottom for a pair of other special cases&lt;/li&gt;
 &lt;li&gt;clcik &lt;i&gt;Cancel&lt;/i&gt; to close this dialog without making any changes&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</source>
       <comment>Ensure that &quot;Default&quot;, &quot;Ignore&quot; and &quot;Cancel&quot; in this instruction are the same as used for the controls elsewhere on this dialog.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;small&gt;Wähle:&lt;ul&gt;&lt;li&gt;eine der 16 Grundfarben unten&lt;/li&gt;
+&lt;li&gt;Klicke auf &lt;i&gt;mehr&lt;/i&gt;, damit die restlichen Farben des 256-Farbspektrums angezeigt werden, dann folge den Anweisungen, um eine dieser 256 unterstützten Farben zu wählen; Falls eine solche Farbe schon benutzt wird, dann wird dieser Bereich bereits angezeigt&lt;/li&gt;
+&lt;li&gt;Klicke unten auf die Schaltflächen &lt;i&gt;Standard&lt;/i&gt; oder &lt;i&gt;Ignorieren&lt;/i&gt; für zwei weitere besondere Möglichkeiten&lt;/li&gt;
+&lt;li&gt;Klicke &lt;i&gt;Abbrechen&lt;/i&gt;, um dieses Fenster zu schließen, ohne irgendwelche Änderungen durchzuführen&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="58"/>
