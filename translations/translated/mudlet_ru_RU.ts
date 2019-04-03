@@ -435,13 +435,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="137"/>
       <source>ID</source>
       <comment>Room ID in the mapper widget</comment>
-      <translation type="unfinished"/>
+      <translation>ID</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="137"/>
       <source>Name</source>
       <comment>Room name in the mapper widget</comment>
-      <translation type="unfinished"/>
+      <translation>Имя</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="139"/>
@@ -1603,21 +1603,21 @@ this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13810"/>
       <source>ERROR</source>
-      <translation type="unfinished"/>
+      <translation>ОШИБКА</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13811"/>
       <location filename="../src/TLuaInterpreter.cpp" line="13822"/>
       <source>object</source>
       <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>объект</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13811"/>
       <location filename="../src/TLuaInterpreter.cpp" line="13822"/>
       <source>function</source>
       <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>функция</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14786"/>
