@@ -560,7 +560,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2714"/>
       <source>Undo</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>Annulla</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2715"/>
@@ -1273,19 +1273,19 @@ rooms:</source>
       <location filename="../src/TCommandLine.cpp" line="669"/>
       <source>no suggestions (system)</source>
       <comment>used when the command spelling checker using the selected system dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>nessun suggerimento (sistema)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="695"/>
       <source>no suggestions (shared)</source>
       <comment>used when the command spelling checker using the dictionary shared between profile has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>nessun suggerimento (condiviso)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="699"/>
       <source>no suggestions (profile)</source>
       <comment>used when the command spelling checker using the profile&apos;s own dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>nessun suggerimento (profilo)</translation>
     </message>
   </context>
   <context>
@@ -1373,7 +1373,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2396"/>
       <source>System Message: %1</source>
-      <translation type="unfinished"/>
+      <translation>Messaggio di Sistema: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2543"/>
@@ -1391,7 +1391,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="380"/>
       <source>Record a replay.</source>
-      <translation type="unfinished"/>
+      <translation>Registra un replay.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="391"/>
@@ -1554,7 +1554,7 @@ this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="14962"/>
       <location filename="../src/TLuaInterpreter.cpp" line="15016"/>
       <source>no error message available from Lua</source>
-      <translation type="unfinished"/>
+      <translation>nessun messaggio di errore disponibile da Lua</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14788"/>
@@ -3174,7 +3174,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2230"/>
       <source>Lua character or code</source>
       <comment>6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Carattere o codice Lua</translation>
     </message>
   </context>
   <context>
@@ -3377,7 +3377,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="302"/>
       <source>Stylesheet:</source>
-      <translation type="unfinished"/>
+      <translation>Foglio di stile:</translation>
     </message>
   </context>
   <context>
@@ -3653,12 +3653,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="375"/>
       <source>Gray (0-23)</source>
-      <translation type="unfinished"/>
+      <translation>Grigio (0-23)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="382"/>
       <source>232 + Gr =</source>
-      <translation type="unfinished"/>
+      <translation>232 + Gr =</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="414"/>
@@ -3668,7 +3668,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="424"/>
       <source>Set to Grayscale value</source>
-      <translation type="unfinished"/>
+      <translation>Imposta valore scala di grigi</translation>
     </message>
   </context>
   <context>
@@ -3814,7 +3814,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2534"/>
       <source>Game description</source>
-      <translation type="unfinished"/>
+      <translation>Descrizione del gioco</translation>
     </message>
   </context>
   <context>
