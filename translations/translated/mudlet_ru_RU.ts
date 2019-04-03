@@ -448,7 +448,7 @@ it with a new symbol for this room:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="139"/>
       <source>&lt;p&gt;Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;/p&gt;Нажмите на строку, чтобы выбрать или отменить выбор номера комнаты (или названия комнаты, если оно было задано), чтобы добавить или удалить комнату из выбора. Для сортировки нажмите на соответствующий заголовок. Обратите внимание, что имя столбца будет отображаться только, если хотя бы одна из комнат имеет  название.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1541"/>
@@ -3532,7 +3532,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
       <source>&lt;p&gt;Choose a good, ideally unique, name for your button, menu or toolbar. This will be displayed in the buttons tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Выберите хорошее (в идеале уникальное) имя для кнопки, меню или панели кнопок. Это будет показано в списке кнопок.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="302"/>
@@ -7576,12 +7576,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="170"/>
       <source>Arabic (Egypt)</source>
-      <translation type="unfinished"/>
+      <translation>Арабский (Египет)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="228"/>
       <source>English (Canada)</source>
-      <translation type="unfinished"/>
+      <translation>Английский (Канада)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="229"/>
@@ -7782,12 +7782,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="268"/>
       <source>Estonian</source>
-      <translation type="unfinished"/>
+      <translation>Эстонский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="269"/>
       <source>Estonian (Estonia)</source>
-      <translation type="unfinished"/>
+      <translation>Эстонский (Эстония)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="270"/>
@@ -7912,12 +7912,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="294"/>
       <source>Armenian</source>
-      <translation type="unfinished"/>
+      <translation>Армении</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="295"/>
       <source>Armenian (Armenia)</source>
-      <translation type="unfinished"/>
+      <translation>Армянский (Армения)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="296"/>
@@ -9860,7 +9860,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1826"/>
       <source>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands. However if significant problems are found the report can be quite extensive, in particular for larger maps. In order to reduce the amount of on-screen messages this option (if not set) will cause most of the text to not be displayed - except for a suggestion to review the report file.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet теперь выполняет некоторую проверку и исправления чтобы устранить проблемы, которые могли возникнуть в предыдущей версии из-за неисправного кода или плохо документированных команд.&lt;p&gt;Однако при обнаружении значительных проблем отчет может быть довольно обширным, особенно для больших карт.&lt;/i&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2021"/>
