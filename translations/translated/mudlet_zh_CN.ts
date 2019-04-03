@@ -9028,12 +9028,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1048"/>
       <source>Fix unnecessary linebreaks on GA servers</source>
-      <translation type="unfinished"/>
+      <translation>修复GA服务器上非必要的换行符</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1058"/>
       <source>Show Spaces/Tabs</source>
-      <translation type="unfinished"/>
+      <translation>显示空格/制表符</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1068"/>
@@ -9043,7 +9043,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1078"/>
       <source>Show Line/Paragraphs</source>
-      <translation type="unfinished"/>
+      <translation>显示行/段落</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1088"/>
@@ -9267,7 +9267,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1055"/>
       <source>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;body&gt;&lt;p&gt;当在编辑器的主文本编辑区域显示Lua内容时，用可见的制表符和空格标志来代替空白。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1065"/>
@@ -9277,7 +9277,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1075"/>
       <source>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show  line and paragraphs ends with visible marks as well as whitespace.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;body&gt;&lt;p&gt;当在编辑器的主文本编辑区域显示Lua内容时，用可见的行和段落结束标志来代替空白。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1085"/>
