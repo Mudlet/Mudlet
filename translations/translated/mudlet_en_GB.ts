@@ -435,13 +435,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="137"/>
       <source>ID</source>
       <comment>Room ID in the mapper widget</comment>
-      <translation type="unfinished"/>
+      <translation>ID</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="137"/>
       <source>Name</source>
       <comment>Room name in the mapper widget</comment>
-      <translation type="unfinished"/>
+      <translation>Name</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="139"/>
@@ -1541,7 +1541,7 @@ this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="13822"/>
       <source>function</source>
       <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>function</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14786"/>
