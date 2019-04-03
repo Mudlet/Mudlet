@@ -450,7 +450,7 @@ einem neuen Symbol für diesen Raum:</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="139"/>
       <source>&lt;p&gt;Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Klick auf eine Zeile, um diese Raumnummer an- oder abzuwählen. Wenn der Raum einen Namen hat, wird dieser auch ausgewählt. Durch einen Klick auf die entsprechende Kopfzelle wird nach der Spalte sortiert. Hinweis: Die Spalte "Name" erscheint nur, wenn mindestens ein Raum einen Namen hat.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1541"/>
@@ -1585,7 +1585,7 @@ Damit der Bildschirm sich nicht mit wiederholten Nachrichten füllt, ist dies de
       <location filename="../src/TLuaInterpreter.cpp" line="13822"/>
       <source>object</source>
       <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>Objekt</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13811"/>
@@ -3532,7 +3532,7 @@ diese Version kann diese Datei nicht lesen. Du benötigst ein aktuelleres Mudlet
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
       <source>&lt;p&gt;Choose a good, ideally unique, name for your button, menu or toolbar. This will be displayed in the buttons tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle einen guten, bestenfalls einzigartigen Namen für deinen Button, das Menu oder die Werkzeugleiste. Dieser wird in der Liste angezeigt werden.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="302"/>
@@ -6587,7 +6587,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, ideally unique, name for your key or key group. This will be displayed in the key tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle einen guten, bestenfalls einzigartigen Namen für deine Taste oder die Gruppe. Dieser wird in der Liste angezeigt werden.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="40"/>
@@ -7602,12 +7602,12 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="170"/>
       <source>Arabic (Egypt)</source>
-      <translation type="unfinished"/>
+      <translation>Arabisch (Ägypten)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="228"/>
       <source>English (Canada)</source>
-      <translation type="unfinished"/>
+      <translation>Englisch (Kanada)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="229"/>
@@ -7808,12 +7808,12 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="268"/>
       <source>Estonian</source>
-      <translation type="unfinished"/>
+      <translation>Estnisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="269"/>
       <source>Estonian (Estonia)</source>
-      <translation type="unfinished"/>
+      <translation>Estnisch (Estland)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="270"/>
@@ -7938,12 +7938,12 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="294"/>
       <source>Armenian</source>
-      <translation type="unfinished"/>
+      <translation>Armenisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="295"/>
       <source>Armenian (Armenia)</source>
-      <translation type="unfinished"/>
+      <translation>Armenisch (Armenien)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="296"/>
