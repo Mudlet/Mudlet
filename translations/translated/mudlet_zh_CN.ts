@@ -9091,7 +9091,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1082"/>
       <source>Make &apos;Ambiguous&apos; E. Asian width characters wide</source>
-      <translation type="unfinished"/>
+      <translation>设置&apos;模糊的&apos;亚洲字符的宽度</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1181"/>
