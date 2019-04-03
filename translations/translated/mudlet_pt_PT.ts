@@ -398,7 +398,7 @@ Por favor aguarde...</translation>
 delete this to clear the symbol or replace
 it with a new symbol for this room:</source>
       <comment>This is for when applying a new room symbol to one room. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>No espaço selecionado o símbolo e &quot;%1&quot;, remova isso para limpar o símbolo ou substitua-o com um novo símbolo para este espaço:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3576"/>
