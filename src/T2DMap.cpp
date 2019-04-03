@@ -613,6 +613,65 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const bool gridMode)
     }
 }
 
+/*
+ * Helper used to size fonts establishes the font size to use to draw the given
+ * sample text centralized inside the given boundary (or rather the boundary
+ * reduced by the margin (0-40) as a percentage). This margin is defaulted to
+ * 20%.
+ */
+bool T2DMap::sizeFontToFitTextInRect( QFont & font, const QRectF & boundaryRect, const QString & text, const quint8 percentageMargin )
+{
+    QFont _font = font;
+
+    if (percentageMargin > 80) {
+        qWarning() << "T2DMap::sizeFontToFitTextInRect(...) percentage margin" << percentageMargin << "exceeded maximum (40%) !";
+        return false;
+    }
+    if (text.isEmpty()) {
+        qWarning() << "T2DMap::sizeFontToFitTextInRect(...) called with no sample text!";
+        return false;
+    }
+
+    qreal fontSize = font.pointSizeF();
+    QRectF testRect(boundaryRect.width() * (100 - percentageMargin) / 200.0,
+                    boundaryRect.height() * (100 - percentageMargin) / 200.0,
+                    boundaryRect.width() * (100 - percentageMargin) / 100.0,
+                    boundaryRect.height() * (100 - percentageMargin) / 100.);
+    // Increase the test font by one, then check to see that it does NOT fit
+    QRectF neededRect;
+    QPixmap _pixmap(qRound(1.0 + boundaryRect.width()), qRound(1.0 + boundaryRect.height()));
+    QPainter _painter(&_pixmap);
+    do {
+        fontSize = fontSize + 1.0;
+        _font.setPointSizeF(fontSize);
+        _painter.setFont(_font);
+
+        neededRect = _painter.boundingRect(testRect, Qt::AlignCenter | Qt::TextSingleLine | Qt::TextIncludeTrailingSpaces, text);
+    } while (testRect.contains(neededRect));
+
+    // Now decrease until it does
+    bool isSizeTooSmall = false;
+    static qreal minFontSize = 7.0;
+    do {
+        fontSize = fontSize - 1.0;
+        _font.setPointSizeF(fontSize);
+        if (fontSize < minFontSize) {
+            isSizeTooSmall = true;
+        }
+
+        _painter.setFont(_font);
+
+        neededRect = _painter.boundingRect(testRect, Qt::AlignCenter | Qt::TextSingleLine | Qt::TextIncludeTrailingSpaces, text);
+    } while ((!isSizeTooSmall) && (!testRect.contains(neededRect)));
+
+    if (isSizeTooSmall) {
+        return false;
+    } else {
+        font.setPointSizeF(fontSize);
+        return true;
+    }
+}
+
 // Revised to use a QCache to hold QPixmap * to generated images for room symbols
 void T2DMap::paintEvent(QPaintEvent* e)
 {
@@ -724,6 +783,46 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     mRX = qRound(mRoomWidth * ((xspan / 2.0) - ox));
     mRY = qRound(mRoomHeight * ((yspan / 2.0) - oy));
+    QFont roomVNumFont = mpMap->mMapSymbolFont;
+    bool isFontBigEnoughToShowRoomVnum = false;
+    if (mShowRoomID) {
+        /*
+         * If we are to show the room Id numbers - find out the number of digits
+         * that we will need to use; actually, knowing the digit count is also
+         * useful for the room selection widget so perform this check EVERY time.
+         * TODO: Eventually move this check to the TArea class and just redo it
+         * when areas' room content changes.
+         */
+        int maxUsedRoomId = 0;
+        QSetIterator<int> itRoomId(playerArea->getAreaRooms());
+        while (itRoomId.hasNext()) {
+            maxUsedRoomId = qMax(maxUsedRoomId, itRoomId.next());
+        }
+        mMaxRoomIdDigits = static_cast<quint8>(QString::number(maxUsedRoomId).length());
+
+        QRectF roomTestRect;
+        if (playerArea->gridMode) {
+            roomTestRect = QRectF(0, 0, static_cast<qreal>(mRoomWidth), static_cast<qreal>(mRoomHeight));
+        } else {
+            roomTestRect = QRectF(0, 0, static_cast<qreal>(mRoomWidth) * rSize, static_cast<qreal>(mRoomHeight) * rSize);
+        }
+        QFont roomVNumFont = mpMap->mMapSymbolFont;
+        static quint8 roomVnumMargin = 10;
+        roomVNumFont.setUnderline(true);
+        roomVNumFont.setOverline(true);
+        roomVNumFont.setBold(true);
+#if QT_VERSION >= 0x050a00
+        // QFont::PreferNoShaping is only available in Qt 5.10 or later
+        // QFont::PreferOutline will help to select a font that will scale to any
+        // size - which is important for good rendering over a range of sizes
+        // QFont::PreferAntialias will look better - except perhaps at very small
+        // sizes (but we prevent that by checking in the method call afterwards):
+        roomVNumFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping|QFont::PreferAntialias|QFont::PreferOutline));
+#else
+        roomVNumFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferAntialias|QFont::PreferOutline));
+#endif
+        isFontBigEnoughToShowRoomVnum = sizeFontToFitTextInRect(roomVNumFont, roomTestRect, QStringLiteral("8").repeated(mMaxRoomIdDigits), roomVnumMargin);
+    }
 
     // This could be the coordinates of the center of the window?
     int px = qRound((mRoomWidth * xspan) / 2.0);
@@ -1560,7 +1659,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 painter.fillRect(roomRectangle, roomColor);
             }
 
-            if (!mShowRoomID && !room->mSymbol.isEmpty()) {
+            if (!(mShowRoomID && isFontBigEnoughToShowRoomVnum) && !room->mSymbol.isEmpty()) {
                 QString pixmapKey;
                 if (roomColor.lightness() > 127) {
                     pixmapKey = QStringLiteral("B_%1").arg(room->mSymbol);
@@ -1578,23 +1677,24 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 if (!pix) {
                     qWarning("T2DMap::paintEvent() Alert: mSymbolPixmapCache failure, too many items to cache all of them for: \"%s\"", room->mSymbol.toUtf8().constData());
                 } else {
-                    /* For the non-scaling QPainter::drawPixmap() used now we
+                    /*
+                     * For the non-scaling QPainter::drawPixmap() used now we
                      * have to position the generated pixmap containing the
                      * particular symbol for this room to Y when it would
                      * position it at X - this should be faster than the previous
                      * scaling QPainter::drawPixmap() as that would scale the
                      * pixmap to fit the Room Rectangle!
                      *
-                     *               |<------->| roomRectangle.width()
+                     *                         |<------->| roomRectangle.width()
                      * roomRectangle.topLeft-->X---------+
-                     *              |  Room   |
-                     *              |  Y---+  |
-                     *              |  |Pix|  |
-                     *              |  +---+  |
-                     *              |Rectangle|
-                     *              +---------+
-                     *                 |<->|<--symbolRect.width()
-                     * x-offset---->|<>|<-- (roomRectangle.width() - symbolRect.width())/2.0
+                     *                         |  Room   |
+                     *                         |  Y---+  |
+                     *                         |  |Pix|  |
+                     *                         |  +---+  |
+                     *                         |Rectangle|
+                     *                         +---------+
+                     *                            |<->|<--symbolRect.width()
+                     *            x-offset---->|<>|<-- (roomRectangle.width() - symbolRect.width())/2.0
                      * similarly for the y-offset
                      */
 
@@ -1620,7 +1720,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 painter.drawPath(diameterPath);
             }
 
-            if (mShowRoomID) {
+            if (mShowRoomID && isFontBigEnoughToShowRoomVnum) {
+                painter.save();
                 QPen roomIdPen = painter.pen();
                 QColor roomIdColor;
                 if (roomColor.red() + roomColor.green() + roomColor.blue() > 200) {
@@ -1628,9 +1729,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 } else {
                     roomIdColor = QColor(Qt::white);
                 }
+                painter.setFont(roomVNumFont);
                 painter.setPen(QPen(roomIdColor));
                 painter.drawText(roomRectangle, Qt::AlignHCenter | Qt::AlignVCenter, QString::number(currentAreaRoom));
                 painter.setPen(roomIdPen);
+                painter.restore();
             }
 
             if (mShiftMode && currentAreaRoom == mpMap->mRoomIdHash.value(mpMap->mProfileName)) {
