@@ -398,7 +398,9 @@ please wait...</source>
 delete this to clear the symbol or replace
 it with a new symbol for this room:</source>
       <comment>This is for when applying a new room symbol to one room. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Символ &quot;%1&quot; в выбранной комнате,
+удалите его, чтобы убрать символ или замените
+на новый символ для этой комнаты:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3576"/>
@@ -6575,7 +6577,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, ideally unique, name for your key or key group. This will be displayed in the key tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Выберите хорошее (в идеале уникальное) имя для ключа или группы ключей. Оно будет показано в списке ключей.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="40"/>
@@ -10926,7 +10928,7 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="128"/>
       <source>Variable name ...</source>
-      <translation type="unfinished"/>
+      <translation>Имя переменной ...</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="150"/>
