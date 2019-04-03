@@ -2522,6 +2522,27 @@ int TLuaInterpreter::killTrigger(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::remainingTime(lua_State* L)
+{
+	string luaSendText = "";
+	if(!lua_isstring(L, 1)){
+		lua_pushstring(L, "remainingTime: remainingTime requires a string ID");
+		lua_error(L);
+		return 1;
+	}else{
+		luaSendText = lua_tostring(L, 1);
+	}
+	Host& host = getHostFromLua(L);
+	QString text(luaSendText.c_str());
+	if(host.remainingTime(text) == -1){
+		lua_pushnil(L);
+		lua_pushstring(L, "Timer is inactive or expired");
+		return 2;
+	}
+	lua_pushinteger(L, host.remainingTime(text));
+	return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#closeMudlet
 int TLuaInterpreter::closeMudlet(lua_State* L)
 {
@@ -14404,6 +14425,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "clearUserWindow", TLuaInterpreter::clearUserWindow);
     lua_register(pGlobalLua, "clearWindow", TLuaInterpreter::clearUserWindow);
     lua_register(pGlobalLua, "killTimer", TLuaInterpreter::killTimer);
+	lua_register(pGlobalLua, "remainingTime", TLuaInterpreter::remainingTime);
     lua_register(pGlobalLua, "moveCursor", TLuaInterpreter::moveCursor);
     lua_register(pGlobalLua, "getLines", TLuaInterpreter::getLines);
     lua_register(pGlobalLua, "getLineNumber", TLuaInterpreter::getLineNumber);
