@@ -398,7 +398,7 @@ please wait...</source>
 delete this to clear the symbol or replace
 it with a new symbol for this room:</source>
       <comment>This is for when applying a new room symbol to one room. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>选择的房间符号为 &quot;%1&quot;，点击此处以清除符号或使用新符号替换此房间符号:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3576"/>
@@ -435,13 +435,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="137"/>
       <source>ID</source>
       <comment>Room ID in the mapper widget</comment>
-      <translation type="unfinished"/>
+      <translation>编号</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="137"/>
       <source>Name</source>
       <comment>Room name in the mapper widget</comment>
-      <translation type="unfinished"/>
+      <translation>名称</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="139"/>
@@ -1529,7 +1529,7 @@ this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13810"/>
       <source>ERROR</source>
-      <translation type="unfinished"/>
+      <translation>错误</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13811"/>
@@ -1543,7 +1543,7 @@ this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="13822"/>
       <source>function</source>
       <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>函数</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14786"/>
@@ -7413,7 +7413,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="210"/>
       <source>German</source>
-      <translation type="unfinished"/>
+      <translation>德文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="211"/>
@@ -7463,7 +7463,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="220"/>
       <source>Greek</source>
-      <translation type="unfinished"/>
+      <translation>希腊文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="221"/>
@@ -7599,7 +7599,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="246"/>
       <source>Spanish</source>
-      <translation type="unfinished"/>
+      <translation>西班牙文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="247"/>
@@ -7734,7 +7734,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="273"/>
       <source>French</source>
-      <translation type="unfinished"/>
+      <translation>法文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="274"/>
@@ -7865,7 +7865,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="299"/>
       <source>Italian</source>
-      <translation type="unfinished"/>
+      <translation>意大利文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="300"/>
@@ -7975,7 +7975,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="321"/>
       <source>Dutch</source>
-      <translation type="unfinished"/>
+      <translation>荷兰文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="322"/>
@@ -8015,7 +8015,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="329"/>
       <source>Polish</source>
-      <translation type="unfinished"/>
+      <translation>波兰文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="330"/>
@@ -8025,7 +8025,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="331"/>
       <source>Portuguese</source>
-      <translation type="unfinished"/>
+      <translation>葡萄牙文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="332"/>
@@ -8050,7 +8050,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="336"/>
       <source>Russian</source>
-      <translation type="unfinished"/>
+      <translation>俄文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="337"/>
