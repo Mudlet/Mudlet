@@ -8962,27 +8962,27 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="711"/>
       <source>Display Border</source>
-      <translation type="unfinished"/>
+      <translation>显示的边框</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="732"/>
       <source>Top border height:</source>
-      <translation type="unfinished"/>
+      <translation>顶部边框高度：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="776"/>
       <source>Left border width:</source>
-      <translation type="unfinished"/>
+      <translation>左边边框宽度：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="820"/>
       <source>Bottom border height:</source>
-      <translation type="unfinished"/>
+      <translation>底部边框高度：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="864"/>
       <source>Right border width:</source>
-      <translation type="unfinished"/>
+      <translation>右边边框宽度：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="905"/>
@@ -8992,18 +8992,18 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="929"/>
       <source>Wrap lines at:</source>
-      <translation type="unfinished"/>
+      <translation>换行于：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="949"/>
       <location filename="../src/ui/profile_preferences.ui" line="997"/>
       <source>characters</source>
-      <translation type="unfinished"/>
+      <translation>字符</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="977"/>
       <source>Indent wrapped lines by:</source>
-      <translation type="unfinished"/>
+      <translation>缩进换行于：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1010"/>
@@ -9229,25 +9229,25 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="729"/>
       <location filename="../src/ui/profile_preferences.ui" line="745"/>
       <source>&lt;p&gt;Extra space to have before text on top - can be set to negative to move text up beyond the screen&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;顶部文本之前额外的空间——可以设置为负数来将文本向上移出屏幕&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="773"/>
       <location filename="../src/ui/profile_preferences.ui" line="789"/>
       <source>&lt;p&gt;Extra space to have before text on the left - can be set to negative to move text left beyond the screen&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;左边文本之前额外的空间——可以设置为负数来将文本向左移出屏幕&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="817"/>
       <location filename="../src/ui/profile_preferences.ui" line="833"/>
       <source>&lt;p&gt;Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;底部文本之前额外的空间——可以设置为负数来将文本向下移出屏幕&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="861"/>
       <location filename="../src/ui/profile_preferences.ui" line="877"/>
       <source>&lt;p&gt;Extra space to have before text on the right - can be set to negative to move text right beyond the screen&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;右边文本之前额外的空间——可以设置为负数来将文本向右移出屏幕&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1023"/>
