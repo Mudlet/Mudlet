@@ -8757,7 +8757,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="337"/>
       <source>Save log files in:</source>
-      <translation type="unfinished"/>
+      <translation>Salvare i file di log in:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="354"/>
@@ -8772,12 +8772,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="368"/>
       <source>Log format:</source>
-      <translation type="unfinished"/>
+      <translation>Formato log:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="381"/>
       <source>Log name:</source>
-      <translation>Nome registro:</translation>
+      <translation>Nome log:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="401"/>
@@ -9053,7 +9053,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="191"/>
       <source>English</source>
-      <translation type="unfinished"/>
+      <translation>Inglese</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="199"/>
@@ -9194,7 +9194,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1154"/>
       <source>h:mm:ss.zzz</source>
       <comment>Used to set a time interval only</comment>
-      <translation type="unfinished"/>
+      <translation>h:mm:ss.zzz</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1300"/>
@@ -9507,7 +9507,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2794"/>
       <source>Security</source>
-      <translation type="unfinished"/>
+      <translation>Sicurezza</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2800"/>
@@ -9683,12 +9683,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2429"/>
       <source>Force compression off</source>
-      <translation type="unfinished"/>
+      <translation>Forza compressione disattivata</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2436"/>
       <source>Force telnet GA signal interpretation off</source>
-      <translation type="unfinished"/>
+      <translation>Forza l'interpretazione del segnale telnet GA disattivata</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2443"/>
@@ -9699,12 +9699,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2447"/>
       <source>Force new line on empty commands</source>
-      <translation type="unfinished"/>
+      <translation>Forza la nuova linea sui comandi vuoti</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2454"/>
       <source>Force MXP negotiation off</source>
-      <translation type="unfinished"/>
+      <translation>Forza la negoziazione MXP disattiva</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2488"/>
@@ -9767,7 +9767,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2563"/>
       <source>Enable Lua API</source>
-      <translation type="unfinished"/>
+      <translation>Abilita API Lua</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2595"/>
@@ -9777,7 +9777,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2539"/>
       <source>Hide state</source>
-      <translation type="unfinished"/>
+      <translation>Nascondi stato</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2546"/>
@@ -10165,7 +10165,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1901"/>
       <source>No door</source>
-      <translation type="unfinished"/>
+      <translation>Nessuna porta</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1916"/>
@@ -10311,7 +10311,8 @@ Bloccata</translation>
       <location filename="../src/ui/room_exits.ui" line="2107"/>
       <source>Command
 or LUA script</source>
-      <translation type="unfinished"/>
+      <translation>Comando
+o script LUA</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2131"/>
@@ -10494,7 +10495,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="487"/>
       <source>zzz</source>
-      <translation type="unfinished"/>
+      <translation>zzz</translation>
     </message>
   </context>
   <context>
