@@ -5496,7 +5496,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1857"/>
       <source>Exits for room Id: %1 [*]</source>
-      <translation type="unfinished"/>
+      <translation>Uscite per la stanza Id: %1 [*]</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1927"/>
@@ -5877,7 +5877,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2385"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2390"/>
       <source>Lua code (%1:%2)</source>
-      <translation type="unfinished"/>
+      <translation>Codice Lua (%1:%2)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1319"/>
@@ -7110,7 +7110,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="176"/>
       <source>Arabic (Libya)</source>
-      <translation type="unfinished"/>
+      <translation>Arabo (Libia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="177"/>
@@ -7155,17 +7155,17 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="185"/>
       <source>Belarusian</source>
-      <translation type="unfinished"/>
+      <translation>Bielorusso</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="186"/>
       <source>Belarusian (Belarus)</source>
-      <translation type="unfinished"/>
+      <translation>Bielorusso (Bielorussia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="187"/>
       <source>Belarusian (Russia)</source>
-      <translation type="unfinished"/>
+      <translation>Bielorusso (Russia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="188"/>
@@ -7466,7 +7466,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="246"/>
       <source>Spanish</source>
-      <translation type="unfinished"/>
+      <translation>Spagnolo</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="247"/>
@@ -8224,7 +8224,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="397"/>
       <source>Zulu</source>
-      <translation type="unfinished"/>
+      <translation>Zulu</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="423"/>
@@ -8251,7 +8251,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="537"/>
       <source>Connect to a game</source>
-      <translation type="unfinished"/>
+      <translation>Connettiti a un gioco</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="545"/>
@@ -8346,7 +8346,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="599"/>
       <source>Manual</source>
-      <translation type="unfinished"/>
+      <translation>Manuale</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="600"/>
@@ -8356,7 +8356,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="605"/>
       <source>Settings</source>
-      <translation type="unfinished"/>
+      <translation>Impostazioni</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="606"/>
@@ -8377,7 +8377,7 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="620"/>
       <location filename="../src/mudlet.cpp" line="1203"/>
       <source>Package Manager</source>
-      <translation type="unfinished"/>
+      <translation>Gestione Pacchetti</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="621"/>
