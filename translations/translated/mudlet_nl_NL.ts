@@ -441,7 +441,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="137"/>
       <source>Name</source>
       <comment>Room name in the mapper widget</comment>
-      <translation type="unfinished"/>
+      <translation>Naam</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="139"/>
