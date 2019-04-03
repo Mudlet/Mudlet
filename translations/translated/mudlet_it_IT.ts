@@ -435,13 +435,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="137"/>
       <source>ID</source>
       <comment>Room ID in the mapper widget</comment>
-      <translation type="unfinished"/>
+      <translation>ID</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="137"/>
       <source>Name</source>
       <comment>Room name in the mapper widget</comment>
-      <translation type="unfinished"/>
+      <translation>Nome</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="139"/>
@@ -1542,7 +1542,7 @@ this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="13822"/>
       <source>function</source>
       <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>funzione</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14786"/>
@@ -6915,7 +6915,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/mapper.ui" line="887"/>
       <source>default</source>
-      <translation type="unfinished"/>
+      <translation>predefinito</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="900"/>
@@ -7003,7 +7003,7 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="142"/>
       <source>German</source>
       <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation type="unfinished"/>
+      <translation>Tedesco</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="143"/>
@@ -7330,7 +7330,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="220"/>
       <source>Greek</source>
-      <translation type="unfinished"/>
+      <translation>Greco</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="221"/>
@@ -7601,7 +7601,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="273"/>
       <source>French</source>
-      <translation type="unfinished"/>
+      <translation>Francese (French)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="274"/>
@@ -7732,7 +7732,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="299"/>
       <source>Italian</source>
-      <translation type="unfinished"/>
+      <translation>Italiano (Italian)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="300"/>
@@ -7842,7 +7842,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="321"/>
       <source>Dutch</source>
-      <translation type="unfinished"/>
+      <translation>Olandese (Dutch)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="322"/>
@@ -7882,7 +7882,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="329"/>
       <source>Polish</source>
-      <translation type="unfinished"/>
+      <translation>Polacco (Polish)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="330"/>
@@ -7917,7 +7917,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="336"/>
       <source>Russian</source>
-      <translation type="unfinished"/>
+      <translation>Russo (Russian)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="337"/>
@@ -8648,7 +8648,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="20"/>
       <source>Profile preferences</source>
-      <translation type="unfinished"/>
+      <translation>Preferenze profilo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="55"/>
@@ -9598,7 +9598,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1931"/>
       <source>Map download</source>
-      <translation type="unfinished"/>
+      <translation>Download mappa</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1953"/>
@@ -9921,7 +9921,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="790"/>
       <source>Weight:</source>
-      <translation type="unfinished"/>
+      <translation>Peso:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="866"/>
@@ -10702,7 +10702,7 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="128"/>
       <source>Variable name ...</source>
-      <translation type="unfinished"/>
+      <translation>Nome variabile ...</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="150"/>
