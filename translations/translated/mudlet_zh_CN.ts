@@ -9013,7 +9013,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1016"/>
       <source>Stop selecting a word on these characters:</source>
-      <translation type="unfinished"/>
+      <translation>在以下字符处停止选中单词：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1026"/>
@@ -9023,7 +9023,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1039"/>
       <source>Display options</source>
-      <translation type="unfinished"/>
+      <translation>显示选项</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1048"/>
@@ -9257,7 +9257,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1029"/>
       <source>(characters to ignore in selection, for example &apos; or &quot;)</source>
-      <translation type="unfinished"/>
+      <translation>（在选择中忽略的字符，如，&apos; 或&quot;“）</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1045"/>
