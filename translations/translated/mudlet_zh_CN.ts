@@ -9569,12 +9569,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1792"/>
       <source>Save your current map:</source>
-      <translation type="unfinished"/>
+      <translation>保存你的当前地图到：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1802"/>
       <source>Press to choose location and save</source>
-      <translation type="unfinished"/>
+      <translation>按下来选择位置并保存</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1809"/>
@@ -9584,7 +9584,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1819"/>
       <source>Press to choose file and load</source>
-      <translation type="unfinished"/>
+      <translation>按下来选择文件并载入</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1856"/>
