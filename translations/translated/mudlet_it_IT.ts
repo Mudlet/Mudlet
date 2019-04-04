@@ -4244,7 +4244,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="54"/>
       <source>Click to access all 256 ANSI colors.</source>
-      <translation type="unfinished"/>
+      <translation>Clicca per accedere a tutti i 256 colori ANSI.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
@@ -4370,7 +4370,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="405"/>
       <source>All color options are showing.</source>
-      <translation type="unfinished"/>
+      <translation>Tutte le opzioni di colore sono visibili.</translation>
     </message>
   </context>
   <context>
@@ -4493,7 +4493,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="113"/>
       <source>%1 closed their client.</source>
-      <translation type="unfinished"/>
+      <translation>%1 ha chiuso il suo client.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="125"/>
@@ -4558,7 +4558,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="417"/>
       <source>! Joining %1...</source>
-      <translation type="unfinished"/>
+      <translation>! Unisciti a %1...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="422"/>
@@ -4597,7 +4597,8 @@ Count</source>
       <location filename="../src/dlgMapper.cpp" line="227"/>
       <source>Cannot find a path to this room.
 </source>
-      <translation type="unfinished"/>
+      <translation>Impossibile trovare un percorso per questa stanza.
+</translation>
     </message>
   </context>
   <context>
@@ -4610,7 +4611,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="21"/>
       <source>Check items to export</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona gli elementi da esportare</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="63"/>
@@ -4719,12 +4720,12 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="637"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd#HH-mm-ss (es. 1970-01-01#00-00-00%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="639"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-ddTHH-mm-ss (es. 1970-01-01T00-00-00%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="640"/>
@@ -4799,7 +4800,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1808"/>
       <source>Loading map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Caricamento mappa - attendere...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1813"/>
@@ -4994,13 +4995,13 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="470"/>
       <source>Mudlet dictionaries:</source>
       <comment>On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones.</comment>
-      <translation type="unfinished"/>
+      <translation>Dizionari Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="472"/>
       <source>System dictionaries:</source>
       <comment>On *nix systems where we find the system ones we use them.</comment>
-      <translation type="unfinished"/>
+      <translation>Dizionari di sistema:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="503"/>
@@ -5010,7 +5011,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="505"/>
       <source>%1 - not recognised</source>
-      <translation type="unfinished"/>
+      <translation>%1 - non riconosciuto</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="506"/>
@@ -5123,12 +5124,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3244"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd#HH-mm-ss (es. 1970-01-01#00-00-00.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3245"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.html)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-ddTHH-mm-ss (es. 1970-01-01T00-00-00.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3246"/>
@@ -5744,7 +5745,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="557"/>
       <source>Case sensitive</source>
-      <translation type="unfinished"/>
+      <translation>Maiuscole/minuscole</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="560"/>
@@ -5936,7 +5937,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2157"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2162"/>
       <source>Command {Down}</source>
-      <translation type="unfinished"/>
+      <translation>Comando {Basso}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1519"/>
@@ -5944,7 +5945,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2176"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2181"/>
       <source>Command {Up}</source>
-      <translation type="unfinished"/>
+      <translation>Comando {Su}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1548"/>
