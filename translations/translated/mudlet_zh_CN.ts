@@ -518,7 +518,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2305"/>
       <source>Background color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>背景色</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2306"/>
@@ -9626,7 +9626,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2423"/>
       <source>Special options needed for some older game drivers (needs client restart to take effect)</source>
-      <translation type="unfinished"/>
+      <translation>特别选项需要一些较早的老游戏驱动（需要客户端重启才生效）</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2767"/>
@@ -9792,7 +9792,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2072"/>
       <source>Mapper colors</source>
-      <translation type="unfinished"/>
+      <translation>地图颜色</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2078"/>
@@ -9802,7 +9802,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2084"/>
       <source>Link color</source>
-      <translation type="unfinished"/>
+      <translation>连接色</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2104"/>
@@ -9812,7 +9812,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2417"/>
       <source>Special Options</source>
-      <translation type="unfinished"/>
+      <translation>特别选项</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2429"/>
