@@ -9817,28 +9817,28 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2429"/>
       <source>Force compression off</source>
-      <translation type="unfinished"/>
+      <translation>强制关闭压缩</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2436"/>
       <source>Force telnet GA signal interpretation off</source>
-      <translation type="unfinished"/>
+      <translation>强制关闭telnet的 GA 信号解释</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2443"/>
       <source>This option adds a line line break &lt;LF&gt; or &quot;
 &quot; to your command input on empty commands. This option will rarely be necessary.</source>
-      <translation type="unfinished"/>
+      <translation>此项在空命令上添加换行&lt;&lt;LF>&gt;或“”到你的命令输入上。本选项极少用到。</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2447"/>
       <source>Force new line on empty commands</source>
-      <translation type="unfinished"/>
+      <translation>强制在空命令上新加一行</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2454"/>
       <source>Force MXP negotiation off</source>
-      <translation type="unfinished"/>
+      <translation>强制关闭MXP协商</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2488"/>
