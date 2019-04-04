@@ -2524,22 +2524,24 @@ int TLuaInterpreter::killTrigger(lua_State* L)
 
 int TLuaInterpreter::remainingTime(lua_State* L)
 {
-	string luaSendText = "";
-	if(!lua_isstring(L, 1)){
-		lua_pushstring(L, "remainingTime: remainingTime requires a string ID");
-		lua_error(L);
-		return 1;
-	}else{
-		luaSendText = lua_tostring(L, 1);
+	if (!lua_isstring(L, 1)) {
+		lua_pushfstring(L, "remainingTime: bad argument #1 (timer name as string expected, got %s!", luaL_typename(L, 1));
+		return lua_error(L);
 	}
+	QString timerName = QString::fromUtf8(lua_tostring(L, 1));
 	Host& host = getHostFromLua(L);
-	QString text(luaSendText.c_str());
-	if(host.remainingTime(text) == -1){
+	int result = host.getTimerUnit()->remainingTime(timerName);
+	if (result == -1) {
 		lua_pushnil(L);
 		lua_pushstring(L, "Timer is inactive or expired");
 		return 2;
 	}
-	lua_pushinteger(L, host.remainingTime(text));
+	if (result == -2) {
+		lua_pushnil(L);
+		lua_pushfstring(L, "Timer \"%s\" not found", timerName.toUtf8().constData());
+		return 2;
+	}
+	lua_pushnumber(L, result / 1000.0);
 	return 1;
 }
 

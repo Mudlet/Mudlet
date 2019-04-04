@@ -774,10 +774,6 @@ bool Host::killTimer(const QString& name)
 {
     return mTimerUnit.killTimer(name);
 }
-int Host::remainingTime(const QString& name)
-{
-    return mTimerUnit.remainingTime(name);
-}
 
 void Host::enableKey(const QString& name)
 {
