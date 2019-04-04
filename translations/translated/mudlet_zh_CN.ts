@@ -9772,7 +9772,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1826"/>
       <source>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands. However if significant problems are found the report can be quite extensive, in particular for larger maps. In order to reduce the amount of on-screen messages this option (if not set) will cause most of the text to not be displayed - except for a suggestion to review the report file.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet现在能做一些检查和修复来清理在之前版本中因错误的代码或糟糕的记录命令而产生的问题。然而报告中发现的重大问题可能会过大，尤其是大地图。为了减少大量的屏显信息，此项（如果未设置的话）将会导致多数的文本不会显示出来——除了去检查报告文件的建议。&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2021"/>
