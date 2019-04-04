@@ -9752,12 +9752,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1989"/>
       <source>days since today, keeping newer and monthly backups</source>
-      <translation type="unfinished"/>
+      <translation>天距离今天，保存新的和月度备份</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2002"/>
       <source>Map view</source>
-      <translation type="unfinished"/>
+      <translation>地图显示</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2031"/>
