@@ -930,7 +930,10 @@ the highlighted room (%1) to:</source>
       <source>Enter the symbol to use
 for this/these %n room(s):</source>
       <comment>this is for when applying a new room symbol to one or more rooms and none have a symbol at present; use line feeds to format text into a reasonable rectangle, %n is the number of rooms involved</comment>
-      <translation type="unfinished"/>
+      <translation type="unfinished">
+        <numerusform>Enter the symbol to use
+for these %n rooms:</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3537"/>
@@ -939,7 +942,12 @@ more of the selected %n room(s), delete this to
 clear it from all selected rooms or replace
 with a new symbol to use for all the rooms:</source>
       <comment>This is for when applying a new room symbol to one or more rooms and some have the SAME symbol (others may have none) at present, %n is the total number of rooms involved and is at least two. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation type="unfinished">
+        <numerusform>The only used symbol is &quot;%1&quot; in one or
+more of the selected %n rooms, delete this to
+clear it from those rooms or replace with a new
+symbol to use in them all:</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3591"/>
