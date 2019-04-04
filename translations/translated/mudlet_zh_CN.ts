@@ -9956,7 +9956,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2700"/>
       <source>Auto-join channels: </source>
-      <translation type="unfinished"/>
+      <translation>自动进入的频道： </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2686"/>
@@ -9981,12 +9981,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2723"/>
       <source>Disable automatic updates</source>
-      <translation type="unfinished"/>
+      <translation>禁止自动更新</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2745"/>
       <source>Other Special options</source>
-      <translation type="unfinished"/>
+      <translation>其它特别选项</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2751"/>
