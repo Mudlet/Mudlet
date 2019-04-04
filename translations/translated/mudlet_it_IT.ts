@@ -1446,7 +1446,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1634"/>
       <source>Pre-Map importing(1) report</source>
-      <translation type="unfinished"/>
+      <translation>Rapporto di pre-importazione mappa (1)</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1657"/>
@@ -1896,12 +1896,12 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2119"/>
       <source>Map issues</source>
-      <translation type="unfinished"/>
+      <translation>Errori mappa</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2126"/>
       <source>Area issues</source>
-      <translation type="unfinished"/>
+      <translation>Errori area</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2134"/>
@@ -1911,7 +1911,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2143"/>
       <source>Room issues</source>
-      <translation type="unfinished"/>
+      <translation>Errori camera</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2152"/>
@@ -2329,12 +2329,12 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="524"/>
       <source>An Unnamed Area is (no longer) permitted!</source>
-      <translation type="unfinished"/>
+      <translation>Un'area senza nome non è più consentita!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="528"/>
       <source>An area called %1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>L'area %1 esiste già!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="613"/>
@@ -6038,12 +6038,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5499"/>
       <source>Menu properties</source>
-      <translation type="unfinished"/>
+      <translation>Proprietà del menu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5509"/>
       <source>Button properties</source>
-      <translation type="unfinished"/>
+      <translation>Proprietà del pulsante</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5517"/>
@@ -6086,7 +6086,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7308"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7313"/>
       <source>Export Package:</source>
-      <translation type="unfinished"/>
+      <translation>Esporta package:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7048"/>
@@ -6124,7 +6124,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7153"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7178"/>
       <source>Package %1 saved</source>
-      <translation type="unfinished"/>
+      <translation>Package %1 salvato</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7202"/>
@@ -6144,12 +6144,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7324"/>
       <source>Mudlet packages (*.xml)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet packages (*.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7338"/>
       <source>export package:</source>
-      <translation type="unfinished"/>
+      <translation>esporta package:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7338"/>
@@ -6198,12 +6198,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7728"/>
       <source>trigger files (*.trigger *.xml)</source>
-      <translation type="unfinished"/>
+      <translation>file trigger (*.trigger *.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7844"/>
       <source>Seclect Icon</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona icona</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7844"/>
@@ -6213,7 +6213,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7853"/>
       <source>Command (down):</source>
-      <translation type="unfinished"/>
+      <translation>Comando (basso):</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7874"/>
@@ -6619,7 +6619,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="125"/>
       <source>About</source>
-      <translation type="unfinished"/>
+      <translation>Altro</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="132"/>
@@ -6771,7 +6771,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="219"/>
       <source>Video tutorials</source>
-      <translation type="unfinished"/>
+      <translation>Tutorial video</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="227"/>
@@ -6786,7 +6786,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="248"/>
       <source>Live help chat</source>
-      <translation type="unfinished"/>
+      <translation>Chat di aiuto</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="256"/>
@@ -6889,7 +6889,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/mapper.ui" line="664"/>
       <source>Room IDs</source>
-      <translation type="unfinished"/>
+      <translation>ID stanze</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="816"/>
@@ -8571,7 +8571,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="3818"/>
       <source>Faster</source>
-      <translation type="unfinished"/>
+      <translation>Più veloce</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3821"/>
@@ -8581,7 +8581,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="3825"/>
       <source>Slower</source>
-      <translation type="unfinished"/>
+      <translation>Più lento</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3828"/>
@@ -8967,12 +8967,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1181"/>
       <source>Editor</source>
-      <translation type="unfinished"/>
+      <translation>Editor</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1187"/>
       <source>Theme</source>
-      <translation type="unfinished"/>
+      <translation>Tema</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1257"/>
@@ -9047,7 +9047,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="180"/>
       <source>Interface language:</source>
-      <translation type="unfinished"/>
+      <translation>Lingua interfaccia:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="187"/>
@@ -9062,7 +9062,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="199"/>
       <source>Server data encoding:</source>
-      <translation type="unfinished"/>
+      <translation>Codifica dati server:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="221"/>
@@ -9082,7 +9082,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="532"/>
       <source>Spell checking</source>
-      <translation type="unfinished"/>
+      <translation>Controllo ortografico</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="538"/>
@@ -9092,7 +9092,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="541"/>
       <source>System/Mudlet dictionary:</source>
-      <translation type="unfinished"/>
+      <translation>Dizionario di sistema/Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="548"/>
@@ -9102,7 +9102,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="576"/>
       <source>User dictionary:</source>
-      <translation type="unfinished"/>
+      <translation>Dizionario utente:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="582"/>
@@ -9122,7 +9122,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="595"/>
       <source>Shared</source>
-      <translation type="unfinished"/>
+      <translation>Condivisi</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="716"/>
@@ -9430,12 +9430,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1780"/>
       <source>Mapper</source>
-      <translation type="unfinished"/>
+      <translation>Mapper</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1786"/>
       <source>Map files</source>
-      <translation type="unfinished"/>
+      <translation>File di mappa</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1792"/>
@@ -9445,7 +9445,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1802"/>
       <source>Press to choose location and save</source>
-      <translation type="unfinished"/>
+      <translation>Premi per scegliere la posizione e salvare</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1809"/>
@@ -9713,7 +9713,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2488"/>
       <source>Discord privacy</source>
-      <translation type="unfinished"/>
+      <translation>Privacy di Discord</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2521"/>
@@ -9756,12 +9756,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2500"/>
       <source>Hide large icon tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Nascondi la descrizione delle icone grandi</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2505"/>
       <source>Hide large icon and tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Nascondi la descrizione e le icone grandi</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2560"/>
@@ -9846,7 +9846,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2717"/>
       <source>Mudlet updates</source>
-      <translation type="unfinished"/>
+      <translation>Aggiornamenti Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2723"/>
@@ -9856,12 +9856,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2745"/>
       <source>Other Special options</source>
-      <translation type="unfinished"/>
+      <translation>Altre opzioni Speciali</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2751"/>
       <source>Show icons on menus</source>
-      <translation type="unfinished"/>
+      <translation>Mostra le icone nei menu</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4910"/>
@@ -10271,7 +10271,8 @@ Room ID</source>
       <location filename="../src/ui/room_exits.ui" line="2053"/>
       <source>No
 Route</source>
-      <translation type="unfinished"/>
+      <translation>Nessun
+Percorso</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2062"/>
@@ -10339,7 +10340,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="40"/>
       <source>Registered Event Handlers:</source>
-      <translation type="unfinished"/>
+      <translation>Gestori di Eventi registrati:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="33"/>
@@ -10377,7 +10378,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="14"/>
       <source>Move rooms to another area</source>
-      <translation type="unfinished"/>
+      <translation>Sposta le stanze in un'altra area</translation>
     </message>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="20"/>
@@ -10573,7 +10574,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="343"/>
       <source>play sound</source>
-      <translation type="unfinished"/>
+      <translation>riproduci suono</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="382"/>
