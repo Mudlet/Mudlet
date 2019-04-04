@@ -4822,7 +4822,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="181"/>
       <source>&lt;p&gt;This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specifed font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.&lt;p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;这将会显示用于当前地图的所有标志，以及是否用了指定的字体、其它字体，或以上都不是来描绘。它也会显示构成标志的Unicode&lt;i&gt;码位&lt;/i&gt;的顺序，这样即使它们没有显示，也可以辨认它们了；而且，最开始的32个房间也会用标志列出来，这有助于辨认出任何意外的或古怪的地方。&lt;p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="187"/>
@@ -4867,17 +4867,17 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="713"/>
       <source>%1 {Default, recommended}</source>
-      <translation>%1 {Default, recommended}</translation>
+      <translation>%1 {默认的，建议}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="724"/>
       <source>%1 {Upgraded, experimental/testing, NOT recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1{升级，实验性/测试用，不建议}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="726"/>
       <source>%1 {Downgraded, for sharing with older version users, NOT recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1{降级，用于在老版本用户间共享，不建议}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="735"/>
@@ -9787,7 +9787,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2048"/>
       <source>Show symbol usage...</source>
-      <translation type="unfinished"/>
+      <translation>显示标志的用法：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2072"/>
