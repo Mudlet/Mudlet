@@ -7079,22 +7079,22 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="168"/>
       <source>Arabic (Bahrain)</source>
-      <translation type="unfinished"/>
+      <translation>Arabo (Bahrain)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="169"/>
       <source>Arabic (Algeria)</source>
-      <translation type="unfinished"/>
+      <translation>Arabo (Algeria)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="171"/>
       <source>Arabic (India)</source>
-      <translation type="unfinished"/>
+      <translation>Arabo (india)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="172"/>
       <source>Arabic (Iraq)</source>
-      <translation type="unfinished"/>
+      <translation>Arabo (Iraq)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="173"/>
@@ -7174,12 +7174,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="188"/>
       <source>Bulgarian</source>
-      <translation type="unfinished"/>
+      <translation>Bulgaro (Bulgarian)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="189"/>
       <source>Bulgarian (Bulgaria)</source>
-      <translation type="unfinished"/>
+      <translation>Bulgaro (Bulgarian)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="190"/>
