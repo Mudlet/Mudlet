@@ -337,6 +337,7 @@ int TimerUnit::remainingTime(const QString& name)
     }
     return -1;
 }
+
 int TimerUnit::getNewID()
 {
     return ++mMaxID;
