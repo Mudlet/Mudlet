@@ -5646,7 +5646,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="1708"/>
       <location filename="../src/dlgRoomExits.cpp" line="1823"/>
       <source>Clear the stub exit for this exit to enter an exit roomID.</source>
-      <translation>Lösche die Abzweigung, damit dieser Ausgang mit ID eingeben werden kann.</translation>
+      <translation>Deaktiviere die Abzweigung, um einen Ausgang per ID einzugeben.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1743"/>
