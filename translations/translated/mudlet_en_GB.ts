@@ -2399,9 +2399,9 @@ Look for further messages related to the rooms that are supposed to be in these 
  be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ ALERT ] - %n areas detected as missing in the map: adding them in.
+        <numerusform>[ ALERT ] - An area was detected as missing in the map: adding it in.
 Look for further messages related to the rooms that are supposed to
-be in these areas...</numerusform>
+be in this area...</numerusform>
         <numerusform>[ ALERT ] - %n areas detected as missing in the map: adding them in.
 Look for further messages related to the rooms that are supposed to
 be in these areas...</numerusform>
