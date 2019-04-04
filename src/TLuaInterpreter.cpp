@@ -14427,7 +14427,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "clearUserWindow", TLuaInterpreter::clearUserWindow);
     lua_register(pGlobalLua, "clearWindow", TLuaInterpreter::clearUserWindow);
     lua_register(pGlobalLua, "killTimer", TLuaInterpreter::killTimer);
-	lua_register(pGlobalLua, "remainingTime", TLuaInterpreter::remainingTime);
+    lua_register(pGlobalLua, "remainingTime", TLuaInterpreter::remainingTime);
     lua_register(pGlobalLua, "moveCursor", TLuaInterpreter::moveCursor);
     lua_register(pGlobalLua, "getLines", TLuaInterpreter::getLines);
     lua_register(pGlobalLua, "getLineNumber", TLuaInterpreter::getLineNumber);
