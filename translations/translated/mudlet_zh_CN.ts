@@ -5016,7 +5016,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2440"/>
       <source>Press to pick destination(s)</source>
-      <translation type="unfinished"/>
+      <translation>按下来选择目标位置</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2676"/>
@@ -9579,7 +9579,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1809"/>
       <source>Load another map file in:</source>
-      <translation type="unfinished"/>
+      <translation>载入另一地图文件：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1819"/>
@@ -9600,7 +9600,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1910"/>
       <source>&lt;p&gt;Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so will lose the extra data available in the current map format&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;在你需要在老版本的Mudlet上阅读时，将你的地图保存为低版本的格式。这样做将会丢失可用于当前地图格式的额外信息。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1937"/>
@@ -9696,7 +9696,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1829"/>
       <source>Report map issues on screen</source>
-      <translation type="unfinished"/>
+      <translation>在屏幕上报告地图问题</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1843"/>
@@ -9706,12 +9706,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1859"/>
       <source>Press to pick destination(s)</source>
-      <translation type="unfinished"/>
+      <translation>按下来选择目标位置</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1872"/>
       <source>Copy to destination(s)</source>
-      <translation type="unfinished"/>
+      <translation>复制到目标位置</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1884"/>
@@ -9742,12 +9742,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1966"/>
       <source>Map backups</source>
-      <translation type="unfinished"/>
+      <translation>地图备份</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1972"/>
       <source>Delete map backups older than:</source>
-      <translation type="unfinished"/>
+      <translation>删除地图备份在早于：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1989"/>
