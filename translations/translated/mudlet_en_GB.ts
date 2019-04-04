@@ -2385,11 +2385,12 @@ Mudlet - is your system running out of memory?</source>
  to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ ALERT ] - An area was detected as missing in the map: adding it.
-Look for further messages related to the rooms that are supposed
-to be in this area...</numerusform>
+        <numerusform>[ ALERT ] - An area was detected as missing in the map: adding it in.
+Look for further messages related to the rooms that are supposed to
+be in this area...</numerusform>
         <numerusform>[ ALERT ] - %n areas were detected as missing in map: adding them in.
-Look for further messages related to the rooms that are supposed to be in these areas...</numerusform>
+Look for further messages related to the rooms that are supposed
+to be in these areas...</numerusform>
       </translation>
     </message>
     <message numerus="yes">
