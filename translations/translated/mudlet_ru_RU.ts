@@ -5614,7 +5614,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1708"/>
       <location filename="../src/dlgRoomExits.cpp" line="1823"/>
       <source>Clear the stub exit for this exit to enter an exit roomID.</source>
-      <translation>Удалите незавершённых выход сначала перед тем как ввести номер выхода.</translation>
+      <translation>Удалите незавершённый выход сначала перед тем как ввести номер выхода.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1743"/>
