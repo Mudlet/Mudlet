@@ -3240,7 +3240,10 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTrigger.cpp" line="1062"/>
       <source>Trigger name=%1 will fire %n more time(s).
 </source>
-      <translation type="unfinished"/>
+      <translation type="unfinished">
+        <numerusform>Trigger name=%1 will fire %n more times.
+</numerusform>
+      </translation>
     </message>
   </context>
   <context>
