@@ -5231,7 +5231,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="3132"/>
       <source>Time</source>
       <comment>Discord Rich Presence time until or time elapsed</comment>
-      <translation type="unfinished"/>
+      <translation>时间</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3167"/>
@@ -10534,7 +10534,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="165"/>
       <source>Time:</source>
-      <translation type="unfinished"/>
+      <translation>时间：</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="33"/>
@@ -10569,7 +10569,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="198"/>
       <source>&lt;p&gt;The &lt;b&gt;hour&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;定时器将停止运行的&lt;b&gt;小时&lt;/b&gt;间隔部分。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="229"/>
@@ -10585,12 +10585,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="292"/>
       <source>&lt;p&gt;The &lt;b&gt;minute&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;定时器将停止运行的&lt;b&gt;分钟&lt;/b&gt;间隔部分。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="376"/>
       <source>&lt;p&gt;The &lt;b&gt;second&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;定时器将停止运行的&lt;b&gt;秒&lt;/b&gt;间隔部分。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="379"/>
@@ -10600,12 +10600,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="463"/>
       <source>&lt;p&gt;The &lt;b&gt;milisecond&lt;/b&gt; part of the interval that the timer will go off at (1000 miliseconds = 1 second).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;定时器将停止运行的&lt;b&gt;毫秒&lt;/b&gt;间隔部分（1000毫秒=1秒）。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="466"/>
       <source>&lt;p&gt;The &lt;b&gt;milisecond&lt;/b&gt; interval that the timer will go off at (1000 miliseconds = 1 second)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;定时器将停止运行的&lt;b&gt;毫秒&lt;/b&gt;间隔部分（1000毫秒=1秒）。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="313"/>
