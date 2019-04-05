@@ -2495,22 +2495,25 @@ it has not been possible to salvage this, it has been lost!</source>
 room&apos;s data has been lost so the id is now being deleted.  This
 suggests serious problems with the currently running version of
 Mudlet - is your system running out of memory?</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Проблема со структурой данных, связанной с комнатой: %1 - данные
+комнаты были потеряны, поэтому идентификатор теперь удаляется. Это 
+предполагает серьезные проблемы с текущей версией
+Mudlet - в вашей системе не хватает ли памяти?</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="621"/>
       <source>[ WARN ]  - Problem with data structure associated with this room.  The room&apos;s data has been lost so the id is now being deleted.  This suggests serious problems with the currently running version of Mudlet - is your system running out of memory?</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Проблема со структурой данных, связанной с етой комнатой. Данныекомнаты были потеряны, поэтому идентификатор теперь удаляется. Это предполагает серьезные проблемы с текущей версией Mudlet - в вашей системе не хватает ли памяти?</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="668"/>
       <source>[ ALERT ] - Area with id: %1 expected but not found, will be created.</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - Зона с идентификатором: %1 ожидается, но не найдена, будет создана.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="671"/>
       <source>[ ALERT ] - Area with this id expected but not found, will be created.</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - Зона с етом идентификатором ожидается, но не найдена, будет создана.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="700"/>
