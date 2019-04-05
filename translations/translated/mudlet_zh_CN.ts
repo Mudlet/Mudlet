@@ -2712,7 +2712,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1198"/>
       <source>Select All</source>
-      <translation>选择全部</translation>
+      <translation>全选</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1203"/>
@@ -5873,12 +5873,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="650"/>
       <source>substring</source>
-      <translation type="unfinished"/>
+      <translation>子字符串</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="651"/>
       <source>perl regex</source>
-      <translation type="unfinished"/>
+      <translation>perl正则</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="652"/>
@@ -5888,12 +5888,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="653"/>
       <source>exact match</source>
-      <translation type="unfinished"/>
+      <translation>完全匹配</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="654"/>
       <source>lua function</source>
-      <translation type="unfinished"/>
+      <translation>Lua函数</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="655"/>
@@ -6425,7 +6425,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8196"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8202"/>
       <source>Select All</source>
-      <translation>选择全部</translation>
+      <translation>全选</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8189"/>
