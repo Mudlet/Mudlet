@@ -10822,7 +10822,7 @@ otherwise highlight the entire match</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="138"/>
       <source>&lt;p&gt;Tables can store values either in a list, and/or a hashmap.&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;list&lt;/b&gt;, &lt;i&gt;unique indexed keys&lt;/i&gt; represent values - so you can have values at &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;map&lt;/b&gt; {a.k.a. an &lt;i&gt;associative array}&lt;/i&gt;, &lt;i&gt;unique keys&lt;/i&gt; represent values - so you can have values under any identifier you would like (theoretically even a function or other lua entity although this GUI only supports strings).&lt;/p&gt;&lt;p&gt;This, for a newly created table (group) selects whenever you would like your table to be an indexed or an associative one.&lt;/p&gt;&lt;p&gt;In other cases it displays other entities (&lt;span style=&quot; font-style:italic;&quot;&gt;functions&lt;/span&gt;) which cannot be modifed from here.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;表格可以将值存在列表和/或hashmap中。&lt;/p&gt;&lt;p&gt;在&lt;b&gt;列表&lt;/b&gt;中，&lt;i&gt;唯一索引的键&lt;/i&gt;可以代表值——因此你可以定值为&lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;在&lt;b&gt;map&lt;/b&gt; {a.k.a. &lt;i&gt;关联数组}&lt;/i&gt;中, &lt;i&gt;唯一的键&lt;/i&gt;代表了值——所以你可以有任何你想要编号的值（理论上甚至可以是个函数或其它的Lua entity ，即使GUI只支持字符串）。&lt;/p&gt;&lt;p&gt;这样，对于新建的表（组）可以在任何你想要索引或关联表时来选择。&lt;/p&gt;&lt;p&gt;在其它情况下，不能从此处修改时，它会显示其它的项（&lt;span style=&quot; font-style:italic;&quot;&gt;函数&lt;/span&gt;）。&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="51"/>
