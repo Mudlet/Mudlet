@@ -2436,14 +2436,18 @@ and the exit will be turned into a stub.</source>
       <source>
 It was locked, this is recorded as user data with key:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>
+Комната была заперта, это зафиксировано как пользовательское данное с ключом:
+&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1662"/>
       <source>
 It had a weight, this is recorded as user data with key:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>
+Комната имела вес, это зафиксировано как пользовательское данное с ключом:
+&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1677"/>
@@ -2546,7 +2550,8 @@ in map, now working out what new id numbers to use...</source>
       <location filename="../src/TRoomDB.cpp" line="763"/>
       <source>[ INFO ]  - The renumbered area ids will be:
 Old ==&gt; New</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Перенумерованные идентификаторы области будут:
+Старый ==&gt; Новый</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="781"/>
@@ -2636,12 +2641,12 @@ they have been added.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1025"/>
       <source>[ INFO ]  - In this area there were %1 rooms missing from those it should be recorded as possessing.  They are: %2.  They have been added.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - В этой области отсутствовали %1 комнаты, которые должны быть зарегистрированы к етой области. Они являются: %2. Они были добавлены.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1046"/>
       <source>[ INFO ]  - This room was claimed by area id: %1, but it does not belong there.  The area has been updated to not include this room.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Эта комната была заявлена областей: %1, но она там не принадлежит. Область была обновлена, чтобы не включать эту комнату.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1052"/>
@@ -2661,7 +2666,9 @@ they have been removed.</source>
       <source>[  OK  ]  - The changes made are:
 (ID) &quot;old name&quot; ==&gt; &quot;new name&quot;
 </source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Изменения сделаны:
+(ID) &quot;старое имя&quot; ==&gt; &quot;новое имя&quot;
+</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1169"/>
@@ -3658,7 +3665,8 @@ or your nameservers are not working properly.</source>
       <location filename="../src/ctelnet.cpp" line="1603"/>
       <source>[ INFO ]  - The server wants to upgrade the GUI to new version &apos;%1&apos;.
 Uninstalling old version &apos;%2&apos;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Сервер хочет обновить графический интерфейс до новой версии &apos;%1&apos;.
+Деинсталлируется старая версия &apos;%2&apos;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1345"/>
@@ -3683,7 +3691,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1343"/>
       <location filename="../src/ctelnet.cpp" line="1622"/>
       <source>[ INFO ]  - Server offers downloadable GUI (url=&apos;%1&apos;) (package=&apos;%2&apos;).</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Сервер предлагает загружаемый графический интерфейс (URL-адрес=&apos;%1&apos;) (пакет=&apos;%2&apos;).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1765"/>
@@ -6669,7 +6677,14 @@ There is NO WARRANTY, to the extent permitted by law.</source>
 There are other inherited options that arise from the Qt Libraries which are
 less likely to be useful for normal use of this application:
 </source>
-      <translation type="unfinished"/>
+      <translation>Использование: %1 [OPTION...]
+       -h, — help отображает это сообщение.
+       -v, — version отображает информацию о версии.
+       -q, — quiet no splash screen при запуске.
+
+Есть другие унаследованные опции, которые возникают из библиотек Qt, которые
+менее пригодны для нормального использования этого приложения:
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="228"/>
