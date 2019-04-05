@@ -3855,7 +3855,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2301"/>
       <source>Secure:</source>
-      <translation type="unfinished"/>
+      <translation>安全：</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2308"/>
@@ -9651,12 +9651,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2905"/>
       <source>Accept self-signed certificates</source>
-      <translation type="unfinished"/>
+      <translation>接受自签名认证</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2915"/>
       <source>Accept expired certificates</source>
-      <translation type="unfinished"/>
+      <translation>接受过期认证</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2809"/>
@@ -9666,32 +9666,32 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2822"/>
       <source>Certificate</source>
-      <translation type="unfinished"/>
+      <translation>认证</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2882"/>
       <source>Serial:</source>
-      <translation type="unfinished"/>
+      <translation>序列号：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2831"/>
       <source>Issuer:</source>
-      <translation type="unfinished"/>
+      <translation>发证者：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2848"/>
       <source>Issued to:</source>
-      <translation type="unfinished"/>
+      <translation>发证给：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2865"/>
       <source>Expires:</source>
-      <translation type="unfinished"/>
+      <translation>到期时间：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2925"/>
       <source>Accept all certificate errors       (unsecure)</source>
-      <translation type="unfinished"/>
+      <translation>接受所有的认证错误（不安全）</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1829"/>
