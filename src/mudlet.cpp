@@ -1571,7 +1571,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
 
 void mudlet::slot_timer_fires()
 {
-    auto pQT = qobject_cast<QTimer*>(sender());
+    QTimer* pQT = (QTimer*)sender();
     if (!pQT) {
         return;
     }
@@ -1610,7 +1610,6 @@ void mudlet::slot_timer_fires()
     pQT->stop();
     pQT->deleteLater();
 }
-
 
 void mudlet::disableToolbarButtons()
 {

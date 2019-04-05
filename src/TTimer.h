@@ -4,7 +4,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia,com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -91,7 +90,6 @@ public:
 
 private:
     TTimer() = default;
-
     QString mName;
     QString mScript;
     QTime mTime;
@@ -100,8 +98,7 @@ private:
     QPointer<Host> mpHost;
     bool mNeedsToBeCompiled;
     QMutex mLock;
-    // Renamed to reduce confusion:
-    QTimer* mpQTimer;
+    QTimer* mpTimer;
     bool mModuleMember;
 };
 
