@@ -10257,7 +10257,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1568"/>
       <location filename="../src/ui/room_exits.ui" line="1708"/>
       <source>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Создать выход в этом направлении с неизвестным назначением, взаимоисключающее с фактическим назначением.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="93"/>
@@ -10278,7 +10278,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1604"/>
       <location filename="../src/ui/room_exits.ui" line="1744"/>
       <source>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;На двухмерной карте для этого выхода не отображается символ двери.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="138"/>
