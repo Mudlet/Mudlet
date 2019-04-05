@@ -2700,7 +2700,19 @@ another that exists at the time.
   If there were more than one area without a name then all but the
 first will also gain a suffix in this manner.
 %2</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Из-за того, что некоторые ситуации не проверялись в прошлом, Mudlet 
+разрешал карте иметь более чем одной области с одинаковыми именами или без имени.
+Это делает некоторые вещи запутанными и теперь запрещено.
+  Чтобы устранить эти случаи, области без имени здесь (или созданная в
+будущем) автоматически будет присвоено имя &quot;%1&quot;.
+  Дублированные имена областей приведут к тому, что все, кроме первой встреченной,
+получат &quot;_###&quot; суффикс, где каждый &quot;###&quot; является увеличивающимся числом;
+вы можете изменить эти, возможно, заменив их
+ &quot;(имя подобласти)&quot;, но это полностью зависит от вас, как вы это сделаете.
+Другое, то вы не сможете установить область имя другой, которая уже существует.
+  Если было более одной области без имени, то все, кроме
+первой, сначала также получат суффикс таким образом.
+%2</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1198"/>
@@ -2747,7 +2759,8 @@ set one area&apos;s name to that of another that exists at the time.</source>
       <location filename="../src/TRoomDB.cpp" line="1241"/>
       <source>[ INFO ]  - Default (reset) area name (for rooms that have not been assigned to an
 area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Не найдена область по умолчанию (для комнат, не назначенных к
+зоне), добавляется &quot;%1&quot; к зарезервированому ID -1.</translation>
     </message>
   </context>
   <context>
@@ -10115,7 +10128,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="96"/>
       <source>NW exit...</source>
-      <translation type="unfinished"/>
+      <translation>Выход NW...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="106"/>
@@ -10136,22 +10149,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="236"/>
       <source>N exit...</source>
-      <translation type="unfinished"/>
+      <translation>Выход N...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="376"/>
       <source>NE exit...</source>
-      <translation type="unfinished"/>
+      <translation>Выход NE...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="516"/>
       <source>Up exit...</source>
-      <translation type="unfinished"/>
+      <translation>Выход вверх...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="659"/>
       <source>W exit...</source>
-      <translation type="unfinished"/>
+      <translation>Выход W...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="767"/>
@@ -10166,37 +10179,37 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="866"/>
       <source>E exit...</source>
-      <translation type="unfinished"/>
+      <translation>Выход E...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1003"/>
       <source>Down exit...</source>
-      <translation type="unfinished"/>
+      <translation>Выход вниз...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1155"/>
       <source>SW exit...</source>
-      <translation type="unfinished"/>
+      <translation>Выход SW...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1301"/>
       <source>S exit...</source>
-      <translation type="unfinished"/>
+      <translation>Выход S...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1441"/>
       <source>SE exit...</source>
-      <translation type="unfinished"/>
+      <translation>Выход SE...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1581"/>
       <source>In exit...</source>
-      <translation type="unfinished"/>
+      <translation>Выход в...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1721"/>
       <source>Out exit...</source>
-      <translation type="unfinished"/>
+      <translation>Выход из...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1826"/>
