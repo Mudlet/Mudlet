@@ -2640,28 +2640,32 @@ out what new id numbers to use.</source>
       <location filename="../src/TRoomDB.cpp" line="921"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - В комнате %1 найдены повторяющиеся незаконченные выхода, это аномалия
+но было легко выполнить очистку.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="926"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room, this is an anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - В етой комнате найдены повторяющиеся незаконченные выхода, это аномалия
+но было легко выполнить очистку.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="935"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - В комнате %1 найдены повторяющиеся выхода, это аномалия
+но было легко выполнить очистку.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="940"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room, this is an anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - В етой комнате найдены повторяющиеся выхода, это аномалия
+но было легко выполнить очистку.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1011"/>
       <source>[ INFO ]  - This room claims to be in area id: %1, but that did not have a record of it.  The area has been updated to include this room.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Эта комната утверждает, что находится в зоне id: %1, но у нее не было записи об этом. Площадь была обновлена, чтобы включить этот номер.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1017"/>
@@ -2715,7 +2719,7 @@ they have been removed.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1181"/>
       <source>[ ALERT ] - Empty and duplicate area names detected in Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - В файле карты обнаружены пустые и повторяющиеся имена областей!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1182"/>
@@ -2750,7 +2754,7 @@ first will also gain a suffix in this manner.
     <message>
       <location filename="../src/TRoomDB.cpp" line="1198"/>
       <source>[ ALERT ] - Duplicate area names detected in the Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - В файле карты обнаружены повторяющиеся имена областей!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1199"/>
@@ -3437,7 +3441,10 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
 &quot;%1&quot;
 reports it has a version (%2) it must have come from a later Mudlet version,
 and this one cannot read it, you need a newer Mudlet!</source>
-      <translation type="unfinished"/>
+      <translation>[ Предупреждение ] - К сожалению, читаемый файл:
+&quot;%1&quot;
+сообщает, что он имеет версию (%2) - он должен быть из более поздней версии Mudlet,
+и ета не может прочитать его, вам необходима более новая Mudlet!</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="356"/>
