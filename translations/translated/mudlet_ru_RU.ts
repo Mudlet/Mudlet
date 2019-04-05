@@ -2636,7 +2636,9 @@ anomaly but has been cleaned up easily.</source>
 should be recording as possessing, they were:
 %3
 they have been added.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - В области с id: %1 отсутствовали %2 комнаты, из которых
+должны быть зарегистрированы как обладающие, они были добавлены:
+%3</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1025"/>
@@ -2654,12 +2656,14 @@ they have been added.</source>
 should be recording as possessing, they were:
 %3
 they have been removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - В области с ID: %1 были %2 дополнительные комнаты по сравнению с теми которые были записаны как обладающие, они были:
+%3
+они были убраны.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1060"/>
       <source>[ INFO ]  - In this area there were %1 extra rooms that it should not be recorded as possessing.  They were: %2.  They have been removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - в етой области были %1 дополнительные комнаты по сравнению с теми которые были записаны как обладающие, они были: %2. Они были убраны.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1162"/>
