@@ -6515,7 +6515,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="50"/>
       <source>&lt;p&gt;Type in one or more commands you want the key to send directly to the game when pressed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;输入一或多个你希望在按下时（可选项）能直接送往游戏中的按键命令。&lt;/p&gt;&lt;p&gt;要送出更复杂的命令，可能要依靠或需要在配置中输入修改了的Lua脚本变量，&lt;i&gt;而不是&lt;/i&gt;在下方的编辑区。此处输入的任何东西，真的将会送往游戏服务器。&lt;/p&gt;&lt;p&gt;允许同时使用&lt;i&gt;Lua脚本&lt;/i&gt;——这将会在脚本运行&lt;b&gt;之前&lt;/b&gt;送出。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="57"/>
@@ -10544,7 +10544,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="73"/>
       <source>&lt;p&gt;Type in one or more commands you want the timer to send directly to the game when the time has elapsed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;输入一或多个你希望能直接送往游戏中的定时器命令，只要时间能够流逝（可选项）&lt;/p&gt;&lt;p&gt;要送出更复杂的命令，可能要依靠或需要在配置中输入修改了的Lua脚本变量，&lt;i&gt;而不是&lt;/i&gt;在下方的编辑区。此处输入的任何东西，真的将会送往游戏服务器。&lt;/p&gt;&lt;p&gt;允许同时使用&lt;i&gt;Lua脚本&lt;/i&gt;——这将会在脚本运行&lt;b&gt;之前&lt;/b&gt;送出。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="85"/>
@@ -10709,12 +10709,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="538"/>
       <source>multiline / AND Trigger</source>
-      <translation type="unfinished"/>
+      <translation>多行/以及触发器</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="577"/>
       <source>line delta</source>
-      <translation type="unfinished"/>
+      <translation>行数</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="675"/>
