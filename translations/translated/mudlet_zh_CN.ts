@@ -9661,7 +9661,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2809"/>
       <source>Secure connection</source>
-      <translation type="unfinished"/>
+      <translation>安全连接</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2822"/>
