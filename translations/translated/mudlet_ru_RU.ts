@@ -10577,7 +10577,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2150"/>
       <source>&amp;End S. Exits editing</source>
-      <translation type="unfinished"/>
+      <translation>Выход из р&amp;едактирования выходов</translation>
     </message>
   </context>
   <context>
