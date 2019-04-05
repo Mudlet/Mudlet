@@ -10554,17 +10554,17 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="100"/>
       <source>&lt;p&gt;minutes&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;分钟&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="115"/>
       <source>&lt;p&gt;seconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;秒&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="130"/>
       <source>&lt;p&gt;miliseconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;毫秒&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="198"/>
@@ -10694,7 +10694,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="340"/>
       <source>play a wave sound file if the trigger fires</source>
-      <translation type="unfinished"/>
+      <translation>要是触发器生效的话就播放wave格式的声音文件</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="343"/>
@@ -10704,7 +10704,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="382"/>
       <source>choose file:</source>
-      <translation type="unfinished"/>
+      <translation>选择文件：</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="538"/>
