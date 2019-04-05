@@ -498,6 +498,7 @@ public:
     static int spellCheckWord(lua_State*);
     static int spellSuggestWord(lua_State*);
     static int getDictionaryWordList(lua_State*);
+    static int getTextFormat(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 
