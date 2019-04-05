@@ -861,6 +861,94 @@ int TLuaInterpreter::getBgColor(lua_State* L)
     return result.size();
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getFgColor
+int TLuaInterpreter::getTextFormat(lua_State* L)
+{
+    QString windowName = QStringLiteral("main");
+    if (lua_gettop(L)) {
+        if (!lua_isstring(L, 1)) {
+            lua_pushfstring(L, "getTextFormat: bad argument #1 type (window name as string is optional, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        }
+        windowName = lua_tostring(L, 1);
+    }
+
+    Host& host = getHostFromLua(L);
+    QPair<quint8, TChar> result = host.mpConsole->getTextAttributes(windowName);
+    if (result.first == 1) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "window \"%s\" not found", windowName.toUtf8().constData());
+        return 2;
+    }
+
+    if (result.first == 2) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "current selection invalid in window \"%s\"", windowName.toUtf8().constData());
+        return 2;
+    }
+
+    lua_newtable(L);
+
+    TChar::AttributeFlags format = result.second.allDisplayAttributes();
+    lua_pushstring(L, "bold");
+    lua_pushboolean(L, format & TChar::Bold);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "italic");
+    lua_pushboolean(L, format & TChar::Italic);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "overline");
+    lua_pushboolean(L, format & TChar::Overline);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "reverse");
+    lua_pushboolean(L, format & TChar::Reverse);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "strikeout");
+    lua_pushboolean(L, format & TChar::StrikeOut);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "underline");
+    lua_pushboolean(L, format & TChar::Underline);
+    lua_settable(L, -3);
+
+    QColor foreground(result.second.foreground());
+    lua_pushstring(L, "foreground");
+    lua_newtable(L);
+    lua_pushnumber(L, 1);
+    lua_pushnumber(L, foreground.red());
+    lua_settable(L, -3);
+
+    lua_pushnumber(L, 2);
+    lua_pushnumber(L, foreground.green());
+    lua_settable(L, -3);
+
+    lua_pushnumber(L, 3);
+    lua_pushnumber(L, foreground.blue());
+    lua_settable(L, -3);
+    lua_settable(L, -3);
+
+    QColor background(result.second.background());
+    lua_pushstring(L, "background");
+    lua_newtable(L);
+    lua_pushnumber(L, 1);
+    lua_pushnumber(L, background.red());
+    lua_settable(L, -3);
+
+    lua_pushnumber(L, 2);
+    lua_pushnumber(L, background.green());
+    lua_settable(L, -3);
+
+    lua_pushnumber(L, 3);
+    lua_pushnumber(L, background.blue());
+    lua_settable(L, -3);
+    lua_settable(L, -3);
+
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#wrapLine
 int TLuaInterpreter::wrapLine(lua_State* L)
 {
@@ -14783,6 +14871,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "spellCheckWord", TLuaInterpreter::spellCheckWord);
     lua_register(pGlobalLua, "spellSuggestWord", TLuaInterpreter::spellSuggestWord);
     lua_register(pGlobalLua, "getDictionaryWordList", TLuaInterpreter::getDictionaryWordList);
+    lua_register(pGlobalLua, "getTextFormat", TLuaInterpreter::getTextFormat);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     // prepend profile path to package.path and package.cpath
