@@ -2574,7 +2574,8 @@ in map, now working out what new id numbers to use...</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="756"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!  Look for further messsages related to this for each affected area ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - Найдены неверные (менее +1 и не зарезервированный -1) идентификаторы областей (всего: %1)
+на карте. Сообщения о каждой области последуют...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="763"/>
