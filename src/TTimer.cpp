@@ -80,7 +80,7 @@ TTimer::~TTimer()
 void TTimer::setName(const QString& name)
 {
     // temp timers do not need to check for names referring to multiple
-    // timer objects as names=ID -> much faster tempTimer creation
+    // timer objects as names=ID -> much faster tempQTimer creation
     if (!isTemporary()) {
         mpHost->getTimerUnit()->mLookupTable.remove(mName, this);
     }

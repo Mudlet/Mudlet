@@ -134,7 +134,7 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
     QStringList headerLabels;
-    headerLabels << tr("Room Id") << tr("Room Name");
+    headerLabels << tr("ID", "Room ID in the mapper widget") << tr("Name", "Room name in the mapper widget");
     mMultiSelectionListWidget.setHeaderLabels(headerLabels);
     mMultiSelectionListWidget.setToolTip(tr("<p>Click on a line to select or deselect that room number (with the given name if the "
                                                  "rooms are named) to add or remove the room from the selection.  Click on the "
@@ -3331,7 +3331,7 @@ void T2DMap::slot_setPlayerLocation()
         // No need to check it is a DIFFERENT room - that is taken care of by en/dis-abling the control
         mpMap->mRoomIdHash[mpMap->mProfileName] = _newRoomId;
         mpMap->mNewMove = true;
-        TEvent manualSetEvent;
+        TEvent manualSetEvent {};
         manualSetEvent.mArgumentList.append(QLatin1String("sysManualLocationSetEvent"));
         manualSetEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         manualSetEvent.mArgumentList.append(QString::number(_newRoomId));
@@ -3343,7 +3343,7 @@ void T2DMap::slot_setPlayerLocation()
 
 void T2DMap::slot_userAction(QString uniqueName)
 {
-    TEvent event;
+    TEvent event {};
     QStringList userEvent = mUserActions[uniqueName];
     event.mArgumentList.append(userEvent[0]);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -3547,7 +3547,7 @@ void T2DMap::slot_setSymbol()
                                                     .arg(usedSymbols.keys().first())
                                                   : tr("The symbol is \"%1\" in the selected room,\n"
                                                        "delete this to clear the symbol or replace\n"
-                                                       "it with a new symbol for this room:"
+                                                       "it with a new symbol for this room:",
                                                        // Intentional comment to separate arguments!
                                                        "This is for when applying a new room symbol to one room. "
                                                        "Use line feeds to format text into a reasonable rectangle.")
@@ -5019,11 +5019,11 @@ void T2DMap::resizeMultiSelectionWidget()
 {
     int newWidth;
     if (mIsSelectionUsingNames) {
-        if (width() <= 300) { // 0 - 300 => 0 - 200
-            newWidth = 2 * width() / 3;
-        } else if (width() <= 600) { // 300 - 600 => 200 - 300
-            newWidth = 100 + width() / 3;
-        } else { // 600+ => 300
+        if (width() <= 750) {
+            newWidth = 160;
+        } else if (width() <= 890) { // 750-890 => 160-300
+            newWidth = 160+width()-750;
+        } else { // 890+ => 300
             newWidth = 300;
         }
     } else {
