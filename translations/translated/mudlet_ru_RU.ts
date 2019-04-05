@@ -2604,12 +2604,14 @@ Old ==&gt; New</source>
       <location filename="../src/TRoomDB.cpp" line="836"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map, now working
 out what new id numbers to use.</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - Найдены неверные (менее + и не зарезервированный -1) идентификаторы комнат (всего: %1)
+на карте, теперь выясняется, какие новые идентификационные номера использовать.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="841"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!  Look for further messsages related to this for each affected room ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - Найдены неверные (менее + и не зарезервированный -1) идентификаторы комнат (всего: %1)
+на карте. Сообщения о каждой области последуют...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="848"/>
