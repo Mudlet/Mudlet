@@ -2542,7 +2542,20 @@ Mudlet - в вашей системе не хватает ли памяти?</tr
  Look for further messsages related to the rooms that is/are supposed to
  be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ВНИМ ] - %n область обнаруженна как отсутствующая на карте: добавляем её.
+ Ищите дополнительные сообщения, связанные с комнатами, которые предположительно
+ должны находиться в этой области...</numerusform>
+        <numerusform>[ ВНИМ ] - %n областей обнаруженны как отсутствующие на карте: добавляем их.
+ Ищите дополнительные сообщения, связанные с комнатами, которые предположительно
+ должны находиться в этих областях...</numerusform>
+        <numerusform>[ ВНИМ ] - %n областей обнаруженны как отсутствующие на карте: добавляем их.
+ Ищите дополнительные сообщения, связанные с комнатами, которые предположительно
+ должны находиться в этих областях...</numerusform>
+        <numerusform>[ ВНИМ ] - %n областей обнаруженны как отсутствующие на карте: добавляем их.
+ Ищите дополнительные сообщения, связанные с комнатами, которые предположительно
+ должны находиться в этих областях...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="716"/>
