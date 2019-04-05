@@ -10673,7 +10673,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="248"/>
       <source>Keep firing the script for x more lines, after the trigger or chain has matched.</source>
-      <translation type="unfinished"/>
+      <translation>在触发器或连续匹配后，在x行中仍然对脚本有效。</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="254"/>
@@ -10684,7 +10684,7 @@ or LUA script</source>
       <location filename="../src/ui/triggers_main_area.ui" line="287"/>
       <location filename="../src/ui/triggers_main_area.ui" line="611"/>
       <source>Within how many lines must all condition be true to fire the trigger?</source>
-      <translation type="unfinished"/>
+      <translation>多少行之内所有的条件都必须为真才能使触发器生效？</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="303"/>
@@ -10719,7 +10719,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="675"/>
       <source>filter</source>
-      <translation type="unfinished"/>
+      <translation>筛选器</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="93"/>
@@ -10739,49 +10739,49 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="672"/>
       <source>&lt;p&gt;Only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;只有筛选过的内容（=捕获组）才能通往子触发器，而不是初始行（见触发器文档）&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="717"/>
       <source>only pass matches to children as trigger input</source>
-      <translation type="unfinished"/>
+      <translation>只能通往匹配了输入的子触发器</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="775"/>
       <source>Choose this option if you want to include all possible matches of the pattern in the line.
 Without this option, the pattern matching will stop after the first successful match.</source>
-      <translation type="unfinished"/>
+      <translation>如果你想要包括进本行中所有可能匹配到的模式，就勾选此项。不勾选此项，则模式在第一次匹配成功后便会停止匹配。</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="779"/>
       <source>match all</source>
-      <translation type="unfinished"/>
+      <translation>全匹配</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="824"/>
       <source>match all occurences of the pattern in the line</source>
-      <translation type="unfinished"/>
+      <translation>匹配行中所有模式的事件</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="891"/>
       <source>highlight the capture groups if there are any
 otherwise highlight the entire match</source>
-      <translation type="unfinished"/>
+      <translation>如果可能的话就高亮捕获组，否则就高亮整个匹配</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="895"/>
       <source>highlight</source>
-      <translation type="unfinished"/>
+      <translation>高亮</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="958"/>
       <source>fg color</source>
-      <translation type="unfinished"/>
+      <translation>前景色</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="1004"/>
       <source>bg color</source>
-      <translation type="unfinished"/>
+      <translation>背景色</translation>
     </message>
   </context>
   <context>
