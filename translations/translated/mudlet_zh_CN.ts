@@ -560,7 +560,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2714"/>
       <source>Undo</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>撤消</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2715"/>
@@ -5783,7 +5783,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8194"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8200"/>
       <source>Paste</source>
-      <translation>粘帖</translation>
+      <translation>粘贴</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="400"/>
@@ -5858,7 +5858,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="550"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="553"/>
       <source>Search Options</source>
-      <translation type="unfinished"/>
+      <translation>搜索选项</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="557"/>
@@ -7009,12 +7009,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/mapper.ui" line="648"/>
       <source>Info</source>
-      <translation type="unfinished"/>
+      <translation>信息</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="664"/>
       <source>Room IDs</source>
-      <translation type="unfinished"/>
+      <translation>房间号</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="816"/>
@@ -10475,7 +10475,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="88"/>
       <source>&lt;p&gt;Remove (selected) event handler from list.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;从列表中删除（已选的）event handler。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="91"/>
@@ -10490,7 +10490,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="133"/>
       <source>&lt;p&gt;Add entered event handler name to list.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;添加输入的event handler名到列表中。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="136"/>
@@ -10655,7 +10655,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="526"/>
       <source>&lt;p&gt;Toggles the display of the search results area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;切换结果搜索区显示。&lt;/p&gt;</translation>
     </message>
   </context>
   <context>
