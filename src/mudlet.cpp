@@ -1576,7 +1576,7 @@ void mudlet::slot_timer_fires()
         return;
     }
 
-    // Pull the Host* and TTimer::id from the properties:
+    // Pull the Host name and TTimer::id from the properties:
     QString hostName(pQT->property(TTimer::scmProperty_HostName).toString());
     if (hostName.isEmpty()) {
         qWarning().nospace().noquote() << "mudlet::slot_timer_fires() INFO - Host name is empty - so TTimer has probably been deleted.";

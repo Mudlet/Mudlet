@@ -75,7 +75,7 @@ public:
     QPointer<Host> getHost() { return mpHost; }
     QTimer* getQTimer() { return mpQTimer; }
     // Override the Tree version as we need to insert the id number as a
-    // property into the mQTimer as well:
+    // property into the QTimer that mpQTimer points to as well:
     void setID(const int);
 
 
