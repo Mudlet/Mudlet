@@ -10734,7 +10734,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="532"/>
       <source>&lt;p&gt;The trigger will only fire if all conditions on the list have been met within the specified line delta, and captures will be saved in &lt;span style=&quot; font-style:italic;&quot;&gt;multimatches&lt;/span&gt; instead of &lt;span style=&quot; font-style:italic;&quot;&gt;matches&lt;/span&gt;. If this option is not set the trigger will fire if any conditon on the list has been met.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;触发器只有在列表中的所有条件，包括指定的行数以及捕获保存在了&lt;span style=&quot; font-style:italic;&quot;&gt;多项匹配&lt;/span&gt;中而不是&lt;span style=&quot; font-style:italic;&quot;&gt;匹配&lt;/span&gt;中才会生效。如果此项未设置，则触发器在列表中的任一条件满足时均会生效。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="672"/>
