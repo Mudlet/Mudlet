@@ -2562,7 +2562,12 @@ Mudlet - в вашей системе не хватает ли памяти?</tr
       <source>[ INFO ]  - The missing area(s) are now called:
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation type="unfinished">
+        <numerusform>[ ИНФО ]  - Недостающие области теперь называются:
+(ID) ==&gt; &quot;имя&quot;</numerusform>
+        <numerusform>[ ИНФО ]  - Недостающие области теперь называются:
+(ID) ==&gt; &quot;имя&quot;</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="751"/>
@@ -7001,7 +7006,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="291"/>
       <source>&lt;p&gt;Share the screen area between multiple open profiles.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Разделить область экрана между несколькими открытыми профилями.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="299"/>
