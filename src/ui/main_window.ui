@@ -195,7 +195,7 @@
     <string>API Reference</string>
    </property>
    <property name="toolTip">
-    <string>&lt;p&gt;Opens the (on-line) Mudlet Wiki, at the API front page, in your system web-browser.&lt;/p&gt;</string>
+    <string>&lt;p&gt;Opens the Mudlet manual in your web browser.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionAbout">
