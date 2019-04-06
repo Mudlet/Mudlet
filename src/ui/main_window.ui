@@ -187,7 +187,7 @@
     <string>Notepad</string>
    </property>
    <property name="toolTip">
-    <string>&lt;p&gt;Opens a free form text editor window for the active profile that is saved between sessions.&lt;/p&gt;</string>
+    <string>&lt;p&gt;Opens a free form text editor window for this profile that is saved between sessions.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionHelp">
