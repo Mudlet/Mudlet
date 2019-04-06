@@ -6940,7 +6940,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="174"/>
       <source>&lt;p&gt;Configure setting for the Mudlet application globally and for the current profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Настройка параметров для Mudlet глобально и для текущего профиля.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="182"/>
@@ -6950,7 +6950,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="190"/>
       <source>&lt;p&gt;Opens a free form text editor window for the active profile that is saved between sessions.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;открывает окно текстового редактора для етого профиля, который сохраняется между сеансами.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="198"/>
