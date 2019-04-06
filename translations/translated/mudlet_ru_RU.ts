@@ -6971,12 +6971,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="230"/>
       <source>&lt;p&gt;Load a previous saved game session that can be used to test Mudlet lua systems (off-line!).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Загрузите предыдущий сохраненный игровой сеанс, который можно использовать для тестирования своих систем (офф-лайн!).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="238"/>
       <source>&lt;p&gt;Opens the (on-line) Mudlet Forum in your system web-browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Открывает (он-лайн) Форум Mudlet в веб-браузере.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="259"/>
@@ -6986,12 +6986,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="267"/>
       <source>&lt;p&gt;Install and remove collections of Mudlet lua items (packages).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Установка и удаление коллекций предметов (пакетов) Mudlet lua.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="275"/>
       <source>&lt;p&gt;Install and remove (share- &amp; sync-able) collections of Mudlet lua items (modules).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Установка и удаление коллекций предметов (синхронизируемых) Mudlet lua.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="283"/>
@@ -7936,7 +7936,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="281"/>
       <source>Gaelic (United Kingdom {Scots})</source>
-      <translation type="unfinished"/>
+      <translation>Гэльский (Соединенное Королевство)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="282"/>
