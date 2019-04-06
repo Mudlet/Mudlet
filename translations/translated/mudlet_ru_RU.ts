@@ -6955,7 +6955,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="198"/>
       <source>&lt;p&gt;Opens the (on-line) Mudlet Wiki, at the API front page, in your system web-browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Открывает вики Mudlet на первой странице API в вашем веб-браузере.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="214"/>
