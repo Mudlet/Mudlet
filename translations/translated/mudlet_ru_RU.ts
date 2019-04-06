@@ -6848,7 +6848,15 @@ certain conditions; select the
 &apos;About&apos; item for details.
 
 </source>
-      <translation type="unfinished"/>
+      <translation>
+
+Mudlet поставляется с БЕЗ ГАРАНТИЙ!
+Это бесплатное программное обеспечение, и вы
+можете распространять его при определенных условиях;
+выберите пункт &apos;O программе&apos; для
+дополнительной информации.
+
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="365"/>
