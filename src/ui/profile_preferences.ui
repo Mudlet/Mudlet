@@ -577,19 +577,6 @@
             </property>
             <layout class="QHBoxLayout" name="horizontalLayout_userDictionary">
              <item>
-              <widget class="QRadioButton" name="radioButton_userDictionary_none">
-               <property name="toolTip">
-                <string>&lt;p&gt;A user dictionary will not be used on the main console command line. Lua commands that target a user dictionary will return &lt;tt&gt;nil&lt;/t&gt; and &lt;i&gt;an error message&lt;/i&gt;.&lt;/p&gt;&lt;p&gt;It will still, however, be possible to access the main dictionary selected above.&lt;/p&gt;</string>
-               </property>
-               <property name="text">
-                <string>None</string>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
               <widget class="QRadioButton" name="radioButton_userDictionary_profile">
                <property name="toolTip">
                 <string>&lt;p&gt;A user dictionary specific to this profile will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</string>

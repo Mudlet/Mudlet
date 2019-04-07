@@ -58,9 +58,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // init generated dialog
     setupUi(this);
 
-// DISABLED: - Prevent "None" option for user dictionary
-    radioButton_userDictionary_none->hide();
-
     QPixmap holdPixmap;
 
     holdPixmap = *(this->notificationAreaIconLabelWarning->pixmap());
@@ -451,21 +448,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     pHost->getUserDictionaryOptions(useUserDictionary, mUseSharedDictionary);
     // Always set the true radio button first - avoids any problems with
     // exclusivity of radio buttons:
-// DISABLED: - Prevent "None" option for user dictionary
-//    if (useUserDictionary) {
-        if (mUseSharedDictionary) {
-            radioButton_userDictionary_common->setChecked(true);
-            radioButton_userDictionary_profile->setChecked(false);
-        } else {
-            radioButton_userDictionary_profile->setChecked(true);
-            radioButton_userDictionary_common->setChecked(false);
-        }
-        radioButton_userDictionary_none->setChecked(false);
-//    } else {
-//        radioButton_userDictionary_none->setChecked(true);
-//        radioButton_userDictionary_profile->setChecked(false);
-//        radioButton_userDictionary_common->setChecked(false);
-//    }
+    if (mUseSharedDictionary) {
+        radioButton_userDictionary_common->setChecked(true);
+        radioButton_userDictionary_profile->setChecked(false);
+    } else {
+        radioButton_userDictionary_profile->setChecked(true);
+        radioButton_userDictionary_common->setChecked(false);
+    }
     checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
     checkBox_useWideAmbiguousEastAsianGlyphs->setCheckState(pHost->getWideAmbiguousEAsianGlyphsControlState());
 
@@ -2170,11 +2159,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
 
         pHost->mEnableSpellCheck = checkBox_spellCheck->isChecked();
-// DISABLED: - Prevent "None" option for user dictionary
-//        if (radioButton_userDictionary_none->isChecked()) {
-            // Disable using which ever dictionary was previously in use:
-//            pHost->setUserDictionaryOptions(false, mUseSharedDictionary);
-/*        } else */ if (radioButton_userDictionary_common->isChecked()) {
+        if (radioButton_userDictionary_common->isChecked()) {
             pHost->setUserDictionaryOptions(true, true);
         } else {
             pHost->setUserDictionaryOptions(true, false);

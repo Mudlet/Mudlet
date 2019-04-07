@@ -1571,103 +1571,36 @@ void mudlet::addConsoleForNewHost(Host* pH)
 
 void mudlet::slot_timer_fires()
 {
-    auto pQT = qobject_cast<QTimer*>(sender());
+    QTimer* pQT = (QTimer*)sender();
     if (!pQT) {
         return;
     }
-
-    // Search through the Host instances to see which one has a QTimer that is
-    // the one that went off:
-    QMapIterator<Host*, QMap<QTimer*, TTimer*>> itHostTimerMap(mHostTimerMap);
-    while (itHostTimerMap.hasNext()) {
-        itHostTimerMap.next();
-        if (itHostTimerMap.value().contains(pQT)) {
-            auto pTT = itHostTimerMap.value().value(pQT);
-            pTT->execute();
-            if (pTT->checkRestart()) {
-                pTT->start();
-            }
-
-            // Okay now we've found it we are done:
-            return;
+    if (mTimerMap.contains(pQT)) {
+        TTimer* pTT = mTimerMap[pQT];
+        pTT->execute();
+        if (pTT->checkRestart()) {
+            pTT->start();
         }
-    }
-
-    qWarning() << "mudlet::slot_timer_fires() ERROR - Timer not registered - automatically deleting it!";
-    // Clean up any bogus ones:
-    pQT->stop();
-    pQT->deleteLater();
-}
-
-// This is called by the TTimer destructor:
-void mudlet::unregisterTimer(TTimer* pTT)
-{
-    if (Q_UNLIKELY(!pTT)) {
-        return;
-    }
-
-    auto pQT = pTT->getQTimer();
-    auto pHost = pTT->getHost();
-    if (Q_UNLIKELY(!pQT||!pHost)) {
-        return;
-    }
-
-    Q_ASSERT_X(mHostTimerMap.contains(pHost), "mudlet::unregisterTimer(...)", "the mHostTimerMap does not contain the Host instance that the TTimer seems to belong to");
-    if (mHostTimerMap.value(pHost).contains(pQT)) {
-        // Be paranoid - ensure that the timer does not fire again:
-        pTT->stop();
-
-//            qDebug().nospace().noquote() << "mudlet::unregisterTimer(...) INFO - unregistering a Timer \"" << pTT->getName() << "\" for profile \"" << pHost->getName() << "\".";
-        mHostTimerMap[pHost].remove(pQT);
-    }
-
-    // This message (and it's previous form:
-    // "MUDLET CRITICAL ERROR: trying to unregister Timer but it is not
-    // registered!") were somewhat bogus because such an unregistered Timer is
-    // created every time that XMLimport::importPackage is run and the package
-    // does not contain any Timer items.
-    if (!pTT->knownUnregistered()) {
-        qWarning() << "mudlet::unregisterTimer(...) ERROR - trying to unregister TTimer  \"" << pTT->getName() << "\" for profile \"" << pHost->getName() << "\" but it is not registered.";
-    }
-}
-
-void mudlet::registerTimer(TTimer* pTT)
-{
-    auto pQT = pTT->getQTimer();
-    if (Q_UNLIKELY(!pTT || !pQT)) {
-        qWarning() << "mudlet::registerTimer(...) ERROR - TTimer or QTimer pointer was a nullpt, aborting!";
-        return;
-    }
-
-    auto pHost = pTT->getHost();
-    if (Q_UNLIKELY(!pHost)) {
-        qWarning() << "mudlet::registerTimer(...) ERROR - TTimer pointed to had a Host nullpt, aborting!";
-        return;
-    }
-
-    Q_ASSERT_X(mHostTimerMap.contains(pHost), "mudlet::registerTimer(...)", "the mHostTimerMap does not contain the Host instance that the TTimer seems to belong to");
-
-    if (!mHostTimerMap.value(pHost).contains(pQT)) {
-        mHostTimerMap[pHost][pQT] = pTT;
-        connect(pQT, &QTimer::timeout, this, &mudlet::slot_timer_fires);
-//        qDebug().nospace().noquote() << "mudlet::registerTimer(...) INFO - registering a Timer \"" << pTT->getName() << "\" for profile \"" << pHost->getName() << "\".";
     } else {
-        qWarning() << "mudlet::registerTimer(...) ERROR - QTimer is already registered for Host \"" << pHost->getName() << "\", not registering again!";
+        qDebug() << "MUDLET CRITICAL ERROR: Timer not registered!";
     }
 }
 
-void mudlet::clearHostTimerMap(Host* pHost)
+void mudlet::unregisterTimer(QTimer* pQT)
 {
-    if (Q_UNLIKELY(!pHost)) {
-        return;
+    if (mTimerMap.contains(pQT)) {
+        mTimerMap.remove(pQT);
+    } else {
+        qDebug() << "MUDLET CRITICAL ERROR: trying to unregister Timer but it is not registered!";
     }
+}
 
-    Q_ASSERT_X(mHostTimerMap.contains(pHost), "mudlet::clearHostTimerMap(...)", "the mHostTimerMap does not contain the Host instance that the TTimer seems to belong to");
-    QMap<QTimer*, TTimer*> hostTimerMap = mHostTimerMap.take(pHost);
-
-// This will silence a warning whilst the line following it is commented out:
-    Q_UNUSED(hostTimerMap);
-//  qDebug().nospace().noquote() << "mudlet::clearHostTimerMap(...) INFO - removed QTimer<==>TTimer map, containing " << hostTimerMap.size() << " entries, for profile \"" << pHost->getName() << "\".";
+void mudlet::registerTimer(TTimer* pTT, QTimer* pQT)
+{
+    if (!mTimerMap.contains(pQT)) {
+        mTimerMap[pQT] = pTT;
+        connect(pQT, &QTimer::timeout, this, &mudlet::slot_timer_fires);
+    }
 }
 
 void mudlet::disableToolbarButtons()
@@ -3372,7 +3305,7 @@ void mudlet::createMapper(bool loadDefaultMap)
     loadWindowLayout();
 
     check_for_mappingscript();
-    TEvent mapOpenEvent;
+    TEvent mapOpenEvent {};
     mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
     mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     pHost->raiseEvent(mapOpenEvent);
@@ -3698,7 +3631,7 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, int historyVer
 
     packagesToInstallList.clear();
 
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     pHost->raiseEvent(event);
@@ -3974,7 +3907,7 @@ void mudlet::playSound(const QString& s, int soundVolume)
 
     connect(pPlayer, &QMediaPlayer::stateChanged, [=](QMediaPlayer::State state) {
         if (state == QMediaPlayer::StoppedState) {
-            TEvent soundFinished;
+            TEvent soundFinished {};
             soundFinished.mArgumentList.append("sysSoundFinished");
             soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().fileName());
@@ -4170,7 +4103,7 @@ void mudlet::slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButto
     if (!pH) {
         return;
     }
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysGamepadButtonPress"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
@@ -4188,7 +4121,7 @@ void mudlet::slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadBut
     if (!pH) {
         return;
     }
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysGamepadButtonRelease"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
@@ -4204,7 +4137,7 @@ void mudlet::slot_gamepadConnected(int deviceId)
     if (!pH) {
         return;
     }
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysGamepadConnected"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
@@ -4218,7 +4151,7 @@ void mudlet::slot_gamepadDisconnected(int deviceId)
     if (!pH) {
         return;
     }
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysGamepadDisconnected"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
@@ -4232,7 +4165,7 @@ void mudlet::slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis ax
     if (!pH) {
         return;
     }
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysGamepadAxisMove"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
