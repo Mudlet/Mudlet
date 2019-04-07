@@ -173,28 +173,63 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         port_ssl_tsl->setEnabled(false);
     }
 
-    mRegularPalette.setColor(QPalette::Text, QColor(0, 0, 192));
-    mRegularPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
-    mRegularPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    mRegularPalette.setColor(QPalette::Base, QColor(Qt::white));
-
-    mReadOnlyPalette.setColor(QPalette::Base, QColor(212, 212, 212));
-    mReadOnlyPalette.setColor(QPalette::Text, QColor(0, 0, 192));
-    mReadOnlyPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
-    mReadOnlyPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-
-    mOKPalette.setColor(QPalette::Text, QColor(0, 0, 192));
-    mOKPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
-    mOKPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    mOKPalette.setColor(QPalette::Base, QColor(235, 255, 235));
-
-    mErrorPalette.setColor(QPalette::Text, QColor(0, 0, 192));
-    mErrorPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
-    mErrorPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
-    mErrorPalette.setColor(QPalette::Base, QColor(255, 235, 235));
-
     profiles_tree_widget->setViewMode(QListView::IconMode);
+    this->setStyleSheet(mStyleSheetRO);
 }
+
+void dlgConnectionProfiles::removeNotification(QString notif)
+{
+    QString msg; //="<html><head/><body>";
+
+    mErrorList.removeDuplicates();
+    QString str = QString("^%1.+").arg(notif.left(20));
+    int index = mErrorList.indexOf(QRegExp(str));
+    mErrorList.removeAt(index);
+
+    foreach (const QString& str, mErrorList) {
+        msg.append(QString("<p>%1</p>").arg(str));
+    }
+    // msg.append("</body></html>");
+    if (mErrorList.count() == 0) {
+        notificationArea->hide();
+        notificationAreaMessageBox->hide();
+        notificationAreaIconLabelWarning->hide();
+        notificationAreaIconLabelError->show();
+        notificationAreaIconLabelInformation->hide();
+    } else {
+        notificationArea->show();
+        notificationAreaMessageBox->show();
+    }
+    notificationAreaMessageBox->setText(msg);
+}
+
+void dlgConnectionProfiles::addNotification(QString notif)
+{
+    QString msg; //="<html><head/><body>";
+
+    mErrorList.removeAt(mErrorList.indexOf(QRegExp(QString("^%1").arg(notif.left(20)))));
+    mErrorList << notif;
+    mErrorList.removeDuplicates();
+
+    foreach (const QString& str, mErrorList) {
+        msg.append(QString("<p>%1</p>").arg(str));
+    }
+
+    //msg.append("</body></html>");
+    if (mErrorList.count() > 0) {
+        notificationArea->show();
+        notificationAreaMessageBox->show();
+    } else {
+        notificationArea->hide();
+        notificationAreaMessageBox->hide();
+        notificationAreaIconLabelWarning->hide();
+        notificationAreaIconLabelError->show();
+        notificationAreaIconLabelInformation->hide();
+    }
+
+    notificationAreaMessageBox->setText(msg);
+}
+
 
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it
 // accepting invalid data
@@ -364,24 +399,16 @@ void dlgConnectionProfiles::slot_save_name()
         QDir currentPath(mudlet::getMudletPath(mudlet::profileHomePath, currentProfileEditName));
         QDir dir;
 
+        removeNotification(tr("Could not rename your profile data on the computer."));
+        removeNotification(tr("Could not create the new profile folder on your computer."));
         if (currentPath.exists()) {
             // CHECKME: previous code specified a path ending in a '/'
             QDir parentpath(mudlet::getMudletPath(mudlet::profilesPath));
             if (!parentpath.rename(currentProfileEditName, newProfileName)) {
-                notificationArea->show();
-                notificationAreaIconLabelWarning->show();
-                notificationAreaIconLabelError->hide();
-                notificationAreaIconLabelInformation->hide();
-                notificationAreaMessageBox->show();
-                notificationAreaMessageBox->setText(tr("Could not rename your profile data on the computer."));
+                addNotification(tr("Could not rename your profile data on the computer."));
             }
         } else if (!dir.mkpath(mudlet::getMudletPath(mudlet::profileHomePath, newProfileName))) {
-            notificationArea->show();
-            notificationAreaIconLabelWarning->show();
-            notificationAreaIconLabelError->hide();
-            notificationAreaIconLabelInformation->hide();
-            notificationAreaMessageBox->show();
-            notificationAreaMessageBox->setText(tr("Could not create the new profile folder on your computer."));
+            addNotification(tr("Could not create the new profile folder on your computer."));
         }
 
         // if this was a previously deleted profile, restore it
@@ -1035,7 +1062,6 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     }
 
     profile_history->setEnabled(static_cast<bool>(profile_history->count()));
-
     const QString profileLoadedMessage = tr("This profile is currently loaded - close it before changing the connection parameters.");
 
     QStringList loadedProfiles = mudlet::self()->getHostManager().getHostList();
@@ -1048,16 +1074,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         host_name_entry->setFocusPolicy(Qt::NoFocus);
         port_entry->setFocusPolicy(Qt::NoFocus);
 
-        profile_name_entry->setPalette(mReadOnlyPalette);
-        host_name_entry->setPalette(mReadOnlyPalette);
-        port_entry->setPalette(mReadOnlyPalette);
+        addNotification(profileLoadedMessage);
 
-        notificationArea->show();
-        notificationAreaIconLabelWarning->hide();
-        notificationAreaIconLabelError->hide();
-        notificationAreaIconLabelInformation->show();
-        notificationAreaMessageBox->show();
-        notificationAreaMessageBox->setText(profileLoadedMessage);
     } else {
         profile_name_entry->setReadOnly(false);
         host_name_entry->setReadOnly(false);
@@ -1067,18 +1085,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         host_name_entry->setFocusPolicy(Qt::StrongFocus);
         port_entry->setFocusPolicy(Qt::StrongFocus);
 
-        profile_name_entry->setPalette(mRegularPalette);
-        host_name_entry->setPalette(mRegularPalette);
-        port_entry->setPalette(mRegularPalette);
-
-        if (notificationAreaMessageBox->text() == profileLoadedMessage) {
-            notificationArea->hide();
-            notificationAreaIconLabelWarning->hide();
-            notificationAreaIconLabelError->hide();
-            notificationAreaIconLabelInformation->hide();
-            notificationAreaMessageBox->hide();
-            notificationAreaMessageBox->setText(QString());
-        }
+        removeNotification(profileLoadedMessage);
     }
 }
 
@@ -1724,26 +1731,21 @@ void dlgConnectionProfiles::slot_connectToServer()
 
 bool dlgConnectionProfiles::validateProfile()
 {
-    notificationArea->hide();
-    notificationAreaIconLabelWarning->hide();
-    notificationAreaIconLabelError->hide();
-    notificationAreaIconLabelInformation->hide();
-    notificationAreaMessageBox->setText(tr(""));
     validProfile = true;
 
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
 
     if (pItem) {
         QString name = profile_name_entry->text().trimmed();
+        profile_name_entry->setStyleSheet("");
         const QString allowedChars = QStringLiteral(". _0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ");
-
+        removeNotification(tr("Please only use one of the following characters:\"%1\".").arg(allowedChars));
+        profile_name_entry->setStyleSheet("");
         for (int i = 0; i < name.size(); ++i) {
             if (!allowedChars.contains(name.at(i))) {
-                notificationAreaIconLabelWarning->show();
-                notificationAreaMessageBox->setText(
-                        QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("The %1 character is not permitted. Use one of the following:\"%2\".").arg(name.at(i), allowedChars)));
+                addNotification(tr("Please only use one of the following characters:\"%1\".").arg(allowedChars));
                 name.replace(name.at(i--), QString());
-                profile_name_entry->setPalette(mErrorPalette);
+                profile_name_entry->setStyleSheet(mStyleSheetError);
                 profile_name_entry->setText(name);
                 validProfile = false;
                 break;
@@ -1752,48 +1754,54 @@ bool dlgConnectionProfiles::validateProfile()
 
         // see if there is an edit that already uses a similar name
         if (pItem->text() != name && mProfileList.contains(name)) {
-            notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("This profile name is already in use.")));
-            profile_name_entry->setPalette(mErrorPalette);
+            addNotification(tr("This profile name is already in use."));
+            profile_name_entry->setStyleSheet(mStyleSheetError);
             validProfile = false;
+        } else {
+            removeNotification(tr("This profile name is already in use."));
         }
 
+        port_entry->setStyleSheet("");
         QString port = port_entry->text().trimmed();
         if (!port.isEmpty() && (port.indexOf(QRegularExpression(QStringLiteral("^\\d+$")), 0) == -1)) {
             QString val = port;
             val.chop(1);
             port_entry->setText(val);
-            notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("You have to enter a number. Other characters are not permitted.")));
-            port_entry->setPalette(mErrorPalette);
+            addNotification(tr("You have to enter a number. Other characters are not permitted."));
+            port_entry->setStyleSheet(mStyleSheetError);
             validProfile = false;
+        } else {
+            removeNotification(tr("You have to enter a number. Other characters are not permitted."));
         }
 
         bool ok;
         int num = port.trimmed().toInt(&ok);
-        if (!port.isEmpty() && ((num >= 65536) || (num <= 0) || !ok)) {
-            notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Port number must be above zero and below 65535.")));
-            port_entry->setPalette(mErrorPalette);
+        if ((num >= 65536) || (num <= 0) || !ok) {
+            addNotification(tr("Port number must be above zero and below 65535."));
+            port_entry->setStyleSheet(mStyleSheetError);
             validProfile = false;
+        } else {
+            removeNotification(tr("Port number must be above zero and below 65535."));
         }
 
+        removeNotification(tr("Mudlet is not configured for secure connections."));
+        port_ssl_tsl->setStyleSheet("");
 #if defined(QT_NO_SSL)
         port_ssl_tsl->setEnabled(false);
         port_ssl_tsl->setToolTip(tr("Mudlet is not configured for secure connections."));
         if (port_ssl_tsl->isChecked()) {
-            notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Mudlet is not configured for secure connections.")));
+            addNotification(tr("Mudlet is not configured for secure connections."));
             port_ssl_tsl->setEnabled(true);
-            port_ssl_tsl->setPalette(mErrorPalette);
+            port_ssl_tsl->setStyleSheet(mStyleSheetError);
             validProfile = false;
         }
 #else
+
+        removeNotification(tr("Mudlet can not load support for secure connections."));
         if (!QSslSocket::supportsSsl()) {
             if (port_ssl_tsl->isChecked()) {
-                notificationAreaIconLabelError->show();
-                notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Mudlet can not load support for secure connections.")));
-                port_ssl_tsl->setPalette(mErrorPalette);
+                addNotification(tr("Mudlet can not load support for secure connections."));
+                port_ssl_tsl->setStyleSheet(mStyleSheetError);
                 validProfile = false;
             }
         } else {
@@ -1801,47 +1809,42 @@ bool dlgConnectionProfiles::validateProfile()
             port_ssl_tsl->setToolTip("");
         }
 #endif
+
         QUrl check;
         QString url = host_name_entry->text().trimmed();
         check.setHost(url);
         if (!check.isValid()) {
-            notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Please enter the URL of the Game server.%1").arg(check.errorString())));
-            host_name_entry->setPalette(mErrorPalette);
+            addNotification(tr("Please enter the URL of the Game server.%1").arg(check.errorString()));
+            host_name_entry->setStyleSheet(mStyleSheetError);
+            validProfile = false;
+        } else {
+            removeNotification(tr("Please enter the URL of the Game server."));
+        }
+
+        removeNotification(tr("SSL connections require the URL of the Game server."));
+        removeNotification(tr("Please enter a valid hostname, IPv4 or IPv6 address for the Game server."));
+        host_name_entry->setStyleSheet("");
+        if ((url.indexOf(QRegularExpression(QStringLiteral("^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$")), 0) != -1)
+            || (url.indexOf(QRegularExpression(QStringLiteral("^(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}$")), 0) != -1)) {
+            if (port_ssl_tsl->isChecked()) {
+                addNotification(tr("SSL connections require the URL of the Game server.%1").arg(check.errorString()));
+                host_name_entry->setStyleSheet(mStyleSheetError);
+                validProfile = false;
+            }
+        } else if ((url.indexOf(QRegularExpression(QStringLiteral("^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])(\\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9]))*$")), 0) != -1) && (url.length() < 255)) {
+        } else {
+            addNotification(tr("Please enter a valid hostname, IPv4 or IPv6 address for the Game server."));
+            host_name_entry->setStyleSheet(mStyleSheetError);
             validProfile = false;
         }
 
-        if (port_ssl_tsl->isChecked()) {
-            if (url.indexOf(QRegularExpression(QStringLiteral("^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$")), 0) != -1) {
-                notificationAreaIconLabelError->show();
-                notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("SSL connections require the URL of the Game server.%1").arg(check.errorString())));
-                host_name_entry->setPalette(mErrorPalette);
-                validProfile = false;
-            }
-        }
-
         if (validProfile) {
-            profile_name_entry->setPalette(mOKPalette);
-            port_entry->setPalette(mOKPalette);
-            port_ssl_tsl->setPalette(mOKPalette);
-            host_name_entry->setPalette(mOKPalette);
-            login_entry->setPalette(mOKPalette);
-            character_password_entry->setPalette(mOKPalette);
-            notificationArea->hide();
-            notificationAreaIconLabelWarning->hide();
-            notificationAreaIconLabelError->hide();
-            notificationAreaIconLabelInformation->hide();
-            notificationAreaMessageBox->hide();
-            notificationAreaMessageBox->setText(tr(""));
-
             if (connect_button) {
                 connect_button->setEnabled(true);
                 connect_button->setToolTip(QString());
             }
 
         } else {
-            notificationArea->show();
-            notificationAreaMessageBox->show();
             if (connect_button) {
                 connect_button->setDisabled(true);
                 connect_button->setToolTip(

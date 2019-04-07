@@ -71,14 +71,19 @@ private:
     bool validateConnect();
     void updateDiscordStatus();
     bool validateProfile();
+    void removeNotification(QString notif);
+    void addNotification(QString notif);
+
 
     bool validProfile;
-
     QStringList mProfileList;
-    QPalette mRegularPalette;
-    QPalette mOKPalette;
-    QPalette mErrorPalette;
-    QPalette mReadOnlyPalette;
+    QStringList mErrorList;
+
+    QString mStyleSheetRegular= "* { color:#0000c0; background: #0000C0; }";
+    QString mStyleSheetRO = "*:disabled  { color:#0000c0; background: #D4D4D4; }";
+    QString mStyleSheetOk = "* { color:#0000c0; background: #EBFFEB; }";
+    QString mStyleSheetError = "* { color:#0000c0; background: #FFEBEB; }";
+
     QPushButton* connect_button;
     QLineEdit* delete_profile_lineedit;
     QPushButton* delete_button;
