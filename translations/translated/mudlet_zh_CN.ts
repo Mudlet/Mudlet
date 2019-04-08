@@ -1869,7 +1869,7 @@ better off starting again...</source>
       <source>[ INFO ]  - Reading map (format version:%1) file:
 &quot;%2&quot;,
 please wait...</source>
-      <translation>[信息] - 读取地图文件中 (格式版本: %1):
+      <translation>[ 信息 ]  - 读取地图文件中 (格式版本: %1):
 &quot;%2&quot;,
 请稍等...</translation>
     </message>
@@ -1877,13 +1877,13 @@ please wait...</source>
       <location filename="../src/TMap.cpp" line="1554"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
-      <translation>[信息] - 找不到默认 (重置) 区域 (对某些尚未指定区域的房间) , 添加保留区域号-1.</translation>
+      <translation>[ 信息 ]  - 找不到默认 (重置) 区域 (对某些尚未指定区域的房间) , 添加保留区域号-1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1638"/>
       <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
-      <translation>[信息] - 读取地图文件成功 (%1s) , 正在检查某些细节的一致性...</translation>
+      <translation>[ 信息 ]  - 读取地图文件成功 (%1s) , 正在检查某些细节的一致性...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1653"/>
@@ -1952,7 +1952,7 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation>[信息] - 关于上次地图操作的信息己保存在最近的报告文件中:
+      <translation>[ 信息 ]  - 关于上次地图操作的信息己保存在最近的报告文件中:
 &quot;%1&quot;
 - 找到 (最近一次的) 带有下面标题的报告:
 &quot;%2&quot;.</translation>
@@ -1960,7 +1960,7 @@ the file:
     <message>
       <location filename="../src/TMap.cpp" line="2250"/>
       <source>[ INFO ]  - Map download initiated, please wait...</source>
-      <translation>[信息] - 己开始下载地图, 请稍等...</translation>
+      <translation>[ 信息 ]  - 己开始下载地图, 请稍等...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2258"/>
@@ -2033,7 +2033,7 @@ in main console!</source>
     <message>
       <location filename="../src/TMap.cpp" line="2434"/>
       <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
-      <translation>[信息] - ... 地图下载并存储完毕, 开始分析...</translation>
+      <translation>[ 信息 ]  - ... 地图下载并存储完毕, 开始分析...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2460"/>
@@ -2172,7 +2172,7 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="1130"/>
       <source>[ INFO ]  - In room id:%1 patching {internal fixup} of (special) exit to
 %2, was: &quot;%3&quot; now: &quot;%4&quot;.</source>
-      <translation>[信息] - 房间:%1中通向房间:%2的 (特别) 出口的补丁{internal fixup}
+      <translation>[ 信息 ]  - 房间:%1中通向房间:%2的 (特别) 出口的补丁{internal fixup}
 以前是： &quot;%3&quot; 现在是: &quot;%4&quot;.</translation>
     </message>
     <message>
@@ -2180,7 +2180,7 @@ in main console!</source>
       <source>[ INFO ]  - In room with id: %1 correcting special exit &quot;%2&quot; that
 was to room with an exit to invalid room: %3 to now go
 to: %4.</source>
-      <translation>[信息] - 房间: %1 的特殊出口 &quot;%2&quot; 
+      <translation>[ 信息 ]  - 房间: %1 的特殊出口 &quot;%2&quot; 
 通向了一个包含无效房间出口的房间: %3, 现已更正为: %4.</translation>
     </message>
     <message>
@@ -2236,55 +2236,55 @@ room user data under a key:
       <location filename="../src/TRoom.cpp" line="1319"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus door items that were removed:
 %2.</source>
-      <translation>[信息] - 在房间: %1 中发现了至少一项多余的门, 这些项已被删除:
+      <translation>[ 信息 ]  - 在房间: %1 中发现了至少一项多余的门, 这些项已被删除:
 %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1326"/>
       <source>[ INFO ]  - Room had one or more surplus door items that were removed:%1.</source>
-      <translation>[信息] - 已删除房间中至少一项多余的门:%1.</translation>
+      <translation>[ 信息 ]  - 已删除房间中至少一项多余的门:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1342"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus weight items that were removed:
 %2.</source>
-      <translation>[信息] - 在房间: %1 中发现了至少一项多余的权值, 这些项已被删除:
+      <translation>[ 信息 ]  - 在房间: %1 中发现了至少一项多余的权值, 这些项已被删除:
 %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1349"/>
       <source>[ INFO ]  - Room had one or more surplus weight items that were removed: %1.</source>
-      <translation>[信息] - 已删除房间中至少一项多余的权值:%1.</translation>
+      <translation>[ 信息 ]  - 已删除房间中至少一项多余的权值:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1365"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus exit lock items that were removed:
 %2.</source>
-      <translation>[信息] - 在房间: %1 中发现了至少一项多余的出口锁, 这些项已被删除:
+      <translation>[ 信息 ]  - 在房间: %1 中发现了至少一项多余的出口锁, 这些项已被删除:
 %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1372"/>
       <source>[ INFO ]  - Room had one or more surplus exit lock items that were removed: %1.</source>
-      <translation>[信息] - 已删除房间中至少一项多余的出口锁:%1.</translation>
+      <translation>[ 信息 ]  - 已删除房间中至少一项多余的出口锁:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1451"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus custom line elements that
 were removed: %2.</source>
-      <translation>[信息] - 在房间: %1 中发现了至少一项多余的自定义行, 这些项已被删除:
+      <translation>[ 信息 ]  - 在房间: %1 中发现了至少一项多余的自定义行, 这些项已被删除:
 %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1457"/>
       <source>[ INFO ]  - Room had one or more surplus custom line elements that were removed: %1.</source>
-      <translation>[信息] - 已删除房间中至少一项多余的自定义行:%1.</translation>
+      <translation>[ 信息 ]  - 已删除房间中至少一项多余的自定义行:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1480"/>
       <source>[ INFO ]  - In room with id: %1 correcting exit &quot;%2&quot; that was to room with
 an exit to invalid room: %3 to now go to: %4.</source>
-      <translation>[信息] - 房间: %1 的特殊出口 &quot;%2&quot; 
+      <translation>[ 信息 ]  - 房间: %1 的特殊出口 &quot;%2&quot; 
 通向了一个包含非法房间出口的房间: %3, 现已更正为: %4.</translation>
     </message>
     <message>
@@ -2432,7 +2432,7 @@ Mudlet 版本存在严重问题-您的系统内存不足吗?</translation>
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[信息] - 缺少的区域现在被表示为：
+        <numerusform>[ 信息 ]  - 缺少的区域现在被表示为：
 (编号)==&gt; &quot;区域名字&quot;</numerusform>
       </translation>
     </message>
@@ -2452,24 +2452,24 @@ in map, now working out what new id numbers to use...</source>
       <location filename="../src/TRoomDB.cpp" line="763"/>
       <source>[ INFO ]  - The renumbered area ids will be:
 Old ==&gt; New</source>
-      <translation>[信息] - 重置的区域编号将表示为：
+      <translation>[ 信息 ]  - 重置的区域编号将表示为：
 旧编号==&gt; 新编号</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="781"/>
       <source>[ INFO ]  - The area with this bad id was renumbered to: %1.</source>
-      <translation>[信息] - 无效的区域编号已重置为: %1.</translation>
+      <translation>[ 信息 ]  - 无效的区域编号已重置为: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="782"/>
       <source>[ INFO ]  - This area was renumbered from the bad id: %1.</source>
-      <translation>[信息] - 该区域是由无效区域: %1重新编号形成的.</translation>
+      <translation>[ 信息 ]  - 该区域是由无效区域: %1重新编号形成的.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="825"/>
       <location filename="../src/TRoomDB.cpp" line="828"/>
       <source>[ INFO ]  - Area id numbering is satisfactory.</source>
-      <translation>[信息] - 区域编号是符合要求的.</translation>
+      <translation>[ 信息 ]  - 区域编号是符合要求的.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="836"/>
@@ -2488,53 +2488,53 @@ out what new id numbers to use.</source>
       <location filename="../src/TRoomDB.cpp" line="848"/>
       <source>[ INFO ]  - The renumbered rooms will be:
 </source>
-      <translation>[信息] - 重新编号的房间将会是:
+      <translation>[ 信息 ]  - 重新编号的房间将会是:
 </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="864"/>
       <source>[ INFO ]  - This room with the bad id was renumbered to: %1.</source>
-      <translation>[信息] - 无效的房间编号已重置为: %1.</translation>
+      <translation>[ 信息 ]  - 无效的房间编号已重置为: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="865"/>
       <source>[ INFO ]  - This room was renumbered from the bad id: %1.</source>
-      <translation>[信息] - 该房间是由无效房间: %1重新编号形成的.</translation>
+      <translation>[ 信息 ]  - 该房间是由无效房间: %1重新编号形成的.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="901"/>
       <location filename="../src/TRoomDB.cpp" line="904"/>
       <source>[ INFO ]  - Room id numbering is satisfactory.</source>
-      <translation>[信息] - 房间编号是符合要求的.</translation>
+      <translation>[ 信息 ]  - 房间编号是符合要求的.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="921"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation>[信息] - 在房间: %1中发现了重复的无效出口标识, 这是一个
+      <translation>[ 信息 ]  - 在房间: %1中发现了重复的无效出口标识, 这是一个
 异常现象, 但是已被迅速地清理了.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="926"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room, this is an anomaly but has been cleaned up easily.</source>
-      <translation>[信息] - 在房间中发现了重复的无效出口标识, 这是一个异常现象, 但是已被迅速地清理了.</translation>
+      <translation>[ 信息 ]  - 在房间中发现了重复的无效出口标识, 这是一个异常现象, 但是已被迅速地清理了.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="935"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation>[信息] - 在房间: %1中发现了重复的出口锁标识, 这是一个
+      <translation>[ 信息 ]  - 在房间: %1中发现了重复的出口锁标识, 这是一个
 异常现象, 但是已被迅速地清理了.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="940"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room, this is an anomaly but has been cleaned up easily.</source>
-      <translation>[信息] - 在房间中发现了重复的无效出口标识, 这是一个异常现象, 但是已被迅速地清理了.</translation>
+      <translation>[ 信息 ]  - 在房间中发现了重复的无效出口标识, 这是一个异常现象, 但是已被迅速地清理了.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1011"/>
       <source>[ INFO ]  - This room claims to be in area id: %1, but that did not have a record of it.  The area has been updated to include this room.</source>
-      <translation>[信息] - 该房间应属于区域: %1，但是后者并没有它的记录. 为了添加该房间, 已对区域进行更新.</translation>
+      <translation>[ 信息 ]  - 该房间应属于区域: %1，但是后者并没有它的记录. 为了添加该房间, 已对区域进行更新.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1017"/>
@@ -2542,7 +2542,7 @@ anomaly but has been cleaned up easily.</source>
 should be recording as possessing, they were:
 %3
 they have been added.</source>
-      <translation>[信息] - 在被记录为属于区域: %1的房间
+      <translation>[ 信息 ]  - 在被记录为属于区域: %1的房间
 中有 %2 个房间已丢失, 它们是:
 %3
 它们已经被增加.</translation>
@@ -2550,12 +2550,12 @@ they have been added.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1025"/>
       <source>[ INFO ]  - In this area there were %1 rooms missing from those it should be recorded as possessing.  They are: %2.  They have been added.</source>
-      <translation>[信息] - 在被记录为属于该区域的房间中有 %1 个房间已丢失, 它们是: %2 它们已经被增加.</translation>
+      <translation>[ 信息 ]  - 在被记录为属于该区域的房间中有 %1 个房间已丢失, 它们是: %2 它们已经被增加.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1046"/>
       <source>[ INFO ]  - This room was claimed by area id: %1, but it does not belong there.  The area has been updated to not include this room.</source>
-      <translation>[信息] - 区域: %1声称拥有该房间, 但是后者并不属于那里. 为了排除后者, 已对区域进行更新.</translation>
+      <translation>[ 信息 ]  - 区域: %1声称拥有该房间, 但是后者并不属于那里. 为了排除后者, 已对区域进行更新.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1052"/>
@@ -2563,7 +2563,7 @@ they have been added.</source>
 should be recording as possessing, they were:
 %3
 they have been removed.</source>
-      <translation>[信息] - 在区域: %1中
+      <translation>[ 信息 ]  - 在区域: %1中
 中有 %2 个额外的没有被记录为属于该区域的房间, 它们是:
 %3
 它们已经被移除.</translation>
@@ -2571,7 +2571,7 @@ they have been removed.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1060"/>
       <source>[ INFO ]  - In this area there were %1 extra rooms that it should not be recorded as possessing.  They were: %2.  They have been removed.</source>
-      <translation>[信息] - 在该区域中有 %1 个额外的房间被记录为不属于该区域, 它们是: %2 它们已经被移除.</translation>
+      <translation>[ 信息 ]  - 在该区域中有 %1 个额外的房间被记录为不属于该区域, 它们是: %2 它们已经被移除.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1162"/>
@@ -2608,7 +2608,7 @@ another that exists at the time.
   If there were more than one area without a name then all but the
 first will also gain a suffix in this manner.
 %2</source>
-      <translation>[信息] - 过去, 由于没有考虑某些情况，Mudlet允许
+      <translation>[ 信息 ]  - 过去, 由于没有考虑某些情况，Mudlet允许
 地图中存在未命名区域或多个具有相同名字的区域.
 这会让事情变得混乱, 现在已经不允许这么做了.
   为了解决这些问题, 如果一个区域没有名字(或者等以后
@@ -2642,7 +2642,7 @@ another that exists at the time.
   If there were more than one area without a name then all but the
 first will also gain a suffix in this manner.
 %1)</source>
-      <translation>[信息] - 过去, 由于没有考虑某些情况，Mudlet允许
+      <translation>[ 信息 ]  - 过去, 由于没有考虑某些情况，Mudlet允许
 地图中存在多个具有相同名字的区域.
 这会让事情变得混乱, 现在已经不允许这么做了.
   重复的区域名称将导致除了第一个被处理的区域之外所有的
