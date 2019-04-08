@@ -5160,7 +5160,7 @@ int TLuaInterpreter::setAppStyleSheet(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysAppStyleSheetChange"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(tag);
