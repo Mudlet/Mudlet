@@ -98,7 +98,7 @@ private:
     QPointer<Host> mpHost;
     bool mNeedsToBeCompiled;
     QMutex mLock;
-    QTimer* mpTimer;
+    QTimer* mpQTimer;
     bool mModuleMember;
 };
 

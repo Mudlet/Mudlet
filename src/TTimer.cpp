@@ -40,7 +40,7 @@ TTimer::TTimer(TTimer* parent, Host* pHost)
 , mModuleMasterFolder(false)
 , mpHost(pHost)
 , mNeedsToBeCompiled(true)
-, mpTimer(new QTimer)
+, mpQTimer(new QTimer)
 , mModuleMember(false)
 {
     mpQTimer->stop();
@@ -58,7 +58,7 @@ TTimer::TTimer(const QString& name, QTime time, Host* pHost)
 , mTime(time)
 , mpHost(pHost)
 , mNeedsToBeCompiled(true)
-, mpTimer(new QTimer)
+, mpQTimer(new QTimer)
 , mModuleMember(false)
 {
     mpQTimer->stop();
@@ -126,10 +126,10 @@ bool TTimer::setIsActive(bool b)
 
 void TTimer::start()
 {
-    mpTimer->setSingleShot(isTemporary());
+    mpQTimer->setSingleShot(isTemporary());
 
     if (!isFolder()) {
-        mpTimer->start();
+        mpQTimer->start();
     } else {
         stop();
     }
@@ -137,7 +137,7 @@ void TTimer::start()
 
 void TTimer::stop()
 {
-    mpTimer->stop();
+    mpQTimer->stop();
 }
 
 void TTimer::compile()
@@ -206,7 +206,7 @@ bool TTimer::checkRestart()
 void TTimer::execute()
 {
     if (!isActive() || isFolder()) {
-        mpTimer->stop();
+        mpQTimer->stop();
         return;
     }
 
@@ -216,7 +216,7 @@ void TTimer::execute()
         } else {
             mpHost->mLuaInterpreter.compileAndExecuteScript(mScript);
         }
-        mpTimer->stop();
+        mpQTimer->stop();
         mpHost->getTimerUnit()->markCleanup(this);
         return;
     }
@@ -247,7 +247,7 @@ void TTimer::execute()
 
         if (!mpHost->mLuaInterpreter.call(mFuncName, mName, (mTime < mpHost->mTimerDebugOutputSuppressionInterval))) {
 
-            mpTimer->stop();
+            mpQTimer->stop();
         }
     }
 }
@@ -276,7 +276,7 @@ void TTimer::enableTimer(int id)
                 }
             } else {
                 deactivate();
-                mpTimer->stop();
+                mpQTimer->stop();
             }
         }
     }
@@ -294,7 +294,7 @@ void TTimer::disableTimer(int id)
 {
     if (mID == id) {
         deactivate();
-        mpTimer->stop();
+        mpQTimer->stop();
     }
 
     for (auto timer : *mpMyChildrenList) {
@@ -314,7 +314,7 @@ void TTimer::enableTimer()
             }
         } else {
             deactivate();
-            mpTimer->stop();
+            mpQTimer->stop();
         }
     }
     if (!isOffsetTimer()) {
@@ -329,7 +329,7 @@ void TTimer::enableTimer()
 void TTimer::disableTimer()
 {
     deactivate();
-    mpTimer->stop();
+    mpQTimer->stop();
     for (auto timer : *mpMyChildrenList) {
         timer->disableTimer();
     }
@@ -341,10 +341,10 @@ void TTimer::enableTimer(const QString& name)
     if (mName == name) {
         if (canBeUnlocked()) {
             if (activate()) {
-                mpTimer->start();
+                mpQTimer->start();
             } else {
                 deactivate();
-                mpTimer->stop();
+                mpQTimer->stop();
             }
         }
     }
@@ -360,7 +360,7 @@ void TTimer::disableTimer(const QString& name)
 {
     if (mName == name) {
         deactivate();
-        mpTimer->stop();
+        mpQTimer->stop();
     }
 
     for (auto timer : *mpMyChildrenList) {
@@ -372,7 +372,7 @@ void TTimer::disableTimer(const QString& name)
 void TTimer::killTimer()
 {
     deactivate();
-    mpTimer->stop();
+    mpQTimer->stop();
 }
 
 void TTimer::setID(const int id)
