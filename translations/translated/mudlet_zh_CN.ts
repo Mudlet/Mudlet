@@ -1462,7 +1462,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1672"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation>[信息] - 已找到并打开地图文件, 开始分析...</translation>
+      <translation>[ 信息 ]  - 已找到并打开地图文件, 开始分析...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1685"/>
@@ -1483,7 +1483,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2607"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation>[信息] - 系统收到重新加载地图的请求...</translation>
+      <translation>[ 信息 ]  - 系统收到重新加载地图的请求...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2612"/>
@@ -1512,7 +1512,7 @@ will NOT persist between sessions as the relevent data IS NOT SAVED.
 
 To avoid filling the screen up with repeated messages, this is your only warning about
 this command...!</source>
-      <translation>[信息] - 要想上述命令完全奏效, 还需对地图文件格式进行一次修订. 尽管此命令已经存在, 但请不要使用, 此命令的效果在会话之间不会一直存在, 因为相关的数据不会被保存.
+      <translation>[ 信息 ]  - 要想上述命令完全奏效, 还需对地图文件格式进行一次修订. 尽管此命令已经存在, 但请不要使用, 此命令的效果在会话之间不会一直存在, 因为相关的数据不会被保存.
 
 为避免这条通知反复出现在屏幕中, 关于此命令的警告仅此一次...!</translation>
     </message>
@@ -1679,17 +1679,17 @@ Error from Lua: </source>
     <message>
       <location filename="../src/TMap.cpp" line="438"/>
       <source>[ INFO ]  - Auditing of a loaded/imported/downloaded map starting...</source>
-      <translation>[信息] - 开始审核 已装载/已导入/已下载 的地图...</translation>
+      <translation>[ 信息 ]  - 开始审核 已装载/已导入/已下载 的地图...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="464"/>
       <source>[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.</source>
-      <translation>[信息] - 转换: 旧版标签, 区域号: %1 标签号: %2.</translation>
+      <translation>[ 信息 ]  - 转换: 旧版标签, 区域号: %1 标签号: %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="467"/>
       <source>[ INFO ] - Converting old style label id: %1.</source>
-      <translation>[信息] - 正在转换旧版标签, 标签号: %1.</translation>
+      <translation>[ 信息 ]  - 正在转换旧版标签, 标签号: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="472"/>
@@ -1847,7 +1847,7 @@ Mudlet can handle (%2)!  The file is:
       <location filename="../src/TMap.cpp" line="1423"/>
       <source>[ INFO ]  - You will need to upgrade your Mudlet or find a map file saved in an
 older format.</source>
-      <translation>[信息] - 你需要升级你的Mudlet, 或者另寻以旧格式存储的地图文件.</translation>
+      <translation>[ 信息 ]  - 你需要升级你的Mudlet, 或者另寻以旧格式存储的地图文件.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1430"/>
@@ -1861,7 +1861,7 @@ it but it will try!  The file is: &quot;%2&quot;.</source>
       <source>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
 There is so much data that it DOES NOT have that you could be
 better off starting again...</source>
-      <translation>[信息] - 也许你应该把这个地图文件捐赠给Mudlet博物馆!
+      <translation>[ 信息 ]  - 也许你应该把这个地图文件捐赠给Mudlet博物馆!
 这个地图文件已经缺少了太多数据, 你最好还是重新做一个...</translation>
     </message>
     <message>
