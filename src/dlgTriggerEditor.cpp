@@ -557,7 +557,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpAction_searchCaseSensitive = new QAction(tr("Case sensitive"), this);
     mpAction_searchCaseSensitive->setObjectName(QStringLiteral("mpAction_searchCaseSensitive"));
     mpAction_searchCaseSensitive->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
-        .arg(tr("If checked then what is searched for must match the case precisely, otherwise case is ignored.")));
+        .arg(tr("If checked then what is searched for must match the case precisely, otherwise the case is ignored.")));
     mpAction_searchCaseSensitive->setCheckable(true);
 
     pMenu_searchOptions->insertAction(nullptr, mpAction_searchCaseSensitive);
