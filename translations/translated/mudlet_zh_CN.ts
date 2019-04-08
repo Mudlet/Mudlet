@@ -1869,7 +1869,7 @@ better off starting again...</source>
       <source>[ INFO ]  - Reading map (format version:%1) file:
 &quot;%2&quot;,
 please wait...</source>
-      <translation>[ 信息 ]  - 读取地图文件中 (格式版本: %1):
+      <translation>[信息] - 读取地图文件中 (格式版本: %1):
 &quot;%2&quot;,
 请稍等...</translation>
     </message>
@@ -1952,7 +1952,7 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation>[ 信息 ]  - 关于上次地图操作的信息己保存在最近的报告文件中:
+      <translation>[信息] - 关于上次地图操作的信息己保存在最近的报告文件中:
 &quot;%1&quot;
 - 找到 (最近一次的) 带有下面标题的报告:
 &quot;%2&quot;.</translation>
@@ -2172,7 +2172,7 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="1130"/>
       <source>[ INFO ]  - In room id:%1 patching {internal fixup} of (special) exit to
 %2, was: &quot;%3&quot; now: &quot;%4&quot;.</source>
-      <translation>[ 信息 ]  - 房间:%1中通向房间:%2的 (特别) 出口的补丁{internal fixup}
+      <translation>[信息] - 房间:%1中通向房间:%2的 (特别) 出口的补丁{internal fixup}
 以前是： &quot;%3&quot; 现在是: &quot;%4&quot;.</translation>
     </message>
     <message>
@@ -2180,7 +2180,7 @@ in main console!</source>
       <source>[ INFO ]  - In room with id: %1 correcting special exit &quot;%2&quot; that
 was to room with an exit to invalid room: %3 to now go
 to: %4.</source>
-      <translation>[ 信息 ]  - 房间: %1 的特殊出口 &quot;%2&quot; 
+      <translation>[信息] - 房间: %1 的特殊出口 &quot;%2&quot; 
 通向了一个包含无效房间出口的房间: %3, 现已更正为: %4.</translation>
     </message>
     <message>
@@ -2284,7 +2284,7 @@ were removed: %2.</source>
       <location filename="../src/TRoom.cpp" line="1480"/>
       <source>[ INFO ]  - In room with id: %1 correcting exit &quot;%2&quot; that was to room with
 an exit to invalid room: %3 to now go to: %4.</source>
-      <translation>[ 信息 ]  - 房间: %1 的特殊出口 &quot;%2&quot; 
+      <translation>[信息] - 房间: %1 的特殊出口 &quot;%2&quot; 
 通向了一个包含非法房间出口的房间: %3, 现已更正为: %4.</translation>
     </message>
     <message>
@@ -2432,7 +2432,7 @@ Mudlet 版本存在严重问题-您的系统内存不足吗?</translation>
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ 信息 ]  - 缺少的区域现在被表示为：
+        <numerusform>[信息] - 缺少的区域现在被表示为：
 (编号)==&gt; &quot;区域名字&quot;</numerusform>
       </translation>
     </message>
@@ -2452,7 +2452,7 @@ in map, now working out what new id numbers to use...</source>
       <location filename="../src/TRoomDB.cpp" line="763"/>
       <source>[ INFO ]  - The renumbered area ids will be:
 Old ==&gt; New</source>
-      <translation>[ 信息 ]  - 重置的区域编号将表示为：
+      <translation>[信息] - 重置的区域编号将表示为：
 旧编号==&gt; 新编号</translation>
     </message>
     <message>
@@ -2608,7 +2608,7 @@ another that exists at the time.
   If there were more than one area without a name then all but the
 first will also gain a suffix in this manner.
 %2</source>
-      <translation>[ 信息 ]  - 过去, 由于没有考虑某些情况，Mudlet允许
+      <translation>[信息] - 过去, 由于没有考虑某些情况，Mudlet允许
 地图中存在未命名区域或多个具有相同名字的区域.
 这会让事情变得混乱, 现在已经不允许这么做了.
   为了解决这些问题, 如果一个区域没有名字(或者等以后
@@ -2642,7 +2642,7 @@ another that exists at the time.
   If there were more than one area without a name then all but the
 first will also gain a suffix in this manner.
 %1)</source>
-      <translation>[ 信息 ]  - 过去, 由于没有考虑某些情况，Mudlet允许
+      <translation>[信息] - 过去, 由于没有考虑某些情况，Mudlet允许
 地图中存在多个具有相同名字的区域.
 这会让事情变得混乱, 现在已经不允许这么做了.
   重复的区域名称将导致除了第一个被处理的区域之外所有的
@@ -3543,14 +3543,14 @@ and this one cannot read it, you need a newer Mudlet!</source>
       <location filename="../src/ctelnet.cpp" line="543"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2
 </source>
-      <translation>[信息] - IP地址 %1 已经找到. 它是: %2
+      <translation>[ 信息 ]  - IP地址 %1 已经找到. 它是: %2
 </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="544"/>
       <source>[ INFO ]  - Trying to connect to %1: %2 ...
 </source>
-      <translation>[信息] - 尝试连接到 %1: %2 ...
+      <translation>[ 信息 ]  - 尝试连接到 %1: %2 ...
 </translation>
     </message>
     <message>
