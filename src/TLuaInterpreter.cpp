@@ -15035,19 +15035,19 @@ QPair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, const Q
     if (parent.isEmpty()) {
         pT = new TTimer(QStringLiteral("newPermTimerWithoutAnId"), time, mpHost);
     } else {
-        // NOTE: There can be more than one timer with the same name - we will
-        // use only the FIRST one:
-        QList<TTimer*> timerList = mpHost->getTimerUnit()->findTimer(parent);
-        if (timerList.isEmpty()) {
+        // FIXME: There can be more than one timer with the same name - we will
+        // use only the FIRST one for now, but we really ought to enhance the
+        // API to handle more than one potential parent with the same name:
+        auto pParentTimer = mpHost->getTimerUnit()->findFirstTimer(parent);
+        if (!pParentTimer) {
             return qMakePair(-1, QStringLiteral("parent \"%1\" not found").arg(parent)); //parent not found
         }
-        pT = new TTimer(timerList[0], mpHost);
+        pT = new TTimer(pParentTimer, mpHost);
     }
     pT->setTime(time);
     pT->setIsFolder(false);
     pT->setTemporary(false);
-    // DE: darf erst nach isTempTimer gesetzt werde, damit setName() schneller ist
-    // EN: must be set after isTempTimer, so that setName () is faster
+    // The name should be set after isTempTimer, as that is faster.
     // Also for perminent timers it is easier to debug if it is set before
     // registration:
     pT->setName(name);

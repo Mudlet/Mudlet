@@ -180,7 +180,11 @@ public:
     void unregisterEventHandler(const QString&, TScript*);
     void raiseEvent(const TEvent& event);
     // This disables all the triggers/timers/keys in preparation to resetting
-    // them:
+    // them - and sets a timer to do resetProfile_phase2() when it is safe to do
+    // so. We need to do it this way because a lua script containing the call to
+    // produce this action will be purged from the Lua system as part of the
+    // reset - which causes nasty existential issues (and crashes) from deleting
+    // a script as it is being interpreted!
     void resetProfile_phase1();
     // This actually does the bulk of the reset but must wait until the profile
     // is quiescent:

@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -313,14 +314,20 @@ bool TimerUnit::disableTimer(const QString& name)
 
 // This is currently only used during the lua scripted creation of a new
 // permTime to find a parent with the given name:
-QList<TTimer*> TimerUnit::findTimer(const QString& name)
+TTimer* TimerUnit::findFirstTimer(const QString& name)
 {
-    // Previously a constFind(name) STL was being used which returns the most
-    // recently added element with a given key first - we now return all the
-    // matches but the first is still the most recently added:
-    return mLookupTable.values(name);
+    return mLookupTable.value(name);
 }
 
+// Not currently used but left for future code that will be looking for multiple
+// timers that all have the same name:
+QList<TTimer*> TimerUnit::findTimers(const QString& name)
+{
+    // This does rather assume an empty QList will be returned if the name is
+    // not used for ANY TTimers - but it does not actually say so in the
+    // documentation!
+    return mLookupTable.values(name);
+}
 
 bool TimerUnit::killTimer(const QString& name)
 {
