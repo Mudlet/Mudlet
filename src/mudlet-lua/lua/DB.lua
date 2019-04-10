@@ -360,11 +360,11 @@ function db:_sql_values(values)
       s = "'" .. v:gsub("'", "''") .. "'"
     elseif t == "nil" then
       s = "NULL"
-    elseif t == "table" and t._timestamp ~= nil then
-      if not t._timestamp then
+    elseif t == "table" and v._timestamp ~= nil then
+      if not v._timestamp then
         return "NULL"
       else
-        s = "datetime('" .. t._timestamp .. "', 'unixepoch')"
+        s = "datetime('" .. v._timestamp .. "', 'unixepoch')"
       end
     else
       s = tostring(v)
