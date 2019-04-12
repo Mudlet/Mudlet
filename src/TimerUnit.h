@@ -53,7 +53,8 @@ public:
     bool enableTimer(const QString&);
     bool disableTimer(const QString&);
     bool killTimer(const QString& name);
-    int remainingTime(const QString& name);
+    int remainingTime(const QString& name) const;
+    int remainingTime(const int id) const;
     bool registerTimer(TTimer* pT);
     void unregisterTimer(TTimer* pT);
     void reParentTimer(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);

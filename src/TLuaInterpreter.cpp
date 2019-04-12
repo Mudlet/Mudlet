@@ -2525,25 +2525,43 @@ int TLuaInterpreter::killTrigger(lua_State* L)
 
 int TLuaInterpreter::remainingTime(lua_State* L)
 {
-	if (!lua_isstring(L, 1)) {
-		lua_pushfstring(L, "remainingTime: bad argument #1 (timer name as string expected, got %s!", luaL_typename(L, 1));
-		return lua_error(L);
-	}
-	QString timerName = QString::fromUtf8(lua_tostring(L, 1));
-	Host& host = getHostFromLua(L);
-	int result = host.getTimerUnit()->remainingTime(timerName);
-	if (result == -1) {
-		lua_pushnil(L);
-		lua_pushstring(L, "Timer is inactive or expired");
-		return 2;
-	}
-	if (result == -2) {
-		lua_pushnil(L);
-		lua_pushfstring(L, "Timer \"%s\" not found", timerName.toUtf8().constData());
-		return 2;
-	}
-	lua_pushnumber(L, result / 1000.0);
-	return 1;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "remainingTime: bad argument #1 (timer name as string or timer id as number expected, got %s!", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+
+    Host& host = getHostFromLua(L);
+    int result = -2;
+    QString timerName;
+    qint64 timerId = 0;
+    if (lua_type(L, 1) == LUA_TNUMBER) {
+        // Is definitely a number and not a string that can be coerced into a number
+        timerId = lua_tointeger(L, 1);
+        result = host.getTimerUnit()->remainingTime(static_cast<int>(timerId));
+    } else {
+        timerName = QString::fromUtf8(lua_tostring(L, 1));
+        result = host.getTimerUnit()->remainingTime(timerName);
+    }
+
+    if (result == -1) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Timer is inactive or expired");
+        return 2;
+    }
+
+    if (result == -2) {
+        lua_pushnil(L);
+        if (timerName.isNull()) {
+            // timerName was never set so we must have used the number
+            lua_pushfstring(L, "Timer id %d not found", timerId);
+        } else {
+            lua_pushfstring(L, "Timer named \"%s\" not found", timerName.toUtf8().constData());
+        }
+        return 2;
+    }
+
+    lua_pushnumber(L, result / 1000.0);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#closeMudlet

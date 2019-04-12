@@ -345,13 +345,23 @@ bool TimerUnit::killTimer(const QString& name)
     return false;
 }
 
-int TimerUnit::remainingTime(const QString& name)
+int TimerUnit::remainingTime(const QString& name) const
 {
     for (auto timer : mTimerRootNodeList) {
         if (timer->getName() == name) {
-                return timer->remainingTime();
+            return timer->remainingTime();
         }
     }
+    return -2;
+}
+
+int TimerUnit::remainingTime(const int id) const
+{
+    auto timer = mTimerMap.value(id);
+    if (timer) {
+        return timer->remainingTime();
+    }
+
     return -2;
 }
 
