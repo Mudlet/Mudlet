@@ -3330,7 +3330,7 @@ void dlgTriggerEditor::addTimer(bool isFolder)
     pT->setScript(script);
     pT->setIsFolder(isFolder);
     pT->setIsActive(false);
-    pT->registerTimer();
+    mpHost->getTimerUnit()->registerTimer(pT);
     int childID = pT->getID();
     pNewItem->setData(0, Qt::UserRole, childID);
     QIcon icon;

@@ -1572,35 +1572,45 @@ void mudlet::addConsoleForNewHost(Host* pH)
 void mudlet::slot_timer_fires()
 {
     QTimer* pQT = (QTimer*)sender();
-    if (!pQT) {
+    if (Q_UNLIKELY(!pQT)) {
         return;
     }
-    if (mTimerMap.contains(pQT)) {
-        TTimer* pTT = mTimerMap[pQT];
+
+    // Pull the Host name and TTimer::id from the properties:
+    QString hostName(pQT->property(TTimer::scmProperty_HostName).toString());
+    if (Q_UNLIKELY(hostName.isEmpty())) {
+        qWarning().nospace().noquote() << "mudlet::slot_timer_fires() INFO - Host name is empty - so TTimer has probably been deleted.";
+        pQT->deleteLater();
+        return;
+    }
+
+    Host* pHost = mHostManager.getHost(hostName);
+    Q_ASSERT_X(pHost, "mudlet::slot_timer_fires()", "Unable to deduce Host pointer from data in QTimer");
+    int id = pQT->property(TTimer::scmProperty_TTimerId).toInt();
+    if (Q_UNLIKELY(!id)) {
+        qWarning().nospace().noquote() << "mudlet::slot_timer_fires() INFO - TTimer ID is zero - so TTimer has probably been deleted.";
+        pQT->deleteLater();
+        return;
+    }
+    TTimer* pTT = pHost->getTimerUnit()->getTimer(id);
+    if (Q_LIKELY(pTT)) {
+// commented out as it will be spammy in normal situations but saved as useful
+// during timer debugging... 8-)
+//        qDebug().nospace().noquote() << "mudlet::slot_timer_fires() INFO - Host: \"" << hostName << "\" QTimer firing for TTimer Id:" << id;
+//        qDebug().nospace().noquote() << "    (objectName:\"" << pQT->objectName() << "\")";
         pTT->execute();
         if (pTT->checkRestart()) {
             pTT->start();
         }
-    } else {
-        qDebug() << "MUDLET CRITICAL ERROR: Timer not registered!";
-    }
-}
 
-void mudlet::unregisterTimer(QTimer* pQT)
-{
-    if (mTimerMap.contains(pQT)) {
-        mTimerMap.remove(pQT);
-    } else {
-        qDebug() << "MUDLET CRITICAL ERROR: trying to unregister Timer but it is not registered!";
+        // Okay now we've found it we are done:
+        return;
     }
-}
 
-void mudlet::registerTimer(TTimer* pTT, QTimer* pQT)
-{
-    if (!mTimerMap.contains(pQT)) {
-        mTimerMap[pQT] = pTT;
-        connect(pQT, &QTimer::timeout, this, &mudlet::slot_timer_fires);
-    }
+    qWarning().nospace().noquote() << "mudlet::slot_timer_fires() ERROR - Timer not registered, it seems to have been called: \"" << pQT->objectName() << "\" - automatically deleting it!";
+    // Clean up any bogus ones:
+    pQT->stop();
+    pQT->deleteLater();
 }
 
 void mudlet::disableToolbarButtons()

@@ -59,8 +59,7 @@ public:
     void setCommand(const QString& cmd) { mCommand = cmd; }
     QString getScript() { return mScript; }
     bool setScript(const QString& script);
-    bool canBeUnlocked(TTimer*);
-    bool registerTimer();
+    bool canBeUnlocked();
     bool setIsActive(bool);
     void stop();
     void start();
@@ -73,11 +72,21 @@ public:
     void killTimer();
 
     bool isOffsetTimer();
+    QPointer<Host> getHost() { return mpHost; }
+    QTimer* getQTimer() { return mpQTimer; }
+    // Override the Tree version as we need to insert the id number as a
+    // property into the QTimer that mpQTimer points to as well:
+    void setID(const int);
+
+
     // specifies whenever the payload is Lua code as a string
     // or a function
     bool mRegisteredAnonymousLuaFunction;
     bool exportItem;
     bool mModuleMasterFolder;
+
+    static const char* scmProperty_HostName;
+    static const char* scmProperty_TTimerId;
 
 private:
     TTimer() = default;
@@ -89,9 +98,8 @@ private:
     QPointer<Host> mpHost;
     bool mNeedsToBeCompiled;
     QMutex mLock;
-    QTimer* mpTimer;
+    QTimer* mpQTimer;
     bool mModuleMember;
-    //TLuaInterpreter *  mpLua;
 };
 
 #endif // MUDLET_TTIMER_H

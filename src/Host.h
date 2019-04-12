@@ -179,7 +179,16 @@ public:
     void registerAnonymousEventHandler(const QString& name, const QString& fun);
     void unregisterEventHandler(const QString&, TScript*);
     void raiseEvent(const TEvent& event);
-    void resetProfile();
+    // This disables all the triggers/timers/keys in preparation to resetting
+    // them - and sets a timer to do resetProfile_phase2() when it is safe to do
+    // so. We need to do it this way because a lua script containing the call to
+    // produce this action will be purged from the Lua system as part of the
+    // reset - which causes nasty existential issues (and crashes) from deleting
+    // a script as it is being interpreted!
+    void resetProfile_phase1();
+    // This actually does the bulk of the reset but must wait until the profile
+    // is quiescent:
+    void resetProfile_phase2();
     std::tuple<bool, QString, QString> saveProfile(const QString& saveLocation = QString(), const QString& saveName = QString(), bool syncModules = false);
     std::tuple<bool, QString, QString> saveProfileAs(const QString& fileName);
     void stopAllTriggers();
