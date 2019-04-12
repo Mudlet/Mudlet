@@ -147,7 +147,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.18.0
+VERSION = 3.19.0
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -259,7 +259,7 @@ unix:!macx {
 # Some OS platforms have a hyphen (I think Cygwin does as well):
             -llua-5.1\
 # FreeFSB appends the version number to hunspell:
-            -lhunspell-1.6
+            -lhunspell-1.7
 # FreeFSB (at least) supports multiple Lua versions (and 5.1 is not the default anymore):
         INCLUDEPATH += \
             /usr/local/include/lua51

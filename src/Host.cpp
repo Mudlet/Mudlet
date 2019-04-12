@@ -220,12 +220,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     if (!optin.isEmpty()) {
         mDiscordDisableServerSide = optin.toInt() == Qt::Unchecked ? true : false;
     }
-
-    if (mHostName != QStringLiteral("default_host")) {
-        Q_ASSERT_X(!mudlet::self()->mHostTimerMap.contains(this), "Host::Host(...)", "the mudlet class mHostTimerMap already contains this Host instance");
-        QMap<QTimer*, TTimer*> hostTimerMap;
-        mudlet::self()->mHostTimerMap.insert(this, hostTimerMap);
-    }
 }
 
 Host::~Host()
@@ -374,14 +368,23 @@ void Host::reloadModule(const QString& reloadModuleName)
     }
 }
 
-void Host::resetProfile()
+void Host::resetProfile_phase1()
 {
-    getTimerUnit()->stopAllTriggers();
-    mudlet::self()->clearHostTimerMap(this);
+    mTriggerUnit.stopAllTriggers();
+    mTimerUnit.stopAllTriggers();
+    mKeyUnit.stopAllTriggers();
+    mResetProfile = true;
+
+    QTimer::singleShot(0, this, [this]() {
+        resetProfile_phase2();
+    });
+}
+
+void Host::resetProfile_phase2()
+{
     getTimerUnit()->removeAllTempTimers();
     getTriggerUnit()->removeAllTempTriggers();
     getKeyUnit()->removeAllTempKeys();
-
 
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
@@ -394,7 +397,6 @@ void Host::resetProfile()
     mLuaInterpreter.initIndenterGlobals();
     mBlockScriptCompile = false;
 
-
     getTriggerUnit()->compileAll();
     getAliasUnit()->compileAll();
     getActionUnit()->compileAll();
@@ -404,6 +406,8 @@ void Host::resetProfile()
     mResetProfile = false;
 
     mTimerUnit.reenableAllTriggers();
+    mTriggerUnit.reenableAllTriggers();
+    mKeyUnit.reenableAllTriggers();
 
     TEvent event {};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
@@ -693,9 +697,6 @@ void Host::incomingStreamProcessor(const QString& data, int line)
     mTriggerUnit.processDataStream(data, line);
 
     mTimerUnit.doCleanup();
-    if (mResetProfile) {
-        resetProfile();
-    }
 }
 
 void Host::registerEventHandler(const QString& name, TScript* pScript)
@@ -1740,7 +1741,15 @@ void Host::setName(const QString& newName)
     }
 
     QMutexLocker locker(& mLock);
+    if (mHostName == newName) {
+        // Oh, it hasn't changed after all so put the player room back and bail
+        // out:
+        mpMap->mRoomIdHash.insert(newName, currentPlayerRoom);
+        return;
+    }
+
     mHostName = newName;
+    // We have made the change so can unlock the mutex locker and procede:
     locker.unlock();
 
     mTelnet.mProfileName = newName;
@@ -1751,4 +1760,5 @@ void Host::setName(const QString& newName)
     if (mpConsole) {
         mpConsole->setProfileName(newName);
     }
+    mTimerUnit.changeHostName(newName);
 }

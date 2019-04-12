@@ -134,7 +134,7 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
     QStringList headerLabels;
-    headerLabels << tr("Room Id") << tr("Room Name");
+    headerLabels << tr("ID", "Room ID in the mapper widget") << tr("Name", "Room name in the mapper widget");
     mMultiSelectionListWidget.setHeaderLabels(headerLabels);
     mMultiSelectionListWidget.setToolTip(tr("<p>Click on a line to select or deselect that room number (with the given name if the "
                                                  "rooms are named) to add or remove the room from the selection.  Click on the "
@@ -1420,6 +1420,12 @@ void T2DMap::paintEvent(QPaintEvent* e)
         } else {
             roomRectangle = QRectF(rx - (mRoomWidth * rSize) / 2.0, ry - (mRoomHeight * rSize) / 2.0, mRoomWidth * rSize, mRoomHeight * rSize);
         }
+        // We should be using the full area for testing for clicks even though
+        // we only show a smaller one if the user has dialed down the room size
+        // on NON-grid mode areas:
+        const QRectF roomClickTestRectangle(QRectF(static_cast<qreal>(rx) - (static_cast<qreal>(mRoomWidth) / 2.0),
+                                                   static_cast<qreal>(ry) - (static_cast<qreal>(mRoomHeight) / 2.0),
+                                                   static_cast<qreal>(mRoomWidth), static_cast<qreal>(mRoomHeight)));
 
         QColor roomColor;
         int roomEnvironment = room->environment;
@@ -1490,28 +1496,26 @@ void T2DMap::paintEvent(QPaintEvent* e)
             if (mpMap->customEnvColors.contains(roomEnvironment)) {
                 roomColor = mpMap->customEnvColors[roomEnvironment];
             } else {
-                if (16 < roomEnvironment && roomEnvironment < 232)
-                {
+                if (16 < roomEnvironment && roomEnvironment < 232) {
                     quint8 base = roomEnvironment - 16;
                     quint8 r = base / 36;
                     quint8 g = (base - (r * 36)) / 6;
                     quint8 b = (base - (r * 36)) - (g * 6);
 
-		    r = r * 51;
-		    g = g * 51;
-		    b = b * 51;
+                    r *= 51;
+                    g *= 51;
+                    b *= 51;
                     roomColor = QColor(r, g, b, 255);
                 } else if (231 < roomEnvironment && roomEnvironment < 256) {
                     quint8 k = ((roomEnvironment - 232) * 10) + 8;
                     roomColor = QColor(k, k, k, 255);
                 }
-	    }
+            }
         }
 
-        if (((mPick || __Pick) && mPHighlight.x() >= roomRectangle.x() - (mRoomWidth * rSize) && mPHighlight.x() <= roomRectangle.x() + (mRoomWidth * rSize)
-             && mPHighlight.y() >= roomRectangle.y() - (mRoomHeight * rSize)
-             && mPHighlight.y() <= roomRectangle.y() + (mRoomHeight * rSize))
+        if (((mPick || __Pick) && roomClickTestRectangle.contains(mPHighlight))
             || mMultiSelectionSet.contains(currentAreaRoom)) {
+
             painter.fillRect(roomRectangle, QColor(255, 155, 55));
             mPick = false;
             if (mStartSpeedWalk) {
@@ -1868,33 +1872,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
 
         painter.restore();
-        if (pArea->gridMode) {
-            QMapIterator<int, QPoint> it(mAreaExitsList);
-            while (it.hasNext()) {
-                it.next();
-                QPoint P = it.value();
-                int rx = P.x();
-                int ry = P.y();
-
-                QRectF dr = QRectF(rx - mRoomWidth / 2.0, ry - mRoomHeight / 2.0, mRoomWidth, mRoomHeight);
-                if (((mPick || __Pick) && mPHighlight.x() >= (dr.x() - mRoomWidth / 2.0) && mPHighlight.x() <= (dr.x() + mRoomWidth / 2.0) && mPHighlight.y() >= (dr.y() - mRoomHeight / 2.0)
-                     && mPHighlight.y() <= (dr.y() + mRoomHeight / 2.0))
-                    || mMultiSelectionSet.contains(currentAreaRoom)) {
-                    painter.fillRect(dr, QColor(50, 255, 50));
-                    mPick = false;
-                    mTarget = it.key();
-                    if (mpMap->mpRoomDB->getRoom(mTarget)) {
-                        mpMap->mTargetID = mTarget;
-                        if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
-                            mpHost->startSpeedWalk();
-                        } else {
-                            QString msg = tr("Mapper: Cannot find a path to this room using known exits.\n");
-                            mpHost->mpConsole->printSystemMessage(msg);
-                        }
-                    }
-                }
-            }
-        } else {
+        if (!pArea->gridMode) {
             QMapIterator<int, QPoint> it(mAreaExitsList);
             while (it.hasNext()) {
                 it.next();
@@ -1903,9 +1881,16 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 int ry = P.y();
 
                 QRectF dr = QRectF(rx, ry, mRoomWidth * rSize, mRoomHeight * rSize);
-                if (((mPick || __Pick) && mPHighlight.x() >= (dr.x() - mRoomWidth / 3.0) && mPHighlight.x() <= (dr.x() + mRoomWidth / 3.0) && mPHighlight.y() >= (dr.y() - mRoomHeight / 3.0)
+
+                // clang-format off
+                if (((mPick || __Pick)
+                     && mPHighlight.x() >= (dr.x() - mRoomWidth / 3.0)
+                     && mPHighlight.x() <= (dr.x() + mRoomWidth / 3.0)
+                     && mPHighlight.y() >= (dr.y() - mRoomHeight / 3.0)
                      && mPHighlight.y() <= (dr.y() + mRoomHeight / 3.0))
                     && mStartSpeedWalk) {
+
+                    // clang-format on
                     mStartSpeedWalk = false;
                     float roomRadius = (0.8 * mRoomWidth) / 2.0;
                     QPointF roomCenter = QPointF(rx, ry);
@@ -3547,7 +3532,7 @@ void T2DMap::slot_setSymbol()
                                                     .arg(usedSymbols.keys().first())
                                                   : tr("The symbol is \"%1\" in the selected room,\n"
                                                        "delete this to clear the symbol or replace\n"
-                                                       "it with a new symbol for this room:"
+                                                       "it with a new symbol for this room:",
                                                        // Intentional comment to separate arguments!
                                                        "This is for when applying a new room symbol to one room. "
                                                        "Use line feeds to format text into a reasonable rectangle.")
@@ -5019,11 +5004,11 @@ void T2DMap::resizeMultiSelectionWidget()
 {
     int newWidth;
     if (mIsSelectionUsingNames) {
-        if (width() <= 300) { // 0 - 300 => 0 - 200
-            newWidth = 2 * width() / 3;
-        } else if (width() <= 600) { // 300 - 600 => 200 - 300
-            newWidth = 100 + width() / 3;
-        } else { // 600+ => 300
+        if (width() <= 750) {
+            newWidth = 160;
+        } else if (width() <= 890) { // 750-890 => 160-300
+            newWidth = 160+width()-750;
+        } else { // 890+ => 300
             newWidth = 300;
         }
     } else {
