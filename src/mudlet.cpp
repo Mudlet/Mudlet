@@ -1572,13 +1572,13 @@ void mudlet::addConsoleForNewHost(Host* pH)
 void mudlet::slot_timer_fires()
 {
     QTimer* pQT = (QTimer*)sender();
-    if (!pQT) {
+    if (Q_UNLIKELY(!pQT)) {
         return;
     }
 
     // Pull the Host name and TTimer::id from the properties:
     QString hostName(pQT->property(TTimer::scmProperty_HostName).toString());
-    if (hostName.isEmpty()) {
+    if (Q_UNLIKELY(hostName.isEmpty())) {
         qWarning().nospace().noquote() << "mudlet::slot_timer_fires() INFO - Host name is empty - so TTimer has probably been deleted.";
         pQT->deleteLater();
         return;
@@ -1587,15 +1587,17 @@ void mudlet::slot_timer_fires()
     Host* pHost = mHostManager.getHost(hostName);
     Q_ASSERT_X(pHost, "mudlet::slot_timer_fires()", "Unable to deduce Host pointer from data in QTimer");
     int id = pQT->property(TTimer::scmProperty_TTimerId).toInt();
-    if (!id) {
+    if (Q_UNLIKELY(!id)) {
         qWarning().nospace().noquote() << "mudlet::slot_timer_fires() INFO - TTimer ID is zero - so TTimer has probably been deleted.";
         pQT->deleteLater();
         return;
     }
     TTimer* pTT = pHost->getTimerUnit()->getTimer(id);
-    if (pTT) {
-        qDebug().nospace().noquote() << "mudlet::slot_timer_fires() INFO - Host: \"" << hostName << "\" QTimer firing for TTimer Id:" << id;
-        qDebug().nospace().noquote() << "    (objectName:\"" << pQT->objectName() << "\")";
+    if (Q_LIKELY(pTT)) {
+// commented out as it will be spammy in normal situations but saved as useful
+// during timer debugging... 8-)
+//        qDebug().nospace().noquote() << "mudlet::slot_timer_fires() INFO - Host: \"" << hostName << "\" QTimer firing for TTimer Id:" << id;
+//        qDebug().nospace().noquote() << "    (objectName:\"" << pQT->objectName() << "\")";
         pTT->execute();
         if (pTT->checkRestart()) {
             pTT->start();
