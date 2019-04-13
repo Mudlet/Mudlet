@@ -1,6 +1,6 @@
 /***************************************************************************
 *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
-*   Copyright (C) 2013-2018 by Stephen Lyons - slysven@virginmedia.com    *
+*   Copyright (C) 2013-2019 by Stephen Lyons - slysven@virginmedia.com    *
 *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
 *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
 *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -539,8 +539,9 @@ int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
 int TLuaInterpreter::resetProfile(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    host.mResetProfile = true;
-    return 0;
+    host.resetProfile_phase1();
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectString
@@ -2524,25 +2525,43 @@ int TLuaInterpreter::killTrigger(lua_State* L)
 
 int TLuaInterpreter::remainingTime(lua_State* L)
 {
-	if (!lua_isstring(L, 1)) {
-		lua_pushfstring(L, "remainingTime: bad argument #1 (timer name as string expected, got %s!", luaL_typename(L, 1));
-		return lua_error(L);
-	}
-	QString timerName = QString::fromUtf8(lua_tostring(L, 1));
-	Host& host = getHostFromLua(L);
-	int result = host.getTimerUnit()->remainingTime(timerName);
-	if (result == -1) {
-		lua_pushnil(L);
-		lua_pushstring(L, "Timer is inactive or expired");
-		return 2;
-	}
-	if (result == -2) {
-		lua_pushnil(L);
-		lua_pushfstring(L, "Timer \"%s\" not found", timerName.toUtf8().constData());
-		return 2;
-	}
-	lua_pushnumber(L, result / 1000.0);
-	return 1;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "remainingTime: bad argument #1 (timer name as string or timer id as number expected, got %s!", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+
+    Host& host = getHostFromLua(L);
+    int result = -2;
+    QString timerName;
+    qint64 timerId = 0;
+    if (lua_type(L, 1) == LUA_TNUMBER) {
+        // Is definitely a number and not a string that can be coerced into a number
+        timerId = lua_tointeger(L, 1);
+        result = host.getTimerUnit()->remainingTime(static_cast<int>(timerId));
+    } else {
+        timerName = QString::fromUtf8(lua_tostring(L, 1));
+        result = host.getTimerUnit()->remainingTime(timerName);
+    }
+
+    if (result == -1) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Timer is inactive or expired");
+        return 2;
+    }
+
+    if (result == -2) {
+        lua_pushnil(L);
+        if (timerName.isNull()) {
+            // timerName was never set so we must have used the number
+            lua_pushfstring(L, "Timer id %d not found", timerId);
+        } else {
+            lua_pushfstring(L, "Timer named \"%s\" not found", timerName.toUtf8().constData());
+        }
+        return 2;
+    }
+
+    lua_pushnumber(L, result / 1000.0);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#closeMudlet
@@ -5182,7 +5201,7 @@ int TLuaInterpreter::setAppStyleSheet(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysAppStyleSheetChange"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(tag);
@@ -6060,39 +6079,47 @@ int TLuaInterpreter::getMousePosition(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempTimer
 int TLuaInterpreter::tempTimer(lua_State* L)
 {
-    double luaTimeout;
+    double time;
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "tempTimer: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaTimeout = lua_tonumber(L, 1);
+        lua_pushfstring(L, "tempTimer: bad argument #1 type (time in seconds as {maybe decimal} number expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     }
+    time = lua_tonumber(L, 1);
 
+    // This is a static function so will not have a this pointer and we will have
+    // to get a reference to a class object and its members by looking them up:
+    Host& host = getHostFromLua(L);
+    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     if (lua_isfunction(L, 2)) {
-        Host& host = getHostFromLua(L);
-        TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-        int timerID = pLuaInterpreter->startTempTimer(luaTimeout, QString());
-        TTimer* timer = host.getTimerUnit()->getTimer(timerID);
+        QPair<int, QString> result = pLuaInterpreter->startTempTimer(time, QString());
+        if (result.first == -1) {
+            lua_pushnumber(L, -1);
+            lua_pushstring(L, result.second.toUtf8().constData());
+            return 2;
+        }
+
+        TTimer* timer = host.getTimerUnit()->getTimer(result.first);
         timer->mRegisteredAnonymousLuaFunction = true;
         lua_pushlightuserdata(L, timer);
         lua_pushvalue(L, 2);
         lua_settable(L, LUA_REGISTRYINDEX);
-        lua_pushnumber(L, timerID);
+        lua_pushnumber(L, result.first);
         return 1;
     }
+
     if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "tempTimer: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "tempTimer: bad argument #2 type (script or function name as string expected, got %s!)", luaL_typename(L,2));
+        return lua_error(L);
+    }
+    QString luaCode = QString::fromUtf8(lua_tostring(L, 2));
+
+    QPair<int, QString> result = pLuaInterpreter->startTempTimer(time, luaCode);
+    lua_pushnumber(L, result.first);
+    if (result.first == -1) {
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
     }
 
-    QString luaCodeAsString = QString::fromUtf8(lua_tostring(L, 2));
-
-    Host& host = getHostFromLua(L);
-    TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    int timerID = pLuaInterpreter->startTempTimer(luaTimeout, luaCodeAsString);
-    lua_pushnumber(L, timerID);
     return 1;
 }
 
@@ -7043,48 +7070,40 @@ int TLuaInterpreter::permAlias(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permTimer
 int TLuaInterpreter::permTimer(lua_State* L)
 {
-    string luaName;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "permTimer: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaName = lua_tostring(L, 1);
+        lua_pushfstring(L, "permTimer: bad argument #1 type (timer name as string expected, got %s!)", luaL_typename(L,1));
+        return lua_error(L);
     }
-    string luaParent;
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
+
     if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "permTimer: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaParent = lua_tostring(L, 2);
+        lua_pushfstring(L, "permTimer: bad argument #2 type (timer parent name as string expected, got %s!)", luaL_typename(L,2));
+        return lua_error(L);
     }
+    QString parent = QString::fromUtf8(lua_tostring(L, 2));
 
-    double luaTimeout;
     if (!lua_isnumber(L, 3)) {
-        lua_pushstring(L, "permTimer: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaTimeout = lua_tonumber(L, 3);
+        lua_pushfstring(L, "permTimer: bad argument #3 type (time in seconds as {maybe decimal} number expected, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
     }
+    double time = lua_tonumber(L, 1);
 
-    string luaFunction;
     if (!lua_isstring(L, 4)) {
-        lua_pushstring(L, "permTimer: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaFunction = lua_tostring(L, 4);
+        lua_pushfstring(L, "permTimer: bad argument #4 type (script as string expected, got %s!)", luaL_typename(L, 4));
+        return lua_error(L);
     }
+    QString luaCode = QString::fromUtf8(lua_tostring(L, 4));
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
-    QString _name = luaName.c_str();
-    QString _parent = luaParent.c_str();
-    QString _fun = luaFunction.c_str();
-    int timerID = pLuaInterpreter->startPermTimer(_name, _parent, luaTimeout, _fun);
-    lua_pushnumber(L, timerID);
+
+    QPair<int, QString> result = pLuaInterpreter->startPermTimer(name, parent, time, luaCode);
+    lua_pushnumber(L, result.first);
+    if (result.first == -1) {
+        lua_pushstring(L, result.second.toUtf8().constData());
+        return 2;
+    }
+
     return 1;
 }
 
@@ -15051,52 +15070,66 @@ void TLuaInterpreter::loadGlobal()
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function)
+QPair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function)
 {
-    QTime time(0, 0, 0, 0);
-    auto msec = static_cast<int>(timeout * 1000);
-    QTime time2 = time.addMSecs(msec);
+    QTime time = QTime(0,0,0,0).addMSecs(qRound(timeout * 1000));
     TTimer* pT;
     if (parent.isEmpty()) {
-        pT = new TTimer("a", time2, mpHost);
+        pT = new TTimer(QStringLiteral("newPermTimerWithoutAnId"), time, mpHost);
     } else {
-        TTimer* pP = mpHost->getTimerUnit()->findTimer(parent);
-        if (!pP) {
-            return -1; //parent not found
+        // FIXME: There can be more than one timer with the same name - we will
+        // use only the FIRST one for now, but we really ought to enhance the
+        // API to handle more than one potential parent with the same name:
+        auto pParentTimer = mpHost->getTimerUnit()->findFirstTimer(parent);
+        if (!pParentTimer) {
+            return qMakePair(-1, QStringLiteral("parent \"%1\" not found").arg(parent)); //parent not found
         }
-        pT = new TTimer(pP, mpHost);
+        pT = new TTimer(pParentTimer, mpHost);
     }
-
-    pT->setTime(time2);
+    pT->setTime(time);
     pT->setIsFolder(false);
     pT->setTemporary(false);
-    pT->registerTimer();
-    pT->setScript(function);
+    // The name should be set after isTempTimer, as that is faster.
+    // Also for perminent timers it is easier to debug if it is set before
+    // registration:
+    pT->setName(name);
+    // This will lead to the generation of the id number:
+    mpHost->getTimerUnit()->registerTimer(pT);
+    if (!pT->setScript(function)) {
+        QString errMsg = pT->getError();
+        // Apparently this will call the TTimer::unregisterTimer(...) method:
+        delete pT;
+        return qMakePair(-1, QStringLiteral("unable to compile \"%1\", reason: %2").arg(function, errMsg));
+    }
+
     int id = pT->getID();
-    pT->setName(name); //darf erst nach isTempTimer gesetzt werde, damit setName() schneller ist
     pT->setIsActive(false);
     mpHost->mpEditorDialog->mNeedUpdateData = true;
-    return id;
+    return qMakePair(id, QString());
 }
 
 // No documentation available in wiki - internal function
-int TLuaInterpreter::startTempTimer(double timeout, const QString& function)
+QPair<int, QString> TLuaInterpreter::startTempTimer(double timeout, const QString& function)
 {
-    QTime time(0, 0, 0, 0);
-    auto msec = static_cast<int>(timeout * 1000);
-    QTime time2 = time.addMSecs(msec);
-    TTimer* pT;
-    pT = new TTimer("a", time2, mpHost);
-    pT->setTime(time2);
+    QTime time = QTime(0,0,0,0).addMSecs(qRound(timeout * 1000));
+    TTimer* pT = new TTimer(QStringLiteral("newTempTimerWithoutAnId"), time, mpHost);
+    pT->setTime(time);
     pT->setIsFolder(false);
     pT->setTemporary(true);
-    pT->registerTimer();
-    pT->setScript(function);
+    // This call leads to the allocation of an ID number - and its use as the
+    // name for temporary timers:
+    mpHost->getTimerUnit()->registerTimer(pT);
+    if (!pT->setScript(function)) {
+        QString errMsg = pT->getError();
+        // Apparently this will call the TTimer::unregisterTimer(...) method:
+        delete pT;
+        return qMakePair(-1, QStringLiteral("unable to compile \"%1\", reason: %2").arg(function, errMsg));
+    };
+
     int id = pT->getID();
-    pT->setName(QString::number(id)); //darf erst nach isTempTimer gesetzt werde, damit setName() schneller ist
     pT->setIsActive(true);
     pT->enableTimer(id);
-    return id;
+    return qMakePair(id, QString());
 }
 
 // No documentation available in wiki - internal function

@@ -112,7 +112,7 @@ public:
     static int dirToNumber(lua_State*, int);
 
 
-    int startTempTimer(double, const QString&);
+    QPair<int, QString> startTempTimer(double, const QString&);
     int startTempAlias(const QString&, const QString&);
     int startTempKey(int&, int&, QString&);
     int startTempTrigger(const QString& regex, const QString& function, int expiryCount = -1);
@@ -126,7 +126,7 @@ public:
     int startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regex, const QString& function);
     int startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
     int startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
-    int startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
+    QPair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     int startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
     int startPermKey(QString&, QString&, int&, int&, QString&);
 

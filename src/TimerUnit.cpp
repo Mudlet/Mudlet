@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,7 +23,7 @@
 #include "TimerUnit.h"
 
 
-#include "Host.h"
+#include "mudlet.h"
 #include "TTimer.h"
 
 
@@ -133,7 +134,7 @@ void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, int
 
 void TimerUnit::removeAllTempTimers()
 {
-    mCleanupList.clear();
+    mCleanupSet.clear();
     for (auto timer : mTimerRootNodeList) {
         if (timer->isTemporary()) {
             timer->killTimer();
@@ -155,7 +156,6 @@ void TimerUnit::_removeTimerRootNode(TTimer* pT)
     } else {
         mLookupTable.remove(pT->getName());
     }
-
     mTimerMap.remove(pT->getID());
     mTimerRootNodeList.remove(pT);
 }
@@ -185,14 +185,23 @@ bool TimerUnit::registerTimer(TTimer* pT)
     }
 
     if (pT->getParent()) {
+        // This allocates the ID number
         addTimer(pT);
-        pT->setIsActive(false);
-        return true;
     } else {
+        // This allocates the ID number
         addTimerRootNode(pT);
-        pT->setIsActive(false);
-        return true;
     }
+
+    pT->setIsActive(false);
+    if (pT->isTemporary()) {
+        // Insert the ID number as the name:
+        pT->setName(QString::number(pT->mID));
+    }
+
+    // This has some side effects, including stopping the timer...
+    pT->setTime(pT->getTime());
+    QTimer::connect(pT->getQTimer(), &QTimer::timeout, mudlet::self(), &mudlet::slot_timer_fires, Qt::UniqueConnection);
+    return true;
 }
 
 void TimerUnit::unregisterTimer(TTimer* pT)
@@ -200,15 +209,16 @@ void TimerUnit::unregisterTimer(TTimer* pT)
     if (!pT) {
         return;
     }
-    pT->deactivate();
+    // Stop the QTimer ASAP:
     pT->stop();
+    pT->deactivate();
+    QTimer::disconnect(pT->getQTimer(), &QTimer::timeout, mudlet::self(), &mudlet::slot_timer_fires);
     if (pT->getParent()) {
         _removeTimer(pT);
         return;
-    } else {
-        _removeTimerRootNode(pT);
-        return;
     }
+
+    _removeTimerRootNode(pT);
 }
 
 
@@ -223,7 +233,8 @@ void TimerUnit::addTimer(TTimer* pT)
     }
 
     mTimerMap.insert(pT->getID(), pT);
-    // in den lookup table wird der timer erst dann eingetragen, wenn er auch einen namen hat -> setName()
+    // DE: in den lookup table wird der timer erst dann eingetragen, wenn er auch einen namen hat -> setName()
+    // EN: in the lookup table, the timer is not entered until it has a name -> setName ()
 }
 
 void TimerUnit::_removeTimer(TTimer* pT)
@@ -251,7 +262,7 @@ bool TimerUnit::enableTimer(const QString& name)
         TTimer* pT = it.value();
 
         if (!pT->isOffsetTimer()) {
-            /* ret = */ pT->setIsActive(true);
+            pT->setIsActive(true);
         } else {
             pT->setShouldBeActive(true);
         }
@@ -301,16 +312,22 @@ bool TimerUnit::disableTimer(const QString& name)
     return found;
 }
 
-TTimer* TimerUnit::findTimer(const QString& name)
+// This is currently only used during the lua scripted creation of a new
+// permTime to find a parent with the given name:
+TTimer* TimerUnit::findFirstTimer(const QString& name) const
 {
-    QMap<QString, TTimer*>::const_iterator it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
-        TTimer* pT = it.value();
-        return pT;
-    }
-    return nullptr;
+    return mLookupTable.value(name);
 }
 
+// Not currently used but left for future code that will be looking for multiple
+// timers that all have the same name:
+QList<TTimer*> TimerUnit::findTimers(const QString& name)
+{
+    // This does rather assume an empty QList will be returned if the name is
+    // not used for ANY TTimers - but it does not actually say so in the
+    // documentation!
+    return mLookupTable.values(name);
+}
 
 bool TimerUnit::killTimer(const QString& name)
 {
@@ -328,13 +345,23 @@ bool TimerUnit::killTimer(const QString& name)
     return false;
 }
 
-int TimerUnit::remainingTime(const QString& name)
+int TimerUnit::remainingTime(const QString& name) const
 {
-    for (auto timer : mTimerRootNodeList) {
-        if (timer->getName() == name) {
-                return timer->remainingTime();
-        }
+    auto pTimer = findFirstTimer(name);
+    if (pTimer){
+        return pTimer->remainingTime();
     }
+
+    return -2;
+}
+
+int TimerUnit::remainingTime(const int id) const
+{
+    auto timer = mTimerMap.value(id);
+    if (timer) {
+        return timer->remainingTime();
+    }
+
     return -2;
 }
 
@@ -345,21 +372,19 @@ int TimerUnit::getNewID()
 
 void TimerUnit::doCleanup()
 {
-    for (auto timer : mCleanupList) {
-        delete timer;
+    QMutableSetIterator<TTimer*> itTimer(mCleanupSet);
+    while (itTimer.hasNext()) {
+        auto pTimer = itTimer.next();
+        // It is important to take the item OUT of the set before you delete
+        // (and thus invalidate this pointer to) it...!
+        itTimer.remove();
+        delete pTimer;
     }
-    mCleanupList.clear();
 }
 
 void TimerUnit::markCleanup(TTimer* pT)
 {
-    for (auto timer : mCleanupList) {
-        if (timer == pT) {
-            return;
-        }
-    }
-
-    mCleanupList.push_back(pT);
+    mCleanupSet.insert(pT);
 }
 
 void TimerUnit::_assembleReport(TTimer* pChild)
@@ -408,4 +433,12 @@ QString TimerUnit::assembleReport()
         << "active timers: " << QString::number(statsActiveTriggers) << "\n";
 
     return msg.join("");
+}
+
+void TimerUnit::changeHostName(const QString& newName)
+{
+    QSetIterator<QTimer*> itQTimerPtr(mQTimerSet);
+    while (itQTimerPtr.hasNext()) {
+        itQTimerPtr.next()->setProperty(TTimer::scmProperty_HostName, newName);
+    }
 }

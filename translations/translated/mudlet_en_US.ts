@@ -121,7 +121,7 @@ for all of the %n selected rooms:</numerusform>
 <context>
     <name>TTrigger</name>
     <message numerus="yes">
-        <location filename="../../src/TTrigger.cpp" line="1047"/>
+        <location filename="../../src/TTrigger.cpp" line="1062"/>
         <source>Trigger name=%1 will fire %n more time(s).
 </source>
         <translation>
@@ -135,7 +135,7 @@ for all of the %n selected rooms:</numerusform>
 <context>
     <name>mudlet</name>
     <message numerus="yes">
-        <location filename="../../src/mudlet.cpp" line="4048"/>
+        <location filename="../../src/mudlet.cpp" line="4450"/>
         <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
         <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
         <translation>
@@ -144,7 +144,7 @@ for all of the %n selected rooms:</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/mudlet.cpp" line="4066"/>
+        <location filename="../../src/mudlet.cpp" line="4468"/>
         <source>Review %n update(s)...</source>
         <comment>Review update(s) menu item, %n is the the count of how many updates are available</comment>
         <translatorcomment>Could do with the insertion of &quot;the&quot; as a second word!</translatorcomment>
@@ -154,7 +154,7 @@ for all of the %n selected rooms:</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/mudlet.cpp" line="4071"/>
+        <location filename="../../src/mudlet.cpp" line="4473"/>
         <source>&lt;p&gt;Review the update(s) available...&lt;/p&gt;</source>
         <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
         <translatorcomment>As per the developer&apos;s comment it is not necessary to include the number of update in this text in English.</translatorcomment>

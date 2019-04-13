@@ -4,7 +4,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia,com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -60,8 +59,7 @@ public:
     void setCommand(const QString& cmd) { mCommand = cmd; }
     QString getScript() { return mScript; }
     bool setScript(const QString& script);
-    bool canBeUnlocked(TTimer*);
-    bool registerTimer();
+    bool canBeUnlocked();
     bool setIsActive(bool);
     void stop();
     void start();
@@ -77,8 +75,9 @@ public:
     bool isOffsetTimer();
     QPointer<Host> getHost() { return mpHost; }
     QTimer* getQTimer() { return mpQTimer; }
-    void setKnownUnregistered() { mKnownToBeUnregistered = true; }
-    bool knownUnregistered() { return mKnownToBeUnregistered; }
+    // Override the Tree version as we need to insert the id number as a
+    // property into the QTimer that mpQTimer points to as well:
+    void setID(const int);
 
 
     // specifies whenever the payload is Lua code as a string
@@ -87,9 +86,11 @@ public:
     bool exportItem;
     bool mModuleMasterFolder;
 
+    static const char* scmProperty_HostName;
+    static const char* scmProperty_TTimerId;
+
 private:
     TTimer() = default;
-
     QString mName;
     QString mScript;
     QTime mTime;
@@ -98,13 +99,8 @@ private:
     QPointer<Host> mpHost;
     bool mNeedsToBeCompiled;
     QMutex mLock;
-    // Renamed to reduce confusion:
     QTimer* mpQTimer;
     bool mModuleMember;
-    //TLuaInterpreter *  mpLua;
-    // Used in XMLimport::package to mark an unused Timer that was created there
-    // and which can be removed without reporting that it was unregistered.
-    bool mKnownToBeUnregistered;
 };
 
 #endif // MUDLET_TTIMER_H
