@@ -47,7 +47,7 @@ public:
     void removeAllTempTimers();
     std::list<TTimer*> getTimerRootNodeList() { return mTimerRootNodeList; }
     TTimer* getTimer(int id);
-    TTimer* findFirstTimer(const QString&);
+    TTimer* findFirstTimer(const QString&) const;
     QList<TTimer*> findTimers(const QString&);
     void compileAll();
     bool enableTimer(const QString&);
