@@ -2545,7 +2545,7 @@ int TLuaInterpreter::remainingTime(lua_State* L)
 
     if (result == -1) {
         lua_pushnil(L);
-        lua_pushstring(L, "Timer is inactive or expired");
+        lua_pushstring(L, "timer is inactive or expired");
         return 2;
     }
 
@@ -2553,9 +2553,9 @@ int TLuaInterpreter::remainingTime(lua_State* L)
         lua_pushnil(L);
         if (timerName.isNull()) {
             // timerName was never set so we must have used the number
-            lua_pushfstring(L, "Timer id %d not found", timerId);
+            lua_pushfstring(L, "timer id %d not found", timerId);
         } else {
-            lua_pushfstring(L, "Timer named \"%s\" not found", timerName.toUtf8().constData());
+            lua_pushfstring(L, "timer named \"%s\" not found", timerName.toUtf8().constData());
         }
         return 2;
     }
