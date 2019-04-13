@@ -314,7 +314,7 @@ bool TimerUnit::disableTimer(const QString& name)
 
 // This is currently only used during the lua scripted creation of a new
 // permTime to find a parent with the given name:
-TTimer* TimerUnit::findFirstTimer(const QString& name)
+TTimer* TimerUnit::findFirstTimer(const QString& name) const
 {
     return mLookupTable.value(name);
 }
@@ -343,6 +343,26 @@ bool TimerUnit::killTimer(const QString& name)
         }
     }
     return false;
+}
+
+int TimerUnit::remainingTime(const QString& name) const
+{
+    auto pTimer = findFirstTimer(name);
+    if (pTimer){
+        return pTimer->remainingTime();
+    }
+
+    return -2;
+}
+
+int TimerUnit::remainingTime(const int id) const
+{
+    auto timer = mTimerMap.value(id);
+    if (timer) {
+        return timer->remainingTime();
+    }
+
+    return -2;
 }
 
 int TimerUnit::getNewID()

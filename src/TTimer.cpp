@@ -380,3 +380,9 @@ void TTimer::setID(const int id)
     Tree<TTimer>::setID(id);
     mpQTimer->setProperty(scmProperty_TTimerId, id);
 }
+
+int TTimer::remainingTime()
+{
+    return mpQTimer->remainingTime();
+}
+
