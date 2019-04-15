@@ -617,15 +617,14 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const bool gridMode)
  * Helper used to size fonts establishes the font size to use to draw the given
  * sample text centralized inside the given boundary (or rather the boundary
  * reduced by the margin (0-40) as a percentage). This margin is defaulted to
- * 20%.
+ * 10%.
  */
 bool T2DMap::sizeFontToFitTextInRect( QFont & font, const QRectF & boundaryRect, const QString & text, const quint8 percentageMargin )
 {
     QFont _font = font;
 
-    if (percentageMargin > 80) {
-        qWarning() << "T2DMap::sizeFontToFitTextInRect(...) percentage margin" << percentageMargin << "exceeded maximum (40%) !";
-        return false;
+    if (percentageMargin > 40) {
+        qWarning() << "T2DMap::sizeFontToFitTextInRect(...) percentage margin" << percentageMargin << "exceeded recommended maximum (40%) !";
     }
     if (text.isEmpty()) {
         qWarning() << "T2DMap::sizeFontToFitTextInRect(...) called with no sample text!";
@@ -666,10 +665,10 @@ bool T2DMap::sizeFontToFitTextInRect( QFont & font, const QRectF & boundaryRect,
 
     if (isSizeTooSmall) {
         return false;
-    } else {
-        font.setPointSizeF(fontSize);
-        return true;
     }
+
+    font.setPointSizeF(fontSize);
+    return true;
 }
 
 // Revised to use a QCache to hold QPixmap * to generated images for room symbols
@@ -806,12 +805,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
         } else {
             roomTestRect = QRectF(0, 0, static_cast<qreal>(mRoomWidth) * rSize, static_cast<qreal>(mRoomHeight) * rSize);
         }
-        QFont roomVNumFont = mpMap->mMapSymbolFont;
         static quint8 roomVnumMargin = 10;
         roomVNumFont.setUnderline(true);
         roomVNumFont.setOverline(true);
         roomVNumFont.setBold(true);
-#if QT_VERSION >= 0x050a00
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 0))
         // QFont::PreferNoShaping is only available in Qt 5.10 or later
         // QFont::PreferOutline will help to select a font that will scale to any
         // size - which is important for good rendering over a range of sizes
@@ -1722,17 +1720,15 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
             if (mShowRoomID && isFontBigEnoughToShowRoomVnum) {
                 painter.save();
-                QPen roomIdPen = painter.pen();
                 QColor roomIdColor;
-                if (roomColor.red() + roomColor.green() + roomColor.blue() > 200) {
+                if (roomColor.lightness() > 127) {
                     roomIdColor = QColor(Qt::black);
                 } else {
                     roomIdColor = QColor(Qt::white);
                 }
-                painter.setFont(roomVNumFont);
                 painter.setPen(QPen(roomIdColor));
-                painter.drawText(roomRectangle, Qt::AlignHCenter | Qt::AlignVCenter, QString::number(currentAreaRoom));
-                painter.setPen(roomIdPen);
+                painter.setFont(roomVNumFont);
+                painter.drawText(roomRectangle, Qt::AlignHCenter | Qt::AlignVCenter, QStringLiteral("%1").arg(currentAreaRoom, mMaxRoomIdDigits, 10, QLatin1Char('0')));
                 painter.restore();
             }
 

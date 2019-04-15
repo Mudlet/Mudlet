@@ -210,7 +210,7 @@ private:
     void resizeMultiSelectionWidget();
     std::pair<int, int> getMousePosition();
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
-    bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8);
+    bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10);
 
     bool mDialogLock;
 
