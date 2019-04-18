@@ -1741,53 +1741,57 @@ void mudlet::setDockLayoutUpdated(Host* pHost, const QString& name)
     }
 
     auto pD = pHost->mpConsole->mDockWidgetMap.value(name);
-    if (!mHostDockLayoutChangeMap.value(pHost).contains(name) && pD) {
-        pD->setObjectName(QStringLiteral("%1_changed").arg(pD->objectName()));
+    if (Q_LIKELY(pD) && !mHostDockLayoutChangeMap.value(pHost).contains(name)) {
+        pD->setProperty("layoutChanged", QVariant(true));
         mHostDockLayoutChangeMap[pHost].append(name);
-
         mHasSavedLayout = false;
     }
 }
 
 void mudlet::setToolbarLayoutUpdated(Host* pHost, TToolBar* pTB)
 {
-    if (!pHost) {
+    if (!pHost || !pTB) {
         return;
     }
 
+    // Using the operator[] will instantiate an empty QList<TToolBar*> if there
+    // is not already one in existance for that pHost:
     QList<TToolBar*>& mToolbarLayoutUpdateMap = mHostToolbarLayoutChangeMap[pHost];
     if (!mToolbarLayoutUpdateMap.contains(pTB)) {
-        pTB->setObjectName(QString("%1_changed").arg(pTB->objectName()));
+        pTB->setProperty("layoutChanged", QVariant(true));
         mToolbarLayoutUpdateMap.append(pTB);
-
         mHasSavedLayout = false;
     }
 }
 
 void mudlet::commitLayoutUpdates()
 {
-    // commit changes for dockwidget consoles. (user windows)
-    for (Host* pHost : mHostDockLayoutChangeMap.keys()) {
-        QMap<QString, TDockWidget*>& dockWindowMap = pHost->mpConsole->mDockWidgetMap;
-        QList<QString>& mDockLayoutUpdateMap = mHostDockLayoutChangeMap[pHost];
-
-        for (QString TDockName : mDockLayoutUpdateMap) {
-            if (dockWindowMap.contains(TDockName)) {
-                QString rename = QString("dockWindow_%1_%2").arg(pHost->getName(), TDockName);
-                dockWindowMap[TDockName]->setObjectName(rename);
+    // commit changes (or rather clear the layout changed flags) for dockwidget
+    // consoles (user windows) across all profiles:
+    QMutableMapIterator<Host*, QList<QString>> itHostDockedConsolesList(mHostDockLayoutChangeMap);
+    while (itHostDockedConsolesList.hasNext()) {
+        itHostDockedConsolesList.next();
+        auto pHost = itHostDockedConsolesList.key();
+        for (auto dockedConsoleName : itHostDockedConsolesList.value()) {
+            auto pD = pHost->mpConsole->mDockWidgetMap.value(dockedConsoleName);
+            if (Q_LIKELY(pD) && pD->property("layoutChanged").toBool()) {
+                pD->setProperty("layoutChanged", QVariant(false));
             }
-            mDockLayoutUpdateMap.removeAll(TDockName);
         }
+        itHostDockedConsolesList.remove();
     }
 
-    // commit changes for dockable/floating toolbars.
-    for (Host* pHost : mHostToolbarLayoutChangeMap.keys()) {
-        QList<TToolBar*>& mToolbarLayoutUpdateMap = mHostToolbarLayoutChangeMap[pHost];
-
-        for (TToolBar* pTB : mToolbarLayoutUpdateMap) {
-            pTB->setObjectName(QString("dockToolBar_%1").arg(pTB->getName()));
-            mToolbarLayoutUpdateMap.removeAll(pTB);
+    // commit changes (or rather clear the layout changed flags) for
+    // dockable/floating toolbars across all profiles:
+    QMutableMapIterator<Host*, QList<TToolBar*>> itHostToolbarsList(mHostToolbarLayoutChangeMap);
+    while (itHostToolbarsList.hasNext()) {
+        itHostToolbarsList.next();
+        for (auto pToolBar : itHostToolbarsList.value()) {
+            if (Q_LIKELY(pToolBar) && pToolBar->property("layoutChanged").toBool()) {
+                pToolBar->setProperty("layoutChanged", QVariant(false));
+            }
         }
+        itHostToolbarsList.remove();
     }
 }
 
