@@ -1750,16 +1750,16 @@ void mudlet::setDockLayoutUpdated(Host* pHost, const QString& name)
 
 void mudlet::setToolbarLayoutUpdated(Host* pHost, TToolBar* pTB)
 {
-    if (!pHost || !pTB) {
+    if (!pHost) {
         return;
     }
 
     // Using the operator[] will instantiate an empty QList<TToolBar*> if there
     // is not already one in existance for that pHost:
-    QList<TToolBar*>& mToolbarLayoutUpdateMap = mHostToolbarLayoutChangeMap[pHost];
-    if (!mToolbarLayoutUpdateMap.contains(pTB)) {
+    QList<TToolBar*>& toolbarLayoutUpdateMap = mHostToolbarLayoutChangeMap[pHost];
+    if (!toolbarLayoutUpdateMap.contains(pTB)) {
         pTB->setProperty("layoutChanged", QVariant(true));
-        mToolbarLayoutUpdateMap.append(pTB);
+        toolbarLayoutUpdateMap.append(pTB);
         mHasSavedLayout = false;
     }
 }
