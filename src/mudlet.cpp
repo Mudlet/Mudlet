@@ -1882,6 +1882,7 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         return false;
     }
 
+    auto hostName(pHost->getName());
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     auto pD = pHost->mpConsole->mDockWidgetMap.value(name);
 
@@ -1889,10 +1890,10 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         // The name is not used in either the QMaps of all user created TConsole
         // or TDockWidget instances - so we can make a NEW one:
         auto pD = new TDockWidget(pHost, name);
-        pD->setObjectName(QString("dockWindow_%1_%2").arg(pHost->getName(), name));
+        pD->setObjectName(QString("dockWindow_%1_%2").arg(hostName, name));
         pD->setContentsMargins(0, 0, 0, 0);
         pD->setFeatures(QDockWidget::AllDockWidgetFeatures);
-        pD->setWindowTitle(tr("User window - %1 - %2").arg(pHost->getName(), name));
+        pD->setWindowTitle(tr("User window - %1 - %2").arg(hostName, name));
         pHost->mpConsole->mDockWidgetMap.insert(name, pD);
         // It wasn't obvious but the parent passed to the TConsole constructor
         // is sliced down to a QWidget and is NOT a TDockWidget pointer:
@@ -3289,8 +3290,9 @@ void mudlet::createMapper(bool loadDefaultMap)
         return;
     }
 
-    pHost->mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(pHost->getName()));
-    pHost->mpDockableMapWidget->setObjectName(QString("dockMap_%1").arg(pHost->getName()));
+    auto hostName(pHost->getName());
+    pHost->mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(hostName));
+    pHost->mpDockableMapWidget->setObjectName(QString("dockMap_%1").arg(hostName));
     pHost->mpMap->mpMapper = new dlgMapper(pHost->mpDockableMapWidget, pHost, pHost->mpMap.data()); //FIXME: mpHost definieren
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
     pHost->mpDockableMapWidget->setWidget(pHost->mpMap->mpMapper);
