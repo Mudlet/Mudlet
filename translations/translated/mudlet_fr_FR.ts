@@ -345,7 +345,7 @@ veuillez patienter...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="2932"/>
       <source>Change the properties of this custom line</source>
-      <translation>Modifier les propriétés de cette ligne</translation>
+      <translation>Modifier les paramètres de cette ligne</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3129"/>
@@ -357,40 +357,40 @@ veuillez patienter...</translation>
       <location filename="../src/T2DMap.cpp" line="3130"/>
       <location filename="../src/T2DMap.cpp" line="4795"/>
       <source>Dot line</source>
-      <translation type="unfinished"/>
+      <translation>Ligne pointillée</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3131"/>
       <location filename="../src/T2DMap.cpp" line="4796"/>
       <source>Dash line</source>
-      <translation type="unfinished"/>
+      <translation>Ligne en tirets</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3132"/>
       <location filename="../src/T2DMap.cpp" line="4797"/>
       <source>Dash-dot line</source>
-      <translation type="unfinished"/>
+      <translation>Ligne de tirets et de points</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3133"/>
       <location filename="../src/T2DMap.cpp" line="4798"/>
       <source>Dash-dot-dot line</source>
-      <translation type="unfinished"/>
+      <translation>Ligne de tirets et de doubles points</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3407"/>
       <source>x coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>coordonnée x (qui remplace %1) :</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3408"/>
       <source>y coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>coordonnée y (qui remplace %1) :</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3409"/>
       <source>z coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>coordonnée z (qui remplace %1) :</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3548"/>
@@ -410,12 +410,12 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3700"/>
       <source>Delete color</source>
       <comment>Deletes an environment colour</comment>
-      <translation type="unfinished"/>
+      <translation>Supprimer la couleur</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3718"/>
       <source>Define new color</source>
-      <translation type="unfinished"/>
+      <translation>Définir une nouvelle couleur</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4032"/>
@@ -429,7 +429,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2302"/>
       <source>no text</source>
       <comment>Default text if a label is created in mapper with no text</comment>
-      <translation type="unfinished"/>
+      <translation>aucun texte</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="137"/>
@@ -441,7 +441,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="137"/>
       <source>Name</source>
       <comment>Room name in the mapper widget</comment>
-      <translation type="unfinished"/>
+      <translation>Nom</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="139"/>
@@ -518,19 +518,19 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2305"/>
       <source>Background color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Couleur d'arrière-plan</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2306"/>
       <source>Foreground color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Couleur du premier plan</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2310"/>
       <source>Select image</source>
       <comment>2D Mapper create label file dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Sélectionner l'image</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2317"/>
@@ -560,25 +560,25 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2714"/>
       <source>Undo</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>Défaire</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2715"/>
       <source>Undo last point</source>
       <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Défaire le point précédent</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2722"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)</comment>
-      <translation type="unfinished"/>
+      <translation>Paramètres</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2724"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)</comment>
-      <translation type="unfinished"/>
+      <translation>paramètres...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2725"/>
@@ -590,7 +590,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2728"/>
       <source>Finish</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>Terminer</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2729"/>
@@ -608,49 +608,49 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2753"/>
       <source>Load map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>Charger une carte</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2766"/>
       <source>Create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Créer une salle</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2772"/>
       <source>Move</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Déplacer</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2773"/>
       <source>Move room</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Déplacer la salle</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2776"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Supprimer</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2777"/>
       <source>Delete room</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Supprimer la salle</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2780"/>
       <source>Color</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Couleur </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2781"/>
       <source>Change room color</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Changer la couleur de la salle</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2784"/>
