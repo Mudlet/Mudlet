@@ -334,23 +334,24 @@ veuillez patienter...</translation>
       <location filename="../src/T2DMap.cpp" line="2108"/>
       <source>Room Name: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Nom de la salle: %1
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2767"/>
       <source>Create a new room here</source>
-      <translation type="unfinished"/>
+      <translation>Créer une nouvelle salle ici</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2932"/>
       <source>Change the properties of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>Modifier les propriétés de cette ligne</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3129"/>
       <location filename="../src/T2DMap.cpp" line="4794"/>
       <source>Solid line</source>
-      <translation type="unfinished"/>
+      <translation>Ligne solide</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3130"/>
