@@ -268,6 +268,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                                                                  "QToolButton:hover{border-image:url(:/icons/arrow-right-16x.png);}"));
     connect(button_toggleSearchAreaResults, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_showSearchAreaResults);
 
+    connect(mpTriggersMainArea->toolButton_toggleExtraControls, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_showAllTriggerControls);
+    slot_showAllTriggerControls(true);
+
     // additional settings
     treeWidget_triggers->setColumnCount(1);
     treeWidget_triggers->setIsTriggerTree();
@@ -664,7 +667,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QStringList patternList;
     patternList << tr("substring")
                 << tr("perl regex")
-                << tr("begin of line substring")
+                << tr("start of line")
                 << tr("exact match")
                 << tr("lua function")
                 << tr("line spacer")
@@ -8338,4 +8341,19 @@ void dlgTriggerEditor::slot_clearSoundFile()
 {
     mpTriggersMainArea->lineEdit_soundFile->clear();
     mpTriggersMainArea->toolButton_clearSoundFile->setEnabled(false);
+}
+
+void dlgTriggerEditor::slot_showAllTriggerControls(const bool isShown)
+{
+    if (mpTriggersMainArea->toolButton_toggleExtraControls->isChecked() != isShown) {
+        mpTriggersMainArea->toolButton_toggleExtraControls->setChecked(isShown);
+    }
+
+    if (mpTriggersMainArea->widget_bottom->isVisible() != isShown) {
+        mpTriggersMainArea->widget_bottom->setVisible(isShown);
+    }
+
+    if (mpTriggersMainArea->widget_middleRight->isVisible() != isShown) {
+        mpTriggersMainArea->widget_middleRight->setVisible(isShown);
+    }
 }

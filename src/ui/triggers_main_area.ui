@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>641</width>
-    <height>293</height>
+    <width>611</width>
+    <height>288</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_main_area" stretch="0,1,0">
@@ -37,7 +37,7 @@
      <property name="autoFillBackground">
       <bool>true</bool>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_widget_top" stretch="0,1,0,1">
+     <layout class="QHBoxLayout" name="horizontalLayout_widget_top" stretch="0,1,0,0,1">
       <property name="spacing">
        <number>9</number>
       </property>
@@ -85,6 +85,32 @@
         </property>
         <property name="toolTip">
          <string>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your trigger or trigger group. This will be displayed in the trigger tree.&lt;/p&gt;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QToolButton" name="toolButton_toggleExtraControls">
+        <property name="toolTip">
+         <string>&lt;p&gt;Use this control to show or hide the extra controls for the trigger; this can be used to allow more space to show the trigger &lt;i&gt;items&lt;/i&gt; on smaller screen.&lt;/p&gt;</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../mudlet.qrc">
+          <normaloff>:/icons/arrow-right_grey-16x.png</normaloff>
+          <normalon>:/icons/arrow-down_grey-16x.png</normalon>
+          <activeoff>:/icons/arrow-right-16x.png</activeoff>
+          <activeon>:/icons/arrow-down-16x.png</activeon>:/icons/arrow-right_grey-16x.png</iconset>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+        <property name="autoRaise">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -180,7 +206,7 @@
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>58</height>
+             <height>48</height>
             </size>
            </property>
            <property name="maximumSize">
@@ -259,7 +285,7 @@
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>58</height>
+             <height>48</height>
             </size>
            </property>
            <property name="maximumSize">
