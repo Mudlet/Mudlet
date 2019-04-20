@@ -271,6 +271,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpTriggersMainArea->toolButton_toggleExtraControls, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_showAllTriggerControls);
     slot_showAllTriggerControls(true);
 
+    connect(splitter_right, &QSplitter::splitterMoved, this, &dlgTriggerEditor::slot_rightSplitterMoved);
     // additional settings
     treeWidget_triggers->setColumnCount(1);
     treeWidget_triggers->setIsTriggerTree();
@@ -8355,5 +8356,27 @@ void dlgTriggerEditor::slot_showAllTriggerControls(const bool isShown)
 
     if (mpTriggersMainArea->widget_middleRight->isVisible() != isShown) {
         mpTriggersMainArea->widget_middleRight->setVisible(isShown);
+    }
+}
+
+void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
+{
+    QList<int> partsSizes = splitter_right->sizes();
+    if (partsSizes.at(1) > 10) {
+        // The triggersMainArea is visible
+        if (partsSizes.at(1) > 350) {
+            // And it is more than 350 pixels high
+            if (!mpTriggersMainArea->toolButton_toggleExtraControls->isChecked()) {
+                // And the extra controls are not visible - so show them
+                slot_showAllTriggerControls(true);
+            }
+
+        } else if (partsSizes.at(1) < 300) {
+            // And it is less than 300 pixels high
+            if (mpTriggersMainArea->toolButton_toggleExtraControls->isChecked()) {
+                // And the extra controls are visible - so hide them
+                slot_showAllTriggerControls(false);
+            }
+        }
     }
 }

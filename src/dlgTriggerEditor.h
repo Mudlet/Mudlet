@@ -254,6 +254,7 @@ public slots:
     void slot_chose_action_icon();
     void slot_showSearchAreaResults(bool);
     void slot_showAllTriggerControls(const bool);
+    void slot_rightSplitterMoved(const int pos, const int handle);
     void slot_script_main_area_delete_handler();
     void slot_script_main_area_add_handler();
     void slot_script_main_area_edit_handler(QListWidgetItem*);
