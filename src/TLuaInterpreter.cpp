@@ -2082,7 +2082,9 @@ int TLuaInterpreter::getStopWatchBrokenDownTime(lua_State* L)
     lua_newtable(L);
     {
         lua_pushstring(L, "negative");
-        lua_pushboolean(L, elapsedTimeSplitString.at(0) == QLatin1Char('-'));
+        // Qt 5.7 seems to not like comparing a QString with a QLatin1Char so
+        // use a QLatin1String instead even though it is only a single character:
+        lua_pushboolean(L, elapsedTimeSplitString.at(0) == QLatin1String("-"));
         lua_settable(L, -3);
 
         lua_pushstring(L, "days");
@@ -2139,7 +2141,10 @@ int TLuaInterpreter::getStopWatches(lua_State* L)
             lua_newtable(L);
             {
                 lua_pushstring(L, "negative");
-                lua_pushboolean(L, elapsedTimeSplitString.at(0) == QLatin1Char('-'));
+                // Qt 5.7 seems to not like comparing a QString with a
+                // QLatin1Char so use a QLatin1String instead even though it is
+                // only a single character:
+                lua_pushboolean(L, elapsedTimeSplitString.at(0) == QLatin1String("-"));
                 lua_settable(L, -3);
 
                 lua_pushstring(L, "days");
