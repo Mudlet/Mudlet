@@ -8354,25 +8354,30 @@ void dlgTriggerEditor::slot_showAllTriggerControls(const bool isShown)
         mpTriggersMainArea->widget_bottom->setVisible(isShown);
     }
 
-    if (mpTriggersMainArea->widget_middleRight->isVisible() != isShown) {
-        mpTriggersMainArea->widget_middleRight->setVisible(isShown);
+    if (mpTriggersMainArea->widget_right->isVisible() != isShown) {
+        mpTriggersMainArea->widget_right->setVisible(isShown);
     }
 }
 
 void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
 {
+    // Change these from const to static to enable interactive adjustment whilst
+    // running in a debugging environment:
+    const uint threshold = 335;
+    const uint hysteresis = 20;
     QList<int> partsSizes = splitter_right->sizes();
+    // qDebug().noquote().nospace() << "dlgTriggerEditor::slot_rightSplitterMoved(...) INFO - splitters are now: " << partsSizes;
     if (partsSizes.at(1) > 10) {
         // The triggersMainArea is visible
-        if (partsSizes.at(1) > 350) {
-            // And it is more than 350 pixels high
+        if (partsSizes.at(1) > (threshold + hysteresis)) {
+            // And it is more than an upper limit high
             if (!mpTriggersMainArea->toolButton_toggleExtraControls->isChecked()) {
                 // And the extra controls are not visible - so show them
                 slot_showAllTriggerControls(true);
             }
 
-        } else if (partsSizes.at(1) < 300) {
-            // And it is less than 300 pixels high
+        } else if (partsSizes.at(1) < (threshold - hysteresis)) {
+            // And it is less than a lower limit high
             if (mpTriggersMainArea->toolButton_toggleExtraControls->isChecked()) {
                 // And the extra controls are visible - so hide them
                 slot_showAllTriggerControls(false);
