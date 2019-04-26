@@ -290,7 +290,6 @@ unix:!macx {
         -lz \                   # for ctelnet.cpp
         -lyajl \
         -lopengl32 \
-        -lglut \
         -lglu32 \
         -lpugixml \
         -lWs2_32 \
