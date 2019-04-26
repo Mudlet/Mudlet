@@ -1197,11 +1197,16 @@ int XMLimport::readTimerGroup(TTimer* pParent)
 {
     auto pT = new TTimer(pParent, mpHost);
 
-    pT->setIsFolder((attributes().value("isFolder") == "yes"));
-    pT->setTemporary((attributes().value("isTempTimer") == "yes"));
+    pT->setIsFolder(attributes().value("isFolder") == "yes");
+    // This should not ever be set here as, by definition, temporary timers
+    // are not saved:
+    pT->setTemporary(attributes().value("isTempTimer") == "yes");
 
+    // This clears the Tree<TTimer>::mUserActiveState flag so MUST be done
+    // BEFORE that flag is parsed:
     mpHost->getTimerUnit()->registerTimer(pT);
-    pT->setShouldBeActive((attributes().value("isActive") == "yes"));
+
+    pT->setShouldBeActive(attributes().value("isActive") == "yes");
 
     if (module) {
         pT->mModuleMember = true;
@@ -1232,8 +1237,6 @@ int XMLimport::readTimerGroup(TTimer* pParent)
             }
         }
     }
-
-    mudlet::self()->registerTimer(pT, pT->mpTimer);
 
     if (!pT->mpParent && pT->shouldBeActive()) {
         pT->setIsActive(true);

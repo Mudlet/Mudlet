@@ -727,6 +727,15 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                  * dar forma a tu legado, forjar maravillas olvidadas para ti -o tus aliados- y luchar por fe, gloria o dinero.
                  * -- end translation --
                  */
+    } else if (hostUrl == QStringLiteral("mud.clessidra.it")) {
+        return QStringLiteral(
+                "Clessidra is the first all italian MUD ever created! On Clessidra you may find only original Areas, all in italian! Many features make Clessidra one of the best, or the best, MUD in Italy : Advanced travel mode, fight one to one versus your friend, or enemy, The Arena and its fight, the Mortal Challenge, the intelligent MOBs and their Quest and fighting style, a random automatic mission assignament and for you and your friends you must try the advanced Clan system that allows wars and conquest. A mercenary system to help playing when few players are online, a crafting system to create special object and a graphical user interface to help newbie and expert players have a better experince. A MUD that evolves with new challenge, new rules, new skills!");
+        /**
+                 * Original Italian
+                 * -- begin translation --
+                 * Clessidra e' il primo MUD completamente in italiano mai creato. Su Clessidra potrete trovare solo aree originali ed in italiano. Molte caratteristiche rendono Clessidra uno dei migliori, se non il migliore, MUD in Italia : Avanzati sistemi di spostamento, sfide uno-contro-uno contro gli amici, o i nemici, L'arena e i combattimenti, Le sfide all'ultimo sangue e i MOB intelligenti con le loro Quest e tecniche di combattimento, un sistema di assegnazione di missioni casuali e un avanzatissimo sistema di Clan che permettera' guerre e conquiste. Disponibilità di mercenari in caso di poca utenza, sistema di produzione/mercato per ottenere esclusivi oggetti, un interfaccia grafica per aiutarti a giocare, sia per i novizi che gli esperti. Un MUD che si evolve di continuo.
+                 * -- end translation --
+                 */
     } else {
         return readProfileData(profile_name, QStringLiteral("description"));
     }
@@ -801,6 +810,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("StickMUD")) {
             host_url = QStringLiteral("stickmud.com");
+        }
+        if (profile_name == QStringLiteral("Clessidra")) {
+            host_url = QStringLiteral("mud.clessidra.it");
         }
         if (profile_name == QStringLiteral("Reinos de Leyenda")) {
             host_url = QStringLiteral("reinosdeleyenda.es");
@@ -905,6 +917,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         if (profile_name == QStringLiteral("StickMUD")) {
             host_port = QStringLiteral("7680");
         }
+        if (profile_name == QStringLiteral("Clessidra")) {
+            host_port = QStringLiteral("4000");
+        }
         if (profile_name == QStringLiteral("Reinos de Leyenda")) {
             //host_url = QStringLiteral("reinosdeleyenda.es");
             host_port = QStringLiteral("23");
@@ -1006,6 +1021,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("StickMUD")) {
             val = QStringLiteral("<center><a href='http://www.stickmud.com/'>stickmud.com</a></center>");
+        }
+        if (profile_name == QStringLiteral("Clessidra")) {
+            val = QStringLiteral("<center><a href='http://www.clessidra.it/'>http://www.clessidra.it</a></center>");
         }
         if (profile_name == QStringLiteral("Reinos de Leyenda")) {
             val = QStringLiteral("<center><a href='https://www.reinosdeleyenda.es/'>Main website</a></center>\n"
@@ -1420,6 +1438,21 @@ void dlgConnectionProfiles::fillout_form()
         }
     }
 
+    mudServer = QStringLiteral("Clessidra");
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        mi = QIcon(QPixmap(QStringLiteral(":/icons/clessidra.jpg")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
+                                                                               Qt::SmoothTransformation).copy());
+        pM->setIcon(mi);
+        description = getDescription(QStringLiteral("clessidra.it"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
+    }
+
     mudServer = QStringLiteral("Reinos de Leyenda");
     if (!deletedDefaultMuds.contains(mudServer)) {
         pM = new QListWidgetItem(mudServer);
@@ -1460,6 +1493,7 @@ void dlgConnectionProfiles::fillout_form()
             || (!mProfileList.at(i).compare(QStringLiteral("Midnight Sun 2"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("Luminari"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("StickMUD"), Qt::CaseInsensitive))
+            || (!mProfileList.at(i).compare(QStringLiteral("Clessidra"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("Reinos de Leyenda"), Qt::CaseInsensitive))
             || (!mProfileList.at(i).compare(QStringLiteral("WoTMUD"), Qt::CaseInsensitive))) {
             delete pItem;

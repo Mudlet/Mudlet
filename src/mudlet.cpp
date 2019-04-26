@@ -1572,35 +1572,45 @@ void mudlet::addConsoleForNewHost(Host* pH)
 void mudlet::slot_timer_fires()
 {
     QTimer* pQT = (QTimer*)sender();
-    if (!pQT) {
+    if (Q_UNLIKELY(!pQT)) {
         return;
     }
-    if (mTimerMap.contains(pQT)) {
-        TTimer* pTT = mTimerMap[pQT];
+
+    // Pull the Host name and TTimer::id from the properties:
+    QString hostName(pQT->property(TTimer::scmProperty_HostName).toString());
+    if (Q_UNLIKELY(hostName.isEmpty())) {
+        qWarning().nospace().noquote() << "mudlet::slot_timer_fires() INFO - Host name is empty - so TTimer has probably been deleted.";
+        pQT->deleteLater();
+        return;
+    }
+
+    Host* pHost = mHostManager.getHost(hostName);
+    Q_ASSERT_X(pHost, "mudlet::slot_timer_fires()", "Unable to deduce Host pointer from data in QTimer");
+    int id = pQT->property(TTimer::scmProperty_TTimerId).toInt();
+    if (Q_UNLIKELY(!id)) {
+        qWarning().nospace().noquote() << "mudlet::slot_timer_fires() INFO - TTimer ID is zero - so TTimer has probably been deleted.";
+        pQT->deleteLater();
+        return;
+    }
+    TTimer* pTT = pHost->getTimerUnit()->getTimer(id);
+    if (Q_LIKELY(pTT)) {
+// commented out as it will be spammy in normal situations but saved as useful
+// during timer debugging... 8-)
+//        qDebug().nospace().noquote() << "mudlet::slot_timer_fires() INFO - Host: \"" << hostName << "\" QTimer firing for TTimer Id:" << id;
+//        qDebug().nospace().noquote() << "    (objectName:\"" << pQT->objectName() << "\")";
         pTT->execute();
         if (pTT->checkRestart()) {
             pTT->start();
         }
-    } else {
-        qDebug() << "MUDLET CRITICAL ERROR: Timer not registered!";
-    }
-}
 
-void mudlet::unregisterTimer(QTimer* pQT)
-{
-    if (mTimerMap.contains(pQT)) {
-        mTimerMap.remove(pQT);
-    } else {
-        qDebug() << "MUDLET CRITICAL ERROR: trying to unregister Timer but it is not registered!";
+        // Okay now we've found it we are done:
+        return;
     }
-}
 
-void mudlet::registerTimer(TTimer* pTT, QTimer* pQT)
-{
-    if (!mTimerMap.contains(pQT)) {
-        mTimerMap[pQT] = pTT;
-        connect(pQT, &QTimer::timeout, this, &mudlet::slot_timer_fires);
-    }
+    qWarning().nospace().noquote() << "mudlet::slot_timer_fires() ERROR - Timer not registered, it seems to have been called: \"" << pQT->objectName() << "\" - automatically deleting it!";
+    // Clean up any bogus ones:
+    pQT->stop();
+    pQT->deleteLater();
 }
 
 void mudlet::disableToolbarButtons()
@@ -1731,10 +1741,9 @@ void mudlet::setDockLayoutUpdated(Host* pHost, const QString& name)
     }
 
     auto pD = pHost->mpConsole->mDockWidgetMap.value(name);
-    if (!mHostDockLayoutChangeMap.value(pHost).contains(name) && pD) {
-        pD->setObjectName(QStringLiteral("%1_changed").arg(pD->objectName()));
+    if (Q_LIKELY(pD) && !mHostDockLayoutChangeMap.value(pHost).contains(name)) {
+        pD->setProperty("layoutChanged", QVariant(true));
         mHostDockLayoutChangeMap[pHost].append(name);
-
         mHasSavedLayout = false;
     }
 }
@@ -1745,39 +1754,44 @@ void mudlet::setToolbarLayoutUpdated(Host* pHost, TToolBar* pTB)
         return;
     }
 
-    QList<TToolBar*>& mToolbarLayoutUpdateMap = mHostToolbarLayoutChangeMap[pHost];
-    if (!mToolbarLayoutUpdateMap.contains(pTB)) {
-        pTB->setObjectName(QString("%1_changed").arg(pTB->objectName()));
-        mToolbarLayoutUpdateMap.append(pTB);
-
+    // Using the operator[] will instantiate an empty QList<TToolBar*> if there
+    // is not already one in existance for that pHost:
+    QList<TToolBar*>& toolbarLayoutUpdateMap = mHostToolbarLayoutChangeMap[pHost];
+    if (!toolbarLayoutUpdateMap.contains(pTB)) {
+        pTB->setProperty("layoutChanged", QVariant(true));
+        toolbarLayoutUpdateMap.append(pTB);
         mHasSavedLayout = false;
     }
 }
 
 void mudlet::commitLayoutUpdates()
 {
-    // commit changes for dockwidget consoles. (user windows)
-    for (Host* pHost : mHostDockLayoutChangeMap.keys()) {
-        QMap<QString, TDockWidget*>& dockWindowMap = pHost->mpConsole->mDockWidgetMap;
-        QList<QString>& mDockLayoutUpdateMap = mHostDockLayoutChangeMap[pHost];
-
-        for (QString TDockName : mDockLayoutUpdateMap) {
-            if (dockWindowMap.contains(TDockName)) {
-                QString rename = QString("dockWindow_%1_%2").arg(pHost->getName(), TDockName);
-                dockWindowMap[TDockName]->setObjectName(rename);
+    // commit changes (or rather clear the layout changed flags) for dockwidget
+    // consoles (user windows) across all profiles:
+    QMutableMapIterator<Host*, QList<QString>> itHostDockedConsolesList(mHostDockLayoutChangeMap);
+    while (itHostDockedConsolesList.hasNext()) {
+        itHostDockedConsolesList.next();
+        auto pHost = itHostDockedConsolesList.key();
+        for (auto dockedConsoleName : itHostDockedConsolesList.value()) {
+            auto pD = pHost->mpConsole->mDockWidgetMap.value(dockedConsoleName);
+            if (Q_LIKELY(pD) && pD->property("layoutChanged").toBool()) {
+                pD->setProperty("layoutChanged", QVariant(false));
             }
-            mDockLayoutUpdateMap.removeAll(TDockName);
         }
+        itHostDockedConsolesList.remove();
     }
 
-    // commit changes for dockable/floating toolbars.
-    for (Host* pHost : mHostToolbarLayoutChangeMap.keys()) {
-        QList<TToolBar*>& mToolbarLayoutUpdateMap = mHostToolbarLayoutChangeMap[pHost];
-
-        for (TToolBar* pTB : mToolbarLayoutUpdateMap) {
-            pTB->setObjectName(QString("dockToolBar_%1").arg(pTB->getName()));
-            mToolbarLayoutUpdateMap.removeAll(pTB);
+    // commit changes (or rather clear the layout changed flags) for
+    // dockable/floating toolbars across all profiles:
+    QMutableMapIterator<Host*, QList<TToolBar*>> itHostToolbarsList(mHostToolbarLayoutChangeMap);
+    while (itHostToolbarsList.hasNext()) {
+        itHostToolbarsList.next();
+        for (auto pToolBar : itHostToolbarsList.value()) {
+            if (Q_LIKELY(pToolBar) && pToolBar->property("layoutChanged").toBool()) {
+                pToolBar->setProperty("layoutChanged", QVariant(false));
+            }
         }
+        itHostToolbarsList.remove();
     }
 }
 
@@ -1868,6 +1882,7 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         return false;
     }
 
+    auto hostName(pHost->getName());
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     auto pD = pHost->mpConsole->mDockWidgetMap.value(name);
 
@@ -1875,10 +1890,10 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         // The name is not used in either the QMaps of all user created TConsole
         // or TDockWidget instances - so we can make a NEW one:
         auto pD = new TDockWidget(pHost, name);
-        pD->setObjectName(QString("dockWindow_%1_%2").arg(pHost->getName(), name));
+        pD->setObjectName(QString("dockWindow_%1_%2").arg(hostName, name));
         pD->setContentsMargins(0, 0, 0, 0);
         pD->setFeatures(QDockWidget::AllDockWidgetFeatures);
-        pD->setWindowTitle(tr("User window - %1 - %2").arg(pHost->getName(), name));
+        pD->setWindowTitle(tr("User window - %1 - %2").arg(hostName, name));
         pHost->mpConsole->mDockWidgetMap.insert(name, pD);
         // It wasn't obvious but the parent passed to the TConsole constructor
         // is sliced down to a QWidget and is NOT a TDockWidget pointer:
@@ -3275,8 +3290,9 @@ void mudlet::createMapper(bool loadDefaultMap)
         return;
     }
 
-    pHost->mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(pHost->getName()));
-    pHost->mpDockableMapWidget->setObjectName(QString("dockMap_%1").arg(pHost->getName()));
+    auto hostName(pHost->getName());
+    pHost->mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(hostName));
+    pHost->mpDockableMapWidget->setObjectName(QString("dockMap_%1").arg(hostName));
     pHost->mpMap->mpMapper = new dlgMapper(pHost->mpDockableMapWidget, pHost, pHost->mpMap.data()); //FIXME: mpHost definieren
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
     pHost->mpDockableMapWidget->setWidget(pHost->mpMap->mpMapper);

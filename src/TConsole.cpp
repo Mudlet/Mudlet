@@ -1841,6 +1841,31 @@ std::list<int> TConsole::getBgColor(std::string& buf)
     return {};
 }
 
+QPair<quint8, TChar> TConsole::getTextAttributes() const
+{
+    int x = P_begin.x();
+    int y = P_begin.y();
+    if (y < 0 || x < 0 || y >= static_cast<int>(buffer.buffer.size()) || x >= (static_cast<int>(buffer.buffer.at(y).size()) - 1)) {
+        return qMakePair(2, TChar());
+    }
+
+    return qMakePair(0, buffer.buffer.at(y).at(x));
+}
+
+QPair<quint8, TChar> TConsole::getTextAttributes(const QString& name) const
+{
+    if (name.isEmpty() || name == QLatin1String("main")) {
+        return getTextAttributes();
+    }
+
+    auto pC = mSubConsoleMap.value(name);
+    if (pC) {
+        return pC->getTextAttributes();
+    }
+
+    return qMakePair(1, TChar());
+}
+
 void TConsole::luaWrapLine(std::string& buf, int line)
 {
     QString key = QString::fromUtf8(buf.c_str());
