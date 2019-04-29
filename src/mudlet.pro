@@ -74,6 +74,10 @@ macx {
 # enable C++14 for builds.
 CONFIG += c++14
 
+# temporary for debugging - limit to a sane amount of errors
+QMAKE_LFLAGS +=-fmax-errors=5
+QMAKE_CFLAGS +=-fmax-errors=5
+
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP
 
