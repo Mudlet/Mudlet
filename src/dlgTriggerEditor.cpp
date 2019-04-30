@@ -621,7 +621,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     labelList << tr("Type", "Heading for the first column of the search results")
               << tr("Name", "Heading for the second column of the search results")
               << tr("Where", "Heading for the third column of the search results")
-              << tr("What", "Heading for the forth column of the search results");
+              << tr("What", "Heading for the fourth column of the search results");
     treeWidget_searchResults->setHeaderLabels(labelList);
 
     slot_showSearchAreaResults(false);
