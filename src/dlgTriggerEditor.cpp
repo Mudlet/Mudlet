@@ -255,7 +255,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     splitter_right->setCollapsible(6, false);
     splitter_right->setStretchFactor(7, 1); // mpScriptsMainArea
     splitter_right->setCollapsible(7, false);
-    splitter_right->setStretchFactor(8, 1); // mpSourceEditorArea
+    splitter_right->setStretchFactor(8, 3); // mpSourceEditorArea
     splitter_right->setCollapsible(8, false);
     splitter_right->setStretchFactor(9, 1); // mpErrorConsole
     splitter_right->setCollapsible(9, false);
@@ -618,10 +618,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     treeWidget_searchResults->setColumnCount(4);
     QStringList labelList;
-    labelList << tr("Type", "Heading for the first column of the search results display treewidget")
-              << tr("Name", "Heading for the second column of the search results display treewidget")
-              << tr("Where", "Heading for the third column of the search results display treewidget")
-              << tr("What", "Heading for the four column of the search results display treewidget");
+    labelList << tr("Type", "Heading for the first column of the search results")
+              << tr("Name", "Heading for the second column of the search results")
+              << tr("Where", "Heading for the third column of the search results")
+              << tr("What", "Heading for the forth column of the search results");
     treeWidget_searchResults->setHeaderLabels(labelList);
 
     slot_showSearchAreaResults(false);
@@ -2642,13 +2642,14 @@ void dlgTriggerEditor::activeToggle_trigger()
 
     if (pT->state()) {
         if (pT->shouldBeActive()) {
-            showInfo(tr(R"(Trying to activate a trigger group, filter or trigger or the part of a module "%1" that contains them <em>succeeded</em>.)").arg(pT->getName()));
+            showInfo(tr(R"(Trying to activate a trigger group, filter or trigger or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName()));
         } else {
-            showInfo(tr(R"(Trying to deactivate a trigger group, filter or trigger or the part of a module "%1" that contains them <em>succeeded</em>.)").arg(pT->getName()));
+            showInfo(tr(R"(Trying to deactivate a trigger group, filter or trigger or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName()));
         }
     } else {
         pT->setIsActive(false);
-        showError(tr(R"(Unable to activate (and automatically deactivating) a filter or trigger or the part of a module "%1" that contains them; reason: %2.)").arg(pT->getName(), pT->getError()));
+        showError(tr(R"(<b>Unable to activate a filter or trigger or the part of a module "<tt>%1</tt>" that contains them; reason: %2.</b></p>
+                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName(), pT->getError()));
         icon.addPixmap(QPixmap(QStringLiteral(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
     }
     pItem->setIcon(0, icon);
@@ -2784,13 +2785,14 @@ void dlgTriggerEditor::activeToggle_timer()
 
     if (pT->state()) {
         if (pT->shouldBeActive()) {
-            showInfo(tr(R"(Trying to activate a timer group, offset timer, timer or the part of a module "%1" that contains them <em>succeeded</em>.)").arg(pT->getName()));
+            showInfo(tr(R"(Trying to activate a timer group, offset timer, timer or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName()));
         } else {
-            showInfo(tr(R"(Trying to deactivate a timer group, offset timer, timer or the part of a module "%1" that contains them <em>succeeded</em>.)").arg(pT->getName()));
+            showInfo(tr(R"(Trying to deactivate a timer group, offset timer, timer or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName()));
         }
     } else {
         pT->setIsActive(false);
-        showError(tr(R"(Unable to activate (and automatically deactivating) an offset timer or timer or the part of a module "%1" that contains them; reason: %2.)").arg(pT->getName(), pT->getError()));
+        showError(tr(R"(<p><b>Unable to activate an offset timer or timer or the part of a module "<tt>%1</tt>" that contains them; reason: %2.</b></p>
+                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName(), pT->getError()));
         icon.addPixmap(QPixmap(QStringLiteral(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
     }
     pItem->setIcon(0, icon);
@@ -2827,13 +2829,14 @@ void dlgTriggerEditor::activeToggle_alias()
 
     if (pT->state()) {
         if (pT->shouldBeActive()) {
-            showInfo(tr(R"(Trying to activate an alias group, alias or the part of a module "%1" that contains them <em>succeeded</em>.)").arg(pT->getName()));
+            showInfo(tr(R"(Trying to activate an alias group, alias or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName()));
         } else {
-            showInfo(tr(R"(Trying to deactivate an alias group, alias or the part of a module "%1" that contains them <em>succeeded</em>.)").arg(pT->getName()));
+            showInfo(tr(R"(Trying to deactivate an alias group, alias or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName()));
         }
     } else {
         pT->setIsActive(false);
-        showError(tr(R"(Unable to activate (and automatically deactivating) an alias or the part of a module "%1" that contains them; reason: %2.)").arg(pT->getName(), pT->getError()));
+        showError(tr(R"(<p><b>Unable to activate an alias or the part of a module "<tt>%1</tt>" that contains them; reason: %2.</b></p>
+                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName(), pT->getError()));
         icon.addPixmap(QPixmap(QStringLiteral(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
     }
     pItem->setIcon(0, icon);
@@ -2930,13 +2933,14 @@ void dlgTriggerEditor::activeToggle_script()
 
     if (pT->state()) {
         if (pT->shouldBeActive()) {
-            showInfo(tr(R"(Trying to activate a script group, script or the part of a module "%1" that contains them <em>succeeded</em>.)").arg(pT->getName()));
+            showInfo(tr(R"(Trying to activate a script group, script or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName()));
         } else {
-            showInfo(tr(R"(Trying to deactivate a script group, script or the part of a module "%1" that contains them <em>succeeded</em>.)").arg(pT->getName()));
+            showInfo(tr(R"(Trying to deactivate a script group, script or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName()));
         }
     } else {
         pT->setIsActive(false);
-        showError(tr(R"(Unable to activate (and automatically deactivating) a script group or script or the part of a module "%1" that contains them; reason: %2.)").arg(pT->getName(), pT->getError()));
+        showError(tr(R"(<p><b>Unable to activate a script group or script or the part of a module "<tt>%1</tt>" that contains them; reason: %2.</b></p>
+                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName(), pT->getError()));
         icon.addPixmap(QPixmap(QStringLiteral(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
     }
     pItem->setIcon(0, icon);
@@ -3000,13 +3004,14 @@ void dlgTriggerEditor::activeToggle_action()
 
     if (pT->state()) {
         if (pT->shouldBeActive()) {
-            showInfo(tr(R"(Trying to activate a button/menu/toolbar or the part of a module "%1" that contains them <em>succeeded</em>.)").arg(pT->getName()));
+            showInfo(tr(R"(Trying to activate a button/menu/toolbar or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName()));
         } else {
-            showInfo(tr(R"(Trying to deactivate a button/menu/toolbar or the part of a module "%1" that contains them <em>succeeded</em>.)").arg(pT->getName()));
+            showInfo(tr(R"(Trying to deactivate a button/menu/toolbar or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName()));
         }
     } else {
         pT->setIsActive(false);
-        showError(tr(R"(Unable to activate (and automatically deactivating) a button/menu/toolbar or the part of a module "%1" that contains them; reason: %2.)").arg(pT->getName(), pT->getError()));
+        showError(tr(R"(<p><b>Unable to activate a button/menu/toolbar or the part of a module "<tt>%1</tt>" that contains them; reason: %2.</b></p>
+                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName(), pT->getError()));
         icon.addPixmap(QPixmap(QStringLiteral(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
     }
     pItem->setIcon(0, icon);

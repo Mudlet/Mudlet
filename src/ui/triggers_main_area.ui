@@ -265,7 +265,7 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>Within how many lines must all condition be true to fire the trigger?</string>
+               <string>&lt;p&gt;Within how many lines must all condition be true to fire the trigger?&lt;/p&gt;</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignCenter</set>
@@ -285,6 +285,9 @@
            </property>
            <property name="autoFillBackground">
             <bool>true</bool>
+           </property>
+           <property name="toolTip">
+            <string>&lt;p&gt;When checked, only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters).&lt;/p&gt;</string>
            </property>
            <property name="title">
             <string>only pass matches</string>
@@ -359,6 +362,9 @@
            <property name="autoFillBackground">
             <bool>true</bool>
            </property>
+           <property name="toolTip">
+            <string>&lt;p&gt;Choose this option if you want to include all possible matches of the pattern in the line.&lt;/p&gt;&lt;p&gt;Without this option, the pattern matching will stop after the first successful match.&lt;/p&gt;</string>
+           </property>
            <property name="title">
             <string>match all</string>
            </property>
@@ -406,9 +412,6 @@
                 <width>16777215</width>
                 <height>16777215</height>
                </size>
-              </property>
-              <property name="toolTip">
-               <string/>
               </property>
               <property name="text">
                <string>Match all occurences of the pattern in the line.</string>
@@ -684,6 +687,9 @@
        <widget class="QGroupBox" name="groupBox_triggerColorizer">
         <property name="autoFillBackground">
          <bool>true</bool>
+        </property>
+        <property name="toolTip">
+         <string>&lt;p&gt;Enable this to highlight the matching text by changing the fore and background colors to the ones selected here.&lt;/p&gt;</string>
         </property>
         <property name="title">
          <string>highlight</string>
