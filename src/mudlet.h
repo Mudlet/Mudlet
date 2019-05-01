@@ -5,7 +5,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
- *   Copyright (C) 2015-2016, 2018 by Stephen Lyons                        *
+ *   Copyright (C) 2015-2016, 2018-2019 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
@@ -113,8 +113,6 @@ public:
     void disableToolbarButtons();
     void enableToolbarButtons();
     Host* getActiveHost();
-    void registerTimer(TTimer*, QTimer*);
-    void unregisterTimer(QTimer*);
     void forceClose();
     bool saveWindowLayout();
     bool loadWindowLayout();
@@ -222,7 +220,6 @@ public:
     QTime mReplayTime;
     int mReplaySpeed;
     QToolBar* mpMainToolBar;
-    QMap<QTimer*, TTimer*> mTimerMap;
     QMap<Host*, QPointer<dlgIRC>> mpIrcClientMap;
     QString version;
     QPointer<Host> mpCurrentActiveHost;

@@ -1188,7 +1188,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
                                  "to gain a \"_###\" style suffix where each \"###\" is an increasing\n"
                                  "number; you may wish to change these, perhaps by replacing them with\n"
                                  "a \"(sub-area name)\" but it is entirely up to you how you do this,\n"
-                                 "other then you will not be able to set one area's name to that of\n"
+                                 "other than you will not be able to set one area's name to that of\n"
                                  "another that exists at the time.\n"
                                  "  If there were more than one area without a name then all but the\n"
                                  "first will also gain a suffix in this manner.\n"

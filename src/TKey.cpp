@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2018-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -171,18 +171,17 @@ bool TKey::setScript(QString& script)
 
 bool TKey::compileScript()
 {
-    mFuncName = QString("Key") + QString::number(mID);
-    QString code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    mFuncName = QStringLiteral("Key%1").arg(QString::number(mID));
+    QString code = QStringLiteral("function %1()\n%2\nend\n").arg(mFuncName, mScript);
     QString error;
-    if (mpHost->mLuaInterpreter.compile(code, error, QString("Key: ") + getName())) {
+    if (mpHost->mLuaInterpreter.compile(code, error, QStringLiteral("Key: %1").arg(getName()))) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
-        return true;
     } else {
         mOK_code = false;
         setError(error);
-        return false;
     }
+    return mOK_code;
 }
 
 void TKey::execute()

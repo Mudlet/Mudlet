@@ -426,7 +426,7 @@ void cTelnet::handle_socket_signal_connected()
 
     emit signal_connected(mpHost);
 
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QStringLiteral("sysConnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
@@ -435,7 +435,7 @@ void cTelnet::handle_socket_signal_connected()
 void cTelnet::handle_socket_signal_disconnected()
 {
     QString msg;
-    TEvent event;
+    TEvent event {};
     QString reason;
     QString spacer = "    ";
     bool sslerr = false;
@@ -560,7 +560,7 @@ bool cTelnet::sendData(QString& data)
 {
     data.remove(QChar::LineFeed);
 
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QStringLiteral("sysDataSendRequest"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(data);
@@ -1476,7 +1476,7 @@ void cTelnet::processTelnetCommand(const string& command)
             msg = msg.mid(3, command.size() - 5);
         }
 
-        TEvent event;
+        TEvent event {};
         event.mArgumentList.append(QStringLiteral("sysTelnetEvent"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         event.mArgumentList.append(QString::number(type));
@@ -2244,48 +2244,46 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                     command = "";
                     iac = false;
                 } else if (insb) {
-                    if (!mNeedDecompression) {
-                        // IAC SB COMPRESS WILL SE for MCCP v1 (unterminated invalid telnet sequence)
-                        // IAC SB COMPRESS2 IAC SE for MCCP v2
-                        if ((mMCCP_version_1 || mMCCP_version_2) && (!mNeedDecompression)) {
-                            char _ch = buffer[i];
-                            if ((_ch == OPT_COMPRESS) || (_ch == OPT_COMPRESS2)) {
-                                bool _compress = false;
-                                if ((i > 1) && (i + 2 < datalen)) {
-                                    qDebug() << "checking mccp start seq...";
-                                    if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_WILL) && (buffer[i + 2] == TN_SE)) {
-                                        qDebug() << "MCCP version 1 starting sequence";
-                                        _compress = true;
-                                    }
-                                    if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_IAC) && (buffer[i + 2] == TN_SE)) {
-                                        qDebug() << "MCCP version 2 starting sequence";
-                                        _compress = true;
-                                    }
-                                    qDebug() << (int)buffer[i - 2] << "," << (int)buffer[i - 1] << "," << (int)buffer[i] << "," << (int)buffer[i + 1] << "," << (int)buffer[i + 2];
+                    // IAC SB COMPRESS WILL SE for MCCP v1 (unterminated invalid telnet sequence)
+                    // IAC SB COMPRESS2 IAC SE for MCCP v2
+                    if ((mMCCP_version_1 || mMCCP_version_2) && (!mNeedDecompression)) {
+                        char _ch = buffer[i];
+                        if ((_ch == OPT_COMPRESS) || (_ch == OPT_COMPRESS2)) {
+                            bool _compress = false;
+                            if ((i > 1) && (i + 2 < datalen)) {
+                                qDebug() << "checking mccp start seq...";
+                                if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_WILL) && (buffer[i + 2] == TN_SE)) {
+                                    qDebug() << "MCCP version 1 starting sequence";
+                                    _compress = true;
                                 }
-                                if (_compress) {
-                                    mNeedDecompression = true;
-                                    // from this position in stream onwards, data will be compressed by zlib
-                                    gotRest(cleandata);
-                                    cleandata = "";
-                                    initStreamDecompressor();
-                                    buffer += i + 3; //bugfix: BenH
-                                    int restLength = datalen - i - 3;
-                                    if (restLength > 0) {
-                                        datalen = decompressBuffer(buffer, restLength, out_buffer);
-                                        buffer = out_buffer;
-                                        i = -1; // start processing buffer from the beginning.
-                                    } else {
-                                        datalen = 0;
-                                        i = -1; // end the loop, this will make i and datalen the same.
-                                    }
-                                    //bugfix: BenH
-                                    iac = false;
-                                    insb = false;
-                                    command = "";
-                                    ////////////////
-                                    goto MAIN_LOOP_END;
+                                if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_IAC) && (buffer[i + 2] == TN_SE)) {
+                                    qDebug() << "MCCP version 2 starting sequence";
+                                    _compress = true;
                                 }
+                                qDebug() << (int)buffer[i - 2] << "," << (int)buffer[i - 1] << "," << (int)buffer[i] << "," << (int)buffer[i + 1] << "," << (int)buffer[i + 2];
+                            }
+                            if (_compress) {
+                                mNeedDecompression = true;
+                                // from this position in stream onwards, data will be compressed by zlib
+                                gotRest(cleandata);
+                                cleandata = "";
+                                initStreamDecompressor();
+                                buffer += i + 3; //bugfix: BenH
+                                int restLength = datalen - i - 3;
+                                if (restLength > 0) {
+                                    datalen = decompressBuffer(buffer, restLength, out_buffer);
+                                    buffer = out_buffer;
+                                    i = -1; // start processing buffer from the beginning.
+                                } else {
+                                    datalen = 0;
+                                    i = -1; // end the loop, this will make i and datalen the same.
+                                }
+                                //bugfix: BenH
+                                iac = false;
+                                insb = false;
+                                command = "";
+                                ////////////////
+                                goto MAIN_LOOP_END;
                             }
                         }
                     }
@@ -2356,7 +2354,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
 
 void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
 {
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(name);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(protocol);

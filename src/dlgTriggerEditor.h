@@ -5,7 +5,7 @@
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 *
- *   Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -158,37 +158,8 @@ public:
 
     Q_DECLARE_FLAGS(SearchOptions,SearchOption)
 
-    void fillout_form();
-    void closeEvent(QCloseEvent* event) override;
-    void showError(const QString&);
-    void showWarning(const QString&);
-    void showInfo(const QString&);
-    void focusInEvent(QFocusEvent*) override;
-    void focusOutEvent(QFocusEvent*) override;
-    void enterEvent(QEvent* pE) override;
-    bool eventFilter(QObject*, QEvent* event) override;
-    void children_icon_triggers(QTreeWidgetItem* pWidgetItemParent);
-    void children_icon_alias(QTreeWidgetItem* pWidgetItemParent);
-    void children_icon_key(QTreeWidgetItem* pWidgetItemParent);
-    void doCleanReset();
-    void addVar(bool);
-    int canRecast(QTreeWidgetItem*, int newNameType, int newValueType);
-    void saveVar();
-    void repopulateVars();
-    void changeView(int);
-    void recurseVariablesUp(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);
-    void recurseVariablesDown(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);
-    void show_vars();
-    void setThemeAndOtherSettings(const QString&);
-    // Helper to ensure the foreground color for a button is always
-    // readable/contrasts with the background when the latter is colored@
-    static QString generateButtonStyleSheet(const QColor& color);
-    // Reader of the above - is a bit simple and may not work if the
-    // stylesheetText has more that one item being styled with a "color" and
-    // "background-color" attribute:
-    static QColor parseButtonStyleSheetColors(const QString& styleSheetText, const bool isToGetForeground = false);
-
     enum class EditorViewType {
+        cmUnknownView = 0,
         cmTriggerView = 0x01,
         cmTimerView = 0x02,
         cmAliasView = 0x03,
@@ -198,12 +169,54 @@ public:
         cmVarsView = 0x07
     };
 
+    void closeEvent(QCloseEvent* event) override;
+    void focusInEvent(QFocusEvent*) override;
+    void focusOutEvent(QFocusEvent*) override;
+    void enterEvent(QEvent* pE) override;
+    bool eventFilter(QObject*, QEvent* event) override;
+    bool event(QEvent* event) override;
+    void fillout_form();
+    void showError(const QString&);
+    void showWarning(const QString&);
+    void showInfo(const QString&);
+    void children_icon_triggers(QTreeWidgetItem* pWidgetItemParent);
+    void children_icon_alias(QTreeWidgetItem* pWidgetItemParent);
+    void children_icon_key(QTreeWidgetItem* pWidgetItemParent);
+    void doCleanReset();
+    void addVar(bool);
+    int canRecast(QTreeWidgetItem*, int newNameType, int newValueType);
+    void saveVar();
+    void repopulateVars();
+    void changeView(EditorViewType);
+    void recurseVariablesUp(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);
+    void recurseVariablesDown(QTreeWidgetItem* const, QList<QTreeWidgetItem*>&);
+    void show_vars();
+    void setThemeAndOtherSettings(const QString&);
+    // Helper to ensure the foreground color for a button is always
+    // readable/contrasts with the background when the latter is colored@
+    static QString generateButtonStyleSheet(const QColor& color, const bool isEnabled = true);
+    // Reader of the above - is a bit simple and may not work if the
+    // stylesheetText has more that one item being styled with a "color" and
+    // "background-color" attribute:
+    static QColor parseButtonStyleSheetColors(const QString& styleSheetText, const bool isToGetForeground = false);
+    void activeToggle_action();
+    void activeToggle_alias();
+    void activeToggle_key();
+    void activeToggle_script();
+    void activeToggle_timer();
+    void activeToggle_trigger();
+    void delete_action();
+    void delete_alias();
+    void delete_key();
+    void delete_script();
+    void delete_timer();
+    void delete_trigger();
+    void delete_variable();
+    void key_grab_callback(const int, const Qt::KeyboardModifiers);
+
 public slots:
     void slot_toggleHiddenVariables(bool);
     void slot_toggleHiddenVar(bool);
-    void slot_addVar();
-    void slot_addVarGroup();
-    void slot_deleteVar();
     void slot_var_selected(QTreeWidgetItem*);
     void slot_var_changed(QTreeWidgetItem*);
     void slot_show_vars();
@@ -232,45 +245,21 @@ public slots:
     void slot_key_selected(QTreeWidgetItem* pItem);
     void slot_add_new();
     void slot_add_new_folder();
-    void slot_addTrigger();
-    void slot_addTriggerGroup();
-    void slot_addTimer();
-    void slot_addTimerGroup();
-    void slot_addAlias();
-    void slot_addAliasGroup();
-    void slot_addScript();
-    void slot_addScriptGroup();
-    void slot_addAction();
-    void slot_addActionGroup();
-    void slot_addKey();
-    void slot_addKeyGroup();
     void slot_toggle_active();
-    void slot_trigger_toggle_active();
-    void slot_action_toggle_active();
-    void slot_timer_toggle_active();
-    void slot_alias_toggle_active();
-    void slot_script_toggle_active();
-    void slot_key_toggle_active();
     void slot_searchMudletItems(const QString&); // Was slot_search_triggers(...)
     void slot_item_selected_search_list(QTreeWidgetItem*);
     void slot_delete_item();
-    void slot_deleteTrigger();
-    void slot_deleteTimer();
-    void slot_deleteAlias();
-    void slot_deleteScript();
-    void slot_deleteAction();
-    void slot_deleteKey();
     void slot_save_edit();
     void slot_copy_xml();
     void slot_paste_xml();
     void slot_chose_action_icon();
     void slot_showSearchAreaResults(bool);
+    void slot_showAllTriggerControls(const bool);
+    void slot_rightSplitterMoved(const int pos, const int handle);
     void slot_script_main_area_delete_handler();
     void slot_script_main_area_add_handler();
     void slot_script_main_area_edit_handler(QListWidgetItem*);
     void slot_key_grab(const bool);
-    bool event(QEvent* event) override;
-    void slot_key_grab_callback(const int, const Qt::KeyboardModifiers);
     void slot_profileSaveAction();
     void slot_profileSaveAsAction();
     void slot_setToolBarIconSize(int);
@@ -285,7 +274,9 @@ private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
     void slot_toggle_isPushDownButton(int);
     void slot_toggleSearchCaseSensitivity(bool);
+    void slot_toggleGroupBoxColorizeTrigger(const bool);
     void slot_clearSearchResults();
+    void slot_clearSoundFile();
     void slot_editorContextMenu();
 
 public:
@@ -304,9 +295,9 @@ private:
     void writeSettings();
     void addScript(bool);
     void addAlias(bool);
-    void addTimer(bool isFolder);
-    void addTrigger(bool isFolder);
-    void addAction(bool isFolder);
+    void addTimer(bool);
+    void addTrigger(bool);
+    void addAction(bool);
     void addKey(bool);
     void timerEvent(QTimerEvent *event) override;
 
@@ -340,9 +331,9 @@ private:
 
     void clearDocument(edbee::TextEditorWidget* ew, const QString& initialText=QLatin1Literal(""));
 
-    void setAllSearchData(QTreeWidgetItem* pItem, const int& type, const QString& name, const int& id, const SearchDataResultType& what, const int& pos = 0, const int& instance = 0, const int& subInstance = 0) {
+    void setAllSearchData(QTreeWidgetItem* pItem, const EditorViewType& type, const QString& name, const int& id, const SearchDataResultType& what, const int& pos = 0, const int& instance = 0, const int& subInstance = 0) {
         // Which is it? A Trigger, an alias etc:
-        pItem->setData(0, ItemRole, type);
+        pItem->setData(0, ItemRole, static_cast<int>(type));
         // What is its name:
         pItem->setData(0, NameRole, name);
         // What is its (Unique per Item Type) identifier - note that variables
@@ -397,6 +388,7 @@ private:
     void runScheduledCleanReset();
     void autoSave();
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
+    void key_grab_callback(int key, int modifier);
 
 
     QToolBar* toolBar;
@@ -419,7 +411,7 @@ private:
     QTreeWidgetItem* mpCurrentAliasItem;
     QTreeWidgetItem* mpCurrentVarItem;
 
-    int mCurrentView;
+    EditorViewType mCurrentView;
 
     QScrollArea* mpScrollArea;
     QWidget* HpatternList;
@@ -472,6 +464,14 @@ private:
 
     // approximate max duration "Copy as image" can take in seconds
     int mCopyAsImageMax;
+
+    QString msgInfoAddAlias;
+    QString msgInfoAddTrigger;
+    QString msgInfoAddScript;
+    QString msgInfoAddTimer;
+    QString msgInfoAddButton;
+    QString msgInfoAddVar;
+    QString msgInfoAddKey;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

@@ -649,7 +649,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
         QString n = "WindowResizeEvent";
         pLua->call(func, n);
 
-        TEvent mudletEvent;
+        TEvent mudletEvent {};
         mudletEvent.mArgumentList.append(QLatin1String("sysWindowResizeEvent"));
         mudletEvent.mArgumentList.append(QString::number(x - mMainFrameLeftWidth - mMainFrameRightWidth));
         mudletEvent.mArgumentList.append(QString::number(y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height()));
@@ -757,7 +757,7 @@ void TConsole::closeEvent(QCloseEvent* event)
     }
 
     if (mProfileName != QLatin1String("default_host")) {
-        TEvent conCloseEvent;
+        TEvent conCloseEvent {};
         conCloseEvent.mArgumentList.append(QLatin1String("sysExitEvent"));
         conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(conCloseEvent);
@@ -1841,6 +1841,31 @@ std::list<int> TConsole::getBgColor(std::string& buf)
     return {};
 }
 
+QPair<quint8, TChar> TConsole::getTextAttributes() const
+{
+    int x = P_begin.x();
+    int y = P_begin.y();
+    if (y < 0 || x < 0 || y >= static_cast<int>(buffer.buffer.size()) || x >= (static_cast<int>(buffer.buffer.at(y).size()) - 1)) {
+        return qMakePair(2, TChar());
+    }
+
+    return qMakePair(0, buffer.buffer.at(y).at(x));
+}
+
+QPair<quint8, TChar> TConsole::getTextAttributes(const QString& name) const
+{
+    if (name.isEmpty() || name == QLatin1String("main")) {
+        return getTextAttributes();
+    }
+
+    auto pC = mSubConsoleMap.value(name);
+    if (pC) {
+        return pC->getTextAttributes();
+    }
+
+    return qMakePair(1, TChar());
+}
+
 void TConsole::luaWrapLine(std::string& buf, int line)
 {
     QString key = QString::fromUtf8(buf.c_str());
@@ -1983,9 +2008,7 @@ int TConsole::select(const QString& text, int numOfMatch)
 bool TConsole::selectSection(int from, int to)
 {
     if (mudlet::debugMode) {
-        if (mudlet::debugMode) {
-            TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "\nselectSection(" << from << "," << to << "): line under current user cursor: " << buffer.line(mUserCursor.y()) << "\n" >> 0;
-        }
+        TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "\nselectSection(" << from << "," << to << "): line under current user cursor: " << buffer.line(mUserCursor.y()) << "\n" >> 0;
     }
     if (from < 0) {
         return false;
@@ -2218,7 +2241,7 @@ void TConsole::createMapper(int x, int y, int width, int height)
 
         mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
 
-        TEvent mapOpenEvent;
+        TEvent mapOpenEvent {};
         mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
         mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(mapOpenEvent);

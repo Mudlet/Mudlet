@@ -2006,8 +2006,9 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
 int TMap::createMapLabelID(int area)
 {
     if (mapLabels.contains(area)) {
-        QList<int> idList = mapLabels[area].keys();
+        const QList<int> idList = mapLabels.value(area).keys();
         int id = 0;
+        // protect against integer overflow
         while (id >= 0) {
             if (!idList.contains(id)) {
                 return id;
@@ -2450,7 +2451,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
                     // direct importation of a local copy of a map file.
 
                     if (readXmlMapFile(file)) {
-                        TEvent mapDownloadEvent;
+                        TEvent mapDownloadEvent {};
                         mapDownloadEvent.mArgumentList.append(QLatin1String("sysMapDownloadEvent"));
                         mapDownloadEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
                         pHost->raiseEvent(mapDownloadEvent);

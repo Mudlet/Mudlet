@@ -134,7 +134,7 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
     QStringList headerLabels;
-    headerLabels << tr("Room Id") << tr("Room Name");
+    headerLabels << tr("ID", "Room ID in the mapper widget") << tr("Name", "Room name in the mapper widget");
     mMultiSelectionListWidget.setHeaderLabels(headerLabels);
     mMultiSelectionListWidget.setToolTip(tr("<p>Click on a line to select or deselect that room number (with the given name if the "
                                                  "rooms are named) to add or remove the room from the selection.  Click on the "
@@ -613,6 +613,64 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const bool gridMode)
     }
 }
 
+/*
+ * Helper used to size fonts establishes the font size to use to draw the given
+ * sample text centralized inside the given boundary (or rather the boundary
+ * reduced by the margin (0-40) as a percentage). This margin is defaulted to
+ * 10%.
+ */
+bool T2DMap::sizeFontToFitTextInRect( QFont & font, const QRectF & boundaryRect, const QString & text, const quint8 percentageMargin )
+{
+    QFont _font = font;
+
+    if (percentageMargin > 40) {
+        qWarning() << "T2DMap::sizeFontToFitTextInRect(...) percentage margin" << percentageMargin << "exceeded recommended maximum (40%) !";
+    }
+    if (text.isEmpty()) {
+        qWarning() << "T2DMap::sizeFontToFitTextInRect(...) called with no sample text!";
+        return false;
+    }
+
+    qreal fontSize = font.pointSizeF();
+    QRectF testRect(boundaryRect.width() * (100 - percentageMargin) / 200.0,
+                    boundaryRect.height() * (100 - percentageMargin) / 200.0,
+                    boundaryRect.width() * (100 - percentageMargin) / 100.0,
+                    boundaryRect.height() * (100 - percentageMargin) / 100.);
+    // Increase the test font by one, then check to see that it does NOT fit
+    QRectF neededRect;
+    QPixmap _pixmap(qRound(1.0 + boundaryRect.width()), qRound(1.0 + boundaryRect.height()));
+    QPainter _painter(&_pixmap);
+    do {
+        fontSize = fontSize + 1.0;
+        _font.setPointSizeF(fontSize);
+        _painter.setFont(_font);
+
+        neededRect = _painter.boundingRect(testRect, Qt::AlignCenter | Qt::TextSingleLine | Qt::TextIncludeTrailingSpaces, text);
+    } while (testRect.contains(neededRect));
+
+    // Now decrease until it does
+    bool isSizeTooSmall = false;
+    static qreal minFontSize = 7.0;
+    do {
+        fontSize = fontSize - 1.0;
+        _font.setPointSizeF(fontSize);
+        if (fontSize < minFontSize) {
+            isSizeTooSmall = true;
+        }
+
+        _painter.setFont(_font);
+
+        neededRect = _painter.boundingRect(testRect, Qt::AlignCenter | Qt::TextSingleLine | Qt::TextIncludeTrailingSpaces, text);
+    } while ((!isSizeTooSmall) && (!testRect.contains(neededRect)));
+
+    if (isSizeTooSmall) {
+        return false;
+    }
+
+    font.setPointSizeF(fontSize);
+    return true;
+}
+
 // Revised to use a QCache to hold QPixmap * to generated images for room symbols
 void T2DMap::paintEvent(QPaintEvent* e)
 {
@@ -724,6 +782,47 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     mRX = qRound(mRoomWidth * ((xspan / 2.0) - ox));
     mRY = qRound(mRoomHeight * ((yspan / 2.0) - oy));
+    QFont roomVNumFont = mpMap->mMapSymbolFont;
+    bool isFontBigEnoughToShowRoomVnum = false;
+    if (mShowRoomID) {
+        /*
+         * If we are to show the room Id numbers - find out the number of digits
+         * that we will need to use; actually, knowing the digit count is also
+         * useful for the room selection widget so perform this check EVERY time.
+         * TODO: Eventually move this check to the TArea class and just redo it
+         * when areas' room content changes.
+         */
+        int maxUsedRoomId = 0;
+        QSetIterator<int> itRoomId(playerArea->getAreaRooms());
+        while (itRoomId.hasNext()) {
+            maxUsedRoomId = qMax(maxUsedRoomId, itRoomId.next());
+        }
+        mMaxRoomIdDigits = static_cast<quint8>(QString::number(maxUsedRoomId).length());
+
+        QRectF roomTestRect;
+        if (playerArea->gridMode) {
+            roomTestRect = QRectF(0, 0, static_cast<qreal>(mRoomWidth), static_cast<qreal>(mRoomHeight));
+        } else {
+            roomTestRect = QRectF(0, 0, static_cast<qreal>(mRoomWidth) * rSize, static_cast<qreal>(mRoomHeight) * rSize);
+        }
+        static quint8 roomVnumMargin = 10;
+        // Peer review has suggested that under/overlining the room id numbers
+        // is not helpful after all:
+        // roomVNumFont.setUnderline(true);
+        // roomVNumFont.setOverline(true);
+        roomVNumFont.setBold(true);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 0))
+        // QFont::PreferNoShaping is only available in Qt 5.10 or later
+        // QFont::PreferOutline will help to select a font that will scale to any
+        // size - which is important for good rendering over a range of sizes
+        // QFont::PreferAntialias will look better - except perhaps at very small
+        // sizes (but we prevent that by checking in the method call afterwards):
+        roomVNumFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping|QFont::PreferAntialias|QFont::PreferOutline));
+#else
+        roomVNumFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferAntialias|QFont::PreferOutline));
+#endif
+        isFontBigEnoughToShowRoomVnum = sizeFontToFitTextInRect(roomVNumFont, roomTestRect, QStringLiteral("8").repeated(mMaxRoomIdDigits), roomVnumMargin);
+    }
 
     // This could be the coordinates of the center of the window?
     int px = qRound((mRoomWidth * xspan) / 2.0);
@@ -1420,6 +1519,12 @@ void T2DMap::paintEvent(QPaintEvent* e)
         } else {
             roomRectangle = QRectF(rx - (mRoomWidth * rSize) / 2.0, ry - (mRoomHeight * rSize) / 2.0, mRoomWidth * rSize, mRoomHeight * rSize);
         }
+        // We should be using the full area for testing for clicks even though
+        // we only show a smaller one if the user has dialed down the room size
+        // on NON-grid mode areas:
+        const QRectF roomClickTestRectangle(QRectF(static_cast<qreal>(rx) - (static_cast<qreal>(mRoomWidth) / 2.0),
+                                                   static_cast<qreal>(ry) - (static_cast<qreal>(mRoomHeight) / 2.0),
+                                                   static_cast<qreal>(mRoomWidth), static_cast<qreal>(mRoomHeight)));
 
         QColor roomColor;
         int roomEnvironment = room->environment;
@@ -1490,28 +1595,26 @@ void T2DMap::paintEvent(QPaintEvent* e)
             if (mpMap->customEnvColors.contains(roomEnvironment)) {
                 roomColor = mpMap->customEnvColors[roomEnvironment];
             } else {
-                if (16 < roomEnvironment && roomEnvironment < 232)
-                {
+                if (16 < roomEnvironment && roomEnvironment < 232) {
                     quint8 base = roomEnvironment - 16;
                     quint8 r = base / 36;
                     quint8 g = (base - (r * 36)) / 6;
                     quint8 b = (base - (r * 36)) - (g * 6);
 
-		    r = r * 51;
-		    g = g * 51;
-		    b = b * 51;
+                    r *= 51;
+                    g *= 51;
+                    b *= 51;
                     roomColor = QColor(r, g, b, 255);
                 } else if (231 < roomEnvironment && roomEnvironment < 256) {
                     quint8 k = ((roomEnvironment - 232) * 10) + 8;
                     roomColor = QColor(k, k, k, 255);
                 }
-	    }
+            }
         }
 
-        if (((mPick || __Pick) && mPHighlight.x() >= roomRectangle.x() - (mRoomWidth * rSize) && mPHighlight.x() <= roomRectangle.x() + (mRoomWidth * rSize)
-             && mPHighlight.y() >= roomRectangle.y() - (mRoomHeight * rSize)
-             && mPHighlight.y() <= roomRectangle.y() + (mRoomHeight * rSize))
+        if (((mPick || __Pick) && roomClickTestRectangle.contains(mPHighlight))
             || mMultiSelectionSet.contains(currentAreaRoom)) {
+
             painter.fillRect(roomRectangle, QColor(255, 155, 55));
             mPick = false;
             if (mStartSpeedWalk) {
@@ -1560,7 +1663,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 painter.fillRect(roomRectangle, roomColor);
             }
 
-            if (!mShowRoomID && !room->mSymbol.isEmpty()) {
+            if (!(mShowRoomID && isFontBigEnoughToShowRoomVnum) && !room->mSymbol.isEmpty()) {
                 QString pixmapKey;
                 if (roomColor.lightness() > 127) {
                     pixmapKey = QStringLiteral("B_%1").arg(room->mSymbol);
@@ -1578,23 +1681,24 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 if (!pix) {
                     qWarning("T2DMap::paintEvent() Alert: mSymbolPixmapCache failure, too many items to cache all of them for: \"%s\"", room->mSymbol.toUtf8().constData());
                 } else {
-                    /* For the non-scaling QPainter::drawPixmap() used now we
+                    /*
+                     * For the non-scaling QPainter::drawPixmap() used now we
                      * have to position the generated pixmap containing the
                      * particular symbol for this room to Y when it would
                      * position it at X - this should be faster than the previous
                      * scaling QPainter::drawPixmap() as that would scale the
                      * pixmap to fit the Room Rectangle!
                      *
-                     *               |<------->| roomRectangle.width()
+                     *                         |<------->| roomRectangle.width()
                      * roomRectangle.topLeft-->X---------+
-                     *              |  Room   |
-                     *              |  Y---+  |
-                     *              |  |Pix|  |
-                     *              |  +---+  |
-                     *              |Rectangle|
-                     *              +---------+
-                     *                 |<->|<--symbolRect.width()
-                     * x-offset---->|<>|<-- (roomRectangle.width() - symbolRect.width())/2.0
+                     *                         |  Room   |
+                     *                         |  Y---+  |
+                     *                         |  |Pix|  |
+                     *                         |  +---+  |
+                     *                         |Rectangle|
+                     *                         +---------+
+                     *                            |<->|<--symbolRect.width()
+                     *            x-offset---->|<>|<-- (roomRectangle.width() - symbolRect.width())/2.0
                      * similarly for the y-offset
                      */
 
@@ -1620,17 +1724,18 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 painter.drawPath(diameterPath);
             }
 
-            if (mShowRoomID) {
-                QPen roomIdPen = painter.pen();
+            if (mShowRoomID && isFontBigEnoughToShowRoomVnum) {
+                painter.save();
                 QColor roomIdColor;
-                if (roomColor.red() + roomColor.green() + roomColor.blue() > 200) {
+                if (roomColor.lightness() > 127) {
                     roomIdColor = QColor(Qt::black);
                 } else {
                     roomIdColor = QColor(Qt::white);
                 }
                 painter.setPen(QPen(roomIdColor));
-                painter.drawText(roomRectangle, Qt::AlignHCenter | Qt::AlignVCenter, QString::number(currentAreaRoom));
-                painter.setPen(roomIdPen);
+                painter.setFont(roomVNumFont);
+                painter.drawText(roomRectangle, Qt::AlignHCenter | Qt::AlignVCenter, QStringLiteral("%1").arg(currentAreaRoom, mMaxRoomIdDigits, 10, QLatin1Char('0')));
+                painter.restore();
             }
 
             if (mShiftMode && currentAreaRoom == mpMap->mRoomIdHash.value(mpMap->mProfileName)) {
@@ -1868,33 +1973,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
 
         painter.restore();
-        if (pArea->gridMode) {
-            QMapIterator<int, QPoint> it(mAreaExitsList);
-            while (it.hasNext()) {
-                it.next();
-                QPoint P = it.value();
-                int rx = P.x();
-                int ry = P.y();
-
-                QRectF dr = QRectF(rx - mRoomWidth / 2.0, ry - mRoomHeight / 2.0, mRoomWidth, mRoomHeight);
-                if (((mPick || __Pick) && mPHighlight.x() >= (dr.x() - mRoomWidth / 2.0) && mPHighlight.x() <= (dr.x() + mRoomWidth / 2.0) && mPHighlight.y() >= (dr.y() - mRoomHeight / 2.0)
-                     && mPHighlight.y() <= (dr.y() + mRoomHeight / 2.0))
-                    || mMultiSelectionSet.contains(currentAreaRoom)) {
-                    painter.fillRect(dr, QColor(50, 255, 50));
-                    mPick = false;
-                    mTarget = it.key();
-                    if (mpMap->mpRoomDB->getRoom(mTarget)) {
-                        mpMap->mTargetID = mTarget;
-                        if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
-                            mpHost->startSpeedWalk();
-                        } else {
-                            QString msg = tr("Mapper: Cannot find a path to this room using known exits.\n");
-                            mpHost->mpConsole->printSystemMessage(msg);
-                        }
-                    }
-                }
-            }
-        } else {
+        if (!pArea->gridMode) {
             QMapIterator<int, QPoint> it(mAreaExitsList);
             while (it.hasNext()) {
                 it.next();
@@ -1903,9 +1982,16 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 int ry = P.y();
 
                 QRectF dr = QRectF(rx, ry, mRoomWidth * rSize, mRoomHeight * rSize);
-                if (((mPick || __Pick) && mPHighlight.x() >= (dr.x() - mRoomWidth / 3.0) && mPHighlight.x() <= (dr.x() + mRoomWidth / 3.0) && mPHighlight.y() >= (dr.y() - mRoomHeight / 3.0)
+
+                // clang-format off
+                if (((mPick || __Pick)
+                     && mPHighlight.x() >= (dr.x() - mRoomWidth / 3.0)
+                     && mPHighlight.x() <= (dr.x() + mRoomWidth / 3.0)
+                     && mPHighlight.y() >= (dr.y() - mRoomHeight / 3.0)
                      && mPHighlight.y() <= (dr.y() + mRoomHeight / 3.0))
                     && mStartSpeedWalk) {
+
+                    // clang-format on
                     mStartSpeedWalk = false;
                     float roomRadius = (0.8 * mRoomWidth) / 2.0;
                     QPointF roomCenter = QPointF(rx, ry);
@@ -3331,7 +3417,7 @@ void T2DMap::slot_setPlayerLocation()
         // No need to check it is a DIFFERENT room - that is taken care of by en/dis-abling the control
         mpMap->mRoomIdHash[mpMap->mProfileName] = _newRoomId;
         mpMap->mNewMove = true;
-        TEvent manualSetEvent;
+        TEvent manualSetEvent {};
         manualSetEvent.mArgumentList.append(QLatin1String("sysManualLocationSetEvent"));
         manualSetEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         manualSetEvent.mArgumentList.append(QString::number(_newRoomId));
@@ -3343,7 +3429,7 @@ void T2DMap::slot_setPlayerLocation()
 
 void T2DMap::slot_userAction(QString uniqueName)
 {
-    TEvent event;
+    TEvent event {};
     QStringList userEvent = mUserActions[uniqueName];
     event.mArgumentList.append(userEvent[0]);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -3547,7 +3633,7 @@ void T2DMap::slot_setSymbol()
                                                     .arg(usedSymbols.keys().first())
                                                   : tr("The symbol is \"%1\" in the selected room,\n"
                                                        "delete this to clear the symbol or replace\n"
-                                                       "it with a new symbol for this room:"
+                                                       "it with a new symbol for this room:",
                                                        // Intentional comment to separate arguments!
                                                        "This is for when applying a new room symbol to one room. "
                                                        "Use line feeds to format text into a reasonable rectangle.")
@@ -5019,11 +5105,11 @@ void T2DMap::resizeMultiSelectionWidget()
 {
     int newWidth;
     if (mIsSelectionUsingNames) {
-        if (width() <= 300) { // 0 - 300 => 0 - 200
-            newWidth = 2 * width() / 3;
-        } else if (width() <= 600) { // 300 - 600 => 200 - 300
-            newWidth = 100 + width() / 3;
-        } else { // 600+ => 300
+        if (width() <= 750) {
+            newWidth = 160;
+        } else if (width() <= 890) { // 750-890 => 160-300
+            newWidth = 160+width()-750;
+        } else { // 890+ => 300
             newWidth = 300;
         }
     } else {
