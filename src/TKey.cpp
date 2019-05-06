@@ -38,7 +38,8 @@ TKey::TKey(TKey* parent, Host* pHost)
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
 , mKeyCode()
-, mKeyModifier()
+, mPresentModifiers()
+, mAbsentModifiers()
 {
 }
 
@@ -51,7 +52,8 @@ TKey::TKey(QString name, Host* pHost)
 , mNeedsToBeCompiled( true )
 , mModuleMember(false)
 , mKeyCode()
-, mKeyModifier()
+, mPresentModifiers()
+, mAbsentModifiers()
 {
 }
 
@@ -72,12 +74,15 @@ void TKey::setName(const QString& name)
     mpHost->getKeyUnit()->mLookupTable.insertMulti(name, this);
 }
 
-bool TKey::match(int key, int modifier, const bool isToMatchAll)
+bool TKey::match(const int key, const Qt::KeyboardModifiers modifiers, const bool isToMatchAll)
 {
     bool isAMatch = false;
     if (isActive()) {
         if (!isFolder()) {
-            if ((mKeyCode == key) && (mKeyModifier == modifier)) {
+            if (  (mKeyCode == key) // The key matches
+               && ((modifiers & mPresentModifiers) == mPresentModifiers) // All of the required present modifiers are present and thus this matches
+               && (!(modifiers & mAbsentModifiers))) { // None of the required to be absent modifiers are present and thus this matches
+
                 execute();
                 if (isToMatchAll) {
                     isAMatch = true;
@@ -88,7 +93,7 @@ bool TKey::match(int key, int modifier, const bool isToMatchAll)
         }
 
         for (auto childKey : *mpMyChildrenList) {
-            if (childKey->match(key, modifier, isToMatchAll)) {
+            if (childKey->match(key, modifiers, isToMatchAll)) {
                 if (isToMatchAll) {
                     isAMatch = true;
                 } else {

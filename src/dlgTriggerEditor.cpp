@@ -3433,7 +3433,7 @@ void dlgTriggerEditor::addKey(bool isFolder)
 
     pT->setName(name);
     pT->setKeyCode(Qt::Key_unknown);
-    pT->setKeyModifiers(Qt::NoModifier);
+    pT->setKeyModifiers(qMakePair(Qt::NoModifier, Qt::NoModifier));
     pT->setScript(script);
     pT->setIsFolder(isFolder);
     pT->setIsActive(false);
@@ -4654,7 +4654,7 @@ void dlgTriggerEditor::saveKey()
     }
     QString command = mpKeysMainArea->lineEdit_key_command->text();
     QString script = mpSourceEditorEdbeeDocument->text();
-    Qt::KeyboardModifiers modifiers = mpKeysMainArea->getModifiers();
+    QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers> modifiers = mpKeysMainArea->getModifiers();
 
     int triggerID = pItem->data(0, Qt::UserRole).toInt();
     TKey* pT = mpHost->getKeyUnit()->getKey(triggerID);
@@ -7834,14 +7834,14 @@ void dlgTriggerEditor::key_grab_callback(const int key, const Qt::KeyboardModifi
     QString keyName = pKeyUnit->getKeyName(key);
     QString name = keyName;
     mpKeysMainArea->label_key_binding_value->setText(name);
-    mpKeysMainArea->setModifiers(modifiers);
+    mpKeysMainArea->setModifiers(qMakePair(modifiers, Qt::NoModifier));
     QTreeWidgetItem* pItem = treeWidget_keys->currentItem();
     if (pItem) {
         int triggerID = pItem->data(0, Qt::UserRole).toInt();
         TKey* pT = mpHost->getKeyUnit()->getKey(triggerID);
         if (pT) {
             pT->setKeyCode(key);
-            pT->setKeyModifiers(modifiers);
+            pT->setKeyModifiers(qMakePair(modifiers, Qt::NoModifier));
         }
     }
 }

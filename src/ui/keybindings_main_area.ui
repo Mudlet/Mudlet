@@ -94,12 +94,18 @@
         <property name="text">
          <string>Group</string>
         </property>
+        <property name="tristate">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
       <item row="0" column="2">
        <widget class="QCheckBox" name="checkBox_modifier_alt">
         <property name="text">
          <string extracomment="This will be changed to &quot;Control&quot; on the MacOs platform.">Alt</string>
+        </property>
+        <property name="tristate">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -114,12 +120,18 @@
         <property name="checked">
          <bool>false</bool>
         </property>
+        <property name="tristate">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
       <item row="1" column="0">
        <widget class="QCheckBox" name="checkBox_modifier_meta">
         <property name="text">
          <string extracomment="This will be changed to &quot;Windows&quot; on the Windows platform.">Meta</string>
+        </property>
+        <property name="tristate">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -128,12 +140,18 @@
         <property name="text">
          <string>Keypad</string>
         </property>
+        <property name="tristate">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
       <item row="0" column="1">
        <widget class="QCheckBox" name="checkBox_modifier_control">
         <property name="text">
          <string extracomment="This will be changed to &quot;Command&quot; on the MacOs platform.">Control</string>
+        </property>
+        <property name="tristate">
+         <bool>true</bool>
         </property>
        </widget>
       </item>

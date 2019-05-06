@@ -90,12 +90,12 @@ void TCommandLine::processNormalKey(QEvent* event)
 
 bool TCommandLine::processPotentialKeyBinding(QKeyEvent* keyEvent)
 {
-    if (mpKeyUnit->processDataStream(keyEvent->key(), (int)keyEvent->modifiers())) {
+    if (mpKeyUnit->processDataStream(keyEvent->key(), keyEvent->modifiers())) {
         keyEvent->accept();
         return true;
-    } else {
-        return false;
     }
+
+    return false;
 }
 
 // This function overrides the QWidget::event() and should return true if the
@@ -109,7 +109,7 @@ bool TCommandLine::event(QEvent* event)
         auto * ke = dynamic_cast<QKeyEvent*>(event);
 
         // Shortcut for keypad keys
-        if ((ke->modifiers() & Qt::KeypadModifier) && mpKeyUnit->processDataStream(ke->key(), (int)ke->modifiers())) {
+        if ((ke->modifiers() & Qt::KeypadModifier) && mpKeyUnit->processDataStream(ke->key(), ke->modifiers())) {
             ke->accept();
             return true;
 

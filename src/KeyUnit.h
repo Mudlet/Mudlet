@@ -58,8 +58,8 @@ public:
     TKey* findKey(QString & name);
     bool enableKey(const QString& name);
     bool disableKey(const QString& name);
-    QPair<bool, Qt::KeyboardModifiers> getKeyModifiers(const QString&) const;
-    bool setKeyModifiers(const QString&, const Qt::KeyboardModifiers);
+    QPair<bool, QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers> > getKeyModifiers(const QString&) const;
+    bool setKeyModifiers(const QString&, const QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>);
     bool killKey(QString& name);
     bool registerKey(TKey* pT);
     void unregisterKey(TKey* pT);
@@ -70,7 +70,7 @@ public:
     void setupKeyNames();
     void uninstall(const QString&);
     void _uninstall(TKey* pChild, const QString& packageName);
-    bool processDataStream(int, int);
+    bool processDataStream(const int, const Qt::KeyboardModifiers);
     void markCleanup( TKey * pT );
     void doCleanup();
     void stopAllTriggers();

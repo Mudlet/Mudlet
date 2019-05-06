@@ -35,8 +35,8 @@ class dlgKeysMainArea : public QWidget, public Ui::keybindings_main_area
 public:
     Q_DISABLE_COPY(dlgKeysMainArea)
     dlgKeysMainArea(QWidget*);
-    void setModifiers(const Qt::KeyboardModifiers modifiers);
-    Qt::KeyboardModifiers getModifiers() const;
+    void setModifiers(const QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers> modifiers);
+    QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers> getModifiers() const;
 
 
 signals:

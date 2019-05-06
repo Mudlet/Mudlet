@@ -71,11 +71,11 @@ void KeyUnit::uninstall(const QString& packageName)
     uninstallList.clear();
 }
 
-bool KeyUnit::processDataStream(int key, int modifier)
+bool KeyUnit::processDataStream(const int key, const Qt::KeyboardModifiers modifiers)
 {
     bool isMatchFound = false;
     for (auto keyObject : mKeyRootNodeList) {
-        if (keyObject->match(key, modifier, mRunAllKeyMatches)) {
+        if (keyObject->match(key, modifiers, mRunAllKeyMatches)) {
             if (!mRunAllKeyMatches) {
                 return true;
             } else {
@@ -110,6 +110,7 @@ void KeyUnit::reenableAllTriggers()
     }
 }
 
+// This currently only finds the FIRST key-binding with the given name:
 TKey* KeyUnit::findKey(QString& name)
 {
     QMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
@@ -154,17 +155,19 @@ bool KeyUnit::disableKey(const QString& name)
     return found;
 }
 
-QPair<bool, Qt::KeyboardModifiers> KeyUnit::getKeyModifiers(const QString& name) const
+// This currently only acts on the FIRST key-binding with the given name
+QPair<bool, QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>> KeyUnit::getKeyModifiers(const QString& name) const
 {
     QMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
         return {true, it.value()->getKeyModifiers()};
     }
 
-    return {false, Qt::NoModifier};
+    return {false, qMakePair(Qt::NoModifier,Qt::NoModifier)};
 }
 
-bool KeyUnit::setKeyModifiers(const QString& name, const Qt::KeyboardModifiers modifiers)
+// This currently only acts on the FIRST key-binding with the given name
+bool KeyUnit::setKeyModifiers(const QString& name, const QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers> modifiers)
 {
     QMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
@@ -175,6 +178,7 @@ bool KeyUnit::setKeyModifiers(const QString& name, const Qt::KeyboardModifiers m
     return false;
 }
 
+// This currently only acts on the FIRST key-binding with the given name
 bool KeyUnit::killKey(QString& name)
 {
     for (auto pChild : mKeyRootNodeList) {

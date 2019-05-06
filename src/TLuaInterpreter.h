@@ -114,7 +114,7 @@ public:
 
     QPair<int, QString> startTempTimer(double, const QString&);
     int startTempAlias(const QString&, const QString&);
-    int startTempKey(const Qt::KeyboardModifiers&, const int&, QString&);
+    int startTempKey(const QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>& modifiers, const int&, QString&);
     int startTempTrigger(const QString& regex, const QString& function, int expiryCount = -1);
     int startTempBeginOfLineTrigger(const QString&, const QString&, int expiryCount = -1);
     int startTempExactMatchTrigger(const QString&, const QString&, int expiryCount = -1);
@@ -128,7 +128,7 @@ public:
     int startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
     QPair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     int startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
-    int startPermKey(QString&, QString&, const int&, const Qt::KeyboardModifiers&, QString&);
+    int startPermKey(QString&, QString&, const int&, const QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>& modifiers, QString&);
 
     static int getCustomLines(lua_State*);
     static int addCustomLine(lua_State*);

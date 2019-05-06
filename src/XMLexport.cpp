@@ -1082,7 +1082,8 @@ void XMLexport::writeKey(TKey* pT, pugi::xml_node xmlParent)
 
             keyContents.append_child("command").text().set(pT->mCommand.toUtf8().constData());
             keyContents.append_child("keyCode").text().set(QString::number(pT->mKeyCode).toUtf8().constData());
-            keyContents.append_child("keyModifier").text().set(QString::number(pT->mKeyModifier).toUtf8().constData());
+            QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers> mods = pT->getKeyModifiers();
+            keyContents.append_child("keyModifier").text().set(QString::number(mods.first|(mods.second>>8)).toUtf8().constData());
         }
     }
 

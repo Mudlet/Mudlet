@@ -37,7 +37,17 @@ dlgKeysMainArea::dlgKeysMainArea(QWidget* pF)
     connect(checkBox_modifier_keypad, &QCheckBox::toggled, this, &dlgKeysMainArea::slot_modifierKeyToggled_keypad);
     connect(checkBox_modifier_group, &QCheckBox::toggled, this, &dlgKeysMainArea::slot_modifierKeyToggled_group);
 
-    checkBox_modifier_keypad->setToolTip(tr("<p>On the MacOs platform this modifier may be set on the directional arrow keys whereas on other platforms it will <b>not</b> be set.</p>"));
+    checkBox_modifier_shift->setCheckState(Qt::PartiallyChecked);
+    checkBox_modifier_control->setCheckState(Qt::PartiallyChecked);
+    checkBox_modifier_alt->setCheckState(Qt::PartiallyChecked);
+    checkBox_modifier_meta->setCheckState(Qt::PartiallyChecked);
+    checkBox_modifier_keypad->setCheckState(Qt::PartiallyChecked);
+    checkBox_modifier_group->setCheckState(Qt::PartiallyChecked);
+
+    checkBox_modifier_keypad->setToolTip(tr("<p>On the MacOs platform this modifier may be set on the directional arrow keys whereas on other platforms it will <b>not</b> be set.</p>"
+                                            "<p>All six of these controls have three states with the partially checked state being the default meaning <i>this modifier is ignored</i>; otherwise it must be present (checked) or absent (unchecked) for the key-binding to fire.  This is so that separate <i>combinations</i> of modifiers can be used for the <i>same</i> base key.</p>"));
+    checkBox_modifier_shift->setToolTip(tr("<p>All six of these controls have three states with the partially checked state being the default meaning <i>this modifier is ignored</i>; otherwise it must be present (checked) or absent (unchecked) for the key-binding to fire.  This is so that separate <i>combinations</i> of modifiers can be used for the <i>same</i> base key.</p>"));
+
 #if defined(Q_OS_MACOS)
     checkBox_modifier_control->setText(tr("Command",
                                           // Intentional comment
@@ -49,16 +59,20 @@ dlgKeysMainArea::dlgKeysMainArea(QWidget* pF)
                                       // Intentional comment
                                       "This is the name of the alt modifier key as it appears on the MacOs platform"));
 
-    checkBox_modifier_control->setToolTip(tr("<p>On other platforms this modifier will be the <tt>Control</tt> key.</p>",
+    checkBox_modifier_control->setToolTip(tr("<p>On other platforms this modifier will be the <tt>Control</tt> key.</p>"
+                                             "<p>All six of these controls have three states with the partially checked state being the default meaning <i>this modifier is ignored</i>; otherwise it must be present (checked) or absent (unchecked) for the key-binding to fire.  This is so that separate <i>combinations</i> of modifiers can be used for the <i>same</i> base key.</p>",
                                              // Intentional comment
                                              "This is the tooltip for the modifier key that Qt identifies as the control modifier, though it is called the command key in this usage on the MacOs platform."));
-    checkBox_modifier_meta->setToolTip(tr("<p>On the Windows platform this modifier will be the <tt>Windows</tt> modifier and on other platforms the <tt>Meta</tt> modifier key.</p>",
+    checkBox_modifier_meta->setToolTip(tr("<p>On the Windows platform this modifier will be the <tt>Windows</tt> modifier and on other platforms the <tt>Meta</tt> modifier key.</p>"
+                                          "<p>All six of these controls have three states with the partially checked state being the default meaning <i>this modifier is ignored</i>; otherwise it must be present (checked) or absent (unchecked) for the key-binding to fire.  This is so that separate <i>combinations</i> of modifiers can be used for the <i>same</i> base key.</p>",
                                           // Intentional comment
                                           "This is the tooltip for the modifier key that Qt identifies as the meta modifier, though it is called the control key in this usage on the MacOs platform."));
-    checkBox_modifier_group->setToolTip(tr("<p>This modifier may only be present on other Unix-like platforms where it <i>may</i> be active when the <tt>AltGr</tt> key is used.</p>",
+    checkBox_modifier_group->setToolTip(tr("<p>This modifier may only be present on other Unix-like platforms where it <i>may</i> be active when the <tt>AltGr</tt> key is used.</p>"
+                                           "<p>All six of these controls have three states with the partially checked state being the default meaning <i>this modifier is ignored</i>; otherwise it must be present (checked) or absent (unchecked) for the key-binding to fire.  This is so that separate <i>combinations</i> of modifiers can be used for the <i>same</i> base key.</p>",
                                            // Intentional comment
                                            "This is the tooltip for the modifier that Qt identifies as the group switch modifier, though it may not be present on the MacOs platform."));
-    checkBox_modifier_alt->setToolTip(tr("<p>On other platform this modifier will be the <tt>Alt</tt> key.</p>",
+    checkBox_modifier_alt->setToolTip(tr("<p>On other platform this modifier will be the <tt>Alt</tt> key.</p>"
+                                         "<p>All six of these controls have three states with the partially checked state being the default meaning <i>this modifier is ignored</i>; otherwise it must be present (checked) or absent (unchecked) for the key-binding to fire.  This is so that separate <i>combinations</i> of modifiers can be used for the <i>same</i> base key.</p>",
                                          // Intentional comment
                                          "This is the tooltip for the modifier that Qt identifies as the alt modifier, though it is called the option key in this usage on the MacOs platform."));
 #elif defined(Q_OS_WIN32)
@@ -66,72 +80,124 @@ dlgKeysMainArea::dlgKeysMainArea(QWidget* pF)
                                        // Intentional comment
                                        "This is the name of the modifier that Qt identifies as the meta modifier as it appears on the Windows platform"));
 
-    checkBox_modifier_control->setToolTip(tr("<p>On the MacOs platform this will be the <tt>Command</tt> modifier.</p>",
+    checkBox_modifier_control->setToolTip(tr("<p>On the MacOs platform this will be the <tt>Command</tt> modifier.</p>"
+                                             "<p>All six of these controls have three states with the partially checked state being the default meaning <i>this modifier is ignored</i>; otherwise it must be present (checked) or absent (unchecked) for the key-binding to fire.  This is so that separate <i>combinations</i> of modifiers can be used for the <i>same</i> base key.</p>",
                                              // Intentional comment
                                              "This is the tooltip for the modifier key that Qt identifies as the control modifier, though it is called the command key (only on) the MacOs platform."));
-    checkBox_modifier_meta->setToolTip(tr("<p>On the MacOs platform this will be the <tt>Control</tt> modifier and on other platforms the <tt>Meta</tt> modifier.</p>",
+    checkBox_modifier_meta->setToolTip(tr("<p>On the MacOs platform this will be the <tt>Control</tt> modifier and on other platforms the <tt>Meta</tt> modifier.</p>"
+                                          "<p>All six of these controls have three states with the partially checked state being the default meaning <i>this modifier is ignored</i>; otherwise it must be present (checked) or absent (unchecked) for the key-binding to fire.  This is so that separate <i>combinations</i> of modifiers can be used for the <i>same</i> base key.</p>",
                                           // Intentional comment
                                           "This is the tooltip for the modifier key that Qt identifies as the meta modifier, though it is called the control key on the MacOs platform."));
-    checkBox_modifier_group->setToolTip(tr("<p>This modifier may only be present on Unix-like platforms where it <i>may</i> be active when the <tt>AltGr</tt> key is used.</p>",
+    checkBox_modifier_group->setToolTip(tr("<p>This modifier may only be present on Unix-like platforms where it <i>may</i> be active when the <tt>AltGr</tt> key is used.</p>"
+                                           "<p>All six of these controls have three states with the partially checked state being the default meaning <i>this modifier is ignored</i>; otherwise it must be present (checked) or absent (unchecked) for the key-binding to fire.  This is so that separate <i>combinations</i> of modifiers can be used for the <i>same</i> base key.</p>",
                                            // Intentional comment
                                            "This is the tooltip for the modifier that Qt identifies as the group switch modifier, though it may not be present for usage on the Windows platform."));
-    checkBox_modifier_alt->setToolTip(tr("<p>On the MacOs platform this will be the <tt>Option</tt> modifier.</p>",
+    checkBox_modifier_alt->setToolTip(tr("<p>On the MacOs platform this will be the <tt>Option</tt> modifier.</p>"
+                                         "<p>All six of these controls have three states with the partially checked state being the default meaning <i>this modifier is ignored</i>; otherwise it must be present (checked) or absent (unchecked) for the key-binding to fire.  This is so that separate <i>combinations</i> of modifiers can be used for the <i>same</i> base key.</p>",
                                          // Intentional comment
                                          "This is the tooltip for the modifier key that Qt identifies as the alt modifier, though it is called the option key on the MacOs platform."));
 #else
     // Linux & FreeBSD:
 
-    checkBox_modifier_control->setToolTip(tr("<p>On the MacOs platform this will be the <tt>Command</tt> modifier.</p>",
+    checkBox_modifier_control->setToolTip(tr("<p>On the MacOs platform this will be the <tt>Command</tt> modifier.</p>"
+                                             "<p>All six of these controls have three states with the partially checked state being the default meaning <i>this modifier is ignored</i>; otherwise it must be present (checked) or absent (unchecked) for the key-binding to fire.  This is so that separate <i>combinations</i> of modifiers can be used for the <i>same</i> base key.</p>",
                                              // Intentional comment
                                              "This is the tooltip for the modifier key that Qt identifies as the control key, though it is called the command key on the MacOs platform."));
-    checkBox_modifier_meta->setToolTip(tr("<p>On the MacOs platform this will be the <tt>Control</tt> modifier and on the Windows platform the <tt>Windows</tt> modifier.</p>",
+    checkBox_modifier_meta->setToolTip(tr("<p>On the MacOs platform this will be the <tt>Control</tt> modifier and on the Windows platform the <tt>Windows</tt> modifier.</p>"
+                                          "<p>All six of these controls have three states with the partially checked state being the default meaning <i>this modifier is ignored</i>; otherwise it must be present (checked) or absent (unchecked) for the key-binding to fire.  This is so that separate <i>combinations</i> of modifiers can be used for the <i>same</i> base key.</p>",
                                           // Intentional comment
                                           "This is the tooltip for the modifier that Qt identifies as the meta key, though it is called the control key on the MacOs platform and the Windows key on the Windows platform."));
-    checkBox_modifier_alt->setToolTip(tr("<p>On the MacOs platform this will be the <tt>Option</tt> modifier.</p>",
+    checkBox_modifier_alt->setToolTip(tr("<p>On the MacOs platform this will be the <tt>Option</tt> modifier.</p>"
+                                         "<p>All six of these controls have three states with the partially checked state being the default meaning <i>this modifier is ignored</i>; otherwise it must be present (checked) or absent (unchecked) for the key-binding to fire.  This is so that separate <i>combinations</i> of modifiers can be used for the <i>same</i> base key.</p>",
                                          // Intentional comment
                                          "This is the tooltip for the modifier that Qt identifies as the alt key, though it is called the option key on the MacOs platform."));
-    checkBox_modifier_group->setToolTip(tr("<p>This modifier may only be present on Unix-like platforms where it <i>may</i> be active when the <tt>AltGr</tt> key is used.</p>",
+    checkBox_modifier_group->setToolTip(tr("<p>This modifier may only be present on Unix-like platforms where it <i>may</i> be active when the <tt>AltGr</tt> key is used.</p>"
+                                           "<p>All six of these controls have three states with the partially checked state being the default meaning <i>this modifier is ignored</i>; otherwise it must be present (checked) or absent (unchecked) for the key-binding to fire.  This is so that separate <i>combinations</i> of modifiers can be used for the <i>same</i> base key.</p>",
                                            // Intentional comment
                                            "This is the tooltip for the modifier that Qt identifies as the group switch modifier, it may only be present on Unix like platforms (not Windows, not MacOs)."));
 #endif
 }
 
 // Sets the modifiers without causing any signals to be emitted
-void dlgKeysMainArea::setModifiers(const Qt::KeyboardModifiers modifiers)
+void dlgKeysMainArea::setModifiers(const QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers> modifiers)
 {
     checkBox_modifier_shift->blockSignals(true);
-    checkBox_modifier_shift->setChecked(modifiers & Qt::ShiftModifier);
+    if (modifiers.first & Qt::ShiftModifier) {
+        checkBox_modifier_shift->setCheckState(Qt::Checked);
+    } else if (modifiers.second & Qt::ShiftModifier) {
+        checkBox_modifier_shift->setCheckState(Qt::Unchecked);
+    } else {
+        checkBox_modifier_shift->setCheckState(Qt::PartiallyChecked);
+    }
     checkBox_modifier_shift->blockSignals(false);
 
     checkBox_modifier_control->blockSignals(true);
-    checkBox_modifier_control->setChecked(modifiers & Qt::ControlModifier);
+    if (modifiers.first & Qt::ControlModifier) {
+        checkBox_modifier_control->setCheckState(Qt::Checked);
+    } else if (modifiers.second & Qt::ControlModifier) {
+        checkBox_modifier_control->setCheckState(Qt::Unchecked);
+    } else {
+        checkBox_modifier_control->setCheckState(Qt::PartiallyChecked);
+    }
     checkBox_modifier_control->blockSignals(false);
 
     checkBox_modifier_alt->blockSignals(true);
-    checkBox_modifier_alt->setChecked(modifiers & Qt::AltModifier);
+    if (modifiers.first & Qt::AltModifier) {
+        checkBox_modifier_alt->setCheckState(Qt::Checked);
+    } else if (modifiers.second & Qt::AltModifier) {
+        checkBox_modifier_alt->setCheckState(Qt::Unchecked);
+    } else {
+        checkBox_modifier_alt->setCheckState(Qt::PartiallyChecked);
+    }
     checkBox_modifier_alt->blockSignals(false);
 
     checkBox_modifier_meta->blockSignals(true);
-    checkBox_modifier_meta->setChecked(modifiers & Qt::MetaModifier);
+    if (modifiers.first & Qt::MetaModifier) {
+        checkBox_modifier_meta->setCheckState(Qt::Checked);
+    } else if (modifiers.second & Qt::MetaModifier) {
+        checkBox_modifier_meta->setCheckState(Qt::Unchecked);
+    } else {
+        checkBox_modifier_meta->setCheckState(Qt::PartiallyChecked);
+    }
     checkBox_modifier_meta->blockSignals(false);
 
     checkBox_modifier_keypad->blockSignals(true);
-    checkBox_modifier_keypad->setChecked(modifiers & Qt::KeypadModifier);
+    if (modifiers.first & Qt::KeypadModifier) {
+        checkBox_modifier_keypad->setCheckState(Qt::Checked);
+    } else if (modifiers.second & Qt::KeypadModifier) {
+        checkBox_modifier_keypad->setCheckState(Qt::Unchecked);
+    } else {
+        checkBox_modifier_keypad->setCheckState(Qt::PartiallyChecked);
+    }
     checkBox_modifier_keypad->blockSignals(false);
 
     checkBox_modifier_group->blockSignals(true);
-    checkBox_modifier_group->setChecked(modifiers & Qt::GroupSwitchModifier);
+    if (modifiers.first & Qt::GroupSwitchModifier) {
+        checkBox_modifier_keypad->setCheckState(Qt::Checked);
+    } else if (modifiers.second & Qt::GroupSwitchModifier) {
+        checkBox_modifier_keypad->setCheckState(Qt::Unchecked);
+    } else {
+        checkBox_modifier_keypad->setCheckState(Qt::PartiallyChecked);
+    }
     checkBox_modifier_group->blockSignals(false);
 }
 
-Qt::KeyboardModifiers dlgKeysMainArea::getModifiers() const
+QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>  dlgKeysMainArea::getModifiers() const
 {
-    return (checkBox_modifier_shift->isChecked() ? Qt::ShiftModifier : Qt::NoModifier)
-            | (checkBox_modifier_control->isChecked() ? Qt::ControlModifier : Qt::NoModifier)
-            | (checkBox_modifier_alt->isChecked() ? Qt::AltModifier : Qt::NoModifier)
-            | (checkBox_modifier_meta->isChecked() ? Qt::MetaModifier : Qt::NoModifier)
-            | (checkBox_modifier_keypad->isChecked() ? Qt::KeypadModifier : Qt::NoModifier)
-            | (checkBox_modifier_group->isChecked() ? Qt::GroupSwitchModifier : Qt::NoModifier);
+    // clang-format off
+    return qMakePair(( (checkBox_modifier_shift->checkState() == Qt::Checked ? Qt::ShiftModifier : Qt::NoModifier)
+                      |(checkBox_modifier_control->checkState() == Qt::Checked ? Qt::ControlModifier : Qt::NoModifier)
+                      |(checkBox_modifier_alt->checkState() == Qt::Checked ? Qt::AltModifier : Qt::NoModifier)
+                      |(checkBox_modifier_meta->checkState() == Qt::Checked ? Qt::MetaModifier : Qt::NoModifier)
+                      |(checkBox_modifier_keypad->checkState() == Qt::Checked  ? Qt::KeypadModifier : Qt::NoModifier)
+                      |(checkBox_modifier_group->checkState() == Qt::Checked ? Qt::GroupSwitchModifier : Qt::NoModifier)),
+                     ( (checkBox_modifier_shift->checkState() == Qt::Unchecked ? Qt::ShiftModifier : Qt::NoModifier)
+                      |(checkBox_modifier_control->checkState() == Qt::Unchecked ? Qt::ControlModifier : Qt::NoModifier)
+                      |(checkBox_modifier_alt->checkState() == Qt::Unchecked ? Qt::AltModifier : Qt::NoModifier)
+                      |(checkBox_modifier_meta->checkState() == Qt::Unchecked ? Qt::MetaModifier : Qt::NoModifier)
+                      |(checkBox_modifier_keypad->checkState() == Qt::Unchecked  ? Qt::KeypadModifier : Qt::NoModifier)
+                      |(checkBox_modifier_group->checkState() == Qt::Unchecked ? Qt::GroupSwitchModifier : Qt::NoModifier)));
+    // clang-format on
 }
 
 
