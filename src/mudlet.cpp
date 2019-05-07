@@ -133,19 +133,19 @@ mudlet* mudlet::self()
 void mudlet::loadLanguagesMap()
 {
     mLanguageCodeMap = {
-            {"en_US", make_pair(tr("English [American]", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 100)},
-            {"en_GB", make_pair(tr("English [British]", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"zh_CN", make_pair(tr("Chinese [Simplified]", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"zh_TW", make_pair(tr("Chinese [Traditional]", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"nl_NL", make_pair(tr("Dutch", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"fr_FR", make_pair(tr("French", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"de_DE", make_pair(tr("German", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"el_GR", make_pair(tr("Greek", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"it_IT", make_pair(tr("Italian", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"pl_PL", make_pair(tr("Polish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"ru_RU", make_pair(tr("Russian", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"es_ES", make_pair(tr("Spanish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"pt_PT", make_pair(tr("Portuguese", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"en_US", make_pair(QStringLiteral("English (American)"), 0)},
+            {"en_GB", make_pair(QStringLiteral("English (British)"), 0)},
+            {"zh_CN", make_pair(QStringLiteral(u"简化字"), 0)},
+            {"zh_TW", make_pair(QStringLiteral(u"繁體字"), 0)},
+            {"nl_NL", make_pair(QStringLiteral("Nederlands"), 0)},
+            {"fr_FR", make_pair(QStringLiteral(u"Français"), 0)},
+            {"de_DE", make_pair(QStringLiteral("Deutsch"), 0)},
+            {"el_GR", make_pair(QStringLiteral(u"ελληνικά"), 0)},
+            {"it_IT", make_pair(QStringLiteral("Italiano"), 0)},
+            {"pl_PL", make_pair(QStringLiteral("Polszczyzna"), 0)},
+            {"ru_RU", make_pair(QStringLiteral(u"Pусский"), 0)},
+            {"es_ES", make_pair(QStringLiteral(u"Español"), 0)},
+            {"pt_PT", make_pair(QStringLiteral(u"Português"), 0)},
     };
 
     // Primarily use to identify Hunspell dictionaries (some of which are not
