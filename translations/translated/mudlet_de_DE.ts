@@ -6016,13 +6016,13 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <location filename="../src/dlgTriggerEditor.cpp" line="621"/>
       <source>Type</source>
       <comment>Heading for the first column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>Art</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="622"/>
       <source>Name</source>
       <comment>Heading for the second column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>Name</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="623"/>
@@ -10626,7 +10626,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="597"/>
       <source>Choose file...</source>
-      <translation type="unfinished"/>
+      <translation>Datei auswählen...</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="619"/>
@@ -10653,12 +10653,12 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="737"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Hintergrund</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="756"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Vordergrund</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="551"/>
