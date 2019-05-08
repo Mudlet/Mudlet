@@ -357,7 +357,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="3216"/>
       <location filename="../src/T2DMap.cpp" line="4881"/>
       <source>Dot line</source>
-      <translation type="unfinished"/>
+      <translation>Linea punteggiata</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3217"/>
@@ -523,7 +523,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2392"/>
       <source>Foreground color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Colore di primo piano</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2396"/>
@@ -1451,24 +1451,27 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="1657"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Il file di mappa non trovato, il percorso e il nome file era:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1663"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; was not found).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: parametro errato #1 (nomefile utilizzato: 
+&quot;%1&quot; non è stato trovato).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1672"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - File di mappa trovato e aperto, analisi in corso...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1685"/>
       <source>loadMap: bad argument #1 value (filename used: 
 &quot;%1&quot; could not be opened for reading).</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: parametro errato #1 (nomefile utilizzato: 
+&quot;%1&quot; non può essere aperto in lettura).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2232"/>
@@ -1694,7 +1697,7 @@ Errore Lua: </translation>
     <message>
       <location filename="../src/TMap.cpp" line="220"/>
       <source>AreaID=%2 does not exist, can not set RoomID=%1 to non-existing area!</source>
-      <translation type="unfinished"/>
+      <translation>AreaID=%2 non esiste, non posso impostare RoomID=%1 su area non esistente!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="438"/>
@@ -5176,32 +5179,32 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3246"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.html)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-mm-gg (concatena i log giornalieri, ad esempio, in 1970-01-01.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3247"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.html)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-mm (concatena i log mensili in, ad esempio, 1970-01.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3250"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.txt)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-mm-gg #HH-mm-ss (ad esempio, 1970-01-01#00-00-00.txt)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3251"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00.txt)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-mm-ddTHH-mm-ss (es. 1970-01-01T00-00-00.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3252"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01.txt)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-mm-gg (concatena i log giornalieri, ad esempio, in 1970-01-01.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3253"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01.txt)</source>
-      <translation type="unfinished"/>
+      <translation>aaaa-mm (concatena i log mensili in, ad esempio, 1970-01.html)</translation>
     </message>
   </context>
   <context>
@@ -5585,13 +5588,15 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="196"/>
       <source>-- Enter your lua code here
 </source>
-      <translation type="unfinished"/>
+      <translation>— Inserisci il tuo codice lua qui
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="237"/>
       <source>*** starting new session ***
 </source>
-      <translation type="unfinished"/>
+      <translation>* * * Inizio nuova sessione * * *
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="339"/>
@@ -5651,7 +5656,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="362"/>
       <source>Show Keybindings</source>
-      <translation type="unfinished"/>
+      <translation>Mostra scorciatoie da tastiera</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="365"/>
@@ -5850,17 +5855,17 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="671"/>
       <source>start of line</source>
-      <translation type="unfinished"/>
+      <translation>inizio della riga</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="669"/>
       <source>substring</source>
-      <translation type="unfinished"/>
+      <translation>sottostringa</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="670"/>
       <source>perl regex</source>
-      <translation type="unfinished"/>
+      <translation>perl regex</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="672"/>
@@ -5875,12 +5880,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="674"/>
       <source>line spacer</source>
-      <translation type="unfinished"/>
+      <translation>spaziatore linea</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="675"/>
       <source>color trigger</source>
-      <translation type="unfinished"/>
+      <translation>trigger di colore</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="676"/>
@@ -5946,7 +5951,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1915"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1920"/>
       <source>Pattern {%1}</source>
-      <translation type="unfinished"/>
+      <translation>Pattern {%1}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1302"/>
@@ -5994,7 +5999,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2009"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2014"/>
       <source>Pattern</source>
-      <translation type="unfinished"/>
+      <translation>Pattern</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1417"/>
@@ -6054,7 +6059,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2217"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2222"/>
       <source>Stylesheet {L: %1 C: %2}</source>
-      <translation type="unfinished"/>
+      <translation>Foglio di stile {L: %1 C: %2}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1621"/>
