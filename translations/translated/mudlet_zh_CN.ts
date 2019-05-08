@@ -5905,13 +5905,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="621"/>
       <source>Type</source>
       <comment>Heading for the first column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>类型</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="622"/>
       <source>Name</source>
       <comment>Heading for the second column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>名称</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="623"/>
@@ -9541,7 +9541,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2104"/>
       <source>Background color:</source>
-      <translation type="unfinished"/>
+      <translation>背景色:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2417"/>
@@ -10508,12 +10508,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="737"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>背景</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="756"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>前景</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="551"/>
