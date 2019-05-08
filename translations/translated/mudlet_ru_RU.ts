@@ -1573,7 +1573,7 @@ rooms:</source>
     <message>
       <location filename="../src/TEasyButtonBar.cpp" line="72"/>
       <source>Easybutton Bar - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Easybutton Bar - %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -3403,7 +3403,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TToolBar.cpp" line="75"/>
       <source>Toolbar - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Панель инструментов - %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -5812,13 +5812,15 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="196"/>
       <source>-- Enter your lua code here
 </source>
-      <translation type="unfinished"/>
+      <translation>-- Введите код Lua здесь
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="237"/>
       <source>*** starting new session ***
 </source>
-      <translation type="unfinished"/>
+      <translation>*** запуск нового сеанса ***
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="339"/>
@@ -6067,18 +6069,18 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="623"/>
       <source>Where</source>
       <comment>Heading for the third column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>Где</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="624"/>
       <source>What</source>
       <comment>Heading for the fourth column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>Что</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="671"/>
       <source>start of line</source>
-      <translation type="unfinished"/>
+      <translation>начало строки</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="669"/>
@@ -6779,12 +6781,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="190"/>
       <source>&lt;p&gt;Opens a free form text editor window for this profile that is saved between sessions.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;открывает окно текстового редактора для етого профиля, который сохраняется между сеансами.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="198"/>
       <source>&lt;p&gt;Opens the Mudlet manual in your web browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Открывает руководство по Mudlet в вашем веб-браузере.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="206"/>
@@ -10680,7 +10682,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="628"/>
       <source>no file</source>
-      <translation type="unfinished"/>
+      <translation>нет файла</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="641"/>
