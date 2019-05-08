@@ -10596,12 +10596,12 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="417"/>
       <source>Match all occurences of the pattern in the line.</source>
-      <translation type="unfinished"/>
+      <translation>Treffe alle Vorkommnisse des Musters in der Zeile.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="478"/>
       <source>&lt;p&gt;Keep firing the script for this many more lines, after the trigger or chain has matched.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Löse das Skript noch für so viele weitere Zeilen aus, nachdem der Trigger oder die Kette übergestimmt haben.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="484"/>
