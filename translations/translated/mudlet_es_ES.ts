@@ -5813,13 +5813,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="621"/>
       <source>Type</source>
       <comment>Heading for the first column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>Tipo</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="622"/>
       <source>Name</source>
       <comment>Heading for the second column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>Nombre</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="623"/>
