@@ -290,12 +290,12 @@ attendere prego...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="422"/>
       <source> - away</source>
-      <translation type="unfinished"/>
+      <translation> - assente</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="424"/>
       <source> - server operator</source>
-      <translation type="unfinished"/>
+      <translation> - operatore server</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="431"/>
@@ -3605,13 +3605,13 @@ Disinstallazione della vecchia versione &apos;%2&apos;.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="2026"/>
       <source>Cannot perform replay, another one may already be in progress. Try again when it has finished.</source>
-      <translation>Impossibile avviare il file di replay, un altro potrebbe già essere in esecuzione. Tentare di nuovo quando è terminato.</translation>
+      <translation>Impossibile avviare il file di replay, un altro potrebbe già essere in esecuzione. Tenta di nuovo quando sarà terminato.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2028"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress.
 Try again when it has finished.</source>
-      <translation>[ WARN ] - Impossibile avviare il file di replay, un altro potrebbe già essere in esecuzione. Tentare di nuovo quando è terminato.</translation>
+      <translation>[ WARN ] - Impossibile avviare il file di replay, un altro potrebbe già essere in esecuzione. Tenta di nuovo quando sarà terminato.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2036"/>
@@ -8366,13 +8366,13 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="3856"/>
       <location filename="../src/mudlet.cpp" line="3869"/>
       <source>Speed: X%1</source>
-      <translation type="unfinished"/>
+      <translation>Velocità: X%1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3794"/>
       <location filename="../src/mudlet.cpp" line="3811"/>
       <source>Time: %1</source>
-      <translation type="unfinished"/>
+      <translation>Tempo: %1</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="4399"/>
@@ -8396,7 +8396,8 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="4513"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - Impossibile avviare il file di replay, un altro potrebbe già essere in esecuzione,
+tenta di nuovo quando sarà terminato.</translation>
     </message>
   </context>
   <context>
@@ -8450,7 +8451,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="110"/>
       <source>Show menu bar:</source>
-      <translation type="unfinished"/>
+      <translation>Mostra barra dei menu:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="121"/>
@@ -8629,7 +8630,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="669"/>
       <source>Size:</source>
-      <translation type="unfinished"/>
+      <translation>Dimensione:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="679"/>
@@ -8639,27 +8640,27 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="682"/>
       <source>Enable anti-aliasing</source>
-      <translation type="unfinished"/>
+      <translation>Abilita anti-aliasing</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="698"/>
       <source>Display Border</source>
-      <translation type="unfinished"/>
+      <translation>Mostra Bordo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="719"/>
       <source>Top border height:</source>
-      <translation type="unfinished"/>
+      <translation>Altezza bordo superiore:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="763"/>
       <source>Left border width:</source>
-      <translation type="unfinished"/>
+      <translation>Larghezza bordo sinistro:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="807"/>
       <source>Bottom border height:</source>
-      <translation type="unfinished"/>
+      <translation>Altezza bordo inferiore:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="851"/>
@@ -8710,22 +8711,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1035"/>
       <source>Fix unnecessary linebreaks on GA servers</source>
-      <translation type="unfinished"/>
+      <translation>Correggi interruzioni di linea non necessarie sui server che supportano GA</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1045"/>
       <source>Show Spaces/Tabs</source>
-      <translation type="unfinished"/>
+      <translation>Mostra Spazi/Tabs</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1055"/>
       <source>Use Mudlet on a netbook with a small screen</source>
-      <translation type="unfinished"/>
+      <translation>Utilizza Mudlet su un netbook con lo schermo piccolo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1065"/>
       <source>Show Line/Paragraphs</source>
-      <translation type="unfinished"/>
+      <translation>Mostra Riga/Paragrafi</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1075"/>
@@ -9254,7 +9255,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1940"/>
       <source>Download latest map provided by your game:</source>
-      <translation type="unfinished"/>
+      <translation>Scarica il file di mappa aggiornato fornito dal tuo gioco:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2008"/>
@@ -9435,17 +9436,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2072"/>
       <source>Mapper colors</source>
-      <translation type="unfinished"/>
+      <translation>Colori Mapper</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2078"/>
       <source>Select your color preferences for the map display</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona le preferenze di colore per la mappa</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2084"/>
       <source>Link color</source>
-      <translation type="unfinished"/>
+      <translation>Colore dei link</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2104"/>
@@ -10447,7 +10448,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="369"/>
       <source>match all</source>
-      <translation type="unfinished"/>
+      <translation>trova tutti</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="695"/>
@@ -10460,12 +10461,12 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="95"/>
       <source>Foreground color ignored</source>
-      <translation type="unfinished"/>
+      <translation>Colore di primo piano ignorato</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="119"/>
       <source>Background color ignored</source>
-      <translation type="unfinished"/>
+      <translation>Colore di sfondo ignorato</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="146"/>
