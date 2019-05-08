@@ -1719,12 +1719,12 @@ Errore Lua: </translation>
     <message>
       <location filename="../src/TMap.cpp" line="475"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label with id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - CONVERSIONE: non è possibile convertire la vecchia etichetta con labelID: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="504"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Controllo della mappa completato (%1s). Buon divertimento...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="511"/>
@@ -1814,7 +1814,8 @@ map with others relying on the original format.</source>
       <location filename="../src/TMap.cpp" line="186"/>
       <source>[MAP ERROR:]%1
 </source>
-      <translation type="unfinished"/>
+      <translation>[ MAP ERROR ] %1
+</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1032"/>
@@ -1972,7 +1973,7 @@ the file:
     <message>
       <location filename="../src/TMap.cpp" line="2258"/>
       <source>Downloading XML map file for use in %1...</source>
-      <translation type="unfinished"/>
+      <translation>Download del file di mappa XML da utilizzare in %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2258"/>
@@ -1988,12 +1989,13 @@ the file:
       <location filename="../src/TMap.cpp" line="2286"/>
       <source>loadMap: unable to perform request, a map is already being downloaded or
 imported at user request.</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: impossibile eseguire la richiesta, una mappa è già stata scaricata o
+importata su richiesta dell'utente.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2318"/>
       <source>Importing XML map file for use in %1...</source>
-      <translation type="unfinished"/>
+      <translation>Importazione del file di mappa XML da utilizzare in %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2319"/>
@@ -2004,7 +2006,8 @@ imported at user request.</source>
       <location filename="../src/TMap.cpp" line="2346"/>
       <source>loadMap: failure to import XML map file, further information may be available
 in main console!</source>
-      <translation type="unfinished"/>
+      <translation>loadMap: non è stato possibile importare il file di mappa XML, ulteriori informazioni sono disponibili
+nella finestra principale!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2381"/>
@@ -2660,7 +2663,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1243"/>
       <source>restore Main Toolbar</source>
-      <translation type="unfinished"/>
+      <translation>ripristino Barra degli Strumenti</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1245"/>
@@ -3203,7 +3206,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TToolBar.cpp" line="75"/>
       <source>Toolbar - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Barra degli strumenti - %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -3298,7 +3301,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="753"/>
       <source>Third Party</source>
-      <translation type="unfinished"/>
+      <translation>Terze Parti</translation>
     </message>
   </context>
   <context>
@@ -3463,13 +3466,15 @@ and this one cannot read it, you need a newer Mudlet!</source>
       <location filename="../src/ctelnet.cpp" line="543"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2
 </source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - L'indirizzo IP di %1 è stato trovato: %2
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="544"/>
       <source>[ INFO ]  - Trying to connect to %1: %2 ...
 </source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Tentativo di connessione a %1: %2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="548"/>
@@ -3477,57 +3482,63 @@ and this one cannot read it, you need a newer Mudlet!</source>
 Connection cannot be established.
 The server name is not correct, not working properly,
 or your nameservers are not working properly.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERRORE ] -Impossibile trovare il nome host!
+La connessione non può essere effettuato.
+Il nome server non è corretto, non funziona correttamente
+o il tuo DNS non funziona correttamente.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="367"/>
       <source>[ INFO ]  - Looking up the IP address of server:</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Ricerca dell'indirizzo IP del server:</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="389"/>
       <source>[ ERROR ] - TCP/IP socket ERROR:</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Errore del socket TCP/IP:</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="412"/>
       <source>[ INFO ]  - A secure connection has been established successfully.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - La connessione sicura è stata stabilita con successo.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="414"/>
       <source>[ INFO ]  - A connection has been established successfully.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - La connessione è stata stabilita con successo.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="452"/>
       <source>[ INFO ]  - Connection time: %1
     </source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Tempo di connessione: %1
+    </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="491"/>
       <source>Secure connections aren&apos;t supported by this game on this port - try turning the option off.</source>
-      <translation type="unfinished"/>
+      <translation>Le connessioni sicure non sono supportate da questo gioco o da questa porta - prova a disattivare l'opzione.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="536"/>
       <source>[ INFO ]  - Trying secure connection to %1: %2 ...
 </source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Tentativo di connessione sicura a %1: %2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1324"/>
       <location filename="../src/ctelnet.cpp" line="1603"/>
       <source>[ INFO ]  - The server wants to upgrade the GUI to new version &apos;%1&apos;.
 Uninstalling old version &apos;%2&apos;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Il server vuole aggiornare la GUI alla nuova versione &apos;%1&apos;.
+Disinstallazione della vecchia versione &apos;%2&apos;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1345"/>
       <location filename="../src/ctelnet.cpp" line="1624"/>
       <source>[  OK  ]  - Package is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Il pacchetto è già installato.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1352"/>
@@ -3546,13 +3557,13 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1343"/>
       <location filename="../src/ctelnet.cpp" line="1622"/>
       <source>[ INFO ]  - Server offers downloadable GUI (url=&apos;%1&apos;) (package=&apos;%2&apos;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Il server offre una GUI scaricabile (url=&apos;%1&apos;) (package=&apos;%2&apos;).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1765"/>
       <source>ERROR</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>ERRORE</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1777"/>
@@ -3564,13 +3575,13 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1788"/>
       <source>WARN</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>WARN</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1799"/>
       <source>ALERT</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>ALERT</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1810"/>
