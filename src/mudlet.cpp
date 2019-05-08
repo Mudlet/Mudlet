@@ -4416,7 +4416,7 @@ void mudlet::slot_updateAvailable(const int updateCount)
     // We can then add in the new item to give access the update(s)
     auto pActionReview = pUpdateMenu->addAction(tr("Review %n update(s)...",
                                                    // Intentional comment
-                                                   "Review update(s) menu item, %n is the the count of how many updates are available",
+                                                   "Review update(s) menu item, %n is the count of how many updates are available",
                                                    updateCount),
                                                 this, &mudlet::slot_check_manual_update);
     pActionReview->setToolTip(tr("<p>Review the update(s) available...</p>",
