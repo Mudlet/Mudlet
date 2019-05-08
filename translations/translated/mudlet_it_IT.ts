@@ -280,7 +280,7 @@ attendere prego...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="414"/>
       <source>[WHOWAS] %1 was logged in as %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOWAS] %1 era registrato come %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="420"/>
@@ -1405,7 +1405,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="440"/>
       <source>Emergency Stop. Stops all timers and triggers.</source>
-      <translation type="unfinished"/>
+      <translation>Fermo di emergenza. Interrompe tutti i timer e i trigger.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="457"/>
@@ -1483,12 +1483,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2632"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation type="unfinished"/>
+      <translation>[INFO] - Richiesta di ricarica della mappa ricevuta dal sistema...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2637"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - ... Il Sistema ha completato la richiesta di ricarica mappa.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2639"/>
@@ -1579,7 +1579,9 @@ this command...!</source>
       <source>[ ERROR ] - Cannot find Lua module rex_pcre.
 Some functions may not be available.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Impossibile trovare il modulo Lua rex_pcre.
+Alcune funzioni potrebbero non essere disponibili.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14928"/>
@@ -1590,7 +1592,8 @@ Some functions may not be available.
       <location filename="../src/TLuaInterpreter.cpp" line="14939"/>
       <source>[ ERROR ] - Cannot find Lua module zip.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Impossibile trovare il modulo Lua zip.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14943"/>
@@ -1602,7 +1605,9 @@ Some functions may not be available.
       <source>[ ERROR ] - Cannot find Lua module lfs (Lua File System).
 Probably will not be able to access Mudlet Lua code.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Impossibile trovare il modulo Lua Ifs (Lua File System).
+Probabilmente non sarà possibile accedere al codice Mudlet Lua.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14959"/>
@@ -1614,7 +1619,9 @@ Probably will not be able to access Mudlet Lua code.
       <source>[ ERROR ] - Cannot find Lua module luasql.sqlite3.
 Database support will not be available.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Impossibile trovare il modulo Lua luasql.sqlite3.
+Il supporto database non sarà disponibile.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14975"/>
@@ -1626,7 +1633,9 @@ Database support will not be available.
       <source>[ ERROR ] - Cannot find Lua module utf8.
 utf8.* Lua functions won&apos;t be available.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ERRORE ] - Impossibile trovare il modulo Lua utf8.
+Le funzioni LUA utf8 .* non saranno disponibili.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14992"/>
@@ -1638,7 +1647,9 @@ utf8.* Lua functions won&apos;t be available.
       <source>[ ERROR ] - Cannot find Lua module yajl.
 yajl.* Lua functions won&apos;t be available.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ERRORE ] - Impossibile trovare il modulo Lua yajl.
+Le funzioni Lua yajl.* non saranno disponibili.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15009"/>
