@@ -811,7 +811,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2953"/>
       <source>Move</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>Déplacer</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2954"/>
@@ -823,7 +823,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2956"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>Supprimer</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2957"/>
@@ -877,13 +877,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3013"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)</comment>
-      <translation type="unfinished"/>
+      <translation>Paramètres</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3017"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise</comment>
-      <translation type="unfinished"/>
+      <translation>paramètres...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3021"/>
@@ -5799,7 +5799,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="622"/>
       <source>Name</source>
       <comment>Heading for the second column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>Nom</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="623"/>
@@ -10380,12 +10380,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="737"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Arrière-plan</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="756"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Premier plan</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="551"/>
