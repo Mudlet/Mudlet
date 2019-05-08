@@ -3563,7 +3563,7 @@ Disinstallazione della vecchia versione &apos;%2&apos;.</translation>
       <location filename="../src/ctelnet.cpp" line="1765"/>
       <source>ERROR</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation>ERRORE</translation>
+      <translation>ERROR</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1777"/>
@@ -3599,34 +3599,36 @@ Disinstallazione della vecchia versione &apos;%2&apos;.</translation>
       <location filename="../src/ctelnet.cpp" line="2010"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Caricamento file di replay:
+&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2026"/>
       <source>Cannot perform replay, another one may already be in progress. Try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>Impossibile avviare il file di replay, un altro potrebbe già essere in esecuzione. Tentare di nuovo quando è terminato.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2028"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress.
 Try again when it has finished.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - Impossibile avviare il file di replay, un altro potrebbe già essere in esecuzione. Tentare di nuovo quando è terminato.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2036"/>
       <source>Cannot read file &quot;%1&quot;, error message was: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Impossibile leggere il file &quot;%1&quot;, il messaggio di errore è: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2039"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Impossibile leggere il file &quot;%1&quot;,
+il messaggio di errore è: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2067"/>
       <source>[  OK  ]  - The replay has ended.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Il file di replay è terminato.</translation>
     </message>
   </context>
   <context>
@@ -3739,7 +3741,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="20"/>
       <source>Select a profile to connect with</source>
-      <translation type="unfinished"/>
+      <translation>Selezionare un profilo a cui collegarsi</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2090"/>
@@ -4079,7 +4081,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="14"/>
       <source>Confirm permanent profile deletion</source>
-      <translation type="unfinished"/>
+      <translation>Confermare l'eliminazione permanente del profilo</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="26"/>
@@ -4464,17 +4466,17 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1130"/>
       <source>Discord integration not available on this platform</source>
-      <translation type="unfinished"/>
+      <translation>Integrazione di Discord non disponibile su questa piattaforma</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1136"/>
       <source>Discord integration not supported by game</source>
-      <translation type="unfinished"/>
+      <translation>Integrazione di Discord non supportata dal gioco</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1139"/>
       <source>Check to enable Discord integration</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona per abilitare l'integrazione con Discord</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1799"/>
@@ -4538,7 +4540,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="125"/>
       <source>Mudlet IRC Client - %1 - %2 on %3</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet IRC Client - %1 - %2 su %3</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="139"/>
@@ -4558,17 +4560,17 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="142"/>
       <source>$ Auto-Join Channels: %1</source>
-      <translation type="unfinished"/>
+      <translation>$ Canali con join automatico: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="143"/>
       <source>$ This client supports Auto-Completion using the Tab key.</source>
-      <translation type="unfinished"/>
+      <translation>$ Questo client supporta l' Auto-Completamento utilizzando il tasto Tab.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="144"/>
       <source>$ Type &lt;b&gt;/help&lt;/b&gt; for commands or &lt;b&gt;/help [command]&lt;/b&gt; for command syntax.</source>
-      <translation type="unfinished"/>
+      <translation>$ Digita &lt;b&gt;/help&lt;/b&gt; per i comandi o &lt;b&gt;/help [comando]&lt;/b&gt; per la sintassi del comando.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="203"/>
@@ -4721,7 +4723,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="91"/>
       <source>Where do you want to save the package?</source>
-      <translation type="unfinished"/>
+      <translation>Dove vuoi salvare il package?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="144"/>
@@ -6532,12 +6534,12 @@ Starting... Have fun!
       <location filename="../src/ui/main_window.ui" line="206"/>
       <source>&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Informati su questa versione di Mudlet, le persone che l'hanno creato e la licenza con cui puoi condividerlo.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="211"/>
       <source>IRC help channel</source>
-      <translation type="unfinished"/>
+      <translation>Canale di aiuto IRC</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="219"/>
@@ -6552,7 +6554,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="243"/>
       <source>Check for updates...</source>
-      <translation type="unfinished"/>
+      <translation>Verifica aggiornamenti...</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="248"/>
@@ -8221,7 +8223,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="927"/>
       <source>Module Name</source>
-      <translation type="unfinished"/>
+      <translation>Nome del modulo</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="927"/>
@@ -8236,7 +8238,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="927"/>
       <source>Module Location</source>
-      <translation type="unfinished"/>
+      <translation>Posizione del modulo</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="969"/>
