@@ -1567,7 +1567,7 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TEasyButtonBar.cpp" line="72"/>
       <source>Easybutton Bar - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Easybutton Bar - %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -3803,7 +3803,10 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
 &lt;li&gt;click the &lt;i&gt;Default&lt;/i&gt; or &lt;i&gt;Ignore&lt;/i&gt; buttons at the bottom for a pair of other special cases&lt;/li&gt;
 &lt;li&gt;click &lt;i&gt;Cancel&lt;/i&gt; to close this dialog without making any changes&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</source>
       <comment>Ensure that &quot;Default&quot;, &quot;Ignore&quot; and &quot;Cancel&quot; in this instruction are the same as used for the controls elsewhere on this dialog.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;small&gt;Wähle:&lt;ul&gt;&lt;li&gt;eine der 16 Grundfarben unten&lt;/li&gt;
+&lt;li&gt;Klicke auf &lt;i&gt;mehr&lt;/i&gt;, damit die restlichen Farben des 256-Farbspektrums angezeigt werden, dann folge den Anweisungen, um eine dieser 256 unterstützten Farben zu wählen; Falls eine solche Farbe schon benutzt wird, dann wird dieser Bereich bereits angezeigt&lt;/li&gt;
+&lt;li&gt;Klicke unten auf die Schaltflächen &lt;i&gt;Standard&lt;/i&gt; oder &lt;i&gt;Ignorieren&lt;/i&gt; für zwei weitere besondere Möglichkeiten&lt;/li&gt;
+&lt;li&gt;Klicke &lt;i&gt;Abbrechen&lt;/i&gt;, um dieses Fenster zu schließen, ohne irgendwelche Änderungen durchzuführen&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="58"/>
@@ -6010,7 +6013,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="582"/>
       <source>If checked then what is searched for must match the case precisely, otherwise the case is ignored.</source>
-      <translation type="unfinished"/>
+      <translation>Wenn aktiviert, dann muss die gesuchte Groß-/Kleinschreibung exakt übereinstimmen, ansonsten wird sie ignoriert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="621"/>
@@ -10638,7 +10641,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="628"/>
       <source>no file</source>
-      <translation type="unfinished"/>
+      <translation>Keine Datei</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="641"/>
@@ -10648,7 +10651,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="692"/>
       <source>&lt;p&gt;Enable this to highlight the matching text by changing the fore and background colors to the ones selected here.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Aktiviere diese Option, um passenden Text hervorzuheben, indem Vorder- und Hintergrundfarben in die hier ausgewählten Farben geändert werden.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="737"/>
