@@ -10388,12 +10388,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="737"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Plano de Fundo</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="756"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Primeiro Plano</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="551"/>
