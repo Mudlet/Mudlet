@@ -1633,7 +1633,7 @@ Il supporto database non sarà disponibile.
       <source>[ ERROR ] - Cannot find Lua module utf8.
 utf8.* Lua functions won&apos;t be available.
 </source>
-      <translation>[ ERRORE ] - Impossibile trovare il modulo Lua utf8.
+      <translation>[ ERROR ] - Impossibile trovare il modulo Lua utf8.
 Le funzioni LUA utf8 .* non saranno disponibili.
 </translation>
     </message>
@@ -1647,7 +1647,7 @@ Le funzioni LUA utf8 .* non saranno disponibili.
       <source>[ ERROR ] - Cannot find Lua module yajl.
 yajl.* Lua functions won&apos;t be available.
 </source>
-      <translation>[ ERRORE ] - Impossibile trovare il modulo Lua yajl.
+      <translation>[ ERROR ] - Impossibile trovare il modulo Lua yajl.
 Le funzioni Lua yajl.* non saranno disponibili.
 </translation>
     </message>
@@ -1660,7 +1660,9 @@ Le funzioni Lua yajl.* non saranno disponibili.
       <location filename="../src/TLuaInterpreter.cpp" line="15099"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ERRORE ] - Impossibile caricare il modulo di formattazione codice
+L'indentazione del codice non sarà disponibile.
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15103"/>
@@ -1672,13 +1674,14 @@ Le funzioni Lua yajl.* non saranno disponibili.
       <location filename="../src/TLuaInterpreter.cpp" line="15140"/>
       <location filename="../src/TLuaInterpreter.cpp" line="15156"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Mudlet-lua API &amp; Geyser Layout manager caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15150"/>
       <source>[ ERROR ] - LuaGlobal.lua compile error - please report!
 Error from Lua: </source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Errore di compilazione LuaGlobal.lua - per favore segnalacelo!
+Errore Lua: </translation>
     </message>
   </context>
   <context>
@@ -1696,22 +1699,22 @@ Error from Lua: </source>
     <message>
       <location filename="../src/TMap.cpp" line="438"/>
       <source>[ INFO ]  - Auditing of a loaded/imported/downloaded map starting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Iniziata verifica della mappa caricata/importata/scaricata ...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="464"/>
       <source>[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - CONVERSIONE: vecchia etichetta, areaID:%1 labelID:%2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="467"/>
       <source>[ INFO ] - Converting old style label id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Conversione vecchia etichetta labelID: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="472"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - CONVERSIONE: non è possibile convertire la vecchia etichetta nell'area con areaID: %1, labelID: %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="475"/>
