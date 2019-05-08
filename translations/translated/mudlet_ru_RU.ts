@@ -6055,13 +6055,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="621"/>
       <source>Type</source>
       <comment>Heading for the first column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>Тип</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="622"/>
       <source>Name</source>
       <comment>Heading for the second column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>Имя</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="623"/>
@@ -10668,7 +10668,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="597"/>
       <source>Choose file...</source>
-      <translation type="unfinished"/>
+      <translation>Выбрать файл...</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="619"/>
@@ -10695,12 +10695,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="737"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Задний план</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="756"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Передний план</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="551"/>
