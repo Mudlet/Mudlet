@@ -6,15 +6,15 @@ sudo: false
 addons:
   apt:
     sources: &add-sources
-    - sourceline: 'ppa:beineri/opt-qt571-trusty'
-    - sourceline: 'ppa:beineri/opt-qt-5.10.1-trusty'
+    - sourceline: 'ppa:beineri/opt-qt571-xenial'
+    - sourceline: 'ppa:beineri/opt-qt-5.10.1-xenial'
     - sourceline: 'ppa:ubuntu-toolchain-r/test'
     - sourceline: 'ppa:ondrej/php'
     packages: &common-packages
     - libhunspell-dev
     - lua5.1
     - liblua5.1-0-dev
-    - libboost-graph1.55-dev
+    - libboost-graph-dev
     - zlib1g-dbg
     - libzip-dev
     - libpulse-dev
