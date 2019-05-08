@@ -146,7 +146,7 @@ for all of the %n selected rooms:</numerusform>
     <message numerus="yes">
         <location filename="../../src/mudlet.cpp" line="4417"/>
         <source>Review %n update(s)...</source>
-        <comment>Review update(s) menu item, %n is the the count of how many updates are available</comment>
+        <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
         <translatorcomment>Could do with the insertion of &quot;the&quot; as a second word!</translatorcomment>
         <translation>
             <numerusform>Review the update...</numerusform>
