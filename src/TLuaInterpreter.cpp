@@ -861,7 +861,7 @@ int TLuaInterpreter::getBgColor(lua_State* L)
     return result.size();
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getFgColor
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getTextFormat
 int TLuaInterpreter::getTextFormat(lua_State* L)
 {
     QString windowName = QStringLiteral("main");
