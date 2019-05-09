@@ -1,20 +1,20 @@
 language: cpp
 cache:
   - ccache
-dist: trusty
+dist: xenial
 sudo: false
 addons:
   apt:
     sources: &add-sources
-    - sourceline: 'ppa:beineri/opt-qt571-trusty'
-    - sourceline: 'ppa:beineri/opt-qt-5.10.1-trusty'
+    - sourceline: 'ppa:beineri/opt-qt571-xenial'
+    - sourceline: 'ppa:beineri/opt-qt-5.10.1-xenial'
     - sourceline: 'ppa:ubuntu-toolchain-r/test'
     - sourceline: 'ppa:ondrej/php'
     packages: &common-packages
     - libhunspell-dev
     - lua5.1
     - liblua5.1-0-dev
-    - libboost-graph1.55-dev
+    - libboost-graph-dev
     - zlib1g-dbg
     - libzip-dev
     - libpulse-dev
@@ -28,6 +28,8 @@ addons:
     - libpugixml-dev
     - xz-utils
     - npm
+    - mesa-common-dev
+    - libglu1-mesa-dev
 env:
   global:
   - secure: VFI3UCiDrp47WTcUhsatdQvvWg+3gk00eBMZgSOXXKY5+hk+NOX7bOFcIM5t9nlZDbpHDr10SFTuUOw+PeWmLpFO06Zrjg86M9jm9WS4i8Cs9hfxoT6H4isXlR1vubX2LmNlHyzg8WtdNanlsufgecyaGksJxr7tVhG/cWyD6yo=

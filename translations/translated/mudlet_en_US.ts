@@ -4,7 +4,7 @@
 <context>
     <name>T2DMap</name>
     <message numerus="yes">
-        <location filename="../../src/T2DMap.cpp" line="2157"/>
+        <location filename="../../src/T2DMap.cpp" line="2243"/>
         <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms
 </source>
         <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected; %1 is the room number for which %2-%4 are the x,y and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</comment>
@@ -17,7 +17,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/T2DMap.cpp" line="3520"/>
+        <location filename="../../src/T2DMap.cpp" line="3606"/>
         <source>Enter the symbol to use
 for this/these %n room(s):</source>
         <comment>this is for when applying a new room symbol to one or more rooms and none have a symbol at present; use line feeds to format text into a reasonable rectangle, %n is the number of rooms involved</comment>
@@ -30,7 +30,7 @@ for these %n rooms:</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/T2DMap.cpp" line="3537"/>
+        <location filename="../../src/T2DMap.cpp" line="3623"/>
         <source>The only used symbol is &quot;%1&quot; in one or
 more of the selected %n room(s), delete this to
 clear it from all selected rooms or replace
@@ -49,7 +49,7 @@ with a new symbol to use for all the rooms:</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/T2DMap.cpp" line="3591"/>
+        <location filename="../../src/T2DMap.cpp" line="3677"/>
         <source>Choose:
  • an existing symbol from the list below (sorted by most commonly used first)
  • enter one or more graphemes (&quot;visible characters&quot;) as a new symbol
@@ -135,7 +135,7 @@ for all of the %n selected rooms:</numerusform>
 <context>
     <name>mudlet</name>
     <message numerus="yes">
-        <location filename="../../src/mudlet.cpp" line="4450"/>
+        <location filename="../../src/mudlet.cpp" line="4399"/>
         <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
         <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
         <translation>
@@ -144,9 +144,9 @@ for all of the %n selected rooms:</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/mudlet.cpp" line="4468"/>
+        <location filename="../../src/mudlet.cpp" line="4417"/>
         <source>Review %n update(s)...</source>
-        <comment>Review update(s) menu item, %n is the the count of how many updates are available</comment>
+        <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
         <translatorcomment>Could do with the insertion of &quot;the&quot; as a second word!</translatorcomment>
         <translation>
             <numerusform>Review the update...</numerusform>
@@ -154,7 +154,7 @@ for all of the %n selected rooms:</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/mudlet.cpp" line="4473"/>
+        <location filename="../../src/mudlet.cpp" line="4422"/>
         <source>&lt;p&gt;Review the update(s) available...&lt;/p&gt;</source>
         <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
         <translatorcomment>As per the developer&apos;s comment it is not necessary to include the number of update in this text in English.</translatorcomment>
