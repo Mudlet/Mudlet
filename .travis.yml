@@ -1,6 +1,9 @@
 language: cpp
 cache:
-  - ccache
+  timeout: 600
+  ccache: true
+  directories:
+    - $HOME/Library/Caches/Homebrew
 dist: xenial
 sudo: false
 addons:
@@ -116,7 +119,8 @@ matrix:
         - qt57base
         - qt57multimedia
         - qt57tools
-
+before_cache:
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew cleanup; fi
 before_install:
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | tee -a "${HOME}/ca-file.pem"; fi
   # add to the path here to pick up things as soon as its installed
