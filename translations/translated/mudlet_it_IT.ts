@@ -453,7 +453,8 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2018"/>
       <source>Mapper: Cannot find a path to this room using known exits.
 </source>
-      <translation type="unfinished"/>
+      <translation>Mapper: Impossibile trovare un percorso per questa stanza utilizzando le uscite note.
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2171"/>
@@ -535,7 +536,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2403"/>
       <source>Draw label as background or on top of everything?</source>
       <comment>2D Mapper create label dialog text</comment>
-      <translation type="unfinished"/>
+      <translation>Disegnare l'etichetta come sfondo o in primo piano?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2404"/>
@@ -757,7 +758,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2903"/>
       <source>Set room&apos;s area number</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Imposta il numero di area</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2906"/>
@@ -805,7 +806,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2926"/>
       <source>Can only set location when exactly one room is selected</source>
       <comment>2D Mapper context menu (room) item tooltip (disabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>È possibile impostare la posizione quando è selezionata solo una stanza</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2953"/>
@@ -871,7 +872,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3009"/>
       <source>Select a point first, then remove it</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state, user will need to do something before it can be used)</comment>
-      <translation type="unfinished"/>
+      <translation>Devi selezionare un punto prima di rimuoverlo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3013"/>
@@ -895,14 +896,15 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3022"/>
       <source>Delete all of this custom line</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Elimina tutte queste linee personalizzate</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3486"/>
       <source>Move the selection, centered on
 the highlighted room (%1) to:</source>
       <comment>Use linefeeds as necessary to format text into a reasonable rectangle of text, %1 is a room number</comment>
-      <translation type="unfinished"/>
+      <translation>Spostare la selezione, centrata su
+la stanza evidenziata (%1) a:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3510"/>
@@ -1410,7 +1412,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="457"/>
       <source>Search buffer.</source>
-      <translation type="unfinished"/>
+      <translation>Buffer di ricerca.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="465"/>
@@ -1496,7 +1498,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2639"/>
       <source>[ WARN ]  - ... System Map reload request failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - ... Caricamento mappa di sistema non riuscita.</translation>
     </message>
   </context>
   <context>
@@ -1504,7 +1506,7 @@ rooms:</source>
     <message>
       <location filename="../src/TEasyButtonBar.cpp" line="72"/>
       <source>Easybutton Bar - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Barra Easybutton - %1 - %2</translation>
     </message>
   </context>
   <context>
