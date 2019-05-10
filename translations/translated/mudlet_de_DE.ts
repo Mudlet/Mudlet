@@ -3501,7 +3501,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTrigger.cpp" line="232"/>
       <source>Error: in item %1, lua condition function &quot;%2&quot; failed to compile, reason: &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Fehler bei Element %1: Lua-Funktion &quot;%2&quot; konnte nicht kompilieren, Grund: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="251"/>
