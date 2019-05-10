@@ -3488,7 +3488,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TToolBar.cpp" line="75"/>
       <source>Toolbar - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Symbolleiste - %1 - %2</translation>
     </message>
   </context>
   <context>
