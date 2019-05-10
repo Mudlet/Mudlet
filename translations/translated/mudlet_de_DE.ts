@@ -880,6 +880,12 @@ einem neuen Symbol für diesen Raum:</translation>
       <translation>Entferne das letzte Segment, indem dieser Punkt entfernt wird</translation>
     </message>
     <message>
+      <location filename="../src/T2DMap.cpp" line="3003"/>
+      <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
+      <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action)</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/T2DMap.cpp" line="3009"/>
       <source>Select a point first, then remove it</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state, user will need to do something before it can be used)</comment>
@@ -1125,6 +1131,14 @@ Ganzzahl eingeben:</translation>
       <source>Left-click and drag a square for the size and position of your label</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
       <translation>Links klicken und ein Rechteck aufziehen für die Größe und Position der Marke</translation>
+    </message>
+  </context>
+  <context>
+    <name>TAlias</name>
+    <message>
+      <location filename="../src/TAlias.cpp" line="255"/>
+      <source>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</source>
+      <translation type="unfinished"/>
     </message>
   </context>
   <context>
@@ -1506,6 +1520,11 @@ Ganzzahl eingeben:</translation>
       <translation>Bericht der geladenen Karte(1) bei %1</translation>
     </message>
     <message>
+      <location filename="../src/TConsole.cpp" line="1592"/>
+      <source>Loading map(1) &quot;%1&quot; at %2 report</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/TConsole.cpp" line="1634"/>
       <source>Pre-Map importing(1) report</source>
       <translation>Bericht bevor die Karte importiert wird(1)</translation>
@@ -1528,6 +1547,16 @@ Ganzzahl eingeben:</translation>
       <location filename="../src/TConsole.cpp" line="1672"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
       <translation>[ INFO ]  - Kartendatei gefunden und geöffnet, wird jetzt verarbeitet...</translation>
+    </message>
+    <message>
+      <location filename="../src/TConsole.cpp" line="1679"/>
+      <source>Importing map(1) &quot;%1&quot; at %2 report</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/TConsole.cpp" line="1682"/>
+      <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1685"/>
@@ -1927,6 +1956,12 @@ ID der betroffenen Regionen: %1.</translation>
       <translation>, </translation>
     </message>
     <message>
+      <location filename="../src/TMap.cpp" line="1407"/>
+      <location filename="../src/TMap.cpp" line="1697"/>
+      <source>[ ERROR ] - Unable to open (for reading) map file: &quot;%1&quot;!</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/TMap.cpp" line="1416"/>
       <source>[ ERROR ] - Map file is too new, its file format (%1) is higher than this version of
 Mudlet can handle (%2)!  The file is:
@@ -1966,6 +2001,11 @@ please wait...</source>
 bitte warten...</translation>
     </message>
     <message>
+      <location filename="../src/TMap.cpp" line="1447"/>
+      <source>[ INFO ]  - Reading map (format version:%1) file: &quot;%2&quot;.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/TMap.cpp" line="1554"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
@@ -1993,6 +2033,11 @@ consistency details...</source>
       <translation>Eigene beginnen</translation>
     </message>
     <message>
+      <location filename="../src/TMap.cpp" line="1710"/>
+      <source>[ INFO ]  - Checking map file: &quot;%1&quot;, format version:%2...</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/TMap.cpp" line="2119"/>
       <source>Map issues</source>
       <translation>Themen zur Karte</translation>
@@ -2003,6 +2048,11 @@ consistency details...</source>
       <translation>Themen zur Region</translation>
     </message>
     <message>
+      <location filename="../src/TMap.cpp" line="2132"/>
+      <source>Area id: %1 &quot;%2&quot;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/TMap.cpp" line="2134"/>
       <source>Area id: %1</source>
       <translation>Regions-ID: %1</translation>
@@ -2011,6 +2061,11 @@ consistency details...</source>
       <location filename="../src/TMap.cpp" line="2143"/>
       <source>Room issues</source>
       <translation>Themen zum Raum</translation>
+    </message>
+    <message>
+      <location filename="../src/TMap.cpp" line="2150"/>
+      <source>Room id: %1 &quot;%2&quot;</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2152"/>
@@ -2266,11 +2321,21 @@ in main console!</source>
       <translation>[ INFO ]  - Behebe im Raum ID:%1 den (besonderen) Ausgang zu %2 {interne Korrektur}, von: &quot;%3&quot; zu: &quot;%4&quot;.</translation>
     </message>
     <message>
+      <location filename="../src/TRoom.cpp" line="1138"/>
+      <source>[ INFO ]  - Room needed patching {internal fixup} of (special) exit to %1, was: &quot;%2&quot; now: &quot;%3&quot;.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/TRoom.cpp" line="1164"/>
       <source>[ INFO ]  - In room with id: %1 correcting special exit &quot;%2&quot; that
 was to room with an exit to invalid room: %3 to now go
 to: %4.</source>
       <translation>[ INFO ]  - Korrigiere im Raum mit ID: %1 den besonderen Ausgang &quot;%2&quot;, der zu einem Raum zeigte, mit einem Ausgang zu einem ungültigen Raum: %3, zeigt nun zu %4.</translation>
+    </message>
+    <message>
+      <location filename="../src/TRoom.cpp" line="1174"/>
+      <source>[ INFO ]  - Room needed correcting of special exit &quot;%1&quot; that was to room with an exit to invalid room: %2 to now go to: %3.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1205"/>
@@ -2285,6 +2350,11 @@ entfernt (aber die ID des Ziel-Raumes wird gespeichert in den
 Benutzerdaten des Raums unter dem Schlüssel: &quot;%4&quot;).</translation>
     </message>
     <message>
+      <location filename="../src/TRoom.cpp" line="1218"/>
+      <source>[ WARN ]  - Room has a special exit &quot;%1&quot; with an exit to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/TRoom.cpp" line="1257"/>
       <source>[ INFO ]  - In room with id: %1 special exit &quot;%2&quot;
 that was to room with an invalid room: %3 that does not exist.
@@ -2295,6 +2365,11 @@ room user data under a key:
 Richtung: %3 aber dieser Raum existiert nicht. Der Ausgang wird
 entfernt (aber die ID des Ziel-Raumes wird gespeichert in den 
 Benutzerdaten des Raums unter dem Schlüssel: &quot;%4&quot;).</translation>
+    </message>
+    <message>
+      <location filename="../src/TRoom.cpp" line="1270"/>
+      <source>[ INFO ]  - Room had special exit &quot;%1&quot; that was to room with an invalid room: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1303"/>
@@ -2376,6 +2451,11 @@ an exit to invalid room: %3 to now go to: %4.</source>
       <translation>[ INFO ]  - Korrigiere im Raum mit ID: %1 den Ausgang &quot;%2&quot;, der zu einem Raum zeigte, mit einem Ausgang zu einem ungültigen Raum: %3, zeigt nun zu %4.</translation>
     </message>
     <message>
+      <location filename="../src/TRoom.cpp" line="1489"/>
+      <source>[ INFO ]  - Correcting exit &quot;%1&quot; that was to invalid room id: %2 to now go to: %3.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/TRoom.cpp" line="1500"/>
       <source>[ WARN ]  - Room with id: %1 has an exit &quot;%2&quot; to: %3 but that room
 does not exist.  The exit will be removed (but the destination room
@@ -2389,6 +2469,11 @@ Benutzerdaten des Raums unter dem Schlüssel: &quot;%4&quot;)
 und der Ausgang wird in eine Abzweigung umgewandelt.</translation>
     </message>
     <message>
+      <location filename="../src/TRoom.cpp" line="1513"/>
+      <source>[ WARN ]  - Room has an exit &quot;%1&quot; to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key: &quot;%4&quot;) and the exit will be turned into a stub.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/TRoom.cpp" line="1557"/>
       <source>[ ALERT ] - Room with id: %1 has an exit &quot;%2&quot; to: %3 but also
 has a stub exit!  As a real exit precludes a stub, the latter will
@@ -2396,6 +2481,11 @@ be removed.</source>
       <translation>[ ACHTUNG ]  - Der Raum mit der ID: %1 hat einen Ausgang &quot;%2&quot; in
 Richtung: %3 aber außerdem eine Abzweigung. Ein richtiger Ausgang geht vor,
 also wird die Abzweigung entfernt.</translation>
+    </message>
+    <message>
+      <location filename="../src/TRoom.cpp" line="1567"/>
+      <source>[ ALERT ] - Room has an exit &quot;%1&quot; to: %2 but also has a stub exit in the same direction!  As a real exit precludes a stub, the latter will be removed.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1623"/>
@@ -2411,6 +2501,11 @@ Benutzerdaten des Raums unter dem Schlüssel: &quot;%4&quot;)
 und der Ausgang wird in eine Abzweigung umgewandelt.</translation>
     </message>
     <message>
+      <location filename="../src/TRoom.cpp" line="1634"/>
+      <source>[ INFO ]  - Room exit &quot;%1&quot; that was to a room with an invalid id: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%4&quot;) and the exit will be turned into a stub.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/TRoom.cpp" line="1650"/>
       <source>
 It was locked, this is recorded as user data with key:
@@ -2420,6 +2515,11 @@ Er war versperrt. Dies wird als Benutzerdaten
 gespeichert unter dem Schlüssel: &quot;%1&quot;.</translation>
     </message>
     <message>
+      <location filename="../src/TRoom.cpp" line="1654"/>
+      <source>  It was locked, this is recorded as user data with key: &quot;%1&quot;.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/TRoom.cpp" line="1662"/>
       <source>
 It had a weight, this is recorded as user data with key:
@@ -2427,6 +2527,11 @@ It had a weight, this is recorded as user data with key:
       <translation>
 Er hatte ein Gewicht. Dies wird als Benutzerdaten 
 gespeichert unter dem Schlüssel: &quot;%1&quot;.</translation>
+    </message>
+    <message>
+      <location filename="../src/TRoom.cpp" line="1666"/>
+      <source>  It had a weight, this is recorded as user data with key: &quot;%1&quot;.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1677"/>
@@ -2682,6 +2787,11 @@ Sie wurden aus dem Bereich entfernt.</translation>
       <translation>[ INFO ]  - In diesem Bereich gab es %1 Räume mehr als eigentlich anwesend sein sollten, nämlich: %2. Sie wurden entfernt.</translation>
     </message>
     <message>
+      <location filename="../src/TRoomDB.cpp" line="1158"/>
+      <source>It has been detected that &quot;_###&quot; form suffixes have already been used, for simplicity in the renaming algorithm these will have been removed and possibly changed as Mudlet sorts this matter out, if a number assigned in this way &lt;b&gt;is&lt;/b&gt; important to you, you can change it back, provided you rename the area that has been allocated the suffix that was wanted first...!&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/TRoomDB.cpp" line="1162"/>
       <source>[  OK  ]  - The changes made are:
 (ID) &quot;old name&quot; ==&gt; &quot;new name&quot;
@@ -2694,6 +2804,11 @@ Sie wurden aus dem Bereich entfernt.</translation>
       <location filename="../src/TRoomDB.cpp" line="1169"/>
       <source>&lt;nothing&gt;</source>
       <translation>&lt;nothing&gt;</translation>
+    </message>
+    <message>
+      <location filename="../src/TRoomDB.cpp" line="1172"/>
+      <source>[ INFO ]  - Area name changed to prevent duplicates or unnamed ones; old name: &quot;%1&quot;, new name: &quot;%2&quot;.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1181"/>
@@ -3364,6 +3479,16 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
   </context>
   <context>
     <name>TTrigger</name>
+    <message>
+      <location filename="../src/TTrigger.cpp" line="212"/>
+      <source>Error: in item %1, perl regex: &quot;%2&quot;, it failed to compile, reason: &quot;%3&quot;.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/TTrigger.cpp" line="232"/>
+      <source>Error: in item %1, lua condition function &quot;%2&quot; failed to compile, reason: &quot;%3&quot;.</source>
+      <translation type="unfinished"/>
+    </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="251"/>
       <source>Error: in item %1, no colors to match were set - at least &lt;i&gt;one&lt;/i&gt; of the foreground or background must not be &lt;i&gt;ignored&lt;/i&gt;.</source>
@@ -4997,6 +5122,11 @@ Nutzungen</translation>
       <translation>Skalierungsfaktor des Symbols für Räume der 2D Karte:</translation>
     </message>
     <message>
+      <location filename="../src/dlgProfilePreferences.cpp" line="755"/>
+      <source>Show &quot;%1&quot; in the map area selection</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="866"/>
       <source>Profile preferences - %1</source>
       <translation>Profil-Einstellungen - %1</translation>
@@ -5515,6 +5645,25 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <translation>(Befehl oder Lua-Skript)</translation>
     </message>
     <message>
+      <location filename="../src/dlgRoomExits.cpp" line="140"/>
+      <location filename="../src/dlgRoomExits.cpp" line="740"/>
+      <location filename="../src/dlgRoomExits.cpp" line="796"/>
+      <location filename="../src/dlgRoomExits.cpp" line="848"/>
+      <location filename="../src/dlgRoomExits.cpp" line="900"/>
+      <location filename="../src/dlgRoomExits.cpp" line="952"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1004"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1056"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1108"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1160"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1212"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1264"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1316"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1793"/>
+      <location filename="../src/dlgRoomExits.cpp" line="1911"/>
+      <source>Exit to &quot;%1&quot;.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/dlgRoomExits.cpp" line="756"/>
       <source>Entered number is invalid, set the number of the room northwest of this one, will turn blue for a valid number.</source>
       <translation>Die eingegebene Nummer ist ungültig. Wähle die ID des Raums in Richtung Nordwesten von hier aus. Gültige Zahlen werden blau.</translation>
@@ -5729,6 +5878,11 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <translation>Wähle die ID des Raums in Richtung %1 von hier aus. Gültige Zahlen werden blau, ungültige werden rot.</translation>
     </message>
     <message>
+      <location filename="../src/dlgRoomExits.cpp" line="1855"/>
+      <source>Exits for room: &quot;%1&quot; [*]</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/dlgRoomExits.cpp" line="1857"/>
       <source>Exits for room Id: %1 [*]</source>
       <translation>Ausgänge für Raum ID: %1 [*]</translation>
@@ -5786,6 +5940,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="339"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5689"/>
       <source>Triggers</source>
       <translation>Trigger</translation>
     </message>
@@ -5796,6 +5951,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="343"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5950"/>
       <source>Buttons</source>
       <translation>Buttons</translation>
     </message>
@@ -5816,6 +5972,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="353"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5770"/>
       <source>Timers</source>
       <translation>Timer</translation>
     </message>
@@ -5826,6 +5983,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="357"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5831"/>
       <source>Scripts</source>
       <translation>Skripte</translation>
     </message>
@@ -5846,6 +6004,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="365"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="6082"/>
       <source>Variables</source>
       <translation>Variablen</translation>
     </message>
@@ -5902,6 +6061,8 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="397"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7753"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7772"/>
       <source>Ctrl+S</source>
       <translation>Ctrl+S</translation>
     </message>
@@ -5919,6 +6080,8 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="404"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8196"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8202"/>
       <source>Copy</source>
       <translation>Kopieren</translation>
     </message>
@@ -5930,6 +6093,8 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="418"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8197"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8203"/>
       <source>Paste</source>
       <translation>Einfügen</translation>
     </message>
@@ -5951,13 +6116,26 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="445"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8061"/>
       <source>Save Profile</source>
       <translation>Profil speichern</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="447"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7755"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7774"/>
       <source>Ctrl+Shift+S</source>
       <translation>Strg+Shift+S</translation>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="450"/>
+      <source>Saves your profile. (Ctrl+Shift+S)&lt;p&gt;Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.&lt;/p&gt;&lt;p&gt;It also makes a backup of your profile, you can load an older version of it when connecting.&lt;/p&gt;&lt;p&gt;Should there be any modules that are marked to be &quot;&lt;i&gt;synced&lt;/i&gt;&quot; this will also cause them to be saved and reloaded into other profiles if they too are active.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="452"/>
+      <source>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also &quot;synchronizes&quot; modules that are so marked.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="455"/>
@@ -6042,6 +6220,413 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="671"/>
       <source>start of line</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2645"/>
+      <source>Trying to activate a trigger group, filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2647"/>
+      <source>Trying to deactivate a trigger group, filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2651"/>
+      <source>&lt;b&gt;Unable to activate a filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2788"/>
+      <source>Trying to activate a timer group, offset timer, timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2790"/>
+      <source>Trying to deactivate a timer group, offset timer, timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2794"/>
+      <source>&lt;p&gt;&lt;b&gt;Unable to activate an offset timer or timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2832"/>
+      <source>Trying to activate an alias group, alias or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2834"/>
+      <source>Trying to deactivate an alias group, alias or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2838"/>
+      <source>&lt;p&gt;&lt;b&gt;Unable to activate an alias or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2936"/>
+      <source>Trying to activate a script group, script or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2938"/>
+      <source>Trying to deactivate a script group, script or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="2942"/>
+      <source>&lt;p&gt;&lt;b&gt;Unable to activate a script group or script or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3007"/>
+      <source>Trying to activate a button/menu/toolbar or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3009"/>
+      <source>Trying to deactivate a button/menu/toolbar or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3013"/>
+      <source>&lt;p&gt;&lt;b&gt;Unable to activate a button/menu/toolbar or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3318"/>
+      <source>Table name...</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="3325"/>
+      <source>Variable name...</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4094"/>
+      <source>Alias &lt;em&gt;%1&lt;/em&gt; has an infinite loop - substitution matches its own pattern. Please fix it - this alias isn&apos;t good as it&apos;ll call itself forever.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4615"/>
+      <source>Checked variables will be saved and loaded with your profile.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4767"/>
+      <source>match on the prompt line</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4770"/>
+      <source>match on the prompt line (disabled)</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4771"/>
+      <source>A Go-Ahead (GA) signal from the game is required to make this feature work</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4820"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4930"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7960"/>
+      <source>Foreground color ignored</source>
+      <comment>Color trigger ignored foreground color button, ensure all three instances have the same text</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4824"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4934"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7963"/>
+      <source>Default foreground color</source>
+      <comment>Color trigger default foreground color button, ensure all three instances have the same text</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4828"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4938"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7966"/>
+      <source>Foreground color [ANSI %1]</source>
+      <comment>Color trigger ANSI foreground color button, ensure all three instances have the same text</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4835"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4945"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8023"/>
+      <source>Background color ignored</source>
+      <comment>Color trigger ignored background color button, ensure all three instances have the same text</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4839"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4949"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8026"/>
+      <source>Default background color</source>
+      <comment>Color trigger default background color button, ensure all three instances have the same text</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4843"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4953"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8029"/>
+      <source>Background color [ANSI %1]</source>
+      <comment>Color trigger ANSI background color button, ensure all three instances have the same text</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4964"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="4966"/>
+      <source>fault</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5461"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7836"/>
+      <source>Command:</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5500"/>
+      <source>Menu properties</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5510"/>
+      <source>Button properties</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5518"/>
+      <source>Command (down);</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="5882"/>
+      <source>Aliases - Input Triggers</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="6010"/>
+      <source>Key Bindings</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7029"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7033"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7053"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7057"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7077"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7081"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7101"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7105"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7125"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7129"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7149"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7154"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7174"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7178"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7197"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7201"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7220"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7224"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7243"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7247"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7266"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7270"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7289"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7294"/>
+      <source>Export Package:</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7029"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7033"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7053"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7057"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7077"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7081"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7101"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7105"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7125"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7129"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7149"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7154"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7174"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7178"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7197"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7201"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7220"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7224"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7243"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7247"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7266"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7270"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7289"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7294"/>
+      <source>You have to choose an item for export first. Please select a tree item and then click on export again.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7038"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7062"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7086"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7110"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7134"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7159"/>
+      <source>Package %1 saved</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7183"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7206"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7229"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7252"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7275"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7299"/>
+      <source>Copied %1 to clipboard</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7305"/>
+      <source>Export Triggers</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7305"/>
+      <source>Mudlet packages (*.xml)</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7319"/>
+      <source>export package:</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7319"/>
+      <source>Cannot write file %1:
+%2.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7554"/>
+      <source>Import Mudlet Package</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7561"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7575"/>
+      <source>Import Mudlet Package:</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7561"/>
+      <source>Cannot read file %1:
+%2.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7575"/>
+      <source>Package %1 is already installed.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7700"/>
+      <source>Couldn&apos;t save profile</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7700"/>
+      <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7707"/>
+      <source>Backup Profile</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7707"/>
+      <source>trigger files (*.trigger *.xml)</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7823"/>
+      <source>Seclect Icon</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7823"/>
+      <source>Images (*.png *.xpm *.jpg)</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7832"/>
+      <source>Command (down):</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7853"/>
+      <source>Select foreground color to apply to matches</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7873"/>
+      <source>Select background color to apply to matches</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7885"/>
+      <source>Choose sound file</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7889"/>
+      <source>Audio files(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;Advanced Audio Coding-stream(*.aac);;MPEG-2 Audio Layer 3(*.mp3);;MPEG-4 Audio(*.mp4a);;Ogg Vorbis(*.oga *.ogg);;PCM Audio(*.pcm);;Wave(*.wav);;Windows Media Audio(*.wma);;All files(*.*)</source>
+      <comment>This the list of file extensions that are considered for sounds from triggers, the terms inside of the &apos;(&apos;...&apos;)&apos; and the &quot;;;&quot; are used programmatically and should not be changed.</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="7941"/>
+      <source>Select foreground trigger color for item %1</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8005"/>
+      <source>Select background trigger color for item %1</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8054"/>
+      <source>Saving…</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8192"/>
+      <source>Format All</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8195"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8201"/>
+      <source>Cut</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8199"/>
+      <location filename="../src/dlgTriggerEditor.cpp" line="8205"/>
+      <source>Select All</source>
       <translation type="unfinished"/>
     </message>
     <message>
@@ -6961,84 +7546,6 @@ Starte... Viel Spaß!
   </context>
   <context>
     <name>mudlet</name>
-    <message>
-      <location filename="../src/mudlet.cpp" line="136"/>
-      <source>English [American]</source>
-      <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation>Englisch [Amerikanisch]</translation>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="137"/>
-      <source>English [British]</source>
-      <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation>Englisch [Britisch]</translation>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="138"/>
-      <source>Chinese [Simplified]</source>
-      <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation>Chinesisch [simpel]</translation>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="139"/>
-      <source>Chinese [Traditional]</source>
-      <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation>Chinesisch [traditionell]</translation>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="140"/>
-      <source>Dutch</source>
-      <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation>Niederländisch (Dutch)</translation>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="141"/>
-      <source>French</source>
-      <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation>Französisch (French)</translation>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="142"/>
-      <source>German</source>
-      <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation>Deutsch (German)</translation>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="143"/>
-      <source>Greek</source>
-      <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation>Griechisch (Greek)</translation>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="144"/>
-      <source>Italian</source>
-      <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation>Italienisch (Italian)</translation>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="145"/>
-      <source>Polish</source>
-      <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation>Polnisch (Polish)</translation>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="146"/>
-      <source>Russian</source>
-      <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation>Russisch (Russian)</translation>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="147"/>
-      <source>Spanish</source>
-      <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation>Spanisch (Spanish)</translation>
-    </message>
-    <message>
-      <location filename="../src/mudlet.cpp" line="148"/>
-      <source>Portuguese</source>
-      <comment>Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)</comment>
-      <translation>Portugiesisch</translation>
-    </message>
     <message>
       <location filename="../src/mudlet.cpp" line="162"/>
       <source>Afrikaans</source>
@@ -8607,11 +9114,8 @@ Starte... Viel Spaß!
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="4417"/>
       <source>Review %n update(s)...</source>
-      <comment>Review update(s) menu item, %n is the the count of how many updates are available</comment>
-      <translation>
-        <numerusform>Prüfe die neue Version...</numerusform>
-        <numerusform>Prüfe %n neue Versionen...</numerusform>
-      </translation>
+      <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
+      <translation type="unfinished"/>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="4422"/>
