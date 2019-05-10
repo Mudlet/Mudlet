@@ -1514,7 +1514,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9941"/>
       <source>[ WARN ]  - Lua command setAreaUserData() used - it is currently flagged as experimental!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - Comando Lua setAreaUserData() utilizzato - è attualmente contrassegnato come sperimentale!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9942"/>
@@ -1525,12 +1525,15 @@ will NOT persist between sessions as the relevent data IS NOT SAVED.
 
 To avoid filling the screen up with repeated messages, this is your only warning about
 this command...!</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Questa funzione richiede un file di mappa più recente.
+Cambiare la versione del file di mappa per utilizzare questo comando.
+
+Per evitare di riempirti lo schermo, questo è il tuo unico avvertimento su questo comando...!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="10002"/>
       <source>[ WARN ]  - Lua command setMapUserData() used - it is currently flagged as experimental!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - Comando Lua setAreaUserData() utilizzato - è attualmente contrassegnato come sperimentale!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="11667"/>
@@ -1540,14 +1543,14 @@ this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13940"/>
       <source>ERROR</source>
-      <translation type="unfinished"/>
+      <translation>ERROR</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13941"/>
       <location filename="../src/TLuaInterpreter.cpp" line="13952"/>
       <source>object</source>
       <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>object</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13941"/>
@@ -1973,7 +1976,7 @@ the file:
     <message>
       <location filename="../src/TMap.cpp" line="2250"/>
       <source>[ INFO ]  - Map download initiated, please wait...</source>
-      <translation type="unfinished"/>
+      <translation>[INFO] - Download del file di mappa avviato, attendere prego...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2258"/>
@@ -2017,25 +2020,28 @@ nella finestra principale!</translation>
     <message>
       <location filename="../src/TMap.cpp" line="2381"/>
       <source>[ ALERT ] - Map download was canceled, on user&apos;s request.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Il download del file di mappa è stato annullato su richiesta dell'utente.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2400"/>
       <source>[ ERROR ] - Map download encountered an error:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Il download del file di mappa ha generato un errore:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2414"/>
       <source>[ ALERT ] - Map download failed, error reported was:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Download del file di mappa non riuscito, l'errore generato era:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2422"/>
       <source>[ ALERT ] - Map download failed, unable to open destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Download file di mappa non riuscito, impossibile aprire il file di destinazione:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2427"/>
