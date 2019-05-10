@@ -886,7 +886,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3003"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action)</comment>
-      <translation type="unfinished"/>
+      <translation>используйте &quot;удалить строку&quot;, чтобы удалить единственный сегмент, заканчивающийся в редактируемой точке</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3009"/>
@@ -1144,7 +1144,7 @@ rooms:</source>
     <message>
       <location filename="../src/TAlias.cpp" line="255"/>
       <source>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Ошибка: в &quot;шаблон:&quot;, неверное регулярное выражение, причина: &quot;%1&quot;.</translation>
     </message>
   </context>
   <context>
@@ -1528,7 +1528,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1592"/>
       <source>Loading map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Загрузка карты(1) &quot;%1&quot; в %2 отчет</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1634"/>
@@ -1557,12 +1557,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1679"/>
       <source>Importing map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Импорт карты (1) &quot;%1&quot; в отчете %2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1682"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФОРМАЦИЯ]-Файл карты обнаружен, но не удалось открыть, проверьте разрешения на:&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1685"/>
@@ -1969,7 +1969,7 @@ Areas id affected: %1.</source>
       <location filename="../src/TMap.cpp" line="1407"/>
       <location filename="../src/TMap.cpp" line="1697"/>
       <source>[ ERROR ] - Unable to open (for reading) map file: &quot;%1&quot;!</source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Невозможно открыть (для чтения) файл карты: &quot;%1&quot;!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1416"/>
@@ -2015,7 +2015,7 @@ please wait...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1447"/>
       <source>[ INFO ]  - Reading map (format version:%1) file: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ Информация ] - чтение карты (формат версии: файл%1): &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1554"/>
@@ -2049,7 +2049,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1710"/>
       <source>[ INFO ]  - Checking map file: &quot;%1&quot;, format version:%2...</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФОРМАЦИЯ]-Проверка файла карты: &quot;%1&quot;, формат версии:%2...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2119"/>
@@ -2064,7 +2064,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2132"/>
       <source>Area id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>Id Зоны: %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2134"/>
@@ -2079,7 +2079,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2150"/>
       <source>Room id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>Id комнаты: %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2152"/>
@@ -2348,7 +2348,7 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1138"/>
       <source>[ INFO ]  - Room needed patching {internal fixup} of (special) exit to %1, was: &quot;%2&quot; now: &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФОРМАЦИЯ ]  - Комната нуждается в исправлении {internal fixup} из (специального) выхода в %1, была: &quot;%2&quot; сейчас: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1164"/>
@@ -2362,7 +2362,7 @@ to: %4.</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1174"/>
       <source>[ INFO ]  - Room needed correcting of special exit &quot;%1&quot; that was to room with an exit to invalid room: %2 to now go to: %3.</source>
-      <translation type="unfinished"/>
+      <translation>[ИНФОРМАЦИЯ] - Комната нуждалась в корректировке специального выхода &quot;%1&quot; , который находился в комнате с выходом в некорректную комнату: %2 теперь перейти по адресу: %3.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1205"/>
@@ -2379,7 +2379,7 @@ the room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1218"/>
       <source>[ WARN ]  - Room has a special exit &quot;%1&quot; with an exit to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN]-В комнате есть специальный выход &quot;%1&quot; с выходом: %2 , но эта комната не существует.  Выход будет удален (но ID места назначения будет храниться в пользовательских данных комнаты под ключом:&quot;%3&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1257"/>
@@ -2482,7 +2482,7 @@ an exit to invalid room: %3 to now go to: %4.</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1489"/>
       <source>[ INFO ]  - Correcting exit &quot;%1&quot; that was to invalid room id: %2 to now go to: %3.</source>
-      <translation type="unfinished"/>
+      <translation>[ПРЕДУПРЕЖДЕНИЕ] - Исправление выхода &quot;%1&quot; , который вел в комнату с недействительным идентификатором : %2 , теперь ведет в: %3.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1500"/>
@@ -5161,7 +5161,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="755"/>
       <source>Show &quot;%1&quot; in the map area selection</source>
-      <translation type="unfinished"/>
+      <translation>Показать &quot;%1&quot; в выборе области карты</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="866"/>
@@ -5697,7 +5697,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1793"/>
       <location filename="../src/dlgRoomExits.cpp" line="1911"/>
       <source>Exit to &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Выход в &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="756"/>
@@ -5916,7 +5916,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1855"/>
       <source>Exits for room: &quot;%1&quot; [*]</source>
-      <translation type="unfinished"/>
+      <translation>Выходы для комнаты: &quot;%1&quot; [*]</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1857"/>
@@ -6343,12 +6343,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3318"/>
       <source>Table name...</source>
-      <translation type="unfinished"/>
+      <translation>Имя таблицы...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3325"/>
       <source>Variable name...</source>
-      <translation type="unfinished"/>
+      <translation>Имя переменной...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4094"/>
@@ -6358,22 +6358,22 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4615"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
-      <translation type="unfinished"/>
+      <translation>Выбранные переменные будут сохранены и загружены вместе с вашим профилем.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4767"/>
       <source>match on the prompt line</source>
-      <translation type="unfinished"/>
+      <translation>матч на оперативную линию</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4770"/>
       <source>match on the prompt line (disabled)</source>
-      <translation type="unfinished"/>
+      <translation>матч на строку состояния (отключено)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4771"/>
       <source>A Go-Ahead (GA) signal from the game is required to make this feature work</source>
-      <translation type="unfinished"/>
+      <translation>Для работы этой функции требуется сигнал Go-Ahead (GA) от игры</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4820"/>
@@ -6381,7 +6381,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7960"/>
       <source>Foreground color ignored</source>
       <comment>Color trigger ignored foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана игнорируется</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4824"/>
@@ -6389,7 +6389,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7963"/>
       <source>Default foreground color</source>
       <comment>Color trigger default foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана по умолчанию</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4828"/>
@@ -6397,7 +6397,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7966"/>
       <source>Foreground color [ANSI %1]</source>
       <comment>Color trigger ANSI foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет переднего плана [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4835"/>
@@ -6405,7 +6405,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8023"/>
       <source>Background color ignored</source>
       <comment>Color trigger ignored background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет заднего плана игнорируется</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4839"/>
@@ -6413,7 +6413,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8026"/>
       <source>Default background color</source>
       <comment>Color trigger default background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет фона по умолчанию</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4843"/>
@@ -6421,44 +6421,44 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8029"/>
       <source>Background color [ANSI %1]</source>
       <comment>Color trigger ANSI background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Цвет фона [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4964"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4966"/>
       <source>fault</source>
-      <translation type="unfinished"/>
+      <translation>сбой</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5461"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7836"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Команда:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5500"/>
       <source>Menu properties</source>
-      <translation type="unfinished"/>
+      <translation>Свойства</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5510"/>
       <source>Button properties</source>
-      <translation type="unfinished"/>
+      <translation>Свойства кнопки</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5518"/>
       <source>Command (down);</source>
-      <translation type="unfinished"/>
+      <translation>Команда (вниз);</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5882"/>
       <source>Aliases - Input Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Алиасы</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6010"/>
       <source>Key Bindings</source>
-      <translation type="unfinished"/>
+      <translation>Привязки клавиш</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7029"/>
@@ -6486,7 +6486,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7289"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7294"/>
       <source>Export Package:</source>
-      <translation type="unfinished"/>
+      <translation>Экспортировать пакет:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7029"/>
@@ -6514,7 +6514,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7289"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7294"/>
       <source>You have to choose an item for export first. Please select a tree item and then click on export again.</source>
-      <translation type="unfinished"/>
+      <translation>Сначала необходимо выбрать элемент для экспорта. Выберите элемент и снова нажмите на экспорт.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7038"/>
@@ -6524,7 +6524,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7134"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7159"/>
       <source>Package %1 saved</source>
-      <translation type="unfinished"/>
+      <translation>Пакет %1 сохранён</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7183"/>
@@ -6534,95 +6534,97 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7275"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7299"/>
       <source>Copied %1 to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>%1 скопирован в буфер обмена</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7305"/>
       <source>Export Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Экспорт Триггеров</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7305"/>
       <source>Mudlet packages (*.xml)</source>
-      <translation type="unfinished"/>
+      <translation>Пакеты Mudlet (*.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7319"/>
       <source>export package:</source>
-      <translation type="unfinished"/>
+      <translation>экспортировать пакет:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7319"/>
       <source>Cannot write file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Не удается записать файл %1:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7554"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>Импортировать пакет</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7561"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7575"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>Импортировать пакет:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7561"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Файл не может бытс прочитан %1:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7575"/>
       <source>Package %1 is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>Пакет %1 уже установлен.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7700"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>Не удалось сохранить профиль</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7700"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>К сожалению, невозможно сохранить профиль - есть ошибка: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7707"/>
       <source>Backup Profile</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить копию профиля</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7707"/>
       <source>trigger files (*.trigger *.xml)</source>
-      <translation type="unfinished"/>
+      <translation>триггер-файлы (*.trigger *.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7823"/>
       <source>Seclect Icon</source>
-      <translation type="unfinished"/>
+      <translation>Выбрать значок</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7823"/>
       <source>Images (*.png *.xpm *.jpg)</source>
-      <translation type="unfinished"/>
+      <translation>Изображения (*.png *.xpm *.jpg)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7832"/>
       <source>Command (down):</source>
-      <translation type="unfinished"/>
+      <translation>Команда (вниз):</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7853"/>
       <source>Select foreground color to apply to matches</source>
-      <translation type="unfinished"/>
+      <translation>Выберите цвет переднего плана для применения к совпадением</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7873"/>
       <source>Select background color to apply to matches</source>
-      <translation type="unfinished"/>
+      <translation>Выберите цвет фона для применения к совпадениям</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7885"/>
@@ -6648,24 +6650,24 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8054"/>
       <source>Saving…</source>
-      <translation type="unfinished"/>
+      <translation>Сохранение…</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8192"/>
       <source>Format All</source>
-      <translation type="unfinished"/>
+      <translation>Форматировать все</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8195"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8201"/>
       <source>Cut</source>
-      <translation type="unfinished"/>
+      <translation>Вырезать</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8199"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8205"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>Выбрать все</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="669"/>
@@ -9154,7 +9156,12 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="4417"/>
       <source>Review %n update(s)...</source>
       <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Проверить %n обновление/й...</numerusform>
+        <numerusform>Проверить %n обновление/й...</numerusform>
+        <numerusform>Проверить %n обновление/й...</numerusform>
+        <numerusform>Проверить %n обновление/й...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="4422"/>
