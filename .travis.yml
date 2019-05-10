@@ -1,6 +1,7 @@
 language: cpp
 cache:
-  - ccache
+  timeout: 600
+  ccache: true
 dist: xenial
 sudo: false
 addons:
