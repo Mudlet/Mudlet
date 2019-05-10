@@ -3045,19 +3045,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1810"/>
       <source>{invisible plus}</source>
       <comment>Unicode U+2064 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{invisible plus}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1811"/>
       <source>{left-to-right isolate}</source>
       <comment>Unicode U+2066 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{left-to-right isolate}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1812"/>
       <source>{right-to-left isolate}</source>
       <comment>Unicode U+2067 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{right-to-left isolate}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1813"/>
@@ -3069,7 +3069,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1814"/>
       <source>{pop directional isolate}</source>
       <comment>Unicode U+2069 codepoint - pop (undo last) directional isolate.</comment>
-      <translation type="unfinished"/>
+      <translation>{pop directional isolate}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1815"/>
@@ -3099,19 +3099,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1819"/>
       <source>{national digit shapes}</source>
       <comment>Unicode U+206E codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{national digit shapes}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1820"/>
       <source>{nominal Digit shapes}</source>
       <comment>Unicode U+206F codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{nominal Digit shapes}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1821"/>
       <source>{ideaographic space}</source>
       <comment>Unicode U+3000 codepoint - ideaographic (CJK Wide) space</comment>
-      <translation type="unfinished"/>
+      <translation>{ideaographic space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1822"/>
@@ -3141,13 +3141,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1826"/>
       <source>{variation selector 5}</source>
       <comment>Unicode U+FE04 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 5}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1827"/>
       <source>{variation selector 6}</source>
       <comment>Unicode U+FE05 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 6}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1828"/>
@@ -3213,7 +3213,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1838"/>
       <source>{zero width no-break space}</source>
       <comment>Unicode U+FEFF codepoint - also known as the Byte-order-mark at start of text!).</comment>
-      <translation type="unfinished"/>
+      <translation>{zero width no-break space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1844"/>
@@ -3225,7 +3225,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1845"/>
       <source>{interlinear annotation separator}</source>
       <comment>Unicode U+FFFA codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{interlinear annotation separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1846"/>
@@ -3273,13 +3273,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1873"/>
       <source>{FitzPatrick modifier 5}</source>
       <comment>Unicode codepoint U+0001F3FE - FitzPatrick modifier (Emoji Human skin-tone) 5.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 5}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1874"/>
       <source>{FitzPatrick modifier 6}</source>
       <comment>Unicode codepoint U+0001F3FF - FitzPatrick modifier (Emoji Human skin-tone) 6.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 6}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1878"/>
@@ -3571,7 +3571,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="76"/>
       <source>Pattern:</source>
-      <translation type="unfinished"/>
+      <translation>Pattern:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="103"/>
@@ -5305,7 +5305,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="3132"/>
       <source>Time</source>
       <comment>Discord Rich Presence time until or time elapsed</comment>
-      <translation type="unfinished"/>
+      <translation>Tempo</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3167"/>
@@ -6134,12 +6134,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3318"/>
       <source>Table name...</source>
-      <translation type="unfinished"/>
+      <translation>Nome tabella...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3325"/>
       <source>Variable name...</source>
-      <translation type="unfinished"/>
+      <translation>Nome variabile...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4094"/>
@@ -6172,7 +6172,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7960"/>
       <source>Foreground color ignored</source>
       <comment>Color trigger ignored foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Colore di primo piano ignorato</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4824"/>
@@ -6196,7 +6196,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8023"/>
       <source>Background color ignored</source>
       <comment>Color trigger ignored background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Colore di sfondo ignorato</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4839"/>
@@ -6224,22 +6224,22 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="5461"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7836"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Comando:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5500"/>
       <source>Menu properties</source>
-      <translation type="unfinished"/>
+      <translation>Proprietà del menu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5510"/>
       <source>Button properties</source>
-      <translation type="unfinished"/>
+      <translation>Proprietà del pulsante</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5518"/>
       <source>Command (down);</source>
-      <translation type="unfinished"/>
+      <translation>Comando (basso);</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5882"/>
@@ -6277,7 +6277,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7289"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7294"/>
       <source>Export Package:</source>
-      <translation type="unfinished"/>
+      <translation>Esporta package:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7029"/>
@@ -6315,7 +6315,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7134"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7159"/>
       <source>Package %1 saved</source>
-      <translation type="unfinished"/>
+      <translation>Package %1 salvato</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7183"/>
@@ -6325,22 +6325,22 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7275"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7299"/>
       <source>Copied %1 to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>Copia %1 negli appunti</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7305"/>
       <source>Export Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Esporta Trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7305"/>
       <source>Mudlet packages (*.xml)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet packages (*.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7319"/>
       <source>export package:</source>
-      <translation type="unfinished"/>
+      <translation>esporta package:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7319"/>
@@ -6351,59 +6351,60 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7554"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>Importa pacchetto Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7561"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7575"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>Importa package di Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7561"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Impossibile leggere il file %1:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7575"/>
       <source>Package %1 is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>Il pacchetto %1 è già installato.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7700"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>Non e&apos; possibile salvare il profilo</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7700"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Spiacenti, non e&apos; possibile salvare il tuo profilo - errore: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7707"/>
       <source>Backup Profile</source>
-      <translation type="unfinished"/>
+      <translation>Backup Profilo</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7707"/>
       <source>trigger files (*.trigger *.xml)</source>
-      <translation type="unfinished"/>
+      <translation>file trigger (*.trigger *.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7823"/>
       <source>Seclect Icon</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona icona</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7823"/>
       <source>Images (*.png *.xpm *.jpg)</source>
-      <translation type="unfinished"/>
+      <translation>Immagini (*.png *.xpm *.jpg)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7832"/>
       <source>Command (down):</source>
-      <translation type="unfinished"/>
+      <translation>Comando (basso):</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7853"/>
@@ -6439,7 +6440,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8054"/>
       <source>Saving…</source>
-      <translation type="unfinished"/>
+      <translation>Salvataggio…</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8192"/>
@@ -6450,13 +6451,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8195"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8201"/>
       <source>Cut</source>
-      <translation type="unfinished"/>
+      <translation>Taglia</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8199"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8205"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona Tutto</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="669"/>
@@ -8735,7 +8736,7 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="4388"/>
       <source>&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Informati su questa versione di Mudlet, le persone che l'hanno creato e la licenza con cui puoi condividerlo.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="669"/>
@@ -10711,7 +10712,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="171"/>
       <source>Time:</source>
-      <translation type="unfinished"/>
+      <translation>Tempo:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="39"/>
