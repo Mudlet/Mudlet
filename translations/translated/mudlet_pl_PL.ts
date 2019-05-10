@@ -6081,12 +6081,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3318"/>
       <source>Table name...</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa tabeli...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3325"/>
       <source>Variable name...</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa zmiennej...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4094"/>
@@ -6171,22 +6171,22 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="5461"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7836"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>Polecenie:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5500"/>
       <source>Menu properties</source>
-      <translation type="unfinished"/>
+      <translation>Właściwości menu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5510"/>
       <source>Button properties</source>
-      <translation type="unfinished"/>
+      <translation>Właściwości przycisku</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5518"/>
       <source>Command (down);</source>
-      <translation type="unfinished"/>
+      <translation>Polecenie (dół);</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5882"/>
@@ -6196,7 +6196,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6010"/>
       <source>Key Bindings</source>
-      <translation type="unfinished"/>
+      <translation>Przypisania klawiszy</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7029"/>
@@ -6320,12 +6320,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7700"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>Nie udało się zapisać profilu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7700"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Przepraszamy, nie udało się zapisać profilu - otrzymano następujący błąd: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7707"/>
@@ -6350,7 +6350,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7832"/>
       <source>Command (down):</source>
-      <translation type="unfinished"/>
+      <translation>Polecenie (dół):</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7853"/>
@@ -6386,24 +6386,24 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8054"/>
       <source>Saving…</source>
-      <translation type="unfinished"/>
+      <translation>Zapisywanie…</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8192"/>
       <source>Format All</source>
-      <translation type="unfinished"/>
+      <translation>Sformatuj wszystko</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8195"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8201"/>
       <source>Cut</source>
-      <translation type="unfinished"/>
+      <translation>Wytnij</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8199"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8205"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>Zaznacz wszystko</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="669"/>
