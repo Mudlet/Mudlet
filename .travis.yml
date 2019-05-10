@@ -129,7 +129,7 @@ before_install:
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then eval $(luarocks path); fi
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PATH="${HOME}/.npm-global/bin:/usr/local/opt/ccache/libexec:/usr/local/opt/qt5/bin:$PATH"; fi
   # homebrew upgrades dependents when upgrading packages, which leads to an gdal upgrade, which in turn pulls a loooong list of other dependencies. Avoid that
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew pin gdal; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew pin gdal; brew pin postgis; fi
   - ./CI/travis.before_install.sh
   - export NPM_CONFIG_PREFIX="${HOME}/.npm-global"
 install: source CI/travis.install.sh
