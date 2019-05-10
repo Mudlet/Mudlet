@@ -10637,7 +10637,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="417"/>
       <source>Match all occurences of the pattern in the line.</source>
-      <translation type="unfinished"/>
+      <translation>Соответствовать всем совпаданиям шаблона в строке.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="478"/>
