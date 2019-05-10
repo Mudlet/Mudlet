@@ -6191,12 +6191,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3318"/>
       <source>Table name...</source>
-      <translation type="unfinished"/>
+      <translation>表名...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3325"/>
       <source>Variable name...</source>
-      <translation type="unfinished"/>
+      <translation>变量名</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4094"/>
@@ -6211,17 +6211,17 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4767"/>
       <source>match on the prompt line</source>
-      <translation type="unfinished"/>
+      <translation>在提示行匹配</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4770"/>
       <source>match on the prompt line (disabled)</source>
-      <translation type="unfinished"/>
+      <translation>在提示行匹配(停用)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4771"/>
       <source>A Go-Ahead (GA) signal from the game is required to make this feature work</source>
-      <translation type="unfinished"/>
+      <translation>需要游戏中有Go-Ahead (GA) 信号才能使本功能运行</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4820"/>
@@ -6229,7 +6229,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7960"/>
       <source>Foreground color ignored</source>
       <comment>Color trigger ignored foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>忽略的前景色</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4824"/>
@@ -6253,7 +6253,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8023"/>
       <source>Background color ignored</source>
       <comment>Color trigger ignored background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>忽略的背景色</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4839"/>
@@ -6281,7 +6281,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="5461"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7836"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>命令:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5500"/>
@@ -6291,7 +6291,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5510"/>
       <source>Button properties</source>
-      <translation type="unfinished"/>
+      <translation>按钮属性</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5518"/>
@@ -6306,7 +6306,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6010"/>
       <source>Key Bindings</source>
-      <translation type="unfinished"/>
+      <translation>按键绑定</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7029"/>
@@ -6387,7 +6387,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7305"/>
       <source>Export Triggers</source>
-      <translation type="unfinished"/>
+      <translation>导出触发器</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7305"/>
@@ -6430,12 +6430,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7700"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>无法保存用户配置文件</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7700"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>对不起, 以下错误导致无法保存用户配置文件: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7707"/>
@@ -6507,13 +6507,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8195"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8201"/>
       <source>Cut</source>
-      <translation type="unfinished"/>
+      <translation>剪切</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8199"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8205"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>选择全部</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="669"/>
