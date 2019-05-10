@@ -6331,7 +6331,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4094"/>
       <source>Alias &lt;em&gt;%1&lt;/em&gt; has an infinite loop - substitution matches its own pattern. Please fix it - this alias isn&apos;t good as it&apos;ll call itself forever.</source>
-      <translation type="unfinished"/>
+      <translation>Alias &lt;em&gt;%1&lt;/em&gt; weist eine Endlosschleife auf - Die Ersetzung stimmt mit dem eigenen Muster überein. Bitte korrigieren, da das Alias sich immer wieder selbst aufrufen wird.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4615"/>
@@ -6607,7 +6607,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7885"/>
       <source>Choose sound file</source>
-      <translation type="unfinished"/>
+      <translation>Audiodatei auswählen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7889"/>
