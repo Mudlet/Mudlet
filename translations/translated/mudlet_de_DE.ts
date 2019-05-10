@@ -5393,7 +5393,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="506"/>
       <source>&lt;p&gt;Mudlet does not recognise the code &quot;%1&quot;, please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!&lt;/p&gt;&lt;p&gt;The file &lt;tt&gt;%2.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file) is still usable.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet erkennt den Code &quot;%1&quot; nicht. Bitte melde ihn bei den Mudlet-Entwicklern, damit wir ihn in zukünftigen Mudlet-Versionen richtig beschreiben können!&lt;/p&gt;&lt;p&gt;Die Datei &lt;tt&gt;%2.dic&lt;/tt&gt; (und die zugehörige &lt;tt&gt;.aff&lt;/tt&gt; Affix-Datei) ist weiterhin verwendbar.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="531"/>
@@ -5923,7 +5923,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgTriggerEditor.cpp" line="106"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="108"/>
       <source>&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Finde &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;weitere Informationen im Handbuch&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="110"/>
@@ -11075,7 +11075,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="91"/>
       <source>&lt;p&gt;Use this control to show or hide the extra controls for the trigger; this can be used to allow more space to show the trigger &lt;i&gt;items&lt;/i&gt; on smaller screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Benutze dieses Steuerelement zum Anzeigen oder Ausblenden der zusätzlichen Bedienelemente des Triggers. Damit bleibt auf kleineren Bildschirmen mehr Raum für die einzelnen Trigger-&lt;i&gt;Elemente&lt;/i&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="117"/>
@@ -11150,7 +11150,8 @@ LUA Skript</translation>
 &lt;p&gt;&lt;i&gt;Cancelling from the file dialogue will not make any changes; to clear the file use the clear button to the right of the file name display.&lt;/i&gt;&lt;/p&gt;</source>
       <comment>This is the button used to select a sound file to be played when a trigger fires.</comment>
       <extracomment>Please ensure the text used here is duplicated within the tooltip for the QLineEdit that displays the file name selected.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle hier eine Audiodatei, die beim Auslösen abgespielt werden soll.&lt;/p&gt;
+&lt;p&gt;&lt;i&gt;Um die Datei zu entfernen, klicke die Schaltfläche rechts neben dem Dateinamen.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="597"/>
@@ -11162,7 +11163,7 @@ LUA Skript</translation>
       <source>&lt;p&gt;This displays the file selected to play when the trigger fires. To change this used the &lt;i&gt;Choose file...&lt;/i&gt; button or to remove it use the clear button.&lt;/p&gt;</source>
       <comment>This is the tooltip for the QLineEdit that shows - but does not permit changing - the sound file used for a trigger.</comment>
       <extracomment>Please ensure that the text used for &quot;Choose file ,,,&quot; here is the same as is used for the button that it refers to.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dies zeigt die Datei, die beim Auslösen abgespielt wird. Zum Ändern eine neue Datei wählen oder die aktuelle mit der Schaltfläche entfernen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="628"/>
@@ -11172,7 +11173,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="641"/>
       <source>&lt;p&gt;Click to remove a sound file set for this trigger.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Hier klicken, um die Audiodatei für diesen Trigger zu entfernen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="692"/>
