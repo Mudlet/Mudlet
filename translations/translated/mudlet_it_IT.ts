@@ -1697,7 +1697,7 @@ Errore Lua: </translation>
     <message>
       <location filename="../src/TMap.cpp" line="209"/>
       <source>RoomID=%1 does not exist, can not set AreaID=%2 for non-existing room!</source>
-      <translation type="unfinished"/>
+      <translation>AreaID=%1 non esiste, non posso impostare AreaID=%2 su una stanza non esistente!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="220"/>
@@ -1712,7 +1712,7 @@ Errore Lua: </translation>
     <message>
       <location filename="../src/TMap.cpp" line="464"/>
       <source>[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.</source>
-      <translation>[ INFO ] - CONVERSIONE: vecchia etichetta, areaID:%1 labelID:%2.</translation>
+      <translation>[ INFO ] - CONVERSIONE: vecchia etichetta, AreaID:%1 LabelID:%2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="467"/>
@@ -1722,7 +1722,7 @@ Errore Lua: </translation>
     <message>
       <location filename="../src/TMap.cpp" line="472"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.</source>
-      <translation>[ WARN ] - CONVERSIONE: non è possibile convertire la vecchia etichetta nell'area con areaID: %1, labelID: %2.</translation>
+      <translation>[ WARN ] - CONVERSIONE: non è possibile convertire la vecchia etichetta nell'area con AreaID: %1, LabelID: %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="475"/>
@@ -2047,24 +2047,27 @@ nella finestra principale!</translation>
       <location filename="../src/TMap.cpp" line="2427"/>
       <source>[ ALERT ] - Map download failed, unable to write destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ALERT] - Download del file di mappa non riuscito, impossibile scrivere il file di destinazione:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2434"/>
       <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - File di mappa scaricato e salvato, analisi in corso...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2460"/>
       <source>[ ERROR ] - Map download problem, failure in parsing destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Problemi con il download del file di mappa, impossibile analizzare il file di destinazione:
+%1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2465"/>
       <source>[ ERROR ] - Map download problem, unable to read destination file:
 %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Problemi con il download dei file di mappa, impossibile leggere il file di destinazione:
+%1.</translation>
     </message>
   </context>
   <context>
@@ -2150,12 +2153,12 @@ nella finestra principale!</translation>
     <message>
       <location filename="../src/TRoom.cpp" line="253"/>
       <source>No area created!  Requested area ID=%1. Note: Area IDs must be &gt; 0</source>
-      <translation type="unfinished"/>
+      <translation>Nessuna area creata!  Richiesto AreaID=%1. Nota: AreaID deve essere &gt; 0</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="275"/>
       <source>Warning: When setting the Area for Room (Id: %1) it did not have a current area!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - Impossibile impostare l'area per RoomID %1, non è stata trovata un'area corrente!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="955"/>
@@ -2180,12 +2183,12 @@ nella finestra principale!</translation>
     <message>
       <location filename="../src/TRoom.cpp" line="1116"/>
       <source>[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - Rimossa l'uscita (speciale) non valida nella RoomID: %1 verso %2 {senza nome!}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1120"/>
       <source>[ WARN ]  - Room had an invalid (special) exit to %1 {with no name!} it was removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - La stanza aveva un'uscita (speciale) non valida verso %1 {senza nome!}, è stato rimossa.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1130"/>
@@ -2897,7 +2900,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1805"/>
       <source>{medium width mathematical space}</source>
       <comment>Unicode U+205F codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{medium width mathematical space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1806"/>
