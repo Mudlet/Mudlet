@@ -6613,7 +6613,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <location filename="../src/dlgTriggerEditor.cpp" line="7889"/>
       <source>Audio files(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;Advanced Audio Coding-stream(*.aac);;MPEG-2 Audio Layer 3(*.mp3);;MPEG-4 Audio(*.mp4a);;Ogg Vorbis(*.oga *.ogg);;PCM Audio(*.pcm);;Wave(*.wav);;Windows Media Audio(*.wma);;All files(*.*)</source>
       <comment>This the list of file extensions that are considered for sounds from triggers, the terms inside of the &apos;(&apos;...&apos;)&apos; and the &quot;;;&quot; are used programmatically and should not be changed.</comment>
-      <translation type="unfinished"/>
+      <translation>Audiodateien (*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;Advanced Audio Coding-Stream (*.aac);;MPEG-2 Audio Layer 3 (*.mp3);;MPEG-4 Audio (*.mp4a);;Ogg Vorbis (*.oga *.ogg);;PCM Audio (*.pcm);;Wave (*.wav);;Windows Media Audio (*.wma);;Alle Dateien (*.*)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7941"/>
@@ -7347,12 +7347,12 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/ui/main_window.ui" line="190"/>
       <source>&lt;p&gt;Opens a free form text editor window for this profile that is saved between sessions.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Öffne einen formlosen Texteditor für dieses Profil, der zwischen den Sitzungen gespeichert wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="198"/>
       <source>&lt;p&gt;Opens the Mudlet manual in your web browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Öffnet das Mudlet-Handbuch in deinem Webbrowser.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="206"/>
@@ -11086,32 +11086,33 @@ LUA Skript</translation>
       <location filename="../src/ui/triggers_main_area.ui" line="216"/>
       <source>&lt;p&gt;The trigger will only fire if &lt;u&gt;all&lt;/u&gt; conditions on the list have been met within the specified line delta, and captures will be saved in &lt;tt&gt;multimatches&lt;/tt&gt; instead of &lt;tt&gt;matches&lt;/tt&gt;.&lt;/p&gt;
 &lt;p&gt;If this option is &lt;b&gt;not&lt;/b&gt; set the trigger will fire if &lt;u&gt;any&lt;/u&gt; condition on the list have been met.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Der Trigger wird nur ausgelöst, wenn &lt;u&gt;alle&lt;/u&gt; Bedingungen der Liste innerhalb des angegebenen Zeilenabstands erfüllt sind. Erfasstes wird als &lt;tt&gt;multimatches&lt;/tt&gt; gespeichert werden, anstelle von &lt;tt&gt;matches&lt;/tt&gt;.&lt;/p&gt; 
+&lt;p&gt;Wenn diese Option &lt;b&gt;nicht&lt;/b&gt; gesetzt ist, wird der Trigger ausgelöst, wenn &lt;u&gt;eine&lt;/u&gt; Bedingung der Liste erfüllt worden ist.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="223"/>
       <source>AND / Multi-line (delta)</source>
-      <translation type="unfinished"/>
+      <translation>UND / Mehrzeilig (Delta)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="268"/>
       <source>&lt;p&gt;Within how many lines must all condition be true to fire the trigger?&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Innerhalb von wie vielen Zeilen müssen alle Bedingungen wahr sein, um den Trigger auszulösen?&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="290"/>
       <source>&lt;p&gt;When checked, only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wenn aktiviert, wird nur gefilterter Inhalt (=erfasste Gruppen, capture groups) an die untergeordneten Trigger weitergeleitet, nicht die ursprüngliche Zeile (siehe Anleitung zu Filtern).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="293"/>
       <source>only pass matches</source>
-      <translation type="unfinished"/>
+      <translation>Nur Übereinstimmungen übergeben</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="341"/>
       <source>Do not pass whole line to children.</source>
-      <translation type="unfinished"/>
+      <translation>Nicht die ganze Zeile an Kinder übergeben.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="366"/>
