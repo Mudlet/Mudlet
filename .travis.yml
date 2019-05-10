@@ -10,9 +10,8 @@ addons:
   apt:
     sources: &add-sources
     - sourceline: 'ppa:beineri/opt-qt571-xenial'
-    - sourceline: 'ppa:beineri/opt-qt-5.10.1-xenial'
-    - sourceline: 'ppa:ubuntu-toolchain-r/test'
-    - sourceline: 'ppa:ondrej/php'
+    - sourceline: 'ppa:beineri/opt-qt-5.12.3-xenial'
+    - sourceline: 'ppa:ondrej/php' #needed for a more-or-less up to date libzip
     packages: &common-packages
     - libhunspell-dev
     - lua5.1
@@ -22,7 +21,8 @@ addons:
     - libzip-dev
     - libpulse-dev
     - libyajl-dev
-    - gcc-5 g++-5
+    - gcc-5
+    - g++-5
     - luarocks
     - lua-rex-pcre
     - lua-filesystem
@@ -61,50 +61,50 @@ matrix:
     compiler: gcc
     env:
     - Q_OR_C_MAKE=qmake
-      QT_VERSION=510
+      QT_VERSION=512
     addons:
       apt:
         sources: *add-sources
-        packages: &qt510-packages
+        packages: &qt512-packages
         - *common-packages
-        - qt510base
-        - qt510multimedia
-        - qt510tools
-        - qt510gamepad
-        - qt510speech
+        - qt512base
+        - qt512multimedia
+        - qt512tools
+        - qt512gamepad
+        - qt512speech
 
   - os: linux
     compiler: gcc
     env:
     - Q_OR_C_MAKE=cmake
-      QT_VERSION=510
+      QT_VERSION=512
     addons:
       apt:
         sources: *add-sources
         packages:
-        - *qt510-packages
+        - *qt512-packages
 
   - os: linux
     compiler: clang
     env:
     - Q_OR_C_MAKE=qmake
-      QT_VERSION=510
+      QT_VERSION=512
     addons:
       apt:
         sources: *add-sources
         packages:
-        - *qt510-packages
+        - *qt512-packages
 
   - os: linux
     compiler: clang
     env:
     - Q_OR_C_MAKE=cmake
-      QT_VERSION=510
+      QT_VERSION=512
     addons:
       apt:
         sources: *add-sources
         packages:
-        - *qt510-packages
+        - *qt512-packages
 
   - os: linux
     compiler: gcc
@@ -124,7 +124,7 @@ before_cache:
 before_install:
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | tee -a "${HOME}/ca-file.pem"; fi
   # add to the path here to pick up things as soon as its installed
-  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="${HOME}/.npm-global/bin:${HOME}/latest-gcc-symlinks:$PATH"; fi
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="${HOME}/.npm-global/bin:$PATH"; fi
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then source "/opt/qt${QT_VERSION}/bin/qt${QT_VERSION}-env.sh"; fi
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then eval $(luarocks path); fi
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PATH="${HOME}/.npm-global/bin:/usr/local/opt/ccache/libexec:/usr/local/opt/qt5/bin:$PATH"; fi
