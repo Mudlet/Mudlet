@@ -838,7 +838,7 @@ int TBuffer::getLastLineNumber()
 
 void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, TChar format)
 {
-    if (++mLinkID > 1000) {
+    if (++mLinkID > MAX_LINKS) {
         mLinkID = 1;
     }
     mLinkStore[mLinkID] = command;
@@ -1497,7 +1497,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             mMXP_SEND_NO_REF_MODE = true;
                         }
                         mLinkID++;
-                        if (mLinkID > 1000) {
+                        if (mLinkID > MAX_LINKS) {
                             mLinkID = 1;
                         }
                         QStringList _tl = _t2.split('|');
@@ -3894,7 +3894,7 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
                     incLinkID = true;
                     mLinkID++;
                     linkID = mLinkID;
-                    if (mLinkID > 1000) {
+                    if (mLinkID > MAX_LINKS) {
                         mLinkID = 1;
                     }
                     mLinkStore[mLinkID] = linkFunction;
