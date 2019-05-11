@@ -184,7 +184,7 @@
           <item row="0" column="1">
            <widget class="QComboBox" name="comboBox_guiLanguage">
             <property name="toolTip">
-             <string>&lt;p&gt;Can you help translate Mudlet? &lt;span style=&quot;font-weight:600;&quot;&gt;bit.ly/translate-mudlet&lt;/span&gt;&lt;/p&gt;</string>
+             <string>&lt;p&gt;Can you help translate Mudlet? &lt;span style=&quot;font-weight:600;&quot;&gt;https://www.mudlet.org/translate&lt;/span&gt;&lt;/p&gt;</string>
             </property>
             <item>
              <property name="text">
