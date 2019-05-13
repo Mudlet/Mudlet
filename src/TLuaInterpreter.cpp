@@ -7174,7 +7174,7 @@ int TLuaInterpreter::permTimer(lua_State* L)
         lua_pushfstring(L, "permTimer: bad argument #3 type (time in seconds as {maybe decimal} number expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
-    double time = lua_tonumber(L, 1);
+    double time = lua_tonumber(L, 3);
 
     if (!lua_isstring(L, 4)) {
         lua_pushfstring(L, "permTimer: bad argument #4 type (script as string expected, got %s!)", luaL_typename(L, 4));
