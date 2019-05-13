@@ -1908,7 +1908,7 @@ Mudlet can handle (%2)!  The file is:
       <location filename="../src/TMap.cpp" line="1423"/>
       <source>[ INFO ]  - You will need to upgrade your Mudlet or find a map file saved in an
 older format.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Devi aggiornare Mudlet o trovare un file di mappa salvato in un formato precedente.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1430"/>
@@ -3960,7 +3960,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2428"/>
       <source>Enable Discord integration (not supported by game)</source>
-      <translation type="unfinished"/>
+      <translation>Abilita integrazione con Discord (non supportata dal gioco)</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2362"/>
@@ -4232,7 +4232,9 @@ custom line?</source>
       <source>Are you sure that you&apos;d like to delete this profile? Everything (aliases, triggers, backups, etc) will be gone.
 
 If you are, please type in the profile name as a confirmation:</source>
-      <translation type="unfinished"/>
+      <translation>Sei sicuro di voler cancellare questo profilo? Ogni elemento (alias, trigger, backup, ecc) sarà eliminato per sempre
+
+Per conferma per favore digita il nome del profilo:</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="54"/>
@@ -4941,12 +4943,12 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="724"/>
       <source>%1 {Upgraded, experimental/testing, NOT recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {Aggiornato, sperimentale/test, NON consigliato}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="726"/>
       <source>%1 {Downgraded, for sharing with older version users, NOT recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {Versione precedente, da utilizzare con vecchie versioni di Mudlet, NON consigliato}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="735"/>
@@ -8637,7 +8639,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="588"/>
       <source>Open the Mudlet IRC client</source>
-      <translation type="unfinished"/>
+      <translation>Apri il client IRC di Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="593"/>
@@ -9194,12 +9196,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="851"/>
       <source>Right border width:</source>
-      <translation type="unfinished"/>
+      <translation>Larghezza bordo destro:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="892"/>
       <source>Word wrapping</source>
-      <translation type="unfinished"/>
+      <translation>Ritorno a capo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="916"/>
@@ -9220,7 +9222,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="997"/>
       <source>Double-click</source>
-      <translation type="unfinished"/>
+      <translation>Doppio-click</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1003"/>
@@ -9489,7 +9491,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1092"/>
       <source>Enable text analyzer</source>
-      <translation type="unfinished"/>
+      <translation>Abilita analisi testo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1120"/>
@@ -9920,12 +9922,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1972"/>
       <source>Delete map backups older than:</source>
-      <translation type="unfinished"/>
+      <translation>Elimina file di mappa più vecchi di:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1989"/>
       <source>days since today, keeping newer and monthly backups</source>
-      <translation type="unfinished"/>
+      <translation>giorni da oggi, mantiene i backup più recenti o mensili</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2002"/>
@@ -10099,7 +10101,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2646"/>
       <source>IRC client options</source>
-      <translation type="unfinished"/>
+      <translation>Opzioni client IRC</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2662"/>
