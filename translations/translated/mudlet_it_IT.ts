@@ -5003,7 +5003,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1815"/>
       <source>Could not load map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>Impossibile caricare il file di mappa da %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1832"/>
@@ -5029,7 +5029,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1854"/>
       <source>Could not save map to %1.</source>
-      <translation type="unfinished"/>
+      <translation>Impossibile salvare il file di mappa in %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1890"/>
@@ -6930,18 +6930,22 @@ less likely to be useful for normal use of this application:
       <location filename="../src/main.cpp" line="268"/>
       <source>Report bugs to: https://github.com/Mudlet/Mudlet/issues.
 </source>
-      <translation type="unfinished"/>
+      <translation>Segnala gli errori a: https://github.com/Mudlet/Mudlet/issues.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="269"/>
       <source>Project home page: http://www.mudlet.org/.
 </source>
-      <translation type="unfinished"/>
+      <translation>Homepage: http://www.mudlet.org/.
+
+Versione italiana a cura di: http://www.clessidra.it/.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="298"/>
       <source>Version: </source>
-      <translation type="unfinished"/>
+      <translation>Versione: </translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="358"/>
@@ -6955,19 +6959,30 @@ certain conditions; select the
 &apos;About&apos; item for details.
 
 </source>
-      <translation type="unfinished"/>
+      <translation>
+
+Mudlet viene fornito
+SENZA ALCUNA GARANZIA!
+Questo è un software gratuito e puoi
+distribuirlo rispettando alcune
+condizioni; visita la voce di menù
+&apos;Altro&apos; per informazioni.
+
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="365"/>
       <source>Locating profiles... </source>
-      <translation type="unfinished"/>
+      <translation>Ricerca profili... </translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="390"/>
       <source>Done.
 
 Loading font files... </source>
-      <translation type="unfinished"/>
+      <translation>Fatto.
+
+Caricamento file dei font... </translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="457"/>
@@ -6978,7 +6993,13 @@ All data has been loaded successfully.
 Starting... Have fun!
 
 </source>
-      <translation type="unfinished"/>
+      <translation>Fatto.
+
+Tutti i dati sono stati caricati correttamente.
+
+Avvio in corso... Buon divertimento!
+
+</translation>
     </message>
   </context>
   <context>
@@ -7117,7 +7138,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="195"/>
       <source>API Reference</source>
-      <translation type="unfinished"/>
+      <translation>Riferimenti API</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="235"/>
@@ -9811,7 +9832,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2770"/>
       <source>Expect Color Space Id in SGR...(3|4)8;2;...m codes</source>
-      <translation type="unfinished"/>
+      <translation>Gestisci lo spazio color in SGR...(3|4)8:2...m codes</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2794"/>
@@ -9937,12 +9958,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2031"/>
       <source>2D Map Room Symbol Font</source>
-      <translation type="unfinished"/>
+      <translation>Carattere dei simboli per le mappe 2D</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2011"/>
       <source>Use high quality graphics in 2D view</source>
-      <translation type="unfinished"/>
+      <translation>Utilizza grafica in alta qualità per la vista 2D</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1826"/>
@@ -9957,7 +9978,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2041"/>
       <source>Only use symbols (glyphs) from chosen font</source>
-      <translation type="unfinished"/>
+      <translation>Utilizza solo i simboli (glyphs) dal carattere selezionato</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2048"/>
@@ -10665,7 +10686,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="98"/>
       <source>Add User Event Handler:</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi gestore eventi utente:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="133"/>
