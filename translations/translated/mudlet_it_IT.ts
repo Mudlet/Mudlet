@@ -9206,7 +9206,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="916"/>
       <source>Wrap lines at:</source>
-      <translation type="unfinished"/>
+      <translation>Torna a capo a:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="936"/>
@@ -9217,7 +9217,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="964"/>
       <source>Indent wrapped lines by:</source>
-      <translation type="unfinished"/>
+      <translation>Indenta i ritorni a capo di:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="997"/>
