@@ -866,7 +866,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2998"/>
       <source>Remove last segment by removing this point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state but is the last time this action can be done on this item)</comment>
-      <translation type="unfinished"/>
+      <translation>Rimuovi l'ultimo segmento rimuovendo questo punto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3003"/>
@@ -4951,7 +4951,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="735"/>
       <source>2D Map Room Symbol scaling factor:</source>
-      <translation type="unfinished"/>
+      <translation>Fattore di scala per i simboli dei file delle mappe 2D:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="755"/>
@@ -6204,7 +6204,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8026"/>
       <source>Default background color</source>
       <comment>Color trigger default background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Colore di sfondo predefinito</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4843"/>
@@ -6212,7 +6212,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8029"/>
       <source>Background color [ANSI %1]</source>
       <comment>Color trigger ANSI background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Colore di sfondo [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4964"/>
@@ -8048,7 +8048,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="301"/>
       <source>Italian (Italy)</source>
-      <translation type="unfinished"/>
+      <translation>Italiano (Italy)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="302"/>
@@ -8970,12 +8970,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="67"/>
       <source>Icon size toolbars:</source>
-      <translation type="unfinished"/>
+      <translation>Dimensione icone barra degli strumenti:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="90"/>
       <source>Icon size in tree views:</source>
-      <translation type="unfinished"/>
+      <translation>Dimensione icone nella vista ad albero:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="110"/>
@@ -8992,7 +8992,7 @@ tenta di nuovo quando sarà terminato.</translation>
       <location filename="../src/ui/profile_preferences.ui" line="126"/>
       <location filename="../src/ui/profile_preferences.ui" line="155"/>
       <source>Until a profile is loaded</source>
-      <translation type="unfinished"/>
+      <translation>Fino a quando non viene caricato un profilo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="131"/>
@@ -9008,12 +9008,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="231"/>
       <source>Misc</source>
-      <translation type="unfinished"/>
+      <translation>Varie</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="237"/>
       <source>Toolbar notification if Mudlet is minimized and new data arrives</source>
-      <translation type="unfinished"/>
+      <translation>Notifica nella barra delle applicazione se Mudlet è ridotto ad icona e arrivano nuovi dati</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="244"/>
@@ -9023,12 +9023,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="251"/>
       <source>Allow server to install script packages</source>
-      <translation type="unfinished"/>
+      <translation>Consenti al server di installare automaticamente i package</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="261"/>
       <source>Game protocols</source>
-      <translation type="unfinished"/>
+      <translation>Protocolli di gioco</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="270"/>
@@ -9129,12 +9129,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="489"/>
       <source>Command separator:</source>
-      <translation type="unfinished"/>
+      <translation>Separatore di input:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="499"/>
       <source>Enter text to separate commands with or leave blank to disable</source>
-      <translation type="unfinished"/>
+      <translation>Inserisci il testo per separare i comandi o lascia vuoto per disabilitare</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="506"/>
@@ -9235,7 +9235,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1026"/>
       <source>Display options</source>
-      <translation type="unfinished"/>
+      <translation>Opzioni di visualizzazione</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1035"/>
@@ -9310,7 +9310,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1353"/>
       <source>Command line background:</source>
-      <translation type="unfinished"/>
+      <translation>Sfondo linea di input:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1370"/>
@@ -9320,7 +9320,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1390"/>
       <source>Command background:</source>
-      <translation type="unfinished"/>
+      <translation>Sfondo comandi:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="209"/>
@@ -9345,7 +9345,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="174"/>
       <source>Language &amp;&amp; data encoding</source>
-      <translation type="unfinished"/>
+      <translation>Lingua &amp;&amp; Codifica</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="180"/>
@@ -9425,7 +9425,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="595"/>
       <source>Shared</source>
-      <translation>Condivisi</translation>
+      <translation>Condiviso</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="716"/>
@@ -9728,7 +9728,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1756"/>
       <source>Server allowed to redefine these colors</source>
-      <translation type="unfinished"/>
+      <translation>Server autorizzato a ridefinire questi colori</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1780"/>
@@ -9799,7 +9799,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2423"/>
       <source>Special options needed for some older game drivers (needs client restart to take effect)</source>
-      <translation type="unfinished"/>
+      <translation>Opzioni avanzate utilizzate da alcuni vecchi giochi (è necessario il riavvio di Mudlet)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2767"/>
@@ -9985,7 +9985,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2417"/>
       <source>Special Options</source>
-      <translation type="unfinished"/>
+      <translation>Opzioni avanzate</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2429"/>
@@ -10021,17 +10021,17 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2521"/>
       <source>Don&apos;t hide small icon or tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Non nascondere le icone piccole e i suggerimenti</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2526"/>
       <source>Hide small icon tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Nascondi i suggerimenti delle icone piccole</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2531"/>
       <source>Hide small icon and tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Nascondi le icone piccole e i suggerimenti</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2553"/>
@@ -10054,7 +10054,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2495"/>
       <source>Don&apos;t hide large icon or tooltip</source>
-      <translation type="unfinished"/>
+      <translation>Non nascondere le icone grandi e i suggerimenti</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2500"/>
@@ -10079,7 +10079,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2595"/>
       <source>specific Discord username</source>
-      <translation type="unfinished"/>
+      <translation>specifica il tuo nome utente Discord</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2539"/>
@@ -10089,12 +10089,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2546"/>
       <source>Hide party details</source>
-      <translation type="unfinished"/>
+      <translation>Nascondi dettagli del gruppo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2513"/>
       <source>Hide detail</source>
-      <translation type="unfinished"/>
+      <translation>Nascondi dettagli</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2646"/>
@@ -10129,7 +10129,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2700"/>
       <source>Auto-join channels: </source>
-      <translation type="unfinished"/>
+      <translation>Canali join automatico: </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2686"/>
