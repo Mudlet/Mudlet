@@ -1495,7 +1495,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1682"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - File di mappa localizzato, ma non è stato possibile aprirlo, controllare le autorizzazioni su:&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1685"/>
@@ -1981,7 +1981,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2132"/>
       <source>Area id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>AreaID: %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2134"/>
@@ -1996,7 +1996,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2150"/>
       <source>Room id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>RoomID: %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2152"/>
@@ -2772,7 +2772,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1221"/>
       <source>Analyse characters</source>
-      <translation type="unfinished"/>
+      <translation>Analizza i caratteri</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1230"/>
@@ -4071,7 +4071,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="63"/>
       <source>Line Settings:</source>
-      <translation type="unfinished"/>
+      <translation>Impostazioni linea:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="97"/>
@@ -5107,32 +5107,32 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2796"/>
       <source>{missing, possibly recently deleted trigger item}</source>
-      <translation type="unfinished"/>
+      <translation>{elemento mancante, probabilmente il trigger è stato appena cancellato}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2799"/>
       <source>{missing, possibly recently deleted alias item}</source>
-      <translation type="unfinished"/>
+      <translation>{elemento mancante, probabilmente l'alias è stato appena cancellato}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2802"/>
       <source>{missing, possibly recently deleted script item}</source>
-      <translation type="unfinished"/>
+      <translation>{elemento mancante, probabilmente lo script è stato appena cancellato}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2805"/>
       <source>{missing, possibly recently deleted timer item}</source>
-      <translation type="unfinished"/>
+      <translation>{elemento mancante, probabilmente il timer è stato appena cancellato}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2808"/>
       <source>{missing, possibly recently deleted key item}</source>
-      <translation type="unfinished"/>
+      <translation>{elemento mancante, probabilmente lo stato è stato appena cancellato}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2811"/>
       <source>{missing, possibly recently deleted button item}</source>
-      <translation type="unfinished"/>
+      <translation>{elemento mancante, probabilmente il bottone è stato appena cancellato}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="189"/>
