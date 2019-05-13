@@ -5055,17 +5055,17 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2019"/>
       <source>Could not copy the map - failed to work out which map file we just saved the map as!</source>
-      <translation type="unfinished"/>
+      <translation>Impossibile copiare il file di mappa - impossibile determinare quale file di mappa è stato salvato!</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2031"/>
       <source>Copying over map to %1 - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Copia del file di mappa %1 - attendere...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2037"/>
       <source>Could not copy the map to %1 - unable to copy the new map file over.</source>
-      <translation type="unfinished"/>
+      <translation>Impossibile copiare il file di mappa %1 - impossibile copia il nuovo file di mappa.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2041"/>
@@ -6984,7 +6984,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="95"/>
       <source>Toolbox</source>
-      <translation type="unfinished"/>
+      <translation>Strumenti</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="109"/>
@@ -7196,7 +7196,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="296"/>
       <source>Compact input line</source>
-      <translation>Compatta linea di input</translation>
+      <translation>Compatta linea dei comandi</translation>
     </message>
   </context>
   <context>
@@ -8857,13 +8857,13 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="3684"/>
       <location filename="../src/mudlet.cpp" line="3703"/>
       <source>Compact input line</source>
-      <translation>Compatta linea di input</translation>
+      <translation>Compatta linea dei comandi</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3688"/>
       <location filename="../src/mudlet.cpp" line="3706"/>
       <source>Standard input line</source>
-      <translation>Espandi linea di input</translation>
+      <translation>Espandi linea dei comandi</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3750"/>
@@ -9094,12 +9094,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="434"/>
       <source>Input line</source>
-      <translation>Linea di input</translation>
+      <translation>Linea dei comandi</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="443"/>
       <source>Input</source>
-      <translation type="unfinished"/>
+      <translation>Linea dei comandi</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="449"/>
@@ -9109,27 +9109,27 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="452"/>
       <source>Strict UNIX line endings</source>
-      <translation type="unfinished"/>
+      <translation>Obbliga terminatore di riga UNIX</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="469"/>
       <source>Show the text you sent</source>
-      <translation type="unfinished"/>
+      <translation>Mostra il testo che hai inviato</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="459"/>
       <source>Auto clear the input line after you sent text</source>
-      <translation>Cancella automaticamente la riga di input dopo aver inviato il testo</translation>
+      <translation>Cancella automaticamente la riga dei comandi dopo aver inviato il testo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="479"/>
       <source>React to all keybindings on the same key</source>
-      <translation type="unfinished"/>
+      <translation>Utilizzati tutte le scorciatoie da tastiera sullo stesso tasto</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="489"/>
       <source>Command separator:</source>
-      <translation>Separatore di input:</translation>
+      <translation>Separatore dei comandi:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="499"/>
@@ -9305,12 +9305,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1336"/>
       <source>Command line foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Colore linea dei comandi:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1353"/>
       <source>Command line background:</source>
-      <translation>Sfondo linea di input:</translation>
+      <translation>Sfondo linea di comandi:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1370"/>
@@ -9753,7 +9753,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1809"/>
       <source>Load another map file in:</source>
-      <translation type="unfinished"/>
+      <translation>Carica un altro file di mappa in:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1819"/>
@@ -9869,12 +9869,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1829"/>
       <source>Report map issues on screen</source>
-      <translation type="unfinished"/>
+      <translation>Segnala problemi del file della mappa sullo schermo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1843"/>
       <source>Copy map to other profile(s):</source>
-      <translation type="unfinished"/>
+      <translation>Copia il file di mappa in altri profili:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1859"/>
@@ -9915,7 +9915,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1966"/>
       <source>Map backups</source>
-      <translation type="unfinished"/>
+      <translation>Backup dei file di mappa</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1972"/>
@@ -10049,7 +10049,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2582"/>
       <source>Restrict to:</source>
-      <translation type="unfinished"/>
+      <translation>Limita a:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2495"/>
