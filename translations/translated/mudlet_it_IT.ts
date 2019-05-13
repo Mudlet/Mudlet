@@ -5737,7 +5737,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="106"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="108"/>
       <source>&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Leggi il manuale per &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;maggiori informazioni&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="110"/>
