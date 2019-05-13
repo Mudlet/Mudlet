@@ -1416,7 +1416,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="402"/>
       <source>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</source>
-      <translation type="unfinished"/>
+      <translation>&lt;i&gt;N:&lt;/i&gt; è la latenza del server di gioco e della rete (anche detto ping, misurato in secondi), &lt;br&gt;&lt;i&gt;S:&lt;/i&gt; è il tempo di elaborazione - quanto tempo impiegato i tuoi trigger ad essere eseguiti sull'ultima linea ricevuta (misurato in secondi).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="440"/>
@@ -3503,7 +3503,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="214"/>
       <source>Button Rotation:</source>
-      <translation type="unfinished"/>
+      <translation>Rotazione Bottone:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="231"/>
@@ -3523,7 +3523,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="249"/>
       <source>Push down button</source>
-      <translation type="unfinished"/>
+      <translation>Bottone a due stati</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="256"/>
@@ -6249,7 +6249,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6010"/>
       <source>Key Bindings</source>
-      <translation type="unfinished"/>
+      <translation>Combinazioni Tasti</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7029"/>
@@ -6785,12 +6785,12 @@ dalla GUI)</translation>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="57"/>
       <source>Key Binding:</source>
-      <translation type="unfinished"/>
+      <translation>Combinazione Tasti:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="111"/>
       <source>Grab New Key</source>
-      <translation type="unfinished"/>
+      <translation>Cattura un nuovo tasto</translation>
     </message>
   </context>
   <context>
@@ -7191,12 +7191,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="288"/>
       <source>MultiView</source>
-      <translation type="unfinished"/>
+      <translation>Vista multipla</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="296"/>
       <source>Compact input line</source>
-      <translation type="unfinished"/>
+      <translation>Compatta linea di input</translation>
     </message>
   </context>
   <context>
@@ -8718,7 +8718,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="643"/>
       <source>MultiView</source>
-      <translation type="unfinished"/>
+      <translation>Vista multipla</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="644"/>
@@ -8857,13 +8857,13 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="3684"/>
       <location filename="../src/mudlet.cpp" line="3703"/>
       <source>Compact input line</source>
-      <translation type="unfinished"/>
+      <translation>Compatta linea di input</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3688"/>
       <location filename="../src/mudlet.cpp" line="3706"/>
       <source>Standard input line</source>
-      <translation type="unfinished"/>
+      <translation>Espandi linea di input</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3750"/>
@@ -9018,7 +9018,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="244"/>
       <source>Force auto save on exit</source>
-      <translation type="unfinished"/>
+      <translation>Forza il salvataggio automatico all'uscita</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="251"/>
@@ -9094,7 +9094,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="434"/>
       <source>Input line</source>
-      <translation type="unfinished"/>
+      <translation>Linea di input</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="443"/>
@@ -9119,7 +9119,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="459"/>
       <source>Auto clear the input line after you sent text</source>
-      <translation type="unfinished"/>
+      <translation>Cancella automaticamente la riga di input dopo aver inviato il testo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="479"/>
@@ -10727,22 +10727,22 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="91"/>
       <source>&lt;p&gt;hours&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;ore&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="106"/>
       <source>&lt;p&gt;minutes&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;minuti&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="121"/>
       <source>&lt;p&gt;seconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;secondi&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="136"/>
       <source>&lt;p&gt;miliseconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;millisecondi&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="186"/>
@@ -10862,7 +10862,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="223"/>
       <source>AND / Multi-line (delta)</source>
-      <translation type="unfinished"/>
+      <translation>E / multi-linea (delta)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="268"/>
@@ -10877,12 +10877,12 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="293"/>
       <source>only pass matches</source>
-      <translation type="unfinished"/>
+      <translation>restituisci solo i risultati della ricerca</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="341"/>
       <source>Do not pass whole line to children.</source>
-      <translation type="unfinished"/>
+      <translation>Non passare tutta la riga ai trigger figli.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="366"/>
@@ -10892,7 +10892,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="417"/>
       <source>Match all occurences of the pattern in the line.</source>
-      <translation type="unfinished"/>
+      <translation>Trova tutte le corrispondenze del pattern nella riga.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="478"/>
@@ -10902,7 +10902,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="484"/>
       <source>fire length (extra lines)</source>
-      <translation type="unfinished"/>
+      <translation>lunghezza trigger (linee extra)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="526"/>
@@ -11013,7 +11013,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="175"/>
       <source>⏴ Key type:</source>
-      <translation type="unfinished"/>
+      <translation>⏴ Tipo Indice:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="125"/>
