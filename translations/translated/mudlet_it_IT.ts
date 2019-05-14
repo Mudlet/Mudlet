@@ -461,7 +461,8 @@ it with a new symbol for this room:</source>
       <source>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and non-breaking hyphens which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. %2 is the (text) name of the area, %3 is the number for it, %4 to %9 are pairs (min &lt;-&gt; max) of extremes for each of x,y and z coordinates</comment>
-      <translation type="unfinished"/>
+      <translation>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2208"/>
@@ -1461,7 +1462,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1592"/>
       <source>Loading map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Caricamento file di mappa (1) &quot;%1&quot; al report %2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1634"/>
@@ -1490,7 +1491,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1679"/>
       <source>Importing map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>Importazione file di mappa (1) &quot;%1&quot; al report %2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1682"/>
@@ -2664,7 +2665,7 @@ they have been removed.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1169"/>
       <source>&lt;nothing&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;niente&gt;</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1172"/>
@@ -2787,7 +2788,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1241"/>
       <source>Use this to restore the Main menu to get access to controls.</source>
-      <translation type="unfinished"/>
+      <translation>Ripristina il menù principale e ottieni l'accesso alle relative voci.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1243"/>
@@ -2797,27 +2798,27 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1245"/>
       <source>Use this to restore the Main Toolbar to get access to controls.</source>
-      <translation type="unfinished"/>
+      <translation>Ripristina la barra degli strumenti e ottieni l'accesso alle relative voci.</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1303"/>
       <source>Mudlet, debug console extract</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, estratto della console di debug</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1305"/>
       <source>Mudlet, %1 mini-console extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, estratto della mini-console %1 dal profilo %2</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1307"/>
       <source>Mudlet, %1 user window extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, estratto di finestra utente %1 dal profilo %2</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1309"/>
       <source>Mudlet, main console extract from %1 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet, estratto della console principale dal profilo %1</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1773"/>
@@ -3463,7 +3464,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="127"/>
       <source>Number of columns/rows (depending on orientation):</source>
-      <translation type="unfinished"/>
+      <translation>Numero di colonne/righe (dipende dall'orientamento):</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="150"/>
@@ -3498,7 +3499,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="208"/>
       <source>Button Properties</source>
-      <translation type="unfinished"/>
+      <translation>Proprietà del bottone</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="214"/>
@@ -3834,7 +3835,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="363"/>
       <source>ANSI 24 Grays scale [232-255] - adjust gray and click button to select matching color number:</source>
-      <translation>ANSI 24 Scala di grigi [232-255] - imposta il grigio e premi sul pulsante per selezionare il numero di colore corrispondente:</translation>
+      <translation>ANSI 24 Scala di grigi [232-255] - imposta il grigio e premi sul bottone per selezionare il numero di colore corrispondente:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="375"/>
@@ -6236,7 +6237,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5510"/>
       <source>Button properties</source>
-      <translation>Proprietà del pulsante</translation>
+      <translation>Proprietà del bottone</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5518"/>
