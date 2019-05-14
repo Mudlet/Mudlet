@@ -1,3 +1,3 @@
 #!/bin/bash
 set -ev
-brew update
+brew update --debug --verbose
