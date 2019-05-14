@@ -7375,32 +7375,32 @@ Avvio in corso... Buon divertimento!
       <location filename="../src/mudlet.cpp" line="162"/>
       <source>Afrikaans</source>
       <extracomment>In the translation source texts the language is the leading term, with, generally, the (primary) country(ies) in the brackets, with a trailing language disabiguation after a &apos;-&apos; Chinese is an exception!</extracomment>
-      <translation type="unfinished"/>
+      <translation>Africano</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="163"/>
       <source>Afrikaans (South Africa)</source>
-      <translation type="unfinished"/>
+      <translation>Africano (Sudafrica)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="164"/>
       <source>Aragonese</source>
-      <translation type="unfinished"/>
+      <translation>Aragonese</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="165"/>
       <source>Aragonese (Spain)</source>
-      <translation type="unfinished"/>
+      <translation>Aragonese (Spagna)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="166"/>
       <source>Arabic</source>
-      <translation type="unfinished"/>
+      <translation>Arabo</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="167"/>
       <source>Arabic (United Arab Emirates)</source>
-      <translation type="unfinished"/>
+      <translation>Arabo (Emirati Arabi Uniti)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="168"/>
@@ -7425,17 +7425,17 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="173"/>
       <source>Arabic (Jordan)</source>
-      <translation type="unfinished"/>
+      <translation>Arabo (Giordania)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="174"/>
       <source>Arabic (Kuwait)</source>
-      <translation type="unfinished"/>
+      <translation>Arabo (Kuwait)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="175"/>
       <source>Arabic (Lebanon)</source>
-      <translation type="unfinished"/>
+      <translation>Arabo (Libano)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="176"/>
@@ -7445,42 +7445,42 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="177"/>
       <source>Arabic (Morocco)</source>
-      <translation type="unfinished"/>
+      <translation>Arabo (Marocco)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="178"/>
       <source>Arabic (Oman)</source>
-      <translation type="unfinished"/>
+      <translation>Arabo (Oman)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="179"/>
       <source>Arabic (Qatar)</source>
-      <translation type="unfinished"/>
+      <translation>Arabo (Qatar)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="180"/>
       <source>Arabic (Saudi Arabia)</source>
-      <translation type="unfinished"/>
+      <translation>Arabo (Arabia Saudita)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="181"/>
       <source>Arabic (Sudan)</source>
-      <translation type="unfinished"/>
+      <translation>Arabo (Sudan)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="182"/>
       <source>Arabic (Syria)</source>
-      <translation type="unfinished"/>
+      <translation>Arabo (Siria)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="183"/>
       <source>Arabic (Tunisia)</source>
-      <translation type="unfinished"/>
+      <translation>Arabo (Tunisia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="184"/>
       <source>Arabic (Yemen)</source>
-      <translation type="unfinished"/>
+      <translation>Arabo (Yemen)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="185"/>
@@ -7510,102 +7510,102 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="190"/>
       <source>Bangla</source>
-      <translation type="unfinished"/>
+      <translation>Bengalese</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="191"/>
       <source>Bangla (Bangladesh)</source>
-      <translation type="unfinished"/>
+      <translation>Bengalese (Bangladesh)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="192"/>
       <source>Bangla (India)</source>
-      <translation type="unfinished"/>
+      <translation>Bengalese (India)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="193"/>
       <source>Tibetan</source>
-      <translation type="unfinished"/>
+      <translation>Tibetano</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="194"/>
       <source>Tibetan (China)</source>
-      <translation type="unfinished"/>
+      <translation>Tibetano (Cina)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="195"/>
       <source>Tibetan (India)</source>
-      <translation type="unfinished"/>
+      <translation>Tibetano (India)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="196"/>
       <source>Breton</source>
-      <translation type="unfinished"/>
+      <translation>Bretone</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="197"/>
       <source>Breton (France)</source>
-      <translation type="unfinished"/>
+      <translation>Bretone (Francia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="198"/>
       <source>Bosnian</source>
-      <translation type="unfinished"/>
+      <translation>Bosniaco</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="199"/>
       <source>Bosnian (Bosnia/Herzegovina)</source>
-      <translation type="unfinished"/>
+      <translation>Bosniaco (Bosnia/Erzegovina)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="200"/>
       <source>Bosnian (Bosnia/Herzegovina - Cyrillic alphabet)</source>
-      <translation type="unfinished"/>
+      <translation>Bosniaco (Bosnia / Erzegovina - Alfabeto cirillico)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="201"/>
       <source>Catalan</source>
-      <translation type="unfinished"/>
+      <translation>Catalano</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="202"/>
       <source>Catalan (Spain)</source>
-      <translation type="unfinished"/>
+      <translation>Catalano (Spagna)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="203"/>
       <source>Catalan (Spain - Valencian)</source>
-      <translation type="unfinished"/>
+      <translation>Catalano (Spagna - Valenciano)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="204"/>
       <source>Central Kurdish</source>
-      <translation type="unfinished"/>
+      <translation>Curdo centrale</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="205"/>
       <source>Central Kurdish (Iraq)</source>
-      <translation type="unfinished"/>
+      <translation>Curdo centrale (Iraq)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="206"/>
       <source>Czech</source>
-      <translation type="unfinished"/>
+      <translation>Ceco</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="207"/>
       <source>Czech (Czechia)</source>
-      <translation type="unfinished"/>
+      <translation>Ceco (Repubblica Ceca)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="208"/>
       <source>Danish</source>
-      <translation type="unfinished"/>
+      <translation>Danese</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="209"/>
       <source>Danish (Denmark)</source>
-      <translation type="unfinished"/>
+      <translation>Danese (Danimarca)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="210"/>
@@ -7615,17 +7615,17 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="211"/>
       <source>German (Austria)</source>
-      <translation type="unfinished"/>
+      <translation>Tedesco (Austria)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="212"/>
       <source>German (Austria, revised by F M Baumann)</source>
-      <translation type="unfinished"/>
+      <translation>Tedesco (Austria, rivisto da F M Baumann)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="213"/>
       <source>German (Belgium)</source>
-      <translation type="unfinished"/>
+      <translation>Tedesco (Belgio)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="214"/>
@@ -7846,87 +7846,87 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="256"/>
       <source>Spanish (Guatemala)</source>
-      <translation type="unfinished"/>
+      <translation>Spagnolo (Guatemala)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="257"/>
       <source>Spanish (Honduras)</source>
-      <translation type="unfinished"/>
+      <translation>Spagnolo (Honduras)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="258"/>
       <source>Spanish (Mexico)</source>
-      <translation type="unfinished"/>
+      <translation>Spagnolo (Messico)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="259"/>
       <source>Spanish (Nicaragua)</source>
-      <translation type="unfinished"/>
+      <translation>Spagnolo (Nicaragua)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="260"/>
       <source>Spanish (Panama)</source>
-      <translation type="unfinished"/>
+      <translation>Spagnolo (Panama)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="261"/>
       <source>Spanish (Peru)</source>
-      <translation type="unfinished"/>
+      <translation>Spagnolo (Perù)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="262"/>
       <source>Spanish (Puerto Rico)</source>
-      <translation type="unfinished"/>
+      <translation>Spagnolo (Puerto Rico)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="263"/>
       <source>Spanish (Paraguay)</source>
-      <translation type="unfinished"/>
+      <translation>Spagnolo (Paraguay)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="264"/>
       <source>Spanish (El Savador)</source>
-      <translation type="unfinished"/>
+      <translation>Spagnolo (El Savador)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="265"/>
       <source>Spanish (United States)</source>
-      <translation type="unfinished"/>
+      <translation>Spagnolo (Stati Uniti)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="266"/>
       <source>Spanish (Uruguay)</source>
-      <translation type="unfinished"/>
+      <translation>Spagnolo (Uruguay)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="267"/>
       <source>Spanish (Venezuela)</source>
-      <translation type="unfinished"/>
+      <translation>Spagnolo (Venezuela)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="268"/>
       <source>Estonian</source>
-      <translation type="unfinished"/>
+      <translation>Estone</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="269"/>
       <source>Estonian (Estonia)</source>
-      <translation type="unfinished"/>
+      <translation>Estone (Estonia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="270"/>
       <source>Basque</source>
-      <translation type="unfinished"/>
+      <translation>Basco</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="271"/>
       <source>Basque (Spain)</source>
-      <translation type="unfinished"/>
+      <translation>Basco (Spagna)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="272"/>
       <source>Basque (France)</source>
-      <translation type="unfinished"/>
+      <translation>Basco (Francia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="273"/>
@@ -7936,67 +7936,67 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="274"/>
       <source>French (Belgium)</source>
-      <translation type="unfinished"/>
+      <translation>Francese (Belgio)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="275"/>
       <source>French (Catalan)</source>
-      <translation type="unfinished"/>
+      <translation>Francese (Catalogna)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="276"/>
       <source>French (Switzerland)</source>
-      <translation type="unfinished"/>
+      <translation>Francese (Svizzera)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="277"/>
       <source>French (France)</source>
-      <translation type="unfinished"/>
+      <translation>Francese (Francia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="278"/>
       <source>French (Luxemburg)</source>
-      <translation type="unfinished"/>
+      <translation>Francese (Lussemburgo)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="279"/>
       <source>French (Monaco)</source>
-      <translation type="unfinished"/>
+      <translation>Francese (Monaco)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="280"/>
       <source>Gaelic</source>
-      <translation type="unfinished"/>
+      <translation>Gaelico</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="281"/>
       <source>Gaelic (United Kingdom {Scots})</source>
-      <translation type="unfinished"/>
+      <translation>Gaelico (Regno Unito {Scozia})</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="282"/>
       <source>Galician</source>
-      <translation type="unfinished"/>
+      <translation>Galiziano</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="283"/>
       <source>Galician (Spain)</source>
-      <translation type="unfinished"/>
+      <translation>Galiziano (Spagna)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="284"/>
       <source>Gujarati</source>
-      <translation type="unfinished"/>
+      <translation>Gujarati</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="285"/>
       <source>Gujarati (India)</source>
-      <translation type="unfinished"/>
+      <translation>Gujarati (India)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="286"/>
       <source>Hebrew</source>
-      <translation type="unfinished"/>
+      <translation>Ebraico</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="287"/>
