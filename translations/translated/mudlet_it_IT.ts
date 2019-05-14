@@ -6422,23 +6422,23 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7885"/>
       <source>Choose sound file</source>
-      <translation type="unfinished"/>
+      <translation>Scegli file audio</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7889"/>
       <source>Audio files(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;Advanced Audio Coding-stream(*.aac);;MPEG-2 Audio Layer 3(*.mp3);;MPEG-4 Audio(*.mp4a);;Ogg Vorbis(*.oga *.ogg);;PCM Audio(*.pcm);;Wave(*.wav);;Windows Media Audio(*.wma);;All files(*.*)</source>
       <comment>This the list of file extensions that are considered for sounds from triggers, the terms inside of the &apos;(&apos;...&apos;)&apos; and the &quot;;;&quot; are used programmatically and should not be changed.</comment>
-      <translation type="unfinished"/>
+      <translation>File audio(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;Advanced Audio Coding-stream(*.aac);;MPEG-2 Audio Layer 3(*.mp3);;MPEG-4 Audio(*.mp4a);;Ogg Vorbis(*.oga *.ogg);;PCM Audio(*.pcm);;Wave(*.wav);;Windows Media Audio(*.wma);;Tutti i file(*. *)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7941"/>
       <source>Select foreground trigger color for item %1</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona il colore del trigger per l'elemento %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8005"/>
       <source>Select background trigger color for item %1</source>
-      <translation type="unfinished"/>
+      <translation>Selezionare il colore di sfondo del trigger per l'elemento %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8054"/>
@@ -6448,7 +6448,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8192"/>
       <source>Format All</source>
-      <translation type="unfinished"/>
+      <translation>Formatta tutto</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8195"/>
@@ -6715,7 +6715,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="53"/>
       <source>index (integer number)</source>
-      <translation type="unfinished"/>
+      <translation>indice (numero intero)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="54"/>
@@ -6816,7 +6816,7 @@ dalla GUI)</translation>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="93"/>
       <source>Find some scripts</source>
-      <translation type="unfinished"/>
+      <translation>Trova script</translation>
     </message>
   </context>
   <context>
@@ -6825,31 +6825,36 @@ dalla GUI)</translation>
       <location filename="../src/main.cpp" line="206"/>
       <source>%1 %2%3 (debug symbols, no optimisations)
 </source>
-      <translation type="unfinished"/>
+      <translation>%1 %2%3 (simboli di debug, nessuna ottimizzazione)
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="211"/>
       <source>Qt libraries %1 (compilation) %2 (runtime)
 </source>
-      <translation type="unfinished"/>
+      <translation>Librerie Qt %1 (compilazione) %2 (runtime)
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="212"/>
       <source>Copyright © 2008-%1  Mudlet developers
 </source>
-      <translation type="unfinished"/>
+      <translation>Copyright © 2008-%1  Mudlet developers
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="213"/>
       <source>Licence GPLv2+: GNU GPL version 2 or later &lt;http://gnu.org/licenses/gpl.html&gt;.
 </source>
-      <translation type="unfinished"/>
+      <translation>Licenza GPLv2+: GNU GPL versione 2 o successiva &lt;http://gnu.org/licenses/gpl.html&gt;.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="214"/>
       <source>This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.</source>
-      <translation type="unfinished"/>
+      <translation>Questo è software gratuito: sei libero di modificarlo e ridistribuirlo.
+Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="220"/>
@@ -8727,7 +8732,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="632"/>
       <source>Replay</source>
-      <translation type="unfinished"/>
+      <translation>Replay</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="637"/>
@@ -8765,7 +8770,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="669"/>
       <source>Central Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Console Debug centrale</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="682"/>
@@ -9908,7 +9913,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1872"/>
       <source>Copy to destination(s)</source>
-      <translation type="unfinished"/>
+      <translation>Copia nella destinazione</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1884"/>
@@ -9918,13 +9923,13 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1891"/>
       <source>Map format version:</source>
-      <translation type="unfinished"/>
+      <translation>Versione file di mappa:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1916"/>
       <location filename="../src/ui/profile_preferences.ui" line="1920"/>
       <source># {default version}</source>
-      <translation type="unfinished"/>
+      <translation># {versione predefinita}</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1931"/>
@@ -9954,7 +9959,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2002"/>
       <source>Map view</source>
-      <translation type="unfinished"/>
+      <translation>Visualizzazione mappa</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2031"/>
@@ -10491,7 +10496,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1874"/>
       <source>Exit RoomID number</source>
-      <translation type="unfinished"/>
+      <translation>RoomID uscita</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1901"/>
@@ -10605,7 +10610,8 @@ Percorso</translation>
       <location filename="../src/ui/room_exits.ui" line="2062"/>
       <source>Exit
 Weight</source>
-      <translation type="unfinished"/>
+      <translation>Uscita
+Peso</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2066"/>
