@@ -3418,12 +3418,12 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/XMLimport.cpp" line="367"/>
       <source>Assigning rooms to their areas...</source>
-      <translation type="unfinished"/>
+      <translation>Assegno le stanze alle loro aree...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="517"/>
       <source>Parsing room data [count: %1]...</source>
-      <translation type="unfinished"/>
+      <translation>Analisi dati della stanza [conteggio: %1]...</translation>
     </message>
   </context>
   <context>
@@ -4641,35 +4641,43 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1842"/>
       <source>Mudlet is not configured for secure connections.</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet non è configurato per connessioni sicure.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1845"/>
       <source>Mudlet is not configured for secure connections.
 
 </source>
-      <translation type="unfinished"/>
+      <translation>Mudlet non è configurato per connessioni sicure.
+
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1854"/>
       <source>Mudlet can not load support for secure connections.
 
 </source>
-      <translation type="unfinished"/>
+      <translation>Mudlet non può caricare il supporto per connessioni sicure.
+
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1868"/>
       <source>Please enter the URL or IP address of the Game server.
 
 %1</source>
-      <translation type="unfinished"/>
+      <translation>Inserire l'URL o l'indirizzo IP del server del gioco.
+
+%1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1877"/>
       <source>SSL connections require the URL of the Game server.
 
 %1</source>
-      <translation type="unfinished"/>
+      <translation>Le connessioni SSL richiedono l'URL del server di gioco.
+
+%1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1909"/>
@@ -4727,7 +4735,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="376"/>
       <source>[Error] MSGLIMIT requires &lt;limit&gt; to be a whole number greater than zero!</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] MSGLIMIT richiede che &lt;limit&gt; sia un numero intero maggiore di zero!</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="406"/>
@@ -4845,12 +4853,12 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="52"/>
       <source>Export location:</source>
-      <translation type="unfinished"/>
+      <translation>Percorso di esportazione:</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="65"/>
       <source>Select</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="78"/>
@@ -5463,7 +5471,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="216"/>
       <source>(room ID)</source>
       <comment>Placeholder, if no room ID is set for an exit, yet. This string is used in 2 places, ensure they match!</comment>
-      <translation type="unfinished"/>
+      <translation>(ID stanza)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="127"/>
@@ -5473,7 +5481,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="2324"/>
       <source>(command or Lua script)</source>
       <comment>Placeholder, if a special exit has no code given, yet. This string is also used programmatically - ensure all five instances are the same</comment>
-      <translation type="unfinished"/>
+      <translation>(comando o script Lua)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="140"/>
