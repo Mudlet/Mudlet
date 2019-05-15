@@ -1086,7 +1086,7 @@ rooms:</source>
     <message>
       <location filename="../src/TArea.cpp" line="373"/>
       <source>roomID=%1 does not exist, can not set properties of a non-existent room!</source>
-      <translation type="unfinished"/>
+      <translation>StanzaID=%1 non esiste, non è possibile impostare proprietà per una stanza non esistente!</translation>
     </message>
   </context>
   <context>
@@ -1727,12 +1727,12 @@ Errore Lua: </translation>
     <message>
       <location filename="../src/TMap.cpp" line="209"/>
       <source>RoomID=%1 does not exist, can not set AreaID=%2 for non-existing room!</source>
-      <translation>AreaID=%1 non esiste, non posso impostare AreaID=%2 su una stanza non esistente!</translation>
+      <translation>StanzaID=%1 non esiste, non posso impostare AreaID=%2 su una stanza non esistente!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="220"/>
       <source>AreaID=%2 does not exist, can not set RoomID=%1 to non-existing area!</source>
-      <translation>AreaID=%2 non esiste, non posso impostare RoomID=%1 su area non esistente!</translation>
+      <translation>AreaID=%2 non esiste, non posso impostare StanzaID=%1 su area non esistente!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="438"/>
@@ -1997,7 +1997,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2150"/>
       <source>Room id: %1 &quot;%2&quot;</source>
-      <translation>RoomID: %1 &quot;%2&quot;</translation>
+      <translation>StanzaID: %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2152"/>
@@ -2214,7 +2214,7 @@ nella finestra principale!</translation>
     <message>
       <location filename="../src/TRoom.cpp" line="275"/>
       <source>Warning: When setting the Area for Room (Id: %1) it did not have a current area!</source>
-      <translation>[ WARN ] - Impossibile impostare l'area per RoomID %1, non è stata trovata un'area corrente!</translation>
+      <translation>[ WARN ] - Impossibile impostare l'Area per la StanzaID %1, non è stata selezionata un'area!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="955"/>
@@ -2239,7 +2239,7 @@ nella finestra principale!</translation>
     <message>
       <location filename="../src/TRoom.cpp" line="1116"/>
       <source>[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}</source>
-      <translation>[ WARN ] - Rimossa l'uscita (speciale) non valida nella RoomID: %1 verso %2 {senza nome!}</translation>
+      <translation>[ WARN ] - Rimossa l'uscita (speciale) non valida nella StanzaID %1 verso %2 {senza nome!}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1120"/>
@@ -5649,7 +5649,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1708"/>
       <location filename="../src/dlgRoomExits.cpp" line="1823"/>
       <source>Clear the stub exit for this exit to enter an exit roomID.</source>
-      <translation type="unfinished"/>
+      <translation>Cancella l'uscita temporanea, prima di inserire la corrispondente StanzaID.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1743"/>
@@ -7641,7 +7641,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="212"/>
       <source>German (Austria, revised by F M Baumann)</source>
-      <translation>Tedesco (Austria, rivisto da F M Baumann)</translation>
+      <translation>Tedesco (Austria, revisionato da F M Baumann)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="213"/>
@@ -8213,22 +8213,22 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="325"/>
       <source>Norwegian Nynorsk</source>
-      <translation type="unfinished"/>
+      <translation>Norvegese Nynorsk</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="326"/>
       <source>Norwegian Nynorsk (Norway)</source>
-      <translation type="unfinished"/>
+      <translation>Norvegese Nynorsk (Norvegia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="327"/>
       <source>Occitan</source>
-      <translation type="unfinished"/>
+      <translation>Occitano</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="328"/>
       <source>Occitan (France)</source>
-      <translation type="unfinished"/>
+      <translation>Occitano (Francia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="329"/>
@@ -8238,32 +8238,32 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="330"/>
       <source>Polish (Poland)</source>
-      <translation type="unfinished"/>
+      <translation>Polacco (Polonia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="331"/>
       <source>Portuguese</source>
-      <translation type="unfinished"/>
+      <translation>Portoghese</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="332"/>
       <source>Portuguese (Brazil)</source>
-      <translation type="unfinished"/>
+      <translation>Portoghese (Brasile)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="333"/>
       <source>Portuguese (Portugal)</source>
-      <translation type="unfinished"/>
+      <translation>Portoghese (Portogallo)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="334"/>
       <source>Romanian</source>
-      <translation type="unfinished"/>
+      <translation>Rumeno</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="335"/>
       <source>Romanian (Romania)</source>
-      <translation type="unfinished"/>
+      <translation>Rumeno (Romania)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="336"/>
@@ -8273,129 +8273,129 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="337"/>
       <source>Russian (Russia)</source>
-      <translation type="unfinished"/>
+      <translation>Russo (Russia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="338"/>
       <source>Northern Sami</source>
-      <translation type="unfinished"/>
+      <translation>Sami del Nord</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="339"/>
       <source>Northern Sami (Finland)</source>
-      <translation type="unfinished"/>
+      <translation>Sami Del Nord (Finlandia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="340"/>
       <source>Northern Sami (Norway)</source>
-      <translation type="unfinished"/>
+      <translation>Sami Del Nord (Norvegia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="341"/>
       <source>Northern Sami (Sweden)</source>
-      <translation type="unfinished"/>
+      <translation>Sami Del Nord (Svezia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="342"/>
       <source>Shtokavian</source>
       <comment>This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state without a state indication</comment>
-      <translation type="unfinished"/>
+      <translation>Shtokaviano</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="343"/>
       <source>Shtokavian (former state of Yugoslavia)</source>
       <comment>This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state with a (withdrawn from ISO 3166) state indication</comment>
-      <translation type="unfinished"/>
+      <translation>Shtokaviano (ex Jugoslavia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="344"/>
       <source>Sinhala</source>
-      <translation type="unfinished"/>
+      <translation>Sinhala</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="345"/>
       <source>Sinhala (Sri Lanka)</source>
-      <translation type="unfinished"/>
+      <translation>Sinhala (Sri Lanka)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="346"/>
       <source>Slovak</source>
-      <translation type="unfinished"/>
+      <translation>Slovacco</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="347"/>
       <source>Slovak (Slovakia)</source>
-      <translation type="unfinished"/>
+      <translation>Slovacco (Slovacchia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="348"/>
       <source>Slovenian</source>
-      <translation type="unfinished"/>
+      <translation>Sloveno</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="349"/>
       <source>Slovenian (Slovenia)</source>
-      <translation type="unfinished"/>
+      <translation>Sloveno (Slovenia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="350"/>
       <source>Somali</source>
-      <translation type="unfinished"/>
+      <translation>Somalo</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="351"/>
       <source>Somali (Somalia)</source>
-      <translation type="unfinished"/>
+      <translation>Somali (Somalia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="352"/>
       <source>Albanian</source>
-      <translation type="unfinished"/>
+      <translation>Albanese</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="353"/>
       <source>Albanian (Albania)</source>
-      <translation type="unfinished"/>
+      <translation>Albanese (Albania)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="354"/>
       <source>Serbian</source>
-      <translation type="unfinished"/>
+      <translation>Serbo</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="355"/>
       <source>Serbian (Montenegro)</source>
-      <translation type="unfinished"/>
+      <translation>Serbo (Montenegro)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="356"/>
       <source>Serbian (Serbia)</source>
-      <translation type="unfinished"/>
+      <translation>Serbo (Serbia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="357"/>
       <source>Serbian (Serbia - Latin-alphabet)</source>
-      <translation type="unfinished"/>
+      <translation>Serbo (Serbia - alfabeto latino)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="358"/>
       <source>Serbian (former state of Yugoslavia)</source>
-      <translation type="unfinished"/>
+      <translation>Serbo (ex Jugoslavia)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="359"/>
       <source>Swati</source>
-      <translation type="unfinished"/>
+      <translation>Swati</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="360"/>
       <source>Swati (Swaziland)</source>
-      <translation type="unfinished"/>
+      <translation>Swati (Swaziland)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="361"/>
       <source>Swati (South Africa)</source>
-      <translation type="unfinished"/>
+      <translation>Swati (Sud Africa)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="362"/>
@@ -8702,7 +8702,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="600"/>
       <source>Browse reference material and documentation</source>
-      <translation type="unfinished"/>
+      <translation>Sfoglia il materiale di riferimento e la documentazione</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="605"/>
@@ -8712,7 +8712,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="606"/>
       <source>See and edit profile preferences</source>
-      <translation type="unfinished"/>
+      <translation>Consultare e modificare le preferenze del profilo</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="614"/>
@@ -8722,7 +8722,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="615"/>
       <source>Open a notepad that you can store your notes in</source>
-      <translation type="unfinished"/>
+      <translation>Aprire un blocco note in cui è possibile memorizzare delle note</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="620"/>
@@ -8822,7 +8822,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="1029"/>
       <source>Module Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>Gestione Moduli - %1</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1138"/>
@@ -8866,7 +8866,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="1896"/>
       <source>User window - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>Finestra Utente - %1 - %2</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3294"/>
@@ -9803,7 +9803,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1819"/>
       <source>Press to choose file and load</source>
-      <translation type="unfinished"/>
+      <translation>Premere per scegliere il file da caricare</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1856"/>
@@ -10114,7 +10114,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2560"/>
       <source>&lt;p&gt;Allow Lua to set Discord status&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Consenti a Lua di impostare lo stato Discord&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2563"/>
@@ -10318,7 +10318,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1844"/>
       <source>No route</source>
-      <translation type="unfinished"/>
+      <translation>Nessun percorso</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1859"/>
@@ -10356,7 +10356,7 @@ tenta di nuovo quando sarà terminato.</translation>
       <location filename="../src/ui/room_exits.ui" line="1568"/>
       <location filename="../src/ui/room_exits.ui" line="1708"/>
       <source>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Crea un'uscita in questa direzione con destinazione sconosciuta, non è impossibile impostare un'uscita con StanzaID.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="93"/>
@@ -10512,7 +10512,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1874"/>
       <source>Exit RoomID number</source>
-      <translation>RoomID uscita</translation>
+      <translation>StanzaID uscita</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1901"/>
@@ -10597,7 +10597,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1886"/>
       <source>Exit Weight (0=No override)</source>
-      <translation type="unfinished"/>
+      <translation>Peso dell'uscita (0 = Nessun valore)</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
@@ -10613,7 +10613,8 @@ tenta di nuovo quando sarà terminato.</translation>
       <location filename="../src/ui/room_exits.ui" line="2044"/>
       <source>Exit
 Room ID</source>
-      <translation type="unfinished"/>
+      <translation>Uscita
+ID Stanza</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2053"/>
@@ -10638,7 +10639,8 @@ Peso</translation>
       <location filename="../src/ui/room_exits.ui" line="2071"/>
       <source>Door
 None</source>
-      <translation type="unfinished"/>
+      <translation>Porte
+Nessuna</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2080"/>
