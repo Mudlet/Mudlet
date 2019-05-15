@@ -10170,7 +10170,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1826"/>
       <source>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands. However if significant problems are found the report can be quite extensive, in particular for larger maps. In order to reduce the amount of on-screen messages this option (if not set) will cause most of the text to not be displayed - except for a suggestion to review the report file.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet führt nun Prüfungen und Reparaturen durch, um Probleme mit vorherigen Versionen zu beseitigen, die auf fehlerhaften Code oder schlecht dokumentierten Befehlen zurückgehen. Sollten schwerwiegende Probleme auftauchen, kann der Bericht sehr umfangreich ausfallen, besonders bei sehr großen Karten. Um die Anzahl der Meldungen überschaubar zu halten (falls nicht aktiviert) wird kein Text ausgegeben und auf die Datei mit dem vollständigen Bericht verwiesen.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2021"/>
