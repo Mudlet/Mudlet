@@ -5975,7 +5975,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="452"/>
       <source>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also &quot;synchronizes&quot; modules that are so marked.</source>
-      <translation type="unfinished"/>
+      <translation>Salva il tuo profilo (trigger, alias, script, timer, bottoni e tasti, ma non le impostazioni specifiche di mappa o script); &quot;sincronizza&quot; anche i moduli contrassegnati.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="455"/>
@@ -5990,7 +5990,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="460"/>
       <source>Generates a statistics summary display on the main profile console.</source>
-      <translation type="unfinished"/>
+      <translation>Genera delle statistiche di riepilogo sulla console principale del profilo.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="463"/>
@@ -6426,7 +6426,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7873"/>
       <source>Select background color to apply to matches</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona il colore di sfondo da applicare alle corrispondenze</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7885"/>
@@ -7387,7 +7387,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/ui/module_manager.ui" line="148"/>
       <source>Module Help</source>
-      <translation type="unfinished"/>
+      <translation>Guida ai Moduli</translation>
     </message>
   </context>
   <context>
@@ -7651,27 +7651,27 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="214"/>
       <source>German (Switzerland)</source>
-      <translation type="unfinished"/>
+      <translation>Tedesco (Svizzera)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="215"/>
       <source>German (Switzerland, revised by F M Baumann)</source>
-      <translation type="unfinished"/>
+      <translation>Tedesco (Svizzera, revisionato da F M Baumann)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="216"/>
       <source>German (Germany/Belgium/Luxemburg)</source>
-      <translation type="unfinished"/>
+      <translation>Tedesco (Germania/Belgio/Lussemburgo)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="217"/>
       <source>German (Germany/Belgium/Luxemburg, revised by F M Baumann)</source>
-      <translation type="unfinished"/>
+      <translation>Tedesco (Germania/Belgio/Lussemburgo, revisionato da F M Baumann)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="218"/>
       <source>German (Liechtenstein)</source>
-      <translation type="unfinished"/>
+      <translation>Tedesco (Liechtenstein)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="219"/>
@@ -7742,7 +7742,7 @@ Avvio in corso... Buon divertimento!
       <location filename="../src/mudlet.cpp" line="231"/>
       <source>English (United Kingdom - &apos;ise&apos; not &apos;ize&apos;)</source>
       <comment>This dictionary prefers the British &apos;ise&apos; form over the American &apos;ize&apos; one.</comment>
-      <translation type="unfinished"/>
+      <translation>Inglese (Regno Unito - &apos;ise&apos; invece che &apos;ize&apos;)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="232"/>
