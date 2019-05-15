@@ -5883,7 +5883,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="385"/>
       <source>Delete Trigger, Script, Alias or Filter</source>
-      <translation type="unfinished"/>
+      <translation>Elimina Trigger, Script, Alias o Filtro</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="392"/>
@@ -7359,7 +7359,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/ui/mapper.ui" line="926"/>
       <source>all levels</source>
-      <translation type="unfinished"/>
+      <translation>tutti i livelli</translation>
     </message>
   </context>
   <context>
@@ -9415,7 +9415,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="221"/>
       <source>Please restart Mudlet to apply the new language</source>
-      <translation type="unfinished"/>
+      <translation>Riavvia Mudlet per attivare la nuova lingua</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="466"/>
@@ -10159,7 +10159,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2707"/>
       <source>#channel1 #channel2 #etc...</source>
-      <translation type="unfinished"/>
+      <translation>#canale1 #channel2 #ecc...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2693"/>
