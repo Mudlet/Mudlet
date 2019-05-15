@@ -1432,12 +1432,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="465"/>
       <source>Earlier search result.</source>
-      <translation type="unfinished"/>
+      <translation>Risultati di ricerca preliminari.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="476"/>
       <source>Later search result.</source>
-      <translation type="unfinished"/>
+      <translation>Risultati di ricerca finali.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1032"/>
@@ -2557,7 +2557,7 @@ Old ==&gt; New</source>
       <location filename="../src/TRoomDB.cpp" line="825"/>
       <location filename="../src/TRoomDB.cpp" line="828"/>
       <source>[ INFO ]  - Area id numbering is satisfactory.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - La numerazione degli ID area è corretta.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="836"/>
@@ -2590,7 +2590,7 @@ out what new id numbers to use.</source>
       <location filename="../src/TRoomDB.cpp" line="901"/>
       <location filename="../src/TRoomDB.cpp" line="904"/>
       <source>[ INFO ]  - Room id numbering is satisfactory.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - La numerazione degli ID stanza è corretta.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="921"/>
@@ -3544,12 +3544,12 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="273"/>
       <source>Command (up):</source>
-      <translation type="unfinished"/>
+      <translation>Comando (alto):</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
       <source>&lt;p&gt;Choose a good, ideally unique, name for your button, menu or toolbar. This will be displayed in the buttons tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Scegli un nome chiaro, idealmente univoco, per il bottone, il menu o la barra degli strumenti. Sarà utilizzato nella vista ad albero dei bottoni.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="302"/>
@@ -3567,7 +3567,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="57"/>
       <source>choose a unique name for your alias; it will show in the tree and is needed for scripting.</source>
-      <translation type="unfinished"/>
+      <translation>scegli un nome univoco per il tuo alias; sarà mostrato nella vista ad albero ed è necessario per gli script.</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="76"/>
@@ -3926,7 +3926,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2301"/>
       <source>Secure:</source>
-      <translation type="unfinished"/>
+      <translation>Sicurezza:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2308"/>
@@ -6316,7 +6316,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7289"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7294"/>
       <source>You have to choose an item for export first. Please select a tree item and then click on export again.</source>
-      <translation>È necessario scegliere un elemento da esportare. Seleziona una voce della struttura ad albero e quindi fai clic di nuovo su esportazione.</translation>
+      <translation>È necessario scegliere un elemento da esportare. Seleziona una voce della vista ad albero e quindi fai clic di nuovo su esportazione.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7038"/>
@@ -6782,7 +6782,7 @@ dalla GUI)</translation>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, ideally unique, name for your key or key group. This will be displayed in the key tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Scegli un nome chiaro, idealmente univoco, per il tasto o il gruppo di tasti. Sarà utilizzato nella vista ad albero dei tasti.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="40"/>
@@ -10696,7 +10696,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your script or script group. This will be displayed in the script tree.&lt;/p&gt;&lt;p&gt;If a function withn the script is to be used to handle events entered in the list below &lt;b&gt;&lt;u&gt;it must have the same name as is entered here.&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Scegli un nome chiaro, idealmente univoco, per il tuo script o il gruppo di script. Sarà utilizzato nella vista ad albero degli script.&lt;/p&gt;&lt;p&gt;Se una funzione all'interno dello script deve essere utilizzata per gestire l'evento indicato nella lista sottostante &lt;b&gt;&lt;u&gt;deve avere lo stesso nome inserito qui.&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="88"/>
@@ -10765,7 +10765,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="39"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your timer, offset-timer or timer group. This will be displayed in the timer tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Scegli un nome chiaro, idealmente univoco, per il timer o il gruppo di timer. Sarà utilizzato nella vista ad albero dei timer.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="79"/>
@@ -11015,7 +11015,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="84"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your trigger or trigger group. This will be displayed in the trigger tree.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Scegli un nome chiaro, idealmente univoco, per il trigger o il gruppo di trigger. Sarà utilizzato nella vista ad albero dei trigger.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="136"/>
@@ -11077,7 +11077,7 @@ o script LUA</translation>
       <location filename="../src/ui/vars_main_area.ui" line="51"/>
       <location filename="../src/ui/vars_main_area.ui" line="145"/>
       <source>Auto-Type</source>
-      <translation type="unfinished"/>
+      <translation>Tipo automatico</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="128"/>
@@ -11087,12 +11087,12 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="150"/>
       <source>key (string)</source>
-      <translation type="unfinished"/>
+      <translation>chiave (stringa)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="155"/>
       <source>index (integer)</source>
-      <translation type="unfinished"/>
+      <translation>indice (numero intero)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="71"/>
