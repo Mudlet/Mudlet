@@ -525,7 +525,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2392"/>
       <source>Foreground color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation>Colore di primo piano</translation>
+      <translation>Colore carattere</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2396"/>
@@ -549,7 +549,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2405"/>
       <source>Foreground</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation>In primo piano</translation>
+      <translation>Colore carattere</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2649"/>
@@ -6000,7 +6000,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="464"/>
       <source>Shows/Hides the errors console in the bottom right of this editor.</source>
-      <translation type="unfinished"/>
+      <translation>Mostra/Nasconde la console degli errori nella parte inferiore destra dell'editor.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="467"/>
@@ -6010,12 +6010,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="468"/>
       <source>Activates Debug Messages -&gt; system will be &lt;b&gt;&lt;i&gt;slower&lt;/i&gt;&lt;/b&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Attiva i messaggi di Debug -&gt; il sistema sarà &lt;b&gt;&lt;i&gt;più lento&lt;/i&gt;&lt;/b&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="469"/>
       <source>Shows/Hides the separate Central Debug Console - when being displayed the system will be slower.</source>
-      <translation type="unfinished"/>
+      <translation>Mostra/Nasconde la console di debug - quando viene visualizzata il sistema sarà più lento.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="572"/>
@@ -6031,7 +6031,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="582"/>
       <source>If checked then what is searched for must match the case precisely, otherwise the case is ignored.</source>
-      <translation type="unfinished"/>
+      <translation>Se selezionato, deve esserci una corrispondenza precisa tra maiuscole/minuscole.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="621"/>
@@ -6175,7 +6175,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4771"/>
       <source>A Go-Ahead (GA) signal from the game is required to make this feature work</source>
-      <translation type="unfinished"/>
+      <translation>Un segnale Go-Ahead (GA) dal gioco è necessario per utilizzare questa funzione</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4820"/>
@@ -6183,7 +6183,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7960"/>
       <source>Foreground color ignored</source>
       <comment>Color trigger ignored foreground color button, ensure all three instances have the same text</comment>
-      <translation>Colore di primo piano ignorato</translation>
+      <translation>Colore carattere ignorato</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4824"/>
@@ -6191,7 +6191,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7963"/>
       <source>Default foreground color</source>
       <comment>Color trigger default foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Colore carattere predefinito</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4828"/>
@@ -6199,7 +6199,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7966"/>
       <source>Foreground color [ANSI %1]</source>
       <comment>Color trigger ANSI foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Colore carattere [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4835"/>
@@ -6229,7 +6229,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="4964"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4966"/>
       <source>fault</source>
-      <translation type="unfinished"/>
+      <translation>errore</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5461"/>
@@ -6255,7 +6255,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5882"/>
       <source>Aliases - Input Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Alias - Trigger di input</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6010"/>
@@ -6316,7 +6316,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7289"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7294"/>
       <source>You have to choose an item for export first. Please select a tree item and then click on export again.</source>
-      <translation type="unfinished"/>
+      <translation>È necessario scegliere un elemento da esportare. Seleziona una voce della struttura ad albero e quindi fai clic di nuovo su esportazione.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7038"/>
@@ -6357,7 +6357,8 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7319"/>
       <source>Cannot write file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Impossibile scrivere il file %1:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7554"/>
@@ -6420,7 +6421,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7853"/>
       <source>Select foreground color to apply to matches</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona il colore da applicare alle corrispondenze</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7873"/>
@@ -9339,7 +9340,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1293"/>
       <source>Foreground:</source>
-      <translation>In primo piano:</translation>
+      <translation>Colore carattere:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1316"/>
@@ -11002,7 +11003,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="756"/>
       <source>Foreground</source>
-      <translation>In primo piano</translation>
+      <translation>Colore carattere</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="551"/>
@@ -11035,7 +11036,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="95"/>
       <source>Foreground color ignored</source>
-      <translation>Colore di primo piano ignorato</translation>
+      <translation>Colore carattere ignorato</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="119"/>
