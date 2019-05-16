@@ -1253,7 +1253,7 @@ void mudlet::slot_package_exporter()
     }
     auto d = new dlgPackageExporter(this, pH);
     // don't show the dialog if the user cancelled the wizard
-    if (d->filePath.isEmpty()) {
+    if (d->mXmlPathFileName.isEmpty()) {
         return;
     }
 

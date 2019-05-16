@@ -47,22 +47,16 @@
        </widget>
       </item>
       <item row="1" column="0">
-       <widget class="QLabel" name="textLabel1">
+       <widget class="QLabel" name="label_exportFilePath">
         <property name="text">
          <string>Export location:</string>
-        </property>
-        <property name="buddy">
-         <cstring>browseButton</cstring>
         </property>
        </widget>
       </item>
       <item row="1" column="1">
-       <widget class="QLineEdit" name="filePath"/>
-      </item>
-      <item row="1" column="2">
-       <widget class="QPushButton" name="browseButton">
-        <property name="text">
-         <string>Select</string>
+       <widget class="QLineEdit" name="filePath">
+        <property name="readOnly">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -90,7 +84,7 @@
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="standardButtons">
-      <set>QDialogButtonBox::NoButton</set>
+      <set>QDialogButtonBox::Apply|QDialogButtonBox::Cancel</set>
      </property>
     </widget>
    </item>
