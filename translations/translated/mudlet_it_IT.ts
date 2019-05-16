@@ -6905,7 +6905,10 @@ meno utili per un uso normale di questa applicazione:
                        --dograb wins over --nograb even when --nograb is last on
                        the command line.
 </source>
-      <translation type="unfinished"/>
+      <translation>       --dograb ignora qualsiasi -nograb sia implicito che esplicito.
+                       --dograb prevale su -- nograb anche quando --nogra è ultima
+                       opzione inserita nella riga dei comandi.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="233"/>
@@ -6913,14 +6916,19 @@ meno utili per un uso normale di questa applicazione:
                        keyboard. This option is set by default when Mudlet is
                        running in the gdb debugger under Linux.
 </source>
-      <translation type="unfinished"/>
+      <translation>       --nograb l'applicazione non deve catturare l'attività del mouse
+                       o la tastiera. Questa opzione è attiva in modo predefinito 
+                       quando Mudlet è in esecuzione nel debugger gdb in Linux.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="237"/>
       <source>       --nograb        the application should never grab the mouse or the
                        keyboard.
 </source>
-      <translation type="unfinished"/>
+      <translation>       --nograb l'applicazione non deve catturare l'attività del mouse
+                       o la tastiera.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="240"/>
@@ -6948,7 +6956,11 @@ meno utili per un uso normale di questa applicazione:
                        program easier to debug and often much slower. The --sync
                        option is only valid for the X11 version of Qt.
 </source>
-      <translation type="unfinished"/>
+      <translation>       --sync forza il server X ad eseguire ogni richiesta client immediatamente 
+                       senza utilizzare l'ottimizzazione del buffer. Rende più facile 
+                       effettuare debug del programma, ma lo rallenta. L'opzione -- sync
+                       è valida solo per la versione X11 di Qt.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="261"/>
@@ -6961,7 +6973,13 @@ meno utili per un uso normale di questa applicazione:
                        debugger connects to it.
 
 </source>
-      <translation type="unfinished"/>
+      <translation>       --widgetcount alla fine stampa un messaggio di debug relativo al numero di widget
+                       non distrutti e al numero massimo di widget esistenti nell'arco di tempo.
+       --qmljsdebugger = 1234[,block] attiva il debugger QML/JS sulla porta specificata.
+                       Il numero è il valore della porta, mentre l'opzione blocco è facoltativa
+                       e mette in pausa l'applicazione fino a quando un debugger si connette.
+
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="268"/>
