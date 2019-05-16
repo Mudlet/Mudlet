@@ -1892,7 +1892,9 @@ Salva nuovamente, prima di uscire, nel formato 17 o superiore per conservare i d
       <source>[ ALERT ] - Area User data has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!
 Areas id affected: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Durante il salvataggio dell'area, i dati dell'utente sono stati persi.
+Salva nuovamente, prima di uscire, nel formato 17 o superiore per conservare i dati.
+Area ID: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1175"/>
@@ -1903,7 +1905,7 @@ Areas id affected: %1.</source>
       <location filename="../src/TMap.cpp" line="1407"/>
       <location filename="../src/TMap.cpp" line="1697"/>
       <source>[ ERROR ] - Unable to open (for reading) map file: &quot;%1&quot;!</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Impossibile aprire (in lettura) il file di mappa: &quot;%1&quot;!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1416"/>
