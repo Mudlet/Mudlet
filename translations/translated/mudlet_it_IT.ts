@@ -1912,7 +1912,8 @@ Area ID: %1.</translation>
       <source>[ ERROR ] - Map file is too new, its file format (%1) is higher than this version of
 Mudlet can handle (%2)!  The file is:
 &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Il file di mappa è troppo recente, il formato (%1) è superiore a quello gestibile da questa versione di Mudlet (%2)!  Il file di mappa è:
+&quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1423"/>
@@ -3353,17 +3354,17 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTrigger.cpp" line="212"/>
       <source>Error: in item %1, perl regex: &quot;%2&quot;, it failed to compile, reason: &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Errore: nella voce %1, la regex perl: &quot;%2&quot;, non è stata compilata, motivazione: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="232"/>
       <source>Error: in item %1, lua condition function &quot;%2&quot; failed to compile, reason: &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Errore: nella voce %1, la funzione Lua &quot;%2&quot; non è stata compilata, motivazione: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="251"/>
       <source>Error: in item %1, no colors to match were set - at least &lt;i&gt;one&lt;/i&gt; of the foreground or background must not be &lt;i&gt;ignored&lt;/i&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Errore: nella voce %1, non sono stati impostati colori da abbinare - almeno &lt;i&gt;un&lt;/i&gt; colore carattere o di sfondo non deve essere &lt;i&gt;ignorato&lt;/i&gt;.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="1059"/>
@@ -3804,12 +3805,12 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="58"/>
       <source>Basic ANSI Colors [0-15] - click a button to select that color number directly:</source>
-      <translation type="unfinished"/>
+      <translation>Colori ANSI di base [0-15] - premi il bottone per selezionare il numero del colore direttamente:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="240"/>
       <source>ANSI 6R x 6G x 6B Colors [16-231] - adjust red, green, blue and click button to select matching color number:</source>
-      <translation type="unfinished"/>
+      <translation>ANSI 6R x 6G x 6B Colori [16-231] - imposta il rosso, verde, blu e premi il bottone per selezionare il numero colore corrispondente:</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="252"/>
@@ -4268,7 +4269,8 @@ Per conferma per favore digita il nome del profilo:</translation>
       <location filename="../src/ui/glyph_usage.ui" line="44"/>
       <source>Symbol
 (Set Font)</source>
-      <translation type="unfinished"/>
+      <translation>Simbolo
+(imposta carattere)</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="50"/>
@@ -4286,7 +4288,8 @@ Per conferma per favore digita il nome del profilo:</translation>
       <location filename="../src/ui/glyph_usage.ui" line="61"/>
       <source>Usage
 Count</source>
-      <translation type="unfinished"/>
+      <translation>Conteggio
+Utilizzi</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="67"/>
@@ -4581,7 +4584,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1077"/>
       <source>This profile is currently loaded - close it before changing the connection parameters.</source>
-      <translation type="unfinished"/>
+      <translation>Questo profilo è attualmente caricato - devi chiuderlo prima di cambiare i parametri di connessione.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1824"/>
@@ -4639,13 +4642,16 @@ Count</source>
       <source>The %1 character is not permitted. Use one of the following:
 &quot;%2&quot;.
 </source>
-      <translation type="unfinished"/>
+      <translation>Il carattere %1 non è permesso. Utilizza uno dei seguenti:
+&quot;%2&quot;.
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1834"/>
       <source>Port number must be above zero and below 65535.
 </source>
-      <translation type="unfinished"/>
+      <translation>Il numero di porta deve essere superiore a 0 e inferiore a 65535.
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1842"/>
@@ -4892,7 +4898,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="144"/>
       <source>Failed to export - couldn&apos;t open %1 for writing in. Do you have the necessary permissions to write to that folder?</source>
-      <translation type="unfinished"/>
+      <translation>Impossibile esportare - non riesco ad aprire %1 per la scrittura. Si dispone delle autorizzazioni necessarie per scrivere in quella cartella?</translation>
     </message>
   </context>
   <context>
@@ -5060,7 +5066,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1897"/>
       <source>Creating a destination directory failed...</source>
-      <translation type="unfinished"/>
+      <translation>Creazione della directory di destinazione non riuscita...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1984"/>
@@ -5238,7 +5244,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="1786"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mappa Mudlet (*.dat);;Mappa Xml (*.xml);;Tutti i file (*)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2939"/>
