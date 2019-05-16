@@ -1057,7 +1057,7 @@ rooms:</source>
       <location filename="../src/T2DMap.cpp" line="4179"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) or the ;;s as they are used programmatically</comment>
-      <translation type="unfinished"/>
+      <translation>Mappa Mudlet (*.dat);;Mappa Xml (*.xml);;Tutti i file (*)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5027"/>
@@ -1412,7 +1412,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="391"/>
       <source>Start logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>Avvia il salvataggio dei messaggi inviati dal gioco nel file di log.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="402"/>
@@ -1846,7 +1846,9 @@ Errore Lua: </translation>
       <source>[ ALERT ] - Saving map in a format {%1} that is different than the one it was
 loaded as {%2}. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Salvataggio del file di mappa nel formato {%1} diverso da quello
+di caricamento {%2}. Questo potrebbe generare dei problemi se si desidera
+condividere la mappa con altri utenti che utilizzano il formato originale.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="186"/>
@@ -1859,26 +1861,31 @@ map with others relying on the original format.</source>
       <location filename="../src/TMap.cpp" line="1032"/>
       <source>[ ERROR ] - The format {%1} you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version {%2}.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Il formato di salvataggio del file di mappa {%1} è troppo recente
+per questa versione di Mudlet. Sono supportati formati fino alla versione {%2}.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1058"/>
       <source>[ WARN ]  - Saving map in a format {%1} different from the
 recommended format {%2} for this version of Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - Salvataggio del file di mappa nel formato {%1} diverso
+da quello raccomandato {%2} per questa versione di Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1089"/>
       <source>[ ALERT ] - Map User data has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Durante il salvataggio del file di mappa, i dati dell'utente sono stati persi.
+Salva nuovamente, prima di uscire, nel formato 17 o superiore per conservare i dati!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1168"/>
       <source>[ ALERT ] - User data for this area has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Durante il salvataggio dell'area, i dati dell'utente sono stati persi.
+Salva nuovamente, prima di uscire, nel formato 17 o superiore per conservare i dati!
+</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1172"/>
