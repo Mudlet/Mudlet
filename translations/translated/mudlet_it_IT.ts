@@ -7158,7 +7158,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/ui/main_window.ui" line="291"/>
       <source>&lt;p&gt;Share the screen area between multiple open profiles.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Condividi lo schermo tra più profili aperti.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="299"/>
@@ -10734,7 +10734,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="88"/>
       <source>&lt;p&gt;Remove (selected) event handler from list.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Rimuovi la voce selezionata dall'elenco del gestore eventi.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="91"/>
@@ -10749,7 +10749,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="133"/>
       <source>&lt;p&gt;Add entered event handler name to list.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Aggiungi all'elenco, il nome del gestore eventi inserito.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="136"/>
@@ -11081,7 +11081,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="146"/>
       <source>match on the prompt line</source>
-      <translation type="unfinished"/>
+      <translation>cerca sulla linea dei comandi</translation>
     </message>
   </context>
   <context>
