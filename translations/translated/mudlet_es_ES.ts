@@ -190,7 +190,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="350"/>
       <source>&lt;b&gt;&amp;lt;%1&amp;gt;&lt;/b&gt; %2</source>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;&amp;lt;%1&amp;gt;&lt;/b&gt; %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="358"/>
