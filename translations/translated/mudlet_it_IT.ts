@@ -25,7 +25,7 @@ attendere prego...</translation>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
-      <translation>Decompressione del pacchetto in corso:
+      <translation>Decompressione del package in corso:
 &quot;%1&quot;
 attendere prego...</translation>
     </message>
@@ -1447,7 +1447,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1050"/>
       <source>&lt;p&gt;Start logging game output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Inizia la registrazione dei dati ricevuti dal gioco sul file di log.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1572"/>
@@ -2556,7 +2556,7 @@ Old ==&gt; New</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="781"/>
       <source>[ INFO ]  - The area with this bad id was renumbered to: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - L'area con questo id errato è stata rinumerata in: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="782"/>
@@ -2590,7 +2590,7 @@ out what new id numbers to use.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="864"/>
       <source>[ INFO ]  - This room with the bad id was renumbered to: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - La stanza con questo id errato è stata rinumerata in: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="865"/>
@@ -2709,7 +2709,7 @@ first will also gain a suffix in this manner.
     <message>
       <location filename="../src/TRoomDB.cpp" line="1198"/>
       <source>[ ALERT ] - Duplicate area names detected in the Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Nomi di area duplicati rilevati nel file di mappa!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1199"/>
@@ -3694,7 +3694,7 @@ Disinstallazione della vecchia versione &apos;%2&apos;.</translation>
       <location filename="../src/ctelnet.cpp" line="1345"/>
       <location filename="../src/ctelnet.cpp" line="1624"/>
       <source>[  OK  ]  - Package is already installed.</source>
-      <translation>[ OK ] - Il pacchetto è già installato.</translation>
+      <translation>[ OK ] - Il package è già installato.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1352"/>
@@ -4884,12 +4884,12 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="87"/>
       <source>Package name</source>
-      <translation>Nome pacchetto</translation>
+      <translation>Nome package</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="87"/>
       <source>Package name:</source>
-      <translation>Nome pacchetto:</translation>
+      <translation>Nome package:</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="91"/>
@@ -6379,7 +6379,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7554"/>
       <source>Import Mudlet Package</source>
-      <translation>Importa pacchetto Mudlet</translation>
+      <translation>Importa package Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7561"/>
@@ -6397,7 +6397,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7575"/>
       <source>Package %1 is already installed.</source>
-      <translation>Il pacchetto %1 è già installato.</translation>
+      <translation>Il package %1 è già installato.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7700"/>
@@ -7098,7 +7098,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/ui/main_window.ui" line="158"/>
       <source>&lt;p&gt;Disconnect from the current game server.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Disconnetti dal server di gioco.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="166"/>
@@ -8879,7 +8879,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="1213"/>
       <source>Import Mudlet Package</source>
-      <translation>Importa pacchetto Mudlet</translation>
+      <translation>Importa package Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1220"/>
