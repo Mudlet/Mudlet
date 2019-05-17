@@ -2561,7 +2561,7 @@ Old ==&gt; New</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="782"/>
       <source>[ INFO ]  - This area was renumbered from the bad id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Questa area è stata rinumerata dall'id errato: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="825"/>
@@ -2584,7 +2584,8 @@ out what new id numbers to use.</source>
       <location filename="../src/TRoomDB.cpp" line="848"/>
       <source>[ INFO ]  - The renumbered rooms will be:
 </source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Le stanze rinumerate sono:
+</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="864"/>
@@ -2594,7 +2595,7 @@ out what new id numbers to use.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="865"/>
       <source>[ INFO ]  - This room was renumbered from the bad id: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Questa stanza è stata rinumerata dall'id errato: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="901"/>
@@ -3873,7 +3874,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/composer.ui" line="14"/>
       <source>News and Message Composer</source>
-      <translation type="unfinished"/>
+      <translation>Compositore di notizie e messaggi</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="123"/>
@@ -4982,7 +4983,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="755"/>
       <source>Show &quot;%1&quot; in the map area selection</source>
-      <translation type="unfinished"/>
+      <translation>Mostra &quot;%1&quot; nella selezione delle mappe di area</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="866"/>
@@ -5126,7 +5127,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2679"/>
       <source>Updating themes from colorsublime.github.io...</source>
-      <translation type="unfinished"/>
+      <translation>Aggiorna tempi da colorsublime.github.io...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2796"/>
@@ -5414,7 +5415,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1919"/>
       <source>&lt;b&gt;Room&lt;/b&gt; Weight of destination: %1.</source>
       <comment>Bold HTML tags are used to emphasis that the value is destination room&apos;s weight whether overridden by a non-zero exit weight here or not.</comment>
-      <translation type="unfinished"/>
+      <translation>Peso &lt;b&gt;Stanza&lt;/b&gt; di destinazione: %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="147"/>
@@ -6064,13 +6065,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="623"/>
       <source>Where</source>
       <comment>Heading for the third column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>Dove</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="624"/>
       <source>What</source>
       <comment>Heading for the fourth column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>Testo</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="671"/>
@@ -8791,7 +8792,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="638"/>
       <source>Disconnects you from the game and connects once again</source>
-      <translation type="unfinished"/>
+      <translation>Disconnette il gioco e si collega di nuovo</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="643"/>
@@ -8801,7 +8802,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="644"/>
       <source>If you&apos;ve got multiple profiles open, splits Mudlet screen to show them all at once</source>
-      <translation type="unfinished"/>
+      <translation>Se hai più profili aperti, divide la finestra di Mudlet per mostrarli tutti</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="649"/>
@@ -9343,7 +9344,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1082"/>
       <source>Make &apos;Ambiguous&apos; E. Asian width characters wide</source>
-      <translation type="unfinished"/>
+      <translation>Rendi i caratteri E. Asiatici con larghezza &apos;ambigua&apos; omogenei</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1181"/>
@@ -9408,12 +9409,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="267"/>
       <source>&lt;p&gt;Enables GMCP - note that if you have MSDP enabled as well, some servers will prefer one over the other&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Abilita GMCP - se hai anche MSDP abilitato, alcuni server potrebbero preferire solo uno dei due&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="277"/>
       <source>&lt;p&gt;Enables MSDP - note that if you have GMCP enabled as well, some servers will prefer one over the other&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Abilita MSDP - se hai anche GMCP abilitato, alcuni server potrebbero preferire solo uno dei due&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="320"/>
@@ -9537,7 +9538,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1016"/>
       <source>(characters to ignore in selection, for example &apos; or &quot;)</source>
-      <translation type="unfinished"/>
+      <translation>(caratteri da ignorare nella selezione automatica, per esempio &apos; o &quot;)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1032"/>
@@ -9573,7 +9574,7 @@ tenta di nuovo quando sarà terminato.</translation>
       <location filename="../src/ui/profile_preferences.ui" line="1120"/>
       <source>Show &apos;LUA OK&apos; messages for Timers with minimum interval of (h:mm:ss.zzz):</source>
       <comment>The terms in italics refer to Mudlet specific things and ought to match translations in the glossary - assuming they have been put in there!</comment>
-      <translation type="unfinished"/>
+      <translation>Mostra i messaggi &apos;LUA OK&apos; per i Timer con un intervallo minimo di (h:mm:ss.zzz):</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1154"/>
@@ -9614,7 +9615,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1416"/>
       <source>These preferences set how you want a particular color to be represented visually in the main display:</source>
-      <translation type="unfinished"/>
+      <translation>Queste opzioni determinano come un colore dovrebbe essere rappresentato nella finestra principale:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1426"/>
@@ -10122,7 +10123,7 @@ tenta di nuovo quando sarà terminato.</translation>
       <location filename="../src/ui/profile_preferences.ui" line="2605"/>
       <location filename="../src/ui/profile_preferences.ui" line="2621"/>
       <source>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet mostrerà le informazioni estese sulla presenza quando utilizzi questo nome utente Discord (utile se si dispone di account Discord multipli). Lascia vuoto per mostrare le informazioni per qualsiasi account di Discord di cui si esegue il login.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2582"/>
@@ -10255,7 +10256,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="37"/>
       <source>General exits:</source>
-      <translation type="unfinished"/>
+      <translation>Uscite:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="96"/>
@@ -10711,7 +10712,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2150"/>
       <source>&amp;End S. Exits editing</source>
-      <translation type="unfinished"/>
+      <translation>T&amp;ermina mod. Uscita S.</translation>
     </message>
   </context>
   <context>
@@ -10948,12 +10949,12 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="268"/>
       <source>&lt;p&gt;Within how many lines must all condition be true to fire the trigger?&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Entro quante righe devono essere vere tutte le condizioni per attivare il trigger?&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="290"/>
       <source>&lt;p&gt;When checked, only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Se attivo, solo il contenuto filtrato (=gruppi di cattura) verrà trasmesso ai trigger figli, non la riga iniziale (consulta il manuale sui filtri).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="293"/>
@@ -10993,7 +10994,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="548"/>
       <source>&lt;p&gt;Play a sound file if the trigger fires.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Riproduci un file audio all'attivazione del trigger.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="593"/>
@@ -11023,7 +11024,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="641"/>
       <source>&lt;p&gt;Click to remove a sound file set for this trigger.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Premi per eliminare un file sonoro impostato per questo trigger.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="692"/>
