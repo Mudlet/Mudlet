@@ -1253,6 +1253,7 @@ local ansiPattern = rex.new("\\e\\[([0-9;]+?)m")
 -- italics and underline not currently supported since decho doesn't support them
 -- bold is emulated so it is supported, up to an extent
 function ansi2decho(text, ansi_default_color)
+  assert(type(text) == 'string', 'ansi2decho() requires a string as the first argument!')
   local coloursToUse = colours
   local lastColour = ansi_default_color
 
