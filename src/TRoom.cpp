@@ -844,7 +844,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             QMap<QString, QList<int>> oldLinesColorData;
             ifs >> oldLinesColorData;
             QMapIterator<QString, QList<int>> itCustomLineColor(oldLinesColorData);
-            while (itCustomLine.hasNext()) {
+            while (itCustomLineColor.hasNext()) {
                 itCustomLineColor.next();
                 QString direction(itCustomLineColor.key());
                 if (direction == QLatin1String("N") || direction == QLatin1String("E") || direction == QLatin1String("S") || direction == QLatin1String("W") || direction == QLatin1String("UP")
