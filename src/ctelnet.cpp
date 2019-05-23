@@ -1319,14 +1319,6 @@ void cTelnet::processTelnetCommand(const string& command)
                 version.replace(QChar::LineFeed, QChar::Space);
                 version = version.section(QChar::Space, 0, 0);
 
-                QString _smsg;
-                if (mpHost->mServerGUI_Package_version != version) {
-                    postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
-                                   "Uninstalling old version '%2'.")
-                                .arg(version, mpHost->mServerGUI_Package_version));
-                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);
-                    mpHost->mServerGUI_Package_version = version;
-                }
                 QString url = msg.section(QChar::LineFeed, 1);
                 QString packageName = url.section(QLatin1Char('/'), -1);
                 QString fileName = packageName;
@@ -1339,6 +1331,16 @@ void cTelnet::processTelnetCommand(const string& command)
                 packageName.remove(QLatin1Char('/'));
                 packageName.remove(QLatin1Char('\\'));
                 packageName.remove(QLatin1Char('.'));
+
+                if (mpHost->mServerGUI_Package_version != version) {
+                    postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
+                                   "Uninstalling old version '%2'.")
+                                .arg(version, mpHost->mServerGUI_Package_version != QStringLiteral("-1") ? mpHost->mServerGUI_Package_version : QStringLiteral("(unknown)")));
+                    // uninstall by previous known package name or current if we don't
+                    // know it (in case of manual installation)
+                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != QStringLiteral("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
+                    mpHost->mServerGUI_Package_version = version;
+                }
 
                 postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
                 if (mpHost->mInstalledPackages.contains(packageName)) {
@@ -1598,14 +1600,6 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         version.replace(QChar::LineFeed, QChar::Space);
         version = version.section(QChar::Space, 0, 0);
 
-        QString _smsg;
-        if (mpHost->mServerGUI_Package_version != version) {
-            postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
-                           "Uninstalling old version '%2'.")
-                        .arg(version, mpHost->mServerGUI_Package_version));
-            mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);
-            mpHost->mServerGUI_Package_version = version;
-        }
         QString url = transcodedMsg.section(QChar::LineFeed, 1);
         QString packageName = url.section(QLatin1Char('/'), -1);
         QString fileName = packageName;
@@ -1618,6 +1612,16 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         packageName.remove(QLatin1Char('/'));
         packageName.remove(QLatin1Char('\\'));
         packageName.remove(QLatin1Char('.'));
+
+        if (mpHost->mServerGUI_Package_version != version) {
+            postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
+                           "Uninstalling old version '%2'.")
+                        .arg(version, mpHost->mServerGUI_Package_version != QStringLiteral("-1") ? mpHost->mServerGUI_Package_version : QStringLiteral("(unknown)")));
+            // uninstall by previous known package name or current if we don't
+            // know it (in case of manual installation)
+            mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != QStringLiteral("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
+            mpHost->mServerGUI_Package_version = version;
+        }
 
         postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
         if (mpHost->mInstalledPackages.contains(packageName)) {
