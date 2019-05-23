@@ -1316,7 +1316,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
 
             QMap<QString, QList<int>> oldLinesColorData;
             QMapIterator<QString, QColor> itCustomLineColor(pR->customLinesColor);
-            while (itCustomLine.hasNext()) {
+            while (itCustomLineColor.hasNext()) {
                 itCustomLineColor.next();
                 QString direction(itCustomLineColor.key());
                 QList<int> colorComponents;
