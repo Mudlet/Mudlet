@@ -264,7 +264,7 @@ private:
     void decodeOSC(const QString&);
     void resetColors();
 
-    int MAX_LINKS = 2000;
+    static const int scmMaxLinks = 2000;
 
     // First stage in decoding SGR/OCS sequences - set true when we see the
     // ASCII ESC character:
