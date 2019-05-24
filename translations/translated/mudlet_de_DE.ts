@@ -7079,7 +7079,8 @@ wahrscheinlich weniger nützlich für die normale Verwendung dieser Anwendung si
       <source>       --nograb        the application should never grab the mouse or the
                        keyboard.
 </source>
-      <translation type="unfinished"/>
+      <translation>       --nograb Die Anwendung sollte niemals die Maus oder die Tastatur fangen.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="240"/>
