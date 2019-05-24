@@ -144,9 +144,9 @@ function CheckAndInstall([string] $dependencyName, [string] $signalFile, [script
 # installation functions
 function InstallSevenZ() {
   if($64Bit){
-    $downloadUrl = "https://www.7-zip.org/a/7z1805-x64.exe"
+    $downloadUrl = "https://www.7-zip.org/a/7z1900-x64.exe"
   } else {
-    $downloadUrl = "https://www.7-zip.org/a/7z1805.exe"
+    $downloadUrl = "https://www.7-zip.org/a/7z1900.exe"
   }
   DownloadFile "$downloadUrl" "7z-installer.exe"
   Step "installing 7z"
