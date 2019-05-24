@@ -163,7 +163,7 @@ function InstallCmake() {
 }
 
 function InstallMingwGet() {
-  DownloadFile "https://downloads.sourceforge.net/project/mingw/Installer/mingw-get/mingw-get-0.6.2-beta-20131004-1/mingw-get-0.6.2-mingw32-beta-20131004-1-bin.zip?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fmingw%2Ffiles%2FInstaller%2Fmingw-get%2Fmingw-get-0.6.2-beta-20131004-1%2Fmingw-get-0.6.2-mingw32-beta-20131004-1-bin.zip%2Fdownload%3Fuse_mirror%3Dautoselect&ts=1524054843&use_mirror=autoselect" "mingw-get.zip"
+  DownloadFile "https://osdn.net/frs/redir.php?m=rwthaachen&f=mingw%2F68260%2Fmingw-get-0.6.3-mingw32-pre-20170905-1-bin.zip" "mingw-get.zip"
   if (!(Test-Path -Path "C:\MinGW" -PathType Container)) {
     Step "Creating MinGW path"
     New-Item -Path "C:\MinGW" -ItemType "directory" >> "$logFile" 2>&1
