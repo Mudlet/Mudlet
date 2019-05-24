@@ -190,7 +190,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="350"/>
       <source>&lt;b&gt;&amp;lt;%1&amp;gt;&lt;/b&gt; %2</source>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;&amp;lt;%1&amp;gt;&lt;/b&gt; %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="358"/>
@@ -357,25 +357,25 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="3216"/>
       <location filename="../src/T2DMap.cpp" line="4881"/>
       <source>Dot line</source>
-      <translation type="unfinished"/>
+      <translation>Linea de puntos</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3217"/>
       <location filename="../src/T2DMap.cpp" line="4882"/>
       <source>Dash line</source>
-      <translation type="unfinished"/>
+      <translation>Línea de trazos</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3218"/>
       <location filename="../src/T2DMap.cpp" line="4883"/>
       <source>Dash-dot line</source>
-      <translation type="unfinished"/>
+      <translation>Línea de trazo-punto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3219"/>
       <location filename="../src/T2DMap.cpp" line="4884"/>
       <source>Dash-dot-dot line</source>
-      <translation type="unfinished"/>
+      <translation>Línea trazo-punto-punto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3493"/>
@@ -398,7 +398,7 @@ Por favor, espere...</translation>
 delete this to clear the symbol or replace
 it with a new symbol for this room:</source>
       <comment>This is for when applying a new room symbol to one room. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>El símbolo es &quot;%1&quot; en la sala seleccionada, borrar aquí para suprimir el símbolo o sustitúyalo por un nuevo símbolo para esta sala:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3662"/>
@@ -410,12 +410,12 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3786"/>
       <source>Delete color</source>
       <comment>Deletes an environment colour</comment>
-      <translation type="unfinished"/>
+      <translation>Eliminar color</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3804"/>
       <source>Define new color</source>
-      <translation type="unfinished"/>
+      <translation>Definir nuevo color</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4118"/>
