@@ -211,7 +211,7 @@ function InstallOpenssl() {
 }
 
 function InstallHunspell() {
-  DownloadFile "https://github.com/hunspell/hunspell/archive/v1.7.0.tar.gz" "hunspell.gz"
+  DownloadFile "https://github.com/hunspell/hunspell/archive/v1.7.0.tar.gz" "hunspell.tar.gz"
   ExtractTar "hunspell.tar.gz" "hunspell"
   Set-Location "hunspell\hunspell-1.7.0"
   Step "Changing src\tools\Makefile.am"
