@@ -267,9 +267,9 @@ function InstallPcre() {
 }
 
 function InstallSqlite() {
-  DownloadFile "https://www.sqlite.org/2018/sqlite-autoconf-3230100.tar.gz" "sqlite-autoconf-3230100.tar.gz"
-  ExtractTar "sqlite-autoconf-3230100.tar.gz" "sqlite"
-  Set-Location sqlite\sqlite-autoconf-3230100
+  DownloadFile "https://sqlite.org/2019/sqlite-autoconf-3280000.tar.gz" "sqlite.tar.gz"
+  ExtractTar "sqlite.tar.gz" "sqlite"
+  Set-Location sqlite\sqlite-autoconf-3280000
   Step "building sqlite"
   exec "gcc" @("-c", "sqlite3.c", "-O2", "-DSQLITE_ENABLE_FTS4", "-DSQLITE_ENABLE_RTREE")
   exec "ar" @("rcs", "libsqlite3.a", "sqlite3.o")
