@@ -4210,7 +4210,15 @@ int TLuaInterpreter::setRoomIDbyHash(lua_State* L)
         hash = lua_tostring(L, 2);
     }
     Host& host = getHostFromLua(L);
-    host.mpMap->mpRoomDB->hashTable[QString(hash.c_str())] = id;
+    QString hashStr = QString(hash.c_str());
+    if ( host.mpMap->mpRoomDB->roomIDToHash.contains(id) ){
+       host.mpMap->mpRoomDB->hashToRoomID.remove( host.mpMap->mpRoomDB->roomIDToHash[id] );
+    }
+    if ( host.mpMap->mpRoomDB->hashToRoomID.contains(hashStr) ){
+       host.mpMap->mpRoomDB->roomIDToHash.remove( host.mpMap->mpRoomDB->hashToRoomID[hashStr] );
+    }
+    host.mpMap->mpRoomDB->hashToRoomID[hashStr] = id;
+    host.mpMap->mpRoomDB->roomIDToHash[id] = hashStr;
     return 0;
 }
 
@@ -4228,8 +4236,8 @@ int TLuaInterpreter::getRoomIDbyHash(lua_State* L)
     Host& host = getHostFromLua(L);
     int retID = -1;
     QString _hash = hash.c_str();
-    if (host.mpMap->mpRoomDB->hashTable.contains(_hash)) {
-        retID = host.mpMap->mpRoomDB->hashTable[_hash];
+    if (host.mpMap->mpRoomDB->hashToRoomID.contains(_hash)) {
+        retID = host.mpMap->mpRoomDB->hashToRoomID[_hash];
         lua_pushnumber(L, retID);
     } else {
         lua_pushnumber(L, -1);
@@ -4250,16 +4258,13 @@ int TLuaInterpreter::getRoomHashByID(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    QMapIterator<QString, int> it(host.mpMap->mpRoomDB->hashTable);
-
-    while (it.hasNext()) {
-        it.next();
-        if (it.value() == id) {
-            lua_pushstring(L, it.key().toUtf8().constData());
-            return 1;
-        }
+    if ( host.mpMap->mpRoomDB->roomIDToHash.contains(id) ){
+        QString retHash = host.mpMap->mpRoomDB->roomIDToHash[id];
+        lua_pushstring(L, retHash.toUtf8().constData());
+        return 1;
     }
     lua_pushnil(L);
+    // This is sloppy: it might exist but not be hashed.
     lua_pushfstring(L, "room %d doesn't exist", id);
     return 2;
 }

@@ -1067,7 +1067,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     ofs << envColors;
     ofs << mpRoomDB->getAreaNamesMap();
     ofs << customEnvColors;
-    ofs << mpRoomDB->hashTable;
+    ofs << mpRoomDB->hashToRoomID;
     if (mSaveVersion >= 17) {
         if (mSaveVersion < 19) {
             // Save the data in the map user data for older versions
@@ -1459,7 +1459,11 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             ifs >> customEnvColors;
         }
         if (mVersion >= 7) {
-            ifs >> mpRoomDB->hashTable;
+            ifs >> mpRoomDB->hashToRoomID;
+            QMap<QString, int>::const_iterator i;
+            for( i = mpRoomDB->hashToRoomID.constBegin(); i != mpRoomDB->hashToRoomID.constEnd(); ++i ){
+               mpRoomDB->roomIDToHash.insert( i.value(), i.key() );
+            }
         }
 
         if (mVersion >= 17) {
@@ -1759,7 +1763,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
 
     if (otherProfileVersion >= 7) {
-        // hashTable
+        // hashToRoomID
         QHash<QString, int> _dummyQHashQStringInt;
         ifs >> _dummyQHashQStringInt;
     }

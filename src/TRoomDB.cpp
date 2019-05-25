@@ -255,13 +255,10 @@ bool TRoomDB::__removeRoom(int id)
             ++i;
         }
         rooms.remove(id);
-        // FIXME: make hashTable a bimap
-        QList<QString> keyList = hashTable.keys();
-        QList<int> valueList = hashTable.values();
-        for (int i = 0; i < valueList.size(); i++) {
-            if (valueList[i] == id) {
-                hashTable.remove(keyList[i]);
-            }
+        if ( roomIDToHash.contains(id) ) {
+            QString hash = roomIDToHash[id];
+            roomIDToHash.remove(id);
+            hashToRoomID.remove(hash);
         }
         int areaID = pR->getArea();
         TArea* pA = getArea(areaID);
@@ -1079,7 +1076,8 @@ void TRoomDB::clearMapDB()
     rooms.clear(); // Prevents any further use of TRoomDB::getRoom(int) !!!
     entranceMap.clear();
     areaNamesMap.clear();
-    hashTable.clear();
+    hashToRoomID.clear();
+    roomIDToHash.clear();
     for (auto room : rPtrL) {
         delete room; // Uses the internally held value of the room Id
                      // (TRoom::id) to call TRoomDB::__removeRoom(id)
