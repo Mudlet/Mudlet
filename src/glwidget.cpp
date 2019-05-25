@@ -405,7 +405,7 @@ void GLWidget::paintGL()
     }
     zmax = static_cast<float>(pArea->max_z);
     zmin = static_cast<float>(pArea->min_z);
-    float zEbene;
+    float zPlane;
     glEnable(GL_CULL_FACE);
     glClearDepth(1.0);
     glDepthFunc(GL_LESS);
@@ -444,9 +444,9 @@ void GLWidget::paintGL()
     //glEnable(GL_LIGHT1);
 
     if (zRot <= 0) {
-        zEbene = zmax;
+        zPlane = zmax;
     } else {
-        zEbene = zmin;
+        zPlane = zmin;
     }
 
     glEnable(GL_LINE_SMOOTH);
@@ -454,7 +454,7 @@ void GLWidget::paintGL()
     glLineWidth(1.0);
     int quads = 0;
     int verts = 0;
-    float ebenenColor2[][4] = {{0.9, 0.5, 0.0, 1.0},
+    float planeColor2[][4] = {{0.9, 0.5, 0.0, 1.0},
                                {165.0 / 255.0, 102.0 / 255.0, 167.0 / 255.0, 1.0},
                                {170.0 / 255.0, 10.0 / 255.0, 127.0 / 255.0, 1.0},
                                {203.0 / 255.0, 135.0 / 255.0, 101.0 / 255.0, 1.0},
@@ -482,7 +482,7 @@ void GLWidget::paintGL()
                                {0.0, 0.3, 0.1, 1.0}};
 
 
-    float ebenenColor[][4] = {{0.5, 0.6, 0.5, 0.2},
+    float planeColor[][4] = {{0.5, 0.6, 0.5, 0.2},
                               {0.233, 0.498, 0.113, 0.2},
                               {0.666, 0.333, 0.498, 0.2},
                               {0.5, 0.333, 0.666, 0.2},
@@ -511,11 +511,11 @@ void GLWidget::paintGL()
 
     while (true) {
         if (zRot <= 0) {
-            if (zEbene < zmin) {
+            if (zPlane < zmin) {
                 break;
             }
         } else {
-            if (zEbene > zmax) {
+            if (zPlane > zmax) {
                 break;
             }
         }
@@ -528,7 +528,7 @@ void GLWidget::paintGL()
             auto rx = static_cast<float>(pR->x);
             auto ry = static_cast<float>(pR->y);
             auto rz = static_cast<float>(pR->z);
-            if (rz != zEbene) {
+            if (rz != zPlane) {
                 continue;
             }
             if (rz > pz) {
@@ -554,7 +554,7 @@ void GLWidget::paintGL()
             exitList.push_back(pR->getDown());
             int e = pR->z;
             const int ef = abs(e % 26);
-            glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor[ef]);
+            glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, planeColor[ef]);
             glMateriali(GL_FRONT, GL_SHININESS, 1);
             glDisable(GL_DEPTH_TEST);
             if (rz <= pz) {
@@ -568,12 +568,12 @@ void GLWidget::paintGL()
                 } else {
                     glDisable(GL_BLEND);
                     glEnable(GL_LIGHTING);
-                    glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor[ef]);
+                    glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, planeColor[ef]);
                     glMateriali(GL_FRONT, GL_SHININESS, 1);
-                    glColor4f(0.3, 0.3, 0.3, 1.0); /*ebenenColor[ef][0],
-                              ebenenColor[ef][1],
-                              ebenenColor[ef][2],
-                              ebenenColor[ef][3]);*/
+                    glColor4f(0.3, 0.3, 0.3, 1.0); /*planeColor[ef][0],
+                              planeColor[ef][1],
+                              planeColor[ef][2],
+                              planeColor[ef][3]);*/
                 }
                 for (int k : exitList) {
                     bool areaExit = false;
@@ -612,12 +612,12 @@ void GLWidget::paintGL()
                     } else {
                         glDisable(GL_BLEND);
                         glEnable(GL_LIGHTING);
-                        glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor[ef]);
+                        glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, planeColor[ef]);
                         glMateriali(GL_FRONT, GL_SHININESS, 1);
-                        glColor4f(0.3, 0.3, 0.3, 1.0); //ebenenColor[ef][0],
-                                                       //                                  ebenenColor[ef][1],
-                                                       //                                  ebenenColor[ef][2],
-                                                       //                                  ebenenColor[ef][3]);
+                        glColor4f(0.3, 0.3, 0.3, 1.0); //planeColor[ef][0],
+                                                       //                                  planeColor[ef][1],
+                                                       //                                  planeColor[ef][2],
+                                                       //                                  planeColor[ef][3]);
                     }
                     glBegin(GL_LINES);
                     if (!areaExit) {
@@ -1024,12 +1024,12 @@ void GLWidget::paintGL()
                         glEnable(GL_BLEND);
                         glEnable(GL_LIGHTING);
                         glEnable(GL_LIGHT1);
-                        glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor2[ef]);
+                        glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, planeColor2[ef]);
                         glMateriali(GL_FRONT, GL_SHININESS, 1); //gut:36
-                        glColor4f(0.3, 0.3, 0.3, 1.0); /*ebenenColor2[ef][0],
-                                  ebenenColor2[ef][1],
-                                  ebenenColor2[ef][2],
-                                  ebenenColor2[ef][3])*/
+                        glColor4f(0.3, 0.3, 0.3, 1.0); /*planeColor2[ef][0],
+                                  planeColor2[ef][1],
+                                  planeColor2[ef][2],
+                                  planeColor2[ef][3])*/
                         ;
                     }
                     glBegin(GL_LINES);
@@ -1399,20 +1399,20 @@ void GLWidget::paintGL()
         }
 
         if (zRot <= 0) {
-            zEbene -= 1.0;
+            zPlane -= 1.0;
         } else {
-            zEbene += 1.0;
+            zPlane += 1.0;
         }
     }
 
     quads = 0;
-    zEbene = zmin;
+    zPlane = zmin;
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glDisable(GL_LIGHT1);
 
     while (true) {
-        if (zEbene > zmax) {
+        if (zPlane > zmax) {
             break;
         }
         QSetIterator<int> itRoom(pArea->getAreaRooms());
@@ -1426,7 +1426,7 @@ void GLWidget::paintGL()
             auto rx = static_cast<float>(pR->x);
             auto ry = static_cast<float>(pR->y);
             auto rz = static_cast<float>(pR->z);
-            if (rz != zEbene) {
+            if (rz != zPlane) {
                 continue;
             }
 
@@ -1443,7 +1443,7 @@ void GLWidget::paintGL()
 
             int e = pR->z;
             const int ef = abs(e % 26);
-            glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor[ef]);
+            glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, planeColor[ef]);
             glMateriali(GL_FRONT, GL_SHININESS, 36); //gut:96
 
             if ((rz == pz) && (rx == px) && (ry == py)) {
@@ -1466,16 +1466,16 @@ void GLWidget::paintGL()
                 glDisable(GL_BLEND);
                 glEnable(GL_LIGHTING);
                 glDisable(GL_LIGHT1);
-                glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor2[ef]);
+                glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, planeColor2[ef]);
                 glMateriali(GL_FRONT, GL_SHININESS, 36);
-                glColor4f(ebenenColor[ef][0], ebenenColor[ef][1], ebenenColor[ef][2], ebenenColor[ef][3]);
+                glColor4f(planeColor[ef][0], planeColor[ef][1], planeColor[ef][2], planeColor[ef][3]);
             } else {
                 glEnable(GL_BLEND);
                 glEnable(GL_LIGHTING);
                 glEnable(GL_LIGHT1);
-                glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, ebenenColor[ef]);
+                glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, planeColor[ef]);
                 glMateriali(GL_FRONT, GL_SHININESS, 36); //56);//gut:36
-                glColor4f(ebenenColor2[ef][0], ebenenColor2[ef][1], ebenenColor2[ef][2], ebenenColor2[ef][3]);
+                glColor4f(planeColor2[ef][0], planeColor2[ef][1], planeColor2[ef][2], planeColor2[ef][3]);
 
                 glLoadIdentity();
                 gluLookAt(px * 0.1 + xRot, py * 0.1 + yRot, pz * 0.1 + zRot, px * 0.1, py * 0.1, pz * 0.1, 0.0, 1.0, 0.0);
@@ -2126,7 +2126,7 @@ void GLWidget::paintGL()
         }
 
 
-        zEbene += 1.0;
+        zPlane += 1.0;
     }
     //   qDebug()<<"FINAL: mQuads.size()="<<mQuads.size()<<"area.size()="<<pArea->rooms.size()<<" quads="<<quads<<" verts="<<verts;
     //    qDebug()<<"mScale="<<mScale<<" 1/mScale="<<1/mScale<<" env="<<env;
