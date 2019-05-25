@@ -1122,23 +1122,23 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pA->min_z;
         ofs << pA->span;
         if (mSaveVersion >= 17) {
-            ofs << pA->xmaxEbene;
-            ofs << pA->ymaxEbene;
-            ofs << pA->xminEbene;
-            ofs << pA->yminEbene;
-        } else { // Recreate the pointless z{min|max}Ebene items
-            QMap<int, int> dummyMinMaxEbene;
+            ofs << pA->xmaxForZ;
+            ofs << pA->ymaxForZ;
+            ofs << pA->xminForZ;
+            ofs << pA->yminForZ;
+        } else { // Recreate the pointless z{min|max}ForZ items
+            QMap<int, int> dummyMinMaxForZ;
             QListIterator<int> itZ(pA->zLevels);
             while (itZ.hasNext()) {
                 int dummyEbenValue = itZ.next();
-                dummyMinMaxEbene.insert(dummyEbenValue, dummyEbenValue);
+                dummyMinMaxForZ.insert(dummyEbenValue, dummyEbenValue);
             }
-            ofs << pA->xmaxEbene;
-            ofs << pA->ymaxEbene;
-            ofs << dummyMinMaxEbene;
-            ofs << pA->xminEbene;
-            ofs << pA->yminEbene;
-            ofs << dummyMinMaxEbene;
+            ofs << pA->xmaxForZ;
+            ofs << pA->ymaxForZ;
+            ofs << dummyMinMaxForZ;
+            ofs << pA->xminForZ;
+            ofs << pA->yminForZ;
+            ofs << dummyMinMaxForZ;
         }
         ofs << pA->pos;
         ofs << pA->isZone;
@@ -1525,18 +1525,18 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 ifs >> pA->min_z;
                 ifs >> pA->span;
                 if (mVersion >= 17) {
-                    ifs >> pA->xmaxEbene;
-                    ifs >> pA->ymaxEbene;
-                    ifs >> pA->xminEbene;
-                    ifs >> pA->yminEbene;
+                    ifs >> pA->xmaxForZ;
+                    ifs >> pA->ymaxForZ;
+                    ifs >> pA->xminForZ;
+                    ifs >> pA->yminForZ;
                 } else {
-                    QMap<int, int> dummyMinMaxEbene;
-                    ifs >> pA->xmaxEbene;
-                    ifs >> pA->ymaxEbene;
-                    ifs >> dummyMinMaxEbene;
-                    ifs >> pA->xminEbene;
-                    ifs >> pA->yminEbene;
-                    ifs >> dummyMinMaxEbene;
+                    QMap<int, int> dummyMinMaxForZ;
+                    ifs >> pA->xmaxForZ;
+                    ifs >> pA->ymaxForZ;
+                    ifs >> dummyMinMaxForZ;
+                    ifs >> pA->xminForZ;
+                    ifs >> pA->yminForZ;
+                    ifs >> dummyMinMaxForZ;
                 }
                 ifs >> pA->pos;
                 ifs >> pA->isZone;
@@ -1793,18 +1793,18 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             ifs >> pA.min_z;
             ifs >> pA.span;
             if (otherProfileVersion >= 17) {
-                ifs >> pA.xmaxEbene;
-                ifs >> pA.ymaxEbene;
-                ifs >> pA.xminEbene;
-                ifs >> pA.yminEbene;
+                ifs >> pA.xmaxForZ;
+                ifs >> pA.ymaxForZ;
+                ifs >> pA.xminForZ;
+                ifs >> pA.yminForZ;
             } else {
-                QMap<int, int> dummyMinMaxEbene;
-                ifs >> pA.xmaxEbene;
-                ifs >> pA.ymaxEbene;
-                ifs >> dummyMinMaxEbene;
-                ifs >> pA.xminEbene;
-                ifs >> pA.yminEbene;
-                ifs >> dummyMinMaxEbene;
+                QMap<int, int> dummyMinMaxForZ;
+                ifs >> pA.xmaxForZ;
+                ifs >> pA.ymaxForZ;
+                ifs >> dummyMinMaxForZ;
+                ifs >> pA.xminForZ;
+                ifs >> pA.yminForZ;
+                ifs >> dummyMinMaxForZ;
             }
             ifs >> pA.pos;
             ifs >> pA.isZone;
