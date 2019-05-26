@@ -1734,7 +1734,9 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 }
                 painter.setPen(QPen(roomIdColor));
                 painter.setFont(roomVNumFont);
-                painter.drawText(roomRectangle, Qt::AlignHCenter | Qt::AlignVCenter, QStringLiteral("%1").arg(currentAreaRoom, mMaxRoomIdDigits, 10, QLatin1Char('0')));
+                // U+2007 is Unicode codepoint for "Figure Space" - the width of
+                // a numeric digit:
+                painter.drawText(roomRectangle, Qt::AlignHCenter | Qt::AlignVCenter, QStringLiteral("%1").arg(currentAreaRoom, mMaxRoomIdDigits, 10, QChar(0x2007)));
                 painter.restore();
             }
 
