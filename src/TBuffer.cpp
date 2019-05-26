@@ -706,6 +706,8 @@ TBuffer::TBuffer(Host* pH)
 , mWrapIndent(0)
 , mCursorY(0)
 , mMXP(false)
+, mMXP_MODE(MXP_MODE_OPEN)
+, mMXP_DEFAULT(MXP_MODE_OPEN)
 , mAssemblingToken(false)
 , openT(0)
 , closeT(0)
@@ -1118,46 +1120,49 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         if (isOk) {
                             // we really do not handle these well...
                             // MXP line modes - comments are from http://www.zuggsoft.com/zmud/mxp.htm#MXP%20Line%20Tags
+			    mMXP = true; // some servers don't negotiate, they assume!
 
                             switch (modeCode) {
                             case 7: // lock locked mode (MXP 0.4 or later) - set locked mode.  Mode remains in effect until changed.  Locked mode becomes the new default mode.
-                                [[clang::fallthrough]];
+				mMXP_DEFAULT = mMXP_MODE = MXP_MODE_LOCKED;
+				break;
                             case 2: // locked line (until next newline) no MXP or HTML commands are allowed in the line.  The line is not parsed for any tags at all.  This is useful for "verbatim" text output from the MUD.  When a newline is received from the MUD, the mode reverts back to the Default mode.
-                                mMXP = false;
+				mMXP_MODE = MXP_MODE_LOCKED;
                                 break;
 
                             case 6: // lock secure mode (MXP 0.4 or later) - set secure mode.  Mode remains in effect until changed.  Secure mode becomes the new default mode.
-                                [[clang::fallthrough]];
+				mMXP_DEFAULT = mMXP_MODE = MXP_MODE_SECURE;
+				break;
                             case 1: // secure line (until next newline) all tags and commands in MXP are allowed within the line.  When a newline is received from the MUD, the mode reverts back to the Default mode.
-                                [[clang::fallthrough]];
+				mMXP_MODE = MXP_MODE_SECURE;
+				break;
                             case 4: // temp secure mode (MXP 0.4 or later) - set secure mode for the next tag only.  Must be immediately followed by a < character to start a tag.  Remember to set secure mode when closing the tag also.
-                                mMXP = true;
+				mMXP_MODE = MXP_MODE_TEMP_SECURE;
                                 break;
-
                             case 3: //  reset (MXP 0.4 or later) - close all open tags.  Set mode to Open.  Set text color and properties to default.
                                 closeT = 0;
                                 openT = 0;
-                                mAssemblingToken = false;
+				mAssemblingToken = false;
+				mMXP_MODE = mMXP_DEFAULT;
                                 currentToken.clear();
                                 mParsingVar = false;
                                 break;
-
                             case 5: // lock open mode (MXP 0.4 or later) - set open mode.  Mode remains in effect until changed.  OPEN mode becomes the new default mode.
-                                [[clang::fallthrough]];
+				mMXP_DEFAULT = mMXP_MODE = MXP_MODE_OPEN;
+				break;
                             case 0: // open line - only MXP commands in the "open" category are allowed.  When a newline is received from the MUD, the mode reverts back to the Default mode.  OPEN MODE starts as the Default mode until changes with one of the "lock mode" tags listed below.
-                                [[clang::fallthrough]];
+				mMXP_MODE = MXP_MODE_OPEN;
+				break;
                             default:
                                  if (modeCode <= 0 | modeCode == 5 | modeCode> 7) {
                                    // 0 and 5 are not even handled in current code
                                    qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
                                  }
                             }
-
                         } else {
                             // isOk is false here as toInt(...) failed
                             qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Non-numeric MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
                         }
-
                     }
                     // end of if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF)
                     // We have manually disabled MXP negotiation
@@ -1221,7 +1226,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
         // We are outside of a CSI or OSC sequence if we get to here:
 
-        if (mMXP && mpHost->mServerMXPenabled) {
+        if (mMXP && mpHost->mServerMXPenabled && (mMXP_MODE != MXP_MODE_LOCKED)) {
 
             // ignore < and > inside of parameter strings
             if (openT == 1) {
@@ -1265,7 +1270,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
                 if ((openT > 0) && (closeT == openT)) {
                     mAssemblingToken = false;
-                    std::string::size_type _pfs = currentToken.find_first_of(' ');
+		    // If we were in temp secure mode, then we switch back to default after the next tag
+                    if (mMXP_MODE == MXP_MODE_TEMP_SECURE) {
+                       mMXP_MODE = mMXP_DEFAULT;
+                    }
+		    std::string::size_type _pfs = currentToken.find_first_of(' ');
                     QString _tn;
                     if (_pfs == std::string::npos) {
                         _tn = currentToken.c_str();
@@ -1606,7 +1615,12 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             mAssembleRef += ch;
         }
 
-    COMMIT_LINE:
+        if (mMXP && ((ch == '\n') || (ch == '\xff') || (ch == '\r'))) {
+            // after a newline (but not a <br>) return to default mode
+	    mMXP_MODE = mMXP_DEFAULT;
+        }
+
+COMMIT_LINE:
         if ((ch == '\n') || (ch == '\xff') || (ch == '\r')) {
             // DE: MUD Zeilen werden immer am Zeilenanfang geschrieben
             // EN: MUD lines are always written at the beginning of the line
