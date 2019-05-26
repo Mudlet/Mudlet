@@ -1309,13 +1309,13 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         QString _tp = currentToken.substr(currentToken.find_first_of(' ')).c_str();
                         _tn = _tp.section(' ', 1, 1).toUpper();
                         _tp = _tp.section(' ', 2).toUpper();
-                        if ((_tp.indexOf("SEND") != -1)) {
+                        if ((_tp.indexOf("<SEND") != -1)) {
                             QString _t2 = _tp;
                             int pRef = _t2.indexOf("HREF=");
                             bool _got_ref = false;
                             // wenn kein href angegeben ist, dann gilt das 1. parameter als href
                             if (pRef == -1) {
-                                pRef = _t2.indexOf("SEND ");
+                                pRef = _t2.indexOf("<SEND ") + 1;
                             } else {
                                 _got_ref = true;
                             }
