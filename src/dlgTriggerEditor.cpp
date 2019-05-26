@@ -700,6 +700,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         pItem->label_patternNumber->setText(QString::number(i+1));
         pItem->label_patternNumber->show();
     }
+    // force the minimum size of the scroll area for the trigger items to be one
+    // and a half trigger item widgets:
+    int triggerWidgetItemMinHeight = qRound(mTriggerPatternEdit.at(0)->minimumSizeHint().height() * 1.5);
+    mpScrollArea->setMinimumHeight(triggerWidgetItemMinHeight);
+
     showHiddenVars = false;
     widget_searchTerm->updateGeometry();
 
