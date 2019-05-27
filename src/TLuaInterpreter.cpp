@@ -4200,17 +4200,16 @@ int TLuaInterpreter::setRoomIDbyHash(lua_State* L)
     }
     id = lua_tonumber(L, 1);
     if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "setRoomIDbyHash: bad argument #2 type (hash as string expected, got %s)",
-              luaL_typename(L, 2));
+        lua_pushfstring(L, "setRoomIDbyHash: bad argument #2 type (hash as string expected, got %s)", luaL_typename(L, 2));
         return lua_error(L);
     }
     QString hash = QString::fromUtf8(lua_tostring(L, 2));
     Host& host = getHostFromLua(L);
-    if ( host.mpMap->mpRoomDB->roomIDToHash.contains(id) ){
-       host.mpMap->mpRoomDB->hashToRoomID.remove( host.mpMap->mpRoomDB->roomIDToHash[id] );
+    if (host.mpMap->mpRoomDB->roomIDToHash.contains(id)) {
+        host.mpMap->mpRoomDB->hashToRoomID.remove(host.mpMap->mpRoomDB->roomIDToHash[id]);
     }
-    if ( host.mpMap->mpRoomDB->hashToRoomID.contains(hash) ){
-       host.mpMap->mpRoomDB->roomIDToHash.remove( host.mpMap->mpRoomDB->hashToRoomID[hash] );
+    if (host.mpMap->mpRoomDB->hashToRoomID.contains(hash)) {
+        host.mpMap->mpRoomDB->roomIDToHash.remove(host.mpMap->mpRoomDB->hashToRoomID[hash]);
     }
     host.mpMap->mpRoomDB->hashToRoomID[hash] = id;
     host.mpMap->mpRoomDB->roomIDToHash[id] = hash;
@@ -4221,8 +4220,7 @@ int TLuaInterpreter::setRoomIDbyHash(lua_State* L)
 int TLuaInterpreter::getRoomIDbyHash(lua_State* L)
 {
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "getRoomIDbyHash: bad argument #1 type (hash as string expected, got %s)",
-              luaL_typename(L, 1));
+        lua_pushfstring(L, "getRoomIDbyHash: bad argument #1 type (hash as string expected, got %s)", luaL_typename(L, 1));
         return lua_error(L);
     }
     QString hash = QString::fromUtf8(lua_tostring(L, 1));
@@ -4244,7 +4242,7 @@ int TLuaInterpreter::getRoomHashByID(lua_State* L)
     id = lua_tonumber(L, 1);
 
     Host& host = getHostFromLua(L);
-    if ( host.mpMap->mpRoomDB->roomIDToHash.contains(id) ){
+    if (host.mpMap->mpRoomDB->roomIDToHash.contains(id)) {
         QString retHash = host.mpMap->mpRoomDB->roomIDToHash[id];
         lua_pushstring(L, retHash.toUtf8().constData());
         return 1;

@@ -1461,8 +1461,8 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         if (mVersion >= 7) {
             ifs >> mpRoomDB->hashToRoomID;
             QMap<QString, int>::const_iterator i;
-            for( i = mpRoomDB->hashToRoomID.constBegin(); i != mpRoomDB->hashToRoomID.constEnd(); ++i ){
-               mpRoomDB->roomIDToHash.insert( i.value(), i.key() );
+            for (i = mpRoomDB->hashToRoomID.constBegin(); i != mpRoomDB->hashToRoomID.constEnd(); ++i) {
+                mpRoomDB->roomIDToHash.insert(i.value(), i.key());
             }
         }
 

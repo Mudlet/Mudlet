@@ -255,7 +255,7 @@ bool TRoomDB::__removeRoom(int id)
             ++i;
         }
         rooms.remove(id);
-        if ( roomIDToHash.contains(id) ) {
+        if (roomIDToHash.contains(id)) {
             QString hash = roomIDToHash[id];
             roomIDToHash.remove(id);
             hashToRoomID.remove(hash);
