@@ -8371,12 +8371,29 @@ void dlgTriggerEditor::slot_showAllTriggerControls(const bool isShown)
 
 void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
 {
-    const int hysteresis = 5;
+    /*
+     * With all widgets shown:              With some hidden:
+     *  +--------------------------------+   +--------------------------------+
+     *  | name / control toggle /command |   | name / control toggle /command |
+     *--+----------------------+---------+ --+----------------------+---------+
+     *  |+--------------------+|         |   |+------------------------------+|
+     *w_||                    ||         |   ||                              ||
+     *il||    scroll area     || widget  |   ||         scroll area          ||
+     *de||                    || _right  |   ||                              ||
+     *gf|+--------------------+|         |   |+------------------------------+|
+     *et|+--------------------+|         | --+--------------------------------+
+     *t ||   widget_bottom    ||         |
+     *=>|+--------------------+|         |
+     *--+----------------------+---------+
+     */
+    const int hysteresis = 10;
+    static int bottomWidgetHeight = 0;
     if (mpTriggersMainArea->isVisible()) {
         // The triggersMainArea is visible
         if (mpTriggersMainArea->toolButton_toggleExtraControls->isChecked()) {
-            // And the extra controls are visible in the triggersMainArea:
-            if ((mpTriggersMainArea->scrollArea->height() + mpTriggersMainArea->widget_bottom->height()) <= mpTriggersMainArea->widget_right->minimumSizeHint().height()) {
+            // The extra controls are visible in the triggersMainArea
+            bottomWidgetHeight = mpTriggersMainArea->widget_bottom->height();
+            if ((mpTriggersMainArea->widget_left->height()) <= (mpTriggersMainArea->widget_right->minimumSizeHint().height() + hysteresis)) {
                 // And it is not tall enough to show the right hand side - so
                 // hide them:
                 slot_showAllTriggerControls(false);
@@ -8384,7 +8401,7 @@ void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
 
         } else {
             // And the extra controls are NOT visible
-            if (mpTriggersMainArea->scrollArea->height() > (mpTriggersMainArea->widget_right->minimumSizeHint().height() + hysteresis)) {
+            if ((mpTriggersMainArea->widget_left->height() - bottomWidgetHeight) > mpTriggersMainArea->widget_right->minimumSizeHint().height() - hysteresis) {
                 // And it is tall enough to show the right hand side completely
                 // so show them:
                 slot_showAllTriggerControls(true);
