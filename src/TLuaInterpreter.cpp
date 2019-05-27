@@ -4196,16 +4196,13 @@ int TLuaInterpreter::setRoomIDbyHash(lua_State* L)
     int id;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setRoomIDbyHash: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
-    } else {
-        id = lua_tonumber(L, 1);
+        return lua_error(L);
     }
+    id = lua_tonumber(L, 1);
     if (!lua_isstring(L, 2)) {
         lua_pushfstring(L, "setRoomIDbyHash: bad argument #2 type (hash as string expected, got %s)",
               luaL_typename(L, 2));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
     QString hash = QString::fromUtf8(lua_tostring(L, 2));
     Host& host = getHostFromLua(L);
@@ -4226,8 +4223,7 @@ int TLuaInterpreter::getRoomIDbyHash(lua_State* L)
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "getRoomIDbyHash: bad argument #1 type (hash as string expected, got %s)",
               luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     }
     QString hash = QString::fromUtf8(lua_tostring(L, 1));
     Host& host = getHostFromLua(L);
@@ -4244,9 +4240,8 @@ int TLuaInterpreter::getRoomHashByID(lua_State* L)
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "getRoomHashByID: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        id = lua_tonumber(L, 1);
     }
+    id = lua_tonumber(L, 1);
 
     Host& host = getHostFromLua(L);
     if ( host.mpMap->mpRoomDB->roomIDToHash.contains(id) ){
@@ -4255,7 +4250,7 @@ int TLuaInterpreter::getRoomHashByID(lua_State* L)
         return 1;
     }
     lua_pushnil(L);
-    lua_pushfstring(L, "no hash for room %d.", id);
+    lua_pushfstring(L, "no hash for room %d", id);
     return 2;
 }
 

@@ -1764,8 +1764,8 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
 
     if (otherProfileVersion >= 7) {
         // hashToRoomID
-        QHash<QString, int> _dummyQHashQStringInt;
-        ifs >> _dummyQHashQStringInt;
+        QMap<QString, int> _dummyQMapQStringInt;
+        ifs >> _dummyQMapQStringInt;
     }
 
     if (otherProfileVersion >= 17) {
