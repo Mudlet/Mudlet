@@ -629,7 +629,7 @@ void TRoom::setSpecialExit(int to, const QString& cmd)
     // Have definitely removed the existing case of this command
     // Now add it to map if wanted
 
-    if (to > 1) {
+    if (to > 0) {
         if (_prefix.isEmpty()) {
             _prefix = '0';
         }
