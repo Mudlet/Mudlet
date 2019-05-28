@@ -4195,45 +4195,38 @@ int TLuaInterpreter::setRoomIDbyHash(lua_State* L)
 {
     int id;
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "setRoomIDbyHash: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        id = lua_tonumber(L, 1);
+        lua_pushfstring(L, "setRoomIDbyHash: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     }
-    string hash;
+    id = lua_tonumber(L, 1);
     if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "setRoomIDbyHash: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        hash = lua_tostring(L, 2);
+        lua_pushfstring(L, "setRoomIDbyHash: bad argument #2 type (hash as string expected, got %s)", luaL_typename(L, 2));
+        return lua_error(L);
     }
+    QString hash = QString::fromUtf8(lua_tostring(L, 2));
     Host& host = getHostFromLua(L);
-    host.mpMap->mpRoomDB->hashTable[QString(hash.c_str())] = id;
+    if (host.mpMap->mpRoomDB->roomIDToHash.contains(id)) {
+        host.mpMap->mpRoomDB->hashToRoomID.remove(host.mpMap->mpRoomDB->roomIDToHash[id]);
+    }
+    if (host.mpMap->mpRoomDB->hashToRoomID.contains(hash)) {
+        host.mpMap->mpRoomDB->roomIDToHash.remove(host.mpMap->mpRoomDB->hashToRoomID[hash]);
+    }
+    host.mpMap->mpRoomDB->hashToRoomID[hash] = id;
+    host.mpMap->mpRoomDB->roomIDToHash[id] = hash;
     return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomIDbyHash
 int TLuaInterpreter::getRoomIDbyHash(lua_State* L)
 {
-    string hash;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "getRoomIDbyHash() wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        hash = lua_tostring(L, 1);
+        lua_pushfstring(L, "getRoomIDbyHash: bad argument #1 type (hash as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
     }
+    QString hash = QString::fromUtf8(lua_tostring(L, 1));
     Host& host = getHostFromLua(L);
-    int retID = -1;
-    QString _hash = hash.c_str();
-    if (host.mpMap->mpRoomDB->hashTable.contains(_hash)) {
-        retID = host.mpMap->mpRoomDB->hashTable[_hash];
-        lua_pushnumber(L, retID);
-    } else {
-        lua_pushnumber(L, -1);
-    }
+    int retID = host.mpMap->mpRoomDB->hashToRoomID.value(hash, -1);
+    lua_pushnumber(L, retID);
 
     return 1;
 }
@@ -4245,22 +4238,17 @@ int TLuaInterpreter::getRoomHashByID(lua_State* L)
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "getRoomHashByID: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        id = lua_tonumber(L, 1);
     }
+    id = lua_tonumber(L, 1);
 
     Host& host = getHostFromLua(L);
-    QMapIterator<QString, int> it(host.mpMap->mpRoomDB->hashTable);
-
-    while (it.hasNext()) {
-        it.next();
-        if (it.value() == id) {
-            lua_pushstring(L, it.key().toUtf8().constData());
-            return 1;
-        }
+    if (host.mpMap->mpRoomDB->roomIDToHash.contains(id)) {
+        QString retHash = host.mpMap->mpRoomDB->roomIDToHash[id];
+        lua_pushstring(L, retHash.toUtf8().constData());
+        return 1;
     }
     lua_pushnil(L);
-    lua_pushfstring(L, "room %d doesn't exist", id);
+    lua_pushfstring(L, "no hash for room %d", id);
     return 2;
 }
 
