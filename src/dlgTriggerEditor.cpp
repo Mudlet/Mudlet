@@ -8393,7 +8393,8 @@ void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
         if (mpTriggersMainArea->toolButton_toggleExtraControls->isChecked()) {
             // The extra controls are visible in the triggersMainArea
             bottomWidgetHeight = mpTriggersMainArea->widget_bottom->height();
-            if ((mpTriggersMainArea->widget_left->height()) <= (mpTriggersMainArea->widget_right->minimumSizeHint().height() + hysteresis)) {
+            if ((mpTriggersMainArea->widget_left->height()) <= (mpTriggersMainArea->widget_right->minimumSizeHint().height() + hysteresis)
+                || mpTriggersMainArea->widget_verticalSpacer_right->height() == 0) {
                 // And it is not tall enough to show the right hand side - so
                 // hide them:
                 slot_showAllTriggerControls(false);
