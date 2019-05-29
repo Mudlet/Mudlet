@@ -6241,82 +6241,87 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2645"/>
       <source>Trying to activate a trigger group, filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Triggergruppe, Filter oder Trigger, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; aktiviert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2647"/>
       <source>Trying to deactivate a trigger group, filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Triggergruppe, Filter oder Trigger, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; deaktiviert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2651"/>
       <source>&lt;b&gt;Unable to activate a filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;Triggergruppe, Filter oder Trigger, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, konnte nicht aktiviert werden. Grund: %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;Bitte erneut aktivieren, nachdem das Problem gelöst wurde.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2788"/>
       <source>Trying to activate a timer group, offset timer, timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Timergruppe, Offset-Timer oder Timer, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; aktiviert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2790"/>
       <source>Trying to deactivate a timer group, offset timer, timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Timergruppe, Offset-Timer oder Timer, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; deaktiviert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2794"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate an offset timer or timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;Offset-Timer oder Timer, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, konnte nicht aktiviert werden. Grund: %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;Bitte erneut aktivieren, nachdem das Problem gelöst wurde.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2832"/>
       <source>Trying to activate an alias group, alias or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Aliasgruppe, Alias, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; aktiviert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2834"/>
       <source>Trying to deactivate an alias group, alias or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Aliasgruppe, Alias, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; deaktiviert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2838"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate an alias or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;Alias oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, konnte nicht aktiviert werden. Grund: %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;Bitte erneut aktivieren, nachdem das Problem gelöst wurde.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2936"/>
       <source>Trying to activate a script group, script or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Skriptgruppe, Skript, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; aktiviert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2938"/>
       <source>Trying to deactivate a script group, script or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Skriptgruppe, Skript, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; deaktiviert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2942"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate a script group or script or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;Skriptgruppe oder Skript oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, konnte nicht aktiviert werden. Grund: %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;Bitte erneut aktivieren, nachdem das Problem gelöst wurde.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3007"/>
       <source>Trying to activate a button/menu/toolbar or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Button, Menu oder Schaltleiste, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; aktiviert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3009"/>
       <source>Trying to deactivate a button/menu/toolbar or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Button, Menu oder Schaltleiste, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; deaktiviert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3013"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate a button/menu/toolbar or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;Button, Menu oder Schaltleiste, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, konnte nicht aktiviert werden. Grund: %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;Bitte erneut aktivieren, nachdem das Problem gelöst wurde.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3318"/>
