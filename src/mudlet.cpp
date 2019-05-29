@@ -3660,6 +3660,9 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, int historyVer
     tempHostQueue.enqueue(pHost);
     if (connect) {
         pHost->connectToServer();
+    } else {
+        QString infoMsg = tr("[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(profile);
+        pHost->postMessage(infoMsg);
     }
 }
 
