@@ -83,7 +83,7 @@ private:
     QPalette mOKPalette;
     QPalette mErrorPalette;
     QPalette mReadOnlyPalette;
-    QPushButton* load_button;
+    QPushButton* offline_button;
     QPushButton* connect_button;
     QLineEdit* delete_profile_lineedit;
     QPushButton* delete_button;

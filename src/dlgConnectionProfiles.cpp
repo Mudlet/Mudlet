@@ -36,7 +36,7 @@
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 : QDialog( parent )
 , mProfileList( QStringList() )
-, load_button( Q_NULLPTR )
+, offline_button( Q_NULLPTR )
 , connect_button( Q_NULLPTR )
 , delete_profile_lineedit( Q_NULLPTR )
 , delete_button( Q_NULLPTR )
@@ -68,7 +68,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 
     QAbstractButton* abort = dialog_buttonbox->button(QDialogButtonBox::Cancel);
     connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
-    load_button = dialog_buttonbox->addButton(tr("Load"), QDialogButtonBox::AcceptRole);
+    offline_button = dialog_buttonbox->addButton(tr("Offline"), QDialogButtonBox::AcceptRole);
 
     // Test and set if needed mudlet::mIsIconShownOnDialogButtonBoxes - if there
     // is already a Qt provided icon on a predefined button, this is probably
@@ -110,7 +110,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         QIcon icon_new(QIcon::fromTheme(QStringLiteral("document-new"), QIcon(QStringLiteral(":/icons/document-new.png"))));
         QIcon icon_connect(QIcon::fromTheme(QStringLiteral("dialog-ok-apply"), QIcon(QStringLiteral(":/icons/dialog-ok-apply.png"))));
 
-        load_button->setIcon(QIcon(QStringLiteral(":/icons/mudlet_editor.png")));
+        offline_button->setIcon(QIcon(QStringLiteral(":/icons/mudlet_editor.png")));
         connect_button->setIcon(QIcon(QStringLiteral(":/icons/preferences-web-browser-cache.png")));
         new_profile_button->setIcon(icon_new);
         copy_profile_button->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
@@ -131,7 +131,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         Q_ASSERT_X(!cursor.isNull(), "dlgConnectionProfiles::dlgConnectionProfiles(...)",
                    "CONNECT_PROFILE_ICON text marker not found in welcome_message text for when icons are shown on dialogue buttons");
         cursor.removeSelectedText();
-        QImage image_load(QPixmap(icon_connect.pixmap(load_button->iconSize())).toImage());
+        QImage image_load(QPixmap(icon_connect.pixmap(offline_button->iconSize())).toImage());
         cursor.insertImage(image_load);
         cursor.clearSelection();
         QImage image_connect(QPixmap(icon_connect.pixmap(connect_button->iconSize())).toImage());
@@ -143,7 +143,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     }
     welcome_message->setDocument(pWelcome_document);
 
-    connect(load_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_load);
+    connect(offline_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_load);
     connect(connect_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::accept);
     connect(abort, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_cancel);
     connect(new_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_addProfile);
@@ -259,7 +259,7 @@ void dlgConnectionProfiles::slot_update_url(const QString& url)
 {
     if (url.isEmpty()) {
         validUrl = false;
-        load_button->setDisabled(true);
+        offline_button->setDisabled(true);
         connect_button->setDisabled(true);
         return;
     }
@@ -327,8 +327,8 @@ void dlgConnectionProfiles::slot_update_port(const QString& ignoreBlank)
 
     if (ignoreBlank.isEmpty()) {
         validPort = false;
-        if (load_button) {
-            load_button->setDisabled(true);
+        if (offline_button) {
+            offline_button->setDisabled(true);
         }
         if (connect_button) {
             connect_button->setDisabled(true);
@@ -532,7 +532,7 @@ void dlgConnectionProfiles::slot_addProfile()
     validName = false;
     validUrl = false;
     validPort = false;
-    load_button->setDisabled(true);
+    offline_button->setDisabled(true);
     connect_button->setDisabled(true);
 }
 
@@ -1916,9 +1916,9 @@ bool dlgConnectionProfiles::validateProfile()
             validPort = true;
             validUrl = true;
 
-            if (load_button) {
-                load_button->setEnabled(true);
-                load_button->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Load profile without connecting.")));
+            if (offline_button) {
+                offline_button->setEnabled(true);
+                offline_button->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Load profile without connecting.")));
             }
             if (connect_button) {
                 connect_button->setEnabled(true);
@@ -1930,9 +1930,9 @@ bool dlgConnectionProfiles::validateProfile()
         } else {
             notificationArea->show();
             notificationAreaMessageBox->show();
-            if (load_button) {
-                load_button->setDisabled(true);
-                load_button->setToolTip(
+            if (offline_button) {
+                offline_button->setDisabled(true);
+                offline_button->setToolTip(
                         QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Please set a valid profile name, game server address and the game port before connecting.")));
             }
             if (connect_button) {
