@@ -9,7 +9,7 @@ fi
 
 # we deploy only qmake and clang combination for macOS
 if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "clang" ]; then
-  git clone https://github.com/Mudlet/installers.git -b fix-appdmg-build "${TRAVIS_BUILD_DIR}/../installers"
+  git clone https://github.com/Mudlet/installers.git -b fix-node-version "${TRAVIS_BUILD_DIR}/../installers"
 
   cd "${TRAVIS_BUILD_DIR}/../installers/osx"
 
