@@ -3025,7 +3025,7 @@ void mudlet::writeSettings()
 void mudlet::slot_show_connection_dialog()
 {
     auto pDlg = new dlgConnectionProfiles(this);
-    connect(pDlg, &dlgConnectionProfiles::signal_establish_connection, this, &mudlet::slot_connection_dlg_finished);
+    connect(pDlg, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connection_dlg_finished);
     pDlg->fillout_form();
 
     connect(pDlg, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
@@ -3537,7 +3537,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     // For the first real host created the getHostCount() will return 2 because
     // there is already a "default_host"
     signal_hostCreated(pHost, mHostManager.getHostCount());
-    slot_connection_dlg_finished(profile_name, 0);
+    slot_connection_dlg_finished(profile_name, 0, true);
     enableToolbarButtons();
 }
 
@@ -3603,7 +3603,7 @@ void mudlet::hideMudletsVariables(Host* pHost)
     }
 }
 
-void mudlet::slot_connection_dlg_finished(const QString& profile, int historyVersion)
+void mudlet::slot_connection_dlg_finished(const QString& profile, int historyVersion, bool connect)
 {
     Host* pHost = getHostManager().getHost(profile);
     if (!pHost) {
@@ -3658,7 +3658,9 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, int historyVer
 
     tempHostQueue.enqueue(pHost);
     tempHostQueue.enqueue(pHost);
-    pHost->connectToServer();
+    if (connect) {
+        pHost->connectToServer();
+    }
 }
 
 void mudlet::slot_multi_view()
