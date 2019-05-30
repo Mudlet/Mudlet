@@ -1918,7 +1918,7 @@ bool dlgConnectionProfiles::validateProfile()
 
             if (offline_button) {
                 offline_button->setEnabled(true);
-                offline_button->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Load profile without connecting.")));
+                offline_button->setToolTip(tr("<p>Load profile without connecting.</p>"));
             }
             if (connect_button) {
                 connect_button->setEnabled(true);
@@ -1932,13 +1932,11 @@ bool dlgConnectionProfiles::validateProfile()
             notificationAreaMessageBox->show();
             if (offline_button) {
                 offline_button->setDisabled(true);
-                offline_button->setToolTip(
-                        QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Please set a valid profile name, game server address and the game port before connecting.")));
+                offline_button->setToolTip(tr("<p>Please set a valid profile name, game server address and the game port before loading.</p>"));
             }
             if (connect_button) {
                 connect_button->setDisabled(true);
-                connect_button->setToolTip(
-                        QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Please set a valid profile name, game server address and the game port before connecting.")));
+                connect_button->setToolTip(tr("<p>Please set a valid profile name, game server address and the game port before connecting.</p>"));
             }
             return false;
         }
