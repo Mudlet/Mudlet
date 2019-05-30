@@ -763,11 +763,13 @@ TBuffer::TBuffer(Host* pH)
     _aURL.hint = "";
     mMXP_Elements["A"] = _aURL;
 
+#ifdef QT_DEBUG
     // Validate the encoding tables in case there has been an edit which breaks
     // things:
     for (auto table : csmEncodingTable) {
         Q_ASSERT_X(table.second.size() == 128, "TBuffer", "Mis-sized encoding look-up table.");
     }
+#endif
 }
 
 void TBuffer::setBufferSize(int s, int batch)
