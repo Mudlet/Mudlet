@@ -257,7 +257,7 @@ public:
     char mOpenMainQuote;
     bool mMXP_SEND_NO_REF_MODE;
     std::string mAssembleRef;
-    bool mEchoText;
+    bool mEchoingText;
 
 
 private:

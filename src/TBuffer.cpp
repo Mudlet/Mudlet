@@ -750,6 +750,7 @@ TBuffer::TBuffer(Host* pH)
 , lastloggedToLine(0)
 , mEncoding()
 , mMainIncomingCodec(nullptr)
+, mEchoingText(false)
 {
     clear();
 
@@ -3051,8 +3052,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         // The ternary operator is used here to set/reset only the TChar::Echo bit in the flags:
         TChar c(format.mFgColor,
                 format.mBgColor,
-                (mEchoText
-                 ? (TChar::Echo | (format.mFlags & TChar::TestMask))
+                (mEchoingText ? (TChar::Echo | (format.mFlags & TChar::TestMask))
                  : (format.mFlags & TChar::TestMask)));
         newLine.push_back(c);
         buffer.push_back(newLine);
@@ -3125,8 +3125,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         lineBuffer.back().append(text.at(i));
         TChar c(format.mFgColor,
                 format.mBgColor,
-                (mEchoText
-                 ? (TChar::Echo | (format.mFlags & TChar::TestMask))
+                (mEchoingText ? (TChar::Echo | (format.mFlags & TChar::TestMask))
                  : (format.mFlags & TChar::TestMask)),
                 linkID);
         buffer.back().push_back(c);
@@ -3148,7 +3147,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     int last = buffer.size() - 1;
     if (last < 0) {
         std::deque<TChar> newLine;
-        TChar c(fgColor, bgColor, (mEchoText ? (TChar::Echo | flags) : flags));
+        TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags));
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
@@ -3217,7 +3216,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             }
         }
         lineBuffer.back().append(text.at(i));
-        TChar c(fgColor, bgColor, (mEchoText ? (TChar::Echo | flags) : flags), linkID);
+        TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
         if (firstChar) {
             timeBuffer.back() = QTime::currentTime().toString(QStringLiteral("hh:mm:ss.zzz   "));
@@ -3240,7 +3239,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
     if (Q_UNLIKELY(lastLine < 0)) {
         // There are NO lines in the buffer - so initialize with a new empty line
         std::deque<TChar> newLine;
-        TChar c(fgColor, bgColor, (mEchoText ? (TChar::Echo | flags) : flags));
+        TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags));
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
@@ -3262,7 +3261,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
 
     for (int i = sub_start; i <= (sub_start + lineEndPos); i++) {
         lineBuffer.back().append(text.at(i));
-        TChar c(fgColor, bgColor, (mEchoText ? (TChar::Echo | flags) : flags), linkID);
+        TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
         if (firstChar) {
             timeBuffer.back() = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
