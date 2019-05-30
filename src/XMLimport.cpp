@@ -835,7 +835,7 @@ void XMLimport::readHostPackage(Host* pHost)
     } else {
         pHost->mTimerDebugOutputSuppressionInterval = QTime();
     }
-  
+
     if (attributes().hasAttribute(QLatin1String("mDiscordAccessFlags"))) {
         pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(attributes().value("mDiscordAccessFlags").toString().toInt());
     }
@@ -1672,63 +1672,65 @@ void XMLimport::remapColorsToAnsiNumber(QStringList & patternList, const QList<i
                 if (!isFgOk) {
                     qDebug() << "XMLimport::remapColorsToAnsiNumber(...) ERROR - failed to extract FG color code from pattern text:" << itPattern.peekPrevious() << " setting colour to default foreground";
                     fg = TTrigger::scmDefault;
-                } else {
-                    // clang-format off
-                    switch (fg) {
-                    case -2:    ansifg = TTrigger::scmIgnored;  break; // Ignored colour - not handled by old code
-                    case 0:     ansifg = TTrigger::scmDefault;  break; // Default colour
-                    case 1:     ansifg = 8;     break; // Light black (dark gray)
-                    case 2:     ansifg = 0;     break; // Black
-                    case 3:     ansifg = 9;     break; // Light red
-                    case 4:     ansifg = 1;     break; // Red
-                    case 5:     ansifg = 10;    break; // Light green
-                    case 6:     ansifg = 2;     break; // Green
-                    case 7:     ansifg = 11;    break; // Light yellow
-                    case 8:     ansifg = 3;     break; // Yellow
-                    case 9:     ansifg = 12;    break; // Light blue
-                    case 10:    ansifg = 4;     break; // Blue
-                    case 11:    ansifg = 13;    break; // Light magenta
-                    case 12:    ansifg = 5;     break; // Magenta
-                    case 13:    ansifg = 14;    break; // Light cyan
-                    case 14:    ansifg = 6;     break; // Cyan
-                    case 15:    ansifg = 15;    break; // Light white
-                    case 16:    ansifg = 7;     break; // White (light gray)
-                    default:
-                        ansifg = fg;
-                    }
-                    // clang-format on
                 }
+
+                // clang-format off
+                switch (fg) {
+                case -2:    ansifg = TTrigger::scmIgnored;  break; // Ignored colour - not handled by old code
+                case 0:     ansifg = TTrigger::scmDefault;  break; // Default colour
+                case 1:     ansifg = 8;     break; // Light black (dark gray)
+                case 2:     ansifg = 0;     break; // Black
+                case 3:     ansifg = 9;     break; // Light red
+                case 4:     ansifg = 1;     break; // Red
+                case 5:     ansifg = 10;    break; // Light green
+                case 6:     ansifg = 2;     break; // Green
+                case 7:     ansifg = 11;    break; // Light yellow
+                case 8:     ansifg = 3;     break; // Yellow
+                case 9:     ansifg = 12;    break; // Light blue
+                case 10:    ansifg = 4;     break; // Blue
+                case 11:    ansifg = 13;    break; // Light magenta
+                case 12:    ansifg = 5;     break; // Magenta
+                case 13:    ansifg = 14;    break; // Light cyan
+                case 14:    ansifg = 6;     break; // Cyan
+                case 15:    ansifg = 15;    break; // Light white
+                case 16:    ansifg = 7;     break; // White (light gray)
+                default:
+                    ansifg = fg;
+                }
+                // clang-format on
+
 
                 int bg = match.captured(2).toInt(&isBgOk);
                 if (!isBgOk) {
-                    qDebug() << "XMLimport::remapColorsToAnsiNumber(...) ERROR - failed to extract BG color code from pattern text:" << itPattern.peekPrevious() << " setting colour to default background";
+                    qDebug() << "XMLimport::remapColorsToAnsiNumber(...) ERROR - failed to extract BG color code from pattern text:" << itPattern.peekPrevious() << ", setting colour to default background";
                     bg = TTrigger::scmDefault;
-                } else {
-                    // clang-format off
-                    switch (bg) {
-                    case -2:    ansibg = TTrigger::scmIgnored;  break; // Ignored colour - not handled by old code
-                    case 0:     ansibg = TTrigger::scmDefault;  break; // Default colour
-                    case 1:     ansibg = 8;     break; // Light black (dark gray)
-                    case 2:     ansibg = 0;     break; // Black
-                    case 3:     ansibg = 9;     break; // Light red
-                    case 4:     ansibg = 1;     break; // Red
-                    case 5:     ansibg = 10;    break; // Light green
-                    case 6:     ansibg = 2;     break; // Green
-                    case 7:     ansibg = 11;    break; // Light yellow
-                    case 8:     ansibg = 3;     break; // Yellow
-                    case 9:     ansibg = 12;    break; // Light blue
-                    case 10:    ansibg = 4;     break; // Blue
-                    case 11:    ansibg = 13;    break; // Light magenta
-                    case 12:    ansibg = 5;     break; // Magenta
-                    case 13:    ansibg = 14;    break; // Light cyan
-                    case 14:    ansibg = 6;     break; // Cyan
-                    case 15:    ansibg = 15;    break; // Light white
-                    case 16:    ansibg = 7;     break; // White (light gray)
-                    default:
-                        ansibg = bg;
-                    }
-                    // clang-format on
                 }
+
+                // clang-format off
+                switch (bg) {
+                case -2:    ansibg = TTrigger::scmIgnored;  break; // Ignored colour - not handled by old code
+                case 0:     ansibg = TTrigger::scmDefault;  break; // Default colour
+                case 1:     ansibg = 8;     break; // Light black (dark gray)
+                case 2:     ansibg = 0;     break; // Black
+                case 3:     ansibg = 9;     break; // Light red
+                case 4:     ansibg = 1;     break; // Red
+                case 5:     ansibg = 10;    break; // Light green
+                case 6:     ansibg = 2;     break; // Green
+                case 7:     ansibg = 11;    break; // Light yellow
+                case 8:     ansibg = 3;     break; // Yellow
+                case 9:     ansibg = 12;    break; // Light blue
+                case 10:    ansibg = 4;     break; // Blue
+                case 11:    ansibg = 13;    break; // Light magenta
+                case 12:    ansibg = 5;     break; // Magenta
+                case 13:    ansibg = 14;    break; // Light cyan
+                case 14:    ansibg = 6;     break; // Cyan
+                case 15:    ansibg = 15;    break; // Light white
+                case 16:    ansibg = 7;     break; // White (light gray)
+                default:
+                    ansibg = bg;
+                }
+                // clang-format on
+
 
                 // Use a different string than before so that we can be certain
                 // we have fixed up all cases where it is used - and it is more
