@@ -130,6 +130,7 @@ T2DMap::T2DMap(QWidget* parent)
 , mIsSelectionSortByNames()
 , mIsSelectionUsingNames(false)
 , mSymbolFontSize(1)
+, mMaxRoomIdDigits(0)
 {
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
