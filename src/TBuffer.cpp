@@ -716,6 +716,7 @@ TBuffer::TBuffer(Host* pH)
 , mParsingVar(false)
 , mOpenMainQuote()
 , mMXP_SEND_NO_REF_MODE(false)
+, mEchoingText(false)
 , mGotESC(false)
 , mGotCSI(false)
 , mGotOSC(false)
@@ -750,7 +751,6 @@ TBuffer::TBuffer(Host* pH)
 , lastloggedToLine(0)
 , mEncoding()
 , mMainIncomingCodec(nullptr)
-, mEchoingText(false)
 {
     clear();
 
