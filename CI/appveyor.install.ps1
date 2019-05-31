@@ -204,7 +204,7 @@ function InstallPython() {
 }
 
 function InstallOpenssl() {
-  DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.0.2r-win32.zip" "openssl-win32.zip"
+  DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.0.2s-win32.zip" "openssl-win32.zip"
   ExtractZip "openssl-win32.zip" "openssl"
   Step "installing"
   exec "XCOPY" @("/S", "/I", "/Q", "openssl", "$Env:MINGW_BASE_DIR\bin")
