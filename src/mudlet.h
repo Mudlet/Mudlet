@@ -436,7 +436,7 @@ public slots:
     void slot_module_clicked(QTableWidgetItem*);
     void slot_module_changed(QTableWidgetItem*);
     void slot_multi_view();
-    void slot_connection_dlg_finished(const QString& profile, int historyVersion, bool connectOnLoad);
+    void slot_connection_dlg_finished(const QString& profile, bool connectOnLoad);
     void slot_timer_fires();
     void slot_send_login();
     void slot_send_pass();
