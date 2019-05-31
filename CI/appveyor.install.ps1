@@ -322,12 +322,12 @@ function InstallZziplib() {
 }
 
 function InstallLuarocks() {
-  DownloadFile "http://luarocks.github.io/luarocks/releases/luarocks-2.4.4-win32.zip" "luarocks-2.4.4-win32.zip"
-  ExtractZip "luarocks-2.4.4-win32.zip" "luarocks"
-  Set-Location luarocks\luarocks-2.4.4-win32
+  DownloadFile "http://luarocks.github.io/luarocks/releases/luarocks-3.1.2-win32.zip" "luarocks.zip"
+  ExtractZip "luarocks.zip" "luarocks"
+  Set-Location luarocks\luarocks-3.1.2-win32
   Step "installing luarocks"
   exec ".\install.bat" @("/P", "C:\LuaRocks", "/MW", "/Q")
-  Set-Location \LuaRocks\lua\luarocks
+  Set-Location \LuaRocks\lua\luarocks\core
   Step "changing luarocks config"
   (Get-Content cfg.lua) -replace 'mingw32-gcc', 'gcc' | Out-File -encoding ASCII cfg.lua >> "$logFile" 2>&1
 }
@@ -353,16 +353,16 @@ function InstallLuaModules(){
   StartPart "Installing lua modules"
   Set-Location \LuaRocks
   Step "installing lfs"
-  exec ".\luarocks" @("install", "LuaFileSystem")
+  exec ".\luarocks" @("--tree=`"C:\\Qt\\Tools\\mingw730_32\\`"", "install", "LuaFileSystem")
   Step "installing luasql.sqlite3"
-  exec ".\luarocks" @("install", "LuaSQL-SQLite3", "SQLITE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"", "SQLITE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"")
+  exec ".\luarocks" @("--tree=`"C:\\Qt\\Tools\\mingw730_32\\`"", "install", "LuaSQL-SQLite3", "SQLITE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"", "SQLITE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"")
   Step "installing rex.pcre"
-  exec ".\luarocks" @("install", "lrexlib-pcre", "PCRE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"", "PCRE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
+  exec ".\luarocks" @("--tree=`"C:\\Qt\\Tools\\mingw730_32\\`"", "install", "lrexlib-pcre", "PCRE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"", "PCRE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
   Step "installing lua-utf8"
-  exec ".\luarocks" @("install", "luautf8")
+  exec ".\luarocks" @("--tree=`"C:\\Qt\\Tools\\mingw730_32\\`"", "install", "luautf8")
   Step "installing lua-yajl"
   $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin"
-  exec ".\luarocks" @("install", "lua-yajl", "YAJL_LIBDIR=`"$Env:MINGW_BASE_DIR\bin`"", "YAJL_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
+  exec ".\luarocks" @("--tree=`"C:\\Qt\\Tools\\mingw730_32\\`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$Env:MINGW_BASE_DIR\bin`"", "YAJL_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
 
   Step "installing luazip"
   Set-Location "$workingBaseDir"
