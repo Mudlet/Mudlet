@@ -1739,20 +1739,25 @@ void Host::setName(const QString& newName)
         return;
     }
 
-    int currentPlayerRoom;
+    int currentPlayerRoom = 0;
     if (mpMap) {
         currentPlayerRoom = mpMap->mRoomIdHash.take(mHostName);
     }
 
     QMutexLocker locker(& mLock);
+    // Now we have the exclusive lock on this class's protected members
     mHostName = newName;
+    // We have made the change to the protected aspects of this class so can unlock the mutex locker and proceed:
     locker.unlock();
 
     mTelnet.mProfileName = newName;
     if (mpMap) {
         mpMap->mProfileName = newName;
-        mpMap->mRoomIdHash.insert(newName, currentPlayerRoom);
+        if (currentPlayerRoom) {
+            mpMap->mRoomIdHash.insert(newName, currentPlayerRoom);
+        }
     }
+
     if (mpConsole) {
         mpConsole->setProfileName(newName);
     }
