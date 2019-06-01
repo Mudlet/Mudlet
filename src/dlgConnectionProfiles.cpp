@@ -36,6 +36,7 @@
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 : QDialog( parent )
 , mProfileList( QStringList() )
+, offline_button( Q_NULLPTR )
 , connect_button( Q_NULLPTR )
 , delete_profile_lineedit( Q_NULLPTR )
 , delete_button( Q_NULLPTR )
@@ -67,6 +68,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 
     QAbstractButton* abort = dialog_buttonbox->button(QDialogButtonBox::Cancel);
     connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
+    offline_button = dialog_buttonbox->addButton(tr("Offline"), QDialogButtonBox::AcceptRole);
 
     // Test and set if needed mudlet::mIsIconShownOnDialogButtonBoxes - if there
     // is already a Qt provided icon on a predefined button, this is probably
@@ -108,6 +110,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         QIcon icon_new(QIcon::fromTheme(QStringLiteral("document-new"), QIcon(QStringLiteral(":/icons/document-new.png"))));
         QIcon icon_connect(QIcon::fromTheme(QStringLiteral("dialog-ok-apply"), QIcon(QStringLiteral(":/icons/dialog-ok-apply.png"))));
 
+        offline_button->setIcon(QIcon(QStringLiteral(":/icons/mudlet_editor.png")));
         connect_button->setIcon(QIcon(QStringLiteral(":/icons/preferences-web-browser-cache.png")));
         new_profile_button->setIcon(icon_new);
         copy_profile_button->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
@@ -128,6 +131,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         Q_ASSERT_X(!cursor.isNull(), "dlgConnectionProfiles::dlgConnectionProfiles(...)",
                    "CONNECT_PROFILE_ICON text marker not found in welcome_message text for when icons are shown on dialogue buttons");
         cursor.removeSelectedText();
+        QImage image_load(QPixmap(icon_connect.pixmap(offline_button->iconSize())).toImage());
+        cursor.insertImage(image_load);
+        cursor.clearSelection();
         QImage image_connect(QPixmap(icon_connect.pixmap(connect_button->iconSize())).toImage());
         cursor.insertImage(image_connect);
         cursor.clearSelection();
@@ -137,6 +143,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     }
     welcome_message->setDocument(pWelcome_document);
 
+    connect(offline_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_load);
     connect(connect_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::accept);
     connect(abort, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_cancel);
     connect(new_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_addProfile);
@@ -252,6 +259,7 @@ void dlgConnectionProfiles::slot_update_url(const QString& url)
 {
     if (url.isEmpty()) {
         validUrl = false;
+        offline_button->setDisabled(true);
         connect_button->setDisabled(true);
         return;
     }
@@ -319,6 +327,9 @@ void dlgConnectionProfiles::slot_update_port(const QString& ignoreBlank)
 
     if (ignoreBlank.isEmpty()) {
         validPort = false;
+        if (offline_button) {
+            offline_button->setDisabled(true);
+        }
         if (connect_button) {
             connect_button->setDisabled(true);
         }
@@ -521,6 +532,7 @@ void dlgConnectionProfiles::slot_addProfile()
     validName = false;
     validUrl = false;
     validPort = false;
+    offline_button->setDisabled(true);
     connect_button->setDisabled(true);
 }
 
@@ -1670,7 +1682,16 @@ void dlgConnectionProfiles::slot_copy_profile()
     discord_optin_checkBox->setChecked(false);
 }
 
+void dlgConnectionProfiles::slot_load()
+{
+    loadProfile(false);
+    QDialog::accept();
+}
 void dlgConnectionProfiles::slot_connectToServer()
+{
+    loadProfile(true);
+}
+void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 {
     QString profile_name = profile_name_entry->text().trimmed();
 
@@ -1681,7 +1702,9 @@ void dlgConnectionProfiles::slot_connectToServer()
     HostManager & hostManager = mudlet::self()->getHostManager();
     Host* pHost = hostManager.getHost(profile_name);
     if (pHost) {
-        pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
+        if (alsoConnect) {
+            pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
+        }
         QDialog::accept();
         return;
     }
@@ -1773,7 +1796,7 @@ void dlgConnectionProfiles::slot_connectToServer()
     }
 
     emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());
-    emit signal_establish_connection(profile_name, 0);
+    emit signal_load_profile(profile_name, 0, alsoConnect);
 }
 
 bool dlgConnectionProfiles::validateProfile()
@@ -1893,6 +1916,10 @@ bool dlgConnectionProfiles::validateProfile()
             validPort = true;
             validUrl = true;
 
+            if (offline_button) {
+                offline_button->setEnabled(true);
+                offline_button->setToolTip(tr("<p>Load profile without connecting.</p>"));
+            }
             if (connect_button) {
                 connect_button->setEnabled(true);
                 connect_button->setToolTip(QString());
@@ -1903,10 +1930,13 @@ bool dlgConnectionProfiles::validateProfile()
         } else {
             notificationArea->show();
             notificationAreaMessageBox->show();
+            if (offline_button) {
+                offline_button->setDisabled(true);
+                offline_button->setToolTip(tr("<p>Please set a valid profile name, game server address and the game port before loading.</p>"));
+            }
             if (connect_button) {
                 connect_button->setDisabled(true);
-                connect_button->setToolTip(
-                        QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(tr("Please set a valid profile name, game server address and the game port before connecting.")));
+                connect_button->setToolTip(tr("<p>Please set a valid profile name, game server address and the game port before connecting.</p>"));
             }
             return false;
         }
