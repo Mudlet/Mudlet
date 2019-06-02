@@ -1796,7 +1796,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     }
 
     emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());
-    emit signal_load_profile(profile_name, 0, alsoConnect);
+    emit signal_load_profile(profile_name, alsoConnect);
 }
 
 bool dlgConnectionProfiles::validateProfile()
