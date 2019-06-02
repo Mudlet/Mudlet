@@ -718,9 +718,11 @@ void TConsole::closeEvent(QCloseEvent* event)
 
     if (mType & (SubConsole|Buffer)) {
         if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
-            QString key = objectName();
-            auto pC = mpHost->mpConsole->mSubConsoleMap.take(key);
+            auto pC = mpHost->mpConsole->mSubConsoleMap.take(mConsoleName);
             if (pC) {
+                // As it happens pC will be identical to 'this' it is just that
+                // we will have removed it from the main TConsole's
+                // mSubConsoleMap:
                 mUpperPane->close();
                 mLowerPane->close();
             }
@@ -736,10 +738,12 @@ void TConsole::closeEvent(QCloseEvent* event)
 
     if (mType == UserWindow) {
         if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
-            QString key = objectName();
-            auto pC = mpHost->mpConsole->mSubConsoleMap.take(key);
-            auto pD = mpHost->mpConsole->mDockWidgetMap.take(key);
+            auto pC = mpHost->mpConsole->mSubConsoleMap.take(mConsoleName);
+            auto pD = mpHost->mpConsole->mDockWidgetMap.take(mConsoleName);
             if (pC) {
+                // As it happens pC will be identical to 'this' it is just that
+                // we will have removed it from the main TConsole's
+                // mSubConsoleMap:
                 mUpperPane->close();
                 mLowerPane->close();
             }
