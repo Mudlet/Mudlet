@@ -39,7 +39,7 @@ public:
     void accept() override;
 
 signals:
-    void signal_load_profile(QString profile_name, int historyVersion, bool alsoConnect);
+    void signal_load_profile(QString profile_name, bool alsoConnect);
 
 public slots:
     void slot_update_name(const QString&);
