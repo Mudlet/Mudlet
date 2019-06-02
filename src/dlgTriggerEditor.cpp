@@ -140,7 +140,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     // system message area
     mpSystemMessageArea = new dlgSystemMessageArea(this);
-    mpSystemMessageArea->setObjectName("mpSystemMessageArea");
+    mpSystemMessageArea->setObjectName(QStringLiteral("mpSystemMessageArea"));
     splitter_right->addWidget(mpSystemMessageArea);
     connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, mpSystemMessageArea, &QWidget::hide);
 

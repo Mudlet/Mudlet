@@ -495,7 +495,7 @@ mudlet::mudlet()
     setWindowTitle(version);
     setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_main_48px.png")));
     mpMainToolBar = new QToolBar(this);
-    mpMainToolBar->setObjectName("mpMainToolBar");
+    mpMainToolBar->setObjectName(QStringLiteral("mpMainToolBar"));
     mpMainToolBar->setWindowTitle(tr("Main Toolbar"));
     addToolBar(mpMainToolBar);
     mpMainToolBar->setMovable(false);
@@ -1889,15 +1889,19 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
     if (!pC && !pD) {
         // The name is not used in either the QMaps of all user created TConsole
         // or TDockWidget instances - so we can make a NEW one:
-        auto pD = new TDockWidget(pHost, name);
-        pD->setObjectName(QString("dockWindow_%1_%2").arg(hostName, name));
+        pD = new TDockWidget(pHost, name);
+        pD->setObjectName(QStringLiteral("dockWindow_%1_%2").arg(hostName, name));
         pD->setContentsMargins(0, 0, 0, 0);
         pD->setFeatures(QDockWidget::AllDockWidgetFeatures);
         pD->setWindowTitle(tr("User window - %1 - %2").arg(hostName, name));
         pHost->mpConsole->mDockWidgetMap.insert(name, pD);
         // It wasn't obvious but the parent passed to the TConsole constructor
         // is sliced down to a QWidget and is NOT a TDockWidget pointer:
-        auto pC = new TConsole(pHost, TConsole::UserWindow, pD->widget());
+        pC = new TConsole(pHost, TConsole::UserWindow, pD->widget());
+        pC->setObjectName(QStringLiteral("dockWindowConsole_%1_%2").arg(hostName, name));
+        // Without this the TConsole instance inside the TDockWidget will be
+        // left being called the default value of "main":
+        pC->mConsoleName = name;
         pC->setContentsMargins(0, 0, 0, 0);
         pD->setTConsole(pC);
         pC->show();
@@ -3292,7 +3296,7 @@ void mudlet::createMapper(bool loadDefaultMap)
 
     auto hostName(pHost->getName());
     pHost->mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(hostName));
-    pHost->mpDockableMapWidget->setObjectName(QString("dockMap_%1").arg(hostName));
+    pHost->mpDockableMapWidget->setObjectName(QStringLiteral("dockMap_%1").arg(hostName));
     pHost->mpMap->mpMapper = new dlgMapper(pHost->mpDockableMapWidget, pHost, pHost->mpMap.data()); //FIXME: mpHost definieren
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
     pHost->mpDockableMapWidget->setWidget(pHost->mpMap->mpMapper);
