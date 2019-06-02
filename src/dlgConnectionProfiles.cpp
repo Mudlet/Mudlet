@@ -108,10 +108,10 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         abort->setIcon(QIcon::fromTheme(QStringLiteral("dialog-close"), QIcon(QStringLiteral(":/icons/dialog-close.png"))));
 
         QIcon icon_new(QIcon::fromTheme(QStringLiteral("document-new"), QIcon(QStringLiteral(":/icons/document-new.png"))));
-        QIcon icon_connect(QIcon::fromTheme(QStringLiteral("dialog-ok-apply"), QIcon(QStringLiteral(":/icons/dialog-ok-apply.png"))));
+        QIcon icon_connect(QIcon::fromTheme(QStringLiteral("dialog-ok-apply"), QIcon(QStringLiteral(":/icons/preferences-web-browser-cache.png"))));
 
         offline_button->setIcon(QIcon(QStringLiteral(":/icons/mudlet_editor.png")));
-        connect_button->setIcon(QIcon(QStringLiteral(":/icons/preferences-web-browser-cache.png")));
+        connect_button->setIcon(icon_connect);
         new_profile_button->setIcon(icon_new);
         copy_profile_button->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
         remove_profile_button->setIcon(QIcon::fromTheme(QStringLiteral("edit-delete"), QIcon(QStringLiteral(":/icons/edit-delete.png"))));
@@ -131,9 +131,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         Q_ASSERT_X(!cursor.isNull(), "dlgConnectionProfiles::dlgConnectionProfiles(...)",
                    "CONNECT_PROFILE_ICON text marker not found in welcome_message text for when icons are shown on dialogue buttons");
         cursor.removeSelectedText();
-        QImage image_load(QPixmap(icon_connect.pixmap(offline_button->iconSize())).toImage());
-        cursor.insertImage(image_load);
-        cursor.clearSelection();
         QImage image_connect(QPixmap(icon_connect.pixmap(connect_button->iconSize())).toImage());
         cursor.insertImage(image_connect);
         cursor.clearSelection();
