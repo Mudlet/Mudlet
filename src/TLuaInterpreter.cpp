@@ -10874,9 +10874,9 @@ int TLuaInterpreter::Echo(lua_State* L)
     }
 
     if (consoleName.isEmpty()) {
-        host.mpConsole->buffer.mEchoText = true;
+        host.mpConsole->buffer.mEchoingText = true;
         host.mpConsole->echo(displayText);
-        host.mpConsole->buffer.mEchoText = false;
+        host.mpConsole->buffer.mEchoingText = false;
         // Writing to the main window must always succeed, but for consistent
         // results, we now return a true for that
         lua_pushboolean(L, true);
