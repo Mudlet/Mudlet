@@ -3649,7 +3649,7 @@ o il tuo DNS non funziona correttamente.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="367"/>
       <source>[ INFO ]  - Looking up the IP address of server:</source>
-      <translation>[ INFO ]  - Ricerca dell'indirizzo IP del server:</translation>
+      <translation>[ INFO ] - Ricerca dell'indirizzo IP del server:</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="389"/>
