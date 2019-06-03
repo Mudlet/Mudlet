@@ -349,22 +349,33 @@ function InstallPugixml() {
   $Env:Path = $ShPath
 }
 
-function InstallLuaModules(){
-  StartPart "Installing lua modules"
+function InstallLfs() {
   Set-Location \LuaRocks
-  Step "installing lfs"
-  exec ".\luarocks" @("--tree=`"C:\\Qt\\Tools\\mingw730_32\\`"", "install", "LuaFileSystem")
-  Step "installing luasql.sqlite3"
-  exec ".\luarocks" @("--tree=`"C:\\Qt\\Tools\\mingw730_32\\`"", "install", "LuaSQL-SQLite3", "SQLITE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"", "SQLITE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"")
-  Step "installing rex.pcre"
-  exec ".\luarocks" @("--tree=`"C:\\Qt\\Tools\\mingw730_32\\`"", "install", "lrexlib-pcre", "PCRE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"", "PCRE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
-  Step "installing lua-utf8"
-  exec ".\luarocks" @("--tree=`"C:\\Qt\\Tools\\mingw730_32\\`"", "install", "luautf8")
-  Step "installing lua-yajl"
-  $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin"
-  exec ".\luarocks" @("--tree=`"C:\\Qt\\Tools\\mingw730_32\\`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$Env:MINGW_BASE_DIR\bin`"", "YAJL_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
+  exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "LuaFileSystem")
+}
 
-  Step "installing luazip"
+function InstallLuasql() {
+  Set-Location \LuaRocks
+  exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "LuaSQL-SQLite3", "SQLITE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"", "SQLITE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"")
+}
+
+function InstallRexPcre() {
+  Set-Location \LuaRocks
+  exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lrexlib-pcre", "PCRE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"", "PCRE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
+}
+
+function InstallLuaUtf8() {
+  Set-Location \LuaRocks
+  exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "luautf8")
+}
+
+function InstallLuaYajl() {
+  Set-Location \LuaRocks
+  $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin"
+  exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$Env:MINGW_BASE_DIR\bin`"", "YAJL_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
+}
+
+function InstallLuaZip () {
   Set-Location "$workingBaseDir"
   DownloadFile "https://github.com/rjpcomputing/luazip/archive/master.zip" "luazip.zip"
   ExtractZip "luazip.zip" "luazip"
@@ -373,7 +384,15 @@ function InstallLuaModules(){
   exec "gcc" @("-O2", "-c", "-o", "src/luazip.o", "-I`"$Env:MINGW_BASE_DIR/include`"", "src/luazip.c")
   exec "gcc" @("-shared", "-o", "zip.dll", "src/luazip.o", "-L`"$Env:MINGW_BASE_DIR/lib`"", "-lzzip", "-lz", "`"$Env:MINGW_BASE_DIR/bin/lua51.dll`"", "-lm")
   Copy-Item "zip.dll" "$Env:MINGW_BASE_DIR\lib\lua\5.1"
-  FinishPart "Installing lua modules"
+}
+
+function InstallLuaModules(){
+  CheckAndInstall "lfs" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\lfs.dll" { InstallLfs }
+  CheckAndInstall "luasql.sqlite3" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\luasql\sqlite3.dll" { InstallLuasql }
+  CheckAndInstall "rex.pcre" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\rex_pcre.dll" { InstallRexPcre }
+  CheckAndInstall "lua-utf8" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\lua-utf8.dll" { InstallLuaUtf8 }
+  CheckAndInstall "lua-yajl" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\yajl.dll" { InstallLuaYajl }
+  CheckAndInstall "luazip" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\zip.dll" { InstallLuaZip }
 }
 
 # install dependencies
