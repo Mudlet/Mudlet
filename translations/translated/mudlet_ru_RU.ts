@@ -9109,7 +9109,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="3664"/>
       <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
-      <translation>[ OK ] - Профиль &quot;%1&quot; загружен в оффлайн режиме.</translation>
+      <translation>[  OK  ]  - Профиль &quot;%1&quot; загружен в оффлайн режиме.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3689"/>
