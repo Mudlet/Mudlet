@@ -4766,7 +4766,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="71"/>
       <source>Offline</source>
-      <translation type="unfinished"/>
+      <translation>Offline</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="408"/>
@@ -4817,17 +4817,17 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1918"/>
       <source>&lt;p&gt;Load profile without connecting.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Profil laden ohne zu verbinden.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1932"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before loading.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Bitte setze einen gültigen Profilnamen sowie Adresse und Port des Spielservers vor dem Laden.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1936"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before connecting.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Bitte setze einen gültigen Profilnamen sowie Adresse und Port des Spielservers vor dem Verbinden.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1862"/>
@@ -9094,7 +9094,7 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="3664"/>
       <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Profil &quot;%1&quot; im Offline-Modus geladen.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3689"/>
