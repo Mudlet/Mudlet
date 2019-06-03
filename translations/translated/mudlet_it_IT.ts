@@ -1523,7 +1523,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2637"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation>[  OK  ]  - ... Il Sistema ha completato la richiesta di ricarica mappa.</translation>
+      <translation>[  OK  ]  - ... Richiesta di ricarica mappa completata.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2639"/>
@@ -1624,7 +1624,7 @@ Alcune funzioni potrebbero non essere disponibili.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14928"/>
       <source>[  OK  ]  - Lua module rex_pcre loaded.</source>
-      <translation>[OK] - Modulo Lua rex_pcre caricato.</translation>
+      <translation>[  OK  ] - Modulo Lua rex_pcre caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14939"/>
@@ -1636,7 +1636,7 @@ Alcune funzioni potrebbero non essere disponibili.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14943"/>
       <source>[  OK  ]  - Lua module zip loaded.</source>
-      <translation>[OK] - Modulo Lua zip caricato.</translation>
+      <translation>[  OK  ] - Modulo Lua zip caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14954"/>
@@ -1650,7 +1650,7 @@ Probabilmente non sarà possibile accedere al codice Mudlet Lua.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14959"/>
       <source>[  OK  ]  - Lua module lfs loaded.</source>
-      <translation>[OK] - Modulo Lua lfs caricato.</translation>
+      <translation>[  OK  ] - Modulo Lua lfs caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14970"/>
@@ -1664,7 +1664,7 @@ Il supporto database non sarà disponibile.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14975"/>
       <source>[  OK  ]  - Lua module sqlite3 loaded.</source>
-      <translation>[OK] - Modulo Lua sqlite3 caricato.</translation>
+      <translation>[  OK  ] - Modulo Lua sqlite3 caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14987"/>
@@ -1678,7 +1678,7 @@ Le funzioni LUA utf8 .* non saranno disponibili.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14992"/>
       <source>[  OK  ]  - Lua module utf8 loaded.</source>
-      <translation>[OK] - Modulo Lua utf8 caricato.</translation>
+      <translation>[  OK  ] - Modulo Lua utf8 caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15004"/>
@@ -1692,7 +1692,7 @@ Le funzioni Lua yajl.* non saranno disponibili.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15009"/>
       <source>[  OK  ]  - Lua module yajl loaded.</source>
-      <translation>[OK] - Modulo Lua yajl caricato.</translation>
+      <translation>[  OK  ] - Modulo Lua yajl caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15099"/>
@@ -1705,14 +1705,14 @@ L'indentazione del codice non sarà disponibile.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15103"/>
       <source>[  OK  ]  - Lua code formatter loaded.</source>
-      <translation>[OK] - Modulo Lua code formatter caricato.</translation>
+      <translation>[  OK  ] - Modulo Lua code formatter caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15136"/>
       <location filename="../src/TLuaInterpreter.cpp" line="15140"/>
       <location filename="../src/TLuaInterpreter.cpp" line="15156"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
-      <translation>[ OK ] - Mudlet-lua API &amp; Geyser Layout manager caricato.</translation>
+      <translation>[  OK  ] - Mudlet-lua API &amp; Geyser Layout manager caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15150"/>
@@ -1762,12 +1762,12 @@ Errore Lua: </translation>
     <message>
       <location filename="../src/TMap.cpp" line="504"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation>[ OK ] - Controllo della mappa completato (%1s). Buon divertimento...</translation>
+      <translation>[  OK  ] - Controllo della mappa completato (%1s). Buon divertimento...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="511"/>
       <source>[  OK  ]  - Map loaded successfully (%1s).</source>
-      <translation>[ OK ] - Mappa caricata correttamente (%1s).</translation>
+      <translation>[  OK  ] - Mappa caricata correttamente (%1s).</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="998"/>
@@ -3694,7 +3694,7 @@ Disinstallazione della vecchia versione &apos;%2&apos;.</translation>
       <location filename="../src/ctelnet.cpp" line="1345"/>
       <location filename="../src/ctelnet.cpp" line="1624"/>
       <source>[  OK  ]  - Package is already installed.</source>
-      <translation>[ OK ] - Il package è già installato.</translation>
+      <translation>[  OK  ] - Il package è già installato.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1352"/>
@@ -3784,7 +3784,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="2067"/>
       <source>[  OK  ]  - The replay has ended.</source>
-      <translation>[ OK ] - Il file di replay è terminato.</translation>
+      <translation>[  OK  ] - Il file di replay è terminato.</translation>
     </message>
   </context>
   <context>
