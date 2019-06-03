@@ -9375,7 +9375,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="187"/>
       <source>&lt;p&gt;Can you help translate Mudlet? &lt;span style=&quot;font-weight:600;&quot;&gt;https://www.mudlet.org/translate&lt;/span&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Kannst du helfen, Mudlet zu übersetzen? &lt;span style=&quot;font-weight:600;&quot;&gt;https://https://www.mudlet.org/translate&lt;/span&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="479"/>
