@@ -700,6 +700,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         pItem->label_patternNumber->setText(QString::number(i+1));
         pItem->label_patternNumber->show();
     }
+    // force the minimum size of the scroll area for the trigger items to be one
+    // and a half trigger item widgets:
+    int triggerWidgetItemMinHeight = qRound(mTriggerPatternEdit.at(0)->minimumSizeHint().height() * 1.5);
+    mpScrollArea->setMinimumHeight(triggerWidgetItemMinHeight);
+
     showHiddenVars = false;
     widget_searchTerm->updateGeometry();
 
@@ -8366,26 +8371,41 @@ void dlgTriggerEditor::slot_showAllTriggerControls(const bool isShown)
 
 void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
 {
-    // Change these from const to static to enable interactive adjustment whilst
-    // running in a debugging environment:
-    const uint threshold = 335;
-    const uint hysteresis = 20;
-    QList<int> partsSizes = splitter_right->sizes();
-    // qDebug().noquote().nospace() << "dlgTriggerEditor::slot_rightSplitterMoved(...) INFO - splitters are now: " << partsSizes;
-    if (partsSizes.at(1) > 10) {
+    /*
+     * With all widgets shown:              With some hidden:
+     *  +--------------------------------+   +--------------------------------+
+     *  | name / control toggle /command |   | name / control toggle /command |
+     *--+----------------------+---------+ --+----------------------+---------+
+     *  |+--------------------+|         |   |+------------------------------+|
+     *w_||                    ||         |   ||                              ||
+     *il||    scroll area     || widget  |   ||         scroll area          ||
+     *de||                    || _right  |   ||                              ||
+     *gf|+--------------------+|         |   |+------------------------------+|
+     *et|+--------------------+|         | --+--------------------------------+
+     *t ||   widget_bottom    ||         |
+     *=>|+--------------------+|         |
+     *--+----------------------+---------+
+     */
+    const int hysteresis = 10;
+    static int bottomWidgetHeight = 0;
+    if (mpTriggersMainArea->isVisible()) {
         // The triggersMainArea is visible
-        if (partsSizes.at(1) > (threshold + hysteresis)) {
-            // And it is more than an upper limit high
-            if (!mpTriggersMainArea->toolButton_toggleExtraControls->isChecked()) {
-                // And the extra controls are not visible - so show them
-                slot_showAllTriggerControls(true);
+        if (mpTriggersMainArea->toolButton_toggleExtraControls->isChecked()) {
+            // The extra controls are visible in the triggersMainArea
+            bottomWidgetHeight = mpTriggersMainArea->widget_bottom->height();
+            if ((mpTriggersMainArea->widget_left->height()) <= (mpTriggersMainArea->widget_right->minimumSizeHint().height() + hysteresis)
+                || mpTriggersMainArea->widget_verticalSpacer_right->height() == 0) {
+                // And it is not tall enough to show the right hand side - so
+                // hide them:
+                slot_showAllTriggerControls(false);
             }
 
-        } else if (partsSizes.at(1) < (threshold - hysteresis)) {
-            // And it is less than a lower limit high
-            if (mpTriggersMainArea->toolButton_toggleExtraControls->isChecked()) {
-                // And the extra controls are visible - so hide them
-                slot_showAllTriggerControls(false);
+        } else {
+            // And the extra controls are NOT visible
+            if ((mpTriggersMainArea->widget_left->height() - bottomWidgetHeight) > mpTriggersMainArea->widget_right->minimumSizeHint().height() - hysteresis) {
+                // And it is tall enough to show the right hand side completely
+                // so show them:
+                slot_showAllTriggerControls(true);
             }
         }
     }

@@ -55,12 +55,6 @@
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-        <property name="maximumSize">
-         <size>
-          <width>51</width>
-          <height>16777215</height>
-         </size>
-        </property>
         <property name="text">
          <string>Name:</string>
         </property>
@@ -74,12 +68,6 @@
       </item>
       <item>
        <widget class="QLineEdit" name="lineEdit_trigger_name">
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>16777215</height>
-         </size>
-        </property>
         <property name="toolTip">
          <string>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your trigger or trigger group. This will be displayed in the trigger tree.&lt;/p&gt;</string>
         </property>
@@ -126,12 +114,6 @@
       </item>
       <item>
        <widget class="QLineEdit" name="lineEdit_trigger_command">
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>0</height>
-         </size>
-        </property>
         <property name="toolTip">
          <string>&lt;p&gt;Type in one or more commands you want the trigger to send directly to the game if it fires. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</string>
         </property>
@@ -206,12 +188,6 @@
              <height>48</height>
             </size>
            </property>
-           <property name="maximumSize">
-            <size>
-             <width>16777215</width>
-             <height>16777215</height>
-            </size>
-           </property>
            <property name="toolTip">
             <string>&lt;p&gt;The trigger will only fire if &lt;u&gt;all&lt;/u&gt; conditions on the list have been met within the specified line delta, and captures will be saved in &lt;tt&gt;multimatches&lt;/tt&gt; instead of &lt;tt&gt;matches&lt;/tt&gt;.&lt;/p&gt;
 &lt;p&gt;If this option is &lt;b&gt;not&lt;/b&gt; set the trigger will fire if &lt;u&gt;any&lt;/u&gt; condition on the list have been met.&lt;/p&gt;</string>
@@ -258,12 +234,6 @@
                 <height>21</height>
                </size>
               </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
-              </property>
               <property name="toolTip">
                <string>&lt;p&gt;Within how many lines must all condition be true to fire the trigger?&lt;/p&gt;</string>
               </property>
@@ -277,12 +247,6 @@
          </item>
          <item alignment="Qt::AlignTop">
           <widget class="QGroupBox" name="groupBox_filterTrigger">
-           <property name="baseSize">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
            <property name="autoFillBackground">
             <bool>true</bool>
            </property>
@@ -324,18 +288,6 @@
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
               </property>
               <property name="text">
                <string>Do not pass whole line to children.</string>
@@ -395,24 +347,6 @@
             </property>
             <item alignment="Qt::AlignTop">
              <widget class="QLabel" name="label_perlSlashGOption">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
-              </property>
               <property name="text">
                <string>Match all occurences of the pattern in the line.</string>
               </property>
@@ -468,12 +402,6 @@
       </property>
       <item alignment="Qt::AlignTop">
        <widget class="QGroupBox" name="groupBox_stayOpen">
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>16777215</height>
-         </size>
-        </property>
         <property name="toolTip">
          <string>&lt;p&gt;Keep firing the script for this many more lines, after the trigger or chain has matched.&lt;/p&gt;</string>
         </property>
@@ -538,12 +466,6 @@
       </item>
       <item alignment="Qt::AlignTop">
        <widget class="QGroupBox" name="groupBox_soundTrigger">
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>16777215</height>
-         </size>
-        </property>
         <property name="toolTip">
          <string>&lt;p&gt;Play a sound file if the trigger fires.&lt;/p&gt;</string>
         </property>
@@ -727,12 +649,6 @@
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
-           <property name="maximumSize">
-            <size>
-             <width>16777215</width>
-             <height>16777215</height>
-            </size>
-           </property>
            <property name="text">
             <string>Background</string>
            </property>
@@ -745,12 +661,6 @@
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>16777215</width>
-             <height>16777215</height>
-            </size>
            </property>
            <property name="text">
             <string>Foreground</string>
