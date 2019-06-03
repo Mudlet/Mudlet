@@ -4789,7 +4789,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="71"/>
       <source>Offline</source>
-      <translation type="unfinished"/>
+      <translation>Оффлайн</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="408"/>
@@ -4840,7 +4840,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1918"/>
       <source>&lt;p&gt;Load profile without connecting.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Загружать профиль без подключения.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1932"/>
