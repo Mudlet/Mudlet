@@ -4845,12 +4845,12 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1932"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before loading.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Пожалуйста, установите правильное имя профиля, адрес игрового сервера и игровой порт перед загрузкой.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1936"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before connecting.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Пожалуйста, установите правильное имя профиля, адрес игрового сервера и игровой порт перед подключением.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1862"/>
