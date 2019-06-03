@@ -4840,7 +4840,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1918"/>
       <source>&lt;p&gt;Load profile without connecting.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Загружать профиль без подключения.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Загрузить профиль без подключения.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1932"/>
@@ -9109,7 +9109,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="3664"/>
       <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Профиль &quot;%1&quot; загружен в оффлайн режиме.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3689"/>
