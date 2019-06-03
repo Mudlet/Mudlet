@@ -1957,7 +1957,8 @@ area) not found, adding reserved -1 id.</source>
       <location filename="../src/TMap.cpp" line="1642"/>
       <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - File di mappa letto con successo (%1s), verifico la coerenza di alcuni dati...
+...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1657"/>
@@ -1977,7 +1978,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1714"/>
       <source>[ INFO ]  - Checking map file: &quot;%1&quot;, format version:%2...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Controllo del file di mappa: &quot;%1&quot;, versione:%2...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2123"/>
@@ -4075,7 +4076,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="14"/>
       <source>Custom Line selection</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona linea personalizzata</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="44"/>
@@ -4216,7 +4217,8 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
       <location filename="../src/ui/custom_lines.ui" line="499"/>
       <source>Has
 custom line?</source>
-      <translation type="unfinished"/>
+      <translation>Ha
+linee personalizzate?</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="511"/>
@@ -4613,7 +4615,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="71"/>
       <source>Offline</source>
-      <translation type="unfinished"/>
+      <translation>Non in linea</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="408"/>
@@ -4664,17 +4666,17 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1918"/>
       <source>&lt;p&gt;Load profile without connecting.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Carica il profilo senza connetterti al gioco.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1932"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before loading.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Per favore imposta un nome profilo valido, l'indirizzo e la porta del server di gioco prima del caricamento.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1936"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before connecting.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Per favore imposta un nome profilo valido, l'indirizzo e la porta del server di gioco prima del caricamento.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1862"/>
