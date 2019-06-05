@@ -88,6 +88,7 @@ bool stopWatch::stop()
     // Is running - so stop and note time:
     mElapsedTime = mEffectiveStartDateTime.msecsTo(QDateTime::currentDateTimeUtc());
     mIsRunning = false;
+    return true;
 }
 
 bool stopWatch::reset()
@@ -127,7 +128,7 @@ void stopWatch::adjustMilliSeconds(const qint64 adjustment)
 
     // Is running so adjust effective start time - to increase the effective
     // elapsed time we must subtract the adjustment from the effect start time:
-    mEffectiveStartDateTime.addMSecs(-adjustment);
+    mEffectiveStartDateTime = mEffectiveStartDateTime.addMSecs(-adjustment);
 }
 
 qint64 stopWatch::getElapsedMilliSeconds() const
@@ -165,14 +166,14 @@ QString stopWatch::getElapsedDayTimeString() const
         elapsed *= -1;
     }
 
-    int days = elapsed /   86400000L;
-    int remainder = elapsed - (days * 86400000L);
-    quint8 hours = remainder / 3600000L;
+    qint64 days = elapsed / 86400000L;
+    qint64 remainder = elapsed - (days * 86400000L);
+    quint8 hours = static_cast<quint8>(remainder / 3600000L);
     remainder = remainder - (hours * 3600000L);
-    quint8 minutes = remainder / 60000;
+    quint8 minutes = static_cast<quint8>(remainder / 60000);
     remainder = remainder - (minutes * 60000L);
-    quint8 seconds = remainder / 1000;
-    quint16 milliSeconds = remainder - (seconds * 1000);
+    quint8 seconds = static_cast<quint8>(remainder / 1000);
+    quint16 milliSeconds = static_cast<quint16>(remainder - (seconds * 1000));
     return QStringLiteral("%1:%2:%3:%4:%5:%6").arg((isNegative ? QLatin1String("-") : QLatin1String("+")), QString::number(days), QString::number(hours), QString::number(minutes), QString::number(seconds), QString::number(milliSeconds));
 }
 
