@@ -806,10 +806,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
             roomTestRect = QRectF(0, 0, static_cast<qreal>(mRoomWidth) * rSize, static_cast<qreal>(mRoomHeight) * rSize);
         }
         static quint8 roomVnumMargin = 10;
-        // Peer review has suggested that under/overlining the room id numbers
-        // is not helpful after all:
-        // roomVNumFont.setUnderline(true);
-        // roomVNumFont.setOverline(true);
         roomVNumFont.setBold(true);
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 10, 0))
         // QFont::PreferNoShaping is only available in Qt 5.10 or later
@@ -1734,9 +1730,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 }
                 painter.setPen(QPen(roomIdColor));
                 painter.setFont(roomVNumFont);
-                // U+2007 is Unicode codepoint for "Figure Space" - the width of
-                // a numeric digit:
-                painter.drawText(roomRectangle, Qt::AlignHCenter | Qt::AlignVCenter, QStringLiteral("%1").arg(currentAreaRoom, mMaxRoomIdDigits, 10, QChar(0x2007)));
+                painter.drawText(roomRectangle, Qt::AlignCenter, QString::number(currentAreaRoom));
                 painter.restore();
             }
 
