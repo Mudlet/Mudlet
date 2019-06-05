@@ -159,6 +159,7 @@ public:
     float highlightRadius;
     bool rendered;
     QMap<QString, int> doors; //0=no door 1=open 2=closed 3=locked
+    QString mHash;
 
 
 private:

@@ -255,10 +255,9 @@ bool TRoomDB::__removeRoom(int id)
             ++i;
         }
         rooms.remove(id);
-        if (roomIDToHash.contains(id)) {
-            QString hash = roomIDToHash[id];
-            roomIDToHash.remove(id);
-            hashToRoomID.remove(hash);
+        // Always remove any matching hashToRoomID entries
+        if (!pR->mHash.isEmpty()) {
+            hashToRoomID.remove(pR->mHash, id);
         }
         int areaID = pR->getArea();
         TArea* pA = getArea(areaID);
@@ -1077,7 +1076,6 @@ void TRoomDB::clearMapDB()
     entranceMap.clear();
     areaNamesMap.clear();
     hashToRoomID.clear();
-    roomIDToHash.clear();
     for (auto room : rPtrL) {
         delete room; // Uses the internally held value of the room Id
                      // (TRoom::id) to call TRoomDB::__removeRoom(id)

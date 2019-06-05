@@ -80,14 +80,15 @@ public:
     void restoreSingleRoom(int, TRoom*);
     const QString getDefaultAreaName() { return mDefaultAreaName; }
 
-    // This is for muds that provide hashes to rooms instead of IDs.
+    // This is for muds that provide hashes to rooms instead of IDs, and
+    // latterly for the user to produce their own indexing/hashing schemes.
     // If it exists, we delete the info when deleting a room.
-    // But we rely on the user to add the data, don't do any checking,
-    // and it isn't audited.
-    // It should be a QHash, but changing it would break loading from files
-    // saved under the old version.
-    QMap<QString, int> hashToRoomID;
-    QMap<int, QString> roomIDToHash;
+    // We rely on the user to add the data, and do limited checking.
+    // For map file formats prior to 21 it was a QMap and NOT a "multi" one,
+    // this was changed to allow the Hash table to allow be used for locally
+    // generated hashes (e.g. derived from the room description) which may
+    // produce collisions:
+    QMultiHash<QString, int> hashToRoomID;
 
 
 private:

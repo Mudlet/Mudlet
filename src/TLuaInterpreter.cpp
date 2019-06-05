@@ -4193,27 +4193,71 @@ int TLuaInterpreter::connectToServer(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomIDbyHash
 int TLuaInterpreter::setRoomIDbyHash(lua_State* L)
 {
-    int id;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setRoomIDbyHash: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    id = lua_tonumber(L, 1);
+    qint64 id = lua_tointeger(L, 1);
     if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "setRoomIDbyHash: bad argument #2 type (hash as string expected, got %s)", luaL_typename(L, 2));
+        lua_pushfstring(L, "setRoomIDbyHash: bad argument #2 type (hash as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
     QString hash = QString::fromUtf8(lua_tostring(L, 2));
+    // This reflects prior code that would silently replace an existing hash
+    // with a new roomId
+    bool allowCollisions = true;
+    if (lua_gettop(L) > 2 ) {
+        if (!lua_isboolean(L, 3)) {
+            lua_pushfstring(L, "setRoomIDbyHash: bad argument #3 type (permit collisions as boolean is optional {defaults to true if omitted}, got %s!)", luaL_typename(L, 3));
+            return lua_error(L);
+        }
+        allowCollisions = lua_toboolean(L, 3);
+    }
+
     Host& host = getHostFromLua(L);
-    if (host.mpMap->mpRoomDB->roomIDToHash.contains(id)) {
-        host.mpMap->mpRoomDB->hashToRoomID.remove(host.mpMap->mpRoomDB->roomIDToHash[id]);
+    auto pR = host.mpMap->mpRoomDB->getRoom(static_cast<int>(id));
+    if (!pR) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "room id %d does not exist", id);
+        return 2;
     }
-    if (host.mpMap->mpRoomDB->hashToRoomID.contains(hash)) {
-        host.mpMap->mpRoomDB->roomIDToHash.remove(host.mpMap->mpRoomDB->hashToRoomID[hash]);
+
+    if (!pR->mHash.isEmpty()) {
+        // Clean old hash key from table - because this is a QMultiHash we need
+        // to specify BOTH key and value to only remove the value for the one
+        // id - during development code runs check that we have actually done
+        // something -  and moan if we haven't:
+        if (!host.mpMap->mpRoomDB->hashToRoomID.remove(pR->mHash, id)) {
+            qWarning().nospace().noquote() << "TLuaInterpreter::setRoomIDbyHash(" << "\"" << pR->mHash << "\", " << id << ") WARNING - old hash not found for this room, this is suspect; please report to Mudlet developers.";
+        }
+        pR->mHash.clear();
     }
-    host.mpMap->mpRoomDB->hashToRoomID[hash] = id;
-    host.mpMap->mpRoomDB->roomIDToHash[id] = hash;
-    return 0;
+
+    // We now use an empty string for the hash to remove the hash to room id
+    // association from the table - and we have now done that - so we can
+    // finish and report success in that case:
+    if (hash.isEmpty()) {
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    // Otherwise, insert the hash ==> roomId entry if we can:
+    if (!allowCollisions && host.mpMap->mpRoomDB->hashToRoomID.contains(hash)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "hash collision on \"%s\", room id %d has already been allocated to that hash", hash.toUtf8().constData(), host.mpMap->mpRoomDB->hashToRoomID.value(hash));
+        return 2;
+    }
+
+    // As this is a QMultiHash this will NOT replace any existing entries with
+    // the same hash and a different roomId - but the getRoomIDbyHash will only
+    // return the last added roomId for any hash by default {though it can now
+    // be set to warn if such a collision is found for a hash}:
+    host.mpMap->mpRoomDB->hashToRoomID.insert(hash, id);
+    // And store it in the room's details:
+    pR->mHash = hash;
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomIDbyHash
@@ -4224,10 +4268,77 @@ int TLuaInterpreter::getRoomIDbyHash(lua_State* L)
         return lua_error(L);
     }
     QString hash = QString::fromUtf8(lua_tostring(L, 1));
+    if (hash.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "an empty string is not valid as a hash");
+        return 2;
+    }
+    bool reportProblems = false;
+    if (lua_gettop(L) > 1) {
+        if (!lua_isboolean(L, 2)) {
+            lua_pushfstring(L, "getRoomIDbyHash: bad argument #2 type (report problems as boolean is optional {defaults to false if omitted}, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        }
+        reportProblems = lua_toboolean(L, 2);
+    }
     Host& host = getHostFromLua(L);
-    int retID = host.mpMap->mpRoomDB->hashToRoomID.value(hash, -1);
-    lua_pushnumber(L, retID);
+    QList<int> ids = host.mpMap->mpRoomDB->hashToRoomID.values(hash);
+    if (ids.isEmpty()) {
+        if (!reportProblems) {
+            // For backwards compatibility:
+            lua_pushnumber(L, -1);
+            return 1;
+        }
 
+        lua_pushnil(L);
+        lua_pushfstring(L, "no room found for a hash of \"%s\"", hash.toUtf8().constData());
+        return 2;
+    }
+
+    if (reportProblems && ids.count() > 1) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "hash collision detected for \"%s\", there are %d rooms with this hash, use getRoomIDsbyHash(...) instead to retrieve them all", hash.toUtf8().constData(), ids.count());
+        return 2;
+    }
+
+    // For backwards compatibility, return the last roomId that was stored
+    // against the given hash:
+    lua_pushnumber(L, ids.first());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomIDsbyHash
+int TLuaInterpreter::getRoomIDsbyHash(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "getRoomIDsbyHash: bad argument #1 type (hash as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString hash = QString::fromUtf8(lua_tostring(L, 1));
+    if (hash.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "an empty string is not valid as a hash");
+        return 2;
+    }
+    Host& host = getHostFromLua(L);
+    QList<int> ids = host.mpMap->mpRoomDB->hashToRoomID.values(hash);
+    if (ids.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "no room found for a hash of \"%s\"", hash.toUtf8().constData());
+        return 2;
+    }
+
+    // Sort into ascending order if there is more than one roomId for given hash:
+    if (ids.count() > 1) {
+        std::sort(ids.begin(), ids.end());
+    }
+
+    lua_newtable(L);
+    for (int index = 0, total = ids.count(); index < total; ++index) {
+        lua_pushnumber(L, index+1); // Lua tables start at 1 not 0!
+        lua_pushnumber(L, ids.at(index));
+        lua_settable(L, -3);
+    }
     return 1;
 }
 
@@ -4242,14 +4353,19 @@ int TLuaInterpreter::getRoomHashByID(lua_State* L)
     id = lua_tonumber(L, 1);
 
     Host& host = getHostFromLua(L);
-    if (host.mpMap->mpRoomDB->roomIDToHash.contains(id)) {
-        QString retHash = host.mpMap->mpRoomDB->roomIDToHash[id];
-        lua_pushstring(L, retHash.toUtf8().constData());
-        return 1;
+    auto* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "room id %d does not exist", id);
+        return 2;
     }
-    lua_pushnil(L);
-    lua_pushfstring(L, "no hash for room %d", id);
-    return 2;
+    if (pR->mHash.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "no hash for room %d", id);
+        return 2;
+    }
+    lua_pushstring(L, pR->mHash.toUtf8().constData());
+    return 1;
 }
 
 int TLuaInterpreter::solveRoomCollisions(lua_State* L)
@@ -14708,6 +14824,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "sendSocket", TLuaInterpreter::sendSocket);
     lua_register(pGlobalLua, "setRoomIDbyHash", TLuaInterpreter::setRoomIDbyHash);
     lua_register(pGlobalLua, "getRoomIDbyHash", TLuaInterpreter::getRoomIDbyHash);
+    lua_register(pGlobalLua, "getRoomIDsbyHash", TLuaInterpreter::getRoomIDsbyHash);
     lua_register(pGlobalLua, "getRoomHashByID", TLuaInterpreter::getRoomHashByID);
     lua_register(pGlobalLua, "addAreaName", TLuaInterpreter::addAreaName);
     lua_register(pGlobalLua, "getRoomAreaName", TLuaInterpreter::getRoomAreaName);

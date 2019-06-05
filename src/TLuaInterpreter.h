@@ -184,6 +184,7 @@ public:
     static int getRoomAreaName(lua_State*);
     static int addAreaName(lua_State* L);
     static int getRoomIDbyHash(lua_State* L);
+    static int getRoomIDsbyHash(lua_State* L);
     static int getRoomHashByID(lua_State* L);
     static int setRoomIDbyHash(lua_State* L);
     static int sendSocket(lua_State* L);

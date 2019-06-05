@@ -58,7 +58,7 @@ TMap::TMap(Host* pH, const QString& profileName)
 , mDefaultVersion(18)
 // maximum version of the map format that this Mudlet can understand and will
 // allow the user to load
-, mMaxVersion(20)
+, mMaxVersion(21)
 // minimum version this instance of Mudlet will allow the user to save maps in
 , mMinVersion(16)
 , mMapSymbolFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 12, QFont::Normal))
@@ -1067,7 +1067,32 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     ofs << envColors;
     ofs << mpRoomDB->getAreaNamesMap();
     ofs << customEnvColors;
-    ofs << mpRoomDB->hashToRoomID;
+    if (mSaveVersion >= 21) {
+        ofs << mpRoomDB->hashToRoomID;
+    } else if (mSaveVersion >=7) {
+        // Prior to version 21 we were using a QMap<QString, int> (which did
+        // not support hash collisions {more than one roomID value for an
+        // identical hash}):
+        bool collisionsDetected = false;
+        QMap<QString, int> oldHashToRoomID;
+        QList<QString> hashKeys = mpRoomDB->hashToRoomID.uniqueKeys();
+        for (int index = 0, total = hashKeys.count(); index < total; ++index) {
+            QList<int> hashValues = mpRoomDB->hashToRoomID.values(hashKeys.at(index));
+            if (!collisionsDetected && hashValues.count() > 1) {
+                collisionsDetected = true;
+            }
+            oldHashToRoomID.insert(hashKeys.at(index), hashValues.first());
+        }
+        if (collisionsDetected) {
+            QString errMsg = tr("[ WARN ]  - one or more RoomID hashes collisions detected (different rooms with\n"
+                                "same hash), these cannot be handled in map file formats lower than\n"
+                                 "21 and the map is being saved in version %1. To prevent data loss\n"
+                                 "in future sessions ensure that this map is saved in a format of 21\n"
+                                 "or more before closing this session.").arg(mSaveVersion);
+            postMessage(errMsg);
+        }
+        ofs << oldHashToRoomID;
+    }
     if (mSaveVersion >= 17) {
         if (mSaveVersion < 19) {
             // Save the data in the map user data for older versions
@@ -1458,11 +1483,17 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         if (mVersion >= 5) {
             ifs >> customEnvColors;
         }
-        if (mVersion >= 7) {
+        if (mVersion >= 21)
+            // In version 21 we switched to a QMultiHash<QString, int> hashToRoomID:
             ifs >> mpRoomDB->hashToRoomID;
-            QMap<QString, int>::const_iterator i;
-            for (i = mpRoomDB->hashToRoomID.constBegin(); i != mpRoomDB->hashToRoomID.constEnd(); ++i) {
-                mpRoomDB->roomIDToHash.insert(i.value(), i.key());
+        else if (mVersion >= 7) {
+            // From version 7 we were using a QMap<QString, int>
+            QMap<QString, int> oldHashToRoomID;
+            ifs >> oldHashToRoomID;
+            QMapIterator<QString, int> itHash(oldHashToRoomID);
+            while (itHash.hasNext()) {
+                itHash.next();
+                mpRoomDB->hashToRoomID.insert(itHash.key(), itHash.value());
             }
         }
 
