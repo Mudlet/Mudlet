@@ -1037,9 +1037,8 @@ void TConsole::toggleLogging(bool isMessageEnabled)
     } else {
         // Logging is being turned off
         buffer.logRemainingOutput();
-        QString endDateTimeLine = tr("Log session ending at %1.")
-                .arg(logDateTime.toString(tr("hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy",
-                                             "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
+        QString endDateTimeLine = logDateTime.toString(tr("Log session ending at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy",
+                                             "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale"));
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             mLogStream << QStringLiteral("<p>%1</p>\n").arg(endDateTimeLine);
             mLogStream << "  </div></body>\n";
