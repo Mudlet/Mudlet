@@ -10943,7 +10943,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="526"/>
       <source>&lt;p&gt;Toggles the display of the search results area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Attiva/Disattiva la visualizzazione dei risultati di ricerca.&lt;/p&gt;</translation>
     </message>
   </context>
   <context>
