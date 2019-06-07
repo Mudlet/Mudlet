@@ -1007,7 +1007,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
                 logStream << "  </div><hr><div>\n";
             }
             logStream << QStringLiteral("<p>%1</p>\n")
-                         .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'",
+                         .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.",
                                                       "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
             // <div></div> tags required around outside of the body <span></spans> for
             // strict HTML 4 as we do not use <p></p>s or anything else
@@ -1028,8 +1028,9 @@ void TConsole::toggleLogging(bool isMessageEnabled)
                 // file to not trigger the insertion of this line:
                 mLogStream << QStringLiteral("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯").repeated(8).append(QChar::LineFeed);
             }
-            mLogStream << logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.\n",
-                                                  "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale"));
+            mLogStream << QStringLiteral("%1\n")
+                         .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.",
+                                                  "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
 
         }
         logButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
@@ -1037,7 +1038,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
     } else {
         // Logging is being turned off
         buffer.logRemainingOutput();
-        QString endDateTimeLine = logDateTime.toString(tr("Log session ending at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy",
+        QString endDateTimeLine = logDateTime.toString(tr("'Log session ending at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.",
                                              "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale"));
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             mLogStream << QStringLiteral("<p>%1</p>\n").arg(endDateTimeLine);
