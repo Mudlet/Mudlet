@@ -5461,12 +5461,12 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="156"/>
       <source>Entered number is invalid, set the number of the room that this special exit leads to, will turn blue for a valid number; if left like this, this exit will be deleted when &amp;lt;i&amp;gt;save&amp;lt;/i&amp;gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Il valore inserito non è valido! Imposta il numero dell'uscita speciale, diventerà blu per numeri validi. se lasciato vuoto, l'uscita sarà cancellata quando al salvataggio.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="220"/>
       <source>Set the number of the room that this special exit leads to, will turn blue for a valid number; if left like this, this exit will be deleted when &amp;lt;i&amp;gt;save&amp;lt;/i&amp;gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Imposta il numero della stanza a cui si riferisce questa uscita speciale, diventerà blu per numeri validi; se lasciato vuoto, l'uscita sarà cancellata quando il bottone &amp;lt;i&amp;gt;salva&amp;lt;/i&amp;gt; sarà premuto.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="223"/>
@@ -5543,7 +5543,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="756"/>
       <source>Entered number is invalid, set the number of the room northwest of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Il valore inserito non è valido! Imposta il numero della stanza a nord-ovest, diventerà blu per numeri validi.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="767"/>
@@ -5554,7 +5554,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="810"/>
       <source>Entered number is invalid, set the number of the room north of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Il valore inserito non è valido! Imposta il numero della stanza a nord, diventerà blu per numeri validi.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="820"/>
@@ -5565,7 +5565,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="862"/>
       <source>Entered number is invalid, set the number of the room northeast of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Il valore inserito non è valido! Imposta il numero della stanza a nord-est, diventerà blu per numeri validi.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="872"/>
@@ -5576,7 +5576,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="914"/>
       <source>Entered number is invalid, set the number of the room up from this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Il valore inserito non è valido! Imposta il numero della stanza in alto, diventerà blu per numeri validi.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="924"/>
@@ -5587,7 +5587,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="966"/>
       <source>Entered number is invalid, set the number of the room west of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Il valore inserito non è valido! Imposta il numero della stanza a ovest, diventerà blu per numeri validi.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="976"/>
@@ -5598,7 +5598,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1018"/>
       <source>Entered number is invalid, set the number of the room east of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Il valore inserito non è valido! Imposta il numero della stanza a est, diventerà blu per numeri validi.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1028"/>
@@ -5609,7 +5609,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1070"/>
       <source>Entered number is invalid, set the number of the room down from this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Il valore inserito non è valido! Imposta il numero della stanza in basso, diventerà blu per numeri validi.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1080"/>
@@ -5620,7 +5620,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1122"/>
       <source>Entered number is invalid, set the number of the room southwest of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Il valore inserito non è valido! Imposta il numero della stanza a sud-ovest, diventerà blu per numeri validi.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1132"/>
@@ -5631,7 +5631,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1174"/>
       <source>Entered number is invalid, set the number of the room south of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Il valore inserito non è valido! Imposta il numero della stanza a sud, diventerà blu per numeri validi.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1184"/>
@@ -5642,7 +5642,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1226"/>
       <source>Entered number is invalid, set the number of the room southeast of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Il valore inserito non è valido! Imposta il numero della stanza a sud-est, diventerà blu per numeri validi.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1236"/>
@@ -5653,7 +5653,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1278"/>
       <source>Entered number is invalid, set the number of the room in from this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Il valore inserito non è valido! Imposta il numero della stanza in ingresso, diventerà blu per numeri validi.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1288"/>
@@ -5664,7 +5664,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1330"/>
       <source>Entered number is invalid, set the number of the room out from this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>Il valore inserito non è valido! Imposta il numero della stanza in uscita, diventerà blu per numeri validi.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1340"/>
