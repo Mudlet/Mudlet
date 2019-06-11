@@ -1427,7 +1427,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             file.close();
             return false;
         } else if (mVersion < 4) {
-            QString alertMsg = tr("[ ALERT ] - Map file is really old, it's file format (%1) is so ancient that\n"
+            QString alertMsg = tr("[ ALERT ] - Map file is really old, its file format (%1) is so ancient that\n"
                                   "this version of Mudlet may not gain enough information from\n"
                                   "it but it will try!  The file is: \"%2\".")
                                        .arg(mVersion)
