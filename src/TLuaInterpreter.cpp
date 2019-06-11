@@ -14914,7 +14914,8 @@ void TLuaInterpreter::initLuaGlobals()
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.")
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
+            "%1 is the name of the module.")
             .arg(QStringLiteral("rex_pcre"));
         mpHost->postMessage(msg);
     }
@@ -14933,7 +14934,8 @@ void TLuaInterpreter::initLuaGlobals()
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.")
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
+            "%1 is the name of the module.")
             .arg(QStringLiteral("zip"));
         mpHost->postMessage(msg);
     }
@@ -14953,7 +14955,8 @@ void TLuaInterpreter::initLuaGlobals()
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.")
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
+            "%1 is the name of the module.")
             .arg(QStringLiteral("lfs"));
         mpHost->postMessage(msg);
     }
@@ -14974,7 +14977,8 @@ void TLuaInterpreter::initLuaGlobals()
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.")
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
+            "%1 is the name of the module.")
             .arg(QStringLiteral("sqlite3"));
         mpHost->postMessage(msg);
     }
@@ -14994,7 +14998,8 @@ void TLuaInterpreter::initLuaGlobals()
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.")
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
+            "%1 is the name of the module.")
             .arg(QStringLiteral("utf8"));
         mpHost->postMessage(msg);
     }
@@ -15014,7 +15019,8 @@ void TLuaInterpreter::initLuaGlobals()
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.")
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
+            "%1 is the name of the module.")
             .arg(QStringLiteral("yajl"));
         mpHost->postMessage(msg);
     }
