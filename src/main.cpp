@@ -203,16 +203,16 @@ int main(int argc, char* argv[])
     if (startupAction & 2) {
         // Do "version" action - wording and format is quite tightly specified by the coding standards
 #if defined(QT_DEBUG)
-        texts << QCoreApplication::translate("main", "%1 %2%3 (with debug symbols, without optimisations)",
+        texts << QCoreApplication::translate("main", "%1 %2%3 (with debug symbols, without optimisations)\n",
 		 "%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev")
-                 .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), QLatin1String(APP_BUILD)) << QLatin1String("\n");
+                 .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), QLatin1String(APP_BUILD));
 #else // ! defined(QT_DEBUG)
         texts << QLatin1String(APP_TARGET " " APP_VERSION APP_BUILD " \n");
 #endif // ! defined(QT_DEBUG)
-        texts << QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)",
-	         "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()) << QLatin1String("\n");
-        texts << QCoreApplication::translate("main", "Copyright © 2008-%1  Mudlet developers").arg(QStringLiteral(__DATE__).mid(7, 4)) << QLatin1String("\n");
-        texts << QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html") << QLatin1String("\n");
+        texts << QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)\n",
+	         "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion());
+        texts << QCoreApplication::translate("main", "Copyright © 2008-%1  Mudlet developers\n").arg(QStringLiteral(__DATE__).mid(7, 4));
+        texts << QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html\n");
         texts << QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
                                                      "There is NO WARRANTY, to the extent permitted by law.");
         std::cout << texts.join(QString()).toStdString();
@@ -224,20 +224,20 @@ int main(int argc, char* argv[])
                                                      "       -v, --version   displays version information.\n"
                                                      "       -q, --quiet     no splash screen on startup.\n\n"
                                                      "There are other inherited options that arise from the Qt Libraries which are\n"
-                                                     "less likely to be useful for normal use of this application:")
-                 .arg(QLatin1String(APP_TARGET)) << QLatin1String("\n");
+                                                     "less likely to be useful for normal use of this application:\n")
+                 .arg(QLatin1String(APP_TARGET));
         // From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
         texts << QCoreApplication::translate("main", "       --dograb        ignore any implicit or explicit -nograb.\n"
                                                      "                       --dograb wins over --nograb even when --nograb is last on\n"
-                                                     "                       the command line.") << QLatin1String("\n");
+                                                     "                       the command line.\n");
 #if defined(Q_OS_LINUX)
         // Need to split these into actually seperate strings, as Crowdin translation would not split strings on #if otherwise.
         texts << QCoreApplication::translate("main", "       --nograb        the application should never grab the mouse or the\n"
                                                      "                       keyboard. This option is set by default when Mudlet is\n"
-                                                     "                       running in the gdb debugger under Linux.") << QLatin1String("\n");
+                                                     "                       running in the gdb debugger under Linux.\n");
 #else // ! defined(Q_OS_LINUX)
         texts << QCoreApplication::translate("main", "       --nograb        the application should never grab the mouse or the\n"
-                                                     "                       keyboard.") << QLatin1String("\n");
+                                                     "                       keyboard.\n");
 #endif // ! defined(Q_OS_LINUX)
         texts << QCoreApplication::translate("main", "       --reverse       sets the application's layout direction to right to left.\n"
                                                      "       --style= style  sets the application GUI style. Possible values depend on\n"
@@ -252,13 +252,13 @@ int main(int argc, char* argv[])
                                                      "                       The value must be a path to a file that contains the\n"
                                                      "                       Style Sheet. Note: Relative URLs in the Style Sheet file\n"
                                                      "                       are relative to the Style Sheet file's path.\n"
-                                                     "       --stylesheet stylesheet  is the same as listed above.") << QLatin1String("\n");
+                                                     "       --stylesheet stylesheet  is the same as listed above.\n");
 // Not sure about MacOS case as that does not use X
 #if defined(Q_OS_UNIX) && (! defined(Q_OS_MACOS))
         texts << QCoreApplication::translate("main", "       --sync          forces the X server to perform each X client request\n"
                                                      "                       immediately and not use buffer optimization. It makes the\n"
                                                      "                       program easier to debug and often much slower. The --sync\n"
-                                                     "                       option is only valid for the X11 version of Qt.") << QLatin1String("\n");
+                                                     "                       option is only valid for the X11 version of Qt.\n");
 #endif // defined(Q_OS_UNIX) and not defined(Q_OS_MACOS)
         texts << QCoreApplication::translate("main", "       --widgetcount   prints debug message at the end about number of widgets\n"
                                                      "                       left undestroyed and maximum number of widgets existing\n"
@@ -266,9 +266,9 @@ int main(int argc, char* argv[])
                                                      "       --qmljsdebugger=1234[,block]  activates the QML/JS debugger with a\n"
                                                      "                       specified port. The number is the port value and block is\n"
                                                      "                       optional and will make the application wait until a\n"
-                                                     "                       debugger connects to it.") << QLatin1String("\n\n");
-        texts << QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues") << QLatin1String("\n");
-        texts << QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/") << QLatin1String("\n");
+                                                     "                       debugger connects to it.\n\n");
+        texts << QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues\n");
+        texts << QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/\n");
         std::cout << texts.join(QString()).toStdString();
         return 0;
     }
@@ -460,7 +460,7 @@ int main(int argc, char* argv[])
     if (show_splash) {
         splash_message.append(QCoreApplication::translate("main", "Done.\n\n"
                               "All data has been loaded successfully.\n\n"
-                              "Starting... Have fun!")) << QLatin1String("\n\n");
+                              "Starting... Have fun!\n\n"));
         splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
     }
