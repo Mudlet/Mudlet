@@ -7042,7 +7042,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <location filename="../src/main.cpp" line="212"/>
       <source>Copyright © 2008-%1  Mudlet developers
 </source>
-      <translation>Copyright © 2008 -%1  Mudlet Entwickler
+      <translation>Copyright © 2008-%1  Mudlet Entwickler
 </translation>
     </message>
     <message>
