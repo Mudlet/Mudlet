@@ -1172,7 +1172,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         QString message = tr("[ ALERT ] - Area User data has been lost in saved map file.  Re-save in a\n"
                              "format of at least 17 to preserve it before quitting!\n"
                              "Areas id affected: %1.")
-                                  .arg(areaIds.join(tr(", "))); // Translatable in case list separators are locale dependant!
+                                  .arg(areaIds.join(QLatin1String(", ")));
         mpHost->mTelnet.postMessage(message);
     }
     // End of TODO
