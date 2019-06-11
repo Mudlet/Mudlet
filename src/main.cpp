@@ -357,7 +357,7 @@ int main(int argc, char* argv[])
 
     QString splash_message;
     if (show_splash) {
-	splash_message.append(QLatin1String("\n\n"));
+        splash_message.append(QLatin1String("\n\n"));
         splash_message.append(QCoreApplication::translate("main", 
                               "Mudlet comes with\n"
                               "ABSOLUTELY NO WARRANTY!\n"
@@ -365,7 +365,7 @@ int main(int argc, char* argv[])
                               "welcome to redistribute it under\n"
                               "certain conditions; select the\n"
                               "'About' item for details."));
-	splash_message.append(QLatin1String("\n\n"));
+        splash_message.append(QLatin1String("\n\n"));
         splash_message.append(QCoreApplication::translate("main", "Locating profiles..."));
         splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
