@@ -1982,7 +1982,7 @@ this version of Mudlet may not gain enough information from
 it but it will try!  The file is: &quot;%2&quot;.</source>
       <translation>[ ACHTUNG ]  - Kartendatei ist wirklich alt, ihr Dateiformat (%1) ist so alt, dass
 diese Version von Mudlet vielleicht nicht genügend Informationen daraus sammeln kann,
-aber es wird es versuchen! Die Datei ist: &quot;%2&quot;.</translation>
+aber sie wird es versuchen! Die Datei ist:&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1437"/>
