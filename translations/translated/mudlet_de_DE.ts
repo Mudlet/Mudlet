@@ -2040,12 +2040,12 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2123"/>
       <source>Map issues</source>
-      <translation>Themen zur Karte</translation>
+      <translation>Aspekte zur Karte</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2130"/>
       <source>Area issues</source>
-      <translation>Themen zur Region</translation>
+      <translation>Aspekte zur Region</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2136"/>
@@ -2060,7 +2060,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2147"/>
       <source>Room issues</source>
-      <translation>Themen zum Raum</translation>
+      <translation>Aspekte zum Raum</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2154"/>
