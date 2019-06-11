@@ -9927,11 +9927,10 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
         static bool isWarningIssued = false;
         if (!isWarningIssued && host.mpMap->mDefaultVersion <= 16 && host.mpMap->mSaveVersion < 17) {
             QString warnMsg = tr("[ WARN ]  - Lua command setAreaUserData() used - it is currently flagged as experimental!");
-            QString infoMsg = tr("[ INFO ]  - To be fully functional the above command requests a revision to the map file format\n"
-                                 "and although that has been coded it is NOT enabled so this feature's effects\n"
-                                 "will NOT persist between sessions as the relevent data IS NOT SAVED.\n\n"
-                                 "To avoid filling the screen up with repeated messages, this is your only warning about\n"
-                                 "this command...!");
+            QString infoMsg = tr("[ INFO ]  - This feature requires a newer map format. Please change your map\n"
+                                 "format to a newer version to be able to SAVE this feature's data.\n\n"
+                                 "To avoid filling the screen up with repeated messages, this is\n"
+                                 "your only warning about this command...!");
             host.postMessage(warnMsg);
             host.postMessage(infoMsg);
             isWarningIssued = true;
@@ -9988,11 +9987,10 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
         static bool isWarningIssued = false;
         if (!isWarningIssued && host.mpMap->mDefaultVersion <= 16 && host.mpMap->mSaveVersion < 17) {
             QString warnMsg = tr("[ WARN ]  - Lua command setMapUserData() used - it is currently flagged as experimental!");
-            QString infoMsg = tr("[ INFO ]  - To be fully functional the above command requests a revision to the map file format\n"
-                                 "and although that has been coded it is NOT enabled so this feature's effects\n"
-                                 "will NOT persist between sessions as the relevent data IS NOT SAVED.\n\n"
-                                 "To avoid filling the screen up with repeated messages, this is your only warning about\n"
-                                 "this command...!");
+            QString infoMsg = tr("[ INFO ]  - This feature requires a newer map format. Please change your map\n"
+                                 "format to a newer version to be able to SAVE this feature's data.\n\n"
+                                 "To avoid filling the screen up with repeated messages, this is\n"
+                                 "your only warning about this command...!");
             host.postMessage(warnMsg);
             host.postMessage(infoMsg);
             isWarningIssued = true;
