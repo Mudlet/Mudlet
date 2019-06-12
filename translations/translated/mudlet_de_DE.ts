@@ -1602,7 +1602,11 @@ format to a newer version to be able to SAVE this feature&apos;s data.
 
 To avoid filling the screen up with repeated messages, this is
 your only warning about this command...!</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Diese Funktion erfordert ein neueres Kartenformat. Bitte erhöhe
+deine Version, um die Daten dieser Funktion speichern zu können.
+
+Damit der Bildschirm sich nicht mit wiederholten Nachrichten füllt, 
+ist dies deine einzige Warnung über diesen Befehl...!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9989"/>
@@ -1696,12 +1700,12 @@ your only warning about this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14996"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>utf8.* Lua Funktionen werden nicht verfügbar sein.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15017"/>
       <source>yajl.* Lua functions won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>yajl.* Lua Funktionen werden nicht verfügbar sein.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15113"/>
@@ -1862,7 +1866,7 @@ map with others relying on the original format.</source>
     <message>
       <location filename="../src/TMap.cpp" line="438"/>
       <source>[ INFO ]  - Map audit starting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Kartenprüfung startet...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1032"/>
@@ -1925,7 +1929,9 @@ older format.</source>
       <source>[ ALERT ] - Map file is really old, its file format (%1) is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try!  The file is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ACHTUNG ] - Kartendatei ist wirklich alt, ihr Dateiformat (%1) ist so alt, dass
+diese Version von Mudlet vielleicht nicht genügend Informationen daraus sammeln kann,
+aber es wird es versuchen! Die Datei ist: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1437"/>
