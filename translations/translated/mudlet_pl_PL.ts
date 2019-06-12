@@ -1968,19 +1968,19 @@ the file:
       <location filename="../src/TMap.cpp" line="2262"/>
       <source>Downloading XML map file for use in %1...</source>
       <comment>%1 is the name of the current Mudlet profile</comment>
-      <translation type="unfinished"/>
+      <translation>Pobieranie pliku XML z mapą %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2265"/>
       <source>Map download</source>
       <comment>This is a title of a progress window.</comment>
-      <translation type="unfinished"/>
+      <translation>Pobieranie mapy</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2325"/>
       <source>Map import</source>
       <comment>This is a title of a progress dialog.</comment>
-      <translation type="unfinished"/>
+      <translation>Importowanie mapy</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2264"/>
