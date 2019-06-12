@@ -1415,7 +1415,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="1032"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;日志会话开始于&apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1037"/>
@@ -1984,19 +1984,19 @@ the file:
       <location filename="../src/TMap.cpp" line="2262"/>
       <source>Downloading XML map file for use in %1...</source>
       <comment>%1 is the name of the current Mudlet profile</comment>
-      <translation type="unfinished"/>
+      <translation>下载XML地图文件中, 该文件用于%1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2265"/>
       <source>Map download</source>
       <comment>This is a title of a progress window.</comment>
-      <translation type="unfinished"/>
+      <translation>地图下载</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2325"/>
       <source>Map import</source>
       <comment>This is a title of a progress dialog.</comment>
-      <translation type="unfinished"/>
+      <translation>地图导入</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2264"/>
