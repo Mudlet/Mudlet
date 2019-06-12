@@ -1490,7 +1490,7 @@ Ganzzahl eingeben:</translation>
       <location filename="../src/TConsole.cpp" line="1041"/>
       <source>&apos;Log session ending at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Protokoll der Sitzung endet um &apos;hh:mm:ss&apos; am &apos;dddd&apos;, &apos;d&apos;. &apos;MMMM&apos; &apos;yyyy&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1054"/>
@@ -1665,12 +1665,12 @@ your only warning about this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15013"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2</source>
       <comment>%1 is the name of the module. %2 can be an additional message about the expected effect.</comment>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - Konnte Lua-Modul %1 nicht finden.%2</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14913"/>
       <source>Some functions may not be available.</source>
-      <translation type="unfinished"/>
+      <translation>Einige Funktionen sind möglicherweise nicht verfügbar.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14917"/>
@@ -1681,17 +1681,17 @@ your only warning about this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15021"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name of the module.</comment>
-      <translation type="unfinished"/>
+      <translation>[ OK ]  - Lua-Modul %1 geladen.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14954"/>
       <source>Probably will not be able to access Mudlet Lua code.</source>
-      <translation type="unfinished"/>
+      <translation>Wahrscheinlich wird es nicht möglich sein, auf Mudlet Lua-Code zuzugreifen.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14975"/>
       <source>Database support will not be available.</source>
-      <translation type="unfinished"/>
+      <translation>Datenbankunterstützung wird nicht verfügbar sein.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14996"/>
