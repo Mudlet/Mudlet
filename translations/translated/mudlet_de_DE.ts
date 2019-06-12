@@ -6988,7 +6988,8 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <source>%1 %2%3 (with debug symbols, without optimisations)
 </source>
       <comment>%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev</comment>
-      <translation type="unfinished"/>
+      <translation>%1 %2%3 (mit Debug-Symbolen, ohne Optimierungen)
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="212"/>
@@ -7002,7 +7003,8 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <location filename="../src/main.cpp" line="215"/>
       <source>Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html
 </source>
-      <translation type="unfinished"/>
+      <translation>Lizenz GPLv2+: GNU GPL Version 2 oder höher - http://gnu.org/licenses/gpl.html
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="216"/>
@@ -7099,18 +7101,20 @@ wahrscheinlich weniger nützlich für die normale Verwendung dieser Anwendung si
       <location filename="../src/main.cpp" line="270"/>
       <source>Report bugs to: https://github.com/Mudlet/Mudlet/issues
 </source>
-      <translation type="unfinished"/>
+      <translation>Fehler melden an: https://github.com/Mudlet/Mudlet/issues
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="271"/>
       <source>Project home page: http://www.mudlet.org/
 </source>
-      <translation type="unfinished"/>
+      <translation>Webseite des Projekts: http://www.mudlet.org/
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="300"/>
       <source>Version: %1</source>
-      <translation type="unfinished"/>
+      <translation>Version: %1</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="361"/>
@@ -7120,7 +7124,12 @@ This is free software, and you are
 welcome to redistribute it under
 certain conditions; select the
 &apos;About&apos; item for details.</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet wird geliefert
+OHNE JEGLICHE GARANTIE!
+Dies ist freie Software und darf
+gerne weiter verteilt werden unter
+bestimmten Bedingungen; Details finden
+sich im &apos;Über Mudlet&apos; Menu.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="369"/>
@@ -9951,7 +9960,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1826"/>
       <source>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands. However if significant problems are found the report can be quite extensive, in particular for larger maps.&lt;/p&gt;&lt;p&gt;Unless this option is set, Mudlet will reduce the amount of on-screen messages by hiding many texts and showing a suggestion to review the report file instead.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet führt nun Prüfungen und Reparaturen durch, um Probleme mit vorherigen Versionen zu beseitigen, die auf fehlerhaften Code oder schlecht dokumentierten Befehlen zurückgehen. Sollten schwerwiegende Probleme auftauchen, kann der Bericht sehr umfangreich ausfallen, besonders bei sehr großen Karten.&lt;/p&gt;&lt;p&gt;Solange diese Funktion deaktiviert ist, wird Mudlet die Anzahl der Meldungen überschaubar halten und weniger Texte auf dem Bildschirm ausgegeben, sondern auf die Datei mit dem vollständigen Bericht verwiesen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1856"/>
