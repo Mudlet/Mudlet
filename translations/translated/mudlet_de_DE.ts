@@ -1479,7 +1479,7 @@ Ganzzahl eingeben:</translation>
       <location filename="../src/TConsole.cpp" line="1032"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Log Sitzung startet um &apos;hh:mm:ss&apos; am &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;JJJJ&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1037"/>
@@ -2057,19 +2057,19 @@ the file:
       <location filename="../src/TMap.cpp" line="2262"/>
       <source>Downloading XML map file for use in %1...</source>
       <comment>%1 is the name of the current Mudlet profile</comment>
-      <translation type="unfinished"/>
+      <translation>Lade XML-Kartendatei für den Gebrauch in %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2265"/>
       <source>Map download</source>
       <comment>This is a title of a progress window.</comment>
-      <translation type="unfinished"/>
+      <translation>Karte herunterladen</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2325"/>
       <source>Map import</source>
       <comment>This is a title of a progress dialog.</comment>
-      <translation type="unfinished"/>
+      <translation>Karte importieren</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2264"/>
@@ -6989,7 +6989,8 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <source>Qt libraries %1 (compilation) %2 (runtime)
 </source>
       <comment>%1 and %2 are version numbers</comment>
-      <translation type="unfinished"/>
+      <translation>Qt-Bibliotheken %1 (Kompilierung) %2 (Laufzeit)
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="215"/>
@@ -7118,14 +7119,16 @@ certain conditions; select the
     <message>
       <location filename="../src/main.cpp" line="369"/>
       <source>Locating profiles...</source>
-      <translation type="unfinished"/>
+      <translation>Profile auffinden...</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="394"/>
       <source>Done.
 
 Loading font files...</source>
-      <translation type="unfinished"/>
+      <translation>Fertig.
+
+Lade Schriftdateien...</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="461"/>
