@@ -1415,7 +1415,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="1032"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Log da sessão começado a &apos;hh:mm:ss&apos; de &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1037"/>
