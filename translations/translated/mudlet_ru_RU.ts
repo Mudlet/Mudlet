@@ -1608,7 +1608,11 @@ format to a newer version to be able to SAVE this feature&apos;s data.
 
 To avoid filling the screen up with repeated messages, this is
 your only warning about this command...!</source>
-      <translation type="unfinished"/>
+      <translation>[INFO] - Для этой функции требуется более новый формат карты. Пожалуйста, измените формат карты
+на более новую версию, чтобы иметь возможность сохранить данные этой функции.
+
+Чтобы избежать заполнения экрана повторяющимися сообщениями, это
+ваше единственное предупреждение об этой команде...!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9989"/>
@@ -1676,7 +1680,7 @@ your only warning about this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14913"/>
       <source>Some functions may not be available.</source>
-      <translation type="unfinished"/>
+      <translation>Некоторые функции могут быть недоступны.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14917"/>
@@ -1687,7 +1691,7 @@ your only warning about this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15021"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name of the module.</comment>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - модуль Lua %1 загружен.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14954"/>
@@ -1697,7 +1701,7 @@ your only warning about this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14975"/>
       <source>Database support will not be available.</source>
-      <translation type="unfinished"/>
+      <translation>Поддержка базы данных будет недоступна.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14996"/>
@@ -1868,7 +1872,7 @@ map with others relying on the original format.</source>
     <message>
       <location filename="../src/TMap.cpp" line="438"/>
       <source>[ INFO ]  - Map audit starting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Начало проверки карты...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1032"/>
@@ -7106,18 +7110,20 @@ less likely to be useful for normal use of this application:
       <location filename="../src/main.cpp" line="270"/>
       <source>Report bugs to: https://github.com/Mudlet/Mudlet/issues
 </source>
-      <translation type="unfinished"/>
+      <translation>Об ошибках сообщайте: https://github.com/Mudlet/Mudlet/issues
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="271"/>
       <source>Project home page: http://www.mudlet.org/
 </source>
-      <translation type="unfinished"/>
+      <translation>Главная страница проекта: http://www.mudlet.org
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="300"/>
       <source>Version: %1</source>
-      <translation type="unfinished"/>
+      <translation>Версия: %1</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="361"/>
@@ -7127,7 +7133,11 @@ This is free software, and you are
 welcome to redistribute it under
 certain conditions; select the
 &apos;About&apos; item for details.</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet поставляется с БЕЗ ГАРАНТИЙ!
+Это бесплатное программное обеспечение, и вы
+можете распространять его при определенных условиях;
+выберите пункт &apos;O программе&apos; для
+дополнительной информации.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="369"/>
