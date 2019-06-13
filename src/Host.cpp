@@ -790,37 +790,24 @@ QPair<int, QString> Host::createStopWatch(const QString& name)
         return qMakePair(0, QStringLiteral("unable to create a stopwatch at this time"));
     }
 
-    int newWatchId = 1;
-    if (!mStopWatchMap.isEmpty()) {
-        if (!name.isEmpty()) {
-            // As we need to check the names we will need a different algorithm
-            // than just looking for the first gap in the integer sequence
-            // 1,2,3,...n:
-            QList<int> watchIdList(mStopWatchMap.keys());
-            std::sort(watchIdList.begin(), watchIdList.end());
-            // Reset newWatchId so we can assign the first unused id to it;
-            newWatchId = 0;
-            for (int index = 0, total = watchIdList.size(); index < total; ++index) {
-                if (mStopWatchMap.value(watchIdList.at(index))->name() == name) {
-                    return qMakePair(0, QStringLiteral("a stopwatch called \"%1\" already exists").arg(name));
-                }
-
-                if (!newWatchId && (1 + index) != watchIdList.at(index)) {
-                    // IF: we haven't previously found a gap AND the current
-                    // value in the list "at(index)" is NOT (index plus 1) then
-                    // the latter is the first gap in the sequence 1,2,3,...n
-                    // and can be used:
-                    newWatchId = 1 + index;
-                }
-            }
-
-        } else {
-            while (mStopWatchMap.contains(newWatchId)) {
-                ++newWatchId;
+    if (!mStopWatchMap.isEmpty() && !name.isEmpty()) {
+        // As we need to check the names we will need a different algorithm
+        // than just looking for the first gap in the integer sequence
+        // 1,2,3,...n if we want to avoid going through the list twice,
+        // the first time to check the name is not in use and a second time
+        // to find the lower positive unused integer id:
+        QMapIterator<int, stopWatch*> itStopWatch(mStopWatchMap);
+        while (itStopWatch.hasNext()) {
+            itStopWatch.next();
+            if (itStopWatch.value()->name() == name) {
+                return qMakePair(0, QStringLiteral("a stopwatch with id %1 called \"%2\" already exists").arg(QString::number(itStopWatch.key()), name));
             }
         }
     }
-    // Else: We will always succeed if there isn't any stopwatches already:
+    int newWatchId = 1;
+    while (mStopWatchMap.contains(newWatchId)) {
+        ++newWatchId;
+    };
 
     // It is hard to imagine a situation in which this will fail - so we won't
     // bother coding for it:
