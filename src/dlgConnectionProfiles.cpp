@@ -696,7 +696,8 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                 "sense of community.");
     } else if (hostUrl == QStringLiteral("localhost")) {
         return QLatin1String(
-                "Test_Profile is not a mud. This is for running tests in the mudlet lua environment using the Busted lua test framework. You may run regression tests here, or extract the scripts to use in your other profiles and test your own scripts. It has an external dependency on Busted, so extra setup is required, which is described in the comments in the profile.");
+                "Test_Profile is not a mud. This is for running tests in the mudlet lua environment using the Busted lua test framework. You may run regression tests here, or extract the scripts to "
+                "use in your other profiles and test your own scripts. It has an external dependency on Busted, so extra setup is required, which is described in the comments in the profile.");
     } else if (hostUrl == QStringLiteral("luminarimud.com")) {
         return QLatin1String("Luminari is a deep, engaging game set in the world of the Luminari - A place where magic is entwined with the fabric of reality and the forces of evil and destruction "
                              "are rising from a long slumber to again wreak havoc on the realm.  The gameplay of Luminari will be familiar to anyone who has played Dungeons and Dragons, Pathfinder "
@@ -1501,8 +1502,8 @@ void dlgConnectionProfiles::fillout_form()
 
     mudServer = QStringLiteral("Test_Profile");
     if (!deletedDefaultMuds.contains(mudServer)) {
-        for (int i = mProfileList.size()-1; i >= 0; --i) {
-            if (mProfileList.at(i) == "default_host"){
+        for (int i = mProfileList.size() - 1; i >= 0; --i) {
+            if (mProfileList.at(i) == "default_host") {
                 mProfileList.insert(i, mudServer);
                 break;
             }
@@ -1612,9 +1613,9 @@ void dlgConnectionProfiles::fillout_form()
     for (int i = 0; i < profiles_tree_widget->count(); i++) {
         auto profile = profiles_tree_widget->item(i);
         auto profileName = profile->text();
-		  if (profileName == QStringLiteral("test_profile")) {
-			  test_profile_row = i;
-		  }
+        if (profileName == QStringLiteral("test_profile")) {
+            test_profile_row = i;
+        }
 
         QDateTime profile_lastRead = QFileInfo(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profileName)).lastModified();
         // Since Qt 5.x null QTimes and QDateTimes are invalid - and might not
@@ -1633,8 +1634,8 @@ void dlgConnectionProfiles::fillout_form()
 
         // make sure not to select the default_host or test_profile though
         auto default_host_row = toselectRow;
-		  // dont infinite loop.
-		  if (test_profile_row == -1 || profiles_tree_widget->count() != 2) {
+        // dont infinite loop.
+        if (test_profile_row == -1 || profiles_tree_widget->count() != 2) {
             while (toselectRow == default_host_row || toselectRow == test_profile_row) {
                 toselectRow = qrand() % profiles_tree_widget->count();
             }
