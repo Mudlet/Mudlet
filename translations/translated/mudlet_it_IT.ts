@@ -1605,12 +1605,12 @@ your only warning about this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15013"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2</source>
       <comment>%1 is the name of the module. %2 can be an additional message about the expected effect.</comment>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Impossibile trovare il modulo %1.%2</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14913"/>
       <source>Some functions may not be available.</source>
-      <translation type="unfinished"/>
+      <translation>Alcune funzioni non saranno disponibili.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14917"/>
@@ -1621,27 +1621,27 @@ your only warning about this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15021"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name of the module.</comment>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Modulo Lua %1 caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14954"/>
       <source>Probably will not be able to access Mudlet Lua code.</source>
-      <translation type="unfinished"/>
+      <translation>Probabilmente non sarai in grado di utilizzare le funzioni Lua di Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14975"/>
       <source>Database support will not be available.</source>
-      <translation type="unfinished"/>
+      <translation>Il supporto ai database non è disponibile.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14996"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>Funzioni Lua utf8.* non disponibili.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15017"/>
       <source>yajl.* Lua functions won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>Funzioni Lua yajl.* non disponibili.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15113"/>
@@ -1804,7 +1804,7 @@ condividere la mappa con altri utenti che utilizzano il formato originale.</tran
     <message>
       <location filename="../src/TMap.cpp" line="438"/>
       <source>[ INFO ]  - Map audit starting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Controllo mappa iniziato...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1032"/>
@@ -2739,7 +2739,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1230"/>
       <source>&lt;p&gt;Hover on this item to display the Unicode codepoints in the selection &lt;i&gt;(only the first line!)&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Passa il mouse su questo elemento per visualizzare la mappa caratteri Unicode della selezione &lt;i&gt;(solo la prima riga!)&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1239"/>
@@ -3261,7 +3261,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2214"/>
       <source>U+&lt;i&gt;####&lt;/i&gt; Unicode Code-point &lt;i&gt;(High:Low Surrogates)&lt;/i&gt;</source>
       <comment>2nd Row heading for Text analyser output, table item is the unicode code point (will be between 000001 and 10FFFF in hexadecimal) {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>U+&lt;i&gt;####&lt;/i&gt; Unicode Code-point &lt;i&gt;(High:Low Surrogates)&lt;/i&gt;</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2157"/>
@@ -4234,7 +4234,7 @@ Per conferma per favore digita il nome del profilo:</translation>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="56"/>
       <source>Codepoints</source>
-      <translation type="unfinished"/>
+      <translation>Mappa caratteri</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="61"/>
