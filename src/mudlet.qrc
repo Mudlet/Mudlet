@@ -165,6 +165,7 @@
         <file>mudlet-mapper.xml</file>
         <file>Mudlet_splashscreen_main.png</file>
         <file>run-lua-code-v4.xml</file>
+        <file>run-tests.xml</file>
         <file>send-text-to-all-games.xml</file>
         <file>ui/custom_lines.ui</file>
         <file>ui/custom_lines_properties.ui</file>

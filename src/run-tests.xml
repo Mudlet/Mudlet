@@ -1,0 +1,407 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+  <TriggerPackage />
+  <TimerPackage />
+  <AliasPackage>
+    <Alias isActive="yes" isFolder="no">
+      <name>Run Tests</name>
+      <script>-- Alias to run busted tests, which should be sufficient
+-- for simple cases.
+--
+-- IT DOES NOT WORK WITHOUT SOME SETUP
+-- PLEASE READ THE README UNDER SCRIPTS
+--
+-- Called without an argument, it will run the last tests run, or the
+-- default tests if this is the first invocation.
+-- Called with a filename, it will run the tests in that filename.
+-- Called with a directory, it will run tests in all files in that
+-- directory with the pattern "_spec" in their name.
+-- Example with file:
+-- runBusted /path/to/my/testFile_spec.lua
+-- Example with directory:
+-- runBusted /path/to/my
+-- Note that the file doesn't need to contain _spec if the filename is
+-- specified explicitly.
+if (not matches[2]) or (#matches[2] == 0) then
+  bustedState.setup()
+else
+  bustedState.setup({matches[2]})
+end
+bustedState.runTests()</script>
+      <command></command>
+      <packageName></packageName>
+      <regex>^runTests(?: (.*))?$</regex>
+    </Alias>
+  </AliasPackage>
+  <ActionPackage />
+  <ScriptPackage>
+    <name>test</name>
+    <packageName></packageName>
+    <script>-------------------------------------------------
+--         Put your Lua functions here.        --
+--                                             --
+-- Note that you can also use external Scripts --
+-------------------------------------------------
+</script>
+    <eventHandlerList />
+    <Script isActive="no" isFolder="no">
+      <name>test scripts</name>
+      <packageName></packageName>
+      <script>-- BEGIN Busted init section
+
+-- This is where you change options. See the busted documentation
+-- or execute 'busted --help' on the command line.
+-- Note that changing these is not guaranteed to work, and the
+-- languages supported are dictated by busted, not mudlet.
+-- For adding more options, you will likely have to look at
+-- the busted code.
+local options = {}  
+
+-- BEGIN user modifiable options
+
+-- If you change the following block of options, you will need to
+-- quit and reload mudlet
+options.output = 'plainTerminal'
+options.suppressPending = false
+options.language = "en"
+options.deferPrint = false
+options.verbose = false
+options.quitOnError = false
+
+-- if you change this you will need to call bustedState.setup()
+options.recursive = true
+
+-- if you change defaultPatterns, you can call bustedState.setup(nil,{})
+--   to load the new default values
+options.defaultPatterns = {"_spec"}
+-- if you change defaultFiles, you can call bustedState.setup({},nil)
+--   to load the new default values
+local path = require 'pl.path'
+local pathTable = getMudletLuaDefaultPaths()
+if type(pathTable) == 'table' then
+  for _, v in pairs(pathTable) do
+    if path.isdir(v) then
+      if path.isdir(v .. "/tests") then
+		  options.defaultFiles = {v .. "/tests"}
+        break
+      end
+    end
+  end
+end
+options.defaultFiles = options.defaultFiles or {"."}
+
+-- END user modifiable options
+
+bustedState = bustedState or {}
+bustedState.verbose = options.verbose
+bustedState.recursive = options.recursive
+bustedState.patternsTable = bustedState.patternsTable or options.defaultPatterns
+bustedState.filesTable = bustedState.filesTable or options.defaultFiles
+  
+busted = busted or require 'busted.core'()
+
+-- The following needs to run only once. The if block prevents
+-- rerunning if the user edits this script in mudlet.
+-- If you're getting errors about calling a table in the
+-- following line, try closing and re-opening mudlet, or manually
+-- setting bustedState.initRun to true.
+if not bustedState.initRun then
+  require 'busted'(busted)
+  
+  local quitOnError = options.quitOnError
+
+  busted.subscribe({ 'error', 'output' }, function(element, parent, message)
+      print(appName, ': error: Cannot load output library: ', element.name)
+      print(message)
+      return nil, true
+    end)
+  busted.subscribe({ 'error', 'helper' }, function(element, parent, message)
+      print(appName, ': error: Cannot load helper script: ', element.name)
+      print(message)
+      return nil, true
+    end)
+  busted.subscribe({ 'error' }, function(element, parent, message)
+      busted.skipAll = quitOnError
+      return nil, true
+    end)
+  busted.subscribe({ 'failure' }, function(element, parent, message)
+      busted.skipAll = quitOnError
+      return nil, true
+    end)
+  
+  local outputHandlerLoader = require 'busted.modules.output_handler_loader'()
+
+  -- Set up output handler to listen to events
+  outputHandlerLoader(busted, options.output, {
+      defaultOutput = options.output,
+      verbose = options.verbose,
+      suppressPending = options.suppressPending,
+      language = options.language,
+      deferPrint = options.deferPrint,
+      arguments = {},
+    })
+end
+bustedState.initRun = true
+
+-- END busted init section
+
+-- BEGIN busted function definitions.
+
+-- bustedState.setup()
+--
+-- Sets up the lists of files and patterns, and loads the tests.
+-- It must be rerun any time changes are made to the test directories
+--   or files.
+-- filesTable: a table with a list of files and/or directories you
+--   would like busted to run.
+-- patternsTable: a list of lua patterns. Any file in the directories
+--   listed in filesTable which matches one of the patterns in
+--   patternsTable will be loaded and run, and does not need to be
+--   explicitly listed in filesTable.
+-- Directories in filesTable will be recursively scanned for files
+--   having one of the patterns in their name. Files listed explicitly
+--   will be loaded regardless of matching patterns.
+
+-- If either table is nil, it will be ignored, and the most recent value
+--   used will be used again.
+-- If either table is empty, it will be reset to the default value.
+
+-- The default filesTable is a system dependant directory containing some
+--   tests.
+-- The default patternsTable is {"_spec"}, so in a directory, only
+--   lua files with _spec in their name will be run. If you want
+--   to run all files in a directory, pass {""}
+
+-- It is an error to pass anything other than nil, an empty table,
+--   or a table of strings indexed by consecutive numbers.
+
+-- Note: The current version of busted has the limitation
+--   that there cannot be any hidden directories in the path
+--   of a directory entry. So if your test files are in a hidden
+--   directory or subdirectory thereof, they will have to be listed
+--   individually. A pull request has been submitted and this should
+--   eventually change.
+function bustedState.setup( filesTable, patternsTable )
+  if type(filesTable) == "table" then
+    if #filesTable &gt; 0 then
+      local fallback = bustedState.filesTable
+      bustedState.filesTable = {}
+      for _, v in ipairs(filesTable) do
+        if type(v) == "string" then
+          table.insert(bustedState.filesTable, v)
+        else
+          bustedState.filesTable = fallback
+          print("Warning: Malformed argument filesTable ignored in bustedState.setup().")
+          break
+        end
+      end -- for
+    else -- #filesTable == 0
+      bustedState.filesTable = options.defaultFiles
+    end
+  elseif type(filesTable) ~= "nil" then
+    print("Warning: Malformed argument filesTable ignored in bustedState.setup().")
+  end
+
+  if type(patternsTable) == "table" then
+    if #patternsTable &gt; 0 then
+      local fallback = bustedState.patternsTable
+      bustedState.patternsTable = {}
+      for _, v in ipairs(patternsTable) do
+        if type(v) == "string" then
+          table.insert(bustedState.patternsTable, v)
+        else
+          bustedState.patternsTable = fallback
+          print("Warning: Malformed argument patternsTable ignored in bustedState.setup().")
+          break
+        end
+      end -- for
+		else -- #patternsTable == 0
+      bustedState.patternsTable = options.defaultPatterns
+    end
+  elseif type(patternsTable) ~= "nil" then
+    print("Warning: Malformed argument patternsTable ignored in bustedState.setup().")
+  end
+
+  -- if this is not the first time we have run setup, we need to clean
+  -- out the previous set of tests.    
+  if bustedState.setupRun then
+    local oldctx = busted.context.get()
+    busted.context.clear()
+    local ctx = busted.context.get()
+    for k, v in pairs(oldctx) do
+      ctx[k] = v
+    end
+    root = busted.context.get()
+    busted.safe_publish('suite', { 'suite', 'reset' }, root, 1, 1)
+  end
+  bustedState.setupRun = true  
+
+  local testFileLoader = testFileLoader or require 'busted.modules.test_file_loader'(busted, {'lua'})
+  testFileLoader(bustedState.filesTable, bustedState.patternsTable, {
+      excludes = {},
+      verbose = bustedState.verbose,
+      recursive = bustedState.recursive,
+    })
+
+  bustedState.execute = bustedState.execute or require 'busted.execute'(busted)
+end -- bustedState.setup()
+
+
+-- bustedState.runTests()
+--
+-- This will run the tests which were loaded with bustedState.setup().
+-- When mudlet is first started, bustedState.setup() must be run
+--   before bustedState.runTests()
+-- It does not reload the tests, so if the tests were edited after 
+--   bustedState.setup() was run, the changes will not take effect
+--   until bustedState.setup() is re-run.
+-- It does, however, run against the current state of mudlet. So if you
+--   make changes to a script which a test is testing, it will run the test
+--   against the current code in mudlet.
+function bustedState.runTests()
+  -- Some cleanup is needed if busted has run already
+  -- it doesn't really clean up after itself.  
+  if bustedState.runTestsRun then
+    local tablex = require 'pl.tablex'
+    local root = busted.context.get()
+    local children = tablex.copy(busted.context.children(root))
+    local oldctx = busted.context.get()
+    busted.context.clear()
+    local ctx = busted.context.get()
+    for k, v in pairs(oldctx) do
+      ctx[k] = v
+    end
+    for _, child in ipairs(children) do
+      for descriptor, _ in pairs(busted.executors) do
+        child[descriptor] = nil
+      end
+      busted.context.attach(child)
+    end
+    root = busted.context.get()
+    busted.safe_publish('suite', { 'suite', 'reset' }, root, 1, 1)
+  end
+  bustedState.runTestsRun = true
+
+  -- redirect io.write() to main screen temporarily
+  -- this could have side-effects if other threads or the test cases use
+  -- io.write() (which normally writes to the command line) before we 
+  -- reset it once the tests are done.
+  oldiowrite = io.write
+  io.write = function (...)
+    echo(...) 
+  end
+
+  -- this is the actual busted call that runs the tests, which were
+  --   loaded in bustedState.setup.
+  bustedState.execute(1, {})
+
+  io.write = oldiowrite
+end -- bustedState.runTests</script>
+      <eventHandlerList />
+    </Script>
+    <Script isActive="no" isFolder="no">
+      <name>README</name>
+      <packageName></packageName>
+      <script>-- This is the set of mudlet scripts to allow running Busted tests from
+-- within the hosted lua environment of Mudlet.
+-- Busted is "a unit testing framework with a focus on being easy to use."
+-- It is written by olivine Labs, and documentation can be found on
+-- their website: https://olivinelabs.com/busted/
+-- 
+-- Using busted within Mudlet's hosted environment allows you to test
+-- lua functions defined within the environment, both user created functions
+-- (You can test your scripts!) and builtin functions.
+--
+-- So how do we get this to work?
+-- Second, you need to install Busted on your system.
+-- Huh? Second? Yes; since Busted is a luarocks package:
+-- First, you need to install luarocks on your system.
+--
+-- For instructions on installing luarocks:
+-- On unix see:  https://luarocks.org/#quick-start
+-- On Windows see: https://github.com/luarocks/luarocks/wiki/Installation-instructions-for-Windows
+--
+-- You can test that you have luarocks installed by typing 
+-- 'luarocks --version' (no quotes) on a command prompt then hit enter.
+--
+-- Once you have luarocks installed, installing busted is easy.
+-- From a command prompt, type 'luarocks install busted' (no quotes), then
+-- hit enter.
+--
+-- Now, once THAT's all done, you can write and run tests.
+--
+-- The writing of Busted tests is covered in the documentation referenced
+-- above, but to get you started, here's an example
+--
+--[[
+-- ** Start of file **
+describe("should always pass", function()
+    it("is the simplest test I could think of.", function()
+        assert.truthy("Yup.")
+      end)
+  end)
+-- ** End of file **
+--]]
+--
+-- If the above is pasted into a file, and then the filename passed to
+-- the runTests alias provided, you should see the results of a successful test.
+-- It is best to use a full path to the file unless you are certain you
+-- know the working directory.
+--
+-- If you change the assert line in the above file to 'assert.truthy(nil)' and run
+-- it again, you shold see the results of a failing test.
+--
+-- Now try 'assert.truthy(string.find(getMudletHomeDir(), "mudlet"))'
+-- to see a successful test that shows busted tests are able to access
+-- the built in functions of Mudlet.
+--
+-- To learn more, see the Busted documentation, and look at other, more
+-- complex tests.
+--
+-- For simple use, the included 'Run Tests' alias can be used. There are some
+-- documentation comments in the alias which explain how to use it.
+--
+-- For more complicated use, see the comments in 'test scripts' in this
+-- group, and read on for some general discussion about how Busted works.
+--
+--
+-- In order to have minimal impact on the global namespace, only two global
+-- variables are defined: bustedState, a table holding state and functions,
+-- and busted, the busted table itself.
+--
+-- There are three main parts in the scripts enabling Busted, all of which
+-- are defined in 'test scripts' script item (should be next to this README):
+--
+-- First, there's the initialization section, which runs whenever the
+-- scripts are loaded, and it is re-run when the item is edited. This is
+-- where you can modify some settings and defaults. Read the comments
+-- and folow instructions.
+--
+-- Second, there's the bustedState.setup() function. This actually loads
+-- the tests into the busted table. This needs to be re-run whenever you
+-- change what you want to run, or if you edit or rename any of the test
+-- files or directories. See the comment before the function definition
+-- for more details on how to use it.
+--
+-- Third, there's the bustedState.runTests() function. This actually runs
+-- the tests. It does not pick up changes made to test files, directories,
+-- filenames or filters since the last time bustedState.setup() was run.
+-- It will pick up the changes to the lua code that the tests are testing.
+--
+-- If that seems a bit complicated, don't worry; the 'Run Tests' alias
+-- can be used for most purposes by simply typing:
+-- 'runTests /path/to/my/testsDir,
+-- 'runTests /path/to/my/test/file.lua'
+-- or once the tests are loaded via one of the above commands,
+-- 'runTests'
+--
+-- Good Luck.</script>
+      <eventHandlerList />
+    </Script>
+  </ScriptPackage>
+  <KeyPackage />
+  <VariablePackage>
+    <HiddenVariables />
+  </VariablePackage>
+</MudletPackage>
