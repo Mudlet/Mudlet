@@ -3553,7 +3553,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="129"/>
       <source>Plain</source>
-      <translation type="unfinished"/>
+      <translation>Normale</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="149"/>
@@ -3970,7 +3970,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="27"/>
       <source>Custom Line Properties [*]</source>
-      <translation type="unfinished"/>
+      <translation>Proprietà riga personalizzata [*]</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="46"/>
@@ -3990,7 +3990,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="43"/>
       <source>&lt;p&gt;Select Style, Color and whether to end the line with an arrow head.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Seleziona stile, colore e se terminare la linea con una freccia.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="122"/>
@@ -4005,7 +4005,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="153"/>
       <source>Origin:</source>
-      <translation type="unfinished"/>
+      <translation>Origine:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="226"/>
