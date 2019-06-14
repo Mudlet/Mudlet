@@ -192,7 +192,7 @@ function bustedState.setup( filesTable, patternsTable )
           table.insert(bustedState.filesTable, v)
         else
           bustedState.filesTable = fallback
-          print("Warning: Malformed argument filesTable ignored in bustedState.setup().")
+          print("Warning: Malformed argument filesTable in bustedState.setup(). Got:"..tostring(filesTable))
           break
         end
       end -- for
@@ -200,7 +200,7 @@ function bustedState.setup( filesTable, patternsTable )
       bustedState.filesTable = options.defaultFiles
     end
   elseif type(filesTable) ~= "nil" then
-    print("Warning: Malformed argument filesTable ignored in bustedState.setup().")
+    print("Warning: Malformed argument filesTable in bustedState.setup(). Got:"..tostring(filesTable))
   end
 
   if type(patternsTable) == "table" then
@@ -212,7 +212,7 @@ function bustedState.setup( filesTable, patternsTable )
           table.insert(bustedState.patternsTable, v)
         else
           bustedState.patternsTable = fallback
-          print("Warning: Malformed argument patternsTable ignored in bustedState.setup().")
+          print("Warning: Malformed argument patternsTable in bustedState.setup(). Got:"..tostring(patternsTable))
           break
         end
       end -- for
@@ -220,7 +220,7 @@ function bustedState.setup( filesTable, patternsTable )
       bustedState.patternsTable = options.defaultPatterns
     end
   elseif type(patternsTable) ~= "nil" then
-    print("Warning: Malformed argument patternsTable ignored in bustedState.setup().")
+    print("Warning: Malformed argument patternsTable in bustedState.setup(). Got:"..tostring(patternsTable))
   end
 
   -- if this is not the first time we have run setup, we need to clean
@@ -323,7 +323,8 @@ end -- bustedState.runTests</script>
 -- On Windows see: https://github.com/luarocks/luarocks/wiki/Installation-instructions-for-Windows
 --
 -- You can test that you have luarocks installed by typing 
--- 'luarocks --version' (no quotes) on a command prompt then hit enter.
+-- 'luarocks --version' (no quotes) on a command prompt (your computer
+-- command line, not Mudlet) then hit enter.
 --
 -- Once you have luarocks installed, installing busted is easy.
 -- From a command prompt, type 'luarocks install busted' (no quotes), then
@@ -338,7 +339,7 @@ end -- bustedState.runTests</script>
 -- ** Start of file **
 describe("should always pass", function()
     it("is the simplest test I could think of.", function()
-        assert.truthy("Yup.")
+        assert.truthy(1 == 1)
       end)
   end)
 -- ** End of file **
@@ -352,7 +353,7 @@ describe("should always pass", function()
 -- If you change the assert line in the above file to 'assert.truthy(nil)' and run
 -- it again, you shold see the results of a failing test.
 --
--- Now try 'assert.truthy(string.find(getMudletHomeDir(), "mudlet"))'
+-- Now try 'assert.truthy(string.find(getMudletHomeDir(), "[mM]udlet"))'
 -- to see a successful test that shows busted tests are able to access
 -- the built in functions of Mudlet.
 --
@@ -391,9 +392,9 @@ describe("should always pass", function()
 --
 -- If that seems a bit complicated, don't worry; the 'Run Tests' alias
 -- can be used for most purposes by simply typing:
--- 'runTests /path/to/my/testsDir,
+-- 'runTests /path/to/my/testsDir'
 -- 'runTests /path/to/my/test/file.lua'
--- or once the tests are loaded via one of the above commands,
+-- or, once the tests are loaded via one of the above commands,
 -- 'runTests'
 --
 -- Good Luck.</script>

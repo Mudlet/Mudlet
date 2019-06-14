@@ -694,10 +694,9 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
         return QLatin1String(
                 "Midnight Sun is a medieval fantasy LPmud that has been around since 1991. We are a non-PK, hack-and-slash game, cooperative rather than competitive in nature, and with a strong "
                 "sense of community.");
-    } else if (hostUrl == QStringLiteral("localhost")) {
+    } else if (hostUrl == QStringLiteral("mudlet.org")) {
         return QLatin1String(
-                "Test_Profile is not a mud. This is for running tests in the mudlet lua environment using the Busted lua test framework. You may run regression tests here, or extract the scripts to "
-                "use in your other profiles and test your own scripts. It has an external dependency on Busted, so extra setup is required, which is described in the comments in the profile.");
+                "This isn't a game profile, but a special one for testing Mudlet itself using Busted. You can also use it as a starting point to create automated tests for your own profiles!");
     } else if (hostUrl == QStringLiteral("luminarimud.com")) {
         return QLatin1String("Luminari is a deep, engaging game set in the world of the Luminari - A place where magic is entwined with the fabric of reality and the forces of evil and destruction "
                              "are rising from a long slumber to again wreak havoc on the realm.  The gameplay of Luminari will be familiar to anyone who has played Dungeons and Dragons, Pathfinder "
@@ -821,8 +820,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         if (profile_name == QStringLiteral("Reinos de Leyenda")) {
             host_url = QStringLiteral("reinosdeleyenda.es");
         }
-        if (profile_name == QStringLiteral("Test_Profile")) {
-            host_url = QStringLiteral("localhost");
+        if (profile_name == QStringLiteral("Mudlet self-test")) {
+            host_url = QStringLiteral("mudlet.org");
         }
     }
     host_name_entry->setText(host_url);
@@ -933,7 +932,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
             host_port = QStringLiteral("23");
             port_ssl_tsl->setChecked(false);
         }
-        if (profile_name == QStringLiteral("Test_Profile")) {
+        if (profile_name == QStringLiteral("Mudlet self-test")) {
             host_port = QStringLiteral("23");
             port_ssl_tsl->setChecked(false);
         }
@@ -1500,8 +1499,8 @@ void dlgConnectionProfiles::fillout_form()
         }
     }
 
-    mudServer = QStringLiteral("Test_Profile");
-    if (!deletedDefaultMuds.contains(mudServer)) {
+    mudServer = QStringLiteral("Mudlet self-test");
+    if (!deletedDefaultMuds.contains(mudServer) && !mProfileList.contains(mudServer)) {
         for (int i = mProfileList.size() - 1; i >= 0; --i) {
             if (mProfileList.at(i) == "default_host") {
                 mProfileList.insert(i, mudServer);
@@ -1542,8 +1541,8 @@ void dlgConnectionProfiles::fillout_form()
             delete pItem;
             continue;
         }
-        if (!mProfileList.at(i).compare(QStringLiteral("Test_Profile"), Qt::CaseInsensitive)) {
-            description = getDescription(QStringLiteral("localhost"), 0, mudServer);
+        if (!mProfileList.at(i).compare(QStringLiteral("Mudlet self-test"), Qt::CaseInsensitive)) {
+            description = getDescription(QStringLiteral("mudlet.org"), 0, mudServer);
             if (!description.isEmpty()) {
                 pItem->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
             }
@@ -1613,7 +1612,7 @@ void dlgConnectionProfiles::fillout_form()
     for (int i = 0; i < profiles_tree_widget->count(); i++) {
         auto profile = profiles_tree_widget->item(i);
         auto profileName = profile->text();
-        if (profileName == QStringLiteral("test_profile")) {
+        if (profileName == QStringLiteral("Mudlet self-test")) {
             test_profile_row = i;
         }
 
@@ -1816,10 +1815,10 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
             mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-mapper.xml"));
         } else if (pHost->getUrl().contains(QStringLiteral("3scapes.org"), Qt::CaseInsensitive) || pHost->getUrl().contains(QStringLiteral("3k.org"), Qt::CaseInsensitive)) {
             mudlet::self()->packagesToInstallList.append(QStringLiteral(":/3k-mapper.xml"));
-        } else if ( not pHost->getUrl().contains(QStringLiteral("localhost"), Qt::CaseInsensitive) ) {
+        } else if ( not pHost->getUrl().contains(QStringLiteral("mudlet.org"), Qt::CaseInsensitive) ) {
             mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
         }
-        if (pHost->getUrl().contains(QStringLiteral("localhost"), Qt::CaseInsensitive)) {
+        if (pHost->getUrl().contains(QStringLiteral("mudlet.org"), Qt::CaseInsensitive)) {
             mudlet::self()->packagesToInstallList.append(QStringLiteral(":/run-tests.xml"));
         } else {
             mudlet::self()->packagesToInstallList.append(QStringLiteral(":/send-text-to-all-games.xml"));
