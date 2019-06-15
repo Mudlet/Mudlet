@@ -147,12 +147,16 @@ private slots:
     void slot_changeMenuBarVisibility(const mudlet::controlsVisibility);
     void slot_changeToolBarVisibility(const mudlet::controlsVisibility);
     void slot_changeShowIconsOnMenus(const Qt::CheckState);
-    void slot_changeGuiLanguage(const QString &language);
+    void slot_changeGuiLanguage(const QString&);
+    void slot_changePlayerRoomStyle(const int);
+    void slot_setPlayerRoomPrimaryColor();
+    void slot_setPlayerRoomSecondaryColor();
 
 private:
     void setColors();
     void setColors2();
     void setColor(QPushButton*, QColor&);
+    void setPlayerRoomColor(QPushButton*, QColor&);
     void setButtonColor(QPushButton*, const QColor&);
     void loadEditorTab();
     void populateThemesList();

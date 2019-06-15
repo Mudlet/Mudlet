@@ -230,7 +230,11 @@ public:
     // location of an MMP map provided by the game
     QString mMmpMapLocation;
 
-
+    // Base color(s) for the player room in the mappers:
+    QColor mPlayerRoomColorPrimary;
+    QColor mPlayerRoomColorSecondary;
+    // Mode selected - 0 is closest to original style:
+    quint8 mPlayerRoomStyle;
 
 public slots:
     // Moved and revised from dlgMapper:

@@ -725,7 +725,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     QList<int> exitList;
     QList<int> oneWayExits;
-    TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
+    int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
+    TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(playerRoomId);
     if (!pPlayerRoom) {
         painter.save();
         painter.fillRect(0, 0, width(), height(), Qt::transparent);
@@ -739,7 +740,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     int ox;
     int oy;
-    if (mRoomID != mpMap->mRoomIdHash.value(mpMap->mProfileName) && mShiftMode) {
+    if (mRoomID != playerRoomId && mShiftMode) {
         mShiftMode = false;
     }
     TArea* playerArea;
@@ -755,7 +756,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         if (!mpMap->mpRoomDB->getArea(playerAreaID)) {
             return;
         }
-        mRoomID = mpMap->mRoomIdHash.value(mpMap->mProfileName);
+        mRoomID = playerRoomId;
         playerRoom = mpMap->mpRoomDB->getRoom(mRoomID);
         if (!playerRoom) {
             return;
@@ -821,9 +822,9 @@ void T2DMap::paintEvent(QPaintEvent* e)
         isFontBigEnoughToShowRoomVnum = sizeFontToFitTextInRect(roomVNumFont, roomTestRect, QStringLiteral("8").repeated(mMaxRoomIdDigits), roomVnumMargin);
     }
 
-    // This could be the coordinates of the center of the window?
-    int px = qRound((mRoomWidth * xspan) / 2.0);
-    int py = qRound((mRoomHeight * yspan) / 2.0);
+    // This is the coordinates of the center of the window
+    int px = qRound(static_cast<double>(mRoomWidth * xspan) / 2.0);
+    int py = qRound(static_cast<double>(mRoomHeight * yspan) / 2.0);
 
     TArea* pArea = playerArea;
 
@@ -1491,6 +1492,9 @@ void T2DMap::paintEvent(QPaintEvent* e)
         painter.fillRect(mMultiRect, QColor(190, 190, 190, 60));
     }
 
+    QPointF playerRoomCoordinates;
+    bool isPlayerRoomVisible = false;
+    // Draw the rooms:
     QSetIterator<int> itRoom(pArea->getAreaRooms());
     while (itRoom.hasNext()) {
         int currentAreaRoom = itRoom.next();
@@ -1509,6 +1513,10 @@ void T2DMap::paintEvent(QPaintEvent* e)
             continue;
         }
 
+        if (playerRoomId == currentAreaRoom) {
+            isPlayerRoomVisible = true;
+            playerRoomCoordinates =  QPointF(static_cast<qreal>(rx),static_cast<qreal>(ry));
+        }
         room->rendered = false;
         QRectF roomRectangle;
         if (pArea->gridMode) {
@@ -1612,10 +1620,19 @@ void T2DMap::paintEvent(QPaintEvent* e)
         if (((mPick || __Pick) && roomClickTestRectangle.contains(mPHighlight))
             || mMultiSelectionSet.contains(currentAreaRoom)) {
 
+            // This room is in the selection:
+            // TODO: replace this flood fill of the room with an orange rectangle with something a bit more subtle:
             painter.fillRect(roomRectangle, QColor(255, 155, 55));
             mPick = false;
             if (mStartSpeedWalk) {
                 mStartSpeedWalk = false;
+                // This draws a red circle around the room that was choosen as
+                // the target for the speedwalk, but it is only shown for one
+                // paintEvent call and it is not obvious that it is useful, note
+                // that this is the code for a room being clicked on that is
+                // within the area - there is a separate block of code lower
+                // down that handles clicking on the out of area exit so that
+                // a speed walk is done to the room in the OTHER area:
                 float roomRadius = 0.4 * mRoomWidth;
                 QPointF roomCenter = QPointF(rx, ry);
                 QRadialGradient gradient(roomCenter, roomRadius);
@@ -1631,11 +1648,10 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
                 painter.drawPath(diameterPath);
 
-
                 mTarget = currentAreaRoom;
                 if (mpMap->mpRoomDB->getRoom(mTarget)) {
                     mpMap->mTargetID = mTarget;
-                    if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
+                    if (mpMap->findPath(playerRoomId, mpMap->mTargetID)) {
                         mpHost->startSpeedWalk();
                     } else {
                         QString msg = tr("Mapper: Cannot find a path to this room using known exits.\n");
@@ -1643,10 +1659,14 @@ void T2DMap::paintEvent(QPaintEvent* e)
                     }
                 }
             }
+
         } else {
+            // Room is NOT selected
             if (mBubbleMode) {
                 float roomRadius = 0.5 * rSize * mRoomWidth;
                 QPointF roomCenter = QPointF(rx, ry);
+                // CHECK: The use of a gradient fill to a white center on round
+                // rooms might look nice in some sitations but not in all:
                 QRadialGradient gradient(roomCenter, roomRadius);
                 gradient.setColorAt(0.85, roomColor);
                 gradient.setColorAt(0, Qt::white);
@@ -1660,6 +1680,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 painter.fillRect(roomRectangle, roomColor);
             }
 
+            // Do we need to draw the room symbol:
             if (!(mShowRoomID && isFontBigEnoughToShowRoomVnum) && !room->mSymbol.isEmpty()) {
                 QString pixmapKey;
                 if (roomColor.lightness() > 127) {
@@ -1707,6 +1728,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 painter.restore();
             }
 
+            // Do we need to draw the custom (user specified) highlight
             if (room->highlight) {
                 float roomRadius = (room->highlightRadius * mRoomWidth) / 2.0;
                 QPointF roomCenter = QPointF(rx, ry);
@@ -1721,6 +1743,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 painter.drawPath(diameterPath);
             }
 
+            // Do we need to draw the room Id number:
             if (mShowRoomID && isFontBigEnoughToShowRoomVnum) {
                 painter.save();
                 QColor roomIdColor;
@@ -1735,22 +1758,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 painter.restore();
             }
 
-            if (mShiftMode && currentAreaRoom == mpMap->mRoomIdHash.value(mpMap->mProfileName)) {
-                float roomRadius = (1.2 * mRoomWidth) / 2;
-                QPointF roomCenter = QPointF(rx, ry);
-                QRadialGradient gradient(roomCenter, roomRadius);
-                gradient.setColorAt(0.95, QColor(255, 0, 0, 150));
-                gradient.setColorAt(0.80, QColor(150, 100, 100, 150));
-                gradient.setColorAt(0.799, QColor(150, 100, 100, 100));
-                gradient.setColorAt(0.7, QColor(255, 0, 0, 200));
-                gradient.setColorAt(0, Qt::white);
-                QPen transparentPen(Qt::transparent);
-                QPainterPath myPath;
-                painter.setBrush(gradient);
-                painter.setPen(transparentPen);
-                myPath.addEllipse(roomCenter, roomRadius, roomRadius);
-                painter.drawPath(myPath);
-            }
         }
 
         // Change these from const to static to tweak them whilst running in a debugger...!
@@ -1990,6 +1997,12 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
                     // clang-format on
                     mStartSpeedWalk = false;
+                    // This draws a red circle around the out of area exit that
+                    // was choosen as the target for the speedwalk, but it is
+                    // only shown for one paintEvent call and it is not obvious
+                    // that it is useful, note that there is similar code for a
+                    // room being clicked on that is WITHIN the area, that is
+                    // above this point in the source code:
                     float roomRadius = (0.8 * mRoomWidth) / 2.0;
                     QPointF roomCenter = QPointF(rx, ry);
                     QRadialGradient gradient(roomCenter, roomRadius);
@@ -2009,7 +2022,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                     mTarget = it.key();
                     if (mpMap->mpRoomDB->getRoom(mTarget)) {
                         mpMap->mTargetID = mTarget;
-                        if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
+                        if (mpMap->findPath(playerRoomId, mpMap->mTargetID)) {
                             mpMap->mpHost->startSpeedWalk();
                         } else {
                             QString msg = tr("Mapper: Cannot find a path to this room using known exits.\n");
@@ -2021,6 +2034,39 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
     }
 
+    if (isPlayerRoomVisible) {
+        painter.save();
+        QPen transparentPen(Qt::transparent);
+        QPainterPath myPath;
+        double roomRadius = 0.95 * static_cast<double>(mRoomWidth);
+        QRadialGradient gradient(playerRoomCoordinates, roomRadius);
+        if (mpHost->mMapStrongHighlight) {
+            // Never set, no means to except via XMLImport, as dlgMapper class's
+            // slot_toggleStrongHighlight is not wired up to anything
+            QRectF dr = QRectF(playerRoomCoordinates.x() - (static_cast<double>(mRoomWidth) * rSize) / 2.0,
+                               playerRoomCoordinates.y() - (static_cast<double>(mRoomHeight) * rSize) / 2.0,
+                               static_cast<double>(mRoomWidth) * rSize, static_cast<double>(mRoomHeight) * rSize);
+            painter.fillRect(dr, QColor(255, 0, 0, 150));
+
+            gradient.setColorAt(0.95, QColor(255, 0, 0, 150));
+            gradient.setColorAt(0.80, QColor(150, 100, 100, 150));
+            gradient.setColorAt(0.799, QColor(150, 100, 100, 100));
+            gradient.setColorAt(0.7, QColor(255, 0, 0, 200));
+            gradient.setColorAt(0, Qt::white);
+            painter.setBrush(gradient);
+            painter.setPen(transparentPen);
+            myPath.addEllipse(playerRoomCoordinates, roomRadius, roomRadius);
+        } else {
+            gradient.setStops(mPlayerRoomColorGradentStops);
+            painter.setBrush(gradient);
+            painter.setPen(transparentPen);
+            myPath.addEllipse(playerRoomCoordinates, roomRadius, roomRadius);
+        }
+        painter.drawPath(myPath);
+        painter.restore();
+    }
+
+    // Draw Labels above the map
     if (mpMap->mapLabels.contains(mAreaID)) {
         QMapIterator<int, TMapLabel> it(mpMap->mapLabels[mAreaID]);
         while (it.hasNext()) {
@@ -2068,6 +2114,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
     }
 
+    // Draw an indication of the central room of a multi-room selection.
     // Similar code was used to indicate target of custom exit line selected for
     // editing but this could not be done there because gridmode areas don't hit
     // that bit of code and later rooms would overwrite the target...
@@ -2105,47 +2152,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
     } else {
         infoColor = QColor(Qt::white);
     }
-
-    // Draw central red circle:
-    if (!mShiftMode) {
-        painter.save();
-        QPen transparentPen(Qt::transparent);
-        QPainterPath myPath;
-        if (mpHost->mMapStrongHighlight) {
-            // Never set, no means to except via XMLImport, as dlgMapper class's
-            // slot_toggleStrongHighlight is not wired up to anything
-            QRectF dr = QRectF(px - (mRoomWidth * rSize) / 2.0, py - (mRoomHeight * rSize) / 2.0, mRoomWidth * rSize, mRoomHeight * rSize);
-            painter.fillRect(dr, QColor(255, 0, 0, 150));
-
-            float roomRadius = 0.95 * mRoomWidth;
-            QPointF roomCenter = QPointF(px, py);
-            QRadialGradient gradient(roomCenter, roomRadius);
-            gradient.setColorAt(0.95, QColor(255, 0, 0, 150));
-            gradient.setColorAt(0.80, QColor(150, 100, 100, 150));
-            gradient.setColorAt(0.799, QColor(150, 100, 100, 100));
-            gradient.setColorAt(0.7, QColor(255, 0, 0, 200));
-            gradient.setColorAt(0, Qt::white);
-            painter.setBrush(gradient);
-            painter.setPen(transparentPen);
-            myPath.addEllipse(roomCenter, roomRadius, roomRadius);
-        } else {
-            float roomRadius = 0.95 * mRoomWidth;
-            QPointF roomCenter = QPointF(px, py);
-            QRadialGradient gradient(roomCenter, roomRadius);
-            gradient.setColorAt(0.95, QColor(255, 0, 0, 150));
-            gradient.setColorAt(0.80, QColor(150, 100, 100, 150));
-            gradient.setColorAt(0.799, QColor(150, 100, 100, 100));
-            gradient.setColorAt(0.3, QColor(150, 150, 150, 100));
-            gradient.setColorAt(0.1, QColor(255, 255, 255, 100));
-            gradient.setColorAt(0, Qt::white);
-            painter.setBrush(gradient);
-            painter.setPen(transparentPen);
-            myPath.addEllipse(roomCenter, roomRadius, roomRadius);
-        }
-        painter.drawPath(myPath);
-        painter.restore();
-    }
-
 
     // Work out text for information box, need to offset if room selection widget is present
     if (mShowInfo) {
@@ -5134,4 +5140,95 @@ void T2DMap::resizeMultiSelectionWidget()
     } else {
         mMultiSelectionListWidget.resize(newWidth, height());
     }
+}
+
+void T2DMap::setPlayerRoomStyle(const int type)
+{
+    if (!mpMap) {
+        return;
+    }
+
+    // From Qt 5.6 does not deallocate any memory previously used:
+    mPlayerRoomColorGradentStops.clear();
+    // Indicate the LARGEST size we will need
+    mPlayerRoomColorGradentStops.reserve(9);
+
+    switch (type) {
+    case 1: // Simple(?) shaded red ring:
+        mPlayerRoomColorGradentStops.resize(9);
+        mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255,0,0,0));
+        mPlayerRoomColorGradentStops[1] = QGradientStop(0.665, QColor(255,0,0,0));
+        mPlayerRoomColorGradentStops[2] = QGradientStop(0.675, QColor(255,0,0,26));
+        mPlayerRoomColorGradentStops[3] = QGradientStop(0.725, QColor(255,0,0,230));
+        mPlayerRoomColorGradentStops[4] = QGradientStop(0.735, QColor(255,0,0,255));
+        mPlayerRoomColorGradentStops[5] = QGradientStop(0.930, QColor(255,0,0,255));
+        mPlayerRoomColorGradentStops[6] = QGradientStop(0.940, QColor(255,0,0,230));
+        mPlayerRoomColorGradentStops[7] = QGradientStop(0.990, QColor(255,0,0,26));
+        mPlayerRoomColorGradentStops[8] = QGradientStop(1.000, QColor(255,0,0,0));
+        break;
+        // End of case 1:
+
+    case 2: // Shaded bicolor (blue-yellow - so it ALWAYS contrasts with underlying room color) Ring:
+        mPlayerRoomColorGradentStops.resize(9);
+        mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255,255,0,0));
+        mPlayerRoomColorGradentStops[1] = QGradientStop(0.665, QColor(255,255,0,0));
+        mPlayerRoomColorGradentStops[2] = QGradientStop(0.675, QColor(255,255,0,26));
+        mPlayerRoomColorGradentStops[3] = QGradientStop(0.725, QColor(255,255,0,230));
+        mPlayerRoomColorGradentStops[4] = QGradientStop(0.735, QColor(Qt::yellow));
+        mPlayerRoomColorGradentStops[5] = QGradientStop(0.930, QColor(Qt::blue));
+        mPlayerRoomColorGradentStops[6] = QGradientStop(0.940, QColor(0,0,255,230));
+        mPlayerRoomColorGradentStops[7] = QGradientStop(0.990, QColor(0,0,255,26));
+        mPlayerRoomColorGradentStops[8] = QGradientStop(1.000, QColor(0,0,255,0));
+        break;
+        // End of case 2:
+
+    case 3: // Shaded user set ring:
+        mPlayerRoomColorGradentStops.resize(9);
+        if (mpMap->mPlayerRoomColorSecondary != mpMap->mPlayerRoomColorPrimary) {
+            QColor alteredColor(mpMap->mPlayerRoomColorSecondary);
+            alteredColor.setAlpha(0);
+            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, alteredColor);
+            mPlayerRoomColorGradentStops[1] = QGradientStop(0.665, alteredColor);
+            alteredColor.setAlpha(26);
+            mPlayerRoomColorGradentStops[2] = QGradientStop(0.675, alteredColor);
+            alteredColor.setAlpha(230);
+            mPlayerRoomColorGradentStops[3] = QGradientStop(0.725, alteredColor);
+            mPlayerRoomColorGradentStops[4] = QGradientStop(0.735, mpMap->mPlayerRoomColorSecondary);
+            mPlayerRoomColorGradentStops[5] = QGradientStop(0.930, mpMap->mPlayerRoomColorPrimary);
+            alteredColor = mpMap->mPlayerRoomColorPrimary;
+            alteredColor.setAlpha(230);
+            mPlayerRoomColorGradentStops[6] = QGradientStop(0.940, alteredColor);
+            alteredColor.setAlpha(26);
+            mPlayerRoomColorGradentStops[7] = QGradientStop(0.990, alteredColor);
+            alteredColor.setAlpha(0);
+            mPlayerRoomColorGradentStops[8] = QGradientStop(1.000, alteredColor);
+        } else {
+            QColor alteredColor(mpMap->mPlayerRoomColorPrimary);
+            alteredColor.setAlpha(0);
+            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, alteredColor);
+            mPlayerRoomColorGradentStops[1] = QGradientStop(0.665, alteredColor);
+            alteredColor.setAlpha(26);
+            mPlayerRoomColorGradentStops[2] = QGradientStop(0.675, alteredColor);
+            alteredColor.setAlpha(230);
+            mPlayerRoomColorGradentStops[3] = QGradientStop(0.725, alteredColor);
+            mPlayerRoomColorGradentStops[4] = QGradientStop(0.735, mpMap->mPlayerRoomColorPrimary);
+            mPlayerRoomColorGradentStops[5] = QGradientStop(0.930, mpMap->mPlayerRoomColorPrimary);
+            alteredColor.setAlpha(230);
+            mPlayerRoomColorGradentStops[6] = QGradientStop(0.940, alteredColor);
+            alteredColor.setAlpha(26);
+            mPlayerRoomColorGradentStops[7] = QGradientStop(0.990, alteredColor);
+            alteredColor.setAlpha(0);
+            mPlayerRoomColorGradentStops[8] = QGradientStop(1.000, alteredColor);
+        }
+        break;
+        // End of case 3:
+
+    default: // Sort of emulates the original code:
+        mPlayerRoomColorGradentStops.resize(5);
+        mPlayerRoomColorGradentStops[0] = QGradientStop(0, Qt::white);
+        mPlayerRoomColorGradentStops[1] = QGradientStop(0.7, QColor(255, 0, 0, 200));
+        mPlayerRoomColorGradentStops[2] = QGradientStop(0.799, QColor(150, 100, 100, 100));
+        mPlayerRoomColorGradentStops[3] = QGradientStop(0.80, QColor(150, 100, 100, 150));
+        mPlayerRoomColorGradentStops[4] = QGradientStop(0.95, QColor(255, 0, 0, 150));
+    } // End of switch ()
 }

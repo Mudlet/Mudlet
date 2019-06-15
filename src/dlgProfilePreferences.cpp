@@ -761,6 +761,16 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(pushButton_showGlyphUsage, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_showMapGlyphUsage, Qt::UniqueConnection);
         connect(fontComboBox_mapSymbols, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_setMapSymbolFont, Qt::UniqueConnection);
         connect(checkBox_isOnlyMapSymbolFontToBeUsed, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapSymbolFontStrategy, Qt::UniqueConnection);
+
+        widget_playerRoomStyle->show();
+        comboBox_playerRoomStyle->setCurrentIndex(pHost->mpMap->mPlayerRoomStyle);
+        pushButton_playerRoomPrimaryColor->setEnabled(pHost->mpMap->mPlayerRoomStyle == 3);
+        pushButton_playerRoomSecondaryColor->setEnabled(pHost->mpMap->mPlayerRoomStyle == 3);
+        setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomColorPrimary);
+        setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomColorSecondary);
+        connect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changePlayerRoomStyle);
+        connect(pushButton_playerRoomPrimaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomPrimaryColor);
+        connect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomSecondaryColor);
     } else {
         label_mapSymbolsFont->setEnabled(false);
         fontComboBox_mapSymbols->setEnabled(false);
@@ -768,6 +778,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         pushButton_showGlyphUsage->setEnabled(false);
 
         checkBox_showDefaultArea->hide();
+        widget_playerRoomStyle->hide();
     }
 
     comboBox_encoding->addItem(QLatin1String("ASCII"));
@@ -1014,6 +1025,11 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_resetLogDir, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), nullptr, nullptr);
     disconnect(mIsToLogInHtml, &QAbstractButton::clicked, nullptr, nullptr);
+
+    widget_playerRoomStyle->hide();
+    disconnect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), nullptr, nullptr);
+    disconnect(pushButton_playerRoomPrimaryColor, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, nullptr, nullptr);
 }
 
 void dlgProfilePreferences::clearHostDetails()
@@ -3257,8 +3273,21 @@ void dlgProfilePreferences::slot_changeLogFileAsHtml(const bool isHtml)
 
 void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& color)
 {
-    button->setStyleSheet(QStringLiteral("QPushButton{color: %1; background-color: %2;}").arg(color.lightness() > 127 ? QStringLiteral("black") : QStringLiteral("white"),
-                                                                                              color.name()));
+    if (color.isValid()) {
+        if (button->isEnabled()) {
+            button->setStyleSheet(QStringLiteral("QPushButton {color: %1; background-color: %2; }")
+                                  .arg(color.lightness() > 127 ? QLatin1String("black") : QLatin1String("white"),
+                                       color.name()));
+            return;
+        }
+
+        QColor disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation()/4, color.lightness());
+        button->setStyleSheet(QStringLiteral("QPushButton {color: %1; background-color: %2; }")
+                              .arg(QLatin1String("darkGray"), disabledColor.name()));
+        return;
+    }
+
+    button->setStyleSheet(QString());
 }
 
 // These next eight slots are so that if there are multiple profile preferences
@@ -3379,4 +3408,99 @@ void dlgProfilePreferences::slot_changeGuiLanguage(const QString &language)
     }
 
     label_languageChangeWarning->show();
+}
+
+void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
+{
+    Host* pHost = mpHost;
+    if (!pHost || !mpHost->mpMap) {
+        return;
+    }
+
+    int style = index;
+    switch (index) {
+    case 1: // Red ring
+        pushButton_playerRoomPrimaryColor->setEnabled(false);
+        pushButton_playerRoomSecondaryColor->setEnabled(false);
+        break;
+
+    case 2: // Blue-yellow ring
+        pushButton_playerRoomPrimaryColor->setEnabled(false);
+        pushButton_playerRoomSecondaryColor->setEnabled(false);
+        break;
+
+    case 3: // Custom ring
+        pushButton_playerRoomPrimaryColor->setEnabled(true);
+        pushButton_playerRoomSecondaryColor->setEnabled(true);
+        break;
+
+    default:
+        style = 0;
+        [[clang::fallthrough]];
+    case 0: // "Original"
+        pushButton_playerRoomPrimaryColor->setEnabled(false);
+        pushButton_playerRoomSecondaryColor->setEnabled(false);
+    }
+    setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomColorPrimary);
+    setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomColorSecondary);
+    pHost->mpMap->mPlayerRoomStyle = static_cast<quint8>(style);
+    if (!mpHost->mpMap->mpMapper || !mpHost->mpMap->mpMapper->mp2dMap) {
+        return;
+    }
+    pHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(style);
+    // And update the displayed map:
+    mpHost->mpMap->mpMapper->mp2dMap->update();
+}
+
+void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()
+{
+    Host* pHost = mpHost;
+    if (!pHost || !mpHost->mpMap || !mpHost->mpMap->mpMapper || !mpHost->mpMap->mpMapper->mp2dMap) {
+        return;
+    }
+
+    setPlayerRoomColor(pushButton_playerRoomPrimaryColor, mpHost->mpMap->mPlayerRoomColorPrimary);
+    if (comboBox_playerRoomStyle->currentIndex() != 3) {
+        return;
+    }
+
+    // The current setting IS for the custom color - so use it straight away:
+    mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(3);
+    // And update the displayed map:
+    mpHost->mpMap->mpMapper->mp2dMap->update();
+}
+
+void dlgProfilePreferences::slot_setPlayerRoomSecondaryColor()
+{
+    Host* pHost = mpHost;
+    if (!pHost || !mpHost->mpMap || !mpHost->mpMap->mpMapper || !mpHost->mpMap->mpMapper->mp2dMap) {
+        return;
+    }
+
+    setPlayerRoomColor(pushButton_playerRoomSecondaryColor, mpHost->mpMap->mPlayerRoomColorSecondary);
+    if (comboBox_playerRoomStyle->currentIndex() != 3) {
+        return;
+    }
+
+    // The current setting IS for the custom color - so use it straight away:
+    mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(3);
+    // And update the displayed map:
+    mpHost->mpMap->mpMapper->mp2dMap->update();
+}
+
+void dlgProfilePreferences::setPlayerRoomColor(QPushButton* b, QColor& c)
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    auto color = QColorDialog::getColor(c, this, (b == pushButton_playerRoomPrimaryColor ? tr("Set outer color of player room marking.") : tr("Set innercolor of player room marking.")));
+    if (color.isValid()) {
+        c = color;
+
+        // Also sets a contrasting foreground color so text will always be
+        // visible and adjusts the saturation of a disabled button:
+        setButtonColor(b, color);
+    }
 }

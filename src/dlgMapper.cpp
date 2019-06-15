@@ -47,6 +47,10 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     glWidget->mpMap = pM;
     mp2dMap->mpMap = pM;
     mp2dMap->mpHost = pH;
+    // Have to do this here rather than in the T2DMap constructor because that
+    // classes mpMap pointer is not initialised in its constructor.
+    // Set up default player room markings:
+    mp2dMap->setPlayerRoomStyle(mpMap->mPlayerRoomStyle);
     QMapIterator<int, QString> it(mpMap->mpRoomDB->getAreaNamesMap());
     //sort them alphabetically (case sensitive)
     QMap<QString, QString> areaNames;

@@ -159,6 +159,7 @@ public:
     bool mSizeLabel;
     bool isCenterViewCall;
     QString mHelpMsg;
+    void setPlayerRoomStyle(const int style);
 
 public slots:
     void slot_roomSelectionChanged();
@@ -248,6 +249,9 @@ private:
     // font to fit - as the numbers are NOW scaled to fit inside the room symbol
     // - and they are suppressed if they would be too small.);
     quint8 mMaxRoomIdDigits;
+
+    // Holds the QRadialGradient details to use for the player room:
+    QGradientStops mPlayerRoomColorGradentStops;
 
 private slots:
     void slot_createRoom();
