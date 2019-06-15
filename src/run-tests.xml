@@ -9,7 +9,7 @@
       <script>-- Alias to run busted tests, which should be sufficient
 -- for simple cases.
 --
--- IT DOES NOT WORK WITHOUT SOME SETUP
+-- IT DOES NOT WORK WITHOUT SOME SETUP - YOU NEED BUSTED INSTALLED
 -- PLEASE READ THE README UNDER SCRIPTS
 --
 -- Called without an argument, it will run the last tests run, or the
