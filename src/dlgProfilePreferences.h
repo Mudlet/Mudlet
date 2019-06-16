@@ -151,6 +151,9 @@ private slots:
     void slot_changePlayerRoomStyle(const int);
     void slot_setPlayerRoomPrimaryColor();
     void slot_setPlayerRoomSecondaryColor();
+    void slot_setPlayerRoomOuterDiameter(const int);
+    void slot_setPlayerRoomInnerDiameter(const int);
+
 
 private:
     void setColors();

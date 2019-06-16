@@ -766,11 +766,16 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         comboBox_playerRoomStyle->setCurrentIndex(pHost->mpMap->mPlayerRoomStyle);
         pushButton_playerRoomPrimaryColor->setEnabled(pHost->mpMap->mPlayerRoomStyle == 3);
         pushButton_playerRoomSecondaryColor->setEnabled(pHost->mpMap->mPlayerRoomStyle == 3);
+        spinBox_playerRoomOuterDiameter->setValue(pHost->mpMap->mPlayerRoomOuterDiameterPercentage);
+        spinBox_playerRoomInnerDiameter->setValue(pHost->mpMap->mPlayerRoomInnerDiameterPercentage);
+        spinBox_playerRoomInnerDiameter->setEnabled(pHost->mpMap->mPlayerRoomStyle != 0);
         setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomColorPrimary);
         setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomColorSecondary);
         connect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changePlayerRoomStyle);
         connect(pushButton_playerRoomPrimaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomPrimaryColor);
         connect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomSecondaryColor);
+        connect(spinBox_playerRoomOuterDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomOuterDiameter);
+        connect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomInnerDiameter);
     } else {
         label_mapSymbolsFont->setEnabled(false);
         fontComboBox_mapSymbols->setEnabled(false);
@@ -1030,6 +1035,8 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), nullptr, nullptr);
     disconnect(pushButton_playerRoomPrimaryColor, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(spinBox_playerRoomOuterDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
+    disconnect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
 }
 
 void dlgProfilePreferences::clearHostDetails()
@@ -3422,16 +3429,19 @@ void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
     case 1: // Red ring
         pushButton_playerRoomPrimaryColor->setEnabled(false);
         pushButton_playerRoomSecondaryColor->setEnabled(false);
+        spinBox_playerRoomInnerDiameter->setEnabled(true);
         break;
 
     case 2: // Blue-yellow ring
         pushButton_playerRoomPrimaryColor->setEnabled(false);
         pushButton_playerRoomSecondaryColor->setEnabled(false);
+        spinBox_playerRoomInnerDiameter->setEnabled(true);
         break;
 
     case 3: // Custom ring
         pushButton_playerRoomPrimaryColor->setEnabled(true);
         pushButton_playerRoomSecondaryColor->setEnabled(true);
+        spinBox_playerRoomInnerDiameter->setEnabled(true);
         break;
 
     default:
@@ -3440,6 +3450,7 @@ void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
     case 0: // "Original"
         pushButton_playerRoomPrimaryColor->setEnabled(false);
         pushButton_playerRoomSecondaryColor->setEnabled(false);
+        spinBox_playerRoomInnerDiameter->setEnabled(false);
     }
     setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomColorPrimary);
     setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomColorSecondary);
@@ -3488,6 +3499,36 @@ void dlgProfilePreferences::slot_setPlayerRoomSecondaryColor()
     mpHost->mpMap->mpMapper->mp2dMap->update();
 }
 
+void dlgProfilePreferences::slot_setPlayerRoomOuterDiameter(const int value)
+{
+    Host* pHost = mpHost;
+    if (!pHost || !mpHost->mpMap || !mpHost->mpMap->mpMapper || !mpHost->mpMap->mpMapper->mp2dMap) {
+        return;
+    }
+
+    if (value < 256 && mpHost->mpMap->mPlayerRoomOuterDiameterPercentage != value) {
+        mpHost->mpMap->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
+        // And update the displayed map:
+        mpHost->mpMap->mpMapper->mp2dMap->update();
+    }
+}
+
+void dlgProfilePreferences::slot_setPlayerRoomInnerDiameter(const int value)
+{
+    Host* pHost = mpHost;
+    if (!pHost || !mpHost->mpMap || !mpHost->mpMap->mpMapper || !mpHost->mpMap->mpMapper->mp2dMap) {
+        return;
+    }
+
+    if (value < 256 && mpHost->mpMap->mPlayerRoomInnerDiameterPercentage != value) {
+        mpHost->mpMap->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
+        // Redefine the QGradientStops
+        mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(qBound(0, comboBox_playerRoomStyle->currentIndex(), 3));
+        // And update the displayed map:
+        mpHost->mpMap->mpMapper->mp2dMap->update();
+    }
+}
+
 void dlgProfilePreferences::setPlayerRoomColor(QPushButton* b, QColor& c)
 {
     Host* pHost = mpHost;
@@ -3495,7 +3536,10 @@ void dlgProfilePreferences::setPlayerRoomColor(QPushButton* b, QColor& c)
         return;
     }
 
-    auto color = QColorDialog::getColor(c, this, (b == pushButton_playerRoomPrimaryColor ? tr("Set outer color of player room marking.") : tr("Set innercolor of player room marking.")));
+    auto color = QColorDialog::getColor(c, this, (b == pushButton_playerRoomPrimaryColor
+                                                  ? tr("Set outer color of player room marking.")
+                                                  : tr("Set innercolor of player room marking.")),
+                                        QColorDialog::ShowAlphaChannel);
     if (color.isValid()) {
         c = color;
 

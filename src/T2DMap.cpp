@@ -2038,7 +2038,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         painter.save();
         QPen transparentPen(Qt::transparent);
         QPainterPath myPath;
-        double roomRadius = 0.95 * static_cast<double>(mRoomWidth);
+        double roomRadius = (mpMap->mPlayerRoomOuterDiameterPercentage / 200.0) * static_cast<double>(mRoomWidth);
         QRadialGradient gradient(playerRoomCoordinates, roomRadius);
         if (mpHost->mMapStrongHighlight) {
             // Never set, no means to except via XMLImport, as dlgMapper class's
@@ -5151,77 +5151,67 @@ void T2DMap::setPlayerRoomStyle(const int type)
     // From Qt 5.6 does not deallocate any memory previously used:
     mPlayerRoomColorGradentStops.clear();
     // Indicate the LARGEST size we will need
-    mPlayerRoomColorGradentStops.reserve(9);
+    mPlayerRoomColorGradentStops.reserve(5);
 
+    double factor = mpMap->mPlayerRoomInnerDiameterPercentage / 100.0;
+    bool solid = (mpMap->mPlayerRoomInnerDiameterPercentage == 0);
     switch (type) {
     case 1: // Simple(?) shaded red ring:
-        mPlayerRoomColorGradentStops.resize(9);
-        mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255,0,0,0));
-        mPlayerRoomColorGradentStops[1] = QGradientStop(0.665, QColor(255,0,0,0));
-        mPlayerRoomColorGradentStops[2] = QGradientStop(0.675, QColor(255,0,0,26));
-        mPlayerRoomColorGradentStops[3] = QGradientStop(0.725, QColor(255,0,0,230));
-        mPlayerRoomColorGradentStops[4] = QGradientStop(0.735, QColor(255,0,0,255));
-        mPlayerRoomColorGradentStops[5] = QGradientStop(0.930, QColor(255,0,0,255));
-        mPlayerRoomColorGradentStops[6] = QGradientStop(0.940, QColor(255,0,0,230));
-        mPlayerRoomColorGradentStops[7] = QGradientStop(0.990, QColor(255,0,0,26));
-        mPlayerRoomColorGradentStops[8] = QGradientStop(1.000, QColor(255,0,0,0));
+        if (solid) {
+            mPlayerRoomColorGradentStops.resize(3);
+            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255,0,0,255));
+            mPlayerRoomColorGradentStops[1] = QGradientStop(0.990, QColor(255,0,0,255));
+            mPlayerRoomColorGradentStops[2] = QGradientStop(1.000, QColor(255,0,0,0));
+        } else  {
+            mPlayerRoomColorGradentStops.resize(5);
+            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255,0,0,0));
+            mPlayerRoomColorGradentStops[1] = QGradientStop(factor * 0.950, QColor(255,0,0,0));
+            mPlayerRoomColorGradentStops[2] = QGradientStop(factor * 1.050, QColor(255,0,0,255));
+            mPlayerRoomColorGradentStops[3] = QGradientStop(1.000 - (factor * 0.100), QColor(255,0,0,255));
+            mPlayerRoomColorGradentStops[4] = QGradientStop(1.000, QColor(255,0,0,0));
+        }
         break;
         // End of case 1:
 
     case 2: // Shaded bicolor (blue-yellow - so it ALWAYS contrasts with underlying room color) Ring:
-        mPlayerRoomColorGradentStops.resize(9);
-        mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255,255,0,0));
-        mPlayerRoomColorGradentStops[1] = QGradientStop(0.665, QColor(255,255,0,0));
-        mPlayerRoomColorGradentStops[2] = QGradientStop(0.675, QColor(255,255,0,26));
-        mPlayerRoomColorGradentStops[3] = QGradientStop(0.725, QColor(255,255,0,230));
-        mPlayerRoomColorGradentStops[4] = QGradientStop(0.735, QColor(Qt::yellow));
-        mPlayerRoomColorGradentStops[5] = QGradientStop(0.930, QColor(Qt::blue));
-        mPlayerRoomColorGradentStops[6] = QGradientStop(0.940, QColor(0,0,255,230));
-        mPlayerRoomColorGradentStops[7] = QGradientStop(0.990, QColor(0,0,255,26));
-        mPlayerRoomColorGradentStops[8] = QGradientStop(1.000, QColor(0,0,255,0));
+        if (solid) {
+            mPlayerRoomColorGradentStops.resize(3);
+            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255,255,0,255));
+            mPlayerRoomColorGradentStops[1] = QGradientStop(0.990, QColor(0,0,255,255));
+            mPlayerRoomColorGradentStops[2] = QGradientStop(1.000, QColor(0,0,255,0));
+        } else  {
+            mPlayerRoomColorGradentStops.resize(5);
+            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255,255,0,0));
+            mPlayerRoomColorGradentStops[1] = QGradientStop(factor * 0.950, QColor(255,255,0,0));
+            mPlayerRoomColorGradentStops[2] = QGradientStop(factor * 1.050, QColor(255,255,0,255));
+            mPlayerRoomColorGradentStops[3] = QGradientStop(1.000 - (factor * 0.100), QColor(0,0,255,255));
+            mPlayerRoomColorGradentStops[4] = QGradientStop(1.000, QColor(0,0,255,0));
+        }
         break;
         // End of case 2:
 
-    case 3: // Shaded user set ring:
-        mPlayerRoomColorGradentStops.resize(9);
-        if (mpMap->mPlayerRoomColorSecondary != mpMap->mPlayerRoomColorPrimary) {
-            QColor alteredColor(mpMap->mPlayerRoomColorSecondary);
-            alteredColor.setAlpha(0);
-            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, alteredColor);
-            mPlayerRoomColorGradentStops[1] = QGradientStop(0.665, alteredColor);
-            alteredColor.setAlpha(26);
-            mPlayerRoomColorGradentStops[2] = QGradientStop(0.675, alteredColor);
-            alteredColor.setAlpha(230);
-            mPlayerRoomColorGradentStops[3] = QGradientStop(0.725, alteredColor);
-            mPlayerRoomColorGradentStops[4] = QGradientStop(0.735, mpMap->mPlayerRoomColorSecondary);
-            mPlayerRoomColorGradentStops[5] = QGradientStop(0.930, mpMap->mPlayerRoomColorPrimary);
-            alteredColor = mpMap->mPlayerRoomColorPrimary;
-            alteredColor.setAlpha(230);
-            mPlayerRoomColorGradentStops[6] = QGradientStop(0.940, alteredColor);
-            alteredColor.setAlpha(26);
-            mPlayerRoomColorGradentStops[7] = QGradientStop(0.990, alteredColor);
-            alteredColor.setAlpha(0);
-            mPlayerRoomColorGradentStops[8] = QGradientStop(1.000, alteredColor);
-        } else {
-            QColor alteredColor(mpMap->mPlayerRoomColorPrimary);
-            alteredColor.setAlpha(0);
-            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, alteredColor);
-            mPlayerRoomColorGradentStops[1] = QGradientStop(0.665, alteredColor);
-            alteredColor.setAlpha(26);
-            mPlayerRoomColorGradentStops[2] = QGradientStop(0.675, alteredColor);
-            alteredColor.setAlpha(230);
-            mPlayerRoomColorGradentStops[3] = QGradientStop(0.725, alteredColor);
-            mPlayerRoomColorGradentStops[4] = QGradientStop(0.735, mpMap->mPlayerRoomColorPrimary);
-            mPlayerRoomColorGradentStops[5] = QGradientStop(0.930, mpMap->mPlayerRoomColorPrimary);
-            alteredColor.setAlpha(230);
-            mPlayerRoomColorGradentStops[6] = QGradientStop(0.940, alteredColor);
-            alteredColor.setAlpha(26);
-            mPlayerRoomColorGradentStops[7] = QGradientStop(0.990, alteredColor);
-            alteredColor.setAlpha(0);
-            mPlayerRoomColorGradentStops[8] = QGradientStop(1.000, alteredColor);
+    case 3: { // User set ring:
+        if (solid) {
+            mPlayerRoomColorGradentStops.resize(3);
+            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, mpMap->mPlayerRoomColorSecondary);
+            mPlayerRoomColorGradentStops[1] = QGradientStop(0.990, mpMap->mPlayerRoomColorPrimary);
+            QColor transparentColor(mpMap->mPlayerRoomColorPrimary);
+            transparentColor.setAlpha(0);
+            mPlayerRoomColorGradentStops[2] = QGradientStop(1.000, transparentColor);
+        } else  {
+            mPlayerRoomColorGradentStops.resize(5);
+            QColor transparentColor(mpMap->mPlayerRoomColorSecondary);
+            transparentColor.setAlpha(0);
+            mPlayerRoomColorGradentStops[0] = QGradientStop(1.000, transparentColor);
+            mPlayerRoomColorGradentStops[1] = QGradientStop(factor * 0.950, transparentColor);
+            mPlayerRoomColorGradentStops[2] = QGradientStop(factor * 1.050, mpMap->mPlayerRoomColorSecondary);
+            mPlayerRoomColorGradentStops[3] = QGradientStop(1.000 - (factor * 0.100), mpMap->mPlayerRoomColorPrimary);
+            transparentColor = mpMap->mPlayerRoomColorPrimary;
+            transparentColor.setAlpha(0);
+            mPlayerRoomColorGradentStops[4] = QGradientStop(1.000, transparentColor);
         }
         break;
-        // End of case 3:
+        } // End of case 3:
 
     default: // Sort of emulates the original code:
         mPlayerRoomColorGradentStops.resize(5);
