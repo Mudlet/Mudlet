@@ -1685,7 +1685,7 @@ ist dies deine einzige Warnung über diesen Befehl...!</translation>
       <location filename="../src/TLuaInterpreter.cpp" line="15021"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name of the module.</comment>
-      <translation>[ OK ]  - Lua-Modul %1 geladen.</translation>
+      <translation>[  OK  ]  - Lua-Modul %1 geladen.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14954"/>
@@ -1770,7 +1770,7 @@ Fehler von Lua: </translation>
     <message>
       <location filename="../src/TMap.cpp" line="504"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation>[ OK ] - Auditierung der Karte abgeschlossen (%1s). Genieß dein Spiel...</translation>
+      <translation>[  OK  ]  - Kartenprüfung abgeschlossen (%1s). Genieß dein Spiel...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="511"/>
