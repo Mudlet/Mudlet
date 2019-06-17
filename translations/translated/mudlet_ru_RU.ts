@@ -6595,7 +6595,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7890"/>
       <source>Choose sound file</source>
-      <translation type="unfinished"/>
+      <translation>Выбрать звук</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7894"/>
@@ -7004,7 +7004,8 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <source>%1 %2%3 (with debug symbols, without optimisations)
 </source>
       <comment>%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev</comment>
-      <translation type="unfinished"/>
+      <translation>%1 %2%3 (символы отладки, без оптимизаций)
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="212"/>
@@ -7018,7 +7019,8 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/main.cpp" line="215"/>
       <source>Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html
 </source>
-      <translation type="unfinished"/>
+      <translation>Лицензия GPLv2 +: GNU GPL версии 2 или более поздней версии http://gnu.org/licenses/gpl.html
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="216"/>
