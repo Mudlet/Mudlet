@@ -1718,14 +1718,14 @@ Die Einrückungungsfunktion wird nicht verfügbar sein.
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15117"/>
       <source>[  OK  ]  - Lua code formatter loaded.</source>
-      <translation>[ OK ]  - Lua Code-Formatierer geladen.</translation>
+      <translation>[  OK  ]  - Lua Code-Formatierer geladen.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15150"/>
       <location filename="../src/TLuaInterpreter.cpp" line="15154"/>
       <location filename="../src/TLuaInterpreter.cpp" line="15170"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
-      <translation>[ OK ]  - Mudlet-Lua-API &amp; Geyser Layoutmanager geladen.</translation>
+      <translation>[  OK  ]  - Mudlet-Lua-API &amp; Geyser Layoutmanager geladen.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15164"/>
@@ -1775,7 +1775,7 @@ Fehler von Lua: </translation>
     <message>
       <location filename="../src/TMap.cpp" line="511"/>
       <source>[  OK  ]  - Map loaded successfully (%1s).</source>
-      <translation>[ OK ] - Karte erfolgreich geladen (%1s).</translation>
+      <translation>[  OK  ]  - Karte erfolgreich geladen (%1s).</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="998"/>
@@ -2762,7 +2762,7 @@ Sie wurden aus dem Bereich entfernt.</translation>
       <source>[  OK  ]  - The changes made are:
 (ID) &quot;old name&quot; ==&gt; &quot;new name&quot;
 </source>
-      <translation>[ OK ] - Die durchgeführten Änderungen sind:
+      <translation>[  OK  ]  - Die durchgeführten Änderungen sind:
 (ID) &quot;alter Name&quot; ==&gt; &quot;neuer Name&quot;
 </translation>
     </message>
@@ -3877,7 +3877,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="2071"/>
       <source>[  OK  ]  - The replay has ended.</source>
-      <translation>[ OK ] - Wiederholung beendet.</translation>
+      <translation>[  OK  ]  - Wiederholung beendet.</translation>
     </message>
   </context>
   <context>
