@@ -9069,7 +9069,7 @@ tenta di nuovo quando sarà terminato.</translation>
       <location filename="../src/ui/profile_preferences.ui" line="126"/>
       <location filename="../src/ui/profile_preferences.ui" line="155"/>
       <source>Until a profile is loaded</source>
-      <translation>Fino a quando non viene caricato un profilo</translation>
+      <translation>Fino al caricamento del profilo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="131"/>
@@ -9090,7 +9090,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="237"/>
       <source>Toolbar notification if Mudlet is minimized and new data arrives</source>
-      <translation>Notifica nella barra delle applicazione se Mudlet è ridotto ad icona e arrivano nuovi dati</translation>
+      <translation>Notifica nella barra delle applicazione se arrivano nuovi dati quando Mudlet è ridotto ad icona</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="244"/>
@@ -9206,7 +9206,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="479"/>
       <source>React to all keybindings on the same key</source>
-      <translation>Utilizzati tutte le scorciatoie da tastiera sullo stesso tasto</translation>
+      <translation>Utilizza tutte le scorciatoie da tastiera assegnato allo stesso tasto</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="489"/>
@@ -9261,22 +9261,22 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="719"/>
       <source>Top border height:</source>
-      <translation>Altezza bordo superiore:</translation>
+      <translation>Dimensione bordo superiore:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="763"/>
       <source>Left border width:</source>
-      <translation>Larghezza bordo sinistro:</translation>
+      <translation>Dimensione bordo sinistro:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="807"/>
       <source>Bottom border height:</source>
-      <translation>Altezza bordo inferiore:</translation>
+      <translation>Dimensione bordo inferiore:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="851"/>
       <source>Right border width:</source>
-      <translation>Larghezza bordo destro:</translation>
+      <translation>Dimensione bordo destro:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="892"/>
@@ -9613,7 +9613,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1416"/>
       <source>These preferences set how you want a particular color to be represented visually in the main display:</source>
-      <translation>Queste opzioni determinano come un colore dovrebbe essere rappresentato nella finestra principale:</translation>
+      <translation>Queste opzioni determinano come un colore è rappresentato nella finestra principale:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1426"/>
@@ -9805,7 +9805,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1756"/>
       <source>Server allowed to redefine these colors</source>
-      <translation>Server autorizzato a ridefinire questi colori</translation>
+      <translation>Autorizza il server del gioco a ridefinire questi colori</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1780"/>
@@ -9825,7 +9825,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1802"/>
       <source>Press to choose location and save</source>
-      <translation>Premi per scegliere la posizione e salvare</translation>
+      <translation>Scegli dove salvare la mappa</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1809"/>
@@ -9835,7 +9835,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1819"/>
       <source>Press to choose file and load</source>
-      <translation>Premere per scegliere il file da caricare</translation>
+      <translation>Scegli il file da cui caricare la mappa</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1826"/>
@@ -9891,7 +9891,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2770"/>
       <source>Expect Color Space Id in SGR...(3|4)8;2;...m codes</source>
-      <translation>Gestisci lo spazio color in SGR...(3|4)8:2...m codes</translation>
+      <translation>Gestisci lo spazio color in SGR...(3|4)8:2;...m codes</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2794"/>
@@ -9946,7 +9946,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2925"/>
       <source>Accept all certificate errors       (unsecure)</source>
-      <translation>Accettare tutti gli errori del certificato (sconsigliato)</translation>
+      <translation>Accetta tutti gli errori del certificato (sconsigliato)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1829"/>
