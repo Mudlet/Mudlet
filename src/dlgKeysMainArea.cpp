@@ -173,11 +173,11 @@ void dlgKeysMainArea::setModifiers(const QPair<Qt::KeyboardModifiers, Qt::Keyboa
 
     checkBox_modifier_group->blockSignals(true);
     if (modifiers.first & Qt::GroupSwitchModifier) {
-        checkBox_modifier_keypad->setCheckState(Qt::Checked);
+        checkBox_modifier_group->setCheckState(Qt::Checked);
     } else if (modifiers.second & Qt::GroupSwitchModifier) {
-        checkBox_modifier_keypad->setCheckState(Qt::Unchecked);
+        checkBox_modifier_group->setCheckState(Qt::Unchecked);
     } else {
-        checkBox_modifier_keypad->setCheckState(Qt::PartiallyChecked);
+        checkBox_modifier_group->setCheckState(Qt::PartiallyChecked);
     }
     checkBox_modifier_group->blockSignals(false);
 }
