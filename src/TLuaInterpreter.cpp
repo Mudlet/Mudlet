@@ -4258,45 +4258,38 @@ int TLuaInterpreter::setRoomIDbyHash(lua_State* L)
 {
     int id;
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "setRoomIDbyHash: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        id = lua_tonumber(L, 1);
+        lua_pushfstring(L, "setRoomIDbyHash: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     }
-    string hash;
+    id = lua_tonumber(L, 1);
     if (!lua_isstring(L, 2)) {
-        lua_pushstring(L, "setRoomIDbyHash: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        hash = lua_tostring(L, 2);
+        lua_pushfstring(L, "setRoomIDbyHash: bad argument #2 type (hash as string expected, got %s)", luaL_typename(L, 2));
+        return lua_error(L);
     }
+    QString hash = QString::fromUtf8(lua_tostring(L, 2));
     Host& host = getHostFromLua(L);
-    host.mpMap->mpRoomDB->hashTable[QString(hash.c_str())] = id;
+    if (host.mpMap->mpRoomDB->roomIDToHash.contains(id)) {
+        host.mpMap->mpRoomDB->hashToRoomID.remove(host.mpMap->mpRoomDB->roomIDToHash[id]);
+    }
+    if (host.mpMap->mpRoomDB->hashToRoomID.contains(hash)) {
+        host.mpMap->mpRoomDB->roomIDToHash.remove(host.mpMap->mpRoomDB->hashToRoomID[hash]);
+    }
+    host.mpMap->mpRoomDB->hashToRoomID[hash] = id;
+    host.mpMap->mpRoomDB->roomIDToHash[id] = hash;
     return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomIDbyHash
 int TLuaInterpreter::getRoomIDbyHash(lua_State* L)
 {
-    string hash;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "getRoomIDbyHash() wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        hash = lua_tostring(L, 1);
+        lua_pushfstring(L, "getRoomIDbyHash: bad argument #1 type (hash as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
     }
+    QString hash = QString::fromUtf8(lua_tostring(L, 1));
     Host& host = getHostFromLua(L);
-    int retID = -1;
-    QString _hash = hash.c_str();
-    if (host.mpMap->mpRoomDB->hashTable.contains(_hash)) {
-        retID = host.mpMap->mpRoomDB->hashTable[_hash];
-        lua_pushnumber(L, retID);
-    } else {
-        lua_pushnumber(L, -1);
-    }
+    int retID = host.mpMap->mpRoomDB->hashToRoomID.value(hash, -1);
+    lua_pushnumber(L, retID);
 
     return 1;
 }
@@ -4308,22 +4301,17 @@ int TLuaInterpreter::getRoomHashByID(lua_State* L)
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "getRoomHashByID: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        id = lua_tonumber(L, 1);
     }
+    id = lua_tonumber(L, 1);
 
     Host& host = getHostFromLua(L);
-    QMapIterator<QString, int> it(host.mpMap->mpRoomDB->hashTable);
-
-    while (it.hasNext()) {
-        it.next();
-        if (it.value() == id) {
-            lua_pushstring(L, it.key().toUtf8().constData());
-            return 1;
-        }
+    if (host.mpMap->mpRoomDB->roomIDToHash.contains(id)) {
+        QString retHash = host.mpMap->mpRoomDB->roomIDToHash[id];
+        lua_pushstring(L, retHash.toUtf8().constData());
+        return 1;
     }
     lua_pushnil(L);
-    lua_pushfstring(L, "room %d doesn't exist", id);
+    lua_pushfstring(L, "no hash for room %d", id);
     return 2;
 }
 
@@ -7237,7 +7225,7 @@ int TLuaInterpreter::permTimer(lua_State* L)
         lua_pushfstring(L, "permTimer: bad argument #3 type (time in seconds as {maybe decimal} number expected, got %s!)", luaL_typename(L, 3));
         return lua_error(L);
     }
-    double time = lua_tonumber(L, 1);
+    double time = lua_tonumber(L, 3);
 
     if (!lua_isstring(L, 4)) {
         lua_pushfstring(L, "permTimer: bad argument #4 type (script as string expected, got %s!)", luaL_typename(L, 4));
@@ -10019,11 +10007,10 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
         static bool isWarningIssued = false;
         if (!isWarningIssued && host.mpMap->mDefaultVersion <= 16 && host.mpMap->mSaveVersion < 17) {
             QString warnMsg = tr("[ WARN ]  - Lua command setAreaUserData() used - it is currently flagged as experimental!");
-            QString infoMsg = tr("[ INFO ]  - To be fully functional the above command requests a revision to the map file format\n"
-                                 "and although that has been coded it is NOT enabled so this feature's effects\n"
-                                 "will NOT persist between sessions as the relevent data IS NOT SAVED.\n\n"
-                                 "To avoid filling the screen up with repeated messages, this is your only warning about\n"
-                                 "this command...!");
+            QString infoMsg = tr("[ INFO ]  - This feature requires a newer map format. Please change your map\n"
+                                 "format to a newer version to be able to SAVE this feature's data.\n\n"
+                                 "To avoid filling the screen up with repeated messages, this is\n"
+                                 "your only warning about this command...!");
             host.postMessage(warnMsg);
             host.postMessage(infoMsg);
             isWarningIssued = true;
@@ -10080,11 +10067,10 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
         static bool isWarningIssued = false;
         if (!isWarningIssued && host.mpMap->mDefaultVersion <= 16 && host.mpMap->mSaveVersion < 17) {
             QString warnMsg = tr("[ WARN ]  - Lua command setMapUserData() used - it is currently flagged as experimental!");
-            QString infoMsg = tr("[ INFO ]  - To be fully functional the above command requests a revision to the map file format\n"
-                                 "and although that has been coded it is NOT enabled so this feature's effects\n"
-                                 "will NOT persist between sessions as the relevent data IS NOT SAVED.\n\n"
-                                 "To avoid filling the screen up with repeated messages, this is your only warning about\n"
-                                 "this command...!");
+            QString infoMsg = tr("[ INFO ]  - This feature requires a newer map format. Please change your map\n"
+                                 "format to a newer version to be able to SAVE this feature's data.\n\n"
+                                 "To avoid filling the screen up with repeated messages, this is\n"
+                                 "your only warning about this command...!");
             host.postMessage(warnMsg);
             host.postMessage(infoMsg);
             isWarningIssued = true;
@@ -10966,9 +10952,9 @@ int TLuaInterpreter::Echo(lua_State* L)
     }
 
     if (consoleName.isEmpty()) {
-        host.mpConsole->buffer.mEchoText = true;
+        host.mpConsole->buffer.mEchoingText = true;
         host.mpConsole->echo(displayText);
-        host.mpConsole->buffer.mEchoText = false;
+        host.mpConsole->buffer.mEchoingText = false;
         // Writing to the main window must always succeed, but for consistent
         // results, we now return a true for that
         lua_pushboolean(L, true);
@@ -15002,12 +14988,17 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module rex_pcre.\n"
-                         "Some functions may not be available.\n");
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2", 
+            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
+            .arg(QStringLiteral("rex_pcre"),
+                 QStringLiteral("\n%1\n"))
+            .arg(tr("Some functions may not be available."));
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module rex_pcre loaded.");
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
+            "%1 is the name of the module.")
+            .arg(QStringLiteral("rex_pcre"));
         mpHost->postMessage(msg);
     }
 
@@ -15018,11 +15009,16 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module zip.\n");
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2", 
+            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
+            .arg(QLatin1String("zip"),
+                 QString());
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module zip loaded.");
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
+            "%1 is the name of the module.")
+            .arg(QLatin1String("zip"));
         mpHost->postMessage(msg);
     }
 
@@ -15033,12 +15029,17 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module lfs (Lua File System).\n"
-                         "Probably will not be able to access Mudlet Lua code.\n");
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2", 
+            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
+            .arg(QLatin1String("lfs (Lua File System)"),
+                 QLatin1String("\n%1\n"))
+            .arg(tr("Probably will not be able to access Mudlet Lua code."));
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module lfs loaded.");
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
+            "%1 is the name of the module.")
+            .arg(QLatin1String("lfs"));
         mpHost->postMessage(msg);
     }
 
@@ -15049,15 +15050,19 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module luasql.sqlite3.\n"
-                         "Database support will not be available.\n");
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2", 
+            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
+            .arg(QLatin1String("luasql.sqlite3"),
+                 QLatin1String("\n%1\n"))
+            .arg(tr("Database support will not be available."));
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module sqlite3 loaded.");
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
+            "%1 is the name of the module.")
+            .arg(QLatin1String("sqlite3"));
         mpHost->postMessage(msg);
     }
-
 
     error = luaL_dostring(pGlobalLua, R"(utf8 = require "lua-utf8")");
     if (error != 0) {
@@ -15066,15 +15071,19 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module utf8.\n"
-                         "utf8.* Lua functions won't be available.\n");
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2", 
+            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
+            .arg(QLatin1String("utf8"),
+                 QLatin1String("\n%1\n"))
+            .arg(tr("utf8.* Lua functions won't be available."));
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module utf8 loaded.");
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
+            "%1 is the name of the module.")
+            .arg(QLatin1String("utf8"));
         mpHost->postMessage(msg);
     }
-
 
     error = luaL_dostring(pGlobalLua, R"(yajl = require "yajl")");
     if (error != 0) {
@@ -15083,12 +15092,17 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module yajl.\n"
-                         "yajl.* Lua functions won't be available.\n");
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2", 
+            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
+            .arg(QLatin1String("yajl"),
+                 QLatin1String("\n%1\n"))
+            .arg(tr("yajl.* Lua functions won't be available."));
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module yajl loaded.");
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
+            "%1 is the name of the module.")
+            .arg(QLatin1String("yajl"));
         mpHost->postMessage(msg);
     }
 

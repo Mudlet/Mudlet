@@ -75,7 +75,7 @@ endif()
 # To insure consistency please ensure the SAME of the first two values are also
 # assigned to the "VERSION" and "BUILD" variables in the native qmake project
 # file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 3.19.0)
+set(APP_VERSION 3.21.0)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
   SET(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
@@ -221,6 +221,17 @@ else()
   foreach(lua_file ${lua_files})
     message(STATUS "    ${lua_file}")
   endforeach(lua_file)
+endif()
+
+file(GLOB_RECURSE lua_test_files RELATIVE "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/tests/" "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/tests/*.lua")
+list(LENGTH lua_test_files lua_test_file_count)
+if(lua_test_file_count EQUAL 4)
+  message(STATUS "Found Mudlet Lua test files")
+else()
+  message(WARNING "Found ${lua_test_file_count} Mudlet Lua test files but 4 were expected:")
+  foreach(lua_test_file ${lua_test_files})
+    message(STATUS "    ${lua_test_file}")
+  endforeach()
 endif()
 
 if(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/lcf/lcf-scm-1.rockspec")
