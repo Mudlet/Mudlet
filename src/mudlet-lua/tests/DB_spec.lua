@@ -1,24 +1,4 @@
 describe("Tests DB.lua functions", function()
-  setup(function()
-    -- add in the location of our files
-    package.path = "../lua/?.lua;"
-
-    -- add in the location of Lua libraries on Ubuntu 12.04
-    package.path = package.path .. "/usr/local/share/lua/5.1/?.lua;/usr/local/share/lua/5.1/?/init.lua;/usr/local/lib/lua/5.1/?.lua;/usr/local/lib/lua/5.1/?/init.lua;/usr/share/lua/5.1/?.lua;/usr/share/lua/5.1/?/init.lua"
-
-    luasql = require"luasql.sqlite3"
-    rex    = require"rex_pcre"
-
-    -- define some common Mudlet functions essential to operation
-    function getMudletHomeDir() return "." end
-
-    require"TableUtils"
-  end)
-
-  it("Should load DB.lua", function()
-    require"DB"
-    assert.truthy(db)
-  end)
 
   describe("Tests that DB creation and deletion works", function()
     it("Should create a db", function()
@@ -84,7 +64,12 @@ describe("Tests DB.lua functions", function()
     end)
 
     teardown(function()
-      os.remove("Database_people.db")
+      -- os.remove("Database_people.db")
+		-- local filename = db:db_filename("people")
+		-- FIXME: There should be a way for us to discover the filename
+		--        but db:db_filename isn't available
+		local filename = getMudletHomeDir() .. "/Database_people.db"
+      os.remove(filename)
     end)
   end)
 
@@ -110,7 +95,9 @@ describe("Tests DB.lua functions", function()
     end)
 
     teardown(function()
-      os.remove("Database_people.db")
+      -- FIXME: breaks encapsulation
+		local filename = getMudletHomeDir() .. "/Database_people.db"
+      os.remove(filename)
     end)
 
     it("Should add one result to the db", function()
@@ -171,7 +158,10 @@ describe("Tests DB.lua functions", function()
     end)
 
     teardown(function()
-      os.remove("Database_dslpnpdata.db")
+      -- os.remove("Database_dslpnpdata.db")
+      -- FIXME: breaks encapsulation
+		local filename = getMudletHomeDir() .. "/Database_dslpnpdata.db"
+      os.remove(filename)
     end)
 
     it("Should sort the fields by level first and then name, both in descending order", function()
@@ -207,7 +197,9 @@ describe("Tests DB.lua functions", function()
 
     after_each(function()
       db:close()
-      os.remove("Database_mydb.db")
+      -- FIXME: breaks encapsulation
+		local filename = getMudletHomeDir() .. "/Database_mydb.db"
+      os.remove(filename)
       mydb = nil
     end)
 
@@ -277,7 +269,9 @@ describe("Tests DB.lua functions", function()
 
     after_each(function()
       db:close()
-      os.remove("Database_mydb.db")
+      -- FIXME: breaks encapsulation
+		local filename = getMudletHomeDir() .. "/Database_mydb.db"
+      os.remove(filename)
       mydb = nil
     end)
 
@@ -364,7 +358,9 @@ describe("Tests DB.lua functions", function()
 
     after_each(function()
       db:close()
-      os.remove("Database_mydb.db")
+      -- FIXME: breaks encapsulation
+		local filename = getMudletHomeDir() .. "/Database_mydb.db"
+      os.remove(filename)
       mydb = nil
     end)
 
@@ -420,7 +416,9 @@ describe("Tests DB.lua functions", function()
 
     after_each(function()
       db:close()
-      os.remove("Database_mydb.db")
+      -- FIXME: breaks encapsulation
+		local filename = getMudletHomeDir() .. "/Database_mydb.db"
+      os.remove(filename)
       mydb = nil
       test_data = nil
     end)
@@ -620,7 +618,9 @@ describe("Tests DB.lua functions", function()
 
     after_each(function()
       db:close()
-      os.remove("Database_mydb.db")
+      -- FIXME: breaks encapsulation
+		local filename = getMudletHomeDir() .. "/Database_mydb.db"
+      os.remove(filename)
       mydb = nil
       test_data = nil
     end)
