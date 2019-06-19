@@ -65,10 +65,10 @@ describe("Tests DB.lua functions", function()
 
     teardown(function()
       -- os.remove("Database_people.db")
-		-- local filename = db:db_filename("people")
-		-- FIXME: There should be a way for us to discover the filename
-		--        but db:db_filename isn't available
-		local filename = getMudletHomeDir() .. "/Database_people.db"
+      -- local filename = db:db_filename("people")
+      -- FIXME: There should be a way for us to discover the filename
+      --        but db:db_filename isn't available
+      local filename = getMudletHomeDir() .. "/Database_people.db"
       os.remove(filename)
     end)
   end)
@@ -96,7 +96,7 @@ describe("Tests DB.lua functions", function()
 
     teardown(function()
       -- FIXME: breaks encapsulation
-		local filename = getMudletHomeDir() .. "/Database_people.db"
+      local filename = getMudletHomeDir() .. "/Database_people.db"
       os.remove(filename)
     end)
 
@@ -160,7 +160,7 @@ describe("Tests DB.lua functions", function()
     teardown(function()
       -- os.remove("Database_dslpnpdata.db")
       -- FIXME: breaks encapsulation
-		local filename = getMudletHomeDir() .. "/Database_dslpnpdata.db"
+      local filename = getMudletHomeDir() .. "/Database_dslpnpdata.db"
       os.remove(filename)
     end)
 
@@ -198,7 +198,7 @@ describe("Tests DB.lua functions", function()
     after_each(function()
       db:close()
       -- FIXME: breaks encapsulation
-		local filename = getMudletHomeDir() .. "/Database_mydb.db"
+      local filename = getMudletHomeDir() .. "/Database_mydb.db"
       os.remove(filename)
       mydb = nil
     end)
@@ -270,7 +270,7 @@ describe("Tests DB.lua functions", function()
     after_each(function()
       db:close()
       -- FIXME: breaks encapsulation
-		local filename = getMudletHomeDir() .. "/Database_mydb.db"
+      local filename = getMudletHomeDir() .. "/Database_mydb.db"
       os.remove(filename)
       mydb = nil
     end)
@@ -359,7 +359,7 @@ describe("Tests DB.lua functions", function()
     after_each(function()
       db:close()
       -- FIXME: breaks encapsulation
-		local filename = getMudletHomeDir() .. "/Database_mydb.db"
+      local filename = getMudletHomeDir() .. "/Database_mydb.db"
       os.remove(filename)
       mydb = nil
     end)
@@ -417,7 +417,7 @@ describe("Tests DB.lua functions", function()
     after_each(function()
       db:close()
       -- FIXME: breaks encapsulation
-		local filename = getMudletHomeDir() .. "/Database_mydb.db"
+      local filename = getMudletHomeDir() .. "/Database_mydb.db"
       os.remove(filename)
       mydb = nil
       test_data = nil
@@ -619,7 +619,7 @@ describe("Tests DB.lua functions", function()
     after_each(function()
       db:close()
       -- FIXME: breaks encapsulation
-		local filename = getMudletHomeDir() .. "/Database_mydb.db"
+      local filename = getMudletHomeDir() .. "/Database_mydb.db"
       os.remove(filename)
       mydb = nil
       test_data = nil
