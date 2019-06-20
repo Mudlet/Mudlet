@@ -178,7 +178,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
     }
 
     if ((propertyList.empty()) && (!isFolder()) && (!mColorTrigger)) {
-        setError("No patterns defined.");
+        setError(tr("No patterns defined."));
         mOK_init = false;
         return false;
     }
