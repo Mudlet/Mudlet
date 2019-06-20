@@ -504,6 +504,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar2->addAction(viewKeysAction);
     toolBar2->addAction(viewVarsAction);
     toolBar2->addAction(viewActionAction);
+
+    toolBar2->addSeparator();
+    
     toolBar2->addAction(viewErrorsAction);
     toolBar2->addAction(viewStatsAction);
     toolBar2->addAction(showDebugAreaAction);
