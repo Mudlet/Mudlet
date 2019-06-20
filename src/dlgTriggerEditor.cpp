@@ -3129,9 +3129,9 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     saveTrigger();
     QString name;
     if (isFolder) {
-        name = "New Trigger Group";
+        name = tr("New Trigger Group");
     } else {
-        name = "New Trigger";
+        name = tr("New Trigger");
     }
     QStringList regexList;
     QList<int> regexPropertyList;
@@ -3974,7 +3974,7 @@ void dlgTriggerEditor::saveTrigger()
         if (pT->state()) {
             clearEditorNotification();
 
-            if (old_name == "New Trigger" || old_name == "New Trigger Group") {
+            if (old_name == tr("New Trigger") || old_name == tr("New Trigger Group")) {
                 QIcon _icon;
                 if (pT->isFolder()) {
                     _icon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
