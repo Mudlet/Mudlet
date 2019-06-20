@@ -1669,7 +1669,7 @@ ist dies deine einzige Warnung über diesen Befehl...!</translation>
       <location filename="../src/TLuaInterpreter.cpp" line="15013"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2</source>
       <comment>%1 is the name of the module. %2 can be an additional message about the expected effect.</comment>
-      <translation>[ FEHLER ] - Konnte Lua-Modul %1 nicht finden.%2</translation>
+      <translation>[FEHLER] - Konnte Lua-Modul %1 nicht finden.%2</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14913"/>
@@ -1711,7 +1711,7 @@ ist dies deine einzige Warnung über diesen Befehl...!</translation>
       <location filename="../src/TLuaInterpreter.cpp" line="15113"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
-      <translation>[ FEHLER ] - Code-Formatierer kann nicht geladen werden.
+      <translation>[FEHLER] - Code-Formatierer kann nicht geladen werden.
 Die Einrückungungsfunktion wird nicht verfügbar sein.
 </translation>
     </message>
@@ -1731,7 +1731,7 @@ Die Einrückungungsfunktion wird nicht verfügbar sein.
       <location filename="../src/TLuaInterpreter.cpp" line="15164"/>
       <source>[ ERROR ] - LuaGlobal.lua compile error - please report!
 Error from Lua: </source>
-      <translation>[ FEHLER ] - LuaGlobal.lua Kompilierungsfehler - bitte melden!
+      <translation>[FEHLER] - LuaGlobal.lua Kompilierungsfehler - bitte melden!
 Fehler von Lua: </translation>
     </message>
   </context>
@@ -1872,7 +1872,7 @@ map with others relying on the original format.</source>
       <location filename="../src/TMap.cpp" line="1032"/>
       <source>[ ERROR ] - The format {%1} you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version {%2}.</source>
-      <translation>[ FEHLER ] - Du versuchst, die Karte in einen zu neuen Format {%1} zu speichern.
+      <translation>[FEHLER] - Du versuchst, die Karte in einen zu neuen Format {%1} zu speichern.
 Diese Version von Mudlet unterstützt nur Formate bis zur Version {%2}.</translation>
     </message>
     <message>
@@ -1908,14 +1908,14 @@ ID der betroffenen Regionen: %1.</translation>
       <location filename="../src/TMap.cpp" line="1407"/>
       <location filename="../src/TMap.cpp" line="1701"/>
       <source>[ ERROR ] - Unable to open (for reading) map file: &quot;%1&quot;!</source>
-      <translation>[ FEHLER ]  - Kartendatei kann nicht (zum Lesen) geöffnet werden: &quot;%1&quot;!</translation>
+      <translation>[FEHLER] - Kartendatei kann nicht (zum Lesen) geöffnet werden: &quot;%1&quot;!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1416"/>
       <source>[ ERROR ] - Map file is too new, its file format (%1) is higher than this version of
 Mudlet can handle (%2)!  The file is:
 &quot;%3&quot;.</source>
-      <translation>[ FEHLER ] - Kartendatei ist zu neu, das Dateiformat (%1) ist höher als diese Version von Mudlet verarbeiten kann (%2)! Die Datei ist:
+      <translation>[FEHLER] - Kartendatei ist zu neu, das Dateiformat (%1) ist höher als diese Version von Mudlet verarbeiten kann (%2)! Die Datei ist:
 &quot;%3&quot;.</translation>
     </message>
     <message>
@@ -2108,7 +2108,7 @@ in main console!</source>
       <location filename="../src/TMap.cpp" line="2406"/>
       <source>[ ERROR ] - Map download encountered an error:
 %1.</source>
-      <translation>[ FEHLER ] – Herunterladen der Karte ist auf einen Fehler gestoßen: %1.</translation>
+      <translation>[FEHLER] - Herunterladen der Karte ist auf einen Fehler gestoßen: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2420"/>
@@ -2137,13 +2137,13 @@ in main console!</source>
       <location filename="../src/TMap.cpp" line="2466"/>
       <source>[ ERROR ] - Map download problem, failure in parsing destination file:
 %1.</source>
-      <translation>[ FEHLER ] – Problem beim Herunterladen der Karte. Fehler beim Verarbeiten der Zieldatei: %1.</translation>
+      <translation>[FEHLER] - Problem beim Herunterladen der Karte. Fehler beim Verarbeiten der Zieldatei: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2471"/>
       <source>[ ERROR ] - Map download problem, unable to read destination file:
 %1.</source>
-      <translation>[ FEHLER ] – Problem beim Herunterladen der Karte. Konnte Zieldatei nicht lesen: %1.</translation>
+      <translation>[FEHLER] - Problem beim Herunterladen der Karte. Konnte Zieldatei nicht lesen: %1.</translation>
     </message>
   </context>
   <context>
@@ -3734,7 +3734,7 @@ diese Version kann diese Datei nicht lesen. Du benötigst ein aktuelleres Mudlet
 Connection cannot be established.
 The server name is not correct, not working properly,
 or your nameservers are not working properly.</source>
-      <translation>[ FEHLER ] - Nachschlagen des Servernamens fehlgeschlagen! Verbindung kann nicht hergestellt werden. Der Name des Servers ist nicht korrekt, funktioniert nicht richtig, oder die Nameserver arbeiten nicht richtig.</translation>
+      <translation>[FEHLER] - Nachschlagen des Servernamens fehlgeschlagen! Verbindung kann nicht hergestellt werden. Der Name des Servers ist nicht korrekt, funktioniert nicht richtig, oder die Nameserver arbeiten nicht richtig.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="367"/>
@@ -3744,7 +3744,7 @@ or your nameservers are not working properly.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="389"/>
       <source>[ ERROR ] - TCP/IP socket ERROR:</source>
-      <translation>[ FEHLER ] - TCP/IP-Socket-FEHLER:</translation>
+      <translation>[FEHLER] - TCP/IP-Socket-FEHLER:</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="412"/>
@@ -3871,7 +3871,7 @@ bereits laufen. Bitte wiederholen, nachdem diese endet.</translation>
       <location filename="../src/ctelnet.cpp" line="2043"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
-      <translation>[ FEHLER ] - Kann Datei &quot;%1&quot; nicht lesen,
+      <translation>[FEHLER] - Kann Datei &quot;%1&quot; nicht lesen,
 Fehlermeldung war: &quot;%2&quot;.</translation>
     </message>
     <message>
