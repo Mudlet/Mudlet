@@ -53,9 +53,9 @@ describe("Tests Other.lua functions", function()
     end)
 
     it("tests reverse speedwalk with a delay", function()
-      local send = spy.on(_G, "send")
+      local send           = spy.on(_G, "send")
       local speedwalktimer = spy.on(_G, "speedwalktimer")
-      local tempTimer = spy.on(_G, "tempTimer")
+      local tempTimer      = spy.on(_G, "tempTimer")
 
       speedwalk("3w, 2ne, w, u", true, 1.25)
       -- Will walk backwards: down, east, twice southwest, thrice east, with 1.25 seconds delay between every move.
