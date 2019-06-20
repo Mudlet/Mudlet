@@ -3129,9 +3129,9 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     saveTrigger();
     QString name;
     if (isFolder) {
-        name = tr("New Trigger Group");
+        name = tr("New trigger group");
     } else {
-        name = tr("New Trigger");
+        name = tr("New trigger");
     }
     QStringList regexList;
     QList<int> regexPropertyList;
@@ -3230,9 +3230,9 @@ void dlgTriggerEditor::addTimer(bool isFolder)
     saveTimer();
     QString name;
     if (isFolder) {
-        name = "New Timer Group";
+        name = tr("New timer group");
     } else {
-        name = "New Timer";
+        name = tr("New timer");
     }
     QString command = "";
     QTime time;
@@ -3384,9 +3384,9 @@ void dlgTriggerEditor::addKey(bool isFolder)
     saveKey();
     QString name;
     if (isFolder) {
-        name = "New Key Group";
+        name = tr("New key group");
     } else {
-        name = "New Key";
+        name = tr("New key");
     }
     QString script = "";
     QStringList nameL;
@@ -3468,9 +3468,9 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     saveAlias();
     QString name;
     if (isFolder) {
-        name = "New Alias Group";
+        name = tr("New alias group");
     } else {
-        name = "New Alias";
+        name = tr("New alias");
     }
     QString regex = "";
     QString command = "";
@@ -3559,9 +3559,9 @@ void dlgTriggerEditor::addAction(bool isFolder)
     saveAction();
     QString name;
     if (isFolder) {
-        name = "new menu";
+        name = tr("New menu");
     } else {
-        name = "new button";
+        name = tr("New button");
     }
     QString cmdButtonUp = "";
     QString cmdButtonDown = "";
@@ -3602,7 +3602,7 @@ void dlgTriggerEditor::addAction(bool isFolder)
     } else {
     //insert a new root item
     ROOT_ACTION:
-        name = "new toolbar";
+        name = tr("New toolbar");
         pT = new TAction(name, mpHost);
         pT->setCommandButtonUp(cmdButtonUp);
         QStringList nl;
@@ -3660,15 +3660,15 @@ void dlgTriggerEditor::addScript(bool isFolder)
     saveScript();
     QString name;
     if (isFolder) {
-        name = "New Script Group";
+        name = tr("New script group");
     } else {
-        name = "NewScript";
+        name = tr("New script");
     }
     QStringList mainFun;
     mainFun << "-------------------------------------------------\n"
             << "--         Put your Lua functions here.        --\n"
             << "--                                             --\n"
-            << "-- Note that you can also use external Scripts --\n"
+            << "-- Note that you can also use external scripts --\n"
             << "-------------------------------------------------\n";
     QString script = mainFun.join("");
     QStringList nameL;
@@ -3974,7 +3974,7 @@ void dlgTriggerEditor::saveTrigger()
         if (pT->state()) {
             clearEditorNotification();
 
-            if (old_name == tr("New Trigger") || old_name == tr("New Trigger Group")) {
+            if (old_name == tr("New trigger") || old_name == tr("New trigger group")) {
                 QIcon _icon;
                 if (pT->isFolder()) {
                     _icon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
@@ -4082,7 +4082,7 @@ void dlgTriggerEditor::saveAlias()
     mpAliasMainArea->trimName();
     QString name = mpAliasMainArea->lineEdit_alias_name->text();
     QString regex = mpAliasMainArea->lineEdit_alias_pattern->text();
-    if ((name.size() < 1) || (name == "New Alias")) {
+    if ((name.size() < 1) || (name == tr("New alias"))) {
         name = regex;
     }
     QString substitution = mpAliasMainArea->lineEdit_alias_command->text();
@@ -4152,7 +4152,7 @@ void dlgTriggerEditor::saveAlias()
         if (pT->state()) {
             clearEditorNotification();
 
-            if (old_name == "New Alias") {
+            if (old_name == tr("New alias")) {
                 QIcon _icon;
                 if (pT->isFolder()) {
                     if (pT->ancestorsActive()) {
@@ -4378,7 +4378,7 @@ void dlgTriggerEditor::saveScript()
     if (pT->state()) {
         clearEditorNotification();
 
-        if (old_name == "New Script" || old_name == "New Script Group") {
+        if (old_name == tr("New script") || old_name == tr("New script group")) {
             QIcon _icon;
             if (pT->isFolder()) {
                 _icon.addPixmap(QPixmap(QStringLiteral(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
