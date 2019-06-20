@@ -1521,7 +1521,7 @@ Ganzzahl eingeben:</translation>
       <location filename="../src/TConsole.cpp" line="1661"/>
       <source>[ ERROR ]  - Map file not found, path and name used was:
 %1.</source>
-      <translation>[ FEHLER ] - Karte Datei nicht gefunden, verwendeter Pfad und Name waren:
+      <translation>[FEHLER] - Kartendatei nicht gefunden, verwendeter Pfad und Name waren:
 %1.</translation>
     </message>
     <message>
@@ -5021,7 +5021,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="144"/>
       <source>Failed to export - couldn&apos;t open %1 for writing in. Do you have the necessary permissions to write to that folder?</source>
-      <translation>Fehler beim Exportieren - Konnte %1 nicht für das Schreiben öffnen. Haben Sie die notwendigen Berechtigungen zum Schreiben in diesem Ordner?</translation>
+      <translation>Fehler beim Exportieren - Konnte %1 nicht für das Schreiben öffnen. Hast du die notwendigen Berechtigungen zum Schreiben in diesem Ordner?</translation>
     </message>
   </context>
   <context>
@@ -5184,7 +5184,7 @@ Nutzungen</translation>
 Please check that you have permissions/access to:
 &quot;%2&quot;
 and there is enough space. The copying operation has failed.</source>
-      <translation>[ FEHLER ] - Kann das Verzeichnis nicht nutzen oder erstellen, um für das andere Profil
+      <translation>[FEHLER] - Kann das Verzeichnis nicht nutzen oder erstellen, um für das andere Profil
 &quot;%1&quot; die Karte zu speichern.
 Prüfe bitte, dass du die Berechtigungen und Zugriff hast auf:
 &quot;%2&quot;
@@ -7101,7 +7101,7 @@ wahrscheinlich weniger nützlich für die normale Verwendung dieser Anwendung si
       <location filename="../src/main.cpp" line="270"/>
       <source>Report bugs to: https://github.com/Mudlet/Mudlet/issues
 </source>
-      <translation>Fehler melden an: https://github.com/Mudlet/Mudlet/issues
+      <translation>Berichte Fehler an: https://github.com/Mudlet/Mudlet/issues
 </translation>
     </message>
     <message>
