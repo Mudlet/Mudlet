@@ -2102,7 +2102,7 @@ in main console!</source>
     <message>
       <location filename="../src/TMap.cpp" line="2387"/>
       <source>[ ALERT ] - Map download was canceled, on user&apos;s request.</source>
-      <translation>[ ACHTUNG ] – Herunterladen der Karte wurde auf Benutzeranforderung abgebrochen.</translation>
+      <translation>[ ACHTUNG ] - Herunterladen der Karte wurde auf Benutzeranforderung abgebrochen.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2406"/>
@@ -2114,19 +2114,19 @@ in main console!</source>
       <location filename="../src/TMap.cpp" line="2420"/>
       <source>[ ALERT ] - Map download failed, error reported was:
 %1.</source>
-      <translation>[ ACHTUNG ] – Herunterladen der Karte fehlgeschlagen. Fehlermeldung war: %1.</translation>
+      <translation>[ ACHTUNG ] - Herunterladen der Karte fehlgeschlagen. Fehlermeldung war: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2428"/>
       <source>[ ALERT ] - Map download failed, unable to open destination file:
 %1.</source>
-      <translation>[ ACHTUNG ] – Herunterladen der Karte fehlgeschlagen. Konnte Zieldatei nicht öffnen: %1.</translation>
+      <translation>[ ACHTUNG ] - Herunterladen der Karte fehlgeschlagen. Konnte Zieldatei nicht öffnen: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2433"/>
       <source>[ ALERT ] - Map download failed, unable to write destination file:
 %1.</source>
-      <translation>[ ACHTUNG ] – Herunterladen der Karte fehlgeschlagen. Konnte Zieldatei nicht schreiben: %1.</translation>
+      <translation>[ ACHTUNG ] - Herunterladen der Karte fehlgeschlagen. Konnte Zieldatei nicht schreiben: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2440"/>
@@ -3766,7 +3766,7 @@ or your nameservers are not working properly.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="491"/>
       <source>Secure connections aren&apos;t supported by this game on this port - try turning the option off.</source>
-      <translation>Sichere Verbindungen werden von diesem Spiel auf diesem Port nicht unterstützt – versuche, die Option zu deaktivieren.</translation>
+      <translation>Sichere Verbindungen werden von diesem Spiel auf diesem Port nicht unterstützt - Versuche, die Option zu deaktivieren.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="536"/>
