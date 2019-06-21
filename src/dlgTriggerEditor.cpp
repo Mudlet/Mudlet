@@ -4082,7 +4082,7 @@ void dlgTriggerEditor::saveAlias()
     mpAliasMainArea->trimName();
     QString name = mpAliasMainArea->lineEdit_alias_name->text();
     QString regex = mpAliasMainArea->lineEdit_alias_pattern->text();
-    if ((name.size() < 1) || (name == "New Alias")) {
+    if (!regex.isEmpty() && ((name.isEmpty()) || (name == "New Alias"))) {
         name = regex;
     }
     QString substitution = mpAliasMainArea->lineEdit_alias_command->text();
