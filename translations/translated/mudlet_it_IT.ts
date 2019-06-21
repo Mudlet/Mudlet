@@ -1424,7 +1424,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1037"/>
       <source>&lt;p&gt;Stop logging game output to log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Interrompi la registrazione dei dati ricevuti dal gioco sul file di log.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1041"/>
@@ -2499,7 +2499,8 @@ in map, now working out what new id numbers to use...</source>
       <location filename="../src/TRoomDB.cpp" line="760"/>
       <source>[ INFO ]  - The renumbered area ids will be:
 Old ==&gt; New</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Gli Area ID rinumerati saranno:
+Vecchio ==&gt; Nuovo</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="778"/>
@@ -2680,7 +2681,7 @@ first will also gain a suffix in this manner.
     <message>
       <location filename="../src/TRoomDB.cpp" line="1212"/>
       <source>[ ALERT ] - An empty area name was detected in the Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Nomi di area inesistenti rilevati nel file di mappa!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1215"/>
@@ -3359,7 +3360,10 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
 &quot;%1&quot;
 reports it has a version (%2) it must have come from a later Mudlet version,
 and this one cannot read it, you need a newer Mudlet!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Spiacente, il file letto:
+&quot;%1&quot;
+utilizza la versione (%2) che proviene da una versione successiva Mudlet,
+per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="351"/>
@@ -4143,7 +4147,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="514"/>
       <source>&lt;p&gt;The room this special exit leads to.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;La stanza a cui questa uscita speciale è assegnata.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="525"/>
@@ -5268,7 +5272,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2987"/>
       <source>&lt;p&gt;How many rooms in the whole map have this symbol.</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Quante camere in tutta la mappa utilizzano questo simbolo.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2999"/>
@@ -6862,7 +6866,8 @@ dalla GUI)</translation>
       <source>%1 %2%3 (with debug symbols, without optimisations)
 </source>
       <comment>%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev</comment>
-      <translation type="unfinished"/>
+      <translation>%1 %2%3 (simboli di debug attivi, nessuna ottimizzazione)
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="212"/>
@@ -7114,17 +7119,17 @@ Avvio in corso... Buon divertimento!
       <location filename="../src/ui/main_window.ui" line="214"/>
       <location filename="../src/ui/main_window.ui" line="251"/>
       <source>&lt;p&gt;Opens a built-in IRC chat on the #mudlet channel on Freenode IRC servers.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Apri la chat IRC integrata sul canale #mudlet sui server IRC di Freenode.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="222"/>
       <source>&lt;p&gt;Opens an (on-line) collection of &quot;Educational Mudlet screencasts&quot; in your system web-browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Apri una raccolta (on-line) di &quot;video educativi su Mudlet&quot; nel browser web del sistema.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="230"/>
       <source>&lt;p&gt;Load a previous saved game session that can be used to test Mudlet lua systems (off-line!).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Carica una precedente sessione di gioco salvata che puoi utilizzare per testare i tuoi script Lua (off-line!).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="238"/>
@@ -7204,7 +7209,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/ui/main_window.ui" line="190"/>
       <source>&lt;p&gt;Opens a free form text editor window for this profile that is saved between sessions.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Apre una finestra di testo personalizzabile per questo profilo che viene salvato tra le sessioni.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="198"/>
@@ -7348,27 +7353,27 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/ui/mapper.ui" line="816"/>
       <source>top + 1</source>
-      <translation type="unfinished"/>
+      <translation>superiore + 1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="829"/>
       <source>bottom + 1</source>
-      <translation type="unfinished"/>
+      <translation>inferiore + 1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="842"/>
       <source>bottom -1</source>
-      <translation type="unfinished"/>
+      <translation>inferiore -1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="855"/>
       <source>top - 1</source>
-      <translation type="unfinished"/>
+      <translation>superiore - 1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="868"/>
       <source>1 level</source>
-      <translation type="unfinished"/>
+      <translation>Livello 1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="887"/>
@@ -10612,7 +10617,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2111"/>
       <source>&lt;p&gt;(Lua scripts need to be prefixed with &quot;script:&quot;).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;(Gli script Lua devono essere preceduti dalla parola chiave &quot;script:&quot;).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2128"/>
@@ -10622,7 +10627,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2147"/>
       <source>&lt;p&gt;Press this button to deactivate the selection of a Special exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Premi questo pulsante per disattivare la selezione di un'uscita speciale.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1978"/>
@@ -10990,7 +10995,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="454"/>
       <source>&lt;p&gt;How many more line after the one that fired the trigger should be passed to children?&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Quante altre righe, dopo quella che ha attivato il trigger, devo passare agli elementi figlio?&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="470"/>
