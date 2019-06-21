@@ -2636,7 +2636,7 @@ they have been removed.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1170"/>
       <source>[ INFO ]  - Area name changed to prevent duplicates or unnamed ones; old name: &quot;%1&quot;, new name: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Nome Area modificato per evitare duplicati o nomi indefiniti; vecchio nome: &quot;%1&quot;, nuovo nome: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1179"/>
