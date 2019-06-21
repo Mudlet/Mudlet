@@ -558,7 +558,7 @@ void dlgPackageExporter::slot_export_package()
 
 void dlgPackageExporter::slot_addFiles()
 {
-    QString stagingPathUrlText = QStringLiteral("file://%1").arg(mStagingDirName);
+    QString stagingPathUrlText = QStringLiteral("file:///%1").arg(mStagingDirName);
     QDesktopServices::openUrl(QUrl(stagingPathUrlText, QUrl::TolerantMode));
 }
 
