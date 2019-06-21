@@ -469,7 +469,8 @@ it with a new symbol for this room:</source>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when NO rooms are selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the current player&apos;s room.</comment>
-      <translation type="unfinished"/>
+      <translation>Stanza%1ID:%1%2 Posizione%1sulla%1Mappa: (%3,%4,%5) -%1stanza attuale del giocatore
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2222"/>
@@ -975,7 +976,7 @@ for all of the %n selected room(s):</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="3871"/>
       <source>Spread out rooms</source>
-      <translation type="unfinished"/>
+      <translation>Espandi le stanze</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3872"/>
@@ -989,7 +990,7 @@ factor of:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="3933"/>
       <source>Shrink in rooms</source>
-      <translation type="unfinished"/>
+      <translation>Riduci le stanze</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3934"/>
@@ -1073,7 +1074,7 @@ rooms:</source>
       <location filename="../src/T2DMap.cpp" line="5069"/>
       <source>Left-click and drag a square for the size and position of your label</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
-      <translation type="unfinished"/>
+      <translation>Premi con il tasto sinistro del mouse e trascina il riquadro per impostare dimensione e posizione dell'etichetta</translation>
     </message>
   </context>
   <context>
@@ -2292,7 +2293,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1326"/>
       <source>[ INFO ]  - Room had one or more surplus door items that were removed:%1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - La stanza aveva una o più porte in eccesso che sono state rimosse:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1342"/>
@@ -2303,7 +2304,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1349"/>
       <source>[ INFO ]  - Room had one or more surplus weight items that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - La stanza aveva una o più pesi in eccesso sulle uscite che sono state rimosse:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1365"/>
@@ -2457,12 +2458,12 @@ Mudlet - is your system running out of memory?</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="665"/>
       <source>[ ALERT ] - Area with id: %1 expected but not found, will be created.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Area ID: %1 previsto, ma non trovato, provvedo alla creazione.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="668"/>
       <source>[ ALERT ] - Area with this id expected but not found, will be created.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Previsto Area ID, ma non trovato, provvedo alla creazione.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="697"/>
