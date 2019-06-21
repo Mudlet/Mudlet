@@ -476,7 +476,8 @@ it with a new symbol for this room:</source>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when ONE room is selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the selected Room.</comment>
-      <translation type="unfinished"/>
+      <translation>Stanza%1ID:%1%2 Posizione%1sulla%1Mappa: (%3,%4,%5) -%1stanza selezionata
+</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="2240"/>
@@ -1012,7 +1013,9 @@ factor of:</source>
 (= travel time), minimum
 (and default) is 1:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Immetti il nuovo peso stanza
+(= tempo di viaggio), minimo
+(predefinito) è 1:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4079"/>
@@ -1889,7 +1892,7 @@ please wait...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1447"/>
       <source>[ INFO ]  - Reading map (format version:%1) file: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Leggo file di mappa (versione:%1): &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1558"/>
@@ -2637,7 +2640,7 @@ they have been removed.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1179"/>
       <source>[ ALERT ] - Empty and duplicate area names detected in Map file!</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Nomi di area duplicati e vuoti rilevati nel file di mappa!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1180"/>
@@ -5174,7 +5177,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="128"/>
       <source>&lt;p&gt;Select a directory where logs will be saved.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Selezionare una cartella in cui salvare i log.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="129"/>
@@ -10417,7 +10420,7 @@ tenta di nuovo quando sarà terminato.</translation>
       <location filename="../src/ui/room_exits.ui" line="1604"/>
       <location filename="../src/ui/room_exits.ui" line="1744"/>
       <source>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Nessun simbolo è disegnato sulla Mappa 2D per questa uscita.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="138"/>
