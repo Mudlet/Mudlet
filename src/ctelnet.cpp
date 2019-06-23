@@ -477,7 +477,7 @@ void cTelnet::handle_socket_signal_disconnected()
             for (int a = 0; a < sslErrors.count(); a++) {
                 reason.append(QStringLiteral("        %1\n").arg(QString(sslErrors.at(a).errorString())));
             }
-            QString err = "[ ALERT ] - Socket got disconnected.\nReason: \n" % reason;
+            QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: \n") % reason;
             postMessage(err);
         } else
 #endif
@@ -490,7 +490,7 @@ void cTelnet::handle_socket_signal_disconnected()
             if (reason == QStringLiteral("Error during SSL handshake: error:140770FC:SSL routines:SSL23_GET_SERVER_HELLO:unknown protocol")) {
                 reason = tr("Secure connections aren't supported by this game on this port - try turning the option off.");
             }
-            QString err = "[ ALERT ] - Socket got disconnected.\nReason: " % reason;
+            QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: ") % reason;
             postMessage(err);
         }
         postMessage(msg);
