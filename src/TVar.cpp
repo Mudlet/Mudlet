@@ -121,7 +121,6 @@ bool TVarLessThan(TVar* varA, TVar* varB)
 QList<TVar*> TVar::getChildren(const bool isToSort)
 {
     if (isToSort && children.count() > 1) {
-        // qSort was used here but it has been deprecated since Qt 5.4
         std::sort(children.begin(), children.end(), TVarLessThan);
     }
     return children;
