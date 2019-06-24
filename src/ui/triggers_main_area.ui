@@ -451,7 +451,7 @@
             </size>
            </property>
            <property name="toolTip">
-            <string>&lt;p&gt;How many more lines, after the one that fired, trigger should be passed to the triggers children?&lt;/p&gt;</string>
+            <string>&lt;p&gt;How many more lines, after the one that fired the trigger, should be passed to the trigger's children?&lt;/p&gt;</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignCenter</set>
