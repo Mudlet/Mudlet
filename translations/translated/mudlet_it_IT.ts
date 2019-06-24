@@ -2299,7 +2299,8 @@ room user data under a key:
       <location filename="../src/TRoom.cpp" line="1342"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus weight items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Nella stanza con id: %1 ho trovato uno o più pesi per le uscite in surplus che
+sono stati rimossi: %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1349"/>
@@ -2310,7 +2311,8 @@ room user data under a key:
       <location filename="../src/TRoom.cpp" line="1365"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus exit lock items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Nella stanza con id: %1 ho trovato una o più chiavi per le uscite in surplus che
+sono state rimosse: %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1372"/>
@@ -2321,7 +2323,8 @@ room user data under a key:
       <location filename="../src/TRoom.cpp" line="1451"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus custom line elements that
 were removed: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Nella stanza con id: %1 ho trovato una o più linee personalizzate in surplus che
+sono state rimosse: %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1457"/>
@@ -10581,7 +10584,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1975"/>
       <source>&lt;p&gt;Use this button to save any changes, will also remove any invalid Special exits.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Utilizza questo bottone per salvare le modifiche, eliminerà anche le eventuali uscite speciali non valide.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1991"/>
