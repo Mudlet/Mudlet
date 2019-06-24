@@ -6319,7 +6319,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4099"/>
       <source>Alias &lt;em&gt;%1&lt;/em&gt; has an infinite loop - substitution matches its own pattern. Please fix it - this alias isn&apos;t good as it&apos;ll call itself forever.</source>
-      <translation type="unfinished"/>
+      <translation>Алиас &lt;em&gt;%1&lt;/em&gt; имеет бесконечный цикл - подстановка соответствует своему шаблону. Пожалуйста, исправьте это - этот псевдоним не хорош, так как он будет себя вызывать безконечно.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4620"/>
@@ -6601,7 +6601,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7894"/>
       <source>Audio files(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;Advanced Audio Coding-stream(*.aac);;MPEG-2 Audio Layer 3(*.mp3);;MPEG-4 Audio(*.mp4a);;Ogg Vorbis(*.oga *.ogg);;PCM Audio(*.pcm);;Wave(*.wav);;Windows Media Audio(*.wma);;All files(*.*)</source>
       <comment>This the list of file extensions that are considered for sounds from triggers, the terms inside of the &apos;(&apos;...&apos;)&apos; and the &quot;;;&quot; are used programmatically and should not be changed.</comment>
-      <translation type="unfinished"/>
+      <translation>Аудиофайлы(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;Advanced Audio Coding-stream(*.aac);;MPEG-2 Audio Layer 3(*.mp3);;MPEG-4 Audio(*.mp4a);;Ogg Vorbis(*.oga *.ogg);;PCM Audio(*.pcm);;Wave(*.wav);;Windows Media Audio(*.wma);;Все файлы(*.*)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7946"/>
@@ -8266,7 +8266,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="305"/>
       <source>Kurmanji {Latin-alphabet Kurdish}</source>
-      <translation type="unfinished"/>
+      <translation>Курманджи {Latin-alphabet Kurdish}</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="306"/>
@@ -8896,7 +8896,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="627"/>
       <source>Module Manager - allows you to install xmls, .mpackages that are syncronized across multiple profile (good for scripts that you use on several profiles)</source>
-      <translation type="unfinished"/>
+      <translation>Менеджер модулей - позволяет установить xmls, .mpackages, синхронизированные через несколько профилей (хорошо для скриптов, которые вы используете на нескольких профилях)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="632"/>
@@ -8921,7 +8921,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="644"/>
       <source>If you&apos;ve got multiple profiles open, splits Mudlet screen to show them all at once</source>
-      <translation type="unfinished"/>
+      <translation>Если у вас есть несколько открытых профилей, разбивает экран Mudlet, чтобы показать их все сразу</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="649"/>
@@ -9008,7 +9008,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="1633"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Disabled until a profile is loaded.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Загрузить просмотр Mudlet.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Отключено до загрузки профиля.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1667"/>
@@ -9357,7 +9357,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="499"/>
       <source>Enter text to separate commands with or leave blank to disable</source>
-      <translation type="unfinished"/>
+      <translation>Введите текст для разделения команд или оставьте пустым, чтобы отключить</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="506"/>
@@ -9488,7 +9488,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1082"/>
       <source>Make &apos;Ambiguous&apos; E. Asian width characters wide</source>
-      <translation type="unfinished"/>
+      <translation>Make &apos;Ambiguous&apos; E. Asian width characters wide</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1181"/>
@@ -9649,25 +9649,25 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="716"/>
       <location filename="../src/ui/profile_preferences.ui" line="732"/>
       <source>&lt;p&gt;Extra space to have before text on top - can be set to negative to move text up beyond the screen&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Дополнительное пространство, чтобы иметь перед текстом сверху - оно может быть отрицательным, чтобы переместить текст вверх за экран&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="760"/>
       <location filename="../src/ui/profile_preferences.ui" line="776"/>
       <source>&lt;p&gt;Extra space to have before text on the left - can be set to negative to move text left beyond the screen&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Дополнительное пространство, чтобы иметь перед текстом слева - оно может быть отрицательным, чтобы переместить текст за пределы экрана&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="804"/>
       <location filename="../src/ui/profile_preferences.ui" line="820"/>
       <source>&lt;p&gt;Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Дополнительное пространство, чтобы иметь перед текстом снизу - оно может быть отрицательным, чтобы переместить текст за пределы экрана&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="848"/>
       <location filename="../src/ui/profile_preferences.ui" line="864"/>
       <source>&lt;p&gt;Extra space to have before text on the right - can be set to negative to move text right beyond the screen&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Дополнительное пространство, чтобы иметь перед текстом справа - оно может быть отрицательным, чтобы переместить текст за пределы экрана&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1010"/>
@@ -9996,7 +9996,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1910"/>
       <source>&lt;p&gt;Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so will lose the extra data available in the current map format&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Если вам нужно сохранить карту в формате, который может быть прочитан старыми версиями Mudlet, измените ее на более низкую версию. Это приведет к потере дополнительных данных, доступных в текущем формате карты&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1937"/>
@@ -10032,7 +10032,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2770"/>
       <source>Expect Color Space Id in SGR...(3|4)8;2;...m codes</source>
-      <translation type="unfinished"/>
+      <translation>Expect Color Space Id in SGR...(3|4)8;2;...m codes</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2794"/>
