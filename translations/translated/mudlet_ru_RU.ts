@@ -11081,7 +11081,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="199"/>
       <source>AND / Multi-line (delta)</source>
-      <translation type="unfinished"/>
+      <translation>И / Многострочный (дельта)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="238"/>
@@ -11096,12 +11096,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="257"/>
       <source>only pass matches</source>
-      <translation type="unfinished"/>
+      <translation>только пропускать совпадения</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="293"/>
       <source>Do not pass whole line to children.</source>
-      <translation type="unfinished"/>
+      <translation>Не передавать всю линию детям.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="318"/>
@@ -11131,7 +11131,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="470"/>
       <source>&lt;p&gt;Play a sound file if the trigger fires.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Играть звуковой файл при срабатывании триггера.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="515"/>
