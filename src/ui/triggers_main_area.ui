@@ -650,7 +650,7 @@
             </sizepolicy>
            </property>
            <property name="text">
-            <string>Background</string>
+            <string>Foreground</string>
            </property>
           </widget>
          </item>
@@ -663,7 +663,7 @@
             </sizepolicy>
            </property>
            <property name="text">
-            <string>Foreground</string>
+            <string>Background</string>
            </property>
            <property name="flat">
             <bool>false</bool>
