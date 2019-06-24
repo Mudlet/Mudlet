@@ -2224,7 +2224,8 @@ nella finestra principale!</translation>
       <source>[ INFO ]  - In room with id: %1 correcting special exit &quot;%2&quot; that
 was to room with an exit to invalid room: %3 to now go
 to: %4.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Nella stanza con id: %1 ho corretto l'uscita speciale &quot;%2&quot; che
+puntava ad un'uscita di una stanza non valida: %3 ora va a %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1174"/>
@@ -2238,7 +2239,10 @@ exit to: %3 but that room does not exist.  The exit will
 be removed (but the destination room id will be stored in
 the room user data under a key:
 &quot;%4&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Nella stanza con id: %1 l'uscita speciale &quot;%2&quot; punta ad una stanza
+non valida: %3 che non esiste.  L'uscita sarà rimossa (l'id della stanza di destinazione
+sarà memorizzato nei dati utente della stanza con la chiave:
+&quot;%4&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1218"/>
@@ -2252,7 +2256,11 @@ that was to room with an invalid room: %3 that does not exist.
 The exit will be removed (the bad destination room id will be stored in the
 room user data under a key:
 &quot;%4&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Nella stanza con id: %1 l'uscita &quot;%2&quot;
+punta ad una stanza non valida: %3 che non esiste.
+L'uscita sarà rimossa (l'id della stanza di destinazione sarà memorizzato
+nei dati utente della stanza con la chiave:
+&quot;%4&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1270"/>
@@ -2288,7 +2296,8 @@ room user data under a key:
       <location filename="../src/TRoom.cpp" line="1319"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus door items that were removed:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Nella stanza con id: %1 ho trovato uno o più porte in surplus che sono
+state rimosse: %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1326"/>
@@ -2335,7 +2344,8 @@ sono state rimosse: %2.</translation>
       <location filename="../src/TRoom.cpp" line="1480"/>
       <source>[ INFO ]  - In room with id: %1 correcting exit &quot;%2&quot; that was to room with
 an exit to invalid room: %3 to now go to: %4.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Nella stanza con id: %1 ho corretto l'uscita &quot;%2&quot; che
+puntava ad un'uscita di una stanza non valida: %3 ora va a %4.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1489"/>
@@ -2375,7 +2385,11 @@ room: %3 that does not exist.  The exit will be removed (the bad destination
 room id will be stored in the room user data under a key:
 &quot;%4&quot;)
 and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Nella stanza con id: %1 l'uscita &quot;%2&quot; punta ad una stanza
+non valida: %3 che non esiste.  L'uscita sarà rimossa (l'id della stanza di destinazione
+sarà memorizzato nei dati utente della stanza con la chiave:
+&quot;%4&quot;)
+e l'uscita verrà trasformata in uno stub.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1634"/>
