@@ -64,7 +64,7 @@ describe("Tests DB.lua functions", function()
     end)
 
     teardown(function()
-      local filename = getMudletHomeDir() .. "/Database_peopletguw.db"
+      local filename = getMudletHomeDir() .. "/Database_peoplettestingonly.db"
       os.remove(filename)
     end)
   end)
@@ -91,7 +91,7 @@ describe("Tests DB.lua functions", function()
     end)
 
     teardown(function()
-      local filename = getMudletHomeDir() .. "/Database_peopletguw.db"
+      local filename = getMudletHomeDir() .. "/Database_peoplettestingonly.db"
       os.remove(filename)
     end)
 
@@ -153,7 +153,7 @@ describe("Tests DB.lua functions", function()
     end)
 
     teardown(function()
-      local filename = getMudletHomeDir() .. "/Database_dslpnpdatatguw.db"
+      local filename = getMudletHomeDir() .. "/Database_dslpnpdatattestingonly.db"
       os.remove(filename)
     end)
 
@@ -190,7 +190,7 @@ describe("Tests DB.lua functions", function()
 
     after_each(function()
       db:close()
-      local filename = getMudletHomeDir() .. "/Database_mydbtguw.db"
+      local filename = getMudletHomeDir() .. "/Database_mydbttestingonly.db"
       os.remove(filename)
       mydb = nil
     end)
@@ -206,7 +206,7 @@ describe("Tests DB.lua functions", function()
       }
 
       mydb = db:create("mydbt_testingonly", { sheet = newschema })
-      assert.are.same(db.__schema.mydbtguw.sheet.columns, newschema)
+      assert.are.same(db.__schema.mydbttestingonly.sheet.columns, newschema)
     end)
 
     it("Should add a column of type string successfully to an empty db", function()
@@ -220,7 +220,7 @@ describe("Tests DB.lua functions", function()
       }
 
       mydb = db:create("mydbt_testingonly", { sheet = newschema })
-      assert.are.same(db.__schema.mydbtguw.sheet.columns, newschema)
+      assert.are.same(db.__schema.mydbttestingonly.sheet.columns, newschema)
     end)
 
     it("Should add a column successfully to a filled db", function()
@@ -236,7 +236,7 @@ describe("Tests DB.lua functions", function()
       }
 
       mydb = db:create("mydbt_testingonly", { sheet = newschema })
-      assert.are.same(db.__schema.mydbtguw.sheet.columns, newschema)
+      assert.are.same(db.__schema.mydbttestingonly.sheet.columns, newschema)
       local newrow = db:fetch(mydb.sheet)[1]
       assert.are.same("some data", newrow.row1)
       assert.are.same("", newrow.row3)
@@ -261,7 +261,7 @@ describe("Tests DB.lua functions", function()
 
     after_each(function()
       db:close()
-      local filename = getMudletHomeDir() .. "/Database_mydbtguw.db"
+      local filename = getMudletHomeDir() .. "/Database_mydbttestingonly.db"
       os.remove(filename)
       mydb = nil
     end)
@@ -282,7 +282,7 @@ describe("Tests DB.lua functions", function()
     it("should apply all indexes correctly.",
       function()
 
-        local conn = db.__conn.mydbtguw
+        local conn = db.__conn.mydbttestingonly
         local cur = conn:execute("SELECT * FROM sqlite_master" ..
                                  " WHERE type = 'index'")
         local results = {}
@@ -349,7 +349,7 @@ describe("Tests DB.lua functions", function()
 
     after_each(function()
       db:close()
-      local filename = getMudletHomeDir() .. "/Database_mydbtguw.db"
+      local filename = getMudletHomeDir() .. "/Database_mydbttestingonly.db"
       os.remove(filename)
       mydb = nil
     end)
@@ -406,7 +406,7 @@ describe("Tests DB.lua functions", function()
 
     after_each(function()
       db:close()
-      local filename = getMudletHomeDir() .. "/Database_mydbtguw.db"
+      local filename = getMudletHomeDir() .. "/Database_mydbttestingonly.db"
       os.remove(filename)
       mydb = nil
       test_data = nil
@@ -607,7 +607,7 @@ describe("Tests DB.lua functions", function()
 
     after_each(function()
       db:close()
-      local filename = getMudletHomeDir() .. "/Database_mydbtguw.db"
+      local filename = getMudletHomeDir() .. "/Database_mydbttestingonly.db"
       os.remove(filename)
       mydb = nil
       test_data = nil
