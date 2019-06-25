@@ -6363,34 +6363,34 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <location filename="../src/dlgTriggerEditor.cpp" line="4088"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4158"/>
       <source>New alias</source>
-      <translation type="unfinished"/>
+      <translation>Neuer Alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3565"/>
       <source>New menu</source>
-      <translation type="unfinished"/>
+      <translation>Neues Menü</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3567"/>
       <source>New button</source>
-      <translation type="unfinished"/>
+      <translation>Neuer Button</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3608"/>
       <source>New toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Neue Symbolleiste</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3666"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4384"/>
       <source>New script group</source>
-      <translation type="unfinished"/>
+      <translation>Neue Skript-Gruppe</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3668"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4384"/>
       <source>New script</source>
-      <translation type="unfinished"/>
+      <translation>Neues Skript</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4102"/>
@@ -11121,7 +11121,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="476"/>
       <source>&lt;p&gt;Enter text here to search through your code.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Gib hier Text ein, um deinen Code zu durchsuchen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="513"/>
@@ -11272,7 +11272,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="454"/>
       <source>&lt;p&gt;How many more lines, after the one that fired the trigger, should be passed to the trigger&apos;s children?&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wie viele Zeilen nach der Auslösung des Triggers sollen zusätzlich an seine Kinder übergeben werden?&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="617"/>
