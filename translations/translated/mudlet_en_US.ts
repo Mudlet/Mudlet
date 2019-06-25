@@ -121,7 +121,7 @@ for all of the %n selected rooms:</numerusform>
 <context>
     <name>TTrigger</name>
     <message numerus="yes">
-        <location filename="../../src/TTrigger.cpp" line="1062"/>
+        <location filename="../../src/TTrigger.cpp" line="1065"/>
         <source>Trigger name=%1 will fire %n more time(s).
 </source>
         <translation>
