@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017-2018 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2017-2019 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -34,6 +34,7 @@
 
 #include "pre_guard.h"
 #include <QDesktopServices>
+#include <QDirIterator>
 #include <QFileDialog>
 #include <QInputDialog>
 #include <zip.h>
@@ -42,21 +43,16 @@
 
 using namespace std;
 
-dlgPackageExporter::dlgPackageExporter(QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::dlgPackageExporter)
-, treeWidget()
-, exportButton()
-, closeButton()
-{
-    ui->setupUi(this);
-}
+// We are now using code that won't work with really old versions of libzip:
+#if (LIBZIP_VERSION_MAJOR < 1) && (LIBZIP_VERSION_MINOR < 11)
+#error Mudlet requires a version of libzip of at least 0.11
+#endif
 
-dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
-    QDialog(parent),
-    ui(new Ui::dlgPackageExporter)
+dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
+: QDialog(parent)
+, ui(new Ui::dlgPackageExporter)
+, mpHost(pHost)
 {
-    mpHost = host;
     ui->setupUi(this);
     treeWidget = ui->treeWidget;
 
@@ -74,46 +70,64 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* host) :
     treeWidget->addTopLevelItem(mpKeys);
     treeWidget->addTopLevelItem(mpButtons);
 
-    closeButton = ui->buttonBox->addButton(QDialogButtonBox::Close);
-    exportButton = new QPushButton(tr("&Export"));
+    // This button has the RejectRole which causes the dialog to be rejected
+    // (and closed):
+    mCancelButton = ui->buttonBox->button(QDialogButtonBox::Cancel);
 
-    ui->browseButton->hide();
+    // This button has the ApplyRole which applies current changes but does NOT
+    // cause the dialog to close:
+    mExportButton = ui->buttonBox->button(QDialogButtonBox::Apply);
+    mExportButton->setText(tr("Export", "Text for button to perform the package export on the items the user has selected."));
+
     ui->filePath->hide();
-    ui->textLabel1->hide();
+    ui->label_exportFilePath->hide();
 
-    // reset zipFile and filePath from possible previous use
-    zipFile = filePath = QLatin1String("");
+    // reset mPackagePathFileName and mXmlPathFileName from possible previous use
+    mPackagePathFileName.clear();
+    mXmlPathFileName.clear();
+    QString profileName(mpHost->getName());
 
-    packageName = QInputDialog::getText(nullptr, tr("Package name"), tr("Package name:"));
-    if (packageName.isEmpty()) {
+    mPackageName = QInputDialog::getText(nullptr, tr("Package name"), tr("What do you wish to call the package:"));
+    if (mPackageName.isEmpty()) {
         return;
     }
-    QString packagePath = QFileDialog::getExistingDirectory(nullptr, tr("Where do you want to save the package?"), tr("Where do you want to save the package?"));
+
+    // The native windows dialog does not support displaying files - and as this
+    // code will clobber/overwrite an existing package with the same
+    // name it is highly desirable to show the files.
+    // Although the Qt Documentation says only that the Windows platform needs
+    // to NOT use the native dialog to show files, it has also shown to be
+    // required for KDE on Linux - so has been used for all platforms:
+    QString packagePath = QFileDialog::getExistingDirectory(nullptr, tr("Where do you want to save the package?"), mudlet::getMudletPath(mudlet::profileHomePath, profileName), QFileDialog::DontUseNativeDialog);
+
     if (packagePath.isEmpty()) {
         return;
     }
     packagePath.replace(QLatin1String(R"(\)"), QLatin1String("/"));
 
-    tempDir = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("tmp/%1").arg(packageName));
-    QDir packageDir = QDir(tempDir);
+    mStagingDirName = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, QStringLiteral("tmp/%1").arg(mPackageName));
+    QDir packageDir = QDir(mStagingDirName);
     if (!packageDir.exists()) {
-        packageDir.mkpath(tempDir);
+        packageDir.mkpath(mStagingDirName);
     }
-    zipFile = packagePath + "/" + packageName + ".zip";
-    filePath = tempDir + "/" + packageName + ".xml";
+    mPackagePathFileName = QStringLiteral("%1/%2.mpackage").arg(packagePath, mPackageName);
+    ui->label_exportFilePath->show();
+    ui->filePath->setText(mPackagePathFileName);
+    ui->filePath->show();
+    mXmlPathFileName = QStringLiteral("%1/%2.xml").arg(mStagingDirName, mPackageName);
 
-    QString luaConfig = tempDir + "/config.lua";
+    QString luaConfig = QStringLiteral("%1/config.lua").arg(mStagingDirName);
     QFile configFile(luaConfig);
     if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QTextStream out(&configFile);
-        out << R"(mpackage = ")" << packageName << "\"\n";
+        out << QStringLiteral("mpackage = \"%1\"\n").arg(mPackageName);
         out.flush();
         configFile.close();
     }
     connect(ui->addFiles, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_addFiles);
 
-    ui->buttonBox->addButton(exportButton, QDialogButtonBox::ResetRole);
-    connect(exportButton, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_export_package);
+    ui->buttonBox->addButton(mExportButton, QDialogButtonBox::ResetRole);
+    connect(mExportButton, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_export_package);
 
     listTriggers();
     listAliases();
@@ -136,15 +150,49 @@ void dlgPackageExporter::recurseTree(QTreeWidgetItem* pItem, QList<QTreeWidgetIt
     }
 }
 
+bool dlgPackageExporter::writeFileToZip(const QString& archiveFileName, const QString& fileSystemFileName, zip* archive)
+{
+    struct zip_source* s = zip_source_file(archive, fileSystemFileName.toUtf8().constData(), 0, -1);
+    if (s == nullptr) {
+        displayResultMessage(tr("Failed to source file \"%1\" to place into (.zip format archive) package file, error is: \"%2\".",
+                                // Intentional comment to separate arguments
+                                "This error message will appear when a file is to be placed into the .zip type file (though we give it an .mpackage extension) but the libzip library cannot open it.")
+                             .arg(fileSystemFileName, QString::fromUtf8(zip_strerror(archive))), false);
+        return false;
+    }
+
+    if (zip_file_add(archive, archiveFileName.toUtf8().constData(), s, ZIP_FL_ENC_UTF_8|ZIP_FL_OVERWRITE) == -1) {
+        displayResultMessage(tr("Failed to add file \"%1\" to (.zip format archive) package file \"%2\", "
+                                "error message was: \"%3\".",
+                                // Intentional comment to separate arguments
+                                "This error message will appear when a file is to be placed into the .zip type file (though we give it an .mpackage extension) but the libzip library cannot do so for some reason.")
+                             .arg(archiveFileName, mPackagePathFileName, QString::fromUtf8(zip_strerror(archive))), false);
+        return false;
+    }
+
+    return true;
+}
 
 void dlgPackageExporter::slot_export_package()
 {
-    QFile checkWriteability(filePath);
+    // Prevent a second call by removing this button:
+    ui->buttonBox->removeButton(mExportButton);
+    // Also disable the addFiles button:
+    ui->addFiles->setEnabled(false);
+
+    QFile checkWriteability(mXmlPathFileName);
     if (!checkWriteability.open(QIODevice::WriteOnly)) {
-        ui->infoLabel->setText(tr("Failed to export - couldn't open %1 for writing in. Do you have the necessary permissions to write to that folder?").arg(filePath));
+        displayResultMessage(tr("Failed to export - could not open %1 for writing in.</p>"
+                                "<p>Do you have the necessary permissions to write to that folder?",
+                                // Intentional comment to separate arguments
+                                "The end and THEN the start paragraph HTML tags in the middle of this text combine with a pair that are added around this (but which are not included here) so that it is split into two paragraphs.")
+                             .arg(mXmlPathFileName), false);
         return;
     }
     checkWriteability.close();
+    // This gets reset anytime that something goes wrong so that the export gets
+    // aborted and shows an error message rather than an okay one:
+    bool isOk = true;
 
     XMLexport writer(mpHost);
     //write trigs
@@ -215,7 +263,19 @@ void dlgPackageExporter::slot_export_package()
         }
     }
 
-    writer.exportPackage(filePath);
+    if (!writer.exportPackage(mXmlPathFileName)) {
+        displayResultMessage(tr("Failed to export - could not write Mudlet items to the file \"%1\".",
+                                // Intentional comment to separate arguments
+                                "This error message is shown when all the Mudlet items cannot be written to the 'packageName'.xml file in the base directory of the place where all the files are staged before being compressed into the (.zip format) 'packageName'.mpackage archive file. The full path and filename are shown to help the user diagnose what might have happened.")
+                             .arg(mXmlPathFileName), false);
+        // Although we have failed we must not just abort here we need to reset
+        // the selected for export or not flags first - so note that we have
+        // failed:
+        isOk = false;
+        // After the following we will then drop through to the end of the
+        // method to set up a means to close the dialogue after the user has
+        // seen the error message...
+    }
 
     //now fix all the stuff we weren't exporting
     //trigger, timer, alias,action,script, keys
@@ -268,64 +328,238 @@ void dlgPackageExporter::slot_export_package()
         }
     }
 
+    if (isOk) {
+        // zip error code:
+        int ze = 0;
+/*
+* Relevant options:
+* * ZIP_CREATE creates the archive if it does not exist.
+* * ZIP_TRUNCATE zaps any contents in a previously existing file.
+*/
+        // The pre-libzip 0.11 with the now obsolete zip_add() lacked the option
+        // of the later zip_file_add() which DOES have an overwrite option:
+        zip* archive = zip_open(mPackagePathFileName.toUtf8().constData(), ZIP_CREATE|ZIP_TRUNCATE, &ze);
 
-    int err = 0;
-    char buf[100];
-    zip* archive;
-    archive = zip_open(zipFile.toStdString().c_str(), ZIP_CREATE, &err);
-    if (err != 0) {
-        zip_error_to_str(buf, sizeof(buf), err, errno);
-        //FIXME: report error to user qDebug()<<"dp zip open error"<<zipFile<<buf;
-        close();
-        return;
-    }
-    QDir dir(tempDir);
-    QStringList contents = dir.entryList();
-    for (int i = 0; i < contents.size(); i++) {
-        QString fname = contents[i];
-        if (fname == "." || fname == "..") {
-            continue;
+        if (!archive) {
+            // Failed to open/create archive file
+            // We now use the better error handling system (not requiring a
+            // previously defined finite-sized char type buffer {which obviously
+            // could have string buffer overflow issues} which is available in
+            // post 0.10 versions of libzip):
+            zip_error_t error;
+            zip_error_init_with_code(&error, ze);
+            displayResultMessage(tr("Failed to open (.zip format archive) package file, error is: \"%1\".",
+                                    // Intentional comment to separate arguments
+                                    "This error message is shown when the libzip library code is unable to open the (.zip archive format) file that was to be the end result of the export process. As this may be an existing file anywhere in the computer's file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.")
+                                 .arg(QString::fromUtf8(zip_error_strerror(&error))), false);
+            zip_error_fini(&error);
+            isOk = false;
+            // The above flag will now cause execution to drop down to the bottom of
+            // the method and set up a means to close the dialogue after the user
+            // has seen the error message...
+
+        } else {
+            // Opened/created archive file successfully
+/*
+ * Previous code here failed if the user included sub-directories in the
+ * temporary directory where the contents for the package/module was assembled -
+ * as sub-directories are now correctly handled by the installer code we have
+ * revised the code here to also work should the user use them. NB This is
+ * typically the case where they have collections of images or sound files
+ * which they wish to store in a heirarchical manner...! - Slysven
+ */
+#if defined(Q_OS_WIN32)
+/*
+ * From Qt Docs:
+ * Note: On NTFS file systems, ownership and permissions checking is disabled by
+ * default for performance reasons. To enable it, include the following line:
+ */
+            extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
+/*
+ * Permission checking is then turned on and off by incrementing and
+ * decrementing qt_ntfs_permission_lookup by 1:
+ */
+            qt_ntfs_permission_lookup++;
+#endif // defined(Q_OS_WIN32)
+            QDirIterator itDir(mStagingDirName, QDir::NoDotAndDotDot|QDir::AllDirs|QDir::Files, QDirIterator::Subdirectories);
+            // relative names to use in archive:
+            QStringList directoryEntries;
+            // Key is relative name to use in archive
+            // Value is fullName in file-system:
+            QMap<QString, QString> fileEntries;
+            while (itDir.hasNext() && isOk) {
+                QString itEntry = itDir.next();
+                Q_UNUSED(itEntry);
+//              Comment out the preceding line if the following is uncommented!
+//              qDebug() << " parsing entry:" << itEntry << " fileName() is:" << itDir.fileName() << " filePath() is:" << itDir.filePath();
+                // QString::compare(...) returns 0 (false) if the two arguments
+                // MATCH and non-0 (true) otherwise and De Morgans' Laws means
+                // that the if branch should be taken if the fileName IS a Dot
+                // OR IS a DotDot file...!
+                if (!(  itDir.fileName().compare(QStringLiteral("."))
+                     && itDir.fileName().compare(QStringLiteral("..")))) {
+
+                     // Dot and DotDot entries are no use to us so skip them
+                     continue;
+                }
+
+                QFileInfo entryInfo(itDir.fileInfo());
+                if (! entryInfo.isReadable()) {
+                    qWarning() << "dlgPackageExporter::slot_export_package() skipping file: "
+                               << itDir.fileName()
+                               << "it is NOT readable!";
+                    continue;
+                }
+
+                if (entryInfo.isSymLink()) {
+                    qWarning() << "dlgPackageExporter::slot_export_package() skipping file: "
+                               << itDir.fileName()
+                               << "it is a Symlink - avoided to prevent file-system loops!";
+                    continue;
+                }
+
+                QString nameInArchive = itDir.filePath();
+                nameInArchive.remove(QStringLiteral("%1/").arg(mStagingDirName));
+
+                if       (entryInfo.isDir()) {
+                    directoryEntries.append(nameInArchive);
+                } else if(entryInfo.isFile()) {
+                    fileEntries.insert(nameInArchive, itDir.filePath());
+                }
+            }
+
+#if defined(Q_OS_WIN32)
+            qt_ntfs_permission_lookup--;
+#endif
+
+            if (directoryEntries.count() > 1) {
+                std::sort(directoryEntries.begin(), directoryEntries.end());
+            }
+
+            QStringListIterator itDirectoryName(directoryEntries);
+            while (itDirectoryName.hasNext() && isOk) {
+                QString directoryName = itDirectoryName.next();
+                // zip_dir_add(...) returns the index of the
+                // added directory item in the archive or -1 on error:
+                if (zip_dir_add(archive, directoryName.toStdString().c_str(), ZIP_FL_ENC_UTF_8) == -1) {
+                    displayResultMessage(tr("Failed to add directory \"%1\" to (.zip format archive) package file, error is: \"%2\".")
+                                         .arg(directoryName, QString::fromUtf8(zip_strerror(archive))), false);
+                    zip_close(archive);
+                    isOk = false;
+                }
+            }
+
+            // Process the config and the file containing the Mudlet triggers,
+            // etc. specially so they are inserted first and last respectively:
+            if (isOk) {
+                // Apparently it is permissable for there NOT to be a config.lua
+                // file in the manufactured module (i.e. the user is allowed to
+                // manually remove it even though we now request they do not).
+                // If we enhance modules in the future to store more data in
+                // that file I think this will no longer be permissable and the
+                // two commented out bits of code can be restored
+                if (fileEntries.contains(QStringLiteral("config.lua"))) {
+                    if (!writeFileToZip(QStringLiteral("config.lua"), fileEntries.value(QStringLiteral("config.lua")), archive)) {
+                        /* isOk = false; */
+                    } else {
+                        fileEntries.remove(QStringLiteral("config.lua"));
+                    }
+                }/* else {
+                    displayResultMessage(tr("Required \"config.lua\" file not found to include in the (.zip format archive) package file, did you remove or rename it?"), false);
+                    zip_close(archive);
+                    isOk = false;
+                }*/
+            }
+
+            QString xmlFileName = mPackageName;
+            xmlFileName.append(QLatin1String(".xml"));
+            if (isOk) {
+                QMapIterator<QString, QString> itFileName(fileEntries);
+                while (itFileName.hasNext() && isOk) {
+                    itFileName.next();
+                    if (itFileName.key() == xmlFileName) {
+                        continue;
+                    }
+
+                    if (!writeFileToZip(itFileName.key(), itFileName.value(), archive)) {
+                        zip_close(archive);
+                        isOk = false;
+                        break;
+                    }
+                }
+            }
+
+            if (isOk) {
+                if (fileEntries.contains(xmlFileName) && fileEntries.value(xmlFileName) == mXmlPathFileName) {
+                    if (!writeFileToZip(xmlFileName, mXmlPathFileName, archive)) {
+                        isOk = false;
+                    }
+
+                    // If successful will get to HERE...
+
+                } else {
+                    displayResultMessage(tr("Required file \"%1\", that contains the mudlet items chosen for the "
+                                            "package, was not found in the staging area. This is from where it would "
+                                            "be include in the (.zip format archive) package file. This suggests "
+                                            "there may be a problem with the permissions, or free disk-space, for "
+                                            "that \"%2\" directory!")
+                                            .arg(mXmlPathFileName, QDir(mStagingDirName).canonicalPath()), false);
+                    isOk = false;
+                }
+            }
+
+            if (isOk) {
+                // THIS is the point that the archive gets created from the
+                // source materials - it may take a short while!
+                // If it fails to write out the new file 'archive' is left
+                // unchanged (and we can still access it to get the error
+                // details):
+                // Change the cursor to a system busy one whilst we are working:
+                QApplication::setOverrideCursor(Qt::BusyCursor);
+                ze = zip_close(archive);
+                QApplication::restoreOverrideCursor();
+                if (ze) {
+                    displayResultMessage(tr("Failed to write files into and then close the (.zip format archive) package file, error is: \"%1\".",
+                                            // Intentional comment to separate arguments
+                                            "This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive by the libzip library code, unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...")
+                                         .arg(QString::fromUtf8(zip_strerror(archive))), false);
+                    // In libzip 0.11 a function was added to clean up
+                    // (deallocate) the memory associated with an archive
+                    // - which would normally occur upon a successful close
+                    // - before that version the memory just leaked away...
+                    zip_discard(archive);
+                    isOk = false;
+                }
+
+            } else {
+                zip_discard(archive);
+            }
         }
-        QString fullName = tempDir + "/" + contents[i];
-        struct zip_source* s = zip_source_file(archive, fullName.toStdString().c_str(), 0, 0);
-        if (s == nullptr) {
-            int sep = 0;
-            zip_error_get(archive, &err, &sep);
-            zip_error_to_str(buf, sizeof(buf), err, errno);
-            //FIXME: report error to userqDebug()<<"zip source error"<<fullName<<fname<<buf;
-        }
-        err = zip_file_add(archive, fname.toStdString().c_str(), s, ZIP_FL_OVERWRITE);
-        if (err == -1) {
-            int sep = 0;
-            zip_error_get(archive, &err, &sep);
-            zip_error_to_str(buf, sizeof(buf), err, errno);
-            //FIXME: report error to userqDebug()<<"added file error"<<fullName<<fname<<buf;
-        }
-    }
-    err = zip_close(archive);
-    if (err != 0) {
-        zip_error_to_str(buf, sizeof(buf), err, errno);
-        //FIXME: report error to userqDebug()<<"dp close file error"<<buf;
-        close();
-        return;
     }
 
-    showUploadNudge();
-
-}
-
-void dlgPackageExporter::showUploadNudge()
-{
-   ui->infoLabel->setText(R"(<a href="https://forums.mudlet.org/posting.php?mode=post&f=6">Upload package to Mudlet</a>)");
-   ui->infoLabel->setTextFormat(Qt::RichText);
-   ui->infoLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
-   ui->infoLabel->setOpenExternalLinks(true);
+    if (isOk) {
+        // Success!
+        displayResultMessage(tr("Package exported to: \"%1\".").arg(mPackagePathFileName), true);
+        // Remove the cancel button and replace it with an ok one
+        ui->buttonBox->removeButton(mCancelButton);
+        ui->buttonBox->addButton(QDialogButtonBox::Ok);
+        connect(ui->buttonBox->button(QDialogButtonBox::Ok), &QAbstractButton::clicked, this, &dlgPackageExporter::close);
+        // No need to show the package location details - as the result message
+        // includes it:
+        ui->label_exportFilePath->hide();
+        ui->filePath->hide();
+    } else {
+        // Failed - convert cancel to a close button
+        ui->buttonBox->removeButton(mCancelButton);
+        ui->buttonBox->addButton(QDialogButtonBox::Close);
+        connect(ui->buttonBox->button(QDialogButtonBox::Close), &QAbstractButton::clicked, this, &dlgPackageExporter::close);
+    }
 }
 
 void dlgPackageExporter::slot_addFiles()
 {
-    QString _pn = "file:///" + tempDir;
-    QDesktopServices::openUrl(QUrl(_pn, QUrl::TolerantMode));
+    QString stagingPathUrlText = QStringLiteral("file:///%1").arg(mStagingDirName);
+    QDesktopServices::openUrl(QUrl(stagingPathUrlText, QUrl::TolerantMode));
 }
 
 void dlgPackageExporter::recurseTriggers(TTrigger* trig, QTreeWidgetItem* qTrig)
@@ -335,10 +569,11 @@ void dlgPackageExporter::recurseTriggers(TTrigger* trig, QTreeWidgetItem* qTrig)
         return;
     }
     list<TTrigger*>::iterator it;
-    for (it = childList->begin(); it != childList->end(); it++) {
+    for (it = childList->begin(); it != childList->end(); ++it) {
         TTrigger* pChild = *it;
-        if (pChild->isTemporary())
+        if (pChild->isTemporary()) {
             continue;
+        }
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
@@ -356,7 +591,7 @@ void dlgPackageExporter::listTriggers()
     list<TTrigger*>::const_iterator it;
     std::list<TTrigger*> tList = tu->getTriggerRootNodeList();
     QTreeWidgetItem* top = mpTriggers;
-    for (it = tList.begin(); it != tList.end(); it++) {
+    for (it = tList.begin(); it != tList.end(); ++it) {
         TTrigger* pChild = *it;
         if (pChild->isTemporary()) {
             continue;
@@ -379,7 +614,7 @@ void dlgPackageExporter::recurseAliases(TAlias* item, QTreeWidgetItem* qItem)
         return;
     }
     list<TAlias*>::iterator it;
-    for (it = childList->begin(); it != childList->end(); it++) {
+    for (it = childList->begin(); it != childList->end(); ++it) {
         TAlias* pChild = *it;
         if (pChild->isTemporary()) {
             continue;
@@ -401,7 +636,7 @@ void dlgPackageExporter::listAliases()
     list<TAlias*>::const_iterator it;
     std::list<TAlias*> tList = tu->getAliasRootNodeList();
     QTreeWidgetItem* top = mpAliases;
-    for (it = tList.begin(); it != tList.end(); it++) {
+    for (it = tList.begin(); it != tList.end(); ++it) {
         TAlias* pChild = *it;
         if (pChild->isTemporary()) {
             continue;
@@ -424,7 +659,7 @@ void dlgPackageExporter::recurseScripts(TScript* item, QTreeWidgetItem* qItem)
         return;
     }
     list<TScript*>::iterator it;
-    for (it = childList->begin(); it != childList->end(); it++) {
+    for (it = childList->begin(); it != childList->end(); ++it) {
         TScript* pChild = *it;
         QStringList sl;
         sl << pChild->getName();
@@ -443,7 +678,7 @@ void dlgPackageExporter::listScripts()
     list<TScript*>::const_iterator it;
     std::list<TScript*> tList = tu->getScriptRootNodeList();
     QTreeWidgetItem* top = mpScripts;
-    for (it = tList.begin(); it != tList.end(); it++) {
+    for (it = tList.begin(); it != tList.end(); ++it) {
         TScript* pChild = *it;
         QStringList sl;
         sl << pChild->getName();
@@ -463,10 +698,11 @@ void dlgPackageExporter::recurseKeys(TKey* item, QTreeWidgetItem* qItem)
         return;
     }
     list<TKey*>::iterator it;
-    for (it = childList->begin(); it != childList->end(); it++) {
+    for (it = childList->begin(); it != childList->end(); ++it) {
         TKey* pChild = *it;
-        if (pChild->isTemporary())
+        if (pChild->isTemporary()) {
             continue;
+        }
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
@@ -484,10 +720,11 @@ void dlgPackageExporter::listKeys()
     list<TKey*>::const_iterator it;
     std::list<TKey*> tList = tu->getKeyRootNodeList();
     QTreeWidgetItem* top = mpKeys;
-    for (it = tList.begin(); it != tList.end(); it++) {
+    for (it = tList.begin(); it != tList.end(); ++it) {
         TKey* pChild = *it;
-        if (pChild->isTemporary())
+        if (pChild->isTemporary()) {
             continue;
+        }
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
@@ -506,7 +743,7 @@ void dlgPackageExporter::recurseActions(TAction* item, QTreeWidgetItem* qItem)
         return;
     }
     list<TAction*>::iterator it;
-    for (it = childList->begin(); it != childList->end(); it++) {
+    for (it = childList->begin(); it != childList->end(); ++it) {
         TAction* pChild = *it;
         QStringList sl;
         sl << pChild->getName();
@@ -525,7 +762,7 @@ void dlgPackageExporter::listActions()
     list<TAction*>::const_iterator it;
     std::list<TAction*> tList = tu->getActionRootNodeList();
     QTreeWidgetItem* top = mpButtons;
-    for (it = tList.begin(); it != tList.end(); it++) {
+    for (it = tList.begin(); it != tList.end(); ++it) {
         TAction* pChild = *it;
         QStringList sl;
         sl << pChild->getName();
@@ -545,7 +782,7 @@ void dlgPackageExporter::recurseTimers(TTimer* item, QTreeWidgetItem* qItem)
         return;
     }
     list<TTimer*>::iterator it;
-    for (it = childList->begin(); it != childList->end(); it++) {
+    for (it = childList->begin(); it != childList->end(); ++it) {
         TTimer* pChild = *it;
         if (pChild->isTemporary()) {
             continue;
@@ -567,7 +804,7 @@ void dlgPackageExporter::listTimers()
     list<TTimer*>::const_iterator it;
     std::list<TTimer*> tList = tu->getTimerRootNodeList();
     QTreeWidgetItem* top = mpTimers;
-    for (it = tList.begin(); it != tList.end(); it++) {
+    for (it = tList.begin(); it != tList.end(); ++it) {
         TTimer* pChild = *it;
         if (pChild->isTemporary()) {
             continue;
@@ -581,4 +818,26 @@ void dlgPackageExporter::listTimers()
         top->addChild(pItem);
         recurseTimers(pChild, pItem);
     }
+}
+
+void dlgPackageExporter::displayResultMessage(const QString& html, bool const isSuccessMessage)
+{
+    if (!isSuccessMessage) {
+        // Big RED error message
+        ui->infoLabel->setText(QStringLiteral("<p><font color='red'><b><big>%1</big><b></font></p>").arg(html));
+        return;
+    }
+
+    // Big BLACK (Green would be hard for most common colour blind people to
+    // tell from Red, and Blue would likely hide the URL) success message:
+    ui->infoLabel->setText(QStringLiteral("<p><b><big>%1</big><b></p>"
+                                          "<p>%2</p>")
+                           .arg(html,
+                                tr("Why not <a href=\"https://forums.mudlet.org/posting.php?mode=post&f=6\">upload</a> your package to Mudlet?",
+                                   // Intentional comment to separate arguments
+                                   "Only the text outside of the 'a' (HTML anchor) tags PLUS the verb "
+                                   "'upload' in between them in the source text, (associated with uploading "
+                                   "the resulting package to the Mudlet forums) should be translated.")));
+    ui->infoLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
+    ui->infoLabel->setOpenExternalLinks(true);
 }

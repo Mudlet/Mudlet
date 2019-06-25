@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -30,7 +31,7 @@
 
 class QTreeWidget;
 class QTreeWidgetItem;
-
+class zip;
 
 namespace Ui {
 class dlgPackageExporter;
@@ -42,7 +43,6 @@ class dlgPackageExporter : public QDialog
 
 public:
     Q_DISABLE_COPY(dlgPackageExporter)
-    explicit dlgPackageExporter(QWidget* parent = nullptr);
     explicit dlgPackageExporter(QWidget* parent, Host*);
     ~dlgPackageExporter();
     void recurseTree(QTreeWidgetItem*, QList<QTreeWidgetItem*>&);
@@ -70,28 +70,32 @@ public:
     QMap<QTreeWidgetItem*, TAction*> modActionMap;
     QMap<QTreeWidgetItem*, TTimer*> timerMap;
     QMap<QTreeWidgetItem*, TTimer*> modTimerMap;
-    QString filePath;
+    // This will hold the absolute pathFileName for the XML file that will
+    // contain the Mudlet items to go into the package:
+    QString mXmlPathFileName;
 
 public slots:
     void slot_addFiles();
     void slot_export_package();
 
 private:
+    bool writeFileToZip(const QString&, const QString&, zip*);
+    void displayResultMessage(const QString&, const bool isSuccessMessage = true);
+
     Ui::dlgPackageExporter* ui;
     QPointer<Host> mpHost;
     QTreeWidget* treeWidget;
-    QPushButton* exportButton;
-    QPushButton* closeButton;
+    QPointer<QPushButton> mExportButton;
+    QPointer<QPushButton> mCancelButton;
     QTreeWidgetItem* mpTriggers;
     QTreeWidgetItem* mpAliases;
     QTreeWidgetItem* mpTimers;
     QTreeWidgetItem* mpScripts;
     QTreeWidgetItem* mpKeys;
     QTreeWidgetItem* mpButtons;
-    QString tempDir;
-    QString packageName;
-    QString zipFile;
-    void showUploadNudge();
+    QString mStagingDirName;
+    QString mPackageName;
+    QString mPackagePathFileName;
 };
 
 #endif // MUDLET_DLGPACKAGEEXPORTER_H

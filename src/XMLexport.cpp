@@ -313,8 +313,8 @@ bool XMLexport::saveXml(const QString& fileName)
         return false;
     }
 
-    bool result = false;
-    if (!saveXmlFile(file)) {
+    bool result = saveXmlFile(file);
+    if (!result) {
         if (file.error() != QFile::NoError) {
             // Error reason was related to QFile:
             qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to save package, reason: " << file.errorString() << ".";
@@ -323,6 +323,7 @@ bool XMLexport::saveXml(const QString& fileName)
             qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to save package, reason: XML document preparation failure.";
         }
     }
+
     file.close();
     return result;
 }
