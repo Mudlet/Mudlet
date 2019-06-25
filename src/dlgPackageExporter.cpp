@@ -154,7 +154,7 @@ bool dlgPackageExporter::writeFileToZip(const QString& archiveFileName, const QS
 {
     struct zip_source* s = zip_source_file(archive, fileSystemFileName.toUtf8().constData(), 0, -1);
     if (s == nullptr) {
-        displayResultMessage(tr("Failed to source file \"%1\" to place into (.zip format archive) package file, error is: \"%3\".",
+        displayResultMessage(tr("Failed to source file \"%1\" to place into (.zip format archive) package file, error is: \"%2\".",
                                 // Intentional comment to separate arguments
                                 "This error message will appear when a file is to be placed into the .zip type file (though we give it an .mpackage extension) but the libzip library cannot open it.")
                              .arg(fileSystemFileName, QString::fromUtf8(zip_strerror(archive))), false);
