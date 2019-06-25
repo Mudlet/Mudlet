@@ -1,7 +1,7 @@
 #!/bin/bash
 compile_line=()
 if [ "${TRAVIS_EVENT_TYPE}" = "cron" ]; then
-  if [ "${CC}" = "clang" ] || [ "${Q_OR_C_MAKE}" = "cmake" ] || [ "${QT_VERSION}" = "56" ]; then
+  if [ "${DEPLOY}" != "deploy" ] || [ "${TRAVIS_OS_NAME}" = "osx" ]; then
     echo Job not executed under cron run
     exit 0
   fi
