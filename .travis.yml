@@ -63,6 +63,7 @@ matrix:
     env:
     - Q_OR_C_MAKE=qmake
       QT_VERSION=512
+      DEPLOY=deploy
     addons:
       apt:
         sources: *add-sources
@@ -79,7 +80,6 @@ matrix:
     env:
     - Q_OR_C_MAKE=cmake
       QT_VERSION=512
-      DEPLOY=deploy
     addons:
       apt:
         sources: *add-sources
