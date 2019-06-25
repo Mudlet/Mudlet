@@ -2,7 +2,7 @@ describe("Tests DB.lua functions", function()
 
   describe("Tests that DB creation and deletion works", function()
     it("Should create a db", function()
-      mydb = db:create("peopletguw", {
+      mydb = db:create("peoplet_testingonly", {
         friends={"name", "city", "notes"},
         enemies={
           name="",
@@ -22,7 +22,7 @@ describe("Tests DB.lua functions", function()
     end)
 
     it("Should recreate a DB", function()
-      mydb = db:create("peopletguw", {
+      mydb = db:create("peoplet_testingonly", {
         friends={"name", "city", "notes"},
         enemies={
           name="",
@@ -42,7 +42,7 @@ describe("Tests DB.lua functions", function()
     end)
 
     it("Should create and add a row", function()
-      mydb = db:create("peopletguw", {
+      mydb = db:create("peoplet_testingonly", {
         friends={"name", "city", "notes"},
         enemies={
           name="",
@@ -71,7 +71,7 @@ describe("Tests DB.lua functions", function()
 
   describe("Tests basic db:create() and db:add()", function()
     before_each(function()
-      mydb = db:create("peopletguw", {
+      mydb = db:create("peoplet_testingonly", {
         friends={"name", "city", "notes"},
         enemies={
           name="",
@@ -131,7 +131,7 @@ describe("Tests DB.lua functions", function()
 
   describe("Tests db:fetch()'s sorting functionality", function()
     before_each(function()
-      mydb = db:create("dslpnp_datatguw", {
+      mydb = db:create("dslpnp_datat_testingonly", {
         people = {
           name = "",
           race = "",
@@ -177,7 +177,7 @@ describe("Tests DB.lua functions", function()
 
   describe("Tests db:create() ability to add a new row to an existing database", function()
     before_each(function()
-      mydb = db:create("mydbtguw", {
+      mydb = db:create("mydbt_testingonly", {
         sheet = {
           row1 = "",
           row2 = 0,
@@ -205,7 +205,7 @@ describe("Tests DB.lua functions", function()
         _violations = "REPLACE"
       }
 
-      mydb = db:create("mydbtguw", { sheet = newschema })
+      mydb = db:create("mydbt_testingonly", { sheet = newschema })
       assert.are.same(db.__schema.mydbtguw.sheet.columns, newschema)
     end)
 
@@ -219,7 +219,7 @@ describe("Tests DB.lua functions", function()
         _violations = "REPLACE"
       }
 
-      mydb = db:create("mydbtguw", { sheet = newschema })
+      mydb = db:create("mydbt_testingonly", { sheet = newschema })
       assert.are.same(db.__schema.mydbtguw.sheet.columns, newschema)
     end)
 
@@ -235,7 +235,7 @@ describe("Tests DB.lua functions", function()
         _violations = "REPLACE"
       }
 
-      mydb = db:create("mydbtguw", { sheet = newschema })
+      mydb = db:create("mydbt_testingonly", { sheet = newschema })
       assert.are.same(db.__schema.mydbtguw.sheet.columns, newschema)
       local newrow = db:fetch(mydb.sheet)[1]
       assert.are.same("some data", newrow.row1)
@@ -247,7 +247,7 @@ describe("Tests DB.lua functions", function()
   function()
 
     before_each(function()
-      mydb = db:create("mydbtguw",
+      mydb = db:create("mydbt_testingonly",
         {
           sheet = {
             name = "", id = 0,
@@ -335,7 +335,7 @@ describe("Tests DB.lua functions", function()
   function()
 
     before_each(function()
-      mydb = db:create("mydbtguw",
+      mydb = db:create("mydbt_testingonly",
         {
           sheet = {
             name = "", id = 0, blubb = "",
@@ -356,7 +356,7 @@ describe("Tests DB.lua functions", function()
 
     it("should successfully delete columns in an empty table.",
     function()
-      mydb = db:create("mydbtguw", { sheet = { name = "", id = 0 }})
+      mydb = db:create("mydbt_testingonly", { sheet = { name = "", id = 0 }})
       local test = { name = "foo", id = 500 }
       db:add(mydb.sheet, test)
       local res = db:fetch(mydb.sheet)
@@ -369,7 +369,7 @@ describe("Tests DB.lua functions", function()
     function()
       local test = { name = "foo", id = 500, blubb = "bar" }
       db:add(mydb.sheet, test)
-      mydb = db:create("mydbtguw", { sheet = { name = "", id = 0 }})
+      mydb = db:create("mydbt_testingonly", { sheet = { name = "", id = 0 }})
       local res = db:fetch(mydb.sheet)
       test.blubb = nil -- we expect the blubb gets deleted
       assert.are.equal(1, #res)
@@ -384,7 +384,7 @@ describe("Tests DB.lua functions", function()
   function()
 
     before_each(function()
-      mydb = db:create("mydbtguw",
+      mydb = db:create("mydbt_testingonly",
         {
           sheet = {
             name = "", id = 0, city = "",
@@ -585,7 +585,7 @@ describe("Tests DB.lua functions", function()
   function()
 
     before_each(function()
-      mydb = db:create("mydbtguw",
+      mydb = db:create("mydbt_testingonly",
         {
           sheet = {
             name = "", count = 0,
