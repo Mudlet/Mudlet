@@ -2320,13 +2320,13 @@ sono stati rimossi: %2.</translation>
       <location filename="../src/TRoom.cpp" line="1365"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus exit lock items that were removed:
 %2.</source>
-      <translation>[ INFO ]  - Nella stanza con id: %1 ho trovato una o più chiavi per le uscite in surplus che
+      <translation>[ INFO ]  - Nella stanza con id: %1 ho trovato una o più uscite bloccate in surplus che
 sono state rimosse: %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1372"/>
       <source>[ INFO ]  - Room had one or more surplus exit lock items that were removed: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - La stanza aveva una o più uscite bloccate in surplus che sono state rimosse: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1451"/>
@@ -2401,12 +2401,14 @@ e l'uscita verrà trasformata in uno stub.</translation>
       <source>
 It was locked, this is recorded as user data with key:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>
+L'uscita è bloccata, questa informazione è registrata nei dati utenti con chiave:
+&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1654"/>
       <source>  It was locked, this is recorded as user data with key: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>  L'uscita è bloccata, questa informazione è registrata nei dati utenti con chiave: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1662"/>
@@ -2577,23 +2579,27 @@ out what new id numbers to use.</source>
       <location filename="../src/TRoomDB.cpp" line="918"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Identificativi di uscite stub duplicati nella Stanza ID: %1.
+L'anomalia è stata risolta facilmente.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="923"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room, this is an anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Identificativi di uscite stub duplicati in questa stanza.
+L'anomalia è stata risolta facilmente.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="932"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Identificativi di uscite bloccate duplicati nella Stanza ID: %1.
+L'anomalia è stata risolta facilmente.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="937"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room, this is an anomaly but has been cleaned up easily.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Identificativi di uscite bloccate duplicati in questa stanza.
+L'anomalia è stata risolta facilmente.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1008"/>
