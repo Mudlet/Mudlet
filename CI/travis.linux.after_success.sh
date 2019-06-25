@@ -2,8 +2,8 @@
 
 set -e
 
-# we deploy only qmake and gcc combination for linux
-if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "gcc" ]; then
+# we deploy only certain builds
+if [ "${DEPLOY}" = "deploy" ]; then
 
   if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
     if $(git diff --name-only | grep -q "mudlet.ts"); then
