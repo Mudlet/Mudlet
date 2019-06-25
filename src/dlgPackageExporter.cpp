@@ -154,7 +154,8 @@ bool dlgPackageExporter::writeFileToZip(const QString& archiveFileName, const QS
 {
     struct zip_source* s = zip_source_file(archive, fileSystemFileName.toUtf8().constData(), 0, -1);
     if (s == nullptr) {
-        displayResultMessage(tr("Failed to open file \"%1\" to place into package file. Error is: \"%2\".",
+        displayResultMessage(tr("Failed to open file \"%1\" to place into package. "
+                                "Error message was: \"%2\".",
                                 // Intentional comment to separate arguments
                                 "This error message will appear when a file is to be placed into the package but the code cannot open it.")
                              .arg(fileSystemFileName, QString::fromUtf8(zip_strerror(archive))), false);
@@ -162,7 +163,7 @@ bool dlgPackageExporter::writeFileToZip(const QString& archiveFileName, const QS
     }
 
     if (zip_file_add(archive, archiveFileName.toUtf8().constData(), s, ZIP_FL_ENC_UTF_8|ZIP_FL_OVERWRITE) == -1) {
-        displayResultMessage(tr("Failed to add file \"%1\" to package file \"%2\". "
+        displayResultMessage(tr("Failed to add file \"%1\" to package \"%2\". "
                                 "Error message was: \"%3\".",
                                 // Intentional comment to separate arguments
                                 "This error message will appear when a file is to be placed into the package but cannot be done for some reason.")
@@ -185,7 +186,7 @@ void dlgPackageExporter::slot_export_package()
         displayResultMessage(tr("Failed to export. Could not open the folder \"%1\" for writing in.</p>"
                                 "<p>Do you have the necessary permissions to write to that folder?",
                                 // Intentional comment to separate arguments
-                                "The end and THEN the start paragraph HTML tags in the middle of this text combine with a pair that are added around this (but which are not included here) so that it is split into two paragraphs.")
+                                "The end and THEN the start paragraph HTML tags in the middle of this text are deliberate. They combine with a pair that are added around this text (but which are not included here) so that it is split into two paragraphs.")
                              .arg(mXmlPathFileName), false);
         return;
     }
@@ -441,7 +442,7 @@ void dlgPackageExporter::slot_export_package()
                 // zip_dir_add(...) returns the index of the
                 // added directory item in the archive or -1 on error:
                 if (zip_dir_add(archive, directoryName.toStdString().c_str(), ZIP_FL_ENC_UTF_8) == -1) {
-                    displayResultMessage(tr("Failed to add directory \"%1\" to package file. Error is: \"%2\".")
+                    displayResultMessage(tr("Failed to add directory \"%1\" to package. Error is: \"%2\".")
                                          .arg(directoryName, QString::fromUtf8(zip_strerror(archive))), false);
                     zip_close(archive);
                     isOk = false;
@@ -464,7 +465,7 @@ void dlgPackageExporter::slot_export_package()
                         fileEntries.remove(QStringLiteral("config.lua"));
                     }
                 }/* else {
-                    displayResultMessage(tr("Required \"config.lua\" file not found to include in the (.zip format archive) package file, did you remove or rename it?"), false);
+                    displayResultMessage(tr("Required \"config.lua\" file not found to include in the package. Did you remove or rename it?"), false);
                     zip_close(archive);
                     isOk = false;
                 }*/
@@ -519,7 +520,7 @@ void dlgPackageExporter::slot_export_package()
                 ze = zip_close(archive);
                 QApplication::restoreOverrideCursor();
                 if (ze) {
-                    displayResultMessage(tr("Failed to write files into and then close the package file. Error is: \"%1\".",
+                    displayResultMessage(tr("Failed to write files into and then close the package. Error is: \"%1\".",
                                             // Intentional comment to separate arguments
                                             "This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...")
                                          .arg(QString::fromUtf8(zip_strerror(archive))), false);
