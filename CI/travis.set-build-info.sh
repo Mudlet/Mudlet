@@ -16,7 +16,7 @@ fi
 VERSION=""
 
 if [ "${Q_OR_C_MAKE}" = "cmake" ]; then
-  VERSION=$(perl -lne 'print $1 if /^SET\(APP_VERSION (.+)\)/' < "${TRAVIS_BUILD_DIR}/CMakeLists.txt")
+  VERSION=$(perl -lne 'print $1 if /^set\(APP_VERSION (.+)\)/' < "${TRAVIS_BUILD_DIR}/CMakeLists.txt")
 elif [ "${Q_OR_C_MAKE}" = "qmake" ]; then
   VERSION=$(perl -lne 'print $1 if /^VERSION = (.+)/' < "${TRAVIS_BUILD_DIR}/src/mudlet.pro")
 fi

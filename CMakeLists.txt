@@ -77,7 +77,7 @@ endif()
 # file, which is NOW called: ./src/mudlet.pro
 set(APP_VERSION 3.21.0)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
-  SET(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
+  set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
   set(APP_BUILD "-dev")
 endif()
