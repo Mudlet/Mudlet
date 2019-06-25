@@ -3448,17 +3448,17 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTrigger.cpp" line="182"/>
       <source>Error: This trigger has no patterns defined, yet. Add some to activate it.</source>
-      <translation type="unfinished"/>
+      <translation>Fehler: Dieser Trigger hat noch keine Muster definiert. Füge einige hinzu, um ihn zu aktivieren.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="213"/>
       <source>Error: in item %1, perl regex &quot;%2&quot; failed to compile, reason: &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Fehler: Bei Element %1 konnte Perl-Regex &quot;%2&quot; nicht kompilieren, Grund: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="234"/>
       <source>Error: in item %1, lua function &quot;%2&quot; failed to compile, reason: &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Fehler: Bei Element %1 konnte Lua-Funktion &quot;%2&quot; nicht kompilieren, Grund: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="254"/>
@@ -3818,13 +3818,16 @@ Die alte Version &apos;%2&apos; wird deinstalliert.</translation>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: 
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ALARM ] - Verbindung wurde getrennt.
+Grund: 
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="493"/>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: </source>
-      <translation type="unfinished"/>
+      <translation>[ ALARM ] - Verbindung wurde getrennt.
+Grund: </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1769"/>
@@ -6312,23 +6315,23 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <location filename="../src/dlgTriggerEditor.cpp" line="3135"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="3980"/>
       <source>New trigger group</source>
-      <translation type="unfinished"/>
+      <translation>Neue Trigger-Gruppe</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3137"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="3980"/>
       <source>New trigger</source>
-      <translation type="unfinished"/>
+      <translation>Neuer Trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3236"/>
       <source>New timer group</source>
-      <translation type="unfinished"/>
+      <translation>Neue Timer-Gruppe</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3238"/>
       <source>New timer</source>
-      <translation type="unfinished"/>
+      <translation>Neuer Timer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3326"/>
@@ -6343,17 +6346,17 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3390"/>
       <source>New key group</source>
-      <translation type="unfinished"/>
+      <translation>Neue Tasten-Gruppe</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3392"/>
       <source>New key</source>
-      <translation type="unfinished"/>
+      <translation>Neue Taste</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3474"/>
       <source>New alias group</source>
-      <translation type="unfinished"/>
+      <translation>Neue Alias-Gruppe</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3476"/>
