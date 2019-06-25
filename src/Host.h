@@ -78,7 +78,7 @@ public:
 
 #ifndef QT_NO_DEBUG_STREAM
     // Only used for debugging:
-    bool initialised() const {return mIsPersistent;}
+    bool initialised() const {return mIsInitialised;}
     qint64 elapsed() const {return mElapsedTime;}
     QDateTime effectiveStartDateTime() const {return mEffectiveStartDateTime;}
 #endif // QT_NO_DEBUG_STREAM
