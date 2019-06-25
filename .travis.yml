@@ -50,6 +50,7 @@ matrix:
     compiler: clang
     env:
     - Q_OR_C_MAKE=qmake
+      DEPLOY=deploy
 
   - os: osx
     osx_image: xcode9.2
@@ -78,6 +79,7 @@ matrix:
     env:
     - Q_OR_C_MAKE=cmake
       QT_VERSION=512
+      DEPLOY=deploy
     addons:
       apt:
         sources: *add-sources
