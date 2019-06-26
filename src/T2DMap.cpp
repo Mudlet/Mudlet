@@ -678,7 +678,7 @@ bool T2DMap::sizeFontToFitTextInRect( QFont & font, const QRectF & boundaryRect,
 // player's room if it is visible. This is so it is drawn LAST (and any effects,
 // or extra markings for it do not get overwritten by the drawing of the other
 // rooms)...
-inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, auto& pen, TRoom* pRoom, TArea* pArea, const int currentRoomId, const bool isFontBigEnoughToShowRoomVnum, const int playerRoomId, const float rx, const float ry, const bool picked)
+inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, TRoom* pRoom, TArea* pArea, const int currentRoomId, const bool isFontBigEnoughToShowRoomVnum, const int playerRoomId, const float rx, const float ry, const bool picked)
 {
     pRoom->rendered = false;
     QRectF roomRectangle;
