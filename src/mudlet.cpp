@@ -133,19 +133,19 @@ mudlet* mudlet::self()
 void mudlet::loadLanguagesMap()
 {
     mLanguageCodeMap = {
-            {"en_US", make_pair(tr("English [American]", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 100)},
-            {"en_GB", make_pair(tr("English [British]", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"zh_CN", make_pair(tr("Chinese [Simplified]", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"zh_TW", make_pair(tr("Chinese [Traditional]", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"nl_NL", make_pair(tr("Dutch", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"fr_FR", make_pair(tr("French", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"de_DE", make_pair(tr("German", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"el_GR", make_pair(tr("Greek", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"it_IT", make_pair(tr("Italian", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"pl_PL", make_pair(tr("Polish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"ru_RU", make_pair(tr("Russian", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"es_ES", make_pair(tr("Spanish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"pt_PT", make_pair(tr("Portuguese", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"en_US", make_pair(QStringLiteral("English (American)"), 0)},
+            {"en_GB", make_pair(QStringLiteral("English (British)"), 0)},
+            {"zh_CN", make_pair(QStringLiteral(u"简化字"), 0)},
+            {"zh_TW", make_pair(QStringLiteral(u"繁體字"), 0)},
+            {"nl_NL", make_pair(QStringLiteral("Nederlands"), 0)},
+            {"fr_FR", make_pair(QStringLiteral(u"Français"), 0)},
+            {"de_DE", make_pair(QStringLiteral("Deutsch"), 0)},
+            {"el_GR", make_pair(QStringLiteral(u"ελληνικά"), 0)},
+            {"it_IT", make_pair(QStringLiteral("Italiano"), 0)},
+            {"pl_PL", make_pair(QStringLiteral("Polszczyzna"), 0)},
+            {"ru_RU", make_pair(QStringLiteral(u"Pусский"), 0)},
+            {"es_ES", make_pair(QStringLiteral(u"Español"), 0)},
+            {"pt_PT", make_pair(QStringLiteral(u"Português"), 0)},
     };
 
     // Primarily use to identify Hunspell dictionaries (some of which are not
@@ -495,7 +495,7 @@ mudlet::mudlet()
     setWindowTitle(version);
     setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_main_48px.png")));
     mpMainToolBar = new QToolBar(this);
-    mpMainToolBar->setObjectName("mpMainToolBar");
+    mpMainToolBar->setObjectName(QStringLiteral("mpMainToolBar"));
     mpMainToolBar->setWindowTitle(tr("Main Toolbar"));
     addToolBar(mpMainToolBar);
     mpMainToolBar->setMovable(false);
@@ -1253,7 +1253,7 @@ void mudlet::slot_package_exporter()
     }
     auto d = new dlgPackageExporter(this, pH);
     // don't show the dialog if the user cancelled the wizard
-    if (d->filePath.isEmpty()) {
+    if (d->mXmlPathFileName.isEmpty()) {
         return;
     }
 
@@ -1889,15 +1889,19 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
     if (!pC && !pD) {
         // The name is not used in either the QMaps of all user created TConsole
         // or TDockWidget instances - so we can make a NEW one:
-        auto pD = new TDockWidget(pHost, name);
-        pD->setObjectName(QString("dockWindow_%1_%2").arg(hostName, name));
+        pD = new TDockWidget(pHost, name);
+        pD->setObjectName(QStringLiteral("dockWindow_%1_%2").arg(hostName, name));
         pD->setContentsMargins(0, 0, 0, 0);
         pD->setFeatures(QDockWidget::AllDockWidgetFeatures);
         pD->setWindowTitle(tr("User window - %1 - %2").arg(hostName, name));
         pHost->mpConsole->mDockWidgetMap.insert(name, pD);
         // It wasn't obvious but the parent passed to the TConsole constructor
         // is sliced down to a QWidget and is NOT a TDockWidget pointer:
-        auto pC = new TConsole(pHost, TConsole::UserWindow, pD->widget());
+        pC = new TConsole(pHost, TConsole::UserWindow, pD->widget());
+        pC->setObjectName(QStringLiteral("dockWindowConsole_%1_%2").arg(hostName, name));
+        // Without this the TConsole instance inside the TDockWidget will be
+        // left being called the default value of "main":
+        pC->mConsoleName = name;
         pC->setContentsMargins(0, 0, 0, 0);
         pD->setTConsole(pC);
         pC->show();
@@ -3025,7 +3029,7 @@ void mudlet::writeSettings()
 void mudlet::slot_show_connection_dialog()
 {
     auto pDlg = new dlgConnectionProfiles(this);
-    connect(pDlg, &dlgConnectionProfiles::signal_establish_connection, this, &mudlet::slot_connection_dlg_finished);
+    connect(pDlg, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connection_dlg_finished);
     pDlg->fillout_form();
 
     connect(pDlg, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
@@ -3292,7 +3296,7 @@ void mudlet::createMapper(bool loadDefaultMap)
 
     auto hostName(pHost->getName());
     pHost->mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(hostName));
-    pHost->mpDockableMapWidget->setObjectName(QString("dockMap_%1").arg(hostName));
+    pHost->mpDockableMapWidget->setObjectName(QStringLiteral("dockMap_%1").arg(hostName));
     pHost->mpMap->mpMapper = new dlgMapper(pHost->mpDockableMapWidget, pHost, pHost->mpMap.data()); //FIXME: mpHost definieren
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
     pHost->mpDockableMapWidget->setWidget(pHost->mpMap->mpMapper);
@@ -3537,7 +3541,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     // For the first real host created the getHostCount() will return 2 because
     // there is already a "default_host"
     signal_hostCreated(pHost, mHostManager.getHostCount());
-    slot_connection_dlg_finished(profile_name, 0);
+    slot_connection_dlg_finished(profile_name, true);
     enableToolbarButtons();
 }
 
@@ -3603,7 +3607,7 @@ void mudlet::hideMudletsVariables(Host* pHost)
     }
 }
 
-void mudlet::slot_connection_dlg_finished(const QString& profile, int historyVersion)
+void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
 {
     Host* pHost = getHostManager().getHost(profile);
     if (!pHost) {
@@ -3658,7 +3662,12 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, int historyVer
 
     tempHostQueue.enqueue(pHost);
     tempHostQueue.enqueue(pHost);
-    pHost->connectToServer();
+    if (connect) {
+        pHost->connectToServer();
+    } else {
+        QString infoMsg = tr("[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(profile);
+        pHost->postMessage(infoMsg);
+    }
 }
 
 void mudlet::slot_multi_view()
@@ -4416,7 +4425,7 @@ void mudlet::slot_updateAvailable(const int updateCount)
     // We can then add in the new item to give access the update(s)
     auto pActionReview = pUpdateMenu->addAction(tr("Review %n update(s)...",
                                                    // Intentional comment
-                                                   "Review update(s) menu item, %n is the the count of how many updates are available",
+                                                   "Review update(s) menu item, %n is the count of how many updates are available",
                                                    updateCount),
                                                 this, &mudlet::slot_check_manual_update);
     pActionReview->setToolTip(tr("<p>Review the update(s) available...</p>",

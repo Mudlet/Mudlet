@@ -39,7 +39,7 @@ public:
     void accept() override;
 
 signals:
-    void signal_establish_connection(QString profile_name, int historyVersion);
+    void signal_load_profile(QString profile_name, bool alsoConnect);
 
 public slots:
     void slot_update_name(const QString&);
@@ -62,6 +62,7 @@ public slots:
     void slot_update_autoreconnect(int state);
     void slot_update_discord_optin(int state);
     void slot_connectToServer();
+    void slot_load();
     void slot_cancel();
     void slot_copy_profile();
 
@@ -73,17 +74,17 @@ private:
     bool validateProfile();
     void removeNotification(QString notif);
     void addNotification(QString notif);
+    void loadProfile(bool alsoConnect);
 
 
     bool validProfile;
     QStringList mProfileList;
     QStringList mErrorList;
-
-    QString mStyleSheetRegular= "* { color:#0000c0; background: #0000C0; }";
-    QString mStyleSheetRO = "*:disabled  { color:#0000c0; background: #D4D4D4; }";
-    QString mStyleSheetOk = "* { color:#0000c0; background: #EBFFEB; }";
-    QString mStyleSheetError = "* { color:#0000c0; background: #FFEBEB; }";
-
+    QPalette mRegularPalette;
+    QPalette mOKPalette;
+    QPalette mErrorPalette;
+    QPalette mReadOnlyPalette;
+    QPushButton* offline_button;
     QPushButton* connect_button;
     QLineEdit* delete_profile_lineedit;
     QPushButton* delete_button;

@@ -1735,28 +1735,29 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
 // however it should ensure that other classes get updated:
 void Host::setName(const QString& newName)
 {
-    int currentPlayerRoom;
+    if (mHostName == newName) {
+        return;
+    }
+
+    int currentPlayerRoom = 0;
     if (mpMap) {
         currentPlayerRoom = mpMap->mRoomIdHash.take(mHostName);
     }
 
     QMutexLocker locker(& mLock);
-    if (mHostName == newName) {
-        // Oh, it hasn't changed after all so put the player room back and bail
-        // out:
-        mpMap->mRoomIdHash.insert(newName, currentPlayerRoom);
-        return;
-    }
-
+    // Now we have the exclusive lock on this class's protected members
     mHostName = newName;
-    // We have made the change so can unlock the mutex locker and procede:
+    // We have made the change to the protected aspects of this class so can unlock the mutex locker and proceed:
     locker.unlock();
 
     mTelnet.mProfileName = newName;
     if (mpMap) {
         mpMap->mProfileName = newName;
-        mpMap->mRoomIdHash.insert(newName, currentPlayerRoom);
+        if (currentPlayerRoom) {
+            mpMap->mRoomIdHash.insert(newName, currentPlayerRoom);
+        }
     }
+
     if (mpConsole) {
         mpConsole->setProfileName(newName);
     }
