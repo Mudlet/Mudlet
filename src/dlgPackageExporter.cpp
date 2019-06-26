@@ -154,18 +154,17 @@ bool dlgPackageExporter::writeFileToZip(const QString& archiveFileName, const QS
 {
     struct zip_source* s = zip_source_file(archive, fileSystemFileName.toUtf8().constData(), 0, -1);
     if (s == nullptr) {
-        displayResultMessage(tr("Failed to source file \"%1\" to place into (.zip format archive) package file, error is: \"%2\".",
+        displayResultMessage(tr("Failed to open file \"%1\" to place into package. Error message was: \"%2\".",
                                 // Intentional comment to separate arguments
-                                "This error message will appear when a file is to be placed into the .zip type file (though we give it an .mpackage extension) but the libzip library cannot open it.")
+                                "This error message will appear when a file is to be placed into the package but the code cannot open it.")
                              .arg(fileSystemFileName, QString::fromUtf8(zip_strerror(archive))), false);
         return false;
     }
 
     if (zip_file_add(archive, archiveFileName.toUtf8().constData(), s, ZIP_FL_ENC_UTF_8|ZIP_FL_OVERWRITE) == -1) {
-        displayResultMessage(tr("Failed to add file \"%1\" to (.zip format archive) package file \"%2\", "
-                                "error message was: \"%3\".",
+        displayResultMessage(tr("Failed to add file \"%1\" to package \"%2\". Error message was: \"%3\".",
                                 // Intentional comment to separate arguments
-                                "This error message will appear when a file is to be placed into the .zip type file (though we give it an .mpackage extension) but the libzip library cannot do so for some reason.")
+                                "This error message will appear when a file is to be placed into the package but cannot be done for some reason.")
                              .arg(archiveFileName, mPackagePathFileName, QString::fromUtf8(zip_strerror(archive))), false);
         return false;
     }
@@ -182,10 +181,8 @@ void dlgPackageExporter::slot_export_package()
 
     QFile checkWriteability(mXmlPathFileName);
     if (!checkWriteability.open(QIODevice::WriteOnly)) {
-        displayResultMessage(tr("Failed to export - could not open %1 for writing in.</p>"
-                                "<p>Do you have the necessary permissions to write to that folder?",
-                                // Intentional comment to separate arguments
-                                "The end and THEN the start paragraph HTML tags in the middle of this text combine with a pair that are added around this (but which are not included here) so that it is split into two paragraphs.")
+        displayResultMessage(tr("Failed to export. Could not open the folder \"%1\" for writing in. - "
+                                "Do you have the necessary permissions and free disk-space to write to that folder?")
                              .arg(mXmlPathFileName), false);
         return;
     }
@@ -264,13 +261,12 @@ void dlgPackageExporter::slot_export_package()
     }
 
     if (!writer.exportPackage(mXmlPathFileName)) {
-        displayResultMessage(tr("Failed to export - could not write Mudlet items to the file \"%1\".",
+        displayResultMessage(tr("Failed to export. Could not write Mudlet items to the file \"%1\".",
                                 // Intentional comment to separate arguments
-                                "This error message is shown when all the Mudlet items cannot be written to the 'packageName'.xml file in the base directory of the place where all the files are staged before being compressed into the (.zip format) 'packageName'.mpackage archive file. The full path and filename are shown to help the user diagnose what might have happened.")
+                                "This error message is shown when all the Mudlet items cannot be written to the 'packageName'.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened.")
                              .arg(mXmlPathFileName), false);
-        // Although we have failed we must not just abort here we need to reset
-        // the selected for export or not flags first - so note that we have
-        // failed:
+        // Although we have failed, we must not just abort here. We need to reset
+        // the selected "for export or not"-flags first. So note that we have failed:
         isOk = false;
         // After the following we will then drop through to the end of the
         // method to set up a means to close the dialogue after the user has
@@ -348,9 +344,9 @@ void dlgPackageExporter::slot_export_package()
             // post 0.10 versions of libzip):
             zip_error_t error;
             zip_error_init_with_code(&error, ze);
-            displayResultMessage(tr("Failed to open (.zip format archive) package file, error is: \"%1\".",
+            displayResultMessage(tr("Failed to open package file. Error is: \"%1\".",
                                     // Intentional comment to separate arguments
-                                    "This error message is shown when the libzip library code is unable to open the (.zip archive format) file that was to be the end result of the export process. As this may be an existing file anywhere in the computer's file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.")
+                                    "This error message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing file anywhere in the computer's file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.")
                                  .arg(QString::fromUtf8(zip_error_strerror(&error))), false);
             zip_error_fini(&error);
             isOk = false;
@@ -442,7 +438,7 @@ void dlgPackageExporter::slot_export_package()
                 // zip_dir_add(...) returns the index of the
                 // added directory item in the archive or -1 on error:
                 if (zip_dir_add(archive, directoryName.toStdString().c_str(), ZIP_FL_ENC_UTF_8) == -1) {
-                    displayResultMessage(tr("Failed to add directory \"%1\" to (.zip format archive) package file, error is: \"%2\".")
+                    displayResultMessage(tr("Failed to add directory \"%1\" to package. Error is: \"%2\".")
                                          .arg(directoryName, QString::fromUtf8(zip_strerror(archive))), false);
                     zip_close(archive);
                     isOk = false;
@@ -465,7 +461,7 @@ void dlgPackageExporter::slot_export_package()
                         fileEntries.remove(QStringLiteral("config.lua"));
                     }
                 }/* else {
-                    displayResultMessage(tr("Required \"config.lua\" file not found to include in the (.zip format archive) package file, did you remove or rename it?"), false);
+                    displayResultMessage(tr("Required \"config.lua\" file not found to include in the package. Did you remove or rename it?"), false);
                     zip_close(archive);
                     isOk = false;
                 }*/
@@ -498,11 +494,12 @@ void dlgPackageExporter::slot_export_package()
                     // If successful will get to HERE...
 
                 } else {
-                    displayResultMessage(tr("Required file \"%1\", that contains the mudlet items chosen for the "
-                                            "package, was not found in the staging area. This is from where it would "
-                                            "be include in the (.zip format archive) package file. This suggests "
-                                            "there may be a problem with the permissions, or free disk-space, for "
-                                            "that \"%2\" directory!")
+                    displayResultMessage(tr("Required file \"%1\" was not found in the staging area. "
+                                            "This area contains the Mudlet items chosen for the package, "
+                                            "which you selected to be included in the package file. "
+                                            "This suggests there may be a problem with that directory: "
+                                            "\"%2\" - "
+                                            "Do you have the necessary permissions and free disk-space?")
                                             .arg(mXmlPathFileName, QDir(mStagingDirName).canonicalPath()), false);
                     isOk = false;
                 }
@@ -519,9 +516,9 @@ void dlgPackageExporter::slot_export_package()
                 ze = zip_close(archive);
                 QApplication::restoreOverrideCursor();
                 if (ze) {
-                    displayResultMessage(tr("Failed to write files into and then close the (.zip format archive) package file, error is: \"%1\".",
+                    displayResultMessage(tr("Failed to write files into and then close the package. Error is: \"%1\".",
                                             // Intentional comment to separate arguments
-                                            "This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive by the libzip library code, unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...")
+                                            "This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...")
                                          .arg(QString::fromUtf8(zip_strerror(archive))), false);
                     // In libzip 0.11 a function was added to clean up
                     // (deallocate) the memory associated with an archive
@@ -833,7 +830,7 @@ void dlgPackageExporter::displayResultMessage(const QString& html, bool const is
     ui->infoLabel->setText(QStringLiteral("<p><b><big>%1</big><b></p>"
                                           "<p>%2</p>")
                            .arg(html,
-                                tr("Why not <a href=\"https://forums.mudlet.org/posting.php?mode=post&f=6\">upload</a> your package to Mudlet?",
+                                tr("Why not <a href=\"https://forums.mudlet.org/viewforum.php?f=6\">upload</a> your package for other Mudlet users?",
                                    // Intentional comment to separate arguments
                                    "Only the text outside of the 'a' (HTML anchor) tags PLUS the verb "
                                    "'upload' in between them in the source text, (associated with uploading "
