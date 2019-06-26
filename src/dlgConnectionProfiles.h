@@ -69,21 +69,20 @@ public slots:
 private:
     void copyFolder(const QString& sourceFolder, const QString& destFolder);
     QString getDescription(const QString& hostUrl, quint16 port, const QString& profile_name);
-    bool validateConnect();
     void updateDiscordStatus();
     bool validateProfile();
-    void removeNotification(QString notif);
-    void addNotification(QString notif);
+    void removeNotification(QString notification);
+    void addNotification(QString notification);
     void loadProfile(bool alsoConnect);
 
 
     bool validProfile;
     QStringList mProfileList;
     QStringList mErrorList;
-    QPalette mRegularPalette;
-    QPalette mOKPalette;
-    QPalette mErrorPalette;
-    QPalette mReadOnlyPalette;
+    QString mStyleSheetRegular = "* { color:#0000c0; background: #0000C0; }";
+    QString mStyleSheetRO = "*:disabled  { color:#0000c0; background: #D4D4D4; }";
+    QString mStyleSheetOk = "* { color:#0000c0; background: #EBFFEB; }";
+    QString mStyleSheetError = "* { color:#0000c0; background: #FFEBEB; }";
     QPushButton* offline_button;
     QPushButton* connect_button;
     QLineEdit* delete_profile_lineedit;

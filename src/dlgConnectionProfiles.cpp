@@ -181,17 +181,17 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     this->setStyleSheet(mStyleSheetRO);
 }
 
-void dlgConnectionProfiles::removeNotification(QString notif)
+void dlgConnectionProfiles::removeNotification(QString notification)
 {
     QString msg; //="<html><head/><body>";
 
     mErrorList.removeDuplicates();
-    QString str = QString("^%1.+").arg(notif.left(20));
+    QString str = QStringLiteral("^%1.+").arg(notification.left(20));
     int index = mErrorList.indexOf(QRegExp(str));
     mErrorList.removeAt(index);
 
     foreach (const QString& str, mErrorList) {
-        msg.append(QString("<p>%1</p>").arg(str));
+        msg.append(QStringLiteral("<p>%1</p>").arg(str));
     }
     // msg.append("</body></html>");
     if (mErrorList.count() == 0) {
@@ -207,16 +207,16 @@ void dlgConnectionProfiles::removeNotification(QString notif)
     notificationAreaMessageBox->setText(msg);
 }
 
-void dlgConnectionProfiles::addNotification(QString notif)
+void dlgConnectionProfiles::addNotification(QString notification)
 {
     QString msg; //="<html><head/><body>";
 
-    mErrorList.removeAt(mErrorList.indexOf(QRegExp(QString("^%1").arg(notif.left(20)))));
-    mErrorList << notif;
+    mErrorList.removeAt(mErrorList.indexOf(QRegExp(QStringLiteral("^%1").arg(notification.left(20)))));
+    mErrorList << notification;
     mErrorList.removeDuplicates();
 
     foreach (const QString& str, mErrorList) {
-        msg.append(QString("<p>%1</p>").arg(str));
+        msg.append(QStringLiteral("<p>%1</p>").arg(str));
     }
 
     //msg.append("</body></html>");
@@ -1824,10 +1824,10 @@ bool dlgConnectionProfiles::validateProfile()
 
     if (pItem) {
         QString name = profile_name_entry->text().trimmed();
-        profile_name_entry->setStyleSheet("");
+        profile_name_entry->setStyleSheet(QString());
         const QString allowedChars = QStringLiteral(". _0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ");
         removeNotification(tr("Please only use one of the following characters:\"%1\".").arg(allowedChars));
-        profile_name_entry->setStyleSheet("");
+        profile_name_entry->setStyleSheet(QString());
         for (int i = 0; i < name.size(); ++i) {
             if (!allowedChars.contains(name.at(i))) {
                 addNotification(tr("Please only use one of the following characters:\"%1\".").arg(allowedChars));
@@ -1863,7 +1863,7 @@ bool dlgConnectionProfiles::validateProfile()
 
         bool ok;
         int num = port.trimmed().toInt(&ok);
-        if ((num >= 65536) || (num <= 0) || !ok) {
+        if ((num >= 65535) || (num <= 0) || !ok) {
             addNotification(tr("Port number must be above zero and below 65535."));
             port_entry->setStyleSheet(mStyleSheetError);
             validProfile = false;
@@ -1901,11 +1901,11 @@ bool dlgConnectionProfiles::validateProfile()
         QString url = host_name_entry->text().trimmed();
         check.setHost(url);
         if (!check.isValid()) {
-            addNotification(tr("Please enter the URL of the Game server.%1").arg(check.errorString()));
+            addNotification(tr("Please enter the URL of the Game server: %1").arg(check.errorString()));
             host_name_entry->setStyleSheet(mStyleSheetError);
             validProfile = false;
         } else {
-            removeNotification(tr("Please enter the URL of the Game server."));
+            removeNotification(tr("Please enter the URL of the Game server:"));
         }
 
         removeNotification(tr("SSL connections require the URL of the Game server."));
