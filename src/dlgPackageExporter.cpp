@@ -539,7 +539,9 @@ void dlgPackageExporter::slot_export_package()
 
     if (isOk) {
         // Success!
-        displayResultMessage(tr("Package exported to: \"%1\".").arg(mPackagePathFileName), true);
+        displayResultMessage(tr("Package \"%1\" exported to: %2")
+                             .arg(mPackageName, QStringLiteral("<a href=\"file:///%1\">%2</a>"))
+                             .arg(packagePath, packagePath), true);
         // Remove the cancel button and replace it with an ok one
         ui->buttonBox->removeButton(mCancelButton);
         ui->buttonBox->addButton(QDialogButtonBox::Ok);
