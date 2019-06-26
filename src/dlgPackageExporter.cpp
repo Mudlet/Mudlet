@@ -98,7 +98,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     // Although the Qt Documentation says only that the Windows platform needs
     // to NOT use the native dialog to show files, it has also shown to be
     // required for KDE on Linux - so has been used for all platforms:
-    QString mPackagePath = QFileDialog::getExistingDirectory(nullptr, tr("Where do you want to save the package?"), mudlet::getMudletPath(mudlet::profileHomePath, profileName), QFileDialog::DontUseNativeDialog);
+    mPackagePath = QFileDialog::getExistingDirectory(nullptr, tr("Where do you want to save the package?"), mudlet::getMudletPath(mudlet::profileHomePath, profileName), QFileDialog::DontUseNativeDialog);
 
     if (mPackagePath.isEmpty()) {
         return;
