@@ -154,8 +154,7 @@ bool dlgPackageExporter::writeFileToZip(const QString& archiveFileName, const QS
 {
     struct zip_source* s = zip_source_file(archive, fileSystemFileName.toUtf8().constData(), 0, -1);
     if (s == nullptr) {
-        displayResultMessage(tr("Failed to open file \"%1\" to place into package. "
-                                "Error message was: \"%2\".",
+        displayResultMessage(tr("Failed to open file \"%1\" to place into package. Error message was: \"%2\".",
                                 // Intentional comment to separate arguments
                                 "This error message will appear when a file is to be placed into the package but the code cannot open it.")
                              .arg(fileSystemFileName, QString::fromUtf8(zip_strerror(archive))), false);
@@ -163,8 +162,7 @@ bool dlgPackageExporter::writeFileToZip(const QString& archiveFileName, const QS
     }
 
     if (zip_file_add(archive, archiveFileName.toUtf8().constData(), s, ZIP_FL_ENC_UTF_8|ZIP_FL_OVERWRITE) == -1) {
-        displayResultMessage(tr("Failed to add file \"%1\" to package \"%2\". "
-                                "Error message was: \"%3\".",
+        displayResultMessage(tr("Failed to add file \"%1\" to package \"%2\". Error message was: \"%3\".",
                                 // Intentional comment to separate arguments
                                 "This error message will appear when a file is to be placed into the package but cannot be done for some reason.")
                              .arg(archiveFileName, mPackagePathFileName, QString::fromUtf8(zip_strerror(archive))), false);
@@ -183,10 +181,8 @@ void dlgPackageExporter::slot_export_package()
 
     QFile checkWriteability(mXmlPathFileName);
     if (!checkWriteability.open(QIODevice::WriteOnly)) {
-        displayResultMessage(tr("Failed to export. Could not open the folder \"%1\" for writing in.</p>"
-                                "<p>Do you have the necessary permissions to write to that folder?",
-                                // Intentional comment to separate arguments
-                                "The end and THEN the start paragraph HTML tags in the middle of this text are deliberate. They combine with a pair that are added around this text (but which are not included here) so that it is split into two paragraphs.")
+        displayResultMessage(tr("Failed to export. Could not open the folder \"%1\" for writing in. - "
+                                "Do you have the necessary permissions and free disk-space to write to that folder?")
                              .arg(mXmlPathFileName), false);
         return;
     }
@@ -498,11 +494,11 @@ void dlgPackageExporter::slot_export_package()
                     // If successful will get to HERE...
 
                 } else {
-                    displayResultMessage(tr("Required file \"%1\" was not found in the staging area."
-                                            "This area contains the Mudlet items chosen for the package,"
-                                            "which you selected to be included in the package file."
-                                            "This suggests there may be a problem with that directory:"
-                                            "\"%2\""
+                    displayResultMessage(tr("Required file \"%1\" was not found in the staging area. "
+                                            "This area contains the Mudlet items chosen for the package, "
+                                            "which you selected to be included in the package file. "
+                                            "This suggests there may be a problem with that directory: "
+                                            "\"%2\" - "
                                             "Do you have the necessary permissions and free disk-space?")
                                             .arg(mXmlPathFileName, QDir(mStagingDirName).canonicalPath()), false);
                     isOk = false;
@@ -834,7 +830,7 @@ void dlgPackageExporter::displayResultMessage(const QString& html, bool const is
     ui->infoLabel->setText(QStringLiteral("<p><b><big>%1</big><b></p>"
                                           "<p>%2</p>")
                            .arg(html,
-                                tr("Why not <a href=\"https://forums.mudlet.org/posting.php?mode=post&f=6\">upload</a> your package to Mudlet?",
+                                tr("Why not <a href=\"https://forums.mudlet.org/viewforum.php?f=6\">upload</a> your package for other Mudlet users?",
                                    // Intentional comment to separate arguments
                                    "Only the text outside of the 'a' (HTML anchor) tags PLUS the verb "
                                    "'upload' in between them in the source text, (associated with uploading "
