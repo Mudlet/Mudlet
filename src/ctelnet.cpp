@@ -477,7 +477,7 @@ void cTelnet::handle_socket_signal_disconnected()
             for (int a = 0; a < sslErrors.count(); a++) {
                 reason.append(QStringLiteral("        %1\n").arg(QString(sslErrors.at(a).errorString())));
             }
-            QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: \n") % reason;
+            QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: ") % reason;
             postMessage(err);
         } else
 #endif
