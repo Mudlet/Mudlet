@@ -1193,6 +1193,10 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
     } else {
         // error
         std::string e = lua_tostring(L, -1);
+        if (e.empty()) {
+            e = "no error message available from Lua";
+        }
+
         std::string reason;
         switch (error) {
         case 4:
@@ -1216,7 +1220,7 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
             qDebug() << reason.c_str() << " in config.lua:" << e.c_str();
         }
         // should print error to main display
-        QString msg = QString("%1 in config.lua: %2\n").arg(reason.c_str(), e.c_str());
+        QString msg = QStringLiteral("%1 in config.lua: %2\n").arg(reason.c_str(), e.c_str());
         mpConsole->printSystemMessage(msg);
 
 
