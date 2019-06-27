@@ -585,6 +585,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_enableTextAnalyzer->setChecked(pHost->mEnableTextAnalyzer);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
+    checkBox_readline->setChecked(pHost->mEnableReadline);
 
     if (mudlet::self()->mDiscord.libraryLoaded()) {
         Host::DiscordOptionFlags discordFlags = pHost->mDiscordAccessFlags;
@@ -1065,6 +1066,7 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_enableTextAnalyzer->setChecked(false);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(false);
     USE_UNIX_EOL->setChecked(false);
+    checkBox_readline->setChecked(false);
     topBorderHeight->clear();
     bottomBorderHeight->clear();
     leftBorderWidth->clear();
@@ -2175,6 +2177,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mEnableTextAnalyzer = checkBox_enableTextAnalyzer->isChecked();
         pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();
         pHost->mUSE_UNIX_EOL = USE_UNIX_EOL->isChecked();
+        pHost->mEnableReadline = checkBox_readline->isChecked();
         pHost->getKeyUnit()->mRunAllKeyMatches = checkBox_runAllKeyBindings->isChecked();
         pHost->mFORCE_NO_COMPRESSION = mFORCE_MCCP_OFF->isChecked();
         pHost->mFORCE_GA_OFF = mFORCE_GA_OFF->isChecked();

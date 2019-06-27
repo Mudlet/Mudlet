@@ -9,7 +9,7 @@ mudlet.supports = {
 
 -- enforce uniform locale so scripts don't get
 -- tripped up on number representation differences (. vs ,)
-os.setlocale("C")
+os.setlocale("C", "numeric")
 
 -- Extending default libraries makes Babelfish happy.
 setmetatable( _G, {

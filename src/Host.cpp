@@ -134,6 +134,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBgColor_2(Qt::black)
 , mMapStrongHighlight(false)
 , mLogStatus(false)
+, mEnableReadline(false)
 , mEnableSpellCheck(true)
 , mDiscordDisableServerSide(true)
 , mDiscordAccessFlags(DiscordLuaAccessEnabled | DiscordSetSubMask)

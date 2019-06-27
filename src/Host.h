@@ -388,6 +388,7 @@ public:
     bool mMapStrongHighlight;
     QStringList mGMCP_merge_table_keys;
     bool mLogStatus;
+    bool mEnableReadline;
     bool mEnableSpellCheck;
     QStringList mInstalledPackages;
     QMap<QString, QStringList> mInstalledModules;

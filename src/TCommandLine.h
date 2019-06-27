@@ -32,6 +32,9 @@
 #include <QTextDecoder>
 #include "post_guard.h"
 
+#include <readline/readline.h>
+#include <readline/history.h>
+
 
 class TConsole;
 class KeyUnit;
@@ -66,6 +69,7 @@ private:
     void adjustHeight();
     void processNormalKey(QEvent*);
     bool processPotentialKeyBinding(QKeyEvent*);
+    void switch_rl_here ();
 
 
     QPointer<Host> mpHost;
@@ -76,6 +80,8 @@ private:
     int mAutoCompletionCount;
     QString mTabCompletionTyped;
     bool mUserKeptOnTyping;
+    struct readline_state *rl_state;
+    HISTORY_STATE *rl_history_state;
 
 
 public slots:

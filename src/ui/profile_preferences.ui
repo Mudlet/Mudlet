@@ -520,6 +520,13 @@
             </property>
            </widget>
           </item>
+          <item row="4" column="0">
+           <widget class="QCheckBox" name="checkBox_readline">
+            <property name="text">
+             <string>Use GNU Readline for input</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>

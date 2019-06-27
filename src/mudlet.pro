@@ -275,7 +275,8 @@ unix:!macx {
         -lGLU \
         -lzip \
         -lz \
-        -lpugixml
+        -lpugixml \
+        -lreadline
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32 {
     MINGW_BASE_DIR = $$(MINGW_BASE_DIR)
