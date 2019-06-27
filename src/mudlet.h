@@ -63,7 +63,6 @@
 #include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
 
-#include <assert.h>
 
 class QAction;
 class QCloseEvent;

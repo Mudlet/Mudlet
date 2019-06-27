@@ -23,7 +23,6 @@
 #include "TToolBar.h"
 
 
-#include "Host.h"
 #include "TAction.h"
 #include "TConsole.h"
 #include "TFlipButton.h"

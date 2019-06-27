@@ -28,7 +28,6 @@
 
 
 #include "Host.h"
-#include "HostManager.h"
 #include "TAlias.h"
 #include "TArea.h"
 #include "TCommandLine.h"
