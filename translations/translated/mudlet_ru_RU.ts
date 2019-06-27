@@ -6329,23 +6329,23 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="3135"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="3980"/>
       <source>New trigger group</source>
-      <translation type="unfinished"/>
+      <translation>Новая группа триггеров</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3137"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="3980"/>
       <source>New trigger</source>
-      <translation type="unfinished"/>
+      <translation>Новый триггер</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3236"/>
       <source>New timer group</source>
-      <translation type="unfinished"/>
+      <translation>Новая группа таймеров</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3238"/>
       <source>New timer</source>
-      <translation type="unfinished"/>
+      <translation>Новый таймер</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3326"/>
@@ -6360,51 +6360,51 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3390"/>
       <source>New key group</source>
-      <translation type="unfinished"/>
+      <translation>Новая группа клавишей</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3392"/>
       <source>New key</source>
-      <translation type="unfinished"/>
+      <translation>Новая клавиша</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3474"/>
       <source>New alias group</source>
-      <translation type="unfinished"/>
+      <translation>Новая группа алиасов</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3476"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4088"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4158"/>
       <source>New alias</source>
-      <translation type="unfinished"/>
+      <translation>Новый алиас</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3565"/>
       <source>New menu</source>
-      <translation type="unfinished"/>
+      <translation>Новое меню</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3567"/>
       <source>New button</source>
-      <translation type="unfinished"/>
+      <translation>Новая кнопка</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3608"/>
       <source>New toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Новая панель инструментов</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3666"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4384"/>
       <source>New script group</source>
-      <translation type="unfinished"/>
+      <translation>Новая группа скриптов</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3668"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4384"/>
       <source>New script</source>
-      <translation type="unfinished"/>
+      <translation>Новый скрипт</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4102"/>
