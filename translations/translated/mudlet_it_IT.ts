@@ -1082,7 +1082,7 @@ rooms:</source>
     <message>
       <location filename="../src/TAlias.cpp" line="255"/>
       <source>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Errore: &quot;Pattern:&quot; con espressione regolare non valida, motivo: &quot;%1&quot;.</translation>
     </message>
   </context>
   <context>
@@ -1888,7 +1888,9 @@ better off starting again...</source>
       <source>[ INFO ]  - Reading map (format version:%1) file:
 &quot;%2&quot;,
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Leggo file di mappa (versione:%1):
+&quot;%2&quot;,
+attendere...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1447"/>
@@ -3333,7 +3335,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTrigger.cpp" line="182"/>
       <source>Error: This trigger has no patterns defined, yet. Add some to activate it.</source>
-      <translation type="unfinished"/>
+      <translation>Errore: questo trigger non ha pattern definiti. Aggiungine alcuni per attivarlo.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="213"/>
@@ -3706,13 +3708,16 @@ Disinstallazione della vecchia versione &apos;%2&apos;.</translation>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: 
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Socket disconnesso.
+Motivo:
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="493"/>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: </source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Socket disconnesso.
+Motivo: </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1769"/>
@@ -6215,23 +6220,23 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="3135"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="3980"/>
       <source>New trigger group</source>
-      <translation type="unfinished"/>
+      <translation>Nuovo gruppo di trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3137"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="3980"/>
       <source>New trigger</source>
-      <translation type="unfinished"/>
+      <translation>Nuovo trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3236"/>
       <source>New timer group</source>
-      <translation type="unfinished"/>
+      <translation>Nuovo gruppo di timer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3238"/>
       <source>New timer</source>
-      <translation type="unfinished"/>
+      <translation>Nuovo timer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3326"/>
@@ -6246,51 +6251,51 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3390"/>
       <source>New key group</source>
-      <translation type="unfinished"/>
+      <translation>Nuovo gruppo di tasti</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3392"/>
       <source>New key</source>
-      <translation type="unfinished"/>
+      <translation>Nuovo tasto</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3474"/>
       <source>New alias group</source>
-      <translation type="unfinished"/>
+      <translation>Nuovo gruppo di alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3476"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4088"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4158"/>
       <source>New alias</source>
-      <translation type="unfinished"/>
+      <translation>Nuovo alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3565"/>
       <source>New menu</source>
-      <translation type="unfinished"/>
+      <translation>Nuovo menu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3567"/>
       <source>New button</source>
-      <translation type="unfinished"/>
+      <translation>Nuovo bottone</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3608"/>
       <source>New toolbar</source>
-      <translation type="unfinished"/>
+      <translation>Nuova barra degli strumenti</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3666"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4384"/>
       <source>New script group</source>
-      <translation type="unfinished"/>
+      <translation>Nuovo gruppo di script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3668"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4384"/>
       <source>New script</source>
-      <translation type="unfinished"/>
+      <translation>Nuovo script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4102"/>
