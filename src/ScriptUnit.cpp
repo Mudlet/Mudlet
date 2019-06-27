@@ -28,7 +28,7 @@
 
 using namespace std;
 
-void ScriptUnit::_uninstall(TScript* pChild, QString packageName)
+void ScriptUnit::_uninstall(TScript* pChild, const QString& packageName)
 {
     list<TScript*>* childrenList = pChild->mpMyChildrenList;
     for (auto script : *childrenList) {
@@ -38,7 +38,7 @@ void ScriptUnit::_uninstall(TScript* pChild, QString packageName)
 }
 
 
-void ScriptUnit::uninstall(QString packageName)
+void ScriptUnit::uninstall(const QString& packageName)
 {
     for (auto rootScript : mScriptRootNodeList) {
         if (rootScript->mPackageName == packageName) {

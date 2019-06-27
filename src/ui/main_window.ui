@@ -13,19 +13,6 @@
     <height>502</height>
    </rect>
   </property>
-  <property name="windowTitle">
-   <string>Mudlet 1.0 - alpha 1</string>
-  </property>
-  <property name="windowIcon">
-   <iconset>
-    <normaloff>:/mudlet_main_16px.png</normaloff>:/mudlet_main_16px.png</iconset>
-  </property>
-  <property name="iconSize">
-   <size>
-    <width>0</width>
-    <height>0</height>
-   </size>
-  </property>
   <property name="dockOptions">
    <set>QMainWindow::AllowNestedDocks|QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks|QMainWindow::VerticalTabs</set>
   </property>
@@ -100,7 +87,7 @@
      <x>0</x>
      <y>0</y>
      <width>750</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEditor">
@@ -108,14 +95,14 @@
      <string>Toolbox</string>
     </property>
     <addaction name="dactionScriptEditor"/>
-    <addaction name="actionShow_Map"/>
+    <addaction name="dactionShowMap"/>
     <addaction name="dactionInputLine"/>
     <addaction name="dactionNotepad"/>
-    <addaction name="actionLive_Help_Chat"/>
-    <addaction name="actionPackage_manager"/>
+    <addaction name="dactionLiveHelpChat"/>
+    <addaction name="dactionPackageManager"/>
     <addaction name="dactionReplay"/>
-    <addaction name="actionModule_manager"/>
-    <addaction name="actionPackage_Exporter"/>
+    <addaction name="dactionModuleManager"/>
+    <addaction name="dactionPackageExporter"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
     <property name="title">
@@ -159,44 +146,32 @@
    <property name="text">
     <string>Play</string>
    </property>
-   <property name="statusTip">
-    <string>configure connection details of, and make a connection to, game servers</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+C</string>
+   <property name="toolTip">
+    <string>&lt;p&gt;Configure connection details of, and make a connection to, game servers.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionDisconnect">
    <property name="text">
     <string>Disconnect</string>
    </property>
-   <property name="statusTip">
-    <string>disconnect from the current game server</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+D</string>
+   <property name="toolTip">
+    <string>&lt;p&gt;Disconnect from the current game server.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionReconnect">
    <property name="text">
     <string>Reconnect</string>
    </property>
-   <property name="statusTip">
-    <string>disconnect and then reconnect to the current game server</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+R</string>
+   <property name="toolTip">
+    <string>&lt;p&gt;Disconnect and then reconnect to the current game server.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionOptions">
    <property name="text">
     <string>Preferences</string>
    </property>
-   <property name="statusTip">
-    <string>configure setting for the Mudlet application globally and for the current profile</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+P</string>
+   <property name="toolTip">
+    <string>&lt;p&gt;Configure setting for the Mudlet application globally and for the current profile.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionScriptEditor">
@@ -204,77 +179,63 @@
     <string>Script editor</string>
    </property>
    <property name="toolTip">
-    <string>Open script editor</string>
-   </property>
-   <property name="statusTip">
-    <string>opens the Editor for the different types of things that can be scripted by the user</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+E</string>
+    <string>&lt;p&gt;Opens the Editor for the different types of things that can be scripted by the user.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionNotepad">
    <property name="text">
     <string>Notepad</string>
    </property>
-   <property name="statusTip">
-    <string>opens a free form text editor window for the active profile that is saved between sessions</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+N</string>
+   <property name="toolTip">
+    <string>&lt;p&gt;Opens a free form text editor window for this profile that is saved between sessions.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionHelp">
    <property name="text">
     <string>API Reference</string>
    </property>
-   <property name="statusTip">
-    <string>opens the (on-line) Mudlet Wiki, at the API front page, in your system web-browser</string>
-   </property>
-  </action>
-  <action name="dactionForum_2">
-   <property name="text">
-    <string>Online forum</string>
+   <property name="toolTip">
+    <string>&lt;p&gt;Opens the Mudlet manual in your web browser.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionAbout">
    <property name="text">
     <string>About Mudlet</string>
    </property>
-   <property name="statusTip">
-    <string>inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it</string>
+   <property name="toolTip">
+    <string comment="Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).">&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionIRC">
    <property name="text">
     <string>IRC help channel</string>
    </property>
-   <property name="statusTip">
-    <string>opens a built-in IRC chat on the #mudlet channel on Freenode IRC servers</string>
+   <property name="toolTip">
+    <string>&lt;p&gt;Opens a built-in IRC chat on the #mudlet channel on Freenode IRC servers.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionVideo">
    <property name="text">
     <string>Video tutorials</string>
    </property>
-   <property name="statusTip">
-    <string>opens an (on-line) collection of &quot;Educational Mudlet screencasts&quot; in your system web-browser</string>
+   <property name="toolTip">
+    <string>&lt;p&gt;Opens an (on-line) collection of &quot;Educational Mudlet screencasts&quot; in your system web-browser.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionReplay">
    <property name="text">
     <string>Load replay</string>
    </property>
-   <property name="statusTip">
-    <string>load a previous saved game session that can be used to test Mudlet lua systems (off-line!)</string>
+   <property name="toolTip">
+    <string>&lt;p&gt;Load a previous saved game session that can be used to test Mudlet lua systems (off-line!).&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionForum">
    <property name="text">
     <string>Online forum</string>
    </property>
-   <property name="statusTip">
-    <string>opens the (on-line) Mudlet Forum in your system web-browser</string>
+   <property name="toolTip">
+    <string>&lt;p&gt;Opens the (on-line) Mudlet Forum in your system web-browser.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionUpdate">
@@ -282,87 +243,60 @@
     <string>Check for updates...</string>
    </property>
   </action>
-  <action name="dactionIRC_2">
-   <property name="text">
-    <string>Help chat</string>
-   </property>
-   <property name="toolTip">
-    <string>Get live help on IRC. If nobody answers right away, give it time</string>
-   </property>
-  </action>
-  <action name="actionLive_Help_Chat">
+  <action name="dactionLiveHelpChat">
    <property name="text">
     <string>Live help chat</string>
    </property>
-   <property name="statusTip">
-    <string>opens a built-in IRC chat on the #mudlet channel on Freenode IRC servers</string>
+   <property name="toolTip">
+    <string>&lt;p&gt;Opens a built-in IRC chat on the #mudlet channel on Freenode IRC servers.&lt;/p&gt;</string>
    </property>
   </action>
-  <action name="actionShow_Map">
+  <action name="dactionShowMap">
    <property name="text">
     <string>Show map</string>
    </property>
-   <property name="statusTip">
-    <string>show or hide the game map</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+M</string>
+   <property name="toolTip">
+    <string>&lt;p&gt;Show or hide the game map.&lt;/p&gt;</string>
    </property>
   </action>
-  <action name="actionPackage_manager">
+  <action name="dactionPackageManager">
    <property name="text">
     <string>Package manager</string>
    </property>
-   <property name="statusTip">
-    <string>install and remove collections of Mudlet lua items (packages)</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+O</string>
+   <property name="toolTip">
+    <string>&lt;p&gt;Install and remove collections of Mudlet lua items (packages).&lt;/p&gt;</string>
    </property>
   </action>
-  <action name="actionTest1">
-   <property name="text">
-    <string>test1</string>
-   </property>
-  </action>
-  <action name="actionAsdf">
-   <property name="text">
-    <string>asdf</string>
-   </property>
-  </action>
-  <action name="actionModule_manager">
+  <action name="dactionModuleManager">
    <property name="text">
     <string>Module manager</string>
    </property>
-   <property name="statusTip">
-    <string>install and remove (share- &amp; sync-able) collections of Mudlet lua items (modules)</string>
+   <property name="toolTip">
+    <string>&lt;p&gt;Install and remove (share- &amp; sync-able) collections of Mudlet lua items (modules).&lt;/p&gt;</string>
    </property>
   </action>
-  <action name="actionPackage_Exporter">
+  <action name="dactionPackageExporter">
    <property name="text">
     <string>Package exporter (experimental)</string>
    </property>
-   <property name="statusTip">
-    <string>gather and bundle up collections of Mudlet Lua items and other reasources into a module</string>
+   <property name="toolTip">
+    <string>&lt;p&gt;Gather and bundle up collections of Mudlet Lua items and other reasources into a module.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionMultiView">
    <property name="text">
     <string>MultiView</string>
    </property>
-   <property name="statusTip">
-    <string>share the screen area between multiple open profiles</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+V</string>
+   <property name="toolTip">
+    <string>&lt;p&gt;Share the screen area between multiple open profiles.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionInputLine">
    <property name="text">
     <string>Compact input line</string>
    </property>
-   <property name="shortcut">
-    <string>Alt+L</string>
+   <property name="toolTip">
+    <string>&lt;p&gt;Hide or show the search area and the bottom buttons to the right of the input area on the input line.&lt;/p&gt;</string>
    </property>
   </action>
  </widget>

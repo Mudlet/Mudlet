@@ -103,7 +103,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -243,7 +243,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default..&lt;/p&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -383,7 +383,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default..&lt;/p&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -523,7 +523,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default..&lt;/p&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -666,7 +666,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -873,7 +873,7 @@
             <number>9999</number>
            </property>
            <property name="toolTip">
-            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
           </widget>
          </item>
@@ -1010,7 +1010,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -1168,7 +1168,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -1308,7 +1308,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -1448,7 +1448,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -1588,7 +1588,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -1728,7 +1728,7 @@
             <cursorShape>SizeVerCursor</cursorShape>
            </property>
            <property name="toolTip">
-            <string>&lt;p&gt;Set to a positive value to overide the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
+            <string>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -1883,7 +1883,7 @@
             </font>
            </property>
            <property name="specialValueText">
-            <string>Exit Weight (0=No overide)</string>
+            <string>Exit Weight (0=No override)</string>
            </property>
            <property name="maximum">
             <number>9999</number>
@@ -2063,7 +2063,7 @@ Route</string>
 Weight</string>
          </property>
          <property name="toolTip">
-          <string>&lt;p&gt;Set to a positive integer value to overide the default (Room) Weight for using this Exit route, a zero value assigns the default.&lt;/p&gt;</string>
+          <string>&lt;p&gt;Set to a positive integer value to override the default (Room) Weight for using this Exit route, a zero value assigns the default.&lt;/p&gt;</string>
          </property>
         </column>
         <column>

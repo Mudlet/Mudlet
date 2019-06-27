@@ -78,10 +78,17 @@ CONFIG += c++14
 msvc:QMAKE_CXXFLAGS += -MP
 
 # Mac specific flags.
-macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.11
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.12
 
 QT += network opengl uitools multimedia gui concurrent
-qtHaveModule(gamepad): QT += gamepad
+qtHaveModule(gamepad) {
+    QT += gamepad
+    message("Using Gamepad module")
+}
+qtHaveModule(texttospeech) {
+    QT += texttospeech
+    message("Using TextToSpeech module")
+}
 
 ############################# TEMPORARY TESTING PART ###########################
 # Tempory tests to determine what scope variables are correct, it seems that
@@ -140,7 +147,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.14.0
+VERSION = 3.21.0
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -252,7 +259,7 @@ unix:!macx {
 # Some OS platforms have a hyphen (I think Cygwin does as well):
             -llua-5.1\
 # FreeFSB appends the version number to hunspell:
-            -lhunspell-1.6
+            -lhunspell-1.7
 # FreeFSB (at least) supports multiple Lua versions (and 5.1 is not the default anymore):
         INCLUDEPATH += \
             /usr/local/include/lua51
@@ -283,7 +290,6 @@ unix:!macx {
         -lz \                   # for ctelnet.cpp
         -lyajl \
         -lopengl32 \
-        -lglut \
         -lglu32 \
         -lpugixml \
         -lWs2_32 \
@@ -309,10 +315,12 @@ unix:!macx {
         LUA.path = $${LUA_DEFAULT_DIR}
         LUA_GEYSER.path = $${LUA.path}/geyser
         LUA_LCF.path = $${LUA.path}/lcf
+        LUA_TESTS.path = $${LUA.path}/tests
 # and say what will happen:
         message("Lua files will be installed to "$${LUA.path}"...")
         message("Geyser lua files will be installed to "$${LUA_GEYSER.path}"...")
         message("Lua Code Formatter lua files will be installed to "$${LUA_LCF.path}"...")
+        message("Test lua files will be installed to "$${LUA_TESTS.path}"...")
     }
 }
 
@@ -375,69 +383,69 @@ DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 # method has NOT been checked thoroughly though, so YMMV.
 win32 {
     # Use a check explicitly based on where the project file is in the sources
-    !exists("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
+    !exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
         message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
         # Changing the directory here only relates to the command following it
         # and that the change does not persist, note that ';' only works for
         # PowerShell - for cmd.exe the nearest equivalent is '&'
-        system("cd $${_PRO_FILE_PWD_}\.. & git submodule update --init 3rdparty/edbee-lib")
+        system("cd $${PWD}\.. & git submodule update --init 3rdparty/edbee-lib")
     }
 
-    !exists("$${_PRO_FILE_PWD_}/../3rdparty/lcf/lcf-scm-1.rockspec") {
+    !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
-        system("cd $${_PRO_FILE_PWD_}\.. & git submodule update --init 3rdparty/lcf")
+        system("cd $${PWD}\.. & git submodule update --init 3rdparty/lcf")
     }
 } else {
-    !exists("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
+    !exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
         message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
-        system("cd $${_PRO_FILE_PWD_}/.. ; git submodule update --init 3rdparty/edbee-lib")
+        system("cd $${PWD}/.. ; git submodule update --init 3rdparty/edbee-lib")
     }
-    !exists("$${_PRO_FILE_PWD_}/../3rdparty/lcf/lcf-scm-1.rockspec") {
+    !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
-        system("cd $${_PRO_FILE_PWD_}/.. ; git submodule update --init 3rdparty/lcf")
+        system("cd $${PWD}/.. ; git submodule update --init 3rdparty/lcf")
     }
 }
 
 contains( DEFINES, INCLUDE_UPDATER ) {
     win32 {
         # DBLSQD updater - needed for Windows
-        !exists("$${_PRO_FILE_PWD_}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
+        !exists("$${PWD}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
             message("git submodule for optional but wanted Dblsqd updater missing from source code, executing 'git submodule update --init' to get it...")
-            system("cd $${_PRO_FILE_PWD_}\.. & git submodule update --init 3rdparty/dblsqd")
+            system("cd $${PWD}\.. & git submodule update --init 3rdparty/dblsqd")
         }
     } else {
         # DBLSQD updater - needed for Linux and MacOS
-        !exists("$${_PRO_FILE_PWD_}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
+        !exists("$${PWD}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
             message("git submodule for optional but wanted Dblsqd updater missing from source code, executing 'git submodule update --init' to get it...")
-            system("cd $${_PRO_FILE_PWD_}/.. ; git submodule update --init 3rdparty/dblsqd")
+            system("cd $${PWD}/.. ; git submodule update --init 3rdparty/dblsqd")
         }
 
         # Sparkle glue code - only needed for MacOs
         macx {
-            !exists("$${_PRO_FILE_PWD_}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
+            !exists("$${PWD}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
                 message("git submodule for optional but wanted Sparkle glue missing from source code, executing 'git submodule update --init' to get it...")
-                system("cd $${_PRO_FILE_PWD_}/.. ; git submodule update --init 3rdparty/sparkle-glue")
+                system("cd $${PWD}/.. ; git submodule update --init 3rdparty/sparkle-glue")
             }
         }
     }
 }
 
 # Now include the submodules - and abort if the needed one are STILL missing
-exists("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
+exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
     # Include shiny, new (and quite substantial) editor widget
-    include("$${_PRO_FILE_PWD_}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri")
+    include("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri")
 } else {
     error("Cannot locate edbee-lib editor widget submodule source code, build abandoned!")
 }
 
-!exists("$${_PRO_FILE_PWD_}/../3rdparty/lcf/lcf-scm-1.rockspec") {
+!exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
     error("Cannot locate lua code formatter submodule source code, build abandoned!")
 }
 
 contains( DEFINES, INCLUDE_UPDATER ) {
     # dblsqd is needed for all update-able platforms:
-    exists("$${_PRO_FILE_PWD_}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
-        include("$${_PRO_FILE_PWD_}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri")
+    exists("$${PWD}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri") {
+        include("$${PWD}/../3rdparty/dblsqd/dblsqd-sdk-qt.pri")
     } else {
         error("Cannot locate Dblsqd updater submodule source code, build abandoned!")
     }
@@ -445,7 +453,7 @@ contains( DEFINES, INCLUDE_UPDATER ) {
     macx {
         # We do not actually have to do anything to include it here - it is
         # pulled in by the Sparkle complation below
-        !exists("$${_PRO_FILE_PWD_}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
+        !exists("$${PWD}/../3rdparty/sparkle-glue/mixing-cocoa-and-qt.pro") {
             error("Cannot locate Sparkle glue library submodule source code, build abandoned!")
         }
     }
@@ -522,8 +530,7 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp \
-    wcwidth.cpp
+    XMLimport.cpp
 
 HEADERS += \
     ActionUnit.h \
@@ -601,7 +608,9 @@ HEADERS += \
     VarUnit.h \
     XMLexport.h \
     XMLimport.h \
-    wcwidth.h
+    widechar_width.h \
+    ../3rdparty/discord/rpc/include/discord_register.h \
+    ../3rdparty/discord/rpc/include/discord_rpc.h
 
 
 # This is for compiled UI files, not those used at runtime through the resource file.
@@ -702,6 +711,7 @@ LUA.files = \
     $${PWD}/mudlet-lua/lua/GMCP.lua \
     $${PWD}/mudlet-lua/lua/GUIUtils.lua \
     $${PWD}/mudlet-lua/lua/KeyCodes.lua \
+    $${PWD}/mudlet-lua/lua/TTSValues.lua \
     $${PWD}/mudlet-lua/lua/LuaGlobal.lua \
     $${PWD}/mudlet-lua/lua/Other.lua \
     $${PWD}/mudlet-lua/lua/StringUtils.lua \
@@ -1169,11 +1179,49 @@ LUA_LCF_L3_WORKSHOP_TABLE_ORDERED__PASS.files = $${PWD}/../3rdparty/lcf/workshop
 LUA_LCF_L3_WORKSHOP_TABLE_ORDERED__PASS.path = $${LUA_LCF_L1_WORKSHOP.path}/table/ordered_pass
 LUA_LCF.depends = mudlet
 
+# Test lua files:
+LUA_TESTS.files = \
+    $${PWD}/mudlet-lua/tests/DB_spec.lua \
+    $${PWD}/mudlet-lua/tests/GUIUtils_spec.lua \
+    $${PWD}/mudlet-lua/tests/MudletBusted_spec.lua \
+    $${PWD}/mudlet-lua/tests/Other_spec.lua
+LUA_TESTS.depends = mudlet
+
 
 macx {
     # Copy mudlet-lua into the .app bundle
     # the location is relative to src.pro, so just use mudlet-lua
-    APP_MUDLET_LUA_FILES.files = mudlet-lua en_US.aff en_US.dic
+    APP_MUDLET_LUA_FILES.files = \
+        mudlet-lua \
+        de_AT_frami.aff \
+        de_AT_frami.dic \
+        de_CH_frami.aff \
+        de_CH_frami.dic \
+        de_DE_frami.aff \
+        de_DE_frami.dic \
+        el_GR.aff \
+        el_GR.dic \
+        en_GB.aff \
+        en_GB.dic \
+        en_US.aff \
+        en_US.dic \
+        es_ES.aff \
+        es_ES.dic \
+        fr.aff \
+        fr.dic \
+        it_IT.aff \
+        it_IT.dic \
+        nl_NL.aff \
+        nl_NL.dic \
+        pl_PL.aff \
+        pl_PL.dic \
+        pt_PT.aff \
+        pt_PT.dic \
+        pt_BR.aff \
+        pt_BR.dic \
+        ru_RU.dic \
+        ru_RU.aff
+
     APP_MUDLET_LUA_FILES.path  = Contents/Resources
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_FILES
 
@@ -1230,6 +1278,7 @@ win32 {
 OTHER_FILES += \
     ${LUA.files} \
     ${LUA_GEYSER.files} \
+    ${LUA_TESTS.files} \
     ${DISTFILES} \
     ../README \
     ../COMPILE \
@@ -1301,7 +1350,8 @@ unix:!macx {
         LUA_LCF_L2_WORKSHOP_STRUC \
         LUA_LCF_L2_WORKSHOP_SYSTEM \
         LUA_LCF_L2_WORKSHOP_TABLE \
-        LUA_LCF_L3_WORKSHOP_TABLE_ORDERED__PASS
+        LUA_LCF_L3_WORKSHOP_TABLE_ORDERED__PASS \
+        LUA_TESTS
     }
 # Unfortunately, because (it seems) there are some directories in the above
 # that do not, themselves contain any actual files and only sub-directories
@@ -1347,4 +1397,14 @@ DISTFILES += \
     ../mudlet.svg \
     ../README.md \
     ../translations/translated/CMakeLists.txt \
-    ../translations/translated/generate-translation-stats.lua
+    ../translations/translated/generate-translation-stats.lua \
+    ../COMMITMENT \
+    ../.crowdin.yml \
+    ../.gitignore \
+    ../.gitmodules \
+    ../translations/translated/updateqm.pri \
+    ../CI/mudlet-deploy-key.enc \
+    ../CI/copy-non-qt-win-dependencies.ps1 \
+    ../CI/mudlet-deploy-key-windows.ppk \
+    ../CI/qt-silent-install.qs \
+    ../CI/travis.compile.sh

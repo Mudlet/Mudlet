@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016, 2018 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -42,13 +42,13 @@ class HostManager
 public:
     HostManager() = default; /* : mpActiveHost() - Not needed */
 
-    Host* getHost(QString hostname);
+    Host* getHost(const QString& hostname);
     int getHostCount();
     QStringList getHostList();
-    bool addHost(QString name, QString port, QString login, QString pass);
-    bool deleteHost(QString);
-    void postIrcMessage(QString, QString, QString);
-    void postInterHostEvent(const Host*, const TEvent&);
+    bool addHost(const QString& name, const QString& port, const QString& login, const QString& pass);
+    bool deleteHost(const QString&);
+    void postIrcMessage(const QString&, const QString&, const QString&);
+    void postInterHostEvent(const Host*, const TEvent&, const bool = false);
 
 private:
     QReadWriteLock mPoolReadWriteLock; // Was QMutex, but we needed to allow concurrent read access

@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2017 by Fae - itsthefae@gmail.com                       *
+ *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,11 +20,23 @@
 
 #include "TDockWidget.h"
 
-TDockWidget::TDockWidget(Host* pH, const QString& consoleName) : QDockWidget()
+TDockWidget::TDockWidget(Host* pH, const QString& consoleName)
+: QDockWidget()
+, widgetConsoleName(consoleName)
+, hasLayoutAlready(false)
+, mpHost(pH)
+, mpConsole(nullptr)
 {
-    mpHost = pH;
-    hasLayoutAlready = false;
-    widgetConsoleName = consoleName;
+}
+
+// This sets the mutual pointers that the TConsole and the TDockWidget now
+// have for each other as well as assigning the TConsole to be the TDockWidget's
+// widget:
+void TDockWidget::setTConsole(TConsole* pC)
+{
+    mpConsole = pC;
+    setWidget(pC);
+    pC->mpDockWidget = this;
 }
 
 void TDockWidget::closeEvent(QCloseEvent* event)

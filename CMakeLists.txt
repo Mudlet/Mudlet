@@ -34,7 +34,7 @@
 # Should be called before PROJECT.
 cmake_minimum_required(VERSION 3.1)
 if(APPLE)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.11") # Qt 5.10 with which we build on OS X only supports 10.11 and up.
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.12") # Qt 5.11.2 with which we build on OS X supports 10.11 and up, but some tools are not provided as bottles for that anymore.
 endif()
 
 project(mudlet)
@@ -75,9 +75,9 @@ endif()
 # To insure consistency please ensure the SAME of the first two values are also
 # assigned to the "VERSION" and "BUILD" variables in the native qmake project
 # file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 3.14.0)
+set(APP_VERSION 3.21.0)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
-  SET(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
+  set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
   set(APP_BUILD "-dev")
 endif()
@@ -124,12 +124,12 @@ endif()
 # something else or not even exist).
 set(FONT_TEST $ENV{WITH_FONTS})
 if(DEFINED FONT_TEST)
-    string(TOUPPER ${FONT_TEST} FONT_TEST)
+  string(TOUPPER ${FONT_TEST} FONT_TEST)
 else()
-    # Set the CMake variable to the default if it (as a result of WITH_FONTS not
-    # existing) has not been defined, without the if(DEFINED ...) string(...)
-    # errors out - and so may further tests on the variable...
-    set(FONT_TEST "YES")
+  # Set the CMake variable to the default if it (as a result of WITH_FONTS not
+  # existing) has not been defined, without the if(DEFINED ...) string(...)
+  # errors out - and so may further tests on the variable...
+  set(FONT_TEST "YES")
 endif()
 if(FONT_TEST STREQUAL "NO")
   option(USE_FONTS "Include Deja Vu and Ubuntu fonts in the executable" OFF)
@@ -214,13 +214,24 @@ endif()
 
 file(GLOB_RECURSE lua_files RELATIVE "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/lua/" "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/lua/*.lua")
 list(LENGTH lua_files lua_file_count)
-if(lua_file_count EQUAL 25)
+if(lua_file_count EQUAL 27)
   message(STATUS "Found Mudlet & Geyser lua files")
 else()
-  message(WARNING "Found ${lua_file_count} Mudlet & Geyser lua files but 25 were expected:")
+  message(WARNING "Found ${lua_file_count} Mudlet & Geyser lua files but 27 were expected:")
   foreach(lua_file ${lua_files})
     message(STATUS "    ${lua_file}")
   endforeach(lua_file)
+endif()
+
+file(GLOB_RECURSE lua_test_files RELATIVE "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/tests/" "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/tests/*.lua")
+list(LENGTH lua_test_files lua_test_file_count)
+if(lua_test_file_count EQUAL 4)
+  message(STATUS "Found Mudlet Lua test files")
+else()
+  message(WARNING "Found ${lua_test_file_count} Mudlet Lua test files but 4 were expected:")
+  foreach(lua_test_file ${lua_test_files})
+    message(STATUS "    ${lua_test_file}")
+  endforeach()
 endif()
 
 if(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/lcf/lcf-scm-1.rockspec")

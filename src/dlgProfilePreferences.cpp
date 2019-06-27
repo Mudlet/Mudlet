@@ -41,6 +41,7 @@
 #include <QFileDialog>
 #include <QFontDialog>
 #include <QNetworkDiskCache>
+#include <QString>
 #include <QTableWidget>
 #include <QToolBar>
 #include <QUiLoader>
@@ -52,9 +53,24 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 , mFontSize(10)
 , mpHost(pHost)
 , mpMenu(nullptr)
+, mUseSharedDictionary(false)
 {
     // init generated dialog
     setupUi(this);
+
+    QPixmap holdPixmap;
+
+    holdPixmap = *(this->notificationAreaIconLabelWarning->pixmap());
+    holdPixmap.setDevicePixelRatio(5.3);
+    this->notificationAreaIconLabelWarning->setPixmap(holdPixmap);
+
+    holdPixmap = *(this->notificationAreaIconLabelError->pixmap());
+    holdPixmap.setDevicePixelRatio(5.3);
+    this->notificationAreaIconLabelError->setPixmap(holdPixmap);
+
+    holdPixmap = *(this->notificationAreaIconLabelInformation->pixmap());
+    holdPixmap.setDevicePixelRatio(5.3);
+    this->notificationAreaIconLabelInformation->setPixmap(holdPixmap);
 
     // The groupBox_debug is no longer empty, (it contains
     // checkBox_showIconsOnMenus) so can no longer be "hidden until needed"
@@ -153,39 +169,55 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     // To be moved to a slot that is used on GUI language change when that gets
     // implimented:
+
+    // Set the tooltip on the containing widget so both the label and the
+    // control have the same tool-tip:
+    widget_timerDebugOutputMinimumInterval->setToolTip(tr("<p>A timer with a short interval will quickly fill up the <i>Central Debug Console</i> "
+                                                          "windows with messages that it ran correctly on <i>each</i> occasion it is called.  This (per profile) "
+                                                          "control adjusts a threshold that will hide those messages in just that window for those timers which "
+                                                          "run <b>correctly</b> when the timer's interval is less than this setting.</p>"
+                                                          "<p><u>Any timer script that has errors will still have its error messages reported whatever the setting.</u></p>"));
+
     pushButton_showGlyphUsage->setToolTip(tr("<p>This will bring up a display showing all the symbols used in the current "
-                                                                 "map and whether they can be drawn using just the specifed font, any other "
-                                                                 "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
-                                                                 "that make up that symbol, so that they can be identified even if they "
-                                                                 "cannot be displayed; also, up to the first thirty two rooms that are using "
-                                                                 "that symbol are listed, which may help to identify any unexpected or odd cases.<p>"));
+                                             "map and whether they can be drawn using just the specifed font, any other "
+                                             "font, or not at all.  It also shows the sequence of Unicode <i>code-points</i> "
+                                             "that make up that symbol, so that they can be identified even if they "
+                                             "cannot be displayed; also, up to the first thirty two rooms that are using "
+                                             "that symbol are listed, which may help to identify any unexpected or odd cases.<p>"));
     fontComboBox_mapSymbols->setToolTip(tr("<p>Select the only or the primary font used (depending on <i>Only use symbols "
-                                                               "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>"));
+                                           "(glyphs) from chosen font</i> setting) to produce the 2D mapper room symbols.</p>"));
     checkBox_isOnlyMapSymbolFontToBeUsed->setToolTip(tr("<p>Using a single font is likely to produce a more consistent style but may "
-                                                                            "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
-                                                                            "does not have a needed glyph (a font's individual character/symbol) to represent "
-                                                                            "the grapheme (what is to be represented).  Clearing this checkbox will allow "
-                                                                            "the best alternative glyph from another font to be used to draw that grapheme.</p>"));
+                                                        "cause the <i>font replacement character</i> '<b>�</b>' to show if the font "
+                                                        "does not have a needed glyph (a font's individual character/symbol) to represent "
+                                                        "the grapheme (what is to be represented).  Clearing this checkbox will allow "
+                                                        "the best alternative glyph from another font to be used to draw that grapheme.</p>"));
     checkBox_runAllKeyBindings->setToolTip(tr("<p>If <b>not</b> checked Mudlet will only react to the first matching keybinding "
-                                                                  "(combination of key and modifiers) even if more than one of them is set to be "
-                                                                  "active. This means that a temporary keybinding (not visible in the Editor) "
-                                                                  "created by a script or package may be used in preference to a permanent one "
-                                                                  "that is shown and is set to be active. If checked then all matching keybindings "
-                                                                  "will be run.</p>"
-                                                                  "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
-                                                                  "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>"));
+                                              "(combination of key and modifiers) even if more than one of them is set to be "
+                                              "active. This means that a temporary keybinding (not visible in the Editor) "
+                                              "created by a script or package may be used in preference to a permanent one "
+                                              "that is shown and is set to be active. If checked then all matching keybindings "
+                                              "will be run.</p>"
+                                              "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
+                                              "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>"));
     checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(tr("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
-                                                                                "of <i>Ambigous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
-                                                                                "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
-                                                                                "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
-                                                                                "chose the right width automatically but you can override the setting for each profile.</p>"
-                                                                                "<p>This control has three settings:"
-                                                                                "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
-                                                                                "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
-                                                                                "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
-                                                                                "encodings of <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
-                                                                                "<p><i>This is a temporary arrangement and will likely to change when Mudlet gains "
-                                                                                "full support for languages other than English.</i></p>"));
+                                                            "of <i>Ambigous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
+                                                            "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
+                                                            "drawn using either a half or the whole space of a full character. By default Mudlet tries to "
+                                                            "chose the right width automatically but you can override the setting for each profile.</p>"
+                                                            "<p>This control has three settings:"
+                                                            "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
+                                                            "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
+                                                            "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
+                                                            "encodings of <b>Big5</b>, <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
+                                                            "<p><i>This is a temporary arrangement and will probably change when Mudlet gains "
+                                                            "full support for languages other than English.</i></p>"));
+    checkBox_enableTextAnalyzer->setToolTip(tr("<p>Enable a context (right click) menu action on any console/user window that, "
+                                               "when the mouse cursor is hovered over it, will display the UTF-16 and UTF-8 items "
+                                               "that make up each Unicode codepoint on the <b>first</b> line of any selection.</p>"
+                                               "<p>This utility feature is intended to help the user identify any grapheme "
+                                               "(visual equivalent to a <i>character</i>) that a Game server may send even "
+                                               "if it is composed of multiple bytes as any non-ASCII character will be in the "
+                                               "Lua sub-system which uses the UTF-8 encoding system.<p>"));
     checkBox_showIconsOnMenus->setToolTip(tr("<p>Some Desktop Environments tell Qt applications like Mudlet whether they should "
                                              "shown icons on menus, others, however do not. This control allows the user to override "
                                              "the setting, if needed, as follows:"
@@ -194,6 +226,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                              "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use the setting that the system provides.</li></ul></p>"
                                              "<p><i>This setting is only processed when individual menus are created and changes may not "
                                              "propogate everywhere until Mudlet is restarted.</i></p>"));
+
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
     connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
@@ -278,8 +311,10 @@ void dlgProfilePreferences::disableHostDetails()
     // Some of groupBox_displayOptions are usable, so must pick out and
     // disable the others:
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(false);
+    checkBox_enableTextAnalyzer->setEnabled(false);
     checkBox_echoLuaErrors->setEnabled(false);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(false);
+    widget_timerDebugOutputMinimumInterval->setEnabled(false);
 
     // on tab_codeEditor:
     groupbox_codeEditorThemeSelection->setEnabled(false);
@@ -324,12 +359,17 @@ void dlgProfilePreferences::disableHostDetails()
 
     // on groupBox_specialOptions:
     groupBox_specialOptions->setEnabled(false);
+
     // it is possible to connect using the IRC client off of the
     // "default" host even without a normal profile loaded so leave
     // groupBox_ircOptions enabled...
     need_reconnect_for_specialoption->hide();
     groupbox_searchEngineSelection->setEnabled(false);
+
     groupBox_discordPrivacy->hide();
+
+    // tab security
+    groupBox_ssl->setEnabled(false);
 }
 
 void dlgProfilePreferences::enableHostDetails()
@@ -350,8 +390,10 @@ void dlgProfilePreferences::enableHostDetails()
     groupBox_doubleClick->setEnabled(true);
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
+    checkBox_enableTextAnalyzer->setEnabled(true);
     checkBox_echoLuaErrors->setEnabled(true);
     checkBox_useWideAmbiguousEastAsianGlyphs->setEnabled(true);
+    widget_timerDebugOutputMinimumInterval->setEnabled(true);
 
     // on tab_codeEditor:
     groupbox_codeEditorThemeSelection->setEnabled(true);
@@ -385,6 +427,12 @@ void dlgProfilePreferences::enableHostDetails()
     // "default" host even without a normal profile loaded so leave
     // groupBox_ircOptions enabled...
     groupbox_searchEngineSelection->setEnabled(true);
+
+#if defined(QT_NO_SSL)
+    groupBox_ssl->setEnabled(false);
+#else
+    groupBox_ssl->setEnabled(QSslSocket::supportsSsl());
+#endif
 }
 
 void dlgProfilePreferences::initWithHost(Host* pHost)
@@ -408,55 +456,99 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     ircNick->setText(dlgIRC::readIrcNickName(pHost));
 
     dictList->setSelectionMode(QAbstractItemView::SingleSelection);
-    enableSpellCheck->setChecked(pHost->mEnableSpellCheck);
+    dictList->clear();
+    // Disable sorting whilst populating the widget:
+    dictList->setSortingEnabled(false);
+    checkBox_spellCheck->setChecked(pHost->mEnableSpellCheck);
+    bool useUserDictionary = false;
+    pHost->getUserDictionaryOptions(useUserDictionary, mUseSharedDictionary);
+    // Always set the true radio button first - avoids any problems with
+    // exclusivity of radio buttons:
+    if (mUseSharedDictionary) {
+        radioButton_userDictionary_common->setChecked(true);
+        radioButton_userDictionary_profile->setChecked(false);
+    } else {
+        radioButton_userDictionary_profile->setChecked(true);
+        radioButton_userDictionary_common->setChecked(false);
+    }
     checkBox_echoLuaErrors->setChecked(pHost->mEchoLuaErrors);
     checkBox_useWideAmbiguousEastAsianGlyphs->setCheckState(pHost->getWideAmbiguousEAsianGlyphsControlState());
 
-    QString path;
-    // This is duplicated (and should be the same as) the code in:
-    // TCommandLine::TCommandLine(Host*, TConsole*, QWidget*)
-#if defined(Q_OS_MACOS)
-    path = QStringLiteral("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
-#elif defined(Q_OS_FREEBSD)
-    if (QFile::exists(QStringLiteral("/usr/local/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
-        path = QLatin1String("/usr/local/share/hunspell/");
-    } else if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
-        path = QLatin1String("/usr/share/hunspell/");
+    // On the first run for a profile this will be the "English (American)"
+    // dictionary "en_US".
+    const QString& currentDictionary = pHost->getSpellDic();
+    // This will also set mudlet::mUsingMudletDictionaries as appropriate:
+    QString path = mudlet::getMudletPath(mudlet::hunspellDictionaryPath, currentDictionary);
+
+    // Tweak the label for the provided spelling dictionaries depending on where
+    // they come from:
+    if (mudlet::self()->mUsingMudletDictionaries) {
+        checkBox_spellCheck->setText(tr("Mudlet dictionaries:", "On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones."));
     } else {
-        path = QLatin1String("./");
+        checkBox_spellCheck->setText(tr("System dictionaries:", "On *nix systems where we find the system ones we use them."));
     }
-#elif defined(Q_OS_LINUX)
-    if (QFile::exists(QStringLiteral("/usr/share/hunspell/%1.aff").arg(pHost->mSpellDic))) {
-        path = QLatin1String("/usr/share/hunspell/");
-    } else {
-        path = QLatin1String("./");
-    }
-#else
-    // Probably Windows!
-    path = "./";
-#endif
 
     QDir dir(path);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
+    // QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
+    // Use the affix file as that may eliminate supplimental dictionaries:
+    QRegularExpression rex(QStringLiteral(R"(\.aff$)"));
     entries = entries.filter(rex);
-    for (int i = 0; i < entries.size(); i++) {
-        // This is a file name and to support macOs platforms should not be case sensitive:
-        entries[i].remove(QLatin1String(".dic"), Qt::CaseInsensitive);
-        auto item = new QListWidgetItem(entries[i]);
-        dictList->addItem(item);
-        if (entries[i] == pHost->mSpellDic) {
-            item->setSelected(true);
-        }
-    }
+    // Don't emit signals - like (void) QListWidget::currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
+    // whilst populating the widget, it reduces noise about:
+    // "qt.accessibility.core: Cannot create accessible child interface for object:  QListWidget(0x############, name = "dictList")  index:  ##
+    dictList->blockSignals(true);
+    if (entries.count()) {
+        QListWidgetItem* scrollToItem = nullptr;
+        for (int i = 0, total = entries.size(); i < total; ++i) {
+            // This is a file name and to support macOs platforms should not be case sensitive:
+            entries[i].remove(QLatin1String(".aff"), Qt::CaseInsensitive);
 
-    const QString url(pHost->getUrl());
-    if (url.contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)
-     || url.contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive)
-     || url.contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)
-     || url.contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)
-     || url.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)
-     || !pHost->getMmpMapLocation().isEmpty()) {
+            if (entries.at(i).endsWith(QStringLiteral("med"), Qt::CaseInsensitive)) {
+                // Skip medical dictionaries - there may be others  we also want to hide:
+                continue;
+            }
+
+            auto item = new QListWidgetItem();
+            item->setTextAlignment(Qt::AlignCenter);
+            auto key = entries.at(i).toLower();
+            // In some cases '-' will be used as a separator and in others '_' so convert all to one form:
+            key.replace(QLatin1String("-"), QLatin1String("_"));
+            if (mudlet::self()->mDictionaryLanguageCodeMap.contains(key)) {
+                item->setText(mudlet::self()->mDictionaryLanguageCodeMap.value(key));
+                item->setToolTip(tr("<p>From the dictionary file <tt>%1.dic</tt> (and its companion affix <tt>.aff</tt> file).</p>").arg(dir.absoluteFilePath(entries.at(i))));
+            } else {
+                item->setText(tr("%1 - not recognised").arg(entries.at(i)));
+                item->setToolTip(tr("<p>Mudlet does not recognise the code \"%1\", please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!</p>"
+                                    "<p>The file <tt>%2.dic</tt> (and its companion affix <tt>.aff</tt> file) is still usable.</p>").arg(entries.at(i), dir.absoluteFilePath(entries.at(i))));
+            }
+            item->setData(Qt::UserRole, entries.at(i));
+            dictList->addItem(item);
+            if (entries.at(i) == currentDictionary) {
+                scrollToItem = item;
+            }
+        }
+
+        // Reenable sorting now we have populated the widget:
+        dictList->setSortingEnabled(true);
+        // Actually do the sort:
+        dictList->sortItems();
+
+        if (scrollToItem) {
+            // As the selection mode is set to
+            // QAbstractItemView::SingleSelection this also selects this item:
+            dictList->setCurrentItem(scrollToItem);
+            // And scroll to it:
+            dictList->scrollToItem(scrollToItem);
+        }
+
+    } else {
+        dictList->setEnabled(false);
+        dictList->setToolTip(tr("No Hunspell dictionary files found, spell-checking will not be available."));
+    }
+    dictList->blockSignals(false);
+
+    if (!pHost->getMmpMapLocation().isEmpty()) {
         groupBox_downloadMapOptions->setVisible(true);
         connect(buttonDownloadMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::downloadMap);
     } else {
@@ -502,11 +594,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     show_sent_text_checkbox->setChecked(pHost->mPrintCommand);
     auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
     command_separator_lineedit->setText(pHost->mCommandSeparator);
-    //disable_auto_completion_checkbox->setChecked(pHost->mDisableAutoCompletion);
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
     //this option is changed into a forced option for GA enabled drivers as triggers wont run on prompt lines otherwise
     //checkBox_LF_ON_GA->setChecked( pHost->mLF_ON_GA );
+    checkBox_enableTextAnalyzer->setChecked(pHost->mEnableTextAnalyzer);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
 
@@ -585,7 +677,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mFORCE_MCCP_OFF->setChecked(pHost->mFORCE_NO_COMPRESSION);
     mFORCE_GA_OFF->setChecked(pHost->mFORCE_GA_OFF);
     mAlertOnNewData->setChecked(pHost->mAlertOnNewData);
-    //mMXPMode->setCurrentIndex( pHost->mMXPMode );
     //encoding->setCurrentIndex( pHost->mEncoding );
     mFORCE_SAVE_ON_EXIT->setChecked(pHost->mFORCE_SAVE_ON_EXIT);
     mEnableGMCP->setChecked(pHost->mEnableGMCP);
@@ -706,6 +797,81 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         comboBox_encoding->setCurrentText(pHost->mTelnet.getFriendlyEncoding());
     }
 
+    timeEdit_timerDebugOutputMinimumInterval->setTime(pHost->mTimerDebugOutputSuppressionInterval);
+    notificationArea->hide();
+    notificationAreaIconLabelWarning->hide();
+    notificationAreaIconLabelError->hide();
+    notificationAreaIconLabelInformation->hide();
+    notificationAreaMessageBox->hide();
+
+#if !defined(QT_NO_SSL)
+    if (QSslSocket::supportsSsl() && pHost->mSslTsl) {
+        QSslCertificate cert = pHost->mTelnet.getPeerCertificate();
+        ssl_issuer_label->setText(cert.issuerInfo(QSslCertificate::CommonName).join(","));
+        ssl_issued_label->setText(cert.subjectInfo(QSslCertificate::CommonName).join(","));
+        ssl_expires_label->setText(cert.expiryDate().toString(Qt::LocalDate));
+        ssl_serial_label->setText(QString::fromStdString(cert.serialNumber().toStdString()));
+        checkBox_self_signed->setStyleSheet("");
+        checkBox_expired->setStyleSheet("");
+        ssl_issuer_label->setStyleSheet("");
+        ssl_expires_label->setStyleSheet("");
+        checkBox_ssl->setStyleSheet("");
+
+        if (!pHost->mTelnet.getSslErrors().empty()) {
+            // handle ssl errors
+            notificationAreaIconLabelWarning->show();
+            notificationArea->show();
+            notificationAreaMessageBox->show();
+            //notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+
+            QList<QSslError> sslErrors = pHost->mTelnet.getSslErrors();
+
+            for (int a = 0; a < sslErrors.count(); a++) {
+                QString thisError = QStringLiteral("<li>%1</li>").arg(sslErrors.at(a).errorString());
+                notificationAreaMessageBox->setText(QStringLiteral("%1\n%2").arg(notificationAreaMessageBox->text(), thisError));
+
+                if (sslErrors.at(a).error() == QSslError::SelfSignedCertificate) {
+                    checkBox_self_signed->setStyleSheet(QStringLiteral("font-weight: bold; background: yellow"));
+                    ssl_issuer_label->setStyleSheet(QStringLiteral("font-weight: bold; color: red; background: yellow"));
+                }
+                if (sslErrors.at(a).error() == QSslError::CertificateExpired) {
+                    checkBox_expired->setStyleSheet(QStringLiteral("font-weight: bold; background: yellow"));
+                    ssl_expires_label->setStyleSheet(QStringLiteral("font-weight: bold; color: red; background: yellow"));
+                }
+            }
+
+        } else if (pHost->mTelnet.error() == QAbstractSocket::SslHandshakeFailedError) {
+            // handle failed handshake, likely not ssl socket
+            notificationAreaIconLabelError->show();
+            notificationArea->show();
+            notificationAreaMessageBox->show();
+            notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+            checkBox_ssl->setStyleSheet(QStringLiteral("font-weight: bold; background: yellow"));
+        }
+        if (pHost->mTelnet.error() == QAbstractSocket::SslInternalError) {
+            // handle ssl library error
+            notificationAreaIconLabelError->show();
+            notificationArea->show();
+            notificationAreaMessageBox->show();
+            notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+        }
+        if (pHost->mTelnet.error() == QAbstractSocket::SslInvalidUserDataError) {
+            // handle invalid data (certificate, key, cypher, etc.)
+            notificationAreaIconLabelError->show();
+            notificationArea->show();
+            notificationAreaMessageBox->show();
+            notificationAreaMessageBox->setText(pHost->mTelnet.errorString());
+        }
+    }
+#endif
+
+    checkBox_ssl->setChecked(pHost->mSslTsl);
+    checkBox_self_signed->setChecked(pHost->mSslIgnoreSelfSigned);
+    checkBox_expired->setChecked(pHost->mSslIgnoreExpired);
+    checkBox_ignore_all->setChecked(pHost->mSslIgnoreAll);
+
+    checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
+    checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
 
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:
@@ -784,6 +950,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_resetLogDir, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetLogDir);
     connect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_logFileNameFormatChange);
     connect(mIsToLogInHtml, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeLogFileAsHtml);
+
+    //Security tab
+
+
 }
 
 void dlgProfilePreferences::disconnectHostRelatedControls()
@@ -882,7 +1052,7 @@ void dlgProfilePreferences::clearHostDetails()
     ircNick->clear();
 
     dictList->clear();
-    enableSpellCheck->setChecked(false);
+    checkBox_spellCheck->setChecked(false);
     checkBox_echoLuaErrors->setChecked(false);
 
     groupBox_downloadMapOptions->setVisible(false);
@@ -908,6 +1078,7 @@ void dlgProfilePreferences::clearHostDetails()
     command_separator_lineedit->clear();
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(false);
+    checkBox_enableTextAnalyzer->setChecked(false);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(false);
     USE_UNIX_EOL->setChecked(false);
     topBorderHeight->clear();
@@ -1124,6 +1295,19 @@ void dlgProfilePreferences::setColors2()
     }
 }
 
+void dlgProfilePreferences::setTab(QString tab)
+{
+    foreach (QWidget* child, tabWidget->findChildren<QWidget*>())
+    {
+        if (child->objectName().contains(tab,Qt::CaseInsensitive))
+        {
+            tabWidget->setCurrentIndex(tabWidget->indexOf(child));
+            return;
+        }
+    }
+    tabWidget->setCurrentIndex(0);
+}
+
 void dlgProfilePreferences::resetColors()
 {
     Host* pHost = mpHost;
@@ -1137,6 +1321,7 @@ void dlgProfilePreferences::resetColors()
     pHost->mCommandBgColor = Qt::black;
     pHost->mFgColor = Qt::lightGray;
     pHost->mBgColor = Qt::black;
+    // If these get changed, ensure TBuffer::resetColors() is updated to match
     pHost->mBlack = Qt::black;
     pHost->mLightBlack = Qt::darkGray;
     pHost->mRed = Qt::darkRed;
@@ -1600,11 +1785,7 @@ void dlgProfilePreferences::downloadMap()
         mudlet::self()->createMapper(false);
     }
 
-    if (pHost->mUrl.contains(QStringLiteral("stickmud.com"), Qt::CaseInsensitive)) {
-        pHost->mpMap->downloadMap(QStringLiteral("http://www.%1/maps/map.xml").arg(mpHost->mUrl));
-    } else {
-        pHost->mpMap->downloadMap();
-    }
+    pHost->mpMap->downloadMap();
 }
 
 void dlgProfilePreferences::loadMap()
@@ -1679,21 +1860,15 @@ void dlgProfilePreferences::saveMap()
                            // Just in case is needed to make the above message
                            // show up when saving big maps
 
-    // Temporarily use whatever version is currently set
-    int oldSaveVersionFormat = pHost->mpMap->mSaveVersion;
-    pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
-
     // Ensure the setting is already made as the saveMap(...) uses the set value
     bool showAuditErrors = mudlet::self()->showMapAuditErrors();
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
-    if (pHost->mpConsole->saveMap(fileName)) {
+    if (pHost->mpConsole->saveMap(fileName, comboBox_mapFileSaveFormatVersion->currentData().toInt())) {
         label_mapFileActionResult->setText(tr("Saved map to %1.").arg(fileName));
     } else {
         label_mapFileActionResult->setText(tr("Could not save map to %1.").arg(fileName));
     }
-    // Then restore prior version
-    pHost->mpMap->mSaveVersion = oldSaveVersionFormat;
     mudlet::self()->setShowMapAuditErrors(showAuditErrors);
 
     QTimer::singleShot(10 * 1000, this, &dlgProfilePreferences::hideActionLabel);
@@ -1748,8 +1923,8 @@ void dlgProfilePreferences::copyMap()
     QSetIterator<Host*> itActiveHost(activeHosts);
     while (itActiveHost.hasNext()) {
         Host* pOtherHost = itActiveHost.next();
-        if (pOtherHost && pHost != pOtherHost && pOtherHost) {
-            QString otherHostName = pOtherHost->getName();
+        if (pOtherHost && (pOtherHost != pHost)) {
+            const auto otherHostName = pOtherHost->getName();
             if (toProfilesRoomIdMap.contains(otherHostName)) {
                 activeOtherHostMap.insert(otherHostName, pOtherHost);
                 toProfilesRoomIdMap.insert(otherHostName, pOtherHost->mpMap->mRoomIdHash.value(otherHostName, -1));
@@ -1995,11 +2170,16 @@ void dlgProfilePreferences::slot_save_and_exit()
     mudlet* pMudlet = mudlet::self();
     Host* pHost = mpHost;
     if (pHost) {
-        if (dictList->currentItem()) {
-            pHost->mSpellDic = dictList->currentItem()->text();
+        if (dictList->isEnabled() && dictList->currentItem()) {
+            pHost->setSpellDic(dictList->currentItem()->data(Qt::UserRole).toString());
         }
 
-        pHost->mEnableSpellCheck = enableSpellCheck->isChecked();
+        pHost->mEnableSpellCheck = checkBox_spellCheck->isChecked();
+        if (radioButton_userDictionary_common->isChecked()) {
+            pHost->setUserDictionaryOptions(true, true);
+        } else {
+            pHost->setUserDictionaryOptions(true, false);
+        }
         pHost->mWrapAt = wrap_at_spinBox->value();
         pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
         pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
@@ -2008,6 +2188,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
         pHost->mUSE_IRE_DRIVER_BUGFIX = checkBox_USE_IRE_DRIVER_BUGFIX->isChecked();
         pHost->set_USE_IRE_DRIVER_BUGFIX(checkBox_USE_IRE_DRIVER_BUGFIX->isChecked());
+        pHost->mEnableTextAnalyzer = checkBox_enableTextAnalyzer->isChecked();
         pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();
         pHost->mUSE_UNIX_EOL = USE_UNIX_EOL->isChecked();
         pHost->getKeyUnit()->mRunAllKeyMatches = checkBox_runAllKeyBindings->isChecked();
@@ -2051,6 +2232,13 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
         pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
         pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
+
+        //tab security
+        pHost->mSslTsl = checkBox_ssl->isChecked();
+        pHost->mSslIgnoreExpired = checkBox_expired->isChecked();
+        pHost->mSslIgnoreSelfSigned = checkBox_self_signed->isChecked();
+        pHost->mSslIgnoreAll = checkBox_ignore_all->isChecked();
+
 
         if (pMudlet->mConsoleMap.contains(pHost)) {
             pMudlet->mConsoleMap[pHost]->changeColors();
@@ -2113,7 +2301,7 @@ void dlgProfilePreferences::slot_save_and_exit()
             dlgIRC::writeIrcNickName(pHost, newIrcNick);
 
             // if the client is active, update our client nickname.
-            if (pMudlet->mpIrcClientMap[pHost]) {
+            if (pMudlet->mpIrcClientMap.contains(pHost)) {
                 pMudlet->mpIrcClientMap[pHost]->connection->setNickName(newIrcNick);
             }
         }
@@ -2133,7 +2321,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
 
         // restart the irc client if it is active and we have changed host/port.
-        if (restartIrcClient && pMudlet->mpIrcClientMap[pHost]) {
+        if (restartIrcClient && pMudlet->mpIrcClientMap.contains(pHost)) {
             pMudlet->mpIrcClientMap[pHost]->ircRestart();
         }
 
@@ -2160,6 +2348,8 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mThemePreviewType = data.first;
 
         pHost->mSearchEngineName = search_engine_combobox->currentText();
+
+        pHost->mTimerDebugOutputSuppressionInterval = timeEdit_timerDebugOutputMinimumInterval->time();
 
         auto hideSmallIcon = false, hideSmallIconText = false;
         if (comboBox_discordSmallIconPrivacy->currentIndex() == 0) {
@@ -2203,6 +2393,9 @@ void dlgProfilePreferences::slot_save_and_exit()
         } else {
             pHost->mRequiredDiscordUserDiscriminator.clear();
         }
+
+        pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
+        pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
     }
 
 #if defined(INCLUDE_UPDATER)
@@ -2495,7 +2688,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 
     QNetworkReply* getReply = manager->get(request);
 
-    connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), [=](QNetworkReply::NetworkError) {
+    connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
         theme_download_label->setText(tr("Could not update themes: %1").arg(getReply->errorString()));
         QTimer::singleShot(5000, theme_download_label, [label = theme_download_label] {
             label->hide();
@@ -2531,8 +2724,8 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
                         // perform unzipping in a worker thread so as not to freeze the UI
                         auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), mudlet::getMudletPath(mudlet::mainDataItemPath, QStringLiteral("edbee/")), temporaryDir.path());
                         auto watcher = new QFutureWatcher<bool>;
-                        QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
-                            if (future.result() == true) {
+                        QObject::connect(watcher, &QFutureWatcher<bool>::finished, this, [=]() {
+                            if (future.result()) {
                                 populateThemesList();
                             }
 
@@ -2555,7 +2748,7 @@ void dlgProfilePreferences::populateThemesList()
 
     if (themesFile.open(QIODevice::ReadOnly)) {
         unsortedThemes = QJsonDocument::fromJson(themesFile.readAll()).array();
-        for (auto theme : unsortedThemes) {
+        for (auto theme : qAsConst(unsortedThemes)) {
             QString themeText = theme.toObject()["Title"].toString();
             QString themeFileName = theme.toObject()["FileName"].toString();
 
@@ -2574,7 +2767,7 @@ void dlgProfilePreferences::populateThemesList()
 
     auto currentSelection = code_editor_theme_selection_combobox->currentText();
     code_editor_theme_selection_combobox->clear();
-    for (auto key : sortedThemes) {
+    for (auto key : qAsConst(sortedThemes)) {
         // store the actual theme file as data because edbee needs that,
         // not the name, for choosing the theme even after the theme file was loaded
         code_editor_theme_selection_combobox->addItem(key.first, key.second);

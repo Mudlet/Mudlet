@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2016-2018 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2014, 2016-2019 by Stephen Lyons                   *
  *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *                                                                         *
@@ -121,7 +121,7 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
     if ((action) & (1 | 2)) {
         return new QCoreApplication(argc, argv);
     } else {
-#if defined(Q_OS_MACOS)
+#if defined(Q_OS_MACOS) && (QT_VERSION < QT_VERSION_CHECK(5, 12, 0))
         // Workaround for horrible mac rendering issues once the mapper widget
         // is open - see https://bugreports.qt.io/browse/QTBUG-41257
         QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
@@ -194,7 +194,15 @@ int main(int argc, char* argv[])
 #endif // _MSC_VER && _DEBUG
     spDebugConsole = nullptr;
     unsigned int startupAction = 0;
+
     QString uri;
+
+    // due to a Qt bug, this only safely works for both non- and HiDPI displays on 5.12+
+    // 5.6 - 5.11 make the application blow up in size on non-HiDPI displays
+#if defined (Q_OS_UNIX) && (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
+    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+#endif
+
     QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction, uri));
     auto * app = qobject_cast<QApplication*>(initApp.data());
 
@@ -204,14 +212,16 @@ int main(int argc, char* argv[])
     if (startupAction & 2) {
         // Do "version" action - wording and format is quite tightly specified by the coding standards
 #if defined(QT_DEBUG)
-        texts << QCoreApplication::translate("main", "%1 %2%3 (debug symbols, no optimisations)\n")
+        texts << QCoreApplication::translate("main", "%1 %2%3 (with debug symbols, without optimisations)\n",
+		 "%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev")
                  .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), QLatin1String(APP_BUILD));
 #else // ! defined(QT_DEBUG)
         texts << QLatin1String(APP_TARGET " " APP_VERSION APP_BUILD " \n");
 #endif // ! defined(QT_DEBUG)
-        texts << QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)\n").arg(QLatin1String(QT_VERSION_STR), qVersion());
+        texts << QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)\n",
+	         "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion());
         texts << QCoreApplication::translate("main", "Copyright © 2008-%1  Mudlet developers\n").arg(QStringLiteral(__DATE__).mid(7, 4));
-        texts << QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later <http://gnu.org/licenses/gpl.html>.\n");
+        texts << QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html\n");
         texts << QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
                                                      "There is NO WARRANTY, to the extent permitted by law.");
         std::cout << texts.join(QString()).toStdString();
@@ -228,15 +238,17 @@ int main(int argc, char* argv[])
         // From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
         texts << QCoreApplication::translate("main", "       --dograb        ignore any implicit or explicit -nograb.\n"
                                                      "                       --dograb wins over --nograb even when --nograb is last on\n"
-                                                     "                       the command line.\n"
-                                                     "       --nograb        the application should never grab the mouse or the\n"
+                                                     "                       the command line.\n");
 #if defined(Q_OS_LINUX)
+        // Need to split these into actually seperate strings, as Crowdin translation would not split strings on #if otherwise.
+        texts << QCoreApplication::translate("main", "       --nograb        the application should never grab the mouse or the\n"
                                                      "                       keyboard. This option is set by default when Mudlet is\n"
-                                                     "                       running in the gdb debugger under Linux.\n"
+                                                     "                       running in the gdb debugger under Linux.\n");
 #else // ! defined(Q_OS_LINUX)
-                                                     "                       keyboard.\n"
+        texts << QCoreApplication::translate("main", "       --nograb        the application should never grab the mouse or the\n"
+                                                     "                       keyboard.\n");
 #endif // ! defined(Q_OS_LINUX)
-                                                     "       --reverse       sets the application's layout direction to right to left.\n"
+        texts << QCoreApplication::translate("main", "       --reverse       sets the application's layout direction to right to left.\n"
                                                      "       --style= style  sets the application GUI style. Possible values depend on\n"
                                                      "                       your system configuration. If Qt was compiled with\n"
                                                      "                       additional styles or has additional styles as plugins\n"
@@ -249,23 +261,23 @@ int main(int argc, char* argv[])
                                                      "                       The value must be a path to a file that contains the\n"
                                                      "                       Style Sheet. Note: Relative URLs in the Style Sheet file\n"
                                                      "                       are relative to the Style Sheet file's path.\n"
-                                                     "       --stylesheet stylesheet  is the same as listed above.\n"
+                                                     "       --stylesheet stylesheet  is the same as listed above.\n");
 // Not sure about MacOS case as that does not use X
 #if defined(Q_OS_UNIX) && (! defined(Q_OS_MACOS))
-                                                     "       --sync          forces the X server to perform each X client request\n"
+        texts << QCoreApplication::translate("main", "       --sync          forces the X server to perform each X client request\n"
                                                      "                       immediately and not use buffer optimization. It makes the\n"
                                                      "                       program easier to debug and often much slower. The --sync\n"
-                                                     "                       option is only valid for the X11 version of Qt.\n"
+                                                     "                       option is only valid for the X11 version of Qt.\n");
 #endif // defined(Q_OS_UNIX) and not defined(Q_OS_MACOS)
-                                                     "       --widgetcount   prints debug message at the end about number of widgets\n"
+        texts << QCoreApplication::translate("main", "       --widgetcount   prints debug message at the end about number of widgets\n"
                                                      "                       left undestroyed and maximum number of widgets existing\n"
                                                      "                       at the same time.\n"
                                                      "       --qmljsdebugger=1234[,block]  activates the QML/JS debugger with a\n"
                                                      "                       specified port. The number is the port value and block is\n"
                                                      "                       optional and will make the application wait until a\n"
                                                      "                       debugger connects to it.\n\n");
-        texts << QCoreApplication::translate("main", "Report bugs to: <https://github.com/Mudlet/Mudlet/issues>.\n");
-        texts << QCoreApplication::translate("main", "Project home page: <http://www.mudlet.org/>.\n");
+        texts << QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues\n");
+        texts << QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/\n");
         std::cout << texts.join(QString()).toStdString();
         return 0;
     }
@@ -294,7 +306,7 @@ int main(int argc, char* argv[])
     if (show_splash) {
         QPainter painter(&splashImage);
         unsigned fontSize = 16;
-        QString sourceVersionText = QString("Version: " APP_VERSION APP_BUILD);
+        QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1").arg(APP_VERSION APP_BUILD));
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
@@ -332,7 +344,7 @@ int main(int argc, char* argv[])
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        QString sourceCopyrightText = QStringLiteral("©️ Mudlet makers 2008-2018");
+        QString sourceCopyrightText = QStringLiteral("©️ Mudlet makers 2008-2019");
         QFont font(QStringLiteral("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
@@ -354,13 +366,16 @@ int main(int argc, char* argv[])
 
     QString splash_message;
     if (show_splash) {
-        splash_message.append("\n\nMudlet comes with\n"
+        splash_message.append(QLatin1String("\n\n"));
+        splash_message.append(QCoreApplication::translate("main", 
+                              "Mudlet comes with\n"
                               "ABSOLUTELY NO WARRANTY!\n"
                               "This is free software, and you are\n"
                               "welcome to redistribute it under\n"
                               "certain conditions; select the\n"
-                              "'About' item for details.\n\n");
-        splash_message.append("Locating profiles... ");
+                              "'About' item for details."));
+        splash_message.append(QLatin1String("\n\n"));
+        splash_message.append(QCoreApplication::translate("main", "Locating profiles..."));
         splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
     }
@@ -385,7 +400,7 @@ int main(int argc, char* argv[])
     }
 
     if (show_splash) {
-        splash_message.append("Done.\n\nLoading font files... ");
+        splash_message.append(QCoreApplication::translate("main", "Done.\n\nLoading font files..."));
         splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
     }
@@ -452,9 +467,9 @@ int main(int argc, char* argv[])
     mudlet::debugMode = false;
 
     if (show_splash) {
-        splash_message.append("Done.\n\n"
+        splash_message.append(QCoreApplication::translate("main", "Done.\n\n"
                               "All data has been loaded successfully.\n\n"
-                              "Starting... Have fun!\n\n");
+                              "Starting... Have fun!\n\n"));
         splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
     }

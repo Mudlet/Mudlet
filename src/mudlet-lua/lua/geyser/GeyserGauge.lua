@@ -57,8 +57,7 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
   end
 
   if text then
-    self.front:echo(text)
-    self.back:echo(text)
+    self.text:echo(text)
   end
 end
 
@@ -84,6 +83,14 @@ function Geyser.Gauge:setText (text)
   end
 end
 
+--- Sets the text on the gauge, overwrites inherited echo function.
+-- @param text The text to set.
+function Geyser.Gauge:echo (text)
+  if text then
+    self.text:echo(text)
+  end
+end
+
 -- Sets the style sheet for the gauge
 -- @param css Style sheet for the front label
 -- @param cssback Style sheet for the back label
@@ -94,6 +101,20 @@ function Geyser.Gauge:setStyleSheet(css, cssback, cssText)
   if cssText ~= nil then
     self.text:setStyleSheet(cssText)
   end
+end
+
+--- Sets the gauge to no longer intercept mouse events
+function Geyser.Gauge:enableClickthrough()
+    self.front:enableClickthrough()
+    self.back:enableClickthrough()
+    self.text:enableClickthrough()
+end
+
+--- Sets the gauge to once again intercept mouse events
+function Geyser.Gauge:disableClickthrough()
+    self.front:disableClickthrough()
+    self.back:disableClickthrough()
+    self.text:disableClickthrough()
 end
 
 -- Save a reference to our parent constructor
@@ -145,6 +166,9 @@ function Geyser.Gauge:new (cons, container)
   -- Set whether this gauge is strict about its max value being 100 or not
   if cons.strict then me.strict = true else me.strict = false end
 
+  -- Set clickthrough if included in constructor
+  if cons.clickthrough then me:enableClickthrough() end
+  
   --print("  New in " .. self.name .. " : " .. me.name)
   return me
 end

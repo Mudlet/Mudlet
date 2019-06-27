@@ -6,7 +6,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
- *   Copyright (C) 2015, 2017-2018 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2017-2019 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -31,7 +31,11 @@
 #include <QHostInfo>
 #include <QPointer>
 #include <QStringList>
+#if defined(QT_NO_SSL)
 #include <QTcpSocket>
+#else
+#include <QSslSocket>
+#endif
 #include <QTime>
 #include "post_guard.h"
 
@@ -70,6 +74,9 @@ class Host;
 class dlgComposer;
 
 
+const char TN_BELL = static_cast<char>(7);
+
+const char TN_EOR = static_cast<char>(239);
 const char TN_SE = static_cast<char>(240);
 const char TN_NOP = static_cast<char>(241);
 const char TN_DM = static_cast<char>(242);
@@ -86,12 +93,10 @@ const char TN_WONT = static_cast<char>(252);
 const char TN_DO = static_cast<char>(253);
 const char TN_DONT = static_cast<char>(254);
 const char TN_IAC = static_cast<char>(255);
-const char TN_EOR = static_cast<char>(239);
-const char TN_BELL = static_cast<char>(7);
 
-const char GMCP = static_cast<char>(201);
-const char MXP = 91;
-const char MSDP = 69; // http://tintin.sourceforge.net/msdp/
+const char TNSB_IS = 0;
+const char TNSB_SEND = 1;
+
 
 const char OPT_ECHO = 1;
 const char OPT_STATUS = 5;
@@ -99,12 +104,22 @@ const char OPT_TIMING_MARK = 6;
 const char OPT_TERMINAL_TYPE = 24;
 const char OPT_EOR = 25;
 const char OPT_NAWS = 31;
+const char OPT_MSDP = 69; // http://tintin.sourceforge.net/msdp/
 const char OPT_COMPRESS = 85;
 const char OPT_COMPRESS2 = 86;
 const char OPT_MSP = 90;
 const char OPT_MXP = 91;
-const char TNSB_IS = 0;
-const char TNSB_SEND = 1;
+const char OPT_102 = 102;
+const char OPT_ATCP = static_cast<char>(200);
+const char OPT_GMCP = static_cast<char>(201);
+
+const char MSDP_VAR = 1;
+const char MSDP_VAL = 2;
+const char MSDP_TABLE_OPEN = 3;
+const char MSDP_TABLE_CLOSE = 4;
+const char MSDP_ARRAY_OPEN = 5;
+const char MSDP_ARRAY_CLOSE = 6;
+
 
 class cTelnet : public QObject
 {
@@ -112,16 +127,18 @@ class cTelnet : public QObject
 
 public:
     Q_DISABLE_COPY(cTelnet)
-    cTelnet(Host* pH);
+    cTelnet(Host* pH, const QString&);
     ~cTelnet();
     void connectIt(const QString& address, int port);
-    void disconnect();
+    void disconnectIt();
+    void abortConnection();
     bool sendData(QString& data);
-    void setATCPVariables(const QString& _msg);
-    void setGMCPVariables(const QString& _msg);
+    void setATCPVariables(const QByteArray&);
+    void setGMCPVariables(const QByteArray&);
     void atcpComposerCancel();
     void atcpComposerSave(QString);
     void setDisplayDimensions();
+    void setAutoReconnect(bool status);
     void encodingChanged(const QString&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
     void set_LF_ON_GA(bool b) { mLF_ON_GA = b; }
@@ -138,7 +155,21 @@ public:
     const QStringList & getFriendlyEncodingsList() const { return mFriendlyEncodings; }
     const QString& getComputerEncoding(const QString& encoding);
     const QString& getFriendlyEncoding();
+    QAbstractSocket::SocketError error();
+    QString errorString();
+#if !defined(QT_NO_SSL)
+    QSslCertificate getPeerCertificate();
+    QList<QSslError> getSslErrors();
+#endif
+    QByteArray decodeBytes(const char*);
+    std::string encodeAndCookBytes(const std::string&);
+    bool isATCPEnabled() const { return enableATCP; }
+    bool isGMCPEnabled() const { return enableGMCP; }
+    bool isChannel102Enabled() const { return enableChannel102; }
     void requestDiscordInfo();
+    QString decodeOption(const unsigned char) const;
+    QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
+
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;
@@ -151,6 +182,8 @@ public:
     QNetworkAccessManager* mpDownloader;
     QProgressDialog* mpProgressDialog;
     QString mServerPackage;
+    QString mProfileName;
+
 
 public slots:
     void setDownloadProgress(qint64, qint64);
@@ -175,6 +208,7 @@ signals:
 private:
     cTelnet() = default;
 
+    void processSocketData(char *data, int size);
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
@@ -188,10 +222,16 @@ private:
     void setKeepAlive(int socketHandle);
     void processChunks();
 
+
     QPointer<Host> mpHost;
+#if defined(QT_NO_SSL)
     QTcpSocket socket;
+#else
+    QSslSocket socket;
+#endif
     QHostAddress mHostAddress;
 //    QTextCodec* incomingDataCodec;
+    QTextCodec* mpOutOfBandDataIncomingCodec;
     QTextCodec* outgoingDataCodec;
 //    QTextDecoder* incomingDataDecoder;
     QTextEncoder* outgoingDataEncoder;
@@ -207,9 +247,16 @@ private:
     bool mNeedDecompression;
     std::string command;
     bool iac, iac2, insb;
-    bool myOptionState[256], hisOptionState[256];
+    // Set if we have negotiated the use of the option by us:
+    bool myOptionState[256];
+    // Set if he has negotiated the use of the option by him:
+    bool hisOptionState[256];
+    // Set if we have tried to negotiate the use of the option by us:
     bool announcedState[256];
+    // Set if the Server tried to negotiate the use of the option by him:
     bool heAnnouncedState[256];
+    // BUG: never set to be true - but seems to hold our intention to want to
+    // enable our use of the option!
     bool triedToEnable[256];
     bool recvdGA;
 
@@ -235,6 +282,8 @@ private:
     bool enableATCP;
     bool enableGMCP;
     bool enableChannel102;
+    bool mDontReconnect;
+    bool mAutoReconnect;
     QStringList messageStack;
     // True if THIS profile is playing a replay, does not know about any OTHER
     // active profile...
@@ -243,6 +292,16 @@ private:
     bool mIsReplayRunFromLua;
     QStringList mAcceptableEncodings;
     QStringList mFriendlyEncodings;
+    // Used to prevent more than one warning being shown in the event of a bad
+    // encoding (when the user wants to use characters that cannot be encoded in
+    // the current Server Encoding) - gets reset when the encoding is changed:
+    bool mEncodingWarningIssued;
+
+private slots:
+#if !defined(QT_NO_SSL)
+    void handle_socket_signal_sslError(const QList<QSslError> &errors);
+#endif
+
 };
 
 #endif // MUDLET_CTELNET_H

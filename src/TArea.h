@@ -39,7 +39,7 @@ class TArea
 {
     Q_DECLARE_TR_FUNCTIONS(TArea) // Needed so we can use tr() even though TArea is NOT derived from QObject
 
-    friend bool TMap::serialize(QDataStream&);
+    friend bool TMap::serialize(QDataStream&, int);
     friend bool TMap::restore(QString, bool);
     friend bool TMap::retrieveMapFileStats(QString, QString*, int*, int*, int*, int*);
 
@@ -71,13 +71,13 @@ public:
     int max_y;
     int max_z;
     // Key = z-level, Value = the relevant x or y extreme:
-    QMap<int, int> xminEbene;
-    QMap<int, int> xmaxEbene;
-    QMap<int, int> yminEbene;
-    QMap<int, int> ymaxEbene;
+    QMap<int, int> xminForZ;
+    QMap<int, int> xmaxForZ;
+    QMap<int, int> yminForZ;
+    QMap<int, int> ymaxForZ;
 // Pointless:
-//    QMap<int, int> zminEbene;
-//    QMap<int, int> zmaxEbene;
+//    QMap<int, int> zminForZ;
+//    QMap<int, int> zmaxForZ;
     QList<int> zLevels; // The z-levels that ARE used, not guaranteed to be in order
     bool gridMode;
     bool isZone;

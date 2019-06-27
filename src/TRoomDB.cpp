@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -31,11 +31,11 @@
 #include "post_guard.h"
 
 
-TRoomDB::TRoomDB( TMap * pMap )
-: mpMap( pMap )
-, mpTempRoomDeletionSet( nullptr )
-, mUnnamedAreaName( tr( "Unnamed Area" ) )
-, mDefaultAreaName( tr( "Default Area" ) )
+TRoomDB::TRoomDB(TMap* pMap)
+: mpMap(pMap)
+, mpTempRoomDeletionSet(nullptr)
+, mUnnamedAreaName(tr("Unnamed Area"))
+, mDefaultAreaName(tr("Default Area"))
 {
     // Ensure the default area is created, the area/areaName items that get
     // created here will get blown away when a map is loaded but that is expected...
@@ -47,8 +47,8 @@ TRoom* TRoomDB::getRoom(int id)
     if (id < 0) {
         return nullptr;
     }
-    auto i = rooms.find(id);
-    if (i != rooms.end() && i.key() == id) {
+    const auto i = rooms.constFind(id);
+    if (i != rooms.constEnd() && i.key() == id) {
         return i.value();
     }
     return nullptr;
@@ -59,11 +59,11 @@ bool TRoomDB::addRoom(int id)
     if (!rooms.contains(id) && id > 0) {
         rooms[id] = new TRoom(this);
         rooms[id]->setId(id);
-        // there is no point to update the entranceMap here, as the room has no exit information
+        // there is no point in updating the entranceMap here, as the room has no exit information
         return true;
     } else {
         if (id <= 0) {
-            QString error = QString("illegal room id=%1. roomID must be > 0").arg(id);
+            QString error = QStringLiteral("addRoom: illegal room id=%1. roomID must be > 0").arg(id);
             mpMap->logError(error);
         }
         return false;
@@ -207,7 +207,7 @@ bool TRoomDB::__removeRoom(int id)
         // iterator is active on - see "Implicit sharing iterator problem" in
         // "Container Class | Qt 5.x Core" - this is now avoid by taking a deep
         // copy and iterating through that instead whilst modifying the original
-        while (i != entranceMap.cend() && i.key() == id) {
+        while (i != _entranceMap.cend() && i.key() == id) {
             if (i.value() == id || (mpTempRoomDeletionSet && mpTempRoomDeletionSet->size() > 1 && mpTempRoomDeletionSet->contains(i.value()))) {
                 ++i;
                 continue; // Bypass rooms we know are also to be deleted
@@ -255,13 +255,10 @@ bool TRoomDB::__removeRoom(int id)
             ++i;
         }
         rooms.remove(id);
-        // FIXME: make hashTable a bimap
-        QList<QString> keyList = hashTable.keys();
-        QList<int> valueList = hashTable.values();
-        for (int i = 0; i < valueList.size(); i++) {
-            if (valueList[i] == id) {
-                hashTable.remove(keyList[i]);
-            }
+        if (roomIDToHash.contains(id)) {
+            QString hash = roomIDToHash[id];
+            roomIDToHash.remove(id);
+            hashToRoomID.remove(hash);
         }
         int areaID = pR->getArea();
         TArea* pA = getArea(areaID);
@@ -284,7 +281,7 @@ bool TRoomDB::__removeRoom(int id)
 bool TRoomDB::removeRoom(int id)
 {
     if (rooms.contains(id) && id > 0) {
-        if (mpMap->mRoomIdHash.value(mpMap->mpHost->getName()) == id) {
+        if (mpMap->mRoomIdHash.value(mpMap->mProfileName) == id) {
             // Now we store mRoomId for each profile, we must remove any where
             // this room was used
             QList<QString> profilesWithUserInThisRoom = mpMap->mRoomIdHash.keys(id);
@@ -359,7 +356,7 @@ bool TRoomDB::removeArea(int id)
     return false;
 }
 
-bool TRoomDB::removeArea(QString name)
+bool TRoomDB::removeArea(const QString& name)
 {
     if (areaNamesMap.values().contains(name)) {
         return removeArea(areaNamesMap.key(name)); // i.e. call the removeArea(int) method
@@ -1079,7 +1076,8 @@ void TRoomDB::clearMapDB()
     rooms.clear(); // Prevents any further use of TRoomDB::getRoom(int) !!!
     entranceMap.clear();
     areaNamesMap.clear();
-    hashTable.clear();
+    hashToRoomID.clear();
+    roomIDToHash.clear();
     for (auto room : rPtrL) {
         delete room; // Uses the internally held value of the room Id
                      // (TRoom::id) to call TRoomDB::__removeRoom(id)
@@ -1188,7 +1186,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
                                  "to gain a \"_###\" style suffix where each \"###\" is an increasing\n"
                                  "number; you may wish to change these, perhaps by replacing them with\n"
                                  "a \"(sub-area name)\" but it is entirely up to you how you do this,\n"
-                                 "other then you will not be able to set one area's name to that of\n"
+                                 "other than you will not be able to set one area's name to that of\n"
                                  "another that exists at the time.\n"
                                  "  If there were more than one area without a name then all but the\n"
                                  "first will also gain a suffix in this manner.\n"

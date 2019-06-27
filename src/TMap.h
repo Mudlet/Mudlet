@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018 by Stephen Lyons                        *
+ *   Copyright (C) 2014-2016, 2018-2019 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -82,7 +82,7 @@ class TMap : public QObject
 
 public:
     Q_DISABLE_COPY(TMap)
-    TMap(Host*);
+    TMap(Host*, const QString&);
     ~TMap();
     void mapClear();
     int createMapLabelID(int area);
@@ -108,7 +108,7 @@ public:
     bool gotoRoom(int);
     bool gotoRoom(int, int);
     void setView(float, float, float, float);
-    bool serialize(QDataStream&);
+    bool serialize(QDataStream&, int saveVersion = 0);
     bool restore(QString location, bool downloadIfNotFound = true);
     bool retrieveMapFileStats(QString, QString*, int*, int*, int*, int*);
     void initGraph();
@@ -154,6 +154,7 @@ public:
     TRoomDB* mpRoomDB;
     QMap<int, int> envColors;
     QPointer<Host> mpHost;
+    QString mProfileName;
 
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name

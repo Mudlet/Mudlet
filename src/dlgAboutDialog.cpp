@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017-2018 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2014, 2017-2019 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
@@ -82,7 +82,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        QString sourceCopyrightText = QStringLiteral("©️ Mudlet makers 2008-2018");
+        QString sourceCopyrightText = QStringLiteral("©️ Mudlet makers 2008-2019");
         QFont font(QStringLiteral("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
@@ -681,7 +681,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
                           "All rights reserved.</h3>"));
 
     QString QsLogHeader(tr("<h2><u>Qt-Components, QsLog</u></h2>"
-                           "<h3>(<span style=\"color:red\"><u>https://bitbucket.org/razvapetru/qt-components [broken link]</u></span></a>"
+                           "<h3>(<span style=\"color:red\"><u>https://bitbucket.org/razvapetru/qt-components [broken link]</u></span></h3>"
                            "<small><a href=\"https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components\"> {&quot;Wayback Machine&quot; archived version}</a></small>)<br>"
                            "Copyright © 2013, Razvan Petru<br>"
                            "All rights reserved.</h3>"));

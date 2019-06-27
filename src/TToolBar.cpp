@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017, 2019 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -35,14 +35,14 @@ TToolBar::TToolBar(TAction* pA, const QString& name, QWidget* pW)
 , mpTAction( pA )
 , mVerticalOrientation( false )
 , mpWidget( new QWidget( this ) )
-, mName( name )
 , mRecordMove( false )
 , mpLayout( nullptr )
 , mItemCount( 0 )
 {
     setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     setWidget(mpWidget);
-    setObjectName(QString("dockToolBar_%1").arg(name));
+    // Needs a unique name across application so needs the Host name as well:
+    setName(name);
 
     connect(this, &QDockWidget::dockLocationChanged, this, &TToolBar::slot_dockLocationChanged);
     connect(this, &QDockWidget::topLevelChanged, this, &TToolBar::slot_topLevelChanged);
@@ -52,11 +52,8 @@ TToolBar::TToolBar(TAction* pA, const QString& name, QWidget* pW)
         setContentsMargins(0, 0, 0, 0);
         mpLayout->setContentsMargins(0, 0, 0, 0);
         mpLayout->setSpacing(0);
-        QSizePolicy sizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
-        mpWidget->setSizePolicy(sizePolicy);
+        mpWidget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
     }
-    auto test = new QWidget;
-    setTitleBarWidget(test);
     setStyleSheet(mpTAction->css);
     mpWidget->setStyleSheet(mpTAction->css);
 }
@@ -68,16 +65,27 @@ void TToolBar::resizeEvent(QResizeEvent* e)
     }
 }
 
+void TToolBar::setName(const QString& name)
+{
+    mName = name;
+    QString hostName(mpTAction->mpHost->getName());
+    setObjectName(QStringLiteral("dockToolBar_%1_%2").arg(hostName, name));
+    // Actually put something in as the title so that the main window context
+    // menu no longer has empty entries which are disabled:
+    setWindowTitle(tr("Toolbar - %1 - %2").arg(hostName, name));
+}
+
 void TToolBar::moveEvent(QMoveEvent* e)
 {
+    if (!mpTAction) {
+        return;
+    }
+    
     if (!mudlet::self()->mIsLoadingLayout) {
         mudlet::self()->setToolbarLayoutUpdated(mpTAction->mpHost, this);
     }
 
     if (mRecordMove) {
-        if (!mpTAction) {
-            return;
-        }
         mpTAction->mPosX = e->pos().x();
         mpTAction->mPosY = e->pos().y();
     }
@@ -223,10 +231,8 @@ void TToolBar::clear()
     } else {
         mpLayout = nullptr;
     }
-    auto test = new QWidget;
     setStyleSheet(mpTAction->css);
     mpWidget->setStyleSheet(mpTAction->css);
-    setTitleBarWidget(test);
 
     mudlet::self()->removeDockWidget(this);
 }

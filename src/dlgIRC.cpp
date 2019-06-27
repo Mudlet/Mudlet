@@ -43,13 +43,22 @@ QString dlgIRC::DefaultHostName = QStringLiteral("irc.freenode.net");
 int dlgIRC::DefaultHostPort = 6667;
 QString dlgIRC::DefaultNickName = QStringLiteral("Mudlet");
 QStringList dlgIRC::DefaultChannels = QStringList() << QStringLiteral("#mudlet");
+int dlgIRC::DefaultMessageBufferLimit = 5000;
 
-dlgIRC::dlgIRC(Host* pHost) : mpHost(pHost), mInputHistoryMax(8), mIrcStarted(false), mReadyForSending(false), mConnectedHostName()
+dlgIRC::dlgIRC(Host* pHost) : mReadyForSending(false), mpHost(pHost), mIrcStarted(false), mInputHistoryMax(8), mConnectedHostName()
 {
     mInputHistoryMax = 8;
+    mInputHistoryIdxNext = 0;
+    mInputHistoryIdxCurrent = 0;
 
     setupUi(this);
     setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_irc.png")));
+
+    bool isIntOk = false;
+    mMessageBufferLimit = mudlet::self()->mpSettings->value("ircMessageBufferLimit", dlgIRC::DefaultMessageBufferLimit).toInt(&isIntOk);
+    if (!isIntOk) {
+        mMessageBufferLimit = dlgIRC::DefaultMessageBufferLimit;
+    }
 
     setupCommandParser();
 
@@ -98,6 +107,8 @@ dlgIRC::dlgIRC(Host* pHost) : mpHost(pHost), mInputHistoryMax(8), mIrcStarted(fa
 
 dlgIRC::~dlgIRC()
 {
+    writeQSettings();
+    
     if (connection->isActive()) {
         const QString quitMsg = tr("%1 closed their client.").arg(mNickName);
         connection->quit(quitMsg);
@@ -198,7 +209,7 @@ void dlgIRC::ircRestart(bool reloadConfigs)
     }
 
     // remove the old buffers.
-    for (QString chName : mChannels) {
+    for (QString chName : qAsConst(mChannels)) {
         if (chName == serverBuffer->name()) {
             continue; // skip the server-buffer.
         }
@@ -269,6 +280,7 @@ void dlgIRC::setupCommandParser()
     commandParser->addCommand(IrcCommand::Custom, QStringLiteral("CLOSE (<buffer>)"));          // closes the buffer and removes it from the list, uses current active buffer if none are given.
     commandParser->addCommand(IrcCommand::Custom, QStringLiteral("RECONNECT"));                 // Issues a Quit command and closes the IRC connection then reconnects to the IRC server.
     commandParser->addCommand(IrcCommand::Custom, QStringLiteral("HELP (<command>)"));          // displays some help information about a given command or lists all available commands.
+    commandParser->addCommand(IrcCommand::Custom, QStringLiteral("MSGLIMIT <limit> (<buffer>)"));  // sets buffer limit on all buffers and updates settings, or sets buffer limit on given buffer.
 }
 
 void dlgIRC::setupBuffers()
@@ -349,6 +361,39 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
         }
 
         sendMsg(target, msgText);
+        return true;
+    }
+    if (cmdName == "MSGLIMIT") {
+        int limit = 0;
+        if (cmd->parameters().count() > 1) {
+            bool isIntOk = false;
+            limit = cmd->parameters().at(1).toInt(&isIntOk);
+            if (!isIntOk) {
+                limit = 0;
+            }
+        }
+        if (limit <= 0) {
+            QString error = tr("[Error] MSGLIMIT requires <limit> to be a whole number greater than zero!");
+            ircBrowser->append(IrcMessageFormatter::formatMessage(error, QStringLiteral("indianred")));
+            return true;
+        }
+        if (cmd->parameters().count() > 2) {
+            QString bufferName = cmd->parameters().at(2);
+            if (!bufferName.isEmpty()) {
+                IrcBuffer* buffer = bufferModel->find(bufferName);
+                if (buffer) {
+                    auto* document = bufferTexts.value(buffer);
+                    document->setMaximumBlockCount(limit);
+                    return true;
+                }
+            }
+        } else {
+            for (auto* document : bufferTexts.values()) {
+                document->setMaximumBlockCount(limit);
+            }
+            mMessageBufferLimit = limit;
+            writeQSettings();
+        }
     }
 
     return true;
@@ -480,6 +525,7 @@ void dlgIRC::slot_onBufferAdded(IrcBuffer* buffer)
     connect(buffer, &IrcBuffer::messageReceived, this, &dlgIRC::slot_receiveMessage);
     // create a document for storing the buffer specific messages
     auto * document = new QTextDocument(buffer);
+    document->setMaximumBlockCount(mMessageBufferLimit); 
     bufferTexts.insert(buffer, document);
     // create a sorted model for buffer users
     auto * userModel = new IrcUserModel(buffer);
@@ -764,4 +810,8 @@ QPair<bool, QString> dlgIRC::writeIrcNickName(Host* pH, const QString& nickname)
 QPair<bool, QString> dlgIRC::writeIrcChannels(Host* pH, const QStringList& channels)
 {
     return pH->writeProfileData(dlgIRC::ChannelsCfgItem, channels.join(QStringLiteral(" ")));
+}
+
+void dlgIRC::writeQSettings() {
+    mudlet::self()->mpSettings->setValue("ircMessageBufferLimit", mMessageBufferLimit);
 }

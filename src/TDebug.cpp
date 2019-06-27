@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,20 +26,22 @@
 #include "mudlet.h"
 
 
-TDebug::TDebug(QColor c, QColor d)
+TDebug::TDebug(const QColor& c, const QColor& d)
+: msg()
+, fgColor(c)
+, bgColor(d)
 {
-    fgColor = c;
-    bgColor = d;
-    msg = "";
 }
 
+// code is a dummy variable so that using operator>>() (at the end of a series
+// of operator<<() calls) causes the accumulated message to be printed/flushed
+// out...
 TDebug& TDebug::operator>>(const int code)
 {
-    mudlet::mpDebugConsole->printDebug(fgColor, bgColor, msg);
+    Q_UNUSED(code);
+    mudlet::mpDebugConsole->print(msg, fgColor, bgColor);
     return *this;
 }
-
-TDebug::~TDebug() = default;
 
 TDebug& TDebug::operator<<(const QString& t)
 {

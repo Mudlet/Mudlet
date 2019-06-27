@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2018 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2016, 2018-2019 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -70,6 +71,7 @@ public:
     // mMultiSelectionHighlightRoomId and returns a (bool) on success or failure
     // to do so.
     bool getCenterSelection();
+    int getCenterSelectedRoomId() const { return mMultiSelectionHighlightRoomId; }
 
     void setRoomSize(double);
     void setExitSize(double);
@@ -135,12 +137,17 @@ public:
     int mCustomLinesRoomFrom;
     int mCustomLinesRoomTo;
     QString mCustomLinesRoomExit;
-    QComboBox* mpCurrentLineStyle;
-    QString mCurrentLineStyle;
-    QPushButton* mpCurrentLineColor;
+
+    // Pointers to controls that hold the settings
+    QPointer<QComboBox> mpCurrentLineStyle;
+    QPointer<QPushButton> mpCurrentLineColor;
+    QPointer<QCheckBox> mpCurrentLineArrow;
+
+    // Variables that hold the current or last used setting:
+    Qt::PenStyle mCurrentLineStyle;
     QColor mCurrentLineColor;
-    QCheckBox* mpCurrentLineArrow;
     bool mCurrentLineArrow;
+
     bool mBubbleMode;
     bool mMapperUseAntiAlias;
     bool mLabelHighlighted;
@@ -201,6 +208,9 @@ public slots:
 
 private:
     void resizeMultiSelectionWidget();
+    std::pair<int, int> getMousePosition();
+    bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
+    bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10);
 
     bool mDialogLock;
 
@@ -215,7 +225,8 @@ private:
     // modifications. {for slot_spread(),
     // slot_shrink(), slot_setUserData() - if ever
     // implemented, slot_setExits(),
-    // slot_movePosition(), etc.}
+    // slot_movePosition(), etc.} - previously have
+    // used -1 but is now reset to 0 if it is not valid.
     int mMultiSelectionHighlightRoomId;
 
     bool mIsSelectionSorting;
@@ -231,8 +242,12 @@ private:
     QFont mMapSymbolFont;
 
     QPointer<QAction> mpCreateRoomAction;
-
-    std::pair<int, int> getMousePosition();
+    // Calculated near the top of the paintEvent() and is used in a couple of
+    // places where we need to pad roomIds to the same widths, it also affects
+    // the font size used to show roomId numbers (longer numbers need a smaller
+    // font to fit - as the numbers are NOW scaled to fit inside the room symbol
+    // - and they are suppressed if they would be too small.);
+    quint8 mMaxRoomIdDigits;
 
 private slots:
     void slot_createRoom();

@@ -2,7 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
- *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -28,6 +28,7 @@
 #include "LuaInterface.h"
 #include "TAction.h"
 #include "TAlias.h"
+#include "TConsole.h"
 #include "TKey.h"
 #include "TScript.h"
 #include "TTimer.h"
@@ -37,6 +38,7 @@
 
 #include "pre_guard.h"
 #include <QtConcurrent>
+#include <QFile>
 #include <fstream>
 #include <sstream>
 #include "post_guard.h"
@@ -215,26 +217,6 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
 }
 
 // credit: https://stackoverflow.com/a/29752943/72944
-void inline XMLexport::replaceAll(std::string& source, const char from, const std::string& to)
-{
-    std::string newString;
-    newString.reserve(source.length()); // avoids a few memory allocations
-
-    std::string::size_type lastPos = 0;
-    std::string::size_type findPos;
-
-    while (std::string::npos != (findPos = source.find(from, lastPos))) {
-        newString.append(source, lastPos, findPos - lastPos);
-        newString += to;
-        lastPos = findPos + 1;
-    }
-
-    // Care for the rest after last occurrence
-    newString += source.substr(lastPos);
-
-    source.swap(newString);
-}
-
 void inline XMLexport::replaceAll(std::string& source, const std::string& from, const std::string& to)
 {
     std::string newString;
@@ -262,13 +244,21 @@ void XMLexport::sanitizeForQxml(std::string& output)
 {
     QMap<std::string, std::string> replacements{
             {"&#1;", "\uFFFC\u2401"},   // SOH
+            {"&#01;", "\uFFFC\u2401"},   // SOH
             {"&#2;", "\uFFFC\u2402"},   // STX
+            {"&#02;", "\uFFFC\u2402"},   // STX
             {"&#3;", "\uFFFC\u2403"},   // ETX
+            {"&#03;", "\uFFFC\u2403"},   // ETX
             {"&#4;", "\uFFFC\u2404"},   // EOT
+            {"&#04;", "\uFFFC\u2404"},   // EOT
             {"&#5;", "\uFFFC\u2405"},   // ENQ
+            {"&#05;", "\uFFFC\u2405"},   // ENQ
             {"&#6;", "\uFFFC\u2406"},   // ACK
+            {"&#06;", "\uFFFC\u2406"},   // ACK
             {"&#7;", "\uFFFC\u2407"},   // BEL
+            {"&#07;", "\uFFFC\u2407"},   // BEL
             {"&#8;", "\uFFFC\u2408"},   // BS
+            {"&#08;", "\uFFFC\u2408"},   // BS
             {"&#11;", "\uFFFC\u240B"},  // VT
             {"&#12;", "\uFFFC\u240C"},  // FF
             {"&#14;", "\uFFFC\u240E"},  // SS
@@ -292,39 +282,76 @@ void XMLexport::sanitizeForQxml(std::string& output)
             {"&#127;", "\uFFFC\u2421"}, // DEL
     };
 
-    QMutableMapIterator<std::string, std::string> searching(replacements);
-    while (searching.hasNext()) {
-        if (output.find(searching.next().key()) == std::string::npos) {
-            searching.remove();
+    // Look for each replacement in data and if not present remove it from the
+    // list of things to replace
+    QMutableMapIterator<std::string, std::string> itReplacement(replacements);
+    while (itReplacement.hasNext()) {
+        itReplacement.next();
+        if (output.find(itReplacement.key()) == std::string::npos) {
+            itReplacement.remove();
         }
     }
 
-    QMapIterator<std::string, std::string> replacing(replacements);
-    while (replacing.hasNext()) {
-        replacing.next();
-        replaceAll(output, replacing.key(), replacing.value());
+    if (!replacements.isEmpty()) {
+        // There is at least one thing left in the QMap of replacements and we
+        // can use the same iterator if we reset it to the start of the
+        // remaining replacements:
+        itReplacement.toFront();
+        while (itReplacement.hasNext()) {
+            itReplacement.next();
+            replaceAll(output, itReplacement.key(), itReplacement.value());
+        }
     }
 }
 
 bool XMLexport::saveXml(const QString& fileName)
 {
-    std::stringstream saveStringStream(ios::out);
-    std::string output;
+    QFile file(fileName);
 
-    mExportDoc.save(saveStringStream);
-    output = saveStringStream.str();
-
-    sanitizeForQxml(output);
-
-    // only open the output file stream once we're ready to save
-    // this avoids a blank file in case serialisation crashed
-    std::ofstream saveFileStream(fileName.toUtf8().constData());
-    saveFileStream << output;
-
-    if (saveFileStream.bad()) {
+    if (!file.open(QFile::WriteOnly)) {
+        qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to open file, reason: " << file.errorString() << ".";
         return false;
     }
-    return true;
+
+    bool result = saveXmlFile(file);
+    if (!result) {
+        if (file.error() != QFile::NoError) {
+            // Error reason was related to QFile:
+            qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to save package, reason: " << file.errorString() << ".";
+        } else {
+            // Error was due to failure in document preparation
+            qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to save package, reason: XML document preparation failure.";
+        }
+    }
+
+    file.close();
+    return result;
+}
+
+// This has been factored out to a separate method from saveXml(const QString&)
+// because there are situations where we have a QFile instance already and
+// just passing a filename and then creating another QFile instance on the
+// same file in the filesystem is less than optimum.
+// TODO: Refactor dlgTriggerEditor::slot_export() {at least} to call this method instead of saveXml(const QString&)
+bool XMLexport::saveXmlFile(QFile& file)
+{
+    std::stringstream saveStringStream(ios::out);
+    // Remember, the mExportDoc is the data in the form of a pugi::xml_document
+    // instance - the save method needs a stream that impliments the
+    // std::ostream interface into which it can push the data:
+    mExportDoc.save(saveStringStream);
+    // We need to do our own replacement of ASCII control characters that are
+    // not valid in XML verison 1.0 and that means we cannot use the pugixml
+    // file methods as it does that in a different way which is not helpful
+    // as we do not use that library for READING the XML files - so convert
+    // the data to a std::string :
+    std::string output(saveStringStream.str());
+    // Then do the control character replacement:
+    sanitizeForQxml(output);
+    // Now we can use Qt's file handling which does handle non-Latin1 named
+    // files - which MinGW's STL file handling (on Windows platform) does not:
+    file.write(output.data());
+    return file.error() == QFile::NoError;
 }
 
 QString XMLexport::saveXml()
@@ -346,7 +373,6 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     auto host = hostPackage.append_child("Host");
 
     host.append_attribute("autoClearCommandLineAfterSend") = pHost->mAutoClearCommandLineAfterSend ? "yes" : "no";
-    host.append_attribute("disableAutoCompletion") = pHost->mDisableAutoCompletion ? "yes" : "no";
     host.append_attribute("printCommand") = pHost->mPrintCommand ? "yes" : "no";
     host.append_attribute("USE_IRE_DRIVER_BUGFIX") = pHost->mUSE_IRE_DRIVER_BUGFIX ? "yes" : "no";
     host.append_attribute("mUSE_FORCE_LF_AFTER_PROMPT") = pHost->mUSE_FORCE_LF_AFTER_PROMPT ? "yes" : "no";
@@ -372,10 +398,16 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mMapStrongHighlight") = pHost->mMapStrongHighlight ? "yes" : "no";
     host.append_attribute("mLogStatus") = pHost->mLogStatus ? "yes" : "no";
     host.append_attribute("mEnableSpellCheck") = pHost->mEnableSpellCheck ? "yes" : "no";
+    bool enableUserDictionary;
+    bool useSharedDictionary;
+    mpHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
+    host.append_attribute("mEnableUserDictionary") = enableUserDictionary ? "yes" : "no";
+    host.append_attribute("mUseSharedDictionary") = useSharedDictionary ? "yes" : "no";
     host.append_attribute("mShowInfo") = pHost->mShowInfo ? "yes" : "no";
     host.append_attribute("mAcceptServerGUI") = pHost->mAcceptServerGUI ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
     host.append_attribute("mFORCE_MXP_NEGOTIATION_OFF") = pHost->mFORCE_MXP_NEGOTIATION_OFF ? "yes" : "no";
+    host.append_attribute("enableTextAnalyzer") = pHost->mEnableTextAnalyzer ? "yes" : "no";
     host.append_attribute("mRoomSize") = QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mLineSize") = QString::number(pHost->mLineSize, 'f', 1).toUtf8().constData();
     host.append_attribute("mBubbleMode") = pHost->mBubbleMode ? "yes" : "no";
@@ -387,9 +419,17 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mThemePreviewItemID") = QString::number(pHost->mThemePreviewItemID).toUtf8().constData();
     host.append_attribute("mThemePreviewType") = pHost->mThemePreviewType.toUtf8().constData();
     host.append_attribute("mSearchEngineName") = pHost->mSearchEngineName.toUtf8().constData();
+    host.append_attribute("mTimerSupressionInterval") = pHost->mTimerDebugOutputSuppressionInterval.toString(QLatin1String("HH:mm:ss.zzz")).toUtf8().constData();
+    host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";
+    host.append_attribute("mAutoReconnect") = pHost->mAutoReconnect ? "yes" : "no";
+    host.append_attribute("mSslIgnoreExpired") = pHost->mSslIgnoreExpired ? "yes" : "no";
+    host.append_attribute("mSslIgnoreSelfSigned") = pHost->mSslIgnoreSelfSigned ? "yes" : "no";
+    host.append_attribute("mSslIgnoreAll") = pHost->mSslIgnoreAll ? "yes" : "no";
     host.append_attribute("mDiscordAccessFlags") = QString::number(pHost->mDiscordAccessFlags).toUtf8().constData();
     host.append_attribute("mRequiredDiscordUserName") = pHost->mRequiredDiscordUserName.toUtf8().constData();
     host.append_attribute("mRequiredDiscordUserDiscriminator") = pHost->mRequiredDiscordUserDiscriminator.toUtf8().constData();
+    host.append_attribute("mSGRCodeHasColSpaceId") = pHost->getHaveColorSpaceId() ? "yes" : "no";
+    host.append_attribute("mServerMayRedefineColors") = pHost->getMayRedefineColors() ? "yes" : "no";
 
     QString ignore;
     QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
@@ -426,7 +466,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
 
         host.append_child("url").text().set(pHost->mUrl.toUtf8().constData());
         host.append_child("serverPackageName").text().set(pHost->mServerGUI_Package_name.toUtf8().constData());
-        host.append_child("serverPackageVersion").text().set(QString::number(pHost->mServerGUI_Package_version).toUtf8().constData());
+        host.append_child("serverPackageVersion").text().set(pHost->mServerGUI_Package_version.toUtf8().constData());
         host.append_child("port").text().set(QString::number(pHost->mPort).toUtf8().constData());
         host.append_child("borderTopHeight").text().set(QString::number(pHost->mBorderTopHeight).toUtf8().constData());
         host.append_child("borderBottomHeight").text().set(QString::number(pHost->mBorderBottomHeight).toUtf8().constData());
@@ -480,7 +520,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mLightMagenta2").text().set(pHost->mLightMagenta_2.name().toUtf8().constData());
         host.append_child("mWhite2").text().set(pHost->mWhite_2.name().toUtf8().constData());
         host.append_child("mLightWhite2").text().set(pHost->mLightWhite_2.name().toUtf8().constData());
-        host.append_child("mSpellDic").text().set(pHost->mSpellDic.toUtf8().constData());
+        host.append_child("mSpellDic").text().set(pHost->mpConsole->getSystemSpellDictionary().toUtf8().constData());
         // TODO: Consider removing these sub-elements that duplicate the same
         // attributes - which WERE bugged - when we update the XML format, must leave
         // them in place for now even though we no longer use them for compatibility
@@ -725,8 +765,8 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
         trigger.append_attribute("isFilterTrigger") = pT->mFilterTrigger ? "yes" : "no";
         trigger.append_attribute("isSoundTrigger") = pT->mSoundTrigger ? "yes" : "no";
         trigger.append_attribute("isColorTrigger") = pT->mColorTrigger ? "yes" : "no";
-        trigger.append_attribute("isColorTriggerFg") = pT->mColorTriggerFg ? "yes" : "no";
-        trigger.append_attribute("isColorTriggerBg") = pT->mColorTriggerBg ? "yes" : "no";
+        trigger.append_attribute("isColorTriggerFg") = (pT->mColorTriggerFgAnsi != TTrigger::scmIgnored) ? "yes" : "no";
+        trigger.append_attribute("isColorTriggerBg") = (pT->mColorTriggerBgAnsi != TTrigger::scmIgnored) ? "yes" : "no";
 
         { // Blocked so that indentation reflects that of the XML file
 
@@ -745,8 +785,11 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
             trigger.append_child("colorTriggerBgColor").text().set(pT->mColorTriggerBgColor.name().toUtf8().constData());
 
             auto regexCodeList = trigger.append_child("regexCodeList");
-            for (int i = 0; i < pT->mRegexCodeList.size(); ++i) {
-                regexCodeList.append_child("string").text().set(pT->mRegexCodeList.at(i).toUtf8().constData());
+            // Revert the first 16 ANSI colour codes back to the wrong values
+            // that are still used in the save files
+            QStringList unfixedAnsiColourPatternList = remapAnsiToColorNumber(pT->mRegexCodeList, pT->mRegexCodePropertyList);
+            for (int i = 0; i < unfixedAnsiColourPatternList.size(); ++i) {
+                regexCodeList.append_child("string").text().set(unfixedAnsiColourPatternList.at(i).toUtf8().constData());
             }
 
             auto regexCodePropertyList = trigger.append_child("regexCodePropertyList");
@@ -1052,4 +1095,130 @@ void XMLexport::writeKey(TKey* pT, pugi::xml_node xmlParent)
 void XMLexport::writeScriptElement(const QString& script, pugi::xml_node xmlElement)
 {
     xmlElement.append_child("script").text().set(script.toUtf8().constData());
+}
+
+// Unlike the reverse operation in XMLimport we cannot modify the supplied patternlist
+QStringList XMLexport::remapAnsiToColorNumber(const QStringList & patternList, const QList<int> & typeList)
+{
+
+    QStringList results;
+    QRegularExpression regex = QRegularExpression(QStringLiteral("(^ANSI_COLORS_F{(\\d+|IGNORE|DEFAULT)}_B{(\\d+|IGNORE|DEFAULT)}$"));
+    QStringListIterator itPattern(patternList);
+    QListIterator<int> itType(typeList);
+    while (itPattern.hasNext() && itType.hasNext()) {
+        if (itType.next() == REGEX_COLOR_PATTERN) {
+            if (!itPattern.next().isEmpty()) {
+                QRegularExpressionMatch match = regex.match(itPattern.peekPrevious());
+                // Although we define two '('...')' capture groups the count/size is
+                // 3 (0 is the whole string)!
+                if (match.hasMatch() && match.capturedTexts().size() == 3) {
+                    bool isFgOk = false;
+                    int fg = 0;
+                    if (match.captured(1) == QLatin1String("DEFAULT")) {
+                        // Use the old value for default which is 0 (though we use
+                        // -1 internally)
+                        isFgOk = true;
+                    } else if (match.captured(1) == QLatin1String("IGNORE")) {
+                        // Ignore is NOT handled by old system but use -2 (the value
+                        // we use internally now)
+                        isFgOk = true;
+                        fg = -2;
+                    } else {
+                        fg = match.captured(1).toInt(&isFgOk);
+                        if (isFgOk) {
+                            // clang-format off
+                            switch (fg) {
+                            case 0:     fg = 2;     break; // black
+                            case 1:     fg = 4;     break; // red
+                            case 2:     fg = 6;     break; // green
+                            case 3:     fg = 8;     break; // yellow
+                            case 4:     fg = 10;    break; // blue
+                            case 5:     fg = 12;    break; // magenta
+                            case 6:     fg = 14;    break; // cyan
+                            case 7:     fg = 16;    break; // white (light gray)
+                            case 8:     fg = 1;     break; // light black (dark gray)
+                            case 9:     fg = 3;     break; // light red
+                            case 10:    fg = 5;     break; // light green
+                            case 11:    fg = 7;     break; // light yellow
+                            case 12:    fg = 9;     break; // light blue
+                            case 13:    fg = 11;    break; // light magenta
+                            case 14:    fg = 13;    break; // light cyan
+                            case 15:    fg = 15;    break; // light white
+                            default:
+                                   ; // No-op for other color codes
+                            }
+                            // clang-format on
+                        } else {
+                            // Oops failure - return to default color
+                            fg = 0;
+                        }
+                    }
+
+                    bool isBgOk = false;
+                    int bg = 0;
+                    if (match.captured(2) == QLatin1String("DEFAULT")) {
+                        // Use the old value for default which is 0 (though we use
+                        // -1 internally)
+                        isBgOk = true;
+                    } else if (match.captured(2) == QLatin1String("IGNORE")) {
+                        // Ignore is NOT handled by old system but use -2 (the value
+                        // we use internally)
+                        isBgOk = true;
+                        bg = -2;
+                    } else {
+                        bg = match.captured(2).toInt(&isBgOk);
+                        if (isBgOk) {
+                            // clang-format off
+                            switch (bg) {
+                            case 0:     bg = 2;     break; // black
+                            case 1:     bg = 4;     break; // red
+                            case 2:     bg = 6;     break; // green
+                            case 3:     bg = 8;     break; // yellow
+                            case 4:     bg = 10;    break; // blue
+                            case 5:     bg = 12;    break; // magenta
+                            case 6:     bg = 14;    break; // cyan
+                            case 7:     bg = 16;    break; // white (light gray)
+                            case 8:     bg = 1;     break; // light black (dark gray)
+                            case 9:     bg = 3;     break; // light red
+                            case 10:    bg = 5;     break; // light green
+                            case 11:    bg = 7;     break; // light yellow
+                            case 12:    bg = 9;     break; // light blue
+                            case 13:    bg = 11;    break; // light magenta
+                            case 14:    bg = 13;    break; // light cyan
+                            case 15:    bg = 15;    break; // light white
+                            default:
+                                   ; // No-op for other color codes
+                            }
+                            // clang-format on
+                        } else {
+                            // Oops failure - return to default color
+                            bg = 0;
+                        }
+                    }
+
+                    if (!isFgOk) {
+                        qDebug() << "XMLexport::remapAnsiToColorNumber(...) ERROR - failed to extract FG color code from pattern text:" << itPattern.peekPrevious() << " setting colour to default foreground";
+                    }
+                    if (!isBgOk) {
+                        qDebug() << "XMLexport::remapAnsiToColorNumber(...) ERROR - failed to extract BG color code from pattern text:" << itPattern.peekPrevious() << " setting colour to default background";
+                    }
+
+                    results << QStringLiteral("FG%1BG%2").arg(QString::number(fg), QString::number(bg));
+                } else {
+                    // No match - so insert previous string - which will cause
+                    // a failure when it gets loaded as a REGEX_COLOR_PATTERN
+                    // again...
+                    results << itPattern.peekPrevious();
+                }
+            } else {
+                // Empty pattern
+                results << QString();
+            }
+        } else {
+            // Copy across the pattern as it isn't a colour pattern
+            results << itPattern.next();
+        }
+    }
+
+    return results;
 }

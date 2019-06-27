@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -88,13 +88,15 @@ public:
 
 
     QString            getName()                        { QMutexLocker locker(& mLock); return mHostName; }
-    void               setName(const QString& s )       { QMutexLocker locker(& mLock); mHostName = s; }
+    QString            getCommandSeparator()            { QMutexLocker locker(& mLock); return mCommandSeparator; }
+    void               setName(const QString& s );
     QString            getUrl()                         { QMutexLocker locker(& mLock); return mUrl; }
     void               setUrl(const QString& s )        { QMutexLocker locker(& mLock); mUrl = s; }
     QString            getUserDefinedName()             { QMutexLocker locker(& mLock); return mUserDefinedName; }
     void               setUserDefinedName(const QString& s ) { QMutexLocker locker(& mLock); mUserDefinedName = s; }
     int                getPort()                        { QMutexLocker locker(& mLock); return mPort; }
     void               setPort( int p )                 { QMutexLocker locker(& mLock); mPort = p; }
+    void               setAutoReconnect(bool b)         { mTelnet.setAutoReconnect(b); }
     QString &          getLogin()                       { QMutexLocker locker(& mLock); return mLogin; }
     void               setLogin(const QString& s )      { QMutexLocker locker(& mLock); mLogin = s; }
     QString &          getPass()                        { QMutexLocker locker(& mLock); return mPass; }
@@ -111,8 +113,16 @@ public:
                                                                        return mAutoAmbigousWidthGlyphsSetting
                                                                                ? Qt::PartiallyChecked
                                                                                : (mWideAmbigousWidthGlyphs ? Qt::Checked : Qt::Unchecked); }
+    void               setHaveColorSpaceId(const bool state) { QMutexLocker locker(& mLock); mSGRCodeHasColSpaceId = state; }
+    bool               getHaveColorSpaceId() { QMutexLocker locker(& mLock); return mSGRCodeHasColSpaceId; }
+    void               setMayRedefineColors(const bool state) { QMutexLocker locker(& mLock); mServerMayRedefineColors = state; }
+    bool               getMayRedefineColors() { QMutexLocker locker(& mLock); return mServerMayRedefineColors; }
     void               setDiscordApplicationID(const QString& s);
     const QString&     getDiscordApplicationID();
+    void               setSpellDic(const QString&);
+    const QString&     getSpellDic() { QMutexLocker locker(& mLock); return mSpellDic; }
+    void               setUserDictionaryOptions(const bool useDictionary, const bool useShared);
+    void               getUserDictionaryOptions(bool& useDictionary, bool& useShared) { QMutexLocker locker(& mLock); useDictionary = mEnableUserDictionary; useShared = mUseSharedDictionary; }
 
     void closingDown();
     bool isClosingDown();
@@ -128,7 +138,6 @@ public:
 
     void connectToServer();
     void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
-    void sendRaw(QString s);
 
     int getHostID()
     {
@@ -170,7 +179,16 @@ public:
     void registerAnonymousEventHandler(const QString& name, const QString& fun);
     void unregisterEventHandler(const QString&, TScript*);
     void raiseEvent(const TEvent& event);
-    void resetProfile();
+    // This disables all the triggers/timers/keys in preparation to resetting
+    // them - and sets a timer to do resetProfile_phase2() when it is safe to do
+    // so. We need to do it this way because a lua script containing the call to
+    // produce this action will be purged from the Lua system as part of the
+    // reset - which causes nasty existential issues (and crashes) from deleting
+    // a script as it is being interpreted!
+    void resetProfile_phase1();
+    // This actually does the bulk of the reset but must wait until the profile
+    // is quiescent:
+    void resetProfile_phase2();
     std::tuple<bool, QString, QString> saveProfile(const QString& saveLocation = QString(), const QString& saveName = QString(), bool syncModules = false);
     std::tuple<bool, QString, QString> saveProfileAs(const QString& fileName);
     void stopAllTriggers();
@@ -198,6 +216,7 @@ public:
     bool removeDir(const QString&, const QString&);
     void readPackageConfig(const QString&, QString&);
     void postMessage(const QString message) { mTelnet.postMessage(message); }
+    QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
     QPair<bool, QString> writeProfileData(const QString&, const QString&);
     QString readProfileData(const QString&);
     void xmlSaved(const QString& xmlName);
@@ -229,12 +248,20 @@ public:
     QFont mDisplayFont;
     bool mEnableGMCP;
     bool mEnableMSDP;
+    bool mServerMXPenabled;
     QTextStream mErrorLogStream;
     QMap<QString, QList<TScript*>> mEventHandlerMap;
     bool mFORCE_GA_OFF;
     bool mFORCE_NO_COMPRESSION;
     bool mFORCE_SAVE_ON_EXIT;
     bool mInsertedMissingLF;
+
+    bool mSslTsl;
+    bool mAutoReconnect;
+    bool mSslIgnoreExpired;
+    bool mSslIgnoreSelfSigned;
+    bool mSslIgnoreAll;
+
     bool mIsGoingDown;
     bool mIsProfileLoadingSequence;
 
@@ -245,7 +272,21 @@ public:
     QScopedPointer<TMap> mpMap;
     dlgNotepad* mpNotePad;
 
+    // This is set when we want commands we typed to be shown on the main
+    // TConsole:
     bool mPrintCommand;
+
+    /*
+     * This is set when the Server is remote echoing what WE send to it,
+     * it will have negotiated the ECHO suboption by sending a IAC WILL ECHO and
+     * we have agreed to it with a IAC DO ECHO - in this state it is normal
+     * Telnet behaviour to NOT echo what we send - to prevent doubled lines.
+     * The rationale behind this is so that when we type passwords - WE do not
+     * echo what we type and rely on the other end to, but they do not, so as to
+     * hide them on our screen (and from logging!) - It should negate the effect
+     * of the above mPrintCommand being true...
+     */
+    bool mIsRemoteEchoingActive;
 
     // To cover the corner case of the user changing the mode
     // whilst a log is being written, this stores the mode of
@@ -346,7 +387,6 @@ public:
     QColor mBgColor_2;
     bool mMapStrongHighlight;
     QStringList mGMCP_merge_table_keys;
-    QString mSpellDic;
     bool mLogStatus;
     bool mEnableSpellCheck;
     QStringList mInstalledPackages;
@@ -368,7 +408,7 @@ public:
     bool mBubbleMode;
     bool mShowRoomID;
     bool mShowPanel;
-    int mServerGUI_Package_version;
+    QString mServerGUI_Package_version;
     QString mServerGUI_Package_name;
     bool mAcceptServerGUI;
     QColor mCommandLineFgColor;
@@ -377,6 +417,14 @@ public:
     bool mFORCE_MXP_NEGOTIATION_OFF;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
+    bool mEnableTextAnalyzer;
+    // Set from profile preferences, if the timer interval is less
+    // than this then the normal reoccuring debug output of the entire command
+    // and script for any timer with a timeout LESS than this is NOT shown
+    // - this is so the spammy output from short timeout timers can be
+    // suppressed.
+    // An invalid/null value is treated as the "show all"/inactive case:
+    QTime mTimerDebugOutputSuppressionInterval;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
@@ -384,6 +432,7 @@ signals:
     void signal_changeIsAmbigousWidthGlyphsToBeWide(bool);
     void profileSaveStarted();
     void profileSaveFinished();
+    void signal_changeSpellDict(const QString&);
 
 private slots:
     void slot_reloadModules();
@@ -403,9 +452,7 @@ private:
     KeyUnit mKeyUnit;
 
     QString mBufferIncomingData;
-    bool mCodeCompletion;
 
-    bool mDisableAutoCompletion;
     QFile mErrorLogFile;
 
     QMap<QString, TEvent*> mEventMap;
@@ -418,9 +465,6 @@ private:
     QString mLine;
     QMutex mLock;
     QString mLogin;
-
-    int mMXPMode;
-
     QString mPass;
 
     int mPort;
@@ -467,6 +511,24 @@ private:
     // we won't use Discord functions.
     QString mRequiredDiscordUserName;
     QString mRequiredDiscordUserDiscriminator;
+
+    // Handles whether to treat 16M-Colour ANSI SGR codes which only use
+    // semi-colons as separator have the initial Colour Space Id parameter
+    // (true) or not (false):
+    bool mSGRCodeHasColSpaceId;
+
+    // Flag whether the Server can use ANSI OSC "P#RRGGBB\" to redefine the
+    // 16 basic colors (and OSC "R\" to reset them).
+    bool mServerMayRedefineColors;
+
+    // Was public but hidden to prevent it being changed without going through
+    // the process to signal to users that they need to change dictionaries:
+    QString mSpellDic;
+    // These are hidden to prevent them being changed directly, they are also
+    // mirrored/cached in the main TConsole's instance so they do not need to be
+    // looked up directly by that class:
+    bool mEnableUserDictionary;
+    bool mUseSharedDictionary;
 
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
