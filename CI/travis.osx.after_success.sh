@@ -7,8 +7,8 @@ if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
   exit
 fi
 
-# we deploy only qmake and clang combination for macOS
-if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "clang" ]; then
+# we deploy only certain builds
+if [ "${DEPLOY}" = "deploy" ]; then
   git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
 
   cd "${TRAVIS_BUILD_DIR}/../installers/osx"
