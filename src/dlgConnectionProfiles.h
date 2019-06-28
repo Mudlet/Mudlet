@@ -71,18 +71,15 @@ private:
     QString getDescription(const QString& hostUrl, quint16 port, const QString& profile_name);
     void updateDiscordStatus();
     bool validateProfile();
-    void removeNotification(QString notification);
-    void addNotification(QString notification);
+    void removeNotification(const QString &notification);
+    void addNotification(const QString &notification);
     void loadProfile(bool alsoConnect);
 
 
     bool validProfile;
     QStringList mProfileList;
     QStringList mErrorList;
-    QString mStyleSheetRegular = "* { color:#0000c0; background: #0000C0; }";
-    QString mStyleSheetRO = "*:disabled  { color:#0000c0; background: #D4D4D4; }";
-    QString mStyleSheetOk = "* { color:#0000c0; background: #EBFFEB; }";
-    QString mStyleSheetError = "* { color:#0000c0; background: #FFEBEB; }";
+    QString mStyleSheetError = QStringLiteral("color:#0000c0; background: #FFEBEB;");
     QPushButton* offline_button;
     QPushButton* connect_button;
     QLineEdit* delete_profile_lineedit;

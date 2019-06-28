@@ -33,27 +33,27 @@
 #include <QtUiTools>
 #include "post_guard.h"
 
-dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
-: QDialog( parent )
-, mProfileList( QStringList() )
-, offline_button( Q_NULLPTR )
-, connect_button( Q_NULLPTR )
-, delete_profile_lineedit( Q_NULLPTR )
-, delete_button( Q_NULLPTR )
+dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
+: QDialog(parent)
 , validProfile()
+, mProfileList{}
+, offline_button(nullptr)
+, connect_button(nullptr)
+, delete_profile_lineedit(nullptr)
+, delete_button(nullptr)
 {
     setupUi(this);
-    
+
     QPixmap holdPixmap;
-    
+
     holdPixmap = *(this->notificationAreaIconLabelWarning->pixmap());
     holdPixmap.setDevicePixelRatio(5.3);
     this->notificationAreaIconLabelWarning->setPixmap(holdPixmap);
-    
+
     holdPixmap = *(this->notificationAreaIconLabelError->pixmap());
     holdPixmap.setDevicePixelRatio(5.3);
     this->notificationAreaIconLabelError->setPixmap(holdPixmap);
-    
+
     holdPixmap = *(this->notificationAreaIconLabelInformation->pixmap());
     holdPixmap.setDevicePixelRatio(5.3);
     this->notificationAreaIconLabelInformation->setPixmap(holdPixmap);
@@ -98,7 +98,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         // particular sequence of characters with an image generated from the
         // actual icon in use.
         pWelcome_document->setHtml(QStringLiteral("<html><head/><body>%1</body></html>")
-                                   .arg(Welcome_text_template.arg(QStringLiteral("NEW_PROFILE_ICON"), 
+                                   .arg(Welcome_text_template.arg(QStringLiteral("NEW_PROFILE_ICON"),
                                                                   QStringLiteral("CONNECT_PROFILE_ICON"))));
 
         // As we are repurposing the cancel to be a close button we do want to
@@ -178,7 +178,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     }
 
     profiles_tree_widget->setViewMode(QListView::IconMode);
-    this->setStyleSheet(mStyleSheetRO);
 }
 
 void dlgConnectionProfiles::removeNotification(QString notification)
@@ -287,6 +286,8 @@ void dlgConnectionProfiles::slot_update_login(const QString &login)
 
 void dlgConnectionProfiles::slot_update_url(const QString& url)
 {
+    Q_UNUSED(url)
+
     if (validateProfile()) {
         QListWidgetItem* pItem = profiles_tree_widget->currentItem();
         if (!pItem) {
@@ -372,6 +373,8 @@ void dlgConnectionProfiles::slot_update_SSL_TSL_port(int state)
 
 void dlgConnectionProfiles::slot_update_name(const QString& newName)
 {
+    Q_UNUSED(newName)
+
     validateProfile();
 }
 
@@ -1489,7 +1492,7 @@ void dlgConnectionProfiles::fillout_form()
                 mProfileList.insert(i, mudServer);
                 break;
             }
-        } 
+        }
     }
 
     for (int i = 0; i < mProfileList.size(); i++) {
@@ -1570,7 +1573,7 @@ void dlgConnectionProfiles::fillout_form()
             }
             _pt.drawText(QRect(0, 0, 90, 30), Qt::AlignHCenter | Qt::AlignVCenter | Qt::TextWordWrap, s, &_r);
             /*if( QFontMetrics( _font ).boundingRect( s ).width() <= 80
-			   && QFontMetrics( _font ).boundingRect( s ).height() <= 30 )*/
+               && QFontMetrics( _font ).boundingRect( s ).height() <= 30 )*/
             if (_r.width() <= 90 && _r.height() <= 30) {
                 break;
             }
@@ -1827,7 +1830,6 @@ bool dlgConnectionProfiles::validateProfile()
     }
 
     QString name = profile_name_entry->text().trimmed();
-    profile_name_entry->setStyleSheet(QString());
     const QString allowedChars = QStringLiteral(". _0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ");
     removeNotification(tr("Please only use one of the following characters:\"%1\".").arg(allowedChars));
     profile_name_entry->setStyleSheet(QString());
@@ -1866,7 +1868,7 @@ bool dlgConnectionProfiles::validateProfile()
 
     bool ok;
     int num = port.trimmed().toInt(&ok);
-    if ((num >= 65535) || (num <= 0) || !ok) {
+        if ((num >= 65535) || (num <= 0) || !ok) {
         addNotification(tr("Port number must be above zero and below 65535."));
         port_entry->setStyleSheet(mStyleSheetError);
         validProfile = false;
@@ -1896,7 +1898,7 @@ bool dlgConnectionProfiles::validateProfile()
         }
     } else {
         port_ssl_tsl->setEnabled(true);
-        port_ssl_tsl->setToolTip("");
+        port_ssl_tsl->setToolTip(QString());
     }
 #endif
 
