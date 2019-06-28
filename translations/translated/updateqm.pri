@@ -2,11 +2,19 @@
 
 TS_FILES += $$files(mudlet_*.ts)
 
+# The American translation is plurals only and has to be done separately (by
+# hand) so is not to be included in the built-in Qt TRANSLATIONS variable as the
+# default processing of it will not have the needed extra `-pluralonly`
+TS_FILES -= mudlet_en_US.ts
+
 # need to use full path, otherwise running
 # `lupdate` will generate *.ts files in project root directory
 for(file, TS_FILES) {
     TRANSLATIONS += "$${PWD}/$${file}"
 }
+
+# Now put the file back
+TS_FILES += mudlet_en_US.ts
 
 isEmpty(QMAKE_LRELEASE) {
     win32 {

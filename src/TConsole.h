@@ -35,6 +35,9 @@
 #include <QWidget>
 #include "post_guard.h"
 
+#include <hunspell/hunspell.hxx>
+#include <hunspell/hunspell.h>
+
 #include <list>
 #include <map>
 
@@ -72,6 +75,8 @@ public:
 
     Q_DISABLE_COPY(TConsole)
     TConsole(Host*, ConsoleType type = UnknownType, QWidget* parent = nullptr);
+    ~TConsole();
+
     void reset();
     void resetMainConsole();
     Host* getHost();
@@ -180,6 +185,32 @@ public:
 
     void toggleLogging(bool);
     ConsoleType getType() const { return mType; }
+    QPair<bool, QString> addWordToSet(const QString&);
+    QPair<bool, QString> removeWordFromSet(const QString&);
+    void setSystemSpellDictionary(const QString&);
+    void setProfileSpellDictionary();
+    const QString& getSystemSpellDictionary() const { return mSpellDic; }
+    QTextCodec* getHunspellCodec_system() const { return mpHunspellCodec_system; }
+    Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }
+    // Either returns the handle of the per profile or the shared Mudlet one or
+    // nullptr depending on the state of the flags mEnableUserDictionary and
+    // mUseSharedDictionary:
+    Hunhandle* getHunspellHandle_user() const {
+        return mEnableUserDictionary
+                ? (mUseSharedDictionary
+                   ? mpHunspell_shared
+                   : mpHunspell_profile)
+                : nullptr; }
+    QSet<QString> getWordSet() const;
+    void setProfileName(const QString&);
+    bool isUsingSharedDictionary() const { return mUseSharedDictionary; }
+    // In the next pair of functions the first element in the return is an
+    // error code:
+    // 0 = Okay
+    // 1 = Window not found
+    // 2 = Selection not valid
+    QPair<quint8, TChar> getTextAttributes() const;
+    QPair<quint8, TChar> getTextAttributes(const QString&) const;
 
 
     QPointer<Host> mpHost;
@@ -261,7 +292,7 @@ public:
     QLineEdit* networkLatency;
     QPoint P_begin;
     QPoint P_end;
-    QString profile_name;
+    QString mProfileName;
     TSplitter* splitter;
     bool mIsPromptLine;
     QToolButton* logButton;
@@ -298,8 +329,56 @@ private:
 
 
     ConsoleType mType;
+
+    // Was public in Host class but made private there and cloned to here
+    // (for main TConsole) to prevent it being changed without going through the
+    // process to load in the the changed dictionary:
+    QString mSpellDic;
+
+    // Cloned from Host
+    bool mEnableUserDictionary;
+    bool mUseSharedDictionary;
+
+    // Three handles, one for the dictionary the user choses from the system
+    // one created by the mudlet class for all profiles and the third for a per
+    // profile one - the last pair are built by the user and/or lua functions:
+    Hunhandle* mpHunspell_system;
+    Hunhandle* mpHunspell_shared;
+    Hunhandle* mpHunspell_profile;
+    // The user dictionary will always use the UTF-8 codec, but the one
+    // selected from the system's ones may not:
+    QByteArray mHunspellCodecName_system;
+    QTextCodec* mpHunspellCodec_system;
+    // To update the profile dictionary we actually have to track all the words
+    // in it so we loaded the contents into this on startup and adjust it as we
+    // go. Then, at the end of a session we will put the revised contents
+    // back into the user's ".dic" file and regenerate the needed pair of lines
+    // for the ".aff" file - this member is for the per profile option only as
+    // the shared one is held by the mudlet singleton class:
+    QSet<QString> mWordSet_profile;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
+
+#if ! defined(QT_NO_DEBUG)
+inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
+{
+    QString text;
+    QDebugStateSaver saver(debug);
+    switch (type) {
+    case TConsole::UnknownType:           text = QStringLiteral("Unknown"); break;
+    case TConsole::CentralDebugConsole:   text = QStringLiteral("Central Debug Console"); break;
+    case TConsole::ErrorConsole:          text = QStringLiteral("Profile Error Console"); break;
+    case TConsole::MainConsole:           text = QStringLiteral("Profile Main Console"); break;
+    case TConsole::SubConsole:            text = QStringLiteral("Mini Console"); break;
+    case TConsole::UserWindow:            text = QStringLiteral("User Window"); break;
+    case TConsole::Buffer:                text = QStringLiteral("Buffer"); break;
+    default:
+        text = QStringLiteral("Non-coded Type");
+    }
+    debug.nospace() << text;
+    return debug;
+}
+#endif // ! defined(QT_NO_DEBUG)
 
 #endif // MUDLET_TCONSOLE_H

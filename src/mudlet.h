@@ -5,7 +5,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
- *   Copyright (C) 2015-2016, 2018 by Stephen Lyons                        *
+ *   Copyright (C) 2015-2016, 2018-2019 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
@@ -46,10 +46,12 @@
 #include <QPointer>
 #include <QProxyStyle>
 #include <QQueue>
+#include <QReadWriteLock>
 #include <QSettings>
 #include <QTextOption>
 #include <QTime>
 #include <QTimer>
+#include <QToolButton>
 #include "edbee/models/textautocompleteprovider.h"
 #include <QShortcut>
 #include <QKeySequence>
@@ -57,6 +59,9 @@
 #include <QGamepad>
 #endif
 #include "post_guard.h"
+
+#include <hunspell/hunspell.hxx>
+#include <hunspell/hunspell.h>
 
 #include <assert.h>
 
@@ -69,6 +74,7 @@ class QPushButton;
 class QTableWidget;
 class QTableWidgetItem;
 class QTextEdit;
+class QToolButton;
 class QTimer;
 
 class Host;
@@ -94,7 +100,7 @@ public:
     static mudlet* self();
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
-    HostManager& getHostManager() { return mHostManager; }    
+    HostManager& getHostManager() { return mHostManager; }
     FontManager mFontManager;
     Discord mDiscord;
     QPointer<QSettings> mpSettings;
@@ -107,8 +113,6 @@ public:
     void disableToolbarButtons();
     void enableToolbarButtons();
     Host* getActiveHost();
-    void registerTimer(TTimer*, QTimer*);
-    void unregisterTimer(QTimer*);
     void forceClose();
     bool saveWindowLayout();
     bool loadWindowLayout();
@@ -206,7 +210,7 @@ public:
     void doAutoLogin(const QString&);
     bool deselect(Host* pHost, const QString& name);
     void stopSounds();
-    void playSound(QString s, int);
+    void playSound(const QString &s, int);
     int getColumnCount(Host* pHost, QString& name);
     int getRowCount(Host* pHost, QString& name);
     QStringList getAvailableFonts();
@@ -216,7 +220,6 @@ public:
     QTime mReplayTime;
     int mReplaySpeed;
     QToolBar* mpMainToolBar;
-    QMap<QTimer*, TTimer*> mTimerMap;
     QMap<Host*, QPointer<dlgIRC>> mpIrcClientMap;
     QString version;
     QPointer<Host> mpCurrentActiveHost;
@@ -350,23 +353,43 @@ public:
         // when saving/resyncing packages/modules - ends in a '/'
         moduleBackupsPath,
         // Returns path to Qt's own translation files
-        qtTranslationsPath
+        qtTranslationsPath,
+        // Takes one extra argument - a (dictionary) language code that should
+        // match a hunspell affix file name e.g. "en_US" in the default case
+        // to yield "en_US.aff" that is searched for in one or more OS dependent
+        // places - returns the path ending in a '/' to use to get the
+        // dictionaries from:
+        hunspellDictionaryPath
     };
     static QString getMudletPath(mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
     // Used to enable "emergency" control recovery action - if Mudlet is
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
-    bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);    
+    bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     void show_options_dialog(QString tab);
     void setInterfaceLanguage(const QString &languageCode);
     QList<QString> getAvailableTranslationCodes() const { return mTranslatorsMap.keys(); }
     QPair<bool, QStringList> getLines(Host* pHost, const QString& windowName, const int lineFrom, const int lineTo);
+    void setEnableFullScreenMode(const bool);
+
+    // Both of these revises the contents of the .aff file: the first will
+    // handle a .dic file that has been updated externally/manually (to add
+    // or remove words) - it also puts the contents of the .dic file into the
+    // supplied second argument; the second will replace the .dic file with just
+    // the words in the supplied second argument and is to be used at the end of
+    // a session to store away the user's changes:
+    Hunhandle* prepareProfileDictionary(const QString&, QSet<QString>&);
+    Hunhandle* prepareSharedDictionary();
+    bool saveDictionary(const QString&, QSet<QString>&);
+    QPair<bool, bool> addWordToSet(const QString&);
+    QPair<bool, bool> removeWordFromSet(const QString&);
+    QSet<QString> getWordSet();
+
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
 #endif
 
-    void setEnableFullScreenMode(const bool);
 
     // Currently tracks the "mudlet_option_use_smallscreen" file's existance but
     // may eventually migrate solely to the "EnableFullScreenMode" in the main
@@ -389,6 +412,15 @@ public:
     // as well as encourage translators to maintain it;
     const int mTranslationStar = 95;
 
+    // A different version of the above intended for Dictionary identification - it might be possible to merge them:
+    QHash<QString, QString>mDictionaryLanguageCodeMap;
+
+    // This is used to keep track of where the main dictionary files are located
+    // will be true if they are ones bundled with Mudlet, false if provided by
+    // the system
+    bool mUsingMudletDictionaries;
+
+
 public slots:
     void processEventLoopHack_timerRun();
     void slot_mapper();
@@ -404,7 +436,7 @@ public slots:
     void slot_module_clicked(QTableWidgetItem*);
     void slot_module_changed(QTableWidgetItem*);
     void slot_multi_view();
-    void slot_connection_dlg_finished(const QString& profile, int historyVersion);
+    void slot_connection_dlg_finished(const QString& profile, bool connectOnLoad);
     void slot_timer_fires();
     void slot_send_login();
     void slot_send_pass();
@@ -450,6 +482,7 @@ signals:
     void signal_toolBarVisibilityChanged(const controlsVisibility);
     void signal_showIconsOnMenusChanged(const Qt::CheckState);
 
+
 private slots:
     void slot_close_profile();
     void slot_tab_changed(int);
@@ -474,12 +507,19 @@ private slots:
     void slot_module_manager_destroyed();
 #if defined(INCLUDE_UPDATER)
     void slot_update_installed();
+    void slot_updateAvailable(const int);
 #endif
 
 private:
     void initEdbee();
     void goingDown() { mIsGoingDown = true; }
     void loadTranslators();
+    bool scanDictionaryFile(QFile&, int&, QHash<QString, unsigned int>&, QStringList&);
+    int scanWordList(QStringList&, QHash<QString, unsigned int>&);
+    bool overwriteDictionaryFile(QFile&, const QStringList&);
+    bool overwriteAffixFile(QFile&, QHash<QString, unsigned int>&);
+    int getDictionaryWordCount(QFile&);
+
 
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
@@ -532,6 +572,7 @@ private:
     QPointer<QAction> mpActionReplay;
 
     QPointer<QAction> mpActionAbout;
+    QPointer<QToolButton> mpButtonAbout;
     QPointer<QAction> mpActionAliases;
     QPointer<QAction> mpActionButtons;
     QPointer<QAction> mpActionConnect;
@@ -585,6 +626,14 @@ private:
     QList<QPointer<QTranslator>> mTranslatorsLoadedList;
     void loadTranslationFile(const QString& translationFileName, const QString &filePath, QString &languageCode);
     void loadLanguagesMap();
+
+    // Points to the common mudlet dictionary handle once a profile has
+    // requested it, then gets closed at termination of the application.
+    Hunhandle* mHunspell_sharedDictionary;
+    // The collection of words in the above:
+    QSet<QString> mWordSet_shared;
+    // Prevent problems when updating the dictionary:
+    QReadWriteLock mDictionaryReadWriteLock;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

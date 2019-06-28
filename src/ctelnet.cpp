@@ -58,7 +58,7 @@ QDataStream replayStream;
 QFile replayFile;
 
 
-cTelnet::cTelnet(Host* pH)
+cTelnet::cTelnet(Host* pH, const QString& profileName)
 : mResponseProcessed(true)
 , networkLatency()
 , mAlertOnNewData(true)
@@ -74,6 +74,7 @@ cTelnet::cTelnet(Host* pH)
 , mMCCP_version_1(false)
 , mMCCP_version_2(false)
 , mpProgressDialog()
+, mProfileName(profileName)
 , hostPort()
 , networkLatencyMin()
 , networkLatencyMax()
@@ -128,7 +129,7 @@ cTelnet::cTelnet(Host* pH)
 
     // initialize the socket after the Host initialisation is complete so we can access mSslTsl
     QTimer::singleShot(0, this, [this]() {
-        qDebug() << mpHost->getName();
+        qDebug() << mProfileName;
         if (mpHost->mSslTsl) {
             connect(&socket, &QSslSocket::encrypted, this, &cTelnet::handle_socket_signal_connected);
         } else {
@@ -162,7 +163,7 @@ cTelnet::cTelnet(Host* pH)
 
 void cTelnet::reset()
 {
-    //prepare option variables
+    //reset telnet options state
     for (int i = 0; i < 256; i++) {
         myOptionState[i] = false;
         hisOptionState[i] = false;
@@ -170,7 +171,12 @@ void cTelnet::reset()
         heAnnouncedState[i] = false;
         triedToEnable[i] = false;
     }
-    iac = iac2 = insb = false;
+    iac = false;
+    iac2 = false;
+    insb = false;
+    // Ensure we do not think that the game server is echoing for us:
+    mpHost->mIsRemoteEchoingActive = false;
+    mGA_Driver = false;
     command = "";
     mMudData = "";
 }
@@ -323,7 +329,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
 void cTelnet::requestDiscordInfo()
 {
     mudlet* pMudlet = mudlet::self();
-    if (pMudlet->mDiscord.libraryLoaded() && !mpHost->mDiscordDisableServerSide) {
+    if (pMudlet->mDiscord.libraryLoaded()) {
         string data;
         data = TN_IAC;
         data += TN_SB;
@@ -365,11 +371,17 @@ void cTelnet::connectIt(const QString& address, int port)
 }
 
 
-void cTelnet::disconnect()
+void cTelnet::disconnectIt()
 {
     mDontReconnect = true;
     socket.disconnectFromHost();
 
+}
+
+void cTelnet::abortConnection()
+{
+    mDontReconnect = true;
+    socket.abort();
 }
 
 void cTelnet::handle_socket_signal_error()
@@ -416,7 +428,7 @@ void cTelnet::handle_socket_signal_connected()
 
     emit signal_connected(mpHost);
 
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QStringLiteral("sysConnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
@@ -425,7 +437,7 @@ void cTelnet::handle_socket_signal_connected()
 void cTelnet::handle_socket_signal_disconnected()
 {
     QString msg;
-    TEvent event;
+    TEvent event {};
     QString reason;
     QString spacer = "    ";
     bool sslerr = false;
@@ -550,7 +562,7 @@ bool cTelnet::sendData(QString& data)
 {
     data.remove(QChar::LineFeed);
 
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QStringLiteral("sysDataSendRequest"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(data);
@@ -559,14 +571,16 @@ bool cTelnet::sendData(QString& data)
 
     if (mpHost->mAllowToSendCommand) {
         string outData;
+        auto errorMsgTemplate = "[ WARN ]  - Invalid characters in outgoing data, one or more characters cannot\n"
+            "be encoded into the range that is acceptable for the character\n"
+            "encoding that is currently set {\"%1\"} for the game server.\n"
+            "It may not understand what is sent to it.\n"
+            "Note: this warning will only be issued once, even if this happens again, until\n"
+            "the encoding is changed.";
         if (!mEncoding.isEmpty()) {
             if ((! mEncodingWarningIssued) && (! outgoingDataCodec->canEncode(data))) {
-                QString errorMsg = tr("[ WARN ]  - Invalid characters in outgoing data, one or more characters cannot\n"
-                                      "be encoded into the range that is acceptable for the character\n"
-                                      "encoding that is currently set {\"%1\"} for the game server.\n"
-                                      "It may not understand what is sent to it.\n"
-                                      "Note: this warning will only be issued once, even if this happens again, until\n"
-                                      "the encoding is changed.").arg(mEncoding);
+                QString errorMsg = tr(errorMsgTemplate, 
+                                      "%1 is the name of the encoding currently set.").arg(mEncoding);
                 postMessage(errorMsg);
                 mEncodingWarningIssued = true;
             }
@@ -576,12 +590,8 @@ bool cTelnet::sendData(QString& data)
             // Plain, raw ASCII, we hope!
             for (int i = 0, total = data.size(); i < total; ++i) {
                 if ((! mEncodingWarningIssued) && (data.at(i).row() || data.at(i).cell() > 127)){
-                    QString errorMsg = tr("[ WARN ]  - Invalid characters in outgoing data, one or more characters cannot\n"
-                                          "be encoded into the range that is acceptable for the character\n"
-                                          "encoding that is currently set {\"ASCII\"} for the MUD Server.\n"
-                                          "It may not understand what is sent to it.\n"
-                                          "Note: this warning will only be issued once, even if this happens again, until\n"
-                                          "the encoding is changed.");
+                QString errorMsg = tr(errorMsgTemplate, 
+                                      "%1 is the name of the encoding currently set.").arg(QStringLiteral("ASCII"));
                     postMessage(errorMsg);
                     mEncodingWarningIssued = true;
                     break;
@@ -986,7 +996,7 @@ void cTelnet::processTelnetCommand(const string& command)
             output += TN_SE;
             socketOutRaw(output);
 
-            if (mudlet::self()->mDiscord.libraryLoaded() && !mpHost->mDiscordDisableServerSide) {
+            if (mudlet::self()->mDiscord.libraryLoaded()) {
                 output = TN_IAC;
                 output += TN_SB;
                 output += OPT_GMCP;
@@ -1311,14 +1321,6 @@ void cTelnet::processTelnetCommand(const string& command)
                 version.replace(QChar::LineFeed, QChar::Space);
                 version = version.section(QChar::Space, 0, 0);
 
-                QString _smsg;
-                if (mpHost->mServerGUI_Package_version != version) {
-                    postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
-                                   "Uninstalling old version '%2'.")
-                                .arg(version, mpHost->mServerGUI_Package_version));
-                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);
-                    mpHost->mServerGUI_Package_version = version;
-                }
                 QString url = msg.section(QChar::LineFeed, 1);
                 QString packageName = url.section(QLatin1Char('/'), -1);
                 QString fileName = packageName;
@@ -1332,13 +1334,23 @@ void cTelnet::processTelnetCommand(const string& command)
                 packageName.remove(QLatin1Char('\\'));
                 packageName.remove(QLatin1Char('.'));
 
-                postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2')...").arg(url, packageName));
+                if (mpHost->mServerGUI_Package_version != version) {
+                    postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
+                                   "Uninstalling old version '%2'.")
+                                .arg(version, mpHost->mServerGUI_Package_version != QStringLiteral("-1") ? mpHost->mServerGUI_Package_version : QStringLiteral("(unknown)")));
+                    // uninstall by previous known package name or current if we don't
+                    // know it (in case of manual installation)
+                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != QStringLiteral("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
+                    mpHost->mServerGUI_Package_version = version;
+                }
+
+                postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
                 if (mpHost->mInstalledPackages.contains(packageName)) {
                     postMessage(tr("[  OK  ]  - Package is already installed."));
                     return;
                 }
 
-                mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), fileName);
+                mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
 
                 QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
                 mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
@@ -1468,7 +1480,7 @@ void cTelnet::processTelnetCommand(const string& command)
             msg = msg.mid(3, command.size() - 5);
         }
 
-        TEvent event;
+        TEvent event {};
         event.mArgumentList.append(QStringLiteral("sysTelnetEvent"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         event.mArgumentList.append(QString::number(type));
@@ -1543,7 +1555,7 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
     mpHost->mLuaInterpreter.setAtcpTable(var, arg);
     if (var.startsWith(QLatin1String("RoomNum"))) {
         if (mpHost->mpMap) {
-            mpHost->mpMap->mRoomIdHash[mpHost->getName()] = arg.toInt();
+            mpHost->mpMap->mRoomIdHash[mProfileName] = arg.toInt();
             if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
                 mpHost->mpMap->mpM->update();
                 mpHost->mpMap->mpMapper->mp2dMap->update();
@@ -1590,14 +1602,6 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         version.replace(QChar::LineFeed, QChar::Space);
         version = version.section(QChar::Space, 0, 0);
 
-        QString _smsg;
-        if (mpHost->mServerGUI_Package_version != version) {
-            postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
-                           "Uninstalling old version '%2'.")
-                        .arg(version, mpHost->mServerGUI_Package_version));
-            mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);
-            mpHost->mServerGUI_Package_version = version;
-        }
         QString url = transcodedMsg.section(QChar::LineFeed, 1);
         QString packageName = url.section(QLatin1Char('/'), -1);
         QString fileName = packageName;
@@ -1611,13 +1615,23 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         packageName.remove(QLatin1Char('\\'));
         packageName.remove(QLatin1Char('.'));
 
+        if (mpHost->mServerGUI_Package_version != version) {
+            postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
+                           "Uninstalling old version '%2'.")
+                        .arg(version, mpHost->mServerGUI_Package_version != QStringLiteral("-1") ? mpHost->mServerGUI_Package_version : QStringLiteral("(unknown)")));
+            // uninstall by previous known package name or current if we don't
+            // know it (in case of manual installation)
+            mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != QStringLiteral("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
+            mpHost->mServerGUI_Package_version = version;
+        }
+
         postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
         if (mpHost->mInstalledPackages.contains(packageName)) {
             postMessage(tr("[  OK  ]  - Package is already installed."));
             return;
         }
 
-        mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), fileName);
+        mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
 
         QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
         mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
@@ -1634,9 +1648,9 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
     // remove \r's from the data, as yajl doesn't like it
     data.remove(QChar::CarriageReturn);
 
-    if (transcodedMsg.startsWith(QLatin1String("External.Discord.Status"))
-        || transcodedMsg.startsWith(QLatin1String("External.Discord.Info"))) {
-        mpHost->processDiscordGMCP(transcodedMsg, data);
+    if (packageMessage.startsWith(QLatin1String("External.Discord.Status"))
+        || packageMessage.startsWith(QLatin1String("External.Discord.Info"))) {
+        mpHost->processDiscordGMCP(packageMessage, data);
     }
 
     mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
@@ -2159,19 +2173,24 @@ void cTelnet::slot_processReplayChunk()
 
 void cTelnet::handle_socket_signal_readyRead()
 {
-    mpHost->mInsertedMissingLF = false;
-
     if (mWaitingForResponse) {
         double time = networkLatencyTime.elapsed();
         networkLatency = time / 1000;
         mWaitingForResponse = false;
     }
 
-    char in_bufferx[100010];
-    char* in_buffer = in_bufferx;
-    char out_buffer[100010];
+    char in_buffer[100010];
 
     int amount = socket.read(in_buffer, 100000);
+    processSocketData(in_buffer, amount);
+}
+
+void cTelnet::processSocketData(char* in_buffer, int amount)
+{
+    mpHost->mInsertedMissingLF = false;
+
+    char out_buffer[100010];
+
     in_buffer[amount + 1] = '\0';
     if (amount == -1) {
         return;
@@ -2231,48 +2250,46 @@ void cTelnet::handle_socket_signal_readyRead()
                     command = "";
                     iac = false;
                 } else if (insb) {
-                    if (!mNeedDecompression) {
-                        // IAC SB COMPRESS WILL SE for MCCP v1 (unterminated invalid telnet sequence)
-                        // IAC SB COMPRESS2 IAC SE for MCCP v2
-                        if ((mMCCP_version_1 || mMCCP_version_2) && (!mNeedDecompression)) {
-                            char _ch = buffer[i];
-                            if ((_ch == OPT_COMPRESS) || (_ch == OPT_COMPRESS2)) {
-                                bool _compress = false;
-                                if ((i > 1) && (i + 2 < datalen)) {
-                                    qDebug() << "checking mccp start seq...";
-                                    if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_WILL) && (buffer[i + 2] == TN_SE)) {
-                                        qDebug() << "MCCP version 1 starting sequence";
-                                        _compress = true;
-                                    }
-                                    if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_IAC) && (buffer[i + 2] == TN_SE)) {
-                                        qDebug() << "MCCP version 2 starting sequence";
-                                        _compress = true;
-                                    }
-                                    qDebug() << (int)buffer[i - 2] << "," << (int)buffer[i - 1] << "," << (int)buffer[i] << "," << (int)buffer[i + 1] << "," << (int)buffer[i + 2];
+                    // IAC SB COMPRESS WILL SE for MCCP v1 (unterminated invalid telnet sequence)
+                    // IAC SB COMPRESS2 IAC SE for MCCP v2
+                    if ((mMCCP_version_1 || mMCCP_version_2) && (!mNeedDecompression)) {
+                        char _ch = buffer[i];
+                        if ((_ch == OPT_COMPRESS) || (_ch == OPT_COMPRESS2)) {
+                            bool _compress = false;
+                            if ((i > 1) && (i + 2 < datalen)) {
+                                qDebug() << "checking mccp start seq...";
+                                if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_WILL) && (buffer[i + 2] == TN_SE)) {
+                                    qDebug() << "MCCP version 1 starting sequence";
+                                    _compress = true;
                                 }
-                                if (_compress) {
-                                    mNeedDecompression = true;
-                                    // from this position in stream onwards, data will be compressed by zlib
-                                    gotRest(cleandata);
-                                    cleandata = "";
-                                    initStreamDecompressor();
-                                    buffer += i + 3; //bugfix: BenH
-                                    int restLength = datalen - i - 3;
-                                    if (restLength > 0) {
-                                        datalen = decompressBuffer(buffer, restLength, out_buffer);
-                                        buffer = out_buffer;
-                                        i = -1; // start processing buffer from the beginning.
-                                    } else {
-                                        datalen = 0;
-                                        i = -1; // end the loop, this will make i and datalen the same.
-                                    }
-                                    //bugfix: BenH
-                                    iac = false;
-                                    insb = false;
-                                    command = "";
-                                    ////////////////
-                                    goto MAIN_LOOP_END;
+                                if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_IAC) && (buffer[i + 2] == TN_SE)) {
+                                    qDebug() << "MCCP version 2 starting sequence";
+                                    _compress = true;
                                 }
+                                qDebug() << (int)buffer[i - 2] << "," << (int)buffer[i - 1] << "," << (int)buffer[i] << "," << (int)buffer[i + 1] << "," << (int)buffer[i + 2];
+                            }
+                            if (_compress) {
+                                mNeedDecompression = true;
+                                // from this position in stream onwards, data will be compressed by zlib
+                                gotRest(cleandata);
+                                cleandata = "";
+                                initStreamDecompressor();
+                                buffer += i + 3; //bugfix: BenH
+                                int restLength = datalen - i - 3;
+                                if (restLength > 0) {
+                                    datalen = decompressBuffer(buffer, restLength, out_buffer);
+                                    buffer = out_buffer;
+                                    i = -1; // start processing buffer from the beginning.
+                                } else {
+                                    datalen = 0;
+                                    i = -1; // end the loop, this will make i and datalen the same.
+                                }
+                                //bugfix: BenH
+                                iac = false;
+                                insb = false;
+                                command = "";
+                                ////////////////
+                                goto MAIN_LOOP_END;
                             }
                         }
                     }
@@ -2343,7 +2360,7 @@ void cTelnet::handle_socket_signal_readyRead()
 
 void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
 {
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(name);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(protocol);

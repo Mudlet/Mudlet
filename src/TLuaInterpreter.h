@@ -112,7 +112,7 @@ public:
     static int dirToNumber(lua_State*, int);
 
 
-    int startTempTimer(double, const QString&);
+    QPair<int, QString> startTempTimer(double, const QString&);
     int startTempAlias(const QString&, const QString&);
     int startTempKey(int&, int&, QString&);
     int startTempTrigger(const QString& regex, const QString& function, int expiryCount = -1);
@@ -126,7 +126,7 @@ public:
     int startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regex, const QString& function);
     int startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
     int startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
-    int startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
+    QPair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     int startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
     int startPermKey(QString&, QString&, int&, int&, QString&);
 
@@ -268,6 +268,7 @@ public:
     static int enableTimer(lua_State* L);
     static int disableTimer(lua_State* L);
     static int killTimer(lua_State* L);
+    static int remainingTime(lua_State* L);
     static int moveCursor(lua_State* L);
     static int insertHTML(lua_State* L);
     static int insertText(lua_State* L);
@@ -435,6 +436,7 @@ public:
     static int clearMapUserDataItem(lua_State*);
     static int setDefaultAreaVisible(lua_State*);
     static int getProfileName(lua_State*);
+    static int getCommandSeparator(lua_State*);
     static int raiseGlobalEvent(lua_State*);
     static int setServerEncoding(lua_State*);
     static int getServerEncoding(lua_State*);
@@ -492,6 +494,12 @@ public:
     static int setDiscordGame(lua_State*);
     static int getPlayerRoom(lua_State*);
     static int getMapSelection(lua_State*);
+    static int addWordToDictionary(lua_State*);
+    static int removeWordFromDictionary(lua_State*);
+    static int spellCheckWord(lua_State*);
+    static int spellSuggestWord(lua_State*);
+    static int getDictionaryWordList(lua_State*);
+    static int getTextFormat(lua_State*);
     static int getPlayerName(lua_State*);
     static int sendPlayerName(lua_State*);
     static int sendPlayerPassword(lua_State*);

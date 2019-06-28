@@ -53,7 +53,7 @@ public:
     TAction(const QString& name, Host* pHost);
     void compileAll();
     QString getName() { return mName; }
-    void setName(const QString& name) { if(name != mName) { setDataChanged(); mName = name; } }
+    void setName(const QString& name);
     void setButtonColor(QColor c) { if(c != mButtonColor) { setDataChanged(); mButtonColor = c; } }
     QColor getButtonColor() { return mButtonColor; }
     void setButtonRotation(int r) { if(r != mButtonRotation) { setDataChanged(); mButtonRotation = r; } }

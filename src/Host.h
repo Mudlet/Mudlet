@@ -88,7 +88,8 @@ public:
 
 
     QString            getName()                        { QMutexLocker locker(& mLock); return mHostName; }
-    void               setName(const QString& s )       { QMutexLocker locker(& mLock); mHostName = s; }
+    QString            getCommandSeparator()            { QMutexLocker locker(& mLock); return mCommandSeparator; }
+    void               setName(const QString& s );
     QString            getUrl()                         { QMutexLocker locker(& mLock); return mUrl; }
     void               setUrl(const QString& s )        { QMutexLocker locker(& mLock); mUrl = s; }
     QString            getUserDefinedName()             { QMutexLocker locker(& mLock); return mUserDefinedName; }
@@ -118,6 +119,10 @@ public:
     bool               getMayRedefineColors() { QMutexLocker locker(& mLock); return mServerMayRedefineColors; }
     void               setDiscordApplicationID(const QString& s);
     const QString&     getDiscordApplicationID();
+    void               setSpellDic(const QString&);
+    const QString&     getSpellDic() { QMutexLocker locker(& mLock); return mSpellDic; }
+    void               setUserDictionaryOptions(const bool useDictionary, const bool useShared);
+    void               getUserDictionaryOptions(bool& useDictionary, bool& useShared) { QMutexLocker locker(& mLock); useDictionary = mEnableUserDictionary; useShared = mUseSharedDictionary; }
 
     void closingDown();
     bool isClosingDown();
@@ -174,7 +179,16 @@ public:
     void registerAnonymousEventHandler(const QString& name, const QString& fun);
     void unregisterEventHandler(const QString&, TScript*);
     void raiseEvent(const TEvent& event);
-    void resetProfile();
+    // This disables all the triggers/timers/keys in preparation to resetting
+    // them - and sets a timer to do resetProfile_phase2() when it is safe to do
+    // so. We need to do it this way because a lua script containing the call to
+    // produce this action will be purged from the Lua system as part of the
+    // reset - which causes nasty existential issues (and crashes) from deleting
+    // a script as it is being interpreted!
+    void resetProfile_phase1();
+    // This actually does the bulk of the reset but must wait until the profile
+    // is quiescent:
+    void resetProfile_phase2();
     std::tuple<bool, QString, QString> saveProfile(const QString& saveLocation = QString(), const QString& saveName = QString(), bool syncModules = false);
     std::tuple<bool, QString, QString> saveProfileAs(const QString& fileName);
     void stopAllTriggers();
@@ -373,7 +387,6 @@ public:
     QColor mBgColor_2;
     bool mMapStrongHighlight;
     QStringList mGMCP_merge_table_keys;
-    QString mSpellDic;
     bool mLogStatus;
     bool mEnableSpellCheck;
     QStringList mInstalledPackages;
@@ -419,6 +432,7 @@ signals:
     void signal_changeIsAmbigousWidthGlyphsToBeWide(bool);
     void profileSaveStarted();
     void profileSaveFinished();
+    void signal_changeSpellDict(const QString&);
 
 private slots:
     void slot_reloadModules();
@@ -506,6 +520,15 @@ private:
     // Flag whether the Server can use ANSI OSC "P#RRGGBB\" to redefine the
     // 16 basic colors (and OSC "R\" to reset them).
     bool mServerMayRedefineColors;
+
+    // Was public but hidden to prevent it being changed without going through
+    // the process to signal to users that they need to change dictionaries:
+    QString mSpellDic;
+    // These are hidden to prevent them being changed directly, they are also
+    // mirrored/cached in the main TConsole's instance so they do not need to be
+    // looked up directly by that class:
+    bool mEnableUserDictionary;
+    bool mUseSharedDictionary;
 
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);

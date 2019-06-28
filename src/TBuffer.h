@@ -122,6 +122,14 @@ struct TMxpElement
     QString hint;
 };
 
+enum TMXPMode
+{
+    MXP_MODE_OPEN,
+    MXP_MODE_SECURE,
+    MXP_MODE_LOCKED,
+    MXP_MODE_TEMP_SECURE
+};
+
 class TBuffer
 {
     // need to use tr() on encoding names in csmEncodingTable
@@ -149,7 +157,7 @@ public:
     int find(int line, const QString& what, int pos);
     int wrap(int);
     QStringList split(int line, const QString& splitter);
-    QStringList split(int line, QRegularExpression splitter);
+    QStringList split(int line, const QRegularExpression& splitter);
     bool replaceInLine(QPoint& start, QPoint& end, const QString& with, TChar& format);
     bool deleteLine(int);
     bool deleteLines(int from, int to);
@@ -182,6 +190,7 @@ public:
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
     void encodingChanged(const QString &);
+    static int lengthInGraphemes(const QString& text);
 
 
     std::deque<TChar> bufferLine;
@@ -231,6 +240,8 @@ public:
 
     // State of MXP systen:
     bool mMXP;
+    TMXPMode mMXP_MODE;
+    TMXPMode mMXP_DEFAULT;
 
     bool mAssemblingToken;
     std::string currentToken;
@@ -246,22 +257,24 @@ public:
     char mOpenMainQuote;
     bool mMXP_SEND_NO_REF_MODE;
     std::string mAssembleRef;
-    bool mEchoText;
+    bool mEchoingText;
 
 
 private:
     void shrinkBuffer();
-    int calcWrapPos(int line, int begin, int end);
+    int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
     bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
     bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
     QString processSupportsRequest(const QString &attributes);
     void decodeSGR(const QString&);
-    void decodeSGR38(QStringList, bool isColonSeparated = true);
-    void decodeSGR48(QStringList, bool isColonSeparated = true);
+    void decodeSGR38(const QStringList&, bool isColonSeparated = true);
+    void decodeSGR48(const QStringList&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
     void resetColors();
+
+    static const int scmMaxLinks = 2000;
 
     // First stage in decoding SGR/OCS sequences - set true when we see the
     // ASCII ESC character:

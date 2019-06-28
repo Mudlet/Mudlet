@@ -74,7 +74,7 @@ TTrigger::TTrigger( TTrigger * parent, Host * pHost )
 {
 }
 
-TTrigger::TTrigger(const QString& name, QStringList regexList, QList<int> regexProperyList, bool isMultiline, Host* pHost)
+TTrigger::TTrigger(const QString& name, const QStringList& regexList, const QList<int>& regexProperyList, bool isMultiline, Host* pHost)
 : Tree<TTrigger>(nullptr)
 , mTriggerContainsPerlRegex( false )
 , mPerlSlashGOption( false )
@@ -209,7 +209,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
                     TDebug(QColor(Qt::red), QColor(Qt::gray)) << R"(in: ")" << regexp.constData() << "\"\n" >> 0;
                 }
                 setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
-                                 .arg(tr(R"(Error: in item %1, perl regex: "%2", it failed to compile, reason: "%3".)").arg(QString::number(i), regexp.constData(), error)));
+                                 .arg(tr(R"(Error: in item %1, perl regex: "%2", it failed to compile, reason: "%3".)").arg(QString::number(i + 1), regexp.constData(), error)));
                 state = false;
             } else {
                 if (mudlet::debugMode) {
@@ -229,7 +229,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
             QString error;
             if (!mpLua->compile(code, error, QString::fromStdString(funcName))) {
                 setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
-                                 .arg(tr(R"(Error: in item %1, lua condition function "%2" failed to compile, reason:%3.)").arg(QString::number(i), regexList.at(i), error)));
+                                 .arg(tr(R"(Error: in item %1, lua condition function "%2" failed to compile, reason: "%3".)").arg(QString::number(i + 1), regexList.at(i), error)));
                 state = false;
                 if (mudlet::debugMode) {
                     TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA ERROR: failed to compile, reason:\n" << error << "\n" >> 0;
@@ -401,6 +401,9 @@ END : {
         int b2 = mFgColor.blue();
         int total = captureList.size();
         TConsole* pC = mpHost->mpConsole;
+        if (Q_UNLIKELY(!pC)) {
+            return true;
+        }
         pC->deselect();
         auto its = captureList.begin();
         auto iti = posList.begin();
@@ -478,6 +481,9 @@ bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QStri
             int g2 = mFgColor.green();
             int b2 = mFgColor.blue();
             TConsole* pC = mpHost->mpConsole;
+            if (Q_UNLIKELY(!pC)) {
+                return true;
+            }
             auto its = captureList.begin();
             for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
                 int begin = *iti;
@@ -594,6 +600,9 @@ bool TTrigger::match_substring(const QString& toMatch, const QString& regex, int
             int g2 = mFgColor.green();
             int b2 = mFgColor.blue();
             TConsole* pC = mpHost->mpConsole;
+            if (Q_UNLIKELY(!pC)) {
+                return true;
+            }
             pC->deselect();
             auto its = captureList.begin();
             for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
@@ -664,8 +673,8 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
         // Ideally we should base the matching on only the ANSI code but not
         // all parts of the text come from the Server and can be determined to
         // have come from a decoded ANSI code number:
-        if (  ((pCT->ansiFg == scmIgnored)||((pCT->ansiFg == scmDefault) && mpHost->mpConsole->mFgColor == (*it).foreground())||(pCT->mFgColor == (*it).foreground()))
-            &&((pCT->ansiBg == scmIgnored)||((pCT->ansiBg == scmDefault) && mpHost->mpConsole->mBgColor == (*it).foreground())||(pCT->mBgColor == (*it).background()))) {
+        if (((pCT->ansiFg == scmIgnored)||((pCT->ansiFg == scmDefault) && mpHost->mpConsole->mFgColor == (*it).foreground())||(pCT->mFgColor == (*it).foreground()))
+            &&((pCT->ansiBg == scmIgnored)||((pCT->ansiBg == scmDefault) && mpHost->mpConsole->mBgColor == (*it).background())||(pCT->mBgColor == (*it).background()))) {
 
             if (matchBegin == -1) {
                 matchBegin = pos;
@@ -701,6 +710,9 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
             int g2 = mFgColor.green();
             int b2 = mFgColor.blue();
             TConsole* pC = mpHost->mpConsole;
+            if (Q_UNLIKELY(!pC)) {
+                return true;
+            }
             pC->deselect();
             auto its = captureList.begin();
             for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
@@ -827,6 +839,9 @@ bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, in
             int g2 = mFgColor.green();
             int b2 = mFgColor.blue();
             TConsole* pC = mpHost->mpConsole;
+            if (Q_UNLIKELY(!pC)) {
+                return true;
+            }
             auto its = captureList.begin();
             for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
                 int begin = *iti;
@@ -1145,11 +1160,7 @@ bool TTrigger::setupTmpColorTrigger(int ansiFg, int ansiBg)
 
 bool TTrigger::isFilterChain()
 {
-    if ((!mRegexCodeList.empty()) && (hasChildren())) {
-        return true;
-    } else {
-        return false;
-    }
+    return (!mRegexCodeList.empty()) && (hasChildren());
 }
 
 bool TTrigger::registerTrigger()
@@ -1206,10 +1217,10 @@ bool TTrigger::setScript(const QString& script)
 
 bool TTrigger::compileScript()
 {
-    mFuncName = QString("Trigger") + QString::number(mID);
-    QString code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    mFuncName = QStringLiteral("Trigger%1").arg(QString::number(mID));
+    QString code = QStringLiteral("function %1()\n%2\nend\n").arg(mFuncName, mScript);
     QString error;
-    if (mpLua->compile(code, error, QString("Trigger: ") + getName())) {
+    if (mpLua->compile(code, error, QStringLiteral("Trigger: %1").arg(getName()))) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;

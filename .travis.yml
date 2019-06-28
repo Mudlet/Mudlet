@@ -1,25 +1,28 @@
 language: cpp
 cache:
-  - ccache
-dist: trusty
+  timeout: 600
+  ccache: true
+  directories:
+    - $HOME/Library/Caches/Homebrew
+dist: xenial
 sudo: false
 addons:
   apt:
     sources: &add-sources
-    - sourceline: 'ppa:beineri/opt-qt571-trusty'
-    - sourceline: 'ppa:beineri/opt-qt-5.10.1-trusty'
-    - sourceline: 'ppa:ubuntu-toolchain-r/test'
-    - sourceline: 'ppa:ondrej/php'
+    - sourceline: 'ppa:beineri/opt-qt571-xenial'
+    - sourceline: 'ppa:beineri/opt-qt-5.12.3-xenial'
+    - sourceline: 'ppa:ondrej/php' #needed for a more-or-less up to date libzip
     packages: &common-packages
     - libhunspell-dev
     - lua5.1
     - liblua5.1-0-dev
-    - libboost-graph1.55-dev
+    - libboost-graph-dev
     - zlib1g-dbg
     - libzip-dev
     - libpulse-dev
     - libyajl-dev
-    - gcc-5 g++-5
+    - gcc-5
+    - g++-5
     - luarocks
     - lua-rex-pcre
     - lua-filesystem
@@ -28,6 +31,8 @@ addons:
     - libpugixml-dev
     - xz-utils
     - npm
+    - mesa-common-dev
+    - libglu1-mesa-dev
 env:
   global:
   - secure: VFI3UCiDrp47WTcUhsatdQvvWg+3gk00eBMZgSOXXKY5+hk+NOX7bOFcIM5t9nlZDbpHDr10SFTuUOw+PeWmLpFO06Zrjg86M9jm9WS4i8Cs9hfxoT6H4isXlR1vubX2LmNlHyzg8WtdNanlsufgecyaGksJxr7tVhG/cWyD6yo=
@@ -56,50 +61,50 @@ matrix:
     compiler: gcc
     env:
     - Q_OR_C_MAKE=qmake
-      QT_VERSION=510
+      QT_VERSION=512
     addons:
       apt:
         sources: *add-sources
-        packages: &qt510-packages
+        packages: &qt512-packages
         - *common-packages
-        - qt510base
-        - qt510multimedia
-        - qt510tools
-        - qt510gamepad
-        - qt510speech
+        - qt512base
+        - qt512multimedia
+        - qt512tools
+        - qt512gamepad
+        - qt512speech
 
   - os: linux
     compiler: gcc
     env:
     - Q_OR_C_MAKE=cmake
-      QT_VERSION=510
+      QT_VERSION=512
     addons:
       apt:
         sources: *add-sources
         packages:
-        - *qt510-packages
+        - *qt512-packages
 
   - os: linux
     compiler: clang
     env:
     - Q_OR_C_MAKE=qmake
-      QT_VERSION=510
+      QT_VERSION=512
     addons:
       apt:
         sources: *add-sources
         packages:
-        - *qt510-packages
+        - *qt512-packages
 
   - os: linux
     compiler: clang
     env:
     - Q_OR_C_MAKE=cmake
-      QT_VERSION=510
+      QT_VERSION=512
     addons:
       apt:
         sources: *add-sources
         packages:
-        - *qt510-packages
+        - *qt512-packages
 
   - os: linux
     compiler: gcc
@@ -114,14 +119,17 @@ matrix:
         - qt57base
         - qt57multimedia
         - qt57tools
-
+before_cache:
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew cleanup; fi
 before_install:
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | tee -a "${HOME}/ca-file.pem"; fi
   # add to the path here to pick up things as soon as its installed
-  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="${HOME}/.npm-global/bin:${HOME}/latest-gcc-symlinks:$PATH"; fi
+  - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="${HOME}/.npm-global/bin:$PATH"; fi
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then source "/opt/qt${QT_VERSION}/bin/qt${QT_VERSION}-env.sh"; fi
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then eval $(luarocks path); fi
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then PATH="${HOME}/.npm-global/bin:/usr/local/opt/ccache/libexec:/usr/local/opt/qt5/bin:$PATH"; fi
+  # homebrew upgrades dependents when upgrading packages, which leads to an gdal upgrade, which in turn pulls a loooong list of other dependencies. Avoid that
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew pin gdal; brew pin postgis; fi
   - ./CI/travis.before_install.sh
   - export NPM_CONFIG_PREFIX="${HOME}/.npm-global"
 install: source CI/travis.install.sh

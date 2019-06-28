@@ -34,7 +34,7 @@
 #include "mudlet.h"
 
 
-bool HostManager::deleteHost(QString hostname)
+bool HostManager::deleteHost(const QString& hostname)
 {
     mPoolReadWriteLock.lockForWrite(); // Will block until gets lock
 
@@ -50,7 +50,7 @@ bool HostManager::deleteHost(QString hostname)
     }
 }
 
-bool HostManager::addHost(QString hostname, QString port, QString login, QString pass)
+bool HostManager::addHost(const QString& hostname, const QString& port, const QString& login, const QString& pass)
 {
     if (hostname.isEmpty()) {
         qDebug() << "HostManager::addHost(" << hostname.toUtf8().constData() << ") ERROR: an unnamed Host is not permitted, aborting and returning false!";
@@ -111,7 +111,7 @@ int HostManager::getHostCount()
     return total;
 }
 
-void HostManager::postIrcMessage(QString a, QString b, QString c)
+void HostManager::postIrcMessage(const QString& a, const QString& b, const QString& c)
 {
     mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
 
@@ -165,12 +165,12 @@ void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event, con
     allValidHosts = afterSendingHost;
     allValidHosts.append(beforeSendingHost);
 
-    for (int validHost : allValidHosts) {
+    for (int validHost : qAsConst(allValidHosts)) {
         hostList.at(validHost)->raiseEvent(event);
     }
 }
 
-Host* HostManager::getHost(QString hostname)
+Host* HostManager::getHost(const QString& hostname)
 {
     mPoolReadWriteLock.lockForRead(); // Will block if a write lock is in place
     Host* pHost = mHostPool.value(hostname).data();
