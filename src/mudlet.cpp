@@ -3297,6 +3297,9 @@ void mudlet::createMapper(bool loadDefaultMap)
     auto hostName(pHost->getName());
     pHost->mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(hostName));
     pHost->mpDockableMapWidget->setObjectName(QStringLiteral("dockMap_%1").arg(hostName));
+    // Values need to be copies across so they are in place when the 2D
+    // mapper is created:
+    pHost->mpMap->initialiseMembersFromHost();
     pHost->mpMap->mpMapper = new dlgMapper(pHost->mpDockableMapWidget, pHost, pHost->mpMap.data()); //FIXME: mpHost definieren
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
     pHost->mpDockableMapWidget->setWidget(pHost->mpMap->mpMapper);

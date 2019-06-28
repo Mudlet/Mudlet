@@ -150,6 +150,8 @@ public:
 
     void setMmpMapLocation(const QString &location);
     QString getMmpMapLocation() const;
+    void initialiseMembersFromHost();
+
 
     TRoomDB* mpRoomDB;
     QMap<int, int> envColors;

@@ -371,6 +371,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     auto hostPackage = mudletPackage.append_child("HostPackage");
     auto host = hostPackage.append_child("Host");
 
+    // Some of the data items being stored are simple numbers or other texts
+    // that can be expressed solely with the Latin1 character encoding so that
+    // can be used compared to the more complex Utf8 one needed otherwise:
     host.append_attribute("autoClearCommandLineAfterSend") = pHost->mAutoClearCommandLineAfterSend ? "yes" : "no";
     host.append_attribute("printCommand") = pHost->mPrintCommand ? "yes" : "no";
     host.append_attribute("USE_IRE_DRIVER_BUGFIX") = pHost->mUSE_IRE_DRIVER_BUGFIX ? "yes" : "no";
@@ -429,6 +432,11 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mRequiredDiscordUserDiscriminator") = pHost->mRequiredDiscordUserDiscriminator.toUtf8().constData();
     host.append_attribute("mSGRCodeHasColSpaceId") = pHost->getHaveColorSpaceId() ? "yes" : "no";
     host.append_attribute("mServerMayRedefineColors") = pHost->getMayRedefineColors() ? "yes" : "no";
+    host.append_attribute("playerRoomPrimaryColor") = pHost->mPlayerRoomColorPrimary.name().toLatin1().constData();
+    host.append_attribute("playerRoomSecondaryColor") = pHost->mPlayerRoomColorSecondary.name().toLatin1().constData();
+    host.append_attribute("playerRoomStyle") = QString::number(pHost->mPlayerRoomStyle).toLatin1().constData();
+    host.append_attribute("playerRoomOuterDiameter") = QString::number(pHost->mPlayerRoomOuterDiameterPercentage).toLatin1().constData();
+    host.append_attribute("playerRoomInnerDiameter") = QString::number(pHost->mPlayerRoomInnerDiameterPercentage).toLatin1().constData();
 
     QString ignore;
     QSetIterator<QChar> it(pHost->mDoubleClickIgnore);

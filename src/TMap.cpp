@@ -64,11 +64,6 @@ TMap::TMap(Host* pH, const QString& profileName)
 , mMapSymbolFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 12, QFont::Normal))
 , mMapSymbolFontFudgeFactor(1.0)
 , mIsOnlyMapSymbolFontToBeUsed(false)
-, mPlayerRoomColorPrimary(Qt::red)
-, mPlayerRoomColorSecondary(Qt::white)
-, mPlayerRoomStyle(0)
-, mPlayerRoomOuterDiameterPercentage(120)
-, mPlayerRoomInnerDiameterPercentage(70)
 , mIsFileViewingRecommended(false)
 , mpNetworkAccessManager(Q_NULLPTR)
 , mpProgressDialog(Q_NULLPTR)
@@ -142,6 +137,15 @@ TMap::~TMap()
             qWarning() << message << "\n------------";
         }
     }
+}
+
+void TMap::initialiseMembersFromHost()
+{
+    mPlayerRoomColorPrimary = mpHost->mPlayerRoomColorPrimary;
+    mPlayerRoomColorSecondary = mpHost->mPlayerRoomColorSecondary;
+    mPlayerRoomStyle = mpHost->mPlayerRoomStyle;
+    mPlayerRoomOuterDiameterPercentage = mpHost->mPlayerRoomOuterDiameterPercentage;
+    mPlayerRoomInnerDiameterPercentage = mpHost->mPlayerRoomInnerDiameterPercentage;
 }
 
 void TMap::mapClear()

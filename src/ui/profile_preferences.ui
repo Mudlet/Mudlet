@@ -2124,7 +2124,7 @@
              <item row="1" column="1">
               <widget class="QSpinBox" name="spinBox_playerRoomOuterDiameter">
                <property name="toolTip">
-                <string>&lt;p&gt;Percentage ratio (&lt;i&gt;the default is 120%.&lt;/i&gt;) of the marker symbol to the space available for the room.&lt;/p&gt;</string>
+                <string>&lt;p&gt;Percentage ratio (&lt;i&gt;the default is 120%&lt;/i&gt;) of the marker symbol to the space available for the room.&lt;/p&gt;</string>
                </property>
                <property name="alignment">
                 <set>Qt::AlignCenter</set>

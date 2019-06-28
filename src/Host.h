@@ -426,6 +426,25 @@ public:
     // An invalid/null value is treated as the "show all"/inactive case:
     QTime mTimerDebugOutputSuppressionInterval;
 
+    // This hold copies of variables from the TMap class which are saved with
+    // the profile - as that class is not necessarily instantiated when the
+    // profile is read.
+    // Base color(s) for the player room in the mappers:
+    QColor mPlayerRoomColorPrimary;
+    QColor mPlayerRoomColorSecondary;
+    // Mode selected - 0 is closest to original style:
+    quint8 mPlayerRoomStyle;
+    // Percentage of the room size (actually width) for the outer diameter of
+    // the circular marking, integer percentage clamped in the preferences
+    // between 200 and 50 - default 120:
+    quint8 mPlayerRoomOuterDiameterPercentage;
+    // Percentage of the outer size for the inner diameter of the circular
+    // marking, integer percentage clamped in the preferences between 83 and 0,
+    // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
+    // one):
+    quint8 mPlayerRoomInnerDiameterPercentage;
+
+
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:

@@ -3454,7 +3454,10 @@ void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
     }
     setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomColorPrimary);
     setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomColorSecondary);
+    pHost->mPlayerRoomColorPrimary = pHost->mpMap->mPlayerRoomColorPrimary;
+    pHost->mPlayerRoomColorSecondary = pHost->mpMap->mPlayerRoomColorSecondary;
     pHost->mpMap->mPlayerRoomStyle = static_cast<quint8>(style);
+    pHost->mPlayerRoomStyle = static_cast<quint8>(style);
     if (!mpHost->mpMap->mpMapper || !mpHost->mpMap->mpMapper->mp2dMap) {
         return;
     }
@@ -3508,6 +3511,7 @@ void dlgProfilePreferences::slot_setPlayerRoomOuterDiameter(const int value)
 
     if (value < 256 && mpHost->mpMap->mPlayerRoomOuterDiameterPercentage != value) {
         mpHost->mpMap->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
+        mpHost->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
         // And update the displayed map:
         mpHost->mpMap->mpMapper->mp2dMap->update();
     }
@@ -3522,6 +3526,7 @@ void dlgProfilePreferences::slot_setPlayerRoomInnerDiameter(const int value)
 
     if (value < 256 && mpHost->mpMap->mPlayerRoomInnerDiameterPercentage != value) {
         mpHost->mpMap->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
+        mpHost->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
         // Redefine the QGradientStops
         mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(qBound(0, comboBox_playerRoomStyle->currentIndex(), 3));
         // And update the displayed map:
