@@ -35,7 +35,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
-static TCommandLine *rl_tc = NULL;
+static TCommandLine *rl_tc = nullptr;
 int rl_prompt_len = 0;
 int is_rl_input_available = 0;
 
@@ -48,8 +48,9 @@ char *rl_finished_line;
 
 static void cb_linehandler (char *line)
 {
-    if (*line)
+    if (*line) {
         add_history (line);
+    }
     rl_finished_line = line;
 }
 
@@ -114,8 +115,8 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
     setContextMenuPolicy(Qt::PreventContextMenu);
 
     //Initialize readline
-    rl_state = NULL;
-    rl_history_state = NULL;
+    rl_state = nullptr;
+    rl_history_state = nullptr;
     switch_rl_here();
     rl_initialize();
     using_history();
@@ -124,7 +125,7 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
     rl_redisplay_function = redisplay_function;
     rl_input_available_hook = input_available_hook;
     /* Install the line handler. */
-    rl_callback_handler_install (NULL, cb_linehandler);
+    rl_callback_handler_install (nullptr, cb_linehandler);
 }
 
 void TCommandLine::processNormalKey(QEvent* event)
@@ -148,22 +149,27 @@ void TCommandLine::processNormalKey(QEvent* event)
 
 void TCommandLine::switch_rl_here ()
 {
-    if (rl_tc == this)
+    if (rl_tc == this) {
         return;
-    if (rl_tc != NULL) {
+    }
+    if (rl_tc != nullptr) {
         // XXX remember to free in deconstructor
-        if (rl_tc->rl_state == NULL)
+        if (rl_tc->rl_state == nullptr) {
             rl_tc->rl_state = (struct readline_state *)malloc(sizeof(struct readline_state));
-        if (rl_tc->rl_history_state == NULL)
+        }
+        if (rl_tc->rl_history_state == nullptr) {
             rl_tc->rl_history_state = (HISTORY_STATE *) malloc(sizeof(HISTORY_STATE));
+        }
         rl_save_state(rl_tc->rl_state);
         memmove(rl_tc->rl_history_state, history_get_history_state(), sizeof(HISTORY_STATE));
     }
     rl_tc = this;
-    if (rl_state != NULL)
+    if (rl_state != nullptr) {
         rl_restore_state(rl_state);
-    if (rl_history_state != NULL)
+    }
+    if (rl_history_state != nullptr) {
         history_set_history_state(rl_history_state);
+    }
 }
 
 bool TCommandLine::processPotentialKeyBinding(QKeyEvent* keyEvent)
@@ -201,36 +207,40 @@ bool TCommandLine::event(QEvent* event)
 
         // We want to turn, for example, Control-Up into ESC[1;5A.
         int modifier = 1 + 1 * (bool(ke->modifiers() & Qt::ShiftModifier)) + 2 * (bool(ke->modifiers() & Qt::AltModifier)) + 4 * (bool(ke->modifiers() & Qt::ControlModifier));
-        QString specialPrefix = QString("\x1b[");
-        if (modifier > 1)
-            specialPrefix = specialPrefix+QString("1;")+('0'+modifier);
+        // ANSI Control Sequence Introducer prefix
+        QString CSIPrefix = QStringLiteral("\x1b[");
+        if (modifier > 1) {
+            CSIPrefix.append(QStringLiteral("1;%1").arg(modifier));
+                //CSIPrefix = CSIPrefix+QStringLiteral("1;")+('0'+modifier);
+        }
 
         switch (ke->key()) {
         case Qt::Key_Up:
-            keyText = specialPrefix+"A";
+            keyText = CSIPrefix+"A";
             break;
         case Qt::Key_Down:
-            keyText = specialPrefix+"B";
+            keyText = CSIPrefix+"B";
             break;
         case Qt::Key_Right:
-            keyText = specialPrefix+"C";
+            keyText = CSIPrefix+"C";
             break;
         case Qt::Key_Left:
-            keyText = specialPrefix+"D";
+            keyText = CSIPrefix+"D";
             break;
         case Qt::Key_Delete:
-            keyText = specialPrefix+"3~";
+            keyText = CSIPrefix+"3~";
             break;
         case Qt::Key_Home:
-            keyText = specialPrefix+"H";
+            keyText = CSIPrefix+"H";
             break;
         case Qt::Key_End:
-            keyText = specialPrefix+"F";
+            keyText = CSIPrefix+"F";
             break;
         case Qt::Key_D:
             // Readline treats ^D on empty line as EOF and quits.  So don't send it.
-            if ((ke->modifiers() == Qt::ControlModifier) && rl_end == 0)
-                keyText = QString("");
+            if ((ke->modifiers() == Qt::ControlModifier) && rl_end == 0) {
+                keyText.clear();
+            }
             break;
         case Qt::Key_Backtab:
         case Qt::Key_Tab:
@@ -312,12 +322,12 @@ bool TCommandLine::event(QEvent* event)
             break;
         }
         // Missing: C-x for cut, tab completion using GNU readline
-
         if (mpHost->mEnableReadline) {
-            if (keyText.length() == 0)
+            if (keyText.isEmpty()) {
                 return false;
+            }
             if (keyText.length() == 1 && (ke->modifiers() & Qt::AltModifier)){
-                keyText = "\x1b" + keyText;
+                keyText.prepend(QLatin1Char('\x1b'));
             }
             mTabCompletionCount = -1;
             ke->accept();
@@ -326,9 +336,9 @@ bool TCommandLine::event(QEvent* event)
 
             // Copy the widget's view to readline's view.
 
-            // In order to figure out where the current cursor position is
-            // in the UTF-8 encoded string, we separately encode the
-            // string before and after the cursor.
+            // In order to figure out where the current cursor
+            // position will be after encoding, we separately encode
+            // the string before and after the cursor.
             QTextCursor c = textCursor();
             c.clearSelection();
             c.setPosition(rl_prompt_len, (c.position() < rl_prompt_len) ?
@@ -350,13 +360,13 @@ bool TCommandLine::event(QEvent* event)
 
                 rl_stuff_char(keyText.at(i).unicode());
                 rl_callback_read_char ();
-                if (rl_finished_line != NULL) {
+                if (rl_finished_line != nullptr) {
                     QString line = QString::fromLocal8Bit(rl_finished_line);
                     mHistoryList.removeAll(line);
                     mHistoryList.push_front(line);
                     mpHost->send(line);
                     free (rl_finished_line);
-                    rl_finished_line = NULL;
+                    rl_finished_line = nullptr;
                 }
 
             }
