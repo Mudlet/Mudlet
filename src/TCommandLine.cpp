@@ -58,10 +58,10 @@ static void redisplay_function ()
     //Put the readline buffer into the display in the TCommandLine stored at rl_tc
     QTextCursor cursor = rl_tc->textCursor();
 
-    QString promptText = QString::fromUtf8(rl_display_prompt);
+    QString promptText = QString::fromLocal8Bit(rl_display_prompt);
     QByteArray lineBytes = rl_line_buffer;
-    QString beforeCursor = promptText + QString::fromUtf8(lineBytes.left(rl_point));
-    QString afterCursor = QString::fromUtf8(lineBytes.right(lineBytes.length() - rl_point));
+    QString beforeCursor = promptText + QString::fromLocal8Bit(lineBytes.left(rl_point));
+    QString afterCursor = QString::fromLocal8Bit(lineBytes.right(lineBytes.length() - rl_point));
 
     // The docs suggest setPlainText should reset currentCharFormat(),
     // but it doesn't seem to work: if the current cursor is in an underlined region,
@@ -333,9 +333,9 @@ bool TCommandLine::event(QEvent* event)
             c.clearSelection();
             c.setPosition(rl_prompt_len, (c.position() < rl_prompt_len) ?
                           QTextCursor::MoveAnchor : QTextCursor::KeepAnchor);
-            QByteArray leftBytes = c.selectedText().toUtf8();
+            QByteArray leftBytes = c.selectedText().toLocal8Bit();
             c.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
-            QByteArray rightBytes = c.selectedText().toUtf8();
+            QByteArray rightBytes = c.selectedText().toLocal8Bit();
             QByteArray fullBytes = (leftBytes + rightBytes);
             rl_extend_line_buffer(fullBytes.length()+1);
             strcpy(rl_line_buffer, fullBytes.data());
@@ -351,7 +351,10 @@ bool TCommandLine::event(QEvent* event)
                 rl_stuff_char(keyText.at(i).unicode());
                 rl_callback_read_char ();
                 if (rl_finished_line != NULL) {
-                    mpHost->send((QString)rl_finished_line);
+                    QString line = QString::fromLocal8Bit(rl_finished_line);
+                    mHistoryList.removeAll(line);
+                    mHistoryList.push_front(line);
+                    mpHost->send(line);
                     free (rl_finished_line);
                     rl_finished_line = NULL;
                 }
