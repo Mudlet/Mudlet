@@ -190,8 +190,8 @@ void dlgConnectionProfiles::removeNotification(QString notification)
     int index = mErrorList.indexOf(QRegExp(str));
     mErrorList.removeAt(index);
 
-    foreach (const QString& str, mErrorList) {
-        msg.append(QStringLiteral("<p>%1</p>").arg(str));
+    for (const QString& error : qAsConst(mErrorList)) {
+        msg.append(QStringLiteral("<p>%1</p>").arg(error));
     }
     // msg.append("</body></html>");
     if (mErrorList.count() == 0) {
@@ -1822,128 +1822,131 @@ bool dlgConnectionProfiles::validateProfile()
 
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
 
-    if (pItem) {
-        QString name = profile_name_entry->text().trimmed();
-        profile_name_entry->setStyleSheet(QString());
-        const QString allowedChars = QStringLiteral(". _0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ");
-        removeNotification(tr("Please only use one of the following characters:\"%1\".").arg(allowedChars));
-        profile_name_entry->setStyleSheet(QString());
-        for (int i = 0; i < name.size(); ++i) {
-            if (!allowedChars.contains(name.at(i))) {
-                addNotification(tr("Please only use one of the following characters:\"%1\".").arg(allowedChars));
-                name.replace(name.at(i--), QString());
-                profile_name_entry->setStyleSheet(mStyleSheetError);
-                profile_name_entry->setText(name);
-                validProfile = false;
-                break;
-            }
-        }
+    if (!pItem) {
+        return true;
+    }
 
-        // see if there is an edit that already uses a similar name
-        if (pItem->text() != name && mProfileList.contains(name)) {
-            addNotification(tr("This profile name is already in use."));
+    QString name = profile_name_entry->text().trimmed();
+    profile_name_entry->setStyleSheet(QString());
+    const QString allowedChars = QStringLiteral(". _0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ");
+    removeNotification(tr("Please only use one of the following characters:\"%1\".").arg(allowedChars));
+    profile_name_entry->setStyleSheet(QString());
+    for (int i = 0; i < name.size(); ++i) {
+        if (!allowedChars.contains(name.at(i))) {
+            addNotification(tr("Please only use one of the following characters:\"%1\".").arg(allowedChars));
+            name.replace(name.at(i--), QString());
             profile_name_entry->setStyleSheet(mStyleSheetError);
+            profile_name_entry->setText(name);
             validProfile = false;
-        } else {
-            removeNotification(tr("This profile name is already in use."));
+            break;
         }
+    }
 
-        port_entry->setStyleSheet("");
-        QString port = port_entry->text().trimmed();
-        if (!port.isEmpty() && (port.indexOf(QRegularExpression(QStringLiteral("^\\d+$")), 0) == -1)) {
-            QString val = port;
-            val.chop(1);
-            port_entry->setText(val);
-            addNotification(tr("You have to enter a number. Other characters are not permitted."));
-            port_entry->setStyleSheet(mStyleSheetError);
-            validProfile = false;
-        } else {
-            removeNotification(tr("You have to enter a number. Other characters are not permitted."));
-        }
+    // see if there is an edit that already uses a similar name
+    if (pItem->text() != name && mProfileList.contains(name)) {
+        addNotification(tr("This profile name is already in use."));
+        profile_name_entry->setStyleSheet(mStyleSheetError);
+        validProfile = false;
+    } else {
+        removeNotification(tr("This profile name is already in use."));
+    }
 
-        bool ok;
-        int num = port.trimmed().toInt(&ok);
-        if ((num >= 65535) || (num <= 0) || !ok) {
-            addNotification(tr("Port number must be above zero and below 65535."));
-            port_entry->setStyleSheet(mStyleSheetError);
-            validProfile = false;
-        } else {
-            removeNotification(tr("Port number must be above zero and below 65535."));
-        }
+    port_entry->setStyleSheet(QString());
+    QString port = port_entry->text().trimmed();
+    if (!port.isEmpty() && (port.indexOf(QRegularExpression(QStringLiteral("^\\d+$")), 0) == -1)) {
+        QString val = port;
+        val.chop(1);
+        port_entry->setText(val);
+        addNotification(tr("You have to enter a number. Other characters are not permitted."));
+        port_entry->setStyleSheet(mStyleSheetError);
+        validProfile = false;
+    } else {
+        removeNotification(tr("You have to enter a number. Other characters are not permitted."));
+    }
 
-        removeNotification(tr("Mudlet is not configured for secure connections."));
-        port_ssl_tsl->setStyleSheet("");
+    bool ok;
+    int num = port.trimmed().toInt(&ok);
+    if ((num >= 65535) || (num <= 0) || !ok) {
+        addNotification(tr("Port number must be above zero and below 65535."));
+        port_entry->setStyleSheet(mStyleSheetError);
+        validProfile = false;
+    } else {
+        removeNotification(tr("Port number must be above zero and below 65535."));
+    }
+
+    removeNotification(tr("Mudlet is not configured for secure connections."));
+    port_ssl_tsl->setStyleSheet(QString());
 #if defined(QT_NO_SSL)
-        port_ssl_tsl->setEnabled(false);
-        port_ssl_tsl->setToolTip(tr("Mudlet is not configured for secure connections."));
+    port_ssl_tsl->setEnabled(false);
+    port_ssl_tsl->setToolTip(tr("Mudlet is not configured for secure connections."));
+    if (port_ssl_tsl->isChecked()) {
+        addNotification(tr("Mudlet is not configured for secure connections."));
+        port_ssl_tsl->setEnabled(true);
+        port_ssl_tsl->setStyleSheet(mStyleSheetError);
+        validProfile = false;
+    }
+#else
+
+    removeNotification(tr("Mudlet can not load support for secure connections."));
+    if (!QSslSocket::supportsSsl()) {
         if (port_ssl_tsl->isChecked()) {
-            addNotification(tr("Mudlet is not configured for secure connections."));
-            port_ssl_tsl->setEnabled(true);
+            addNotification(tr("Mudlet can not load support for secure connections."));
             port_ssl_tsl->setStyleSheet(mStyleSheetError);
             validProfile = false;
         }
-#else
-
-        removeNotification(tr("Mudlet can not load support for secure connections."));
-        if (!QSslSocket::supportsSsl()) {
-            if (port_ssl_tsl->isChecked()) {
-                addNotification(tr("Mudlet can not load support for secure connections."));
-                port_ssl_tsl->setStyleSheet(mStyleSheetError);
-                validProfile = false;
-            }
-        } else {
-            port_ssl_tsl->setEnabled(true);
-            port_ssl_tsl->setToolTip("");
-        }
+    } else {
+        port_ssl_tsl->setEnabled(true);
+        port_ssl_tsl->setToolTip("");
+    }
 #endif
 
-        QUrl check;
-        QString url = host_name_entry->text().trimmed();
-        check.setHost(url);
-        if (!check.isValid()) {
-            addNotification(tr("Please enter the URL of the Game server: %1").arg(check.errorString()));
-            host_name_entry->setStyleSheet(mStyleSheetError);
-            validProfile = false;
-        } else {
-            removeNotification(tr("Please enter the URL of the Game server:"));
-        }
+    QUrl check;
+    QString url = host_name_entry->text().trimmed();
+    check.setHost(url);
+    if (!check.isValid()) {
+        addNotification(tr("Please enter the URL of the Game server: %1").arg(check.errorString()));
+        host_name_entry->setStyleSheet(mStyleSheetError);
+        validProfile = false;
+    } else {
+        removeNotification(tr("Please enter the URL of the Game server:"));
+    }
 
-        removeNotification(tr("SSL connections require the URL of the Game server."));
-        removeNotification(tr("Please enter a valid hostname, IPv4 or IPv6 address for the Game server."));
-        host_name_entry->setStyleSheet("");
-        if ((url.indexOf(QRegularExpression(QStringLiteral("^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$")), 0) != -1)
-            || (url.indexOf(QRegularExpression(QStringLiteral("^(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}$")), 0) != -1)) {
-            if (port_ssl_tsl->isChecked()) {
-                addNotification(tr("SSL connections require the URL of the Game server.%1").arg(check.errorString()));
-                host_name_entry->setStyleSheet(mStyleSheetError);
-                validProfile = false;
-            }
-        } else if ((url.indexOf(QRegularExpression(QStringLiteral("^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])(\\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9]))*$")), 0) != -1) && (url.length() < 255)) {
-        } else {
-            addNotification(tr("Please enter a valid hostname, IPv4 or IPv6 address for the Game server."));
+    removeNotification(tr("SSL connections require the URL of the Game server."));
+    removeNotification(tr("Please enter a valid hostname, IPv4 or IPv6 address for the Game server."));
+    host_name_entry->setStyleSheet(QString());
+    if ((url.indexOf(QRegularExpression(QStringLiteral("^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$")), 0) != -1)
+        || (url.indexOf(QRegularExpression(QStringLiteral("^(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}$")), 0) != -1)) {
+        if (port_ssl_tsl->isChecked()) {
+            addNotification(tr("SSL connections require the URL of the Game server.%1").arg(check.errorString()));
             host_name_entry->setStyleSheet(mStyleSheetError);
             validProfile = false;
         }
+    } else if ((url.indexOf(QRegularExpression(QStringLiteral("^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])(\\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9]))*$")), 0) != -1)
+               && (url.length() < 255)) {
+    } else {
+        addNotification(tr("Please enter a valid hostname, IPv4 or IPv6 address for the Game server."));
+        host_name_entry->setStyleSheet(mStyleSheetError);
+        validProfile = false;
+    }
 
-        if (validProfile) {
-            if (offline_button) {
-                offline_button->setEnabled(true);
-                offline_button->setToolTip(tr("<p>Load profile without connecting.</p>"));
-            }
-            if (connect_button) {
-                connect_button->setEnabled(true);
-                connect_button->setToolTip(QString());
-            }
+    if (validProfile) {
+        if (offline_button) {
+            offline_button->setEnabled(true);
+            offline_button->setToolTip(tr("<p>Load profile without connecting.</p>"));
+        }
+        if (connect_button) {
+            connect_button->setEnabled(true);
+            connect_button->setToolTip(QString());
+        }
 
-        } else {
-            if (offline_button) {
-                offline_button->setDisabled(true);
-                offline_button->setToolTip(tr("<p>Please set a valid profile name, game server address and the game port before loading.</p>"));
-            }
-            if (connect_button) {
-                connect_button->setDisabled(true);
-                connect_button->setToolTip(tr("<p>Please set a valid profile name, game server address and the game port before connecting.</p>"));
-            }
+    } else {
+        if (offline_button) {
+            offline_button->setDisabled(true);
+            offline_button->setToolTip(tr("<p>Please set a valid profile name, game server address and the game port before loading.</p>"));
+        }
+        if (connect_button) {
+            connect_button->setDisabled(true);
+            connect_button->setToolTip(tr("<p>Please set a valid profile name, game server address and the game port before connecting.</p>"));
         }
     }
     return validProfile;
