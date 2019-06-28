@@ -46,11 +46,7 @@ extern "C" {
 #include <lualib.h>
 }
 
-#include <iostream>
 #include <list>
-#include <map>
-#include <ostream>
-#include <queue>
 #include <string>
 
 
