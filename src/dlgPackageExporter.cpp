@@ -98,19 +98,19 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     // Although the Qt Documentation says only that the Windows platform needs
     // to NOT use the native dialog to show files, it has also shown to be
     // required for KDE on Linux - so has been used for all platforms:
-    QString packagePath = QFileDialog::getExistingDirectory(nullptr, tr("Where do you want to save the package?"), mudlet::getMudletPath(mudlet::profileHomePath, profileName), QFileDialog::DontUseNativeDialog);
+    mPackagePath = QFileDialog::getExistingDirectory(nullptr, tr("Where do you want to save the package?"), mudlet::getMudletPath(mudlet::profileHomePath, profileName), QFileDialog::DontUseNativeDialog);
 
-    if (packagePath.isEmpty()) {
+    if (mPackagePath.isEmpty()) {
         return;
     }
-    packagePath.replace(QLatin1String(R"(\)"), QLatin1String("/"));
+    mPackagePath.replace(QLatin1String(R"(\)"), QLatin1String("/"));
 
     mStagingDirName = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, QStringLiteral("tmp/%1").arg(mPackageName));
     QDir packageDir = QDir(mStagingDirName);
     if (!packageDir.exists()) {
         packageDir.mkpath(mStagingDirName);
     }
-    mPackagePathFileName = QStringLiteral("%1/%2.mpackage").arg(packagePath, mPackageName);
+    mPackagePathFileName = QStringLiteral("%1/%2.mpackage").arg(mPackagePath, mPackageName);
     ui->label_exportFilePath->show();
     ui->filePath->setText(mPackagePathFileName);
     ui->filePath->show();
@@ -536,7 +536,9 @@ void dlgPackageExporter::slot_export_package()
 
     if (isOk) {
         // Success!
-        displayResultMessage(tr("Package exported to: \"%1\".").arg(mPackagePathFileName), true);
+        displayResultMessage(tr("Package \"%1\" exported to: %2")
+                             .arg(mPackageName, QStringLiteral("<a href=\"file:///%1\">%2</a>"))
+                             .arg(mPackagePath.toHtmlEscaped(), mPackagePath.toHtmlEscaped()), true);
         // Remove the cancel button and replace it with an ok one
         ui->buttonBox->removeButton(mCancelButton);
         ui->buttonBox->addButton(QDialogButtonBox::Ok);

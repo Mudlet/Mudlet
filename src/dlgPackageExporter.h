@@ -95,6 +95,7 @@ private:
     QTreeWidgetItem* mpButtons;
     QString mStagingDirName;
     QString mPackageName;
+    QString mPackagePath;
     QString mPackagePathFileName;
 };
 
