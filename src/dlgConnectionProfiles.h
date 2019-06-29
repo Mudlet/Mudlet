@@ -39,18 +39,18 @@ public:
     void accept() override;
 
 signals:
-    void signal_establish_connection(QString profile_name, int historyVersion);
+    void signal_load_profile(QString profile_name, bool alsoConnect);
 
 public slots:
-    void slot_update_name(QString);
+    void slot_update_name(const QString&);
     void slot_save_name();
     void slot_update_url(const QString &);
-    void slot_update_port(QString);
+    void slot_update_port(const QString&);
     void slot_update_SSL_TSL_port(int state);
     void slot_update_login(const QString &);
     void slot_update_pass(const QString &);
     void slot_update_website(const QString &);
-    void slot_deleteprofile_check(QString);
+    void slot_deleteprofile_check(const QString&);
     void slot_update_description();
 
     void slot_item_clicked(QListWidgetItem*);
@@ -62,16 +62,21 @@ public slots:
     void slot_update_autoreconnect(int state);
     void slot_update_discord_optin(int state);
     void slot_connectToServer();
+    void slot_load();
     void slot_cancel();
     void slot_copy_profile();
 
 private:
-    void copyFolder(QString sourceFolder, QString destFolder);
+    void copyFolder(const QString& sourceFolder, const QString& destFolder);
     QString getDescription(const QString& hostUrl, quint16 port, const QString& profile_name);
     bool validateConnect();
     void updateDiscordStatus();
     bool validateProfile();
+    void loadProfile(bool alsoConnect);
 
+    // split into 3 properties so each one can be checked individually
+    // important for creation of a folder on disk, for example: name has
+    // to be valid, but other properties don't have to be
     bool validName;
     bool validUrl;
     bool validPort;
@@ -81,6 +86,7 @@ private:
     QPalette mOKPalette;
     QPalette mErrorPalette;
     QPalette mReadOnlyPalette;
+    QPushButton* offline_button;
     QPushButton* connect_button;
     QLineEdit* delete_profile_lineedit;
     QPushButton* delete_button;

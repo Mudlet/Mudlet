@@ -24,6 +24,8 @@
  ***************************************************************************/
 
 
+#include "dlgTriggerEditor.h"
+
 #include "pre_guard.h"
 #include <QApplication>
 #include <QFile>
@@ -51,10 +53,10 @@ class XMLimport : public QXmlStreamReader
 public:
     XMLimport(Host*);
     bool importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = Q_NULLPTR);
-    std::pair<int, int> importFromClipboard();
+    std::pair<dlgTriggerEditor::EditorViewType, int> importFromClipboard();
 
 private:
-    std::pair<int, int> readPackage();
+    std::pair<dlgTriggerEditor::EditorViewType, int> readPackage();
     void readUnknownPackage();
 
     void readHostPackage();
@@ -99,6 +101,7 @@ private:
     void getVersionString(QString&);
     QString readScriptElement();
 
+    void remapColorsToAnsiNumber(QStringList&, const QList<int>&);
 
     QPointer<Host> mpHost;
     QString mPackageName;

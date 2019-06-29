@@ -410,7 +410,7 @@ end
 --- Internal function when a parent nest element is clicked
 --- to lay out the nested elements within
 -- @param label The name of the label to use
-function doNestClick(label)
+function doNestShow(label)
   Geyser.Label:displayNest(label)
 end
 
@@ -463,10 +463,13 @@ function Geyser.Label:new (cons, container)
   Geyser.Color.applyColors(me)
   me:echo()
 
+  -- Set up mouse hover as the callback if we have one
+  if cons.nestflyout then
+    setLabelOnEnter(me.name, "doNestShow", me.name)
+  end
   -- Set up the callback if we have one
   if cons.nestable then
-    --echo("setting callback to doNestClick")
-    setLabelClickCallback(me.name, "doNestClick", me.name)
+    setLabelClickCallback(me.name, "doNestShow", me.name)
   end
   if me.clickCallback then
     if type(me.clickArgs) == "string" or type(me.clickArgs) == "number" then
@@ -526,7 +529,10 @@ function Geyser.Label:new (cons, container)
   if me.onLeave then
     me:setOnLeave(me.onLeave, me.args)
   end
-
+  
+  -- Set clickthrough if included in constructor
+  if cons.clickthrough then me:enableClickthrough() end
+  
   --print("  New in " .. self.name .. " : " .. me.name)
   return me
 end
@@ -618,6 +624,16 @@ function Geyser.Label:addChild(cons, container)
   table.insert(self.nestedLabels, me)
   me:hide()
   return me
+end
+
+--- Sets label to no longer intercept mouse events
+function Geyser.Label:enableClickthrough()
+  enableClickthrough(self.name)
+end
+
+--- Sets label to once again intercept mouse events
+function Geyser.Label:disableClickthrough()
+  disableClickthrough(self.name)
 end
 
 ---

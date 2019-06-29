@@ -115,7 +115,7 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
     if ((action) & (1 | 2)) {
         return new QCoreApplication(argc, argv);
     } else {
-#if defined(Q_OS_MACOS)
+#if defined(Q_OS_MACOS) && (QT_VERSION < QT_VERSION_CHECK(5, 12, 0))
         // Workaround for horrible mac rendering issues once the mapper widget
         // is open - see https://bugreports.qt.io/browse/QTBUG-41257
         QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
@@ -188,7 +188,9 @@ int main(int argc, char* argv[])
     spDebugConsole = nullptr;
     unsigned int startupAction = 0;
 
-#ifdef Q_OS_UNIX
+    // due to a Qt bug, this only safely works for both non- and HiDPI displays on 5.12+
+    // 5.6 - 5.11 make the application blow up in size on non-HiDPI displays
+#if defined (Q_OS_UNIX) && (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
 
@@ -201,14 +203,16 @@ int main(int argc, char* argv[])
     if (startupAction & 2) {
         // Do "version" action - wording and format is quite tightly specified by the coding standards
 #if defined(QT_DEBUG)
-        texts << QCoreApplication::translate("main", "%1 %2%3 (debug symbols, no optimisations)\n")
+        texts << QCoreApplication::translate("main", "%1 %2%3 (with debug symbols, without optimisations)\n",
+		 "%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev")
                  .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), QLatin1String(APP_BUILD));
 #else // ! defined(QT_DEBUG)
         texts << QLatin1String(APP_TARGET " " APP_VERSION APP_BUILD " \n");
 #endif // ! defined(QT_DEBUG)
-        texts << QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)\n").arg(QLatin1String(QT_VERSION_STR), qVersion());
+        texts << QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)\n",
+	         "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion());
         texts << QCoreApplication::translate("main", "Copyright © 2008-%1  Mudlet developers\n").arg(QStringLiteral(__DATE__).mid(7, 4));
-        texts << QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later <http://gnu.org/licenses/gpl.html>.\n");
+        texts << QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html\n");
         texts << QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
                                                      "There is NO WARRANTY, to the extent permitted by law.");
         std::cout << texts.join(QString()).toStdString();
@@ -263,8 +267,8 @@ int main(int argc, char* argv[])
                                                      "                       specified port. The number is the port value and block is\n"
                                                      "                       optional and will make the application wait until a\n"
                                                      "                       debugger connects to it.\n\n");
-        texts << QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues.\n");
-        texts << QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/.\n");
+        texts << QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues\n");
+        texts << QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/\n");
         std::cout << texts.join(QString()).toStdString();
         return 0;
     }
@@ -293,7 +297,7 @@ int main(int argc, char* argv[])
     if (show_splash) {
         QPainter painter(&splashImage);
         unsigned fontSize = 16;
-        QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: ") + APP_VERSION APP_BUILD);
+        QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1").arg(APP_VERSION APP_BUILD));
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
@@ -353,14 +357,16 @@ int main(int argc, char* argv[])
 
     QString splash_message;
     if (show_splash) {
-        splash_message.append(QCoreApplication::translate("main", "\n\n"
+        splash_message.append(QLatin1String("\n\n"));
+        splash_message.append(QCoreApplication::translate("main", 
                               "Mudlet comes with\n"
                               "ABSOLUTELY NO WARRANTY!\n"
                               "This is free software, and you are\n"
                               "welcome to redistribute it under\n"
                               "certain conditions; select the\n"
-                              "'About' item for details.\n\n"));
-        splash_message.append(QCoreApplication::translate("main", "Locating profiles... "));
+                              "'About' item for details."));
+        splash_message.append(QLatin1String("\n\n"));
+        splash_message.append(QCoreApplication::translate("main", "Locating profiles..."));
         splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
     }
@@ -385,7 +391,7 @@ int main(int argc, char* argv[])
     }
 
     if (show_splash) {
-        splash_message.append(QCoreApplication::translate("main", "Done.\n\nLoading font files... "));
+        splash_message.append(QCoreApplication::translate("main", "Done.\n\nLoading font files..."));
         splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
         app->processEvents();
     }

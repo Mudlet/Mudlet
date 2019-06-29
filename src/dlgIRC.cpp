@@ -209,7 +209,7 @@ void dlgIRC::ircRestart(bool reloadConfigs)
     }
 
     // remove the old buffers.
-    for (QString chName : mChannels) {
+    for (QString chName : qAsConst(mChannels)) {
         if (chName == serverBuffer->name()) {
             continue; // skip the server-buffer.
         }

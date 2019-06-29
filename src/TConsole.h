@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018 by Stephen Lyons                        *
+ *   Copyright (C) 2014-2016, 2018-2019 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -35,6 +35,8 @@
 #include <QWidget>
 #include "post_guard.h"
 
+#include <hunspell/hunspell.h>
+
 #include <list>
 #include <map>
 
@@ -47,6 +49,7 @@ class dlgMapper;
 class Host;
 class TTextEdit;
 class TCommandLine;
+class TDockWidget;
 class TLabel;
 class TSplitter;
 class dlgNotepad;
@@ -71,9 +74,10 @@ public:
 
     Q_DISABLE_COPY(TConsole)
     TConsole(Host*, ConsoleType type = UnknownType, QWidget* parent = nullptr);
+    ~TConsole();
+
     void reset();
     void resetMainConsole();
-    void echoUserWindow(const QString&);
     Host* getHost();
     void replace(const QString&);
     void insertHTML(const QString&);
@@ -123,7 +127,9 @@ public:
     bool selectSection(int, int);
     void skipLine();
     void setFgColor(int, int, int);
+    void setFgColor(const QColor&);
     void setBgColor(int, int, int);
+    void setBgColor(const QColor&);
     void setScrollBarVisible(bool);
     void changeColors();
     TConsole* createBuffer(const QString& name);
@@ -132,7 +138,6 @@ public:
     void print(const QString&, QColor fgColor, QColor bgColor);
     void print(const QString& msg);
     void print(const char*);
-    void printDebug(QColor&, QColor&, const QString&);
     void printSystemMessage(const QString& msg);
     void printOnDisplay(std::string&, bool isFromServer = false);
     void printCommand(QString&);
@@ -140,7 +145,8 @@ public:
     void moveCursorEnd();
     int getLastLineNumber();
     void refresh();
-    TLabel* createLabel(const QString& name, int x, int y, int width, int height, bool fillBackground);
+    TLabel*
+    createLabel(const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
     TConsole* createMiniConsole(const QString& name, int x, int y, int width, int height);
     bool createButton(const QString& name, int x, int y, int width, int height, bool fillBackground);
     bool raiseWindow(const QString& name);
@@ -154,11 +160,9 @@ public:
     void selectCurrentLine(std::string&);
     bool setMiniConsoleFontSize(int);    
     bool setMiniConsoleFont(const QString& font);
-    void setBold(bool);
-    void setLink(const QString& linkText, QStringList& linkFunction, QStringList& linkHint);
-    void setItalics(bool);
-    void setUnderline(bool);
-    void setStrikeOut(bool);
+    void setLink(const QStringList& linkFunction, const QStringList& linkHint);
+    // Cannot be called setAttributes as that would mask an inherited method
+    void setDisplayAttributes(const TChar::AttributeFlags, const bool);
     void finalize();
     void runTriggers(int);
     void showStatistics();
@@ -180,10 +184,39 @@ public:
 
     void toggleLogging(bool);
     ConsoleType getType() const { return mType; }
+    QPair<bool, QString> addWordToSet(const QString&);
+    QPair<bool, QString> removeWordFromSet(const QString&);
+    void setSystemSpellDictionary(const QString&);
+    void setProfileSpellDictionary();
+    const QString& getSystemSpellDictionary() const { return mSpellDic; }
+    QTextCodec* getHunspellCodec_system() const { return mpHunspellCodec_system; }
+    Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }
+    // Either returns the handle of the per profile or the shared Mudlet one or
+    // nullptr depending on the state of the flags mEnableUserDictionary and
+    // mUseSharedDictionary:
+    Hunhandle* getHunspellHandle_user() const {
+        return mEnableUserDictionary
+                ? (mUseSharedDictionary
+                   ? mpHunspell_shared
+                   : mpHunspell_profile)
+                : nullptr; }
+    QSet<QString> getWordSet() const;
+    void setProfileName(const QString&);
+    bool isUsingSharedDictionary() const { return mUseSharedDictionary; }
+    // In the next pair of functions the first element in the return is an
+    // error code:
+    // 0 = Okay
+    // 1 = Window not found
+    // 2 = Selection not valid
+    QPair<quint8, TChar> getTextAttributes() const;
+    QPair<quint8, TChar> getTextAttributes(const QString&) const;
 
 
     QPointer<Host> mpHost;
-    TCommandLine* mpCommandLine;
+    // Only assigned a value for user windows:
+    QPointer<TDockWidget> mpDockWidget;
+    // Only on a MainConsole type instance:
+    QPointer<TCommandLine> mpCommandLine;
 
     TBuffer buffer;
     static const QString cmLuaLineVariable;
@@ -191,7 +224,6 @@ public:
     TTextEdit* mLowerPane;
 
     QToolButton* emergencyStop;
-    bool isUserScrollBack;
     QWidget* layer;
     QWidget* layerCommandLine;
     QWidget* layerEdit;
@@ -213,7 +245,9 @@ public:
     TChar mFormatSystemMessage;
 
     int mIndentCount;
-    std::map<std::string, TLabel*> mLabelMap;
+    QMap<QString, TConsole*> mSubConsoleMap;
+    QMap<QString, TDockWidget*> mDockWidgetMap;
+    QMap<QString, TLabel*> mLabelMap;
     QFile mLogFile;
     QString mLogFileName;
     QTextStream mLogStream;
@@ -224,7 +258,6 @@ public:
     int mMainFrameTopHeight;
     int mOldX;
     int mOldY;
-
 
     TChar mFormatCurrent;
     QString mFormatSequenceRest;
@@ -247,8 +280,6 @@ public:
     QFile mReplayFile;
     QDataStream mReplayStream;
     TChar mStandardFormat;
-    QList<TConsole*> mSubConsoleList;
-    std::map<std::string, TConsole*> mSubConsoleMap;
 
     QColor mSystemMessageBgColor;
     QColor mSystemMessageFgColor;
@@ -260,7 +291,7 @@ public:
     QLineEdit* networkLatency;
     QPoint P_begin;
     QPoint P_end;
-    QString profile_name;
+    QString mProfileName;
     TSplitter* splitter;
     bool mIsPromptLine;
     QToolButton* logButton;
@@ -271,7 +302,6 @@ public:
     int mCurrentSearchResult;
     QList<int> mSearchResults;
     QString mSearchQuery;
-    bool mSaveLayoutRequested;
     QWidget* mpButtonMainLayer;
 
 signals:
@@ -298,8 +328,56 @@ private:
 
 
     ConsoleType mType;
+
+    // Was public in Host class but made private there and cloned to here
+    // (for main TConsole) to prevent it being changed without going through the
+    // process to load in the the changed dictionary:
+    QString mSpellDic;
+
+    // Cloned from Host
+    bool mEnableUserDictionary;
+    bool mUseSharedDictionary;
+
+    // Three handles, one for the dictionary the user choses from the system
+    // one created by the mudlet class for all profiles and the third for a per
+    // profile one - the last pair are built by the user and/or lua functions:
+    Hunhandle* mpHunspell_system;
+    Hunhandle* mpHunspell_shared;
+    Hunhandle* mpHunspell_profile;
+    // The user dictionary will always use the UTF-8 codec, but the one
+    // selected from the system's ones may not:
+    QByteArray mHunspellCodecName_system;
+    QTextCodec* mpHunspellCodec_system;
+    // To update the profile dictionary we actually have to track all the words
+    // in it so we loaded the contents into this on startup and adjust it as we
+    // go. Then, at the end of a session we will put the revised contents
+    // back into the user's ".dic" file and regenerate the needed pair of lines
+    // for the ".aff" file - this member is for the per profile option only as
+    // the shared one is held by the mudlet singleton class:
+    QSet<QString> mWordSet_profile;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
+
+#if ! defined(QT_NO_DEBUG)
+inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
+{
+    QString text;
+    QDebugStateSaver saver(debug);
+    switch (type) {
+    case TConsole::UnknownType:           text = QStringLiteral("Unknown"); break;
+    case TConsole::CentralDebugConsole:   text = QStringLiteral("Central Debug Console"); break;
+    case TConsole::ErrorConsole:          text = QStringLiteral("Profile Error Console"); break;
+    case TConsole::MainConsole:           text = QStringLiteral("Profile Main Console"); break;
+    case TConsole::SubConsole:            text = QStringLiteral("Mini Console"); break;
+    case TConsole::UserWindow:            text = QStringLiteral("User Window"); break;
+    case TConsole::Buffer:                text = QStringLiteral("Buffer"); break;
+    default:
+        text = QStringLiteral("Non-coded Type");
+    }
+    debug.nospace() << text;
+    return debug;
+}
+#endif // ! defined(QT_NO_DEBUG)
 
 #endif // MUDLET_TCONSOLE_H

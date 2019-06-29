@@ -30,7 +30,6 @@
 #include "TRoomDB.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
-#include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -40,9 +39,10 @@
 #include <QProgressDialog>
 #include "post_guard.h"
 
-TMap::TMap(Host* pH)
+TMap::TMap(Host* pH, const QString& profileName)
 : mpRoomDB(new TRoomDB(this))
 , mpHost(pH)
+, mProfileName(profileName)
 , m2DPanMode(false)
 , mLeftDown(false)
 , mRightDown(false)
@@ -181,11 +181,8 @@ void TMap::mapClear()
 
 void TMap::logError(QString& msg)
 {
-    auto orange = QColor(255, 128, 0);
-    auto black = QColor(Qt::black);
-    QString s1 = QString("[MAP ERROR:]%1\n").arg(msg);
     if (mpHost->mpEditorDialog) {
-        mpHost->mpEditorDialog->mpErrorConsole->printDebug(orange, black, s1);
+        mpHost->mpEditorDialog->mpErrorConsole->print(tr("[MAP ERROR:]%1\n").arg(msg), QColor(255, 128, 0), QColor(Qt::black));
     }
 }
 
@@ -437,7 +434,7 @@ void TMap::audit()
     _time.start();
 
     { // Blocked - just to limit the scope of infoMsg...!
-        QString infoMsg = tr("[ INFO ]  - Auditing of a loaded/imported/downloaded map starting...");
+        QString infoMsg = tr("[ INFO ]  - Map audit starting...");
         postMessage(infoMsg);
     }
 
@@ -587,7 +584,7 @@ QList<int> TMap::detectRoomCollisions(int id)
 bool TMap::gotoRoom(int r)
 {
     mTargetID = r;
-    return findPath(mRoomIdHash.value(mpHost->getName()), r);
+    return findPath(mRoomIdHash.value(mProfileName), r);
 }
 
 // As can be seen this only sets the target and start point for a path find
@@ -1031,20 +1028,18 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         saveVersion = 0;
     } else if (saveVersion > mMaxVersion) {
         saveVersion = mMaxVersion;
-         QString errMsg = tr("[ ERROR ] -  The format {%1} you are trying to save the map with is too new\n"
-                             "for this version of mudlet that only supports formats up to version {%2}.")
+         QString errMsg = tr("[ ERROR ] - The format {%1} you are trying to save the map with is too new\n"
+                             "for this version of Mudlet. Supported are only formats up to version {%2}.")
                                  .arg(QString::number(saveVersion), QString::number(mMaxVersion));
-        appendErrorMsg(errMsg);
+        appendErrorMsgWithNoLf(errMsg, false);
         postMessage(errMsg);
         return false;
     }
 
-    // if 0 we default to mDefaultVersion
-    if (saveVersion == 0) {
-        mSaveVersion = mDefaultVersion;
-    }
-    // else we use saveVersion
-    else  {
+    auto oldSaveVersion = mSaveVersion;
+
+    // if 0 we default to current version selected
+    if (saveVersion != 0) {
         mSaveVersion = saveVersion;
     }
 
@@ -1059,15 +1054,8 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     }
 
     if (mSaveVersion != mDefaultVersion) {
-        QString message = tr("[ WARN ]  - Saving map in a format {%1} that is different than the one\n"
-                             "recommended {%2} bearing in mind the build status of the source\n"
-                             "code.  Development code versions may offer the chance to try\n"
-                             "experimental features needing a revised format that could be\n"
-                             "incompatible with existing release code versions.  Conversely\n"
-                             "a release version may allow you to downgrade to save a map in\n"
-                             "a format compatible with others using older versions of Mudlet\n"
-                             "however some features may be crippled or non-operational for\n"
-                             "this version of Mudlet.")
+        QString message = tr("[ WARN ]  - Saving map in a format {%1} different from the\n"
+                             "recommended format {%2} for this version of Mudlet.")
                                   .arg(mSaveVersion)
                                   .arg(mDefaultVersion);
         appendErrorMsgWithNoLf(message, false);
@@ -1078,7 +1066,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     ofs << envColors;
     ofs << mpRoomDB->getAreaNamesMap();
     ofs << customEnvColors;
-    ofs << mpRoomDB->hashTable;
+    ofs << mpRoomDB->hashToRoomID;
     if (mSaveVersion >= 17) {
         if (mSaveVersion < 19) {
             // Save the data in the map user data for older versions
@@ -1133,23 +1121,23 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pA->min_z;
         ofs << pA->span;
         if (mSaveVersion >= 17) {
-            ofs << pA->xmaxEbene;
-            ofs << pA->ymaxEbene;
-            ofs << pA->xminEbene;
-            ofs << pA->yminEbene;
-        } else { // Recreate the pointless z{min|max}Ebene items
-            QMap<int, int> dummyMinMaxEbene;
+            ofs << pA->xmaxForZ;
+            ofs << pA->ymaxForZ;
+            ofs << pA->xminForZ;
+            ofs << pA->yminForZ;
+        } else { // Recreate the pointless z{min|max}ForZ items
+            QMap<int, int> dummyMinMaxForZ;
             QListIterator<int> itZ(pA->zLevels);
             while (itZ.hasNext()) {
                 int dummyEbenValue = itZ.next();
-                dummyMinMaxEbene.insert(dummyEbenValue, dummyEbenValue);
+                dummyMinMaxForZ.insert(dummyEbenValue, dummyEbenValue);
             }
-            ofs << pA->xmaxEbene;
-            ofs << pA->ymaxEbene;
-            ofs << dummyMinMaxEbene;
-            ofs << pA->xminEbene;
-            ofs << pA->yminEbene;
-            ofs << dummyMinMaxEbene;
+            ofs << pA->xmaxForZ;
+            ofs << pA->ymaxForZ;
+            ofs << dummyMinMaxForZ;
+            ofs << pA->xminForZ;
+            ofs << pA->yminForZ;
+            ofs << dummyMinMaxForZ;
         }
         ofs << pA->pos;
         ofs << pA->isZone;
@@ -1183,7 +1171,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         QString message = tr("[ ALERT ] - Area User data has been lost in saved map file.  Re-save in a\n"
                              "format of at least 17 to preserve it before quitting!\n"
                              "Areas id affected: %1.")
-                                  .arg(areaIds.join(tr(", "))); // Translatable in case list separators are locale dependant!
+                                  .arg(areaIds.join(QLatin1String(", ")));
         mpHost->mTelnet.postMessage(message);
     }
     // End of TODO
@@ -1194,7 +1182,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         // location
         ofs << mRoomIdHash;
     } else {
-        ofs << mRoomIdHash.value(mpHost->getName());
+        ofs << mRoomIdHash.value(mProfileName);
     }
 
     ofs << mapLabels.size(); //anzahl der areas
@@ -1327,7 +1315,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
 
             QMap<QString, QList<int>> oldLinesColorData;
             QMapIterator<QString, QColor> itCustomLineColor(pR->customLinesColor);
-            while (itCustomLine.hasNext()) {
+            while (itCustomLineColor.hasNext()) {
                 itCustomLineColor.next();
                 QString direction(itCustomLineColor.key());
                 QList<int> colorComponents;
@@ -1389,14 +1377,14 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pR->doors;
     }
 
-    // reset to default map version
-    mSaveVersion = mDefaultVersion;
+    // reset to the old map version
+    mSaveVersion = oldSaveVersion;
     return true;
 }
 
 bool TMap::restore(QString location, bool downloadIfNotFound)
 {
-    qDebug() << "TMap::restore(" << location << ") INFO: restoring map of Profile:" << mpHost->getName() << " URL:" << mpHost->getUrl();
+    qDebug() << "TMap::restore(" << location << ") INFO: restoring map of Profile:" << mProfileName << " URL:" << mpHost->getUrl();
 
     QElapsedTimer _time;
     _time.start();
@@ -1404,7 +1392,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
     QStringList entries;
 
     if (location.isEmpty()) {
-        folder = mudlet::getMudletPath(mudlet::profileMapsPath, mpHost->getName());
+        folder = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
         QDir dir(folder);
         dir.setSorting(QDir::Time);
         entries = dir.entryList(QDir::Files, QDir::Time);
@@ -1438,7 +1426,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             file.close();
             return false;
         } else if (mVersion < 4) {
-            QString alertMsg = tr("[ ALERT ] - Map file is really old, it's file format (%1) is so ancient that\n"
+            QString alertMsg = tr("[ ALERT ] - Map file is really old, its file format (%1) is so ancient that\n"
                                   "this version of Mudlet may not gain enough information from\n"
                                   "it but it will try!  The file is: \"%2\".")
                                        .arg(mVersion)
@@ -1470,7 +1458,11 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             ifs >> customEnvColors;
         }
         if (mVersion >= 7) {
-            ifs >> mpRoomDB->hashTable;
+            ifs >> mpRoomDB->hashToRoomID;
+            QMap<QString, int>::const_iterator i;
+            for (i = mpRoomDB->hashToRoomID.constBegin(); i != mpRoomDB->hashToRoomID.constEnd(); ++i) {
+                mpRoomDB->roomIDToHash.insert(i.value(), i.key());
+            }
         }
 
         if (mVersion >= 17) {
@@ -1536,18 +1528,18 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 ifs >> pA->min_z;
                 ifs >> pA->span;
                 if (mVersion >= 17) {
-                    ifs >> pA->xmaxEbene;
-                    ifs >> pA->ymaxEbene;
-                    ifs >> pA->xminEbene;
-                    ifs >> pA->yminEbene;
+                    ifs >> pA->xmaxForZ;
+                    ifs >> pA->ymaxForZ;
+                    ifs >> pA->xminForZ;
+                    ifs >> pA->yminForZ;
                 } else {
-                    QMap<int, int> dummyMinMaxEbene;
-                    ifs >> pA->xmaxEbene;
-                    ifs >> pA->ymaxEbene;
-                    ifs >> dummyMinMaxEbene;
-                    ifs >> pA->xminEbene;
-                    ifs >> pA->yminEbene;
-                    ifs >> dummyMinMaxEbene;
+                    QMap<int, int> dummyMinMaxForZ;
+                    ifs >> pA->xmaxForZ;
+                    ifs >> pA->ymaxForZ;
+                    ifs >> dummyMinMaxForZ;
+                    ifs >> pA->xminForZ;
+                    ifs >> pA->yminForZ;
+                    ifs >> dummyMinMaxForZ;
                 }
                 ifs >> pA->pos;
                 ifs >> pA->isZone;
@@ -1578,7 +1570,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         } else if (mVersion >= 12) {
             int oldRoomId;
             ifs >> oldRoomId;
-            mRoomIdHash[mpHost->getName()] = oldRoomId;
+            mRoomIdHash[mProfileName] = oldRoomId;
         }
 
         if (mVersion >= 11) {
@@ -1770,9 +1762,9 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
 
     if (otherProfileVersion >= 7) {
-        // hashTable
-        QHash<QString, int> _dummyQHashQStringInt;
-        ifs >> _dummyQHashQStringInt;
+        // hashToRoomID
+        QMap<QString, int> _dummyQMapQStringInt;
+        ifs >> _dummyQMapQStringInt;
     }
 
     if (otherProfileVersion >= 17) {
@@ -1804,18 +1796,18 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             ifs >> pA.min_z;
             ifs >> pA.span;
             if (otherProfileVersion >= 17) {
-                ifs >> pA.xmaxEbene;
-                ifs >> pA.ymaxEbene;
-                ifs >> pA.xminEbene;
-                ifs >> pA.yminEbene;
+                ifs >> pA.xmaxForZ;
+                ifs >> pA.ymaxForZ;
+                ifs >> pA.xminForZ;
+                ifs >> pA.yminForZ;
             } else {
-                QMap<int, int> dummyMinMaxEbene;
-                ifs >> pA.xmaxEbene;
-                ifs >> pA.ymaxEbene;
-                ifs >> dummyMinMaxEbene;
-                ifs >> pA.xminEbene;
-                ifs >> pA.yminEbene;
-                ifs >> dummyMinMaxEbene;
+                QMap<int, int> dummyMinMaxForZ;
+                ifs >> pA.xmaxForZ;
+                ifs >> pA.ymaxForZ;
+                ifs >> dummyMinMaxForZ;
+                ifs >> pA.xminForZ;
+                ifs >> pA.yminForZ;
+                ifs >> dummyMinMaxForZ;
             }
             ifs >> pA.pos;
             ifs >> pA.isZone;
@@ -2017,8 +2009,9 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
 int TMap::createMapLabelID(int area)
 {
     if (mapLabels.contains(area)) {
-        QList<int> idList = mapLabels[area].keys();
+        const QList<int> idList = mapLabels.value(area).keys();
         int id = 0;
+        // protect against integer overflow
         while (id >= 0) {
             if (!idList.contains(id)) {
                 return id;
@@ -2181,7 +2174,7 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
                        "\"%1\"\n"
                        "- look for the (last) report with the title:\n"
                        "\"%2\".")
-                    .arg(mudlet::getMudletPath(mudlet::profileLogErrorsFilePath, mpHost->getName()), title));
+                    .arg(mudlet::getMudletPath(mudlet::profileLogErrorsFilePath, mProfileName), title));
     } else if (mIsFileViewingRecommended && mudlet::self()->showMapAuditErrors()) {
         postMessage(tr("[ INFO ]  - The equivalent to the above information about that last map\n"
                        "operation has been saved for review as the most recent report in\n"
@@ -2189,7 +2182,7 @@ void TMap::pushErrorMessagesToFile(const QString title, const bool isACleanup)
                        "\"%1\"\n"
                        "- look for the (last) report with the title:\n"
                        "\"%2\".")
-                    .arg(mudlet::getMudletPath(mudlet::profileLogErrorsFilePath, mpHost->getName()), title));
+                    .arg(mudlet::getMudletPath(mudlet::profileLogErrorsFilePath, mProfileName), title));
     }
 
     mIsFileViewingRecommended = false;
@@ -2236,7 +2229,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     }
 
     if (localFileName.isEmpty()) {
-        mLocalMapFileName = mudlet::getMudletPath(mudlet::profileXmlMapPathFileName, pHost->getName());
+        mLocalMapFileName = mudlet::getMudletPath(mudlet::profileXmlMapPathFileName, mProfileName);
     } else {
         mLocalMapFileName = localFileName;
     }
@@ -2265,8 +2258,10 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     mpNetworkReply = mpNetworkAccessManager->get(QNetworkRequest(QUrl(url)));
     // Using zero for both min and max values should cause the bar to oscillate
     // until the first update
-    mpProgressDialog = new QProgressDialog(tr("Downloading XML map file for use in %1...").arg(pHost->getName()), tr("Abort"), 0, 0);
-    mpProgressDialog->setWindowTitle(tr("Map download"));
+    mpProgressDialog = new QProgressDialog(tr("Downloading XML map file for use in %1...",
+                                              "%1 is the name of the current Mudlet profile")
+                                              .arg(mProfileName), tr("Abort"), 0, 0);
+    mpProgressDialog->setWindowTitle(tr("Map download", "This is a title of a progress window."));
     mpProgressDialog->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_map_download.png")));
     mpProgressDialog->setMinimumWidth(300);
     mpProgressDialog->setAutoClose(false);
@@ -2325,8 +2320,8 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
         // This is the local import case - which has not got a progress dialog
         // until now:
         isLocalImport = true;
-        mpProgressDialog = new QProgressDialog(tr("Importing XML map file for use in %1...").arg(pHost->getName()), QString(), 0, 0);
-        mpProgressDialog->setWindowTitle(tr("Map import"));
+        mpProgressDialog = new QProgressDialog(tr("Importing XML map file for use in %1...").arg(mProfileName), QString(), 0, 0);
+        mpProgressDialog->setWindowTitle(tr("Map import", "This is a title of a progress dialog."));
         mpProgressDialog->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_map_download.png")));
         mpProgressDialog->setMinimumWidth(300);
         mpProgressDialog->setAutoClose(false);
@@ -2461,7 +2456,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
                     // direct importation of a local copy of a map file.
 
                     if (readXmlMapFile(file)) {
-                        TEvent mapDownloadEvent;
+                        TEvent mapDownloadEvent {};
                         mapDownloadEvent.mArgumentList.append(QLatin1String("sysMapDownloadEvent"));
                         mapDownloadEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
                         pHost->raiseEvent(mapDownloadEvent);

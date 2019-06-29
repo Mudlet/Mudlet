@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -23,8 +23,8 @@
 #include "XMLimport.h"
 
 
-#include "dlgTriggerEditor.h"
 #include "LuaInterface.h"
+#include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "VarUnit.h"
@@ -227,13 +227,11 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
 }
 
 // returns the type of item and ID of the first (root) element
-pair<int, int> XMLimport::importFromClipboard()
+pair<dlgTriggerEditor::EditorViewType, int> XMLimport::importFromClipboard()
 {
     QString xml;
     QClipboard* clipboard = QApplication::clipboard();
-
-    int packageType = 0;
-    pair<int, int> result;
+    pair<dlgTriggerEditor::EditorViewType, int> result;
 
     xml = clipboard->text(QClipboard::Clipboard);
 
@@ -514,7 +512,7 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
     }
 
     if (pT->id > 0) {
-        if ((++(*roomCount) % 100 == 0)) {
+        if (++(*roomCount) % 100 == 0) {
             mpHost->mpMap->reportStringToProgressDialog(tr("Parsing room data [count: %1]...").arg(*roomCount));
         }
         areamRoomMultiHash.insert(pT->area, pT->id);
@@ -541,9 +539,9 @@ void XMLimport::readUnknownMapElement()
 }
 
 // returns the type of item and ID of the first (root) element
-pair<int, int> XMLimport::readPackage()
+pair<dlgTriggerEditor::EditorViewType, int> XMLimport::readPackage()
 {
-    int objectType = 0;
+    dlgTriggerEditor::EditorViewType objectType = dlgTriggerEditor::EditorViewType::cmUnknownView;
     int rootItemID = -1;
     while (!atEnd()) {
         readNext();
@@ -554,27 +552,27 @@ pair<int, int> XMLimport::readPackage()
             if (name() == "HostPackage") {
                 readHostPackage();
             } else if (name() == "TriggerPackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmTriggerView);
+                objectType = dlgTriggerEditor::EditorViewType::cmTriggerView;
                 rootItemID = readTriggerPackage();
             } else if (name() == "TimerPackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmTimerView);
+                objectType = dlgTriggerEditor::EditorViewType::cmTimerView;
                 rootItemID = readTimerPackage();
             } else if (name() == "AliasPackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmAliasView);
+                objectType = dlgTriggerEditor::EditorViewType::cmAliasView;
                 rootItemID = readAliasPackage();
             } else if (name() == "ActionPackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmActionView);
+                objectType = dlgTriggerEditor::EditorViewType::cmActionView;
                 rootItemID = readActionPackage();
             } else if (name() == "ScriptPackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmScriptView);
+                objectType = dlgTriggerEditor::EditorViewType::cmScriptView;
                 rootItemID = readScriptPackage();
             } else if (name() == "KeyPackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmKeysView);
+                objectType = dlgTriggerEditor::EditorViewType::cmKeysView;
                 rootItemID = readKeyPackage();
             } else if (name() == "HelpPackage") {
                 readHelpPackage();
             } else if (name() == "VariablePackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmVarsView);
+                objectType = dlgTriggerEditor::EditorViewType::cmVarsView;
                 readVariablePackage();
             } else {
                 readUnknownPackage();
@@ -806,6 +804,9 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mMapStrongHighlight = (attributes().value("mMapStrongHighlight") == "yes");
     pHost->mLogStatus = (attributes().value("mLogStatus") == "yes");
     pHost->mEnableSpellCheck = (attributes().value("mEnableSpellCheck") == "yes");
+    bool enableUserDictionary = (attributes().value("mEnableUserDictionary") == "yes");
+    bool useSharedDictionary = (attributes().value("mUseSharedDictionary") == "yes");
+    pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     pHost->mShowInfo = (attributes().value("mShowInfo") == "yes");
     pHost->mAcceptServerGUI = (attributes().value("mAcceptServerGUI") == "yes");
     pHost->mMapperUseAntiAlias = (attributes().value("mMapperUseAntiAlias") == "yes");
@@ -1029,7 +1030,7 @@ void XMLimport::readHostPackage(Host* pHost)
             } else if (name() == "mLightWhite2") {
                 pHost->mLightWhite_2.setNamedColor(readElementText());
             } else if (name() == "mSpellDic") {
-                pHost->mSpellDic = readElementText();
+                pHost->setSpellDic(readElementText());
             } else if (name() == "mLineSize" || name() == "mRoomSize") {
                 // These two have been dropped from the Xml format as these are
                 // duplicates of attributes that were being incorrected read in
@@ -1095,8 +1096,6 @@ int XMLimport::readTriggerGroup(TTrigger* pParent)
     pT->mFilterTrigger = (attributes().value("isFilterTrigger") == "yes");
     pT->mSoundTrigger = (attributes().value("isSoundTrigger") == "yes");
     pT->mColorTrigger = (attributes().value("isColorTrigger") == "yes");
-    pT->mColorTriggerBg = (attributes().value("isColorTriggerBg") == "yes");
-    pT->mColorTriggerFg = (attributes().value("isColorTriggerFg") == "yes");
 
 
     while (!atEnd()) {
@@ -1147,6 +1146,11 @@ int XMLimport::readTriggerGroup(TTrigger* pParent)
                                          << " 'regexCodePropertyList' sub-elements so "
                                             "something is broken!";
                 }
+                // Fixup the first 16 incorrect ANSI colour numbers from old
+                // code if there are any
+                if (!pT->mRegexCodeList.isEmpty()) {
+                    remapColorsToAnsiNumber(pT->mRegexCodeList, pT->mRegexCodePropertyList);
+                }
             } else if (name() == "TriggerGroup" || name() == "Trigger") {
                 readTriggerGroup(pT);
             } else {
@@ -1189,11 +1193,16 @@ int XMLimport::readTimerGroup(TTimer* pParent)
 {
     auto pT = new TTimer(pParent, mpHost);
 
-    pT->setIsFolder((attributes().value("isFolder") == "yes"));
-    pT->setTemporary((attributes().value("isTempTimer") == "yes"));
+    pT->setIsFolder(attributes().value("isFolder") == "yes");
+    // This should not ever be set here as, by definition, temporary timers
+    // are not saved:
+    pT->setTemporary(attributes().value("isTempTimer") == "yes");
 
+    // This clears the Tree<TTimer>::mUserActiveState flag so MUST be done
+    // BEFORE that flag is parsed:
     mpHost->getTimerUnit()->registerTimer(pT);
-    pT->setShouldBeActive((attributes().value("isActive") == "yes"));
+
+    pT->setShouldBeActive(attributes().value("isActive") == "yes");
 
     if (module) {
         pT->mModuleMember = true;
@@ -1224,8 +1233,6 @@ int XMLimport::readTimerGroup(TTimer* pParent)
             }
         }
     }
-
-    mudlet::self()->registerTimer(pT, pT->mpTimer);
 
     if (!pT->mpParent && pT->shouldBeActive()) {
         pT->setIsActive(true);
@@ -1638,4 +1645,99 @@ QString XMLimport::readScriptElement()
     }
 
     return localScript;
+}
+
+// Unlike the reverse operation in the XMLexport this can modify the supplied patternList:
+void XMLimport::remapColorsToAnsiNumber(QStringList & patternList, const QList<int> & typeList)
+{
+    // The regexp is slightly modified compared to the one we once used to allow
+    // it to capture a '-' sign as part of the color numbers as we use -2 for
+    // ignored which was/is/will not handled by code before Mudlet 3.17.x (and
+    // we might have more  negative numbers in the future!)
+    QRegularExpression regex = QRegularExpression(QStringLiteral("FG(-?\\d+)BG(-?\\d+)"));
+    QMutableStringListIterator itPattern(patternList);
+    QListIterator<int> itType(typeList);
+    while (itPattern.hasNext() && itType.hasNext()) {
+        if (itType.next() == REGEX_COLOR_PATTERN) {
+            QRegularExpressionMatch match = regex.match(itPattern.next());
+            // Although we define two '('...')' capture groups the count/size is
+            // 3 (0 is the whole string)!
+            if (match.capturedTexts().size() == 3) {
+                bool isFgOk = false;
+                bool isBgOk = false;
+                int ansifg = TTrigger::scmIgnored;
+                int ansibg = TTrigger::scmIgnored;
+                int fg = match.captured(1).toInt(&isFgOk);
+                if (!isFgOk) {
+                    qDebug() << "XMLimport::remapColorsToAnsiNumber(...) ERROR - failed to extract FG color code from pattern text:" << itPattern.peekPrevious() << " setting colour to default foreground";
+                    fg = TTrigger::scmDefault;
+                } else {
+                    // clang-format off
+                    switch (fg) {
+                    case -2:    ansifg = TTrigger::scmIgnored;  break; // Ignored colour - not handled by old code
+                    case 0:     ansifg = TTrigger::scmDefault;  break; // Default colour
+                    case 1:     ansifg = 8;     break; // Light black (dark gray)
+                    case 2:     ansifg = 0;     break; // Black
+                    case 3:     ansifg = 9;     break; // Light red
+                    case 4:     ansifg = 1;     break; // Red
+                    case 5:     ansifg = 10;    break; // Light green
+                    case 6:     ansifg = 2;     break; // Green
+                    case 7:     ansifg = 11;    break; // Light yellow
+                    case 8:     ansifg = 3;     break; // Yellow
+                    case 9:     ansifg = 12;    break; // Light blue
+                    case 10:    ansifg = 4;     break; // Blue
+                    case 11:    ansifg = 13;    break; // Light magenta
+                    case 12:    ansifg = 5;     break; // Magenta
+                    case 13:    ansifg = 14;    break; // Light cyan
+                    case 14:    ansifg = 6;     break; // Cyan
+                    case 15:    ansifg = 15;    break; // Light white
+                    case 16:    ansifg = 7;     break; // White (light gray)
+                    default:
+                        ansifg = fg;
+                    }
+                    // clang-format on
+                }
+
+                int bg = match.captured(2).toInt(&isBgOk);
+                if (!isBgOk) {
+                    qDebug() << "XMLimport::remapColorsToAnsiNumber(...) ERROR - failed to extract BG color code from pattern text:" << itPattern.peekPrevious() << " setting colour to default background";
+                    bg = TTrigger::scmDefault;
+                } else {
+                    // clang-format off
+                    switch (bg) {
+                    case -2:    ansibg = TTrigger::scmIgnored;  break; // Ignored colour - not handled by old code
+                    case 0:     ansibg = TTrigger::scmDefault;  break; // Default colour
+                    case 1:     ansibg = 8;     break; // Light black (dark gray)
+                    case 2:     ansibg = 0;     break; // Black
+                    case 3:     ansibg = 9;     break; // Light red
+                    case 4:     ansibg = 1;     break; // Red
+                    case 5:     ansibg = 10;    break; // Light green
+                    case 6:     ansibg = 2;     break; // Green
+                    case 7:     ansibg = 11;    break; // Light yellow
+                    case 8:     ansibg = 3;     break; // Yellow
+                    case 9:     ansibg = 12;    break; // Light blue
+                    case 10:    ansibg = 4;     break; // Blue
+                    case 11:    ansibg = 13;    break; // Light magenta
+                    case 12:    ansibg = 5;     break; // Magenta
+                    case 13:    ansibg = 14;    break; // Light cyan
+                    case 14:    ansibg = 6;     break; // Cyan
+                    case 15:    ansibg = 15;    break; // Light white
+                    case 16:    ansibg = 7;     break; // White (light gray)
+                    default:
+                        ansibg = bg;
+                    }
+                    // clang-format on
+                }
+
+                // Use a different string than before so that we can be certain
+                // we have fixed up all cases where it is used - and it is more
+                // understandable if it gets revealed in the Editor!
+                itPattern.setValue(TTrigger::createColorPatternText(ansifg, ansibg));
+            }
+
+        } else {
+            // Must advance the pattern interator if it isn't a colour pattern
+            itPattern.next();
+        }
+    }
 }

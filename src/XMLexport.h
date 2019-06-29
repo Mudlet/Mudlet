@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017, 2019 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2017-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -28,7 +28,6 @@
 #include <QClipboard>
 #include <QPointer>
 #include <QFuture>
-#include <pugiconfig.hpp>
 #include <pugixml.hpp>
 #include "post_guard.h"
 
@@ -114,6 +113,7 @@ private:
     pugi::xml_node writeXmlHeader();
     void sanitizeForQxml(std::string& output);
     QString saveXml();
+    QStringList remapAnsiToColorNumber(const QStringList&, const QList<int>&);
 };
 
 #endif // MUDLET_XMLEXPORT_H

@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -116,7 +117,7 @@ Tree<T>::Tree( T * pParent )
 , mFolder( false )
 {
     if (pParent) {
-        pParent->addChild((T*)(this));
+        pParent->addChild(static_cast<T*>(this));
     } else {
         mpParent = nullptr;
     }
@@ -132,7 +133,7 @@ Tree<T>::~Tree()
     }
     delete mpMyChildrenList;
     if (mpParent) {
-        mpParent->popChild((T*)this); // tell parent about my death
+        mpParent->popChild(static_cast<T*>(this)); // tell parent about my death
         if (std::uncaught_exception()) {
             std::cout << "ERROR: Hook destructed during stack rewind because of an uncaught exception." << std::endl;
         }

@@ -95,7 +95,6 @@ set(mudlet_SRCS
     TTrigger.cpp
     TVar.cpp
     VarUnit.cpp
-    wcwidth.cpp
     XMLexport.cpp
     XMLimport.cpp
 )
@@ -206,7 +205,7 @@ set(mudlet_HDRS
     TTrigger.h
     TVar.h
     VarUnit.h
-    wcwidth.h
+    widechar_width.h
     XMLimport.h
 )
 
@@ -555,16 +554,22 @@ if(UNIX)
   foreach(lua_file ${lua_files})
     get_filename_component(lua_file_name ${lua_file} NAME)
     get_filename_component(lua_file_path ${lua_file} DIRECTORY)
-#    message(STATUS "For ${lua_file} ==> installing ${lua_file_name} in ${CMAKE_INSTALL_PREFIX}/share/mudlet/lua/${lua_file_path}")
     install(FILES "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/lua/${lua_file}"
       DESTINATION "share/mudlet/lua/${lua_file_path}"
       PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
       CONFIGURATIONS Debug Release)
-  endforeach(lua_file)
+  endforeach()
+  foreach(lua_test_file ${lua_test_files})
+    get_filename_component(lua_test_file_name ${lua_test_file} NAME)
+    get_filename_component(lua_test_file_path ${lua_test_file} DIRECTORY)
+    install(FILES "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/tests/${lua_test_file}"
+      DESTINATION "share/mudlet/tests/${lua_test_file_path}"
+      PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+      CONFIGURATIONS Debug Release)
+  endforeach()
   foreach(lcf_file ${lcf_files})
     get_filename_component(lcf_file_name ${lcf_file} NAME)
     get_filename_component(lcf_file_path ${lcf_file} DIRECTORY)
-#    message(STATUS "For ${lcf_file} ==> installing ${lcf_file_name} in ${CMAKE_INSTALL_PREFIX}/share/mudlet/lua/${lcf_file_path}")
     install(FILES "${CMAKE_HOME_DIRECTORY}/3rdparty/${lcf_file}"
       DESTINATION "share/mudlet/lua/${lcf_file_path}"
       PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ

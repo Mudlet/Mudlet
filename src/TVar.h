@@ -34,15 +34,15 @@ class TVar
 public:
     TVar();
     TVar(TVar*);
-    TVar(TVar*, QString, int, QString, int);
+    TVar(TVar*, const QString&, int, const QString&, int);
     void addChild(TVar*);
     void setParent(TVar*);
     void removeChild(TVar*);
-    bool setValue(QString);
-    bool setValue(QString, int);
+    bool setValue(const QString&);
+    bool setValue(const QString&, int);
     bool setValueType(int);
-    bool setName(QString);
-    bool setName(QString, int);
+    bool setName(const QString&);
+    bool setName(const QString&, int);
     void setNewName(const QString&, int);
     void setReference(bool);
     QList<TVar*> getChildren(bool isToSort = true);

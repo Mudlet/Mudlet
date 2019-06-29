@@ -44,6 +44,18 @@ bool VarUnit::isHidden(TVar* var)
     return hiddenByUser.contains(shortVarName(var).join("."));
 }
 
+
+bool VarUnit::isHidden(const QString& fullname)
+{
+    if (fullname == QLatin1String("_G")) { // we never hide global
+        return false;
+    }
+    if (hidden.contains(fullname)) {
+        return true;
+    }
+    return hiddenByUser.contains(fullname);
+}
+
 void VarUnit::addPointer(const void* p)
 {
     pointers.insert(p);
@@ -53,18 +65,12 @@ bool VarUnit::shouldSave(QTreeWidgetItem* p)
 {
     auto var = getWVar(p);
 
-    if (!var || var->getValueType() == 6 || var->isReference()) {
-        return false;
-    }
-    return true;
+    return !(!var || var->getValueType() == 6 || var->isReference());
 }
 
 bool VarUnit::shouldSave(TVar* var)
 {
-    if (var->getValueType() == 6 || var->isReference()) {
-        return false;
-    }
-    return true;
+    return !(var->getValueType() == 6 || var->isReference());
 }
 
 void VarUnit::buildVarTree(QTreeWidgetItem* p, TVar* var, bool showHidden)
@@ -199,7 +205,7 @@ void VarUnit::addHidden(TVar* var, int user)
     }
 }
 
-void VarUnit::addHidden(QString var)
+void VarUnit::addHidden(const QString& var)
 {
     hiddenByUser.insert(var);
 }
@@ -210,6 +216,13 @@ void VarUnit::removeHidden(TVar* var)
     hidden.remove(n);
     hiddenByUser.remove(n);
     var->hidden = false;
+}
+
+void VarUnit::removeHidden(const QString& name)
+{
+    hidden.remove(name);
+    hiddenByUser.remove(name);
+    // does not remove the reference from TVar, similar to addHidden()
 }
 
 void VarUnit::addSavedVar(TVar* var)
