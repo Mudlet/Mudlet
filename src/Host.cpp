@@ -90,6 +90,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mUSE_UNIX_EOL(false)
 , mWrapAt(100)
 , mWrapIndentCount(0)
+, mEditorAutoComplete(true)
 , mEditorTheme(QLatin1String("Mudlet"))
 , mEditorThemeFile(QLatin1String("Mudlet.tmTheme"))
 , mThemePreviewItemID(-1)

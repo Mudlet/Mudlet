@@ -85,7 +85,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     groupBox_discordPrivacy->hide();
 
     checkBox_USE_SMALL_SCREEN->setChecked(pMudlet->mEnableFullScreenMode);
-    
+
     // As we demonstrate the options that these next two checkboxes control in
     // the editor "preview" widget (on another tab) we will need to track
     // changes and update the edbee widget straight away. As we can have
@@ -1168,6 +1168,8 @@ void dlgProfilePreferences::loadEditorTab()
     script_preview_combobox->setDuplicatesEnabled(true);
 
     theme_download_label->hide();
+
+    checkBox_autocompleteLuaCode->setChecked(pHost->mEditorAutoComplete);
 
     // changes the theme being previewed
     connect(code_editor_theme_selection_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_theme_selected);
@@ -2323,6 +2325,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->setWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
+        pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();
         if (pHost->mpEditorDialog) {
             pHost->mpEditorDialog->setThemeAndOtherSettings(pHost->mEditorTheme);
         }

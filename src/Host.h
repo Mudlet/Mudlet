@@ -328,6 +328,8 @@ public:
     int mWrapAt;
     int mWrapIndentCount;
 
+    bool mEditorAutoComplete;
+
     // code editor theme (human-friendly name)
     QString mEditorTheme;
     // code editor theme file on disk for edbee to load
