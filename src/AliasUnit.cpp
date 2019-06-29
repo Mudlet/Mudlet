@@ -258,7 +258,7 @@ void AliasUnit::reenableAllTriggers()
     }
 }
 
-TAlias* AliasUnit::findAlias(const QString& name)
+TAlias* AliasUnit::findFirstAlias(const QString& name)
 {
     QMap<QString, TAlias*>::const_iterator it = mLookupTable.constFind(name);
     if (it != mLookupTable.cend() && it.key() == name) {

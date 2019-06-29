@@ -15057,7 +15057,7 @@ int TLuaInterpreter::startPermAlias(const QString& name, const QString& parent, 
     if (parent.isEmpty()) {
         pT = new TAlias("a", mpHost);
     } else {
-        TAlias* pP = mpHost->getAliasUnit()->findAlias(parent);
+        TAlias* pP = mpHost->getAliasUnit()->findFirstAlias(parent);
         if (!pP) {
             return -1; //parent not found
         }
