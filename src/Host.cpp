@@ -1217,7 +1217,7 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
         }
 
         if (mudlet::debugMode) {
-            qDebug() << reason.c_str() << " in config.lua:" << e.c_str();
+            qDebug() << reason.c_str() << " in config.lua: " << e.c_str();
         }
         // should print error to main display
         QString msg = QStringLiteral("%1 in config.lua: %2\n").arg(reason.c_str(), e.c_str());
