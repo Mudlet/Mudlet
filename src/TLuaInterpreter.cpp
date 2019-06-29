@@ -15099,7 +15099,7 @@ int TLuaInterpreter::startPermKey(QString& name, QString& parent, int& keycode, 
     if (parent.isEmpty()) {
         pT = new TKey("a", mpHost); // The use of "a" seems a bit arbitary...!
     } else {
-        TKey* pP = mpHost->getKeyUnit()->findKey(parent);
+        TKey* pP = mpHost->getKeyUnit()->findFirstKey(parent);
         if (!pP) {
             return -1; //parent not found
         }

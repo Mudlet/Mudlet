@@ -110,7 +110,7 @@ void KeyUnit::reenableAllTriggers()
     }
 }
 
-TKey* KeyUnit::findKey(QString& name)
+TKey* KeyUnit::findFirstKey(QString& name)
 {
     QMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
     if (it != mLookupTable.cend() && it.key() == name) {
