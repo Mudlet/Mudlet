@@ -41,7 +41,6 @@
 #include "pre_guard.h"
 #include <QProgressDialog>
 #include <QTextCodec>
-#include <QTextEncoder>
 #include <QSslError>
 #include "post_guard.h"
 
@@ -426,7 +425,7 @@ void cTelnet::handle_socket_signal_connected()
 
     emit signal_connected(mpHost);
 
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QStringLiteral("sysConnectionEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(event);
@@ -435,7 +434,7 @@ void cTelnet::handle_socket_signal_connected()
 void cTelnet::handle_socket_signal_disconnected()
 {
     QString msg;
-    TEvent event;
+    TEvent event {};
     QString reason;
     QString spacer = "    ";
     bool sslerr = false;
@@ -477,7 +476,7 @@ void cTelnet::handle_socket_signal_disconnected()
             for (int a = 0; a < sslErrors.count(); a++) {
                 reason.append(QStringLiteral("        %1\n").arg(QString(sslErrors.at(a).errorString())));
             }
-            QString err = "[ ALERT ] - Socket got disconnected.\nReason: \n" % reason;
+            QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: ") % reason;
             postMessage(err);
         } else
 #endif
@@ -490,7 +489,7 @@ void cTelnet::handle_socket_signal_disconnected()
             if (reason == QStringLiteral("Error during SSL handshake: error:140770FC:SSL routines:SSL23_GET_SERVER_HELLO:unknown protocol")) {
                 reason = tr("Secure connections aren't supported by this game on this port - try turning the option off.");
             }
-            QString err = "[ ALERT ] - Socket got disconnected.\nReason: " % reason;
+            QString err = tr("[ ALERT ] - Socket got disconnected.\nReason: ") % reason;
             postMessage(err);
         }
         postMessage(msg);
@@ -560,7 +559,7 @@ bool cTelnet::sendData(QString& data)
 {
     data.remove(QChar::LineFeed);
 
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QStringLiteral("sysDataSendRequest"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(data);
@@ -1319,14 +1318,6 @@ void cTelnet::processTelnetCommand(const string& command)
                 version.replace(QChar::LineFeed, QChar::Space);
                 version = version.section(QChar::Space, 0, 0);
 
-                QString _smsg;
-                if (mpHost->mServerGUI_Package_version != version) {
-                    postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
-                                   "Uninstalling old version '%2'.")
-                                .arg(version, mpHost->mServerGUI_Package_version));
-                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);
-                    mpHost->mServerGUI_Package_version = version;
-                }
                 QString url = msg.section(QChar::LineFeed, 1);
                 QString packageName = url.section(QLatin1Char('/'), -1);
                 QString fileName = packageName;
@@ -1339,6 +1330,16 @@ void cTelnet::processTelnetCommand(const string& command)
                 packageName.remove(QLatin1Char('/'));
                 packageName.remove(QLatin1Char('\\'));
                 packageName.remove(QLatin1Char('.'));
+
+                if (mpHost->mServerGUI_Package_version != version) {
+                    postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
+                                   "Uninstalling old version '%2'.")
+                                .arg(version, mpHost->mServerGUI_Package_version != QStringLiteral("-1") ? mpHost->mServerGUI_Package_version : QStringLiteral("(unknown)")));
+                    // uninstall by previous known package name or current if we don't
+                    // know it (in case of manual installation)
+                    mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != QStringLiteral("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
+                    mpHost->mServerGUI_Package_version = version;
+                }
 
                 postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
                 if (mpHost->mInstalledPackages.contains(packageName)) {
@@ -1476,7 +1477,7 @@ void cTelnet::processTelnetCommand(const string& command)
             msg = msg.mid(3, command.size() - 5);
         }
 
-        TEvent event;
+        TEvent event {};
         event.mArgumentList.append(QStringLiteral("sysTelnetEvent"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         event.mArgumentList.append(QString::number(type));
@@ -1598,14 +1599,6 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         version.replace(QChar::LineFeed, QChar::Space);
         version = version.section(QChar::Space, 0, 0);
 
-        QString _smsg;
-        if (mpHost->mServerGUI_Package_version != version) {
-            postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
-                           "Uninstalling old version '%2'.")
-                        .arg(version, mpHost->mServerGUI_Package_version));
-            mpHost->uninstallPackage(mpHost->mServerGUI_Package_name, 0);
-            mpHost->mServerGUI_Package_version = version;
-        }
         QString url = transcodedMsg.section(QChar::LineFeed, 1);
         QString packageName = url.section(QLatin1Char('/'), -1);
         QString fileName = packageName;
@@ -1618,6 +1611,16 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         packageName.remove(QLatin1Char('/'));
         packageName.remove(QLatin1Char('\\'));
         packageName.remove(QLatin1Char('.'));
+
+        if (mpHost->mServerGUI_Package_version != version) {
+            postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
+                           "Uninstalling old version '%2'.")
+                        .arg(version, mpHost->mServerGUI_Package_version != QStringLiteral("-1") ? mpHost->mServerGUI_Package_version : QStringLiteral("(unknown)")));
+            // uninstall by previous known package name or current if we don't
+            // know it (in case of manual installation)
+            mpHost->uninstallPackage(mpHost->mServerGUI_Package_name != QStringLiteral("nothing") ? mpHost->mServerGUI_Package_name : packageName, 0);
+            mpHost->mServerGUI_Package_version = version;
+        }
 
         postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
         if (mpHost->mInstalledPackages.contains(packageName)) {
@@ -2244,48 +2247,46 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
                     command = "";
                     iac = false;
                 } else if (insb) {
-                    if (!mNeedDecompression) {
-                        // IAC SB COMPRESS WILL SE for MCCP v1 (unterminated invalid telnet sequence)
-                        // IAC SB COMPRESS2 IAC SE for MCCP v2
-                        if ((mMCCP_version_1 || mMCCP_version_2) && (!mNeedDecompression)) {
-                            char _ch = buffer[i];
-                            if ((_ch == OPT_COMPRESS) || (_ch == OPT_COMPRESS2)) {
-                                bool _compress = false;
-                                if ((i > 1) && (i + 2 < datalen)) {
-                                    qDebug() << "checking mccp start seq...";
-                                    if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_WILL) && (buffer[i + 2] == TN_SE)) {
-                                        qDebug() << "MCCP version 1 starting sequence";
-                                        _compress = true;
-                                    }
-                                    if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_IAC) && (buffer[i + 2] == TN_SE)) {
-                                        qDebug() << "MCCP version 2 starting sequence";
-                                        _compress = true;
-                                    }
-                                    qDebug() << (int)buffer[i - 2] << "," << (int)buffer[i - 1] << "," << (int)buffer[i] << "," << (int)buffer[i + 1] << "," << (int)buffer[i + 2];
+                    // IAC SB COMPRESS WILL SE for MCCP v1 (unterminated invalid telnet sequence)
+                    // IAC SB COMPRESS2 IAC SE for MCCP v2
+                    if ((mMCCP_version_1 || mMCCP_version_2) && (!mNeedDecompression)) {
+                        char _ch = buffer[i];
+                        if ((_ch == OPT_COMPRESS) || (_ch == OPT_COMPRESS2)) {
+                            bool _compress = false;
+                            if ((i > 1) && (i + 2 < datalen)) {
+                                qDebug() << "checking mccp start seq...";
+                                if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_WILL) && (buffer[i + 2] == TN_SE)) {
+                                    qDebug() << "MCCP version 1 starting sequence";
+                                    _compress = true;
                                 }
-                                if (_compress) {
-                                    mNeedDecompression = true;
-                                    // from this position in stream onwards, data will be compressed by zlib
-                                    gotRest(cleandata);
-                                    cleandata = "";
-                                    initStreamDecompressor();
-                                    buffer += i + 3; //bugfix: BenH
-                                    int restLength = datalen - i - 3;
-                                    if (restLength > 0) {
-                                        datalen = decompressBuffer(buffer, restLength, out_buffer);
-                                        buffer = out_buffer;
-                                        i = -1; // start processing buffer from the beginning.
-                                    } else {
-                                        datalen = 0;
-                                        i = -1; // end the loop, this will make i and datalen the same.
-                                    }
-                                    //bugfix: BenH
-                                    iac = false;
-                                    insb = false;
-                                    command = "";
-                                    ////////////////
-                                    goto MAIN_LOOP_END;
+                                if ((buffer[i - 2] == TN_IAC) && (buffer[i - 1] == TN_SB) && (buffer[i + 1] == TN_IAC) && (buffer[i + 2] == TN_SE)) {
+                                    qDebug() << "MCCP version 2 starting sequence";
+                                    _compress = true;
                                 }
+                                qDebug() << (int)buffer[i - 2] << "," << (int)buffer[i - 1] << "," << (int)buffer[i] << "," << (int)buffer[i + 1] << "," << (int)buffer[i + 2];
+                            }
+                            if (_compress) {
+                                mNeedDecompression = true;
+                                // from this position in stream onwards, data will be compressed by zlib
+                                gotRest(cleandata);
+                                cleandata = "";
+                                initStreamDecompressor();
+                                buffer += i + 3; //bugfix: BenH
+                                int restLength = datalen - i - 3;
+                                if (restLength > 0) {
+                                    datalen = decompressBuffer(buffer, restLength, out_buffer);
+                                    buffer = out_buffer;
+                                    i = -1; // start processing buffer from the beginning.
+                                } else {
+                                    datalen = 0;
+                                    i = -1; // end the loop, this will make i and datalen the same.
+                                }
+                                //bugfix: BenH
+                                iac = false;
+                                insb = false;
+                                command = "";
+                                ////////////////
+                                goto MAIN_LOOP_END;
                             }
                         }
                     }
@@ -2356,7 +2357,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
 
 void cTelnet::raiseProtocolEvent(const QString& name, const QString& protocol)
 {
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(name);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(protocol);

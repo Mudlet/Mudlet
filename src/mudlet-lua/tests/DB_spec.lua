@@ -1,28 +1,8 @@
 describe("Tests DB.lua functions", function()
-  setup(function()
-    -- add in the location of our files
-    package.path = "../lua/?.lua;"
-
-    -- add in the location of Lua libraries on Ubuntu 12.04
-    package.path = package.path .. "/usr/local/share/lua/5.1/?.lua;/usr/local/share/lua/5.1/?/init.lua;/usr/local/lib/lua/5.1/?.lua;/usr/local/lib/lua/5.1/?/init.lua;/usr/share/lua/5.1/?.lua;/usr/share/lua/5.1/?/init.lua"
-
-    luasql = require"luasql.sqlite3"
-    rex    = require"rex_pcre"
-
-    -- define some common Mudlet functions essential to operation
-    function getMudletHomeDir() return "." end
-
-    require"TableUtils"
-  end)
-
-  it("Should load DB.lua", function()
-    require"DB"
-    assert.truthy(db)
-  end)
 
   describe("Tests that DB creation and deletion works", function()
     it("Should create a db", function()
-      mydb = db:create("people", {
+      mydb = db:create("peoplet_testingonly", {
         friends={"name", "city", "notes"},
         enemies={
           name="",
@@ -42,7 +22,7 @@ describe("Tests DB.lua functions", function()
     end)
 
     it("Should recreate a DB", function()
-      mydb = db:create("people", {
+      mydb = db:create("peoplet_testingonly", {
         friends={"name", "city", "notes"},
         enemies={
           name="",
@@ -62,7 +42,7 @@ describe("Tests DB.lua functions", function()
     end)
 
     it("Should create and add a row", function()
-      mydb = db:create("people", {
+      mydb = db:create("peoplet_testingonly", {
         friends={"name", "city", "notes"},
         enemies={
           name="",
@@ -84,13 +64,14 @@ describe("Tests DB.lua functions", function()
     end)
 
     teardown(function()
-      os.remove("Database_people.db")
+      local filename = getMudletHomeDir() .. "/Database_peoplettestingonly.db"
+      os.remove(filename)
     end)
   end)
 
   describe("Tests basic db:create() and db:add()", function()
     before_each(function()
-      mydb = db:create("people", {
+      mydb = db:create("peoplet_testingonly", {
         friends={"name", "city", "notes"},
         enemies={
           name="",
@@ -110,7 +91,8 @@ describe("Tests DB.lua functions", function()
     end)
 
     teardown(function()
-      os.remove("Database_people.db")
+      local filename = getMudletHomeDir() .. "/Database_peoplettestingonly.db"
+      os.remove(filename)
     end)
 
     it("Should add one result to the db", function()
@@ -149,7 +131,7 @@ describe("Tests DB.lua functions", function()
 
   describe("Tests db:fetch()'s sorting functionality", function()
     before_each(function()
-      mydb = db:create("dslpnp_data", {
+      mydb = db:create("dslpnp_datat_testingonly", {
         people = {
           name = "",
           race = "",
@@ -171,7 +153,8 @@ describe("Tests DB.lua functions", function()
     end)
 
     teardown(function()
-      os.remove("Database_dslpnpdata.db")
+      local filename = getMudletHomeDir() .. "/Database_dslpnpdatattestingonly.db"
+      os.remove(filename)
     end)
 
     it("Should sort the fields by level first and then name, both in descending order", function()
@@ -194,7 +177,7 @@ describe("Tests DB.lua functions", function()
 
   describe("Tests db:create() ability to add a new row to an existing database", function()
     before_each(function()
-      mydb = db:create("mydb", {
+      mydb = db:create("mydbt_testingonly", {
         sheet = {
           row1 = "",
           row2 = 0,
@@ -207,7 +190,8 @@ describe("Tests DB.lua functions", function()
 
     after_each(function()
       db:close()
-      os.remove("Database_mydb.db")
+      local filename = getMudletHomeDir() .. "/Database_mydbttestingonly.db"
+      os.remove(filename)
       mydb = nil
     end)
 
@@ -221,8 +205,8 @@ describe("Tests DB.lua functions", function()
         _violations = "REPLACE"
       }
 
-      mydb = db:create("mydb", { sheet = newschema })
-      assert.are.same(db.__schema.mydb.sheet.columns, newschema)
+      mydb = db:create("mydbt_testingonly", { sheet = newschema })
+      assert.are.same(db.__schema.mydbttestingonly.sheet.columns, newschema)
     end)
 
     it("Should add a column of type string successfully to an empty db", function()
@@ -235,8 +219,8 @@ describe("Tests DB.lua functions", function()
         _violations = "REPLACE"
       }
 
-      mydb = db:create("mydb", { sheet = newschema })
-      assert.are.same(db.__schema.mydb.sheet.columns, newschema)
+      mydb = db:create("mydbt_testingonly", { sheet = newschema })
+      assert.are.same(db.__schema.mydbttestingonly.sheet.columns, newschema)
     end)
 
     it("Should add a column successfully to a filled db", function()
@@ -251,8 +235,8 @@ describe("Tests DB.lua functions", function()
         _violations = "REPLACE"
       }
 
-      mydb = db:create("mydb", { sheet = newschema })
-      assert.are.same(db.__schema.mydb.sheet.columns, newschema)
+      mydb = db:create("mydbt_testingonly", { sheet = newschema })
+      assert.are.same(db.__schema.mydbttestingonly.sheet.columns, newschema)
       local newrow = db:fetch(mydb.sheet)[1]
       assert.are.same("some data", newrow.row1)
       assert.are.same("", newrow.row3)
@@ -263,7 +247,7 @@ describe("Tests DB.lua functions", function()
   function()
 
     before_each(function()
-      mydb = db:create("mydb",
+      mydb = db:create("mydbt_testingonly",
         {
           sheet = {
             name = "", id = 0,
@@ -277,7 +261,8 @@ describe("Tests DB.lua functions", function()
 
     after_each(function()
       db:close()
-      os.remove("Database_mydb.db")
+      local filename = getMudletHomeDir() .. "/Database_mydbttestingonly.db"
+      os.remove(filename)
       mydb = nil
     end)
 
@@ -297,7 +282,7 @@ describe("Tests DB.lua functions", function()
     it("should apply all indexes correctly.",
       function()
 
-        local conn = db.__conn.mydb
+        local conn = db.__conn.mydbttestingonly
         local cur = conn:execute("SELECT * FROM sqlite_master" ..
                                  " WHERE type = 'index'")
         local results = {}
@@ -350,7 +335,7 @@ describe("Tests DB.lua functions", function()
   function()
 
     before_each(function()
-      mydb = db:create("mydb",
+      mydb = db:create("mydbt_testingonly",
         {
           sheet = {
             name = "", id = 0, blubb = "",
@@ -364,13 +349,14 @@ describe("Tests DB.lua functions", function()
 
     after_each(function()
       db:close()
-      os.remove("Database_mydb.db")
+      local filename = getMudletHomeDir() .. "/Database_mydbttestingonly.db"
+      os.remove(filename)
       mydb = nil
     end)
 
     it("should successfully delete columns in an empty table.",
     function()
-      mydb = db:create("mydb", { sheet = { name = "", id = 0 }})
+      mydb = db:create("mydbt_testingonly", { sheet = { name = "", id = 0 }})
       local test = { name = "foo", id = 500 }
       db:add(mydb.sheet, test)
       local res = db:fetch(mydb.sheet)
@@ -383,7 +369,7 @@ describe("Tests DB.lua functions", function()
     function()
       local test = { name = "foo", id = 500, blubb = "bar" }
       db:add(mydb.sheet, test)
-      mydb = db:create("mydb", { sheet = { name = "", id = 0 }})
+      mydb = db:create("mydbt_testingonly", { sheet = { name = "", id = 0 }})
       local res = db:fetch(mydb.sheet)
       test.blubb = nil -- we expect the blubb gets deleted
       assert.are.equal(1, #res)
@@ -398,7 +384,7 @@ describe("Tests DB.lua functions", function()
   function()
 
     before_each(function()
-      mydb = db:create("mydb",
+      mydb = db:create("mydbt_testingonly",
         {
           sheet = {
             name = "", id = 0, city = "",
@@ -420,7 +406,8 @@ describe("Tests DB.lua functions", function()
 
     after_each(function()
       db:close()
-      os.remove("Database_mydb.db")
+      local filename = getMudletHomeDir() .. "/Database_mydbttestingonly.db"
+      os.remove(filename)
       mydb = nil
       test_data = nil
     end)
@@ -598,7 +585,7 @@ describe("Tests DB.lua functions", function()
   function()
 
     before_each(function()
-      mydb = db:create("mydb",
+      mydb = db:create("mydbt_testingonly",
         {
           sheet = {
             name = "", count = 0,
@@ -620,7 +607,8 @@ describe("Tests DB.lua functions", function()
 
     after_each(function()
       db:close()
-      os.remove("Database_mydb.db")
+      local filename = getMudletHomeDir() .. "/Database_mydbttestingonly.db"
+      os.remove(filename)
       mydb = nil
       test_data = nil
     end)

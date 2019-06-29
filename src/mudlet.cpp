@@ -133,19 +133,19 @@ mudlet* mudlet::self()
 void mudlet::loadLanguagesMap()
 {
     mLanguageCodeMap = {
-            {"en_US", make_pair(tr("English [American]", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 100)},
-            {"en_GB", make_pair(tr("English [British]", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"zh_CN", make_pair(tr("Chinese [Simplified]", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"zh_TW", make_pair(tr("Chinese [Traditional]", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"nl_NL", make_pair(tr("Dutch", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"fr_FR", make_pair(tr("French", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"de_DE", make_pair(tr("German", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"el_GR", make_pair(tr("Greek", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"it_IT", make_pair(tr("Italian", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"pl_PL", make_pair(tr("Polish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"ru_RU", make_pair(tr("Russian", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"es_ES", make_pair(tr("Spanish", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
-            {"pt_PT", make_pair(tr("Portuguese", "Name of language. Please translate with the English description intact, like this: Nederlands (Dutch)"), 0)},
+            {"en_US", make_pair(QStringLiteral("English (American)"), 0)},
+            {"en_GB", make_pair(QStringLiteral("English (British)"), 0)},
+            {"zh_CN", make_pair(QStringLiteral(u"简化字"), 0)},
+            {"zh_TW", make_pair(QStringLiteral(u"繁體字"), 0)},
+            {"nl_NL", make_pair(QStringLiteral("Nederlands"), 0)},
+            {"fr_FR", make_pair(QStringLiteral(u"Français"), 0)},
+            {"de_DE", make_pair(QStringLiteral("Deutsch"), 0)},
+            {"el_GR", make_pair(QStringLiteral(u"ελληνικά"), 0)},
+            {"it_IT", make_pair(QStringLiteral("Italiano"), 0)},
+            {"pl_PL", make_pair(QStringLiteral("Polszczyzna"), 0)},
+            {"ru_RU", make_pair(QStringLiteral(u"Pусский"), 0)},
+            {"es_ES", make_pair(QStringLiteral(u"Español"), 0)},
+            {"pt_PT", make_pair(QStringLiteral(u"Português"), 0)},
     };
 
     // Primarily use to identify Hunspell dictionaries (some of which are not
@@ -495,7 +495,7 @@ mudlet::mudlet()
     setWindowTitle(version);
     setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_main_48px.png")));
     mpMainToolBar = new QToolBar(this);
-    mpMainToolBar->setObjectName("mpMainToolBar");
+    mpMainToolBar->setObjectName(QStringLiteral("mpMainToolBar"));
     mpMainToolBar->setWindowTitle(tr("Main Toolbar"));
     addToolBar(mpMainToolBar);
     mpMainToolBar->setMovable(false);
@@ -1253,7 +1253,7 @@ void mudlet::slot_package_exporter()
     }
     auto d = new dlgPackageExporter(this, pH);
     // don't show the dialog if the user cancelled the wizard
-    if (d->filePath.isEmpty()) {
+    if (d->mXmlPathFileName.isEmpty()) {
         return;
     }
 
@@ -1572,35 +1572,45 @@ void mudlet::addConsoleForNewHost(Host* pH)
 void mudlet::slot_timer_fires()
 {
     QTimer* pQT = (QTimer*)sender();
-    if (!pQT) {
+    if (Q_UNLIKELY(!pQT)) {
         return;
     }
-    if (mTimerMap.contains(pQT)) {
-        TTimer* pTT = mTimerMap[pQT];
+
+    // Pull the Host name and TTimer::id from the properties:
+    QString hostName(pQT->property(TTimer::scmProperty_HostName).toString());
+    if (Q_UNLIKELY(hostName.isEmpty())) {
+        qWarning().nospace().noquote() << "mudlet::slot_timer_fires() INFO - Host name is empty - so TTimer has probably been deleted.";
+        pQT->deleteLater();
+        return;
+    }
+
+    Host* pHost = mHostManager.getHost(hostName);
+    Q_ASSERT_X(pHost, "mudlet::slot_timer_fires()", "Unable to deduce Host pointer from data in QTimer");
+    int id = pQT->property(TTimer::scmProperty_TTimerId).toInt();
+    if (Q_UNLIKELY(!id)) {
+        qWarning().nospace().noquote() << "mudlet::slot_timer_fires() INFO - TTimer ID is zero - so TTimer has probably been deleted.";
+        pQT->deleteLater();
+        return;
+    }
+    TTimer* pTT = pHost->getTimerUnit()->getTimer(id);
+    if (Q_LIKELY(pTT)) {
+// commented out as it will be spammy in normal situations but saved as useful
+// during timer debugging... 8-)
+//        qDebug().nospace().noquote() << "mudlet::slot_timer_fires() INFO - Host: \"" << hostName << "\" QTimer firing for TTimer Id:" << id;
+//        qDebug().nospace().noquote() << "    (objectName:\"" << pQT->objectName() << "\")";
         pTT->execute();
         if (pTT->checkRestart()) {
             pTT->start();
         }
-    } else {
-        qDebug() << "MUDLET CRITICAL ERROR: Timer not registered!";
-    }
-}
 
-void mudlet::unregisterTimer(QTimer* pQT)
-{
-    if (mTimerMap.contains(pQT)) {
-        mTimerMap.remove(pQT);
-    } else {
-        qDebug() << "MUDLET CRITICAL ERROR: trying to unregister Timer but it is not registered!";
+        // Okay now we've found it we are done:
+        return;
     }
-}
 
-void mudlet::registerTimer(TTimer* pTT, QTimer* pQT)
-{
-    if (!mTimerMap.contains(pQT)) {
-        mTimerMap[pQT] = pTT;
-        connect(pQT, &QTimer::timeout, this, &mudlet::slot_timer_fires);
-    }
+    qWarning().nospace().noquote() << "mudlet::slot_timer_fires() ERROR - Timer not registered, it seems to have been called: \"" << pQT->objectName() << "\" - automatically deleting it!";
+    // Clean up any bogus ones:
+    pQT->stop();
+    pQT->deleteLater();
 }
 
 void mudlet::disableToolbarButtons()
@@ -1731,10 +1741,9 @@ void mudlet::setDockLayoutUpdated(Host* pHost, const QString& name)
     }
 
     auto pD = pHost->mpConsole->mDockWidgetMap.value(name);
-    if (!mHostDockLayoutChangeMap.value(pHost).contains(name) && pD) {
-        pD->setObjectName(QStringLiteral("%1_changed").arg(pD->objectName()));
+    if (Q_LIKELY(pD) && !mHostDockLayoutChangeMap.value(pHost).contains(name)) {
+        pD->setProperty("layoutChanged", QVariant(true));
         mHostDockLayoutChangeMap[pHost].append(name);
-
         mHasSavedLayout = false;
     }
 }
@@ -1745,39 +1754,44 @@ void mudlet::setToolbarLayoutUpdated(Host* pHost, TToolBar* pTB)
         return;
     }
 
-    QList<TToolBar*>& mToolbarLayoutUpdateMap = mHostToolbarLayoutChangeMap[pHost];
-    if (!mToolbarLayoutUpdateMap.contains(pTB)) {
-        pTB->setObjectName(QString("%1_changed").arg(pTB->objectName()));
-        mToolbarLayoutUpdateMap.append(pTB);
-
+    // Using the operator[] will instantiate an empty QList<TToolBar*> if there
+    // is not already one in existance for that pHost:
+    QList<TToolBar*>& toolbarLayoutUpdateMap = mHostToolbarLayoutChangeMap[pHost];
+    if (!toolbarLayoutUpdateMap.contains(pTB)) {
+        pTB->setProperty("layoutChanged", QVariant(true));
+        toolbarLayoutUpdateMap.append(pTB);
         mHasSavedLayout = false;
     }
 }
 
 void mudlet::commitLayoutUpdates()
 {
-    // commit changes for dockwidget consoles. (user windows)
-    for (Host* pHost : mHostDockLayoutChangeMap.keys()) {
-        QMap<QString, TDockWidget*>& dockWindowMap = pHost->mpConsole->mDockWidgetMap;
-        QList<QString>& mDockLayoutUpdateMap = mHostDockLayoutChangeMap[pHost];
-
-        for (QString TDockName : mDockLayoutUpdateMap) {
-            if (dockWindowMap.contains(TDockName)) {
-                QString rename = QString("dockWindow_%1_%2").arg(pHost->getName(), TDockName);
-                dockWindowMap[TDockName]->setObjectName(rename);
+    // commit changes (or rather clear the layout changed flags) for dockwidget
+    // consoles (user windows) across all profiles:
+    QMutableMapIterator<Host*, QList<QString>> itHostDockedConsolesList(mHostDockLayoutChangeMap);
+    while (itHostDockedConsolesList.hasNext()) {
+        itHostDockedConsolesList.next();
+        auto pHost = itHostDockedConsolesList.key();
+        for (auto dockedConsoleName : itHostDockedConsolesList.value()) {
+            auto pD = pHost->mpConsole->mDockWidgetMap.value(dockedConsoleName);
+            if (Q_LIKELY(pD) && pD->property("layoutChanged").toBool()) {
+                pD->setProperty("layoutChanged", QVariant(false));
             }
-            mDockLayoutUpdateMap.removeAll(TDockName);
         }
+        itHostDockedConsolesList.remove();
     }
 
-    // commit changes for dockable/floating toolbars.
-    for (Host* pHost : mHostToolbarLayoutChangeMap.keys()) {
-        QList<TToolBar*>& mToolbarLayoutUpdateMap = mHostToolbarLayoutChangeMap[pHost];
-
-        for (TToolBar* pTB : mToolbarLayoutUpdateMap) {
-            pTB->setObjectName(QString("dockToolBar_%1").arg(pTB->getName()));
-            mToolbarLayoutUpdateMap.removeAll(pTB);
+    // commit changes (or rather clear the layout changed flags) for
+    // dockable/floating toolbars across all profiles:
+    QMutableMapIterator<Host*, QList<TToolBar*>> itHostToolbarsList(mHostToolbarLayoutChangeMap);
+    while (itHostToolbarsList.hasNext()) {
+        itHostToolbarsList.next();
+        for (auto pToolBar : itHostToolbarsList.value()) {
+            if (Q_LIKELY(pToolBar) && pToolBar->property("layoutChanged").toBool()) {
+                pToolBar->setProperty("layoutChanged", QVariant(false));
+            }
         }
+        itHostToolbarsList.remove();
     }
 }
 
@@ -1868,21 +1882,26 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         return false;
     }
 
+    auto hostName(pHost->getName());
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     auto pD = pHost->mpConsole->mDockWidgetMap.value(name);
 
     if (!pC && !pD) {
         // The name is not used in either the QMaps of all user created TConsole
         // or TDockWidget instances - so we can make a NEW one:
-        auto pD = new TDockWidget(pHost, name);
-        pD->setObjectName(QString("dockWindow_%1_%2").arg(pHost->getName(), name));
+        pD = new TDockWidget(pHost, name);
+        pD->setObjectName(QStringLiteral("dockWindow_%1_%2").arg(hostName, name));
         pD->setContentsMargins(0, 0, 0, 0);
         pD->setFeatures(QDockWidget::AllDockWidgetFeatures);
-        pD->setWindowTitle(tr("User window - %1 - %2").arg(pHost->getName(), name));
+        pD->setWindowTitle(tr("User window - %1 - %2").arg(hostName, name));
         pHost->mpConsole->mDockWidgetMap.insert(name, pD);
         // It wasn't obvious but the parent passed to the TConsole constructor
         // is sliced down to a QWidget and is NOT a TDockWidget pointer:
-        auto pC = new TConsole(pHost, TConsole::UserWindow, pD->widget());
+        pC = new TConsole(pHost, TConsole::UserWindow, pD->widget());
+        pC->setObjectName(QStringLiteral("dockWindowConsole_%1_%2").arg(hostName, name));
+        // Without this the TConsole instance inside the TDockWidget will be
+        // left being called the default value of "main":
+        pC->mConsoleName = name;
         pC->setContentsMargins(0, 0, 0, 0);
         pD->setTConsole(pC);
         pC->show();
@@ -1930,7 +1949,7 @@ bool mudlet::createMiniConsole(Host* pHost, const QString& name, int x, int y, i
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (!pC) {
-        TConsole* pC = pHost->mpConsole->createMiniConsole(name, x, y, width, height);
+        pC = pHost->mpConsole->createMiniConsole(name, x, y, width, height);
         if (pC) {
             pC->setMiniConsoleFontSize(12);
             return true;
@@ -3010,7 +3029,7 @@ void mudlet::writeSettings()
 void mudlet::slot_show_connection_dialog()
 {
     auto pDlg = new dlgConnectionProfiles(this);
-    connect(pDlg, &dlgConnectionProfiles::signal_establish_connection, this, &mudlet::slot_connection_dlg_finished);
+    connect(pDlg, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connection_dlg_finished);
     pDlg->fillout_form();
 
     connect(pDlg, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
@@ -3275,8 +3294,9 @@ void mudlet::createMapper(bool loadDefaultMap)
         return;
     }
 
-    pHost->mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(pHost->getName()));
-    pHost->mpDockableMapWidget->setObjectName(QString("dockMap_%1").arg(pHost->getName()));
+    auto hostName(pHost->getName());
+    pHost->mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(hostName));
+    pHost->mpDockableMapWidget->setObjectName(QStringLiteral("dockMap_%1").arg(hostName));
     pHost->mpMap->mpMapper = new dlgMapper(pHost->mpDockableMapWidget, pHost, pHost->mpMap.data()); //FIXME: mpHost definieren
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
     pHost->mpDockableMapWidget->setWidget(pHost->mpMap->mpMapper);
@@ -3305,7 +3325,7 @@ void mudlet::createMapper(bool loadDefaultMap)
     loadWindowLayout();
 
     check_for_mappingscript();
-    TEvent mapOpenEvent;
+    TEvent mapOpenEvent {};
     mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
     mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     pHost->raiseEvent(mapOpenEvent);
@@ -3521,7 +3541,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     // For the first real host created the getHostCount() will return 2 because
     // there is already a "default_host"
     signal_hostCreated(pHost, mHostManager.getHostCount());
-    slot_connection_dlg_finished(profile_name, 0);
+    slot_connection_dlg_finished(profile_name, true);
     enableToolbarButtons();
 }
 
@@ -3587,7 +3607,7 @@ void mudlet::hideMudletsVariables(Host* pHost)
     }
 }
 
-void mudlet::slot_connection_dlg_finished(const QString& profile, int historyVersion)
+void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
 {
     Host* pHost = getHostManager().getHost(profile);
     if (!pHost) {
@@ -3631,7 +3651,7 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, int historyVer
 
     packagesToInstallList.clear();
 
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     pHost->raiseEvent(event);
@@ -3642,7 +3662,12 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, int historyVer
 
     tempHostQueue.enqueue(pHost);
     tempHostQueue.enqueue(pHost);
-    pHost->connectToServer();
+    if (connect) {
+        pHost->connectToServer();
+    } else {
+        QString infoMsg = tr("[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(profile);
+        pHost->postMessage(infoMsg);
+    }
 }
 
 void mudlet::slot_multi_view()
@@ -3907,7 +3932,7 @@ void mudlet::playSound(const QString& s, int soundVolume)
 
     connect(pPlayer, &QMediaPlayer::stateChanged, [=](QMediaPlayer::State state) {
         if (state == QMediaPlayer::StoppedState) {
-            TEvent soundFinished;
+            TEvent soundFinished {};
             soundFinished.mArgumentList.append("sysSoundFinished");
             soundFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             soundFinished.mArgumentList.append(pPlayer->media().canonicalUrl().fileName());
@@ -4103,7 +4128,7 @@ void mudlet::slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButto
     if (!pH) {
         return;
     }
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysGamepadButtonPress"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
@@ -4121,7 +4146,7 @@ void mudlet::slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadBut
     if (!pH) {
         return;
     }
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysGamepadButtonRelease"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
@@ -4137,7 +4162,7 @@ void mudlet::slot_gamepadConnected(int deviceId)
     if (!pH) {
         return;
     }
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysGamepadConnected"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
@@ -4151,7 +4176,7 @@ void mudlet::slot_gamepadDisconnected(int deviceId)
     if (!pH) {
         return;
     }
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysGamepadDisconnected"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
@@ -4165,7 +4190,7 @@ void mudlet::slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis ax
     if (!pH) {
         return;
     }
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysGamepadAxisMove"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(QString::number(deviceId));
@@ -4400,7 +4425,7 @@ void mudlet::slot_updateAvailable(const int updateCount)
     // We can then add in the new item to give access the update(s)
     auto pActionReview = pUpdateMenu->addAction(tr("Review %n update(s)...",
                                                    // Intentional comment
-                                                   "Review update(s) menu item, %n is the the count of how many updates are available",
+                                                   "Review update(s) menu item, %n is the count of how many updates are available",
                                                    updateCount),
                                                 this, &mudlet::slot_check_manual_update);
     pActionReview->setToolTip(tr("<p>Review the update(s) available...</p>",

@@ -649,7 +649,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
         QString n = "WindowResizeEvent";
         pLua->call(func, n);
 
-        TEvent mudletEvent;
+        TEvent mudletEvent {};
         mudletEvent.mArgumentList.append(QLatin1String("sysWindowResizeEvent"));
         mudletEvent.mArgumentList.append(QString::number(x - mMainFrameLeftWidth - mMainFrameRightWidth));
         mudletEvent.mArgumentList.append(QString::number(y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height()));
@@ -718,9 +718,11 @@ void TConsole::closeEvent(QCloseEvent* event)
 
     if (mType & (SubConsole|Buffer)) {
         if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
-            QString key = objectName();
-            auto pC = mpHost->mpConsole->mSubConsoleMap.take(key);
+            auto pC = mpHost->mpConsole->mSubConsoleMap.take(mConsoleName);
             if (pC) {
+                // As it happens pC will be identical to 'this' it is just that
+                // we will have removed it from the main TConsole's
+                // mSubConsoleMap:
                 mUpperPane->close();
                 mLowerPane->close();
             }
@@ -736,10 +738,12 @@ void TConsole::closeEvent(QCloseEvent* event)
 
     if (mType == UserWindow) {
         if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
-            QString key = objectName();
-            auto pC = mpHost->mpConsole->mSubConsoleMap.take(key);
-            auto pD = mpHost->mpConsole->mDockWidgetMap.take(key);
+            auto pC = mpHost->mpConsole->mSubConsoleMap.take(mConsoleName);
+            auto pD = mpHost->mpConsole->mDockWidgetMap.take(mConsoleName);
             if (pC) {
+                // As it happens pC will be identical to 'this' it is just that
+                // we will have removed it from the main TConsole's
+                // mSubConsoleMap:
                 mUpperPane->close();
                 mLowerPane->close();
             }
@@ -757,7 +761,7 @@ void TConsole::closeEvent(QCloseEvent* event)
     }
 
     if (mProfileName != QLatin1String("default_host")) {
-        TEvent conCloseEvent;
+        TEvent conCloseEvent {};
         conCloseEvent.mArgumentList.append(QLatin1String("sysExitEvent"));
         conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(conCloseEvent);
@@ -1003,7 +1007,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
                 logStream << "  </div><hr><div>\n";
             }
             logStream << QStringLiteral("<p>%1</p>\n")
-                         .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'",
+                         .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.",
                                                       "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
             // <div></div> tags required around outside of the body <span></spans> for
             // strict HTML 4 as we do not use <p></p>s or anything else
@@ -1024,8 +1028,9 @@ void TConsole::toggleLogging(bool isMessageEnabled)
                 // file to not trigger the insertion of this line:
                 mLogStream << QStringLiteral("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯").repeated(8).append(QChar::LineFeed);
             }
-            mLogStream << logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.\n",
-                                                  "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale"));
+            mLogStream << QStringLiteral("%1\n")
+                         .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.",
+                                                  "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
 
         }
         logButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
@@ -1033,9 +1038,8 @@ void TConsole::toggleLogging(bool isMessageEnabled)
     } else {
         // Logging is being turned off
         buffer.logRemainingOutput();
-        QString endDateTimeLine = tr("Log session ending at %1.")
-                .arg(logDateTime.toString(tr("hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy",
-                                             "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
+        QString endDateTimeLine = logDateTime.toString(tr("'Log session ending at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.",
+                                             "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale"));
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             mLogStream << QStringLiteral("<p>%1</p>\n").arg(endDateTimeLine);
             mLogStream << "  </div></body>\n";
@@ -1841,6 +1845,31 @@ std::list<int> TConsole::getBgColor(std::string& buf)
     return {};
 }
 
+QPair<quint8, TChar> TConsole::getTextAttributes() const
+{
+    int x = P_begin.x();
+    int y = P_begin.y();
+    if (y < 0 || x < 0 || y >= static_cast<int>(buffer.buffer.size()) || x >= (static_cast<int>(buffer.buffer.at(y).size()) - 1)) {
+        return qMakePair(2, TChar());
+    }
+
+    return qMakePair(0, buffer.buffer.at(y).at(x));
+}
+
+QPair<quint8, TChar> TConsole::getTextAttributes(const QString& name) const
+{
+    if (name.isEmpty() || name == QLatin1String("main")) {
+        return getTextAttributes();
+    }
+
+    auto pC = mSubConsoleMap.value(name);
+    if (pC) {
+        return pC->getTextAttributes();
+    }
+
+    return qMakePair(1, TChar());
+}
+
 void TConsole::luaWrapLine(std::string& buf, int line)
 {
     QString key = QString::fromUtf8(buf.c_str());
@@ -1983,9 +2012,7 @@ int TConsole::select(const QString& text, int numOfMatch)
 bool TConsole::selectSection(int from, int to)
 {
     if (mudlet::debugMode) {
-        if (mudlet::debugMode) {
-            TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "\nselectSection(" << from << "," << to << "): line under current user cursor: " << buffer.line(mUserCursor.y()) << "\n" >> 0;
-        }
+        TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "\nselectSection(" << from << "," << to << "): line under current user cursor: " << buffer.line(mUserCursor.y()) << "\n" >> 0;
     }
     if (from < 0) {
         return false;
@@ -2218,7 +2245,7 @@ void TConsole::createMapper(int x, int y, int width, int height)
 
         mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
 
-        TEvent mapOpenEvent;
+        TEvent mapOpenEvent {};
         mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
         mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(mapOpenEvent);

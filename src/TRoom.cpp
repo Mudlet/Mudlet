@@ -629,7 +629,7 @@ void TRoom::setSpecialExit(int to, const QString& cmd)
     // Have definitely removed the existing case of this command
     // Now add it to map if wanted
 
-    if (to > 1) {
+    if (to > 0) {
         if (_prefix.isEmpty()) {
             _prefix = '0';
         }
@@ -844,7 +844,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             QMap<QString, QList<int>> oldLinesColorData;
             ifs >> oldLinesColorData;
             QMapIterator<QString, QList<int>> itCustomLineColor(oldLinesColorData);
-            while (itCustomLine.hasNext()) {
+            while (itCustomLineColor.hasNext()) {
                 itCustomLineColor.next();
                 QString direction(itCustomLineColor.key());
                 if (direction == QLatin1String("N") || direction == QLatin1String("E") || direction == QLatin1String("S") || direction == QLatin1String("W") || direction == QLatin1String("UP")

@@ -2,8 +2,8 @@
 
 set -e
 
-# we deploy only qmake and gcc combination for linux
-if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "gcc" ]; then
+# we deploy only certain builds
+if [ "${DEPLOY}" = "deploy" ]; then
 
   if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
     if $(git diff --name-only | grep -q "mudlet.ts"); then
@@ -51,7 +51,7 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "gcc" ]; then
     tar -cvf "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.AppImage"
 
     DEPLOY_URL=$(wget --method PUT --body-file="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" \
-                   "https://transfer.sh/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" -O - -q)
+                   "https://make.mudlet.org/snapshots/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" -O - -q)
   else
 
     # add ssh-key to ssh-agent for deployment

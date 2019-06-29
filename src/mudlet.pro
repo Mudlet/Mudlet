@@ -147,7 +147,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.18.0
+VERSION = 3.21.0
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -259,7 +259,7 @@ unix:!macx {
 # Some OS platforms have a hyphen (I think Cygwin does as well):
             -llua-5.1\
 # FreeFSB appends the version number to hunspell:
-            -lhunspell-1.6
+            -lhunspell-1.7
 # FreeFSB (at least) supports multiple Lua versions (and 5.1 is not the default anymore):
         INCLUDEPATH += \
             /usr/local/include/lua51
@@ -290,7 +290,6 @@ unix:!macx {
         -lz \                   # for ctelnet.cpp
         -lyajl \
         -lopengl32 \
-        -lglut \
         -lglu32 \
         -lpugixml \
         -lWs2_32 \
@@ -316,10 +315,12 @@ unix:!macx {
         LUA.path = $${LUA_DEFAULT_DIR}
         LUA_GEYSER.path = $${LUA.path}/geyser
         LUA_LCF.path = $${LUA.path}/lcf
+        LUA_TESTS.path = $${LUA.path}/tests
 # and say what will happen:
         message("Lua files will be installed to "$${LUA.path}"...")
         message("Geyser lua files will be installed to "$${LUA_GEYSER.path}"...")
         message("Lua Code Formatter lua files will be installed to "$${LUA_LCF.path}"...")
+        message("Test lua files will be installed to "$${LUA_TESTS.path}"...")
     }
 }
 
@@ -1178,6 +1179,14 @@ LUA_LCF_L3_WORKSHOP_TABLE_ORDERED__PASS.files = $${PWD}/../3rdparty/lcf/workshop
 LUA_LCF_L3_WORKSHOP_TABLE_ORDERED__PASS.path = $${LUA_LCF_L1_WORKSHOP.path}/table/ordered_pass
 LUA_LCF.depends = mudlet
 
+# Test lua files:
+LUA_TESTS.files = \
+    $${PWD}/mudlet-lua/tests/DB_spec.lua \
+    $${PWD}/mudlet-lua/tests/GUIUtils_spec.lua \
+    $${PWD}/mudlet-lua/tests/MudletBusted_spec.lua \
+    $${PWD}/mudlet-lua/tests/Other_spec.lua
+LUA_TESTS.depends = mudlet
+
 
 macx {
     # Copy mudlet-lua into the .app bundle
@@ -1269,6 +1278,7 @@ win32 {
 OTHER_FILES += \
     ${LUA.files} \
     ${LUA_GEYSER.files} \
+    ${LUA_TESTS.files} \
     ${DISTFILES} \
     ../README \
     ../COMPILE \
@@ -1340,7 +1350,8 @@ unix:!macx {
         LUA_LCF_L2_WORKSHOP_STRUC \
         LUA_LCF_L2_WORKSHOP_SYSTEM \
         LUA_LCF_L2_WORKSHOP_TABLE \
-        LUA_LCF_L3_WORKSHOP_TABLE_ORDERED__PASS
+        LUA_LCF_L3_WORKSHOP_TABLE_ORDERED__PASS \
+        LUA_TESTS
     }
 # Unfortunately, because (it seems) there are some directories in the above
 # that do not, themselves contain any actual files and only sub-directories

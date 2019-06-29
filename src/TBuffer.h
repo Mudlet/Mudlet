@@ -122,6 +122,14 @@ struct TMxpElement
     QString hint;
 };
 
+enum TMXPMode
+{
+    MXP_MODE_OPEN,
+    MXP_MODE_SECURE,
+    MXP_MODE_LOCKED,
+    MXP_MODE_TEMP_SECURE
+};
+
 class TBuffer
 {
     // need to use tr() on encoding names in csmEncodingTable
@@ -232,6 +240,8 @@ public:
 
     // State of MXP systen:
     bool mMXP;
+    TMXPMode mMXP_MODE;
+    TMXPMode mMXP_DEFAULT;
 
     bool mAssemblingToken;
     std::string currentToken;
@@ -247,7 +257,7 @@ public:
     char mOpenMainQuote;
     bool mMXP_SEND_NO_REF_MODE;
     std::string mAssembleRef;
-    bool mEchoText;
+    bool mEchoingText;
 
 
 private:
@@ -263,6 +273,8 @@ private:
     void decodeSGR48(const QStringList&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
     void resetColors();
+
+    static const int scmMaxLinks = 2000;
 
     // First stage in decoding SGR/OCS sequences - set true when we see the
     // ASCII ESC character:
