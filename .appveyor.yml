@@ -27,9 +27,9 @@ on_failure:
 - cd C:\src
 - bash -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
 
-artifacts:
-- path: src\release
-  name: mudlet
+after_build:
+- 7z a Mudlet-%VERSION%-%MUDLET_VERSION_BUILD%.zip src\release
+- tree /F .
 
 notifications:
 - provider: Webhook
