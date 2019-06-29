@@ -706,6 +706,8 @@ TBuffer::TBuffer(Host* pH)
 , mWrapIndent(0)
 , mCursorY(0)
 , mMXP(false)
+, mMXP_MODE(MXP_MODE_OPEN)
+, mMXP_DEFAULT(MXP_MODE_OPEN)
 , mAssemblingToken(false)
 , openT(0)
 , closeT(0)
@@ -714,6 +716,7 @@ TBuffer::TBuffer(Host* pH)
 , mParsingVar(false)
 , mOpenMainQuote()
 , mMXP_SEND_NO_REF_MODE(false)
+, mEchoingText(false)
 , mGotESC(false)
 , mGotCSI(false)
 , mGotOSC(false)
@@ -763,11 +766,13 @@ TBuffer::TBuffer(Host* pH)
     _aURL.hint = "";
     mMXP_Elements["A"] = _aURL;
 
+#ifdef QT_DEBUG
     // Validate the encoding tables in case there has been an edit which breaks
     // things:
     for (auto table : csmEncodingTable) {
         Q_ASSERT_X(table.second.size() == 128, "TBuffer", "Mis-sized encoding look-up table.");
     }
+#endif
 }
 
 void TBuffer::setBufferSize(int s, int batch)
@@ -838,7 +843,7 @@ int TBuffer::getLastLineNumber()
 
 void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, TChar format)
 {
-    if (++mLinkID > 1000) {
+    if (++mLinkID > scmMaxLinks) {
         mLinkID = 1;
     }
     mLinkStore[mLinkID] = command;
@@ -1118,46 +1123,45 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         if (isOk) {
                             // we really do not handle these well...
                             // MXP line modes - comments are from http://www.zuggsoft.com/zmud/mxp.htm#MXP%20Line%20Tags
+			    mMXP = true; // some servers don't negotiate, they assume!
 
                             switch (modeCode) {
-                            case 7: // lock locked mode (MXP 0.4 or later) - set locked mode.  Mode remains in effect until changed.  Locked mode becomes the new default mode.
-                                [[clang::fallthrough]];
-                            case 2: // locked line (until next newline) no MXP or HTML commands are allowed in the line.  The line is not parsed for any tags at all.  This is useful for "verbatim" text output from the MUD.  When a newline is received from the MUD, the mode reverts back to the Default mode.
-                                mMXP = false;
-                                break;
-
-                            case 6: // lock secure mode (MXP 0.4 or later) - set secure mode.  Mode remains in effect until changed.  Secure mode becomes the new default mode.
-                                [[clang::fallthrough]];
+                            case 0: // open line - only MXP commands in the "open" category are allowed.  When a newline is received from the MUD, the mode reverts back to the Default mode.  OPEN MODE starts as the Default mode until changes with one of the "lock mode" tags listed below.
+				mMXP_MODE = MXP_MODE_OPEN;
+				break;
                             case 1: // secure line (until next newline) all tags and commands in MXP are allowed within the line.  When a newline is received from the MUD, the mode reverts back to the Default mode.
-                                [[clang::fallthrough]];
-                            case 4: // temp secure mode (MXP 0.4 or later) - set secure mode for the next tag only.  Must be immediately followed by a < character to start a tag.  Remember to set secure mode when closing the tag also.
-                                mMXP = true;
+				mMXP_MODE = MXP_MODE_SECURE;
+				break;
+                            case 2: // locked line (until next newline) no MXP or HTML commands are allowed in the line.  The line is not parsed for any tags at all.  This is useful for "verbatim" text output from the MUD.  When a newline is received from the MUD, the mode reverts back to the Default mode.
+				mMXP_MODE = MXP_MODE_LOCKED;
                                 break;
-
                             case 3: //  reset (MXP 0.4 or later) - close all open tags.  Set mode to Open.  Set text color and properties to default.
                                 closeT = 0;
                                 openT = 0;
-                                mAssemblingToken = false;
+				mAssemblingToken = false;
+				mMXP_MODE = mMXP_DEFAULT;
                                 currentToken.clear();
                                 mParsingVar = false;
                                 break;
-
+                            case 4: // temp secure mode (MXP 0.4 or later) - set secure mode for the next tag only.  Must be immediately followed by a < character to start a tag.  Remember to set secure mode when closing the tag also.
+				mMXP_MODE = MXP_MODE_TEMP_SECURE;
+                                break;
                             case 5: // lock open mode (MXP 0.4 or later) - set open mode.  Mode remains in effect until changed.  OPEN mode becomes the new default mode.
-                                [[clang::fallthrough]];
-                            case 0: // open line - only MXP commands in the "open" category are allowed.  When a newline is received from the MUD, the mode reverts back to the Default mode.  OPEN MODE starts as the Default mode until changes with one of the "lock mode" tags listed below.
-                                [[clang::fallthrough]];
+				mMXP_DEFAULT = mMXP_MODE = MXP_MODE_OPEN;
+				break;
+                            case 6: // lock secure mode (MXP 0.4 or later) - set secure mode.  Mode remains in effect until changed.  Secure mode becomes the new default mode.
+				mMXP_DEFAULT = mMXP_MODE = MXP_MODE_SECURE;
+				break;
+                            case 7: // lock locked mode (MXP 0.4 or later) - set locked mode.  Mode remains in effect until changed.  Locked mode becomes the new default mode.
+				mMXP_DEFAULT = mMXP_MODE = MXP_MODE_LOCKED;
+				break;
                             default:
-                                 if (modeCode <= 0 | modeCode == 5 | modeCode> 7) {
-                                   // 0 and 5 are not even handled in current code
-                                   qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
-                                 }
+			      qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
                             }
-
                         } else {
                             // isOk is false here as toInt(...) failed
                             qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Non-numeric MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
                         }
-
                     }
                     // end of if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF)
                     // We have manually disabled MXP negotiation
@@ -1221,7 +1225,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
         // We are outside of a CSI or OSC sequence if we get to here:
 
-        if (mMXP && mpHost->mServerMXPenabled) {
+        if (mMXP && mpHost->mServerMXPenabled && (mMXP_MODE != MXP_MODE_LOCKED)) {
 
             // ignore < and > inside of parameter strings
             if (openT == 1) {
@@ -1265,7 +1269,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
                 if ((openT > 0) && (closeT == openT)) {
                     mAssemblingToken = false;
-                    std::string::size_type _pfs = currentToken.find_first_of(' ');
+		    // If we were in temp secure mode, then we switch back to default after the next tag
+                    if (mMXP_MODE == MXP_MODE_TEMP_SECURE) {
+                       mMXP_MODE = mMXP_DEFAULT;
+                    }
+		    std::string::size_type _pfs = currentToken.find_first_of(' ');
                     QString _tn;
                     if (_pfs == std::string::npos) {
                         _tn = currentToken.c_str();
@@ -1282,31 +1290,24 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         mpHost->mTelnet.sendData(payload);
                     }
                     if (_tn == "BR") {
-                        /*
-                         * FIXME: The Zuggsoft MXP specification states:
-                         * "<BR> = Line break.  Forces a line break inside or
-                         * outside of a paragraph.  Note that <BR> is NOT parsed
-                         * as a newline from the MUD as far as mode changes are
-                         * concerned."
-                         * This does not appear to be how it is done here...!
-                         */
-                        ch = '\n';
+		        // a <BR> is a newline, but doesn't reset the MXP mode
+		        ch = '\n';
                         openT = 0;
                         closeT = 0;
                         currentToken.clear();
-                        goto COMMIT_LINE;
+                        goto COMMIT_LINE; // jump ahead of the part that resets MXP mode on newline
                     }
                     if (_tn.startsWith("!EL")) {
                         QString _tp = currentToken.substr(currentToken.find_first_of(' ')).c_str();
                         _tn = _tp.section(' ', 1, 1).toUpper();
                         _tp = _tp.section(' ', 2).toUpper();
-                        if ((_tp.indexOf("SEND") != -1)) {
+                        if ((_tp.indexOf("<SEND") != -1)) {
                             QString _t2 = _tp;
                             int pRef = _t2.indexOf("HREF=");
                             bool _got_ref = false;
                             // wenn kein href angegeben ist, dann gilt das 1. parameter als href
                             if (pRef == -1) {
-                                pRef = _t2.indexOf("SEND ");
+                                pRef = _t2.indexOf("<SEND ") + 1;
                             } else {
                                 _got_ref = true;
                             }
@@ -1497,7 +1498,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             mMXP_SEND_NO_REF_MODE = true;
                         }
                         mLinkID++;
-                        if (mLinkID > 1000) {
+                        if (mLinkID > scmMaxLinks) {
                             mLinkID = 1;
                         }
                         QStringList _tl = _t2.split('|');
@@ -1606,7 +1607,12 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             mAssembleRef += ch;
         }
 
-    COMMIT_LINE:
+        if (mMXP && ((ch == '\n') || (ch == '\xff') || (ch == '\r'))) {
+            // after a newline (but not a <br>) return to default mode
+	    mMXP_MODE = mMXP_DEFAULT;
+        }
+
+COMMIT_LINE:
         if ((ch == '\n') || (ch == '\xff') || (ch == '\r')) {
             // DE: MUD Zeilen werden immer am Zeilenanfang geschrieben
             // EN: MUD lines are always written at the beginning of the line
@@ -3046,8 +3052,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         // The ternary operator is used here to set/reset only the TChar::Echo bit in the flags:
         TChar c(format.mFgColor,
                 format.mBgColor,
-                (mEchoText
-                 ? (TChar::Echo | (format.mFlags & TChar::TestMask))
+                (mEchoingText ? (TChar::Echo | (format.mFlags & TChar::TestMask))
                  : (format.mFlags & TChar::TestMask)));
         newLine.push_back(c);
         buffer.push_back(newLine);
@@ -3120,8 +3125,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         lineBuffer.back().append(text.at(i));
         TChar c(format.mFgColor,
                 format.mBgColor,
-                (mEchoText
-                 ? (TChar::Echo | (format.mFlags & TChar::TestMask))
+                (mEchoingText ? (TChar::Echo | (format.mFlags & TChar::TestMask))
                  : (format.mFlags & TChar::TestMask)),
                 linkID);
         buffer.back().push_back(c);
@@ -3143,7 +3147,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     int last = buffer.size() - 1;
     if (last < 0) {
         std::deque<TChar> newLine;
-        TChar c(fgColor, bgColor, (mEchoText ? (TChar::Echo | flags) : flags));
+        TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags));
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
@@ -3212,7 +3216,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             }
         }
         lineBuffer.back().append(text.at(i));
-        TChar c(fgColor, bgColor, (mEchoText ? (TChar::Echo | flags) : flags), linkID);
+        TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
         if (firstChar) {
             timeBuffer.back() = QTime::currentTime().toString(QStringLiteral("hh:mm:ss.zzz   "));
@@ -3235,7 +3239,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
     if (Q_UNLIKELY(lastLine < 0)) {
         // There are NO lines in the buffer - so initialize with a new empty line
         std::deque<TChar> newLine;
-        TChar c(fgColor, bgColor, (mEchoText ? (TChar::Echo | flags) : flags));
+        TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags));
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
@@ -3257,7 +3261,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
 
     for (int i = sub_start; i <= (sub_start + lineEndPos); i++) {
         lineBuffer.back().append(text.at(i));
-        TChar c(fgColor, bgColor, (mEchoText ? (TChar::Echo | flags) : flags), linkID);
+        TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
         if (firstChar) {
             timeBuffer.back() = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
@@ -3894,7 +3898,7 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
                     incLinkID = true;
                     mLinkID++;
                     linkID = mLinkID;
-                    if (mLinkID > 1000) {
+                    if (mLinkID > scmMaxLinks) {
                         mLinkID = 1;
                     }
                     mLinkStore[mLinkID] = linkFunction;

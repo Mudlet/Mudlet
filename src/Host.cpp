@@ -57,7 +57,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBorderRightWidth(0)
 , mBorderTopHeight(0)
 , mCommandLineFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
-, mCommandSeparator(QLatin1String(";"))
+, mCommandSeparator(QLatin1String(";;"))
 , mDisplayFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
 , mEnableGMCP(true)
 , mEnableMSDP(false)
@@ -368,14 +368,23 @@ void Host::reloadModule(const QString& reloadModuleName)
     }
 }
 
-void Host::resetProfile()
+void Host::resetProfile_phase1()
 {
-    getTimerUnit()->stopAllTriggers();
-    mudlet::self()->mTimerMap.clear();
+    mTriggerUnit.stopAllTriggers();
+    mTimerUnit.stopAllTriggers();
+    mKeyUnit.stopAllTriggers();
+    mResetProfile = true;
+
+    QTimer::singleShot(0, this, [this]() {
+        resetProfile_phase2();
+    });
+}
+
+void Host::resetProfile_phase2()
+{
     getTimerUnit()->removeAllTempTimers();
     getTriggerUnit()->removeAllTempTriggers();
     getKeyUnit()->removeAllTempKeys();
-
 
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
@@ -388,7 +397,6 @@ void Host::resetProfile()
     mLuaInterpreter.initIndenterGlobals();
     mBlockScriptCompile = false;
 
-
     getTriggerUnit()->compileAll();
     getAliasUnit()->compileAll();
     getActionUnit()->compileAll();
@@ -398,8 +406,10 @@ void Host::resetProfile()
     mResetProfile = false;
 
     mTimerUnit.reenableAllTriggers();
+    mTriggerUnit.reenableAllTriggers();
+    mKeyUnit.reenableAllTriggers();
 
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(event);
@@ -687,9 +697,6 @@ void Host::incomingStreamProcessor(const QString& data, int line)
     mTriggerUnit.processDataStream(data, line);
 
     mTimerUnit.doCleanup();
-    if (mResetProfile) {
-        resetProfile();
-    }
 }
 
 void Host::registerEventHandler(const QString& name, TScript* pScript)
@@ -747,7 +754,7 @@ void Host::raiseEvent(const TEvent& pE)
 
 void Host::postIrcMessage(const QString& a, const QString& b, const QString& c)
 {
-    TEvent event;
+    TEvent event {};
     event.mArgumentList << QLatin1String("sysIrcMessage");
     event.mArgumentList << a << b << c;
     event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
@@ -995,14 +1002,14 @@ bool Host::installPackage(const QString& fileName, int module)
     // raise 2 events - a generic one and a more detailed one to serve both
     // a simple need ("I just want the install event") and a more specific need
     // ("I specifically need to know when the module was synced")
-    TEvent genericInstallEvent;
+    TEvent genericInstallEvent {};
     genericInstallEvent.mArgumentList.append(QLatin1String("sysInstall"));
     genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     genericInstallEvent.mArgumentList.append(packageName);
     genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(genericInstallEvent);
 
-    TEvent detailedInstallEvent;
+    TEvent detailedInstallEvent {};
     switch (module) {
     case 0:
         detailedInstallEvent.mArgumentList.append(QLatin1String("sysInstallPackage"));
@@ -1075,14 +1082,14 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     // raise 2 events - a generic one and a more detailed one to serve both
     // a simple need ("I just want the uninstall event") and a more specific need
     // ("I specifically need to know when the module was uninstalled via Lua")
-    TEvent genericUninstallEvent;
+    TEvent genericUninstallEvent {};
     genericUninstallEvent.mArgumentList.append(QLatin1String("sysUninstall"));
     genericUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     genericUninstallEvent.mArgumentList.append(packageName);
     genericUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(genericUninstallEvent);
 
-    TEvent detailedUninstallEvent;
+    TEvent detailedUninstallEvent {};
     switch (module) {
     case 0:
         detailedUninstallEvent.mArgumentList.append(QLatin1String("sysUninstallPackage"));
@@ -1192,8 +1199,11 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
         return;
     } else {
         // error
-        std::string e = "no error message available from Lua";
-        e = lua_tostring(L, -1);
+        std::string e = lua_tostring(L, -1);
+        if (e.empty()) {
+            e = "no error message available from Lua";
+        }
+
         std::string reason;
         switch (error) {
         case 4:
@@ -1214,10 +1224,10 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
         }
 
         if (mudlet::debugMode) {
-            qDebug() << reason.c_str() << " in config.lua:" << e.c_str();
+            qDebug() << reason.c_str() << " in config.lua: " << e.c_str();
         }
         // should print error to main display
-        QString msg = QString("%1 in config.lua: %2\n").arg(reason.c_str(), e.c_str());
+        QString msg = QStringLiteral("%1 in config.lua: %2\n").arg(reason.c_str(), e.c_str());
         mpConsole->printSystemMessage(msg);
 
 
@@ -1728,21 +1738,31 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
 // however it should ensure that other classes get updated:
 void Host::setName(const QString& newName)
 {
-    int currentPlayerRoom;
+    if (mHostName == newName) {
+        return;
+    }
+
+    int currentPlayerRoom = 0;
     if (mpMap) {
         currentPlayerRoom = mpMap->mRoomIdHash.take(mHostName);
     }
 
     QMutexLocker locker(& mLock);
+    // Now we have the exclusive lock on this class's protected members
     mHostName = newName;
+    // We have made the change to the protected aspects of this class so can unlock the mutex locker and proceed:
     locker.unlock();
 
     mTelnet.mProfileName = newName;
     if (mpMap) {
         mpMap->mProfileName = newName;
-        mpMap->mRoomIdHash.insert(newName, currentPlayerRoom);
+        if (currentPlayerRoom) {
+            mpMap->mRoomIdHash.insert(newName, currentPlayerRoom);
+        }
     }
+
     if (mpConsole) {
         mpConsole->setProfileName(newName);
     }
+    mTimerUnit.changeHostName(newName);
 }

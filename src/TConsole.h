@@ -35,7 +35,6 @@
 #include <QWidget>
 #include "post_guard.h"
 
-#include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
 
 #include <list>
@@ -204,6 +203,13 @@ public:
     QSet<QString> getWordSet() const;
     void setProfileName(const QString&);
     bool isUsingSharedDictionary() const { return mUseSharedDictionary; }
+    // In the next pair of functions the first element in the return is an
+    // error code:
+    // 0 = Okay
+    // 1 = Window not found
+    // 2 = Selection not valid
+    QPair<quint8, TChar> getTextAttributes() const;
+    QPair<quint8, TChar> getTextAttributes(const QString&) const;
 
 
     QPointer<Host> mpHost;

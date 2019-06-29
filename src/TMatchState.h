@@ -39,6 +39,7 @@ public:
         mNextCondition = ms.mNextCondition;
         mDelta = ms.mDelta;
         mLineCount = ms.mLineCount;
+        mSpacer = ms.mSpacer;
     }
 
     int nextCondition() { return mNextCondition; }

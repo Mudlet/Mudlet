@@ -788,8 +788,8 @@ if rex then
   _Echos = {
     Patterns = {
       Hex = {
-        [[(\x5c?\|c[0-9a-fA-F]{6}?(?:,[0-9a-fA-F]{6})?)|(\|r)]],
-        rex.new [[\|c(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?]],
+        [[(\x5c?(?:#|\|c)[0-9a-fA-F]{6}?(?:,[0-9a-fA-F]{6})?)|(\|r|#r)]],
+        rex.new [[(?:#|\|c)(?:([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?(?:,([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2}))?]],
       },
       Decimal = {
         [[(<[0-9,:]+>)|(<r>)]],
@@ -1253,6 +1253,7 @@ local ansiPattern = rex.new("\\e\\[([0-9;]+?)m")
 -- italics and underline not currently supported since decho doesn't support them
 -- bold is emulated so it is supported, up to an extent
 function ansi2decho(text, ansi_default_color)
+  assert(type(text) == 'string', 'ansi2decho: bad argument #1 type (expected string, got '..type(text)..'!)')
   local coloursToUse = colours
   local lastColour = ansi_default_color
 
@@ -1515,4 +1516,17 @@ function creplace(window, text)
 	end
 	moveCursor(window, start, getLineNumber(window))
 	cinsertText(window, text)
+end
+
+function dreplace(window, text)
+	if not text then text, window = window, nil end
+	window = window or "main"
+	local str, start, stop = getSelection(window)
+	if window ~= "main" then
+		replace(window, "")
+	else
+		replace("")
+	end
+	moveCursor(window, start, getLineNumber(window))
+	dinsertText(window, text)
 end

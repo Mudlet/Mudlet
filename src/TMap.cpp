@@ -30,7 +30,6 @@
 #include "TRoomDB.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
-#include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -435,7 +434,7 @@ void TMap::audit()
     _time.start();
 
     { // Blocked - just to limit the scope of infoMsg...!
-        QString infoMsg = tr("[ INFO ]  - Auditing of a loaded/imported/downloaded map starting...");
+        QString infoMsg = tr("[ INFO ]  - Map audit starting...");
         postMessage(infoMsg);
     }
 
@@ -1067,7 +1066,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     ofs << envColors;
     ofs << mpRoomDB->getAreaNamesMap();
     ofs << customEnvColors;
-    ofs << mpRoomDB->hashTable;
+    ofs << mpRoomDB->hashToRoomID;
     if (mSaveVersion >= 17) {
         if (mSaveVersion < 19) {
             // Save the data in the map user data for older versions
@@ -1122,23 +1121,23 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pA->min_z;
         ofs << pA->span;
         if (mSaveVersion >= 17) {
-            ofs << pA->xmaxEbene;
-            ofs << pA->ymaxEbene;
-            ofs << pA->xminEbene;
-            ofs << pA->yminEbene;
-        } else { // Recreate the pointless z{min|max}Ebene items
-            QMap<int, int> dummyMinMaxEbene;
+            ofs << pA->xmaxForZ;
+            ofs << pA->ymaxForZ;
+            ofs << pA->xminForZ;
+            ofs << pA->yminForZ;
+        } else { // Recreate the pointless z{min|max}ForZ items
+            QMap<int, int> dummyMinMaxForZ;
             QListIterator<int> itZ(pA->zLevels);
             while (itZ.hasNext()) {
                 int dummyEbenValue = itZ.next();
-                dummyMinMaxEbene.insert(dummyEbenValue, dummyEbenValue);
+                dummyMinMaxForZ.insert(dummyEbenValue, dummyEbenValue);
             }
-            ofs << pA->xmaxEbene;
-            ofs << pA->ymaxEbene;
-            ofs << dummyMinMaxEbene;
-            ofs << pA->xminEbene;
-            ofs << pA->yminEbene;
-            ofs << dummyMinMaxEbene;
+            ofs << pA->xmaxForZ;
+            ofs << pA->ymaxForZ;
+            ofs << dummyMinMaxForZ;
+            ofs << pA->xminForZ;
+            ofs << pA->yminForZ;
+            ofs << dummyMinMaxForZ;
         }
         ofs << pA->pos;
         ofs << pA->isZone;
@@ -1172,7 +1171,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         QString message = tr("[ ALERT ] - Area User data has been lost in saved map file.  Re-save in a\n"
                              "format of at least 17 to preserve it before quitting!\n"
                              "Areas id affected: %1.")
-                                  .arg(areaIds.join(tr(", "))); // Translatable in case list separators are locale dependant!
+                                  .arg(areaIds.join(QLatin1String(", ")));
         mpHost->mTelnet.postMessage(message);
     }
     // End of TODO
@@ -1316,7 +1315,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
 
             QMap<QString, QList<int>> oldLinesColorData;
             QMapIterator<QString, QColor> itCustomLineColor(pR->customLinesColor);
-            while (itCustomLine.hasNext()) {
+            while (itCustomLineColor.hasNext()) {
                 itCustomLineColor.next();
                 QString direction(itCustomLineColor.key());
                 QList<int> colorComponents;
@@ -1427,7 +1426,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             file.close();
             return false;
         } else if (mVersion < 4) {
-            QString alertMsg = tr("[ ALERT ] - Map file is really old, it's file format (%1) is so ancient that\n"
+            QString alertMsg = tr("[ ALERT ] - Map file is really old, its file format (%1) is so ancient that\n"
                                   "this version of Mudlet may not gain enough information from\n"
                                   "it but it will try!  The file is: \"%2\".")
                                        .arg(mVersion)
@@ -1459,7 +1458,11 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             ifs >> customEnvColors;
         }
         if (mVersion >= 7) {
-            ifs >> mpRoomDB->hashTable;
+            ifs >> mpRoomDB->hashToRoomID;
+            QMap<QString, int>::const_iterator i;
+            for (i = mpRoomDB->hashToRoomID.constBegin(); i != mpRoomDB->hashToRoomID.constEnd(); ++i) {
+                mpRoomDB->roomIDToHash.insert(i.value(), i.key());
+            }
         }
 
         if (mVersion >= 17) {
@@ -1525,18 +1528,18 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 ifs >> pA->min_z;
                 ifs >> pA->span;
                 if (mVersion >= 17) {
-                    ifs >> pA->xmaxEbene;
-                    ifs >> pA->ymaxEbene;
-                    ifs >> pA->xminEbene;
-                    ifs >> pA->yminEbene;
+                    ifs >> pA->xmaxForZ;
+                    ifs >> pA->ymaxForZ;
+                    ifs >> pA->xminForZ;
+                    ifs >> pA->yminForZ;
                 } else {
-                    QMap<int, int> dummyMinMaxEbene;
-                    ifs >> pA->xmaxEbene;
-                    ifs >> pA->ymaxEbene;
-                    ifs >> dummyMinMaxEbene;
-                    ifs >> pA->xminEbene;
-                    ifs >> pA->yminEbene;
-                    ifs >> dummyMinMaxEbene;
+                    QMap<int, int> dummyMinMaxForZ;
+                    ifs >> pA->xmaxForZ;
+                    ifs >> pA->ymaxForZ;
+                    ifs >> dummyMinMaxForZ;
+                    ifs >> pA->xminForZ;
+                    ifs >> pA->yminForZ;
+                    ifs >> dummyMinMaxForZ;
                 }
                 ifs >> pA->pos;
                 ifs >> pA->isZone;
@@ -1759,9 +1762,9 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
 
     if (otherProfileVersion >= 7) {
-        // hashTable
-        QHash<QString, int> _dummyQHashQStringInt;
-        ifs >> _dummyQHashQStringInt;
+        // hashToRoomID
+        QMap<QString, int> _dummyQMapQStringInt;
+        ifs >> _dummyQMapQStringInt;
     }
 
     if (otherProfileVersion >= 17) {
@@ -1793,18 +1796,18 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             ifs >> pA.min_z;
             ifs >> pA.span;
             if (otherProfileVersion >= 17) {
-                ifs >> pA.xmaxEbene;
-                ifs >> pA.ymaxEbene;
-                ifs >> pA.xminEbene;
-                ifs >> pA.yminEbene;
+                ifs >> pA.xmaxForZ;
+                ifs >> pA.ymaxForZ;
+                ifs >> pA.xminForZ;
+                ifs >> pA.yminForZ;
             } else {
-                QMap<int, int> dummyMinMaxEbene;
-                ifs >> pA.xmaxEbene;
-                ifs >> pA.ymaxEbene;
-                ifs >> dummyMinMaxEbene;
-                ifs >> pA.xminEbene;
-                ifs >> pA.yminEbene;
-                ifs >> dummyMinMaxEbene;
+                QMap<int, int> dummyMinMaxForZ;
+                ifs >> pA.xmaxForZ;
+                ifs >> pA.ymaxForZ;
+                ifs >> dummyMinMaxForZ;
+                ifs >> pA.xminForZ;
+                ifs >> pA.yminForZ;
+                ifs >> dummyMinMaxForZ;
             }
             ifs >> pA.pos;
             ifs >> pA.isZone;
@@ -2006,8 +2009,9 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
 int TMap::createMapLabelID(int area)
 {
     if (mapLabels.contains(area)) {
-        QList<int> idList = mapLabels[area].keys();
+        const QList<int> idList = mapLabels.value(area).keys();
         int id = 0;
+        // protect against integer overflow
         while (id >= 0) {
             if (!idList.contains(id)) {
                 return id;
@@ -2254,8 +2258,10 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     mpNetworkReply = mpNetworkAccessManager->get(QNetworkRequest(QUrl(url)));
     // Using zero for both min and max values should cause the bar to oscillate
     // until the first update
-    mpProgressDialog = new QProgressDialog(tr("Downloading XML map file for use in %1...").arg(mProfileName), tr("Abort"), 0, 0);
-    mpProgressDialog->setWindowTitle(tr("Map download"));
+    mpProgressDialog = new QProgressDialog(tr("Downloading XML map file for use in %1...",
+                                              "%1 is the name of the current Mudlet profile")
+                                              .arg(mProfileName), tr("Abort"), 0, 0);
+    mpProgressDialog->setWindowTitle(tr("Map download", "This is a title of a progress window."));
     mpProgressDialog->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_map_download.png")));
     mpProgressDialog->setMinimumWidth(300);
     mpProgressDialog->setAutoClose(false);
@@ -2315,7 +2321,7 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
         // until now:
         isLocalImport = true;
         mpProgressDialog = new QProgressDialog(tr("Importing XML map file for use in %1...").arg(mProfileName), QString(), 0, 0);
-        mpProgressDialog->setWindowTitle(tr("Map import"));
+        mpProgressDialog->setWindowTitle(tr("Map import", "This is a title of a progress dialog."));
         mpProgressDialog->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_map_download.png")));
         mpProgressDialog->setMinimumWidth(300);
         mpProgressDialog->setAutoClose(false);
@@ -2450,7 +2456,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
                     // direct importation of a local copy of a map file.
 
                     if (readXmlMapFile(file)) {
-                        TEvent mapDownloadEvent;
+                        TEvent mapDownloadEvent {};
                         mapDownloadEvent.mArgumentList.append(QLatin1String("sysMapDownloadEvent"));
                         mapDownloadEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
                         pHost->raiseEvent(mapDownloadEvent);
