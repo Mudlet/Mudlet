@@ -41,7 +41,6 @@
 #include "pre_guard.h"
 #include <QProgressDialog>
 #include <QTextCodec>
-#include <QTextEncoder>
 #include <QSslError>
 #include "post_guard.h"
 

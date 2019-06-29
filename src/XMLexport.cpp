@@ -39,7 +39,6 @@
 #include "pre_guard.h"
 #include <QtConcurrent>
 #include <QFile>
-#include <fstream>
 #include <sstream>
 #include "post_guard.h"
 

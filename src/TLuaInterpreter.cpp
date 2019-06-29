@@ -28,7 +28,6 @@
 
 
 #include "Host.h"
-#include "HostManager.h"
 #include "TAlias.h"
 #include "TArea.h"
 #include "TCommandLine.h"
@@ -15325,7 +15324,7 @@ int TLuaInterpreter::startPermAlias(const QString& name, const QString& parent, 
     if (parent.isEmpty()) {
         pT = new TAlias("a", mpHost);
     } else {
-        TAlias* pP = mpHost->getAliasUnit()->findAlias(parent);
+        TAlias* pP = mpHost->getAliasUnit()->findFirstAlias(parent);
         if (!pP) {
             return -1; //parent not found
         }
@@ -15367,7 +15366,7 @@ int TLuaInterpreter::startPermKey(QString& name, QString& parent, const int& key
     if (parent.isEmpty()) {
         pT = new TKey("a", mpHost); // The use of "a" seems a bit arbitary...!
     } else {
-        TKey* pP = mpHost->getKeyUnit()->findKey(parent);
+        TKey* pP = mpHost->getKeyUnit()->findFirstKey(parent);
         if (!pP) {
             return -1; //parent not found
         }

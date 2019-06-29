@@ -27,7 +27,6 @@
 #include <QApplication>
 #include <QHash>
 #include <QMap>
-#include <QMultiHash>
 #include <QString>
 #include "post_guard.h"
 

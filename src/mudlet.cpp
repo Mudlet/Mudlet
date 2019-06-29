@@ -1949,7 +1949,7 @@ bool mudlet::createMiniConsole(Host* pHost, const QString& name, int x, int y, i
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (!pC) {
-        TConsole* pC = pHost->mpConsole->createMiniConsole(name, x, y, width, height);
+        pC = pHost->mpConsole->createMiniConsole(name, x, y, width, height);
         if (pC) {
             pC->setMiniConsoleFontSize(12);
             return true;

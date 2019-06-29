@@ -110,13 +110,11 @@ void KeyUnit::reenableAllTriggers()
     }
 }
 
-// This currently only finds the FIRST key-binding with the given name:
-TKey* KeyUnit::findKey(QString& name)
+TKey* KeyUnit::findFirstKey(QString& name)
 {
     QMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
-        TKey* pT = it.value();
-        return pT;
+    if (it != mLookupTable.cend() && it.key() == name) {
+        return it.value();
     }
     return nullptr;
 }

@@ -46,12 +46,9 @@
 #include "pre_guard.h"
 #include <QDialog>
 #include <QFlag>
-#include <QFile>
-#include <QListWidget>
 #include <QListWidgetItem>
 #include <QScrollArea>
 #include <QTreeWidget>
-#include <QTreeWidgetItem>
 #include "post_guard.h"
 
 // Edbee editor includes

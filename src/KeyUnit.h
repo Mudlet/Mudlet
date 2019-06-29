@@ -55,7 +55,7 @@ public:
     TKey* getKey(int id);
     void removeAllTempKeys();
     void compileAll();
-    TKey* findKey(QString & name);
+    TKey* findFirstKey(QString & name);
     bool enableKey(const QString& name);
     bool disableKey(const QString& name);
     QPair<bool, QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers> > getKeyModifiers(const QString&) const;
