@@ -68,22 +68,22 @@
 #endif
 
 const QMap<Qt::MouseButton, QString> TLuaInterpreter::mMouseButtons = {
-        {Qt::NoButton, QStringLiteral("NoButton")},           {Qt::LeftButton, QStringLiteral("LeftButton")},       {Qt::RightButton, QStringLiteral("RightButton")},
-        {Qt::MidButton, QStringLiteral("MidButton")},         {Qt::BackButton, QStringLiteral("BackButton")},       {Qt::ForwardButton, QStringLiteral("ForwardButton")},
-        {Qt::TaskButton, QStringLiteral("TaskButton")},       {Qt::ExtraButton4, QStringLiteral("ExtraButton4")},   {Qt::ExtraButton5, QStringLiteral("ExtraButton5")},
-        {Qt::ExtraButton6, QStringLiteral("ExtraButton6")},   {Qt::ExtraButton7, QStringLiteral("ExtraButton7")},   {Qt::ExtraButton8, QStringLiteral("ExtraButton8")},
-        {Qt::ExtraButton9, QStringLiteral("ExtraButton9")},   {Qt::ExtraButton10, QStringLiteral("ExtraButton10")}, {Qt::ExtraButton11, QStringLiteral("ExtraButton11")},
-        {Qt::ExtraButton12, QStringLiteral("ExtraButton12")}, {Qt::ExtraButton13, QStringLiteral("ExtraButton13")}, {Qt::ExtraButton14, QStringLiteral("ExtraButton14")},
-        {Qt::ExtraButton15, QStringLiteral("ExtraButton15")}, {Qt::ExtraButton16, QStringLiteral("ExtraButton16")}, {Qt::ExtraButton17, QStringLiteral("ExtraButton17")},
-        {Qt::ExtraButton18, QStringLiteral("ExtraButton18")}, {Qt::ExtraButton19, QStringLiteral("ExtraButton19")}, {Qt::ExtraButton20, QStringLiteral("ExtraButton20")},
-        {Qt::ExtraButton21, QStringLiteral("ExtraButton21")}, {Qt::ExtraButton22, QStringLiteral("ExtraButton22")}, {Qt::ExtraButton23, QStringLiteral("ExtraButton23")},
-        {Qt::ExtraButton24, QStringLiteral("ExtraButton24")},
+    {Qt::NoButton, QStringLiteral("NoButton")},           {Qt::LeftButton, QStringLiteral("LeftButton")},       {Qt::RightButton, QStringLiteral("RightButton")},
+    {Qt::MidButton, QStringLiteral("MidButton")},         {Qt::BackButton, QStringLiteral("BackButton")},       {Qt::ForwardButton, QStringLiteral("ForwardButton")},
+    {Qt::TaskButton, QStringLiteral("TaskButton")},       {Qt::ExtraButton4, QStringLiteral("ExtraButton4")},   {Qt::ExtraButton5, QStringLiteral("ExtraButton5")},
+    {Qt::ExtraButton6, QStringLiteral("ExtraButton6")},   {Qt::ExtraButton7, QStringLiteral("ExtraButton7")},   {Qt::ExtraButton8, QStringLiteral("ExtraButton8")},
+    {Qt::ExtraButton9, QStringLiteral("ExtraButton9")},   {Qt::ExtraButton10, QStringLiteral("ExtraButton10")}, {Qt::ExtraButton11, QStringLiteral("ExtraButton11")},
+    {Qt::ExtraButton12, QStringLiteral("ExtraButton12")}, {Qt::ExtraButton13, QStringLiteral("ExtraButton13")}, {Qt::ExtraButton14, QStringLiteral("ExtraButton14")},
+    {Qt::ExtraButton15, QStringLiteral("ExtraButton15")}, {Qt::ExtraButton16, QStringLiteral("ExtraButton16")}, {Qt::ExtraButton17, QStringLiteral("ExtraButton17")},
+    {Qt::ExtraButton18, QStringLiteral("ExtraButton18")}, {Qt::ExtraButton19, QStringLiteral("ExtraButton19")}, {Qt::ExtraButton20, QStringLiteral("ExtraButton20")},
+    {Qt::ExtraButton21, QStringLiteral("ExtraButton21")}, {Qt::ExtraButton22, QStringLiteral("ExtraButton22")}, {Qt::ExtraButton23, QStringLiteral("ExtraButton23")},
+    {Qt::ExtraButton24, QStringLiteral("ExtraButton24")},
 
 };
 
 
 extern "C" {
-int luaopen_yajl(lua_State*);
+    int luaopen_yajl(lua_State*);
 }
 
 using namespace std;
@@ -459,7 +459,7 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
     // values in the Lua registry
     for (int i = 0; i < event.mArgumentList.size(); i++) {
         if (event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE || event.mArgumentTypeList.at(i) == ARGUMENT_TYPE_FUNCTION)
-             host.getLuaInterpreter()->freeLuaRegistryIndex(event.mArgumentList.at(i).toInt());
+            host.getLuaInterpreter()->freeLuaRegistryIndex(event.mArgumentList.at(i).toInt());
     }
 
     return 0;
@@ -1089,8 +1089,8 @@ int TLuaInterpreter::loadRawFile(lua_State* L)
     QString replayFileName;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "loadRawFile: bad argument #1 type (replay file name, {may include a relative to \n"
-                           "profile's \"logs\" sub-directory, or an absolute path}, as string expected, \n"
-                           "got %s!)",
+                        "profile's \"logs\" sub-directory, or an absolute path}, as string expected, \n"
+                        "got %s!)",
                         luaL_typename(L, 1));
         return lua_error(L);
     } else {
@@ -3860,7 +3860,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
 
     if (!lua_isnumber(L, ++s)) {
         lua_pushfstring(L, "setTextFormat: bad argument #%d type (blue foreground color component as number\n"
-                           "expected, got %s!)", s, luaL_typename(L, s));
+                        "expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     } else {
         colorComponents[5] = qRound(qBound(0.0, lua_tonumber(L, s), 255.0));
@@ -3943,11 +3943,11 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
     }
 
     TChar::AttributeFlags flags = (bold ? TChar::Bold : TChar::None)
-            | (italics ? TChar::Italic : TChar::None)
-            | (overline ? TChar::Overline : TChar::None)
-            | (reverse ? TChar::Reverse : TChar::None)
-            | (strikeout ? TChar::StrikeOut : TChar::None)
-            | (underline ? TChar::Underline : TChar::None);
+                                  | (italics ? TChar::Italic : TChar::None)
+                                  | (overline ? TChar::Overline : TChar::None)
+                                  | (reverse ? TChar::Reverse : TChar::None)
+                                  | (strikeout ? TChar::StrikeOut : TChar::None)
+                                  | (underline ? TChar::Underline : TChar::None);
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         TConsole* pC = host.mpConsole;
@@ -3962,9 +3962,9 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, mudlet::self()->setTextFormat(&host, windowName,
-                                                         QColor(colorComponents.at(3), colorComponents.at(4), colorComponents.at(5)),
-                                                         QColor(colorComponents.at(0), colorComponents.at(1), colorComponents.at(2)),
-                                                         flags));
+                        QColor(colorComponents.at(3), colorComponents.at(4), colorComponents.at(5)),
+                        QColor(colorComponents.at(0), colorComponents.at(1), colorComponents.at(2)),
+                        flags));
     }
 
     return 1;
@@ -6318,7 +6318,7 @@ int TLuaInterpreter::tempBeginOfLineTrigger(lua_State* L)
     }
     QString pattern = QString::fromUtf8(lua_tostring(L, 1));
 
-        if (lua_isnumber(L, 3)) {
+    if (lua_isnumber(L, 3)) {
         expiryCount = lua_tonumber(L, 3);
 
         if (expiryCount < 1) {
@@ -6447,31 +6447,67 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
     int value = lua_tointeger(L, 1);
     // clang-format off
     switch (value) {
-    case 0:     foregroundColor = TTrigger::scmDefault;  break; // Default foreground colour
-    case 1:     foregroundColor =      8;   break; // light black (dark gray)
-    case 2:     foregroundColor =      0;   break; // black
-    case 3:     foregroundColor =      9;   break; // light red
-    case 4:     foregroundColor =      1;   break; // red
-    case 5:     foregroundColor =     10;   break; // light green
-    case 6:     foregroundColor =      2;   break; // green
-    case 7:     foregroundColor =     11;   break; // light yellow
-    case 8:     foregroundColor =      3;   break; // yellow
-    case 9:     foregroundColor =     12;   break; // light blue
-    case 10:    foregroundColor =      4;   break; // blue
-    case 11:    foregroundColor =     13;   break; // light magenta
-    case 12:    foregroundColor =      5;   break; // magenta
-    case 13:    foregroundColor =     14;   break; // light cyan
-    case 14:    foregroundColor =      6;   break; // cyan
-    case 15:    foregroundColor =     15;   break; // light white
-    case 16:    foregroundColor =      7;   break; // white (light gray)
+    case 0:
+        foregroundColor = TTrigger::scmDefault;
+        break; // Default foreground colour
+    case 1:
+        foregroundColor =      8;
+        break; // light black (dark gray)
+    case 2:
+        foregroundColor =      0;
+        break; // black
+    case 3:
+        foregroundColor =      9;
+        break; // light red
+    case 4:
+        foregroundColor =      1;
+        break; // red
+    case 5:
+        foregroundColor =     10;
+        break; // light green
+    case 6:
+        foregroundColor =      2;
+        break; // green
+    case 7:
+        foregroundColor =     11;
+        break; // light yellow
+    case 8:
+        foregroundColor =      3;
+        break; // yellow
+    case 9:
+        foregroundColor =     12;
+        break; // light blue
+    case 10:
+        foregroundColor =      4;
+        break; // blue
+    case 11:
+        foregroundColor =     13;
+        break; // light magenta
+    case 12:
+        foregroundColor =      5;
+        break; // magenta
+    case 13:
+        foregroundColor =     14;
+        break; // light cyan
+    case 14:
+        foregroundColor =      6;
+        break; // cyan
+    case 15:
+        foregroundColor =     15;
+        break; // light white
+    case 16:
+        foregroundColor =      7;
+        break; // white (light gray)
     // The default includes case -1:    foregroundColor = TTrigger::scmIgnored
     // which means only consider the background color now (and that cannot be
     // set to this value) - NOTE: TTrigger::scmIgnored has been set to BE -1
     // when it was added after Mudlet 3.7.1 but if that is subsequently changed
     // it will break the API for this lua function
     // other colours in ANSI 256 colours handled but not mentioned in Wiki
-    default:    foregroundColor =  value;   break;
-    // clang-format on
+    default:
+        foregroundColor =  value;
+        break;
+        // clang-format on
     }
 
     if (!lua_isnumber(L, 2)) {
@@ -6483,27 +6519,63 @@ int TLuaInterpreter::tempColorTrigger(lua_State* L)
     int backgroundColor = TTrigger::scmIgnored;
     // clang-format off
     switch (value) {
-    case 0:     backgroundColor = TTrigger::scmDefault;  break; // Default background colour
-    case 1:     backgroundColor =      8;   break; // light black (dark gray)
-    case 2:     backgroundColor =      0;   break; // black
-    case 3:     backgroundColor =      9;   break; // light red
-    case 4:     backgroundColor =      1;   break; // red
-    case 5:     backgroundColor =     10;   break; // light green
-    case 6:     backgroundColor =      2;   break; // green
-    case 7:     backgroundColor =     11;   break; // light yellow
-    case 8:     backgroundColor =      3;   break; // yellow
-    case 9:     backgroundColor =     12;   break; // light blue
-    case 10:    backgroundColor =      4;   break; // blue
-    case 11:    backgroundColor =     13;   break; // light magenta
-    case 12:    backgroundColor =      5;   break; // magenta
-    case 13:    backgroundColor =     14;   break; // light cyan
-    case 14:    backgroundColor =      6;   break; // cyan
-    case 15:    backgroundColor =     15;   break; // light white
-    case 16:    backgroundColor =      7;   break; // white (light gray)
+    case 0:
+        backgroundColor = TTrigger::scmDefault;
+        break; // Default background colour
+    case 1:
+        backgroundColor =      8;
+        break; // light black (dark gray)
+    case 2:
+        backgroundColor =      0;
+        break; // black
+    case 3:
+        backgroundColor =      9;
+        break; // light red
+    case 4:
+        backgroundColor =      1;
+        break; // red
+    case 5:
+        backgroundColor =     10;
+        break; // light green
+    case 6:
+        backgroundColor =      2;
+        break; // green
+    case 7:
+        backgroundColor =     11;
+        break; // light yellow
+    case 8:
+        backgroundColor =      3;
+        break; // yellow
+    case 9:
+        backgroundColor =     12;
+        break; // light blue
+    case 10:
+        backgroundColor =      4;
+        break; // blue
+    case 11:
+        backgroundColor =     13;
+        break; // light magenta
+    case 12:
+        backgroundColor =      5;
+        break; // magenta
+    case 13:
+        backgroundColor =     14;
+        break; // light cyan
+    case 14:
+        backgroundColor =      6;
+        break; // cyan
+    case 15:
+        backgroundColor =     15;
+        break; // light white
+    case 16:
+        backgroundColor =      7;
+        break; // white (light gray)
     // The default includes case -1:    backgroundColor = TTrigger::scmIgnored
     // but this cannot be used for the foreground case at the same time:
-    default:    backgroundColor =  value;   break;
-    // clang-format on
+    default:
+        backgroundColor =  value;
+        break;
+        // clang-format on
     }
 
     if (foregroundColor == TTrigger::scmIgnored && backgroundColor == TTrigger::scmIgnored) {
@@ -6592,7 +6664,7 @@ int TLuaInterpreter::tempAnsiColorTrigger(lua_State* L)
     if (lua_gettop(L) > 2 && !lua_isnumber(L, 2)) {
         lua_pushfstring(L, "tempAnsiColorTrigger: bad argument #3 type (background color as ANSI Color number {%d = ignore foreground color, %d = default colour, 0 to 255 ANSI colour} expected, got %s!)",
                         TTrigger::scmIgnored, TTrigger::scmDefault, luaL_typename(L, 3));
-                 return lua_error(L);
+        return lua_error(L);
     } else {
         int value = lua_tointeger(L, 2);
         if (!(value == TTrigger::scmIgnored || value == TTrigger::scmDefault || (value >= 0 && value <= 255))) {
@@ -7092,7 +7164,7 @@ int TLuaInterpreter::exists(lua_State* L)
     } else if (type == "script") {
         std::list<TScript*> scripts = host.getScriptUnit()->getScriptRootNodeList();
         for (auto script : scripts) {
-          cnt += (script->getName() == name);
+            cnt += (script->getName() == name);
         }
     }
     lua_pushnumber(L, cnt);
@@ -7335,7 +7407,7 @@ int TLuaInterpreter::permKey(lua_State* L)
         lua_pushfstring(L, "permKey: bad argument #2 type (key parent group as string expected, got %s!)", luaL_typename(L, argIndex));
         return lua_error(L);
     }
-        QString parentGroup = QString::fromUtf8(lua_tostring(L, argIndex));
+    QString parentGroup = QString::fromUtf8(lua_tostring(L, argIndex));
 
     Qt::KeyboardModifiers requiredKeyModifiers = Qt::NoModifier;
     if (lua_gettop(L) > 4) {
@@ -8631,19 +8703,19 @@ int TLuaInterpreter::setDoor(lua_State* L)
     } else {
         exitCmd = QString::fromUtf8(lua_tostring(L, 2));
         if (exitCmd.compare(QStringLiteral("n")) && exitCmd.compare(QStringLiteral("e")) && exitCmd.compare(QStringLiteral("s")) && exitCmd.compare(QStringLiteral("w"))
-            && exitCmd.compare(QStringLiteral("ne"))
-            && exitCmd.compare(QStringLiteral("se"))
-            && exitCmd.compare(QStringLiteral("sw"))
-            && exitCmd.compare(QStringLiteral("nw"))
-            && exitCmd.compare(QStringLiteral("up"))
-            && exitCmd.compare(QStringLiteral("down"))
-            && exitCmd.compare(QStringLiteral("in"))
-            && exitCmd.compare(QStringLiteral("out"))) {
+                && exitCmd.compare(QStringLiteral("ne"))
+                && exitCmd.compare(QStringLiteral("se"))
+                && exitCmd.compare(QStringLiteral("sw"))
+                && exitCmd.compare(QStringLiteral("nw"))
+                && exitCmd.compare(QStringLiteral("up"))
+                && exitCmd.compare(QStringLiteral("down"))
+                && exitCmd.compare(QStringLiteral("in"))
+                && exitCmd.compare(QStringLiteral("out"))) {
             // One of the above WILL BE ZERO if the exitCmd is ONE of the above QStringLiterals
             // So the above will be TRUE if NONE of above strings match - which
             // means we must treat the exitCmd as a SPECIAL exit
             if (!(pR->getOtherMap().values().contains(exitCmd) || pR->getOtherMap().values().contains(QStringLiteral("0%1").arg(exitCmd))
-                  || pR->getOtherMap().values().contains(QStringLiteral("1%1").arg(exitCmd)))) {
+                    || pR->getOtherMap().values().contains(QStringLiteral("1%1").arg(exitCmd)))) {
                 // And NOT a special one either
                 lua_pushnil(L);
                 lua_pushfstring(L,
@@ -8657,17 +8729,17 @@ int TLuaInterpreter::setDoor(lua_State* L)
         } else {
             // Is a normal exit so see if it is valid
             if (!(((!exitCmd.compare(QStringLiteral("n"))) && (pR->getExit(DIR_NORTH) > 0 || pR->exitStubs.contains(DIR_NORTH)))
-                  || ((!exitCmd.compare(QStringLiteral("e"))) && (pR->getExit(DIR_EAST) > 0 || pR->exitStubs.contains(DIR_EAST)))
-                  || ((!exitCmd.compare(QStringLiteral("s"))) && (pR->getExit(DIR_SOUTH) > 0 || pR->exitStubs.contains(DIR_SOUTH)))
-                  || ((!exitCmd.compare(QStringLiteral("w"))) && (pR->getExit(DIR_WEST) > 0 || pR->exitStubs.contains(DIR_WEST)))
-                  || ((!exitCmd.compare(QStringLiteral("ne"))) && (pR->getExit(DIR_NORTHEAST) > 0 || pR->exitStubs.contains(DIR_NORTHEAST)))
-                  || ((!exitCmd.compare(QStringLiteral("se"))) && (pR->getExit(DIR_SOUTHEAST) > 0 || pR->exitStubs.contains(DIR_SOUTHEAST)))
-                  || ((!exitCmd.compare(QStringLiteral("sw"))) && (pR->getExit(DIR_SOUTHWEST) > 0 || pR->exitStubs.contains(DIR_SOUTHWEST)))
-                  || ((!exitCmd.compare(QStringLiteral("nw"))) && (pR->getExit(DIR_NORTHWEST) > 0 || pR->exitStubs.contains(DIR_NORTHWEST)))
-                  || ((!exitCmd.compare(QStringLiteral("up"))) && (pR->getExit(DIR_UP) > 0 || pR->exitStubs.contains(DIR_UP)))
-                  || ((!exitCmd.compare(QStringLiteral("down"))) && (pR->getExit(DIR_DOWN) > 0 || pR->exitStubs.contains(DIR_DOWN)))
-                  || ((!exitCmd.compare(QStringLiteral("in"))) && (pR->getExit(DIR_IN) > 0 || pR->exitStubs.contains(DIR_IN)))
-                  || ((!exitCmd.compare(QStringLiteral("out"))) && (pR->getExit(DIR_OUT) > 0 || pR->exitStubs.contains(DIR_OUT))))) {
+                    || ((!exitCmd.compare(QStringLiteral("e"))) && (pR->getExit(DIR_EAST) > 0 || pR->exitStubs.contains(DIR_EAST)))
+                    || ((!exitCmd.compare(QStringLiteral("s"))) && (pR->getExit(DIR_SOUTH) > 0 || pR->exitStubs.contains(DIR_SOUTH)))
+                    || ((!exitCmd.compare(QStringLiteral("w"))) && (pR->getExit(DIR_WEST) > 0 || pR->exitStubs.contains(DIR_WEST)))
+                    || ((!exitCmd.compare(QStringLiteral("ne"))) && (pR->getExit(DIR_NORTHEAST) > 0 || pR->exitStubs.contains(DIR_NORTHEAST)))
+                    || ((!exitCmd.compare(QStringLiteral("se"))) && (pR->getExit(DIR_SOUTHEAST) > 0 || pR->exitStubs.contains(DIR_SOUTHEAST)))
+                    || ((!exitCmd.compare(QStringLiteral("sw"))) && (pR->getExit(DIR_SOUTHWEST) > 0 || pR->exitStubs.contains(DIR_SOUTHWEST)))
+                    || ((!exitCmd.compare(QStringLiteral("nw"))) && (pR->getExit(DIR_NORTHWEST) > 0 || pR->exitStubs.contains(DIR_NORTHWEST)))
+                    || ((!exitCmd.compare(QStringLiteral("up"))) && (pR->getExit(DIR_UP) > 0 || pR->exitStubs.contains(DIR_UP)))
+                    || ((!exitCmd.compare(QStringLiteral("down"))) && (pR->getExit(DIR_DOWN) > 0 || pR->exitStubs.contains(DIR_DOWN)))
+                    || ((!exitCmd.compare(QStringLiteral("in"))) && (pR->getExit(DIR_IN) > 0 || pR->exitStubs.contains(DIR_IN)))
+                    || ((!exitCmd.compare(QStringLiteral("out"))) && (pR->getExit(DIR_OUT) > 0 || pR->exitStubs.contains(DIR_OUT))))) {
                 // No there IS NOT a stub or real exit in the exitCmd direction
                 lua_pushnil(L);
                 lua_pushfstring(L,
@@ -8947,7 +9019,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         } else {
             lua_pushnil(L);
             lua_pushfstring(
-                    L, "invalid line style \"%s\", only use one of: \"solid line\", \"dot line\", \"dash line\", \"dash dot line\" or \"dash dot dot line\"", lineStyleString.toUtf8().constData());
+                L, "invalid line style \"%s\", only use one of: \"solid line\", \"dot line\", \"dash line\", \"dash dot line\" or \"dash dot dot line\"", lineStyleString.toUtf8().constData());
             return 2;
         }
     }
@@ -10402,7 +10474,7 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
     QString symbol;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setRoomChar: bad argument #1 type (room id as number expected, got %s!)",
-                       luaL_typename(L, 1));
+                        luaL_typename(L, 1));
         return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
@@ -10410,7 +10482,7 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
 
     if (!lua_isstring(L, 2)) {
         lua_pushfstring(L, "setRoomChar: bad argument #2 type (room symbol as string expected, got %s!)",
-                       luaL_typename(L, 2));
+                        luaL_typename(L, 2));
         return lua_error(L);
     } else {
         symbol = QString::fromUtf8(lua_tostring(L, 2));
@@ -10442,7 +10514,7 @@ int TLuaInterpreter::getRoomChar(lua_State* L)
     int id;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "getRoomChar: bad argument #1 type (room id as number expected, got %s!)",
-                       luaL_typename(L, 1));
+                        luaL_typename(L, 1));
         return lua_error(L);
     } else {
         id = lua_tointeger(L, 1);
@@ -10965,7 +11037,7 @@ int TLuaInterpreter::Echo(lua_State* L)
         } else {
             lua_pushnil(L);
             lua_pushfstring(
-                    L, R"(echo: bad argument #1 value (console name "%s" does not exist, omit this{or use the default "main"} to send text to main console!))", consoleName.toUtf8().constData());
+                L, R"(echo: bad argument #1 value (console name "%s" does not exist, omit this{or use the default "main"} to send text to main console!))", consoleName.toUtf8().constData());
             return 2;
         }
     }
@@ -11061,7 +11133,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
 
     int s = 0;
     int n = lua_gettop(L);
-    if (n > 3){
+    if (n > 3) {
         if (lua_isboolean(L, 4)) gotBool = true;
     }
     if (!lua_isstring(L, ++s)) {
@@ -14987,17 +15059,17 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2", 
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QStringLiteral("rex_pcre"),
-                 QStringLiteral("\n%1\n"))
-            .arg(tr("Some functions may not be available."));
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
+                         "%1 is the name of the module. %2 can be an additional message about the expected effect.")
+                      .arg(QStringLiteral("rex_pcre"),
+                           QStringLiteral("\n%1\n"))
+                      .arg(tr("Some functions may not be available."));
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
-            "%1 is the name of the module.")
-            .arg(QStringLiteral("rex_pcre"));
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
+                         "%1 is the name of the module.")
+                      .arg(QStringLiteral("rex_pcre"));
         mpHost->postMessage(msg);
     }
 
@@ -15008,16 +15080,16 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2", 
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QLatin1String("zip"),
-                 QString());
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
+                         "%1 is the name of the module. %2 can be an additional message about the expected effect.")
+                      .arg(QLatin1String("zip"),
+                           QString());
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
-            "%1 is the name of the module.")
-            .arg(QLatin1String("zip"));
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
+                         "%1 is the name of the module.")
+                      .arg(QLatin1String("zip"));
         mpHost->postMessage(msg);
     }
 
@@ -15028,17 +15100,17 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2", 
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QLatin1String("lfs (Lua File System)"),
-                 QLatin1String("\n%1\n"))
-            .arg(tr("Probably will not be able to access Mudlet Lua code."));
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
+                         "%1 is the name of the module. %2 can be an additional message about the expected effect.")
+                      .arg(QLatin1String("lfs (Lua File System)"),
+                           QLatin1String("\n%1\n"))
+                      .arg(tr("Probably will not be able to access Mudlet Lua code."));
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
-            "%1 is the name of the module.")
-            .arg(QLatin1String("lfs"));
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
+                         "%1 is the name of the module.")
+                      .arg(QLatin1String("lfs"));
         mpHost->postMessage(msg);
     }
 
@@ -15049,17 +15121,17 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2", 
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QLatin1String("luasql.sqlite3"),
-                 QLatin1String("\n%1\n"))
-            .arg(tr("Database support will not be available."));
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
+                         "%1 is the name of the module. %2 can be an additional message about the expected effect.")
+                      .arg(QLatin1String("luasql.sqlite3"),
+                           QLatin1String("\n%1\n"))
+                      .arg(tr("Database support will not be available."));
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
-            "%1 is the name of the module.")
-            .arg(QLatin1String("sqlite3"));
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
+                         "%1 is the name of the module.")
+                      .arg(QLatin1String("sqlite3"));
         mpHost->postMessage(msg);
     }
 
@@ -15070,17 +15142,17 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2", 
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QLatin1String("utf8"),
-                 QLatin1String("\n%1\n"))
-            .arg(tr("utf8.* Lua functions won't be available."));
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
+                         "%1 is the name of the module. %2 can be an additional message about the expected effect.")
+                      .arg(QLatin1String("utf8"),
+                           QLatin1String("\n%1\n"))
+                      .arg(tr("utf8.* Lua functions won't be available."));
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
-            "%1 is the name of the module.")
-            .arg(QLatin1String("utf8"));
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
+                         "%1 is the name of the module.")
+                      .arg(QLatin1String("utf8"));
         mpHost->postMessage(msg);
     }
 
@@ -15091,17 +15163,17 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2", 
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QLatin1String("yajl"),
-                 QLatin1String("\n%1\n"))
-            .arg(tr("yajl.* Lua functions won't be available."));
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
+                         "%1 is the name of the module. %2 can be an additional message about the expected effect.")
+                      .arg(QLatin1String("yajl"),
+                           QLatin1String("\n%1\n"))
+                      .arg(tr("yajl.* Lua functions won't be available."));
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
-            "%1 is the name of the module.")
-            .arg(QLatin1String("yajl"));
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
+                         "%1 is the name of the module.")
+                      .arg(QLatin1String("yajl"));
         mpHost->postMessage(msg);
     }
 
@@ -15148,13 +15220,13 @@ void TLuaInterpreter::initIndenterGlobals()
 
 
 #if defined(Q_OS_MACOS)
-        //macOS app bundle would like the search path to also be set to the current binary directory
-        luaL_dostring(pIndenterState, QStringLiteral("package.cpath = package.cpath .. ';%1/?.so'")
-                      .arg(QCoreApplication::applicationDirPath())
-                      .toUtf8().constData());
-        luaL_dostring(pIndenterState, QStringLiteral("package.path = package.path .. ';%1/?.lua'")
-                      .arg(QCoreApplication::applicationDirPath())
-                      .toUtf8().constData());
+    //macOS app bundle would like the search path to also be set to the current binary directory
+    luaL_dostring(pIndenterState, QStringLiteral("package.cpath = package.cpath .. ';%1/?.so'")
+                  .arg(QCoreApplication::applicationDirPath())
+                  .toUtf8().constData());
+    luaL_dostring(pIndenterState, QStringLiteral("package.path = package.path .. ';%1/?.lua'")
+                  .arg(QCoreApplication::applicationDirPath())
+                  .toUtf8().constData());
 
 #elif defined(Q_OS_UNIX)
     // Need to tweak the lua path for the installed *nix case and AppImage builds as well as
@@ -15176,8 +15248,8 @@ void TLuaInterpreter::initIndenterGlobals()
     // For Qt Creator builds, add search paths one and two levels up from here, then a 3rdparty directory:
     luaL_dostring(pIndenterState,
                   QStringLiteral("package.path = [[%1\\?.lua;%2\\..\\3rdparty\\?.lua;%2\\..\\..\\3rdparty\\?.lua;]] .. package.path")
-                          .arg(QByteArray(LUA_DEFAULT_PATH), QDir::toNativeSeparators(QCoreApplication::applicationDirPath()))
-                          .toUtf8().constData());
+                  .arg(QByteArray(LUA_DEFAULT_PATH), QDir::toNativeSeparators(QCoreApplication::applicationDirPath()))
+                  .toUtf8().constData());
 #endif
 
     int error = luaL_dostring(pIndenterState, R"(
@@ -15884,7 +15956,7 @@ int TLuaInterpreter::addWordToDictionary(lua_State* L)
     }
 
     QPair<bool, QString> result = host.mpConsole->addWordToSet(text);
-    if (!result.first){
+    if (!result.first) {
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
         return 2;
@@ -15916,7 +15988,7 @@ int TLuaInterpreter::removeWordFromDictionary(lua_State* L)
     }
 
     QPair<bool, QString> result = host.mpConsole->removeWordFromSet(text);
-    if (!result.first){
+    if (!result.first) {
         lua_pushnil(L);
         lua_pushstring(L, result.second.toUtf8().constData());
         return 2;

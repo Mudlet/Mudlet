@@ -30,18 +30,18 @@
 using namespace std;
 
 KeyUnit::KeyUnit(Host* pHost)
-: statsKeyTotal(0)
-, statsTempKeys(0)
-, statsActiveKeys(0)
-, statsActiveKeysMax(0)
-, statsActiveKeysMin(0)
-, statsActiveKeysAverage(0)
-, statsTempKeysCreated(0)
-, statsTempKeysKilled(0)
-, mRunAllKeyMatches(false)
-, mpHost(pHost)
-, mMaxID(0)
-, mModuleMember(false)
+    : statsKeyTotal(0)
+    , statsTempKeys(0)
+    , statsActiveKeys(0)
+    , statsActiveKeysMax(0)
+    , statsActiveKeysMin(0)
+    , statsActiveKeysAverage(0)
+    , statsTempKeysCreated(0)
+    , statsTempKeysKilled(0)
+    , mRunAllKeyMatches(false)
+    , mpHost(pHost)
+    , mMaxID(0)
+    , mModuleMember(false)
 {
     setupKeyNames();
 }

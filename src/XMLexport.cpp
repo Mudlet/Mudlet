@@ -45,79 +45,79 @@
 using namespace std;
 
 XMLexport::XMLexport( Host * pH )
-: mpHost( pH )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+    : mpHost( pH )
+    , mpTrigger( Q_NULLPTR )
+    , mpTimer( Q_NULLPTR )
+    , mpAlias( Q_NULLPTR )
+    , mpAction( Q_NULLPTR )
+    , mpScript( Q_NULLPTR )
+    , mpKey( Q_NULLPTR )
 {
 }
 
 XMLexport::XMLexport( TTrigger * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( pT )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+    : mpHost( Q_NULLPTR )
+    , mpTrigger( pT )
+    , mpTimer( Q_NULLPTR )
+    , mpAlias( Q_NULLPTR )
+    , mpAction( Q_NULLPTR )
+    , mpScript( Q_NULLPTR )
+    , mpKey( Q_NULLPTR )
 {
 }
 
 XMLexport::XMLexport( TTimer * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( pT )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+    : mpHost( Q_NULLPTR )
+    , mpTrigger( Q_NULLPTR )
+    , mpTimer( pT )
+    , mpAlias( Q_NULLPTR )
+    , mpAction( Q_NULLPTR )
+    , mpScript( Q_NULLPTR )
+    , mpKey( Q_NULLPTR )
 {
 }
 
 XMLexport::XMLexport( TAlias * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( pT )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+    : mpHost( Q_NULLPTR )
+    , mpTrigger( Q_NULLPTR )
+    , mpTimer( Q_NULLPTR )
+    , mpAlias( pT )
+    , mpAction( Q_NULLPTR )
+    , mpScript( Q_NULLPTR )
+    , mpKey( Q_NULLPTR )
 {
 }
 
 XMLexport::XMLexport( TAction * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( pT )
-, mpScript( Q_NULLPTR )
-, mpKey( Q_NULLPTR )
+    : mpHost( Q_NULLPTR )
+    , mpTrigger( Q_NULLPTR )
+    , mpTimer( Q_NULLPTR )
+    , mpAlias( Q_NULLPTR )
+    , mpAction( pT )
+    , mpScript( Q_NULLPTR )
+    , mpKey( Q_NULLPTR )
 {
 }
 
 XMLexport::XMLexport( TScript * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( pT )
-, mpKey( Q_NULLPTR )
+    : mpHost( Q_NULLPTR )
+    , mpTrigger( Q_NULLPTR )
+    , mpTimer( Q_NULLPTR )
+    , mpAlias( Q_NULLPTR )
+    , mpAction( Q_NULLPTR )
+    , mpScript( pT )
+    , mpKey( Q_NULLPTR )
 {
 }
 
 XMLexport::XMLexport( TKey * pT )
-: mpHost( Q_NULLPTR )
-, mpTrigger( Q_NULLPTR )
-, mpTimer( Q_NULLPTR )
-, mpAlias( Q_NULLPTR )
-, mpAction( Q_NULLPTR )
-, mpScript( Q_NULLPTR )
-, mpKey( pT )
+    : mpHost( Q_NULLPTR )
+    , mpTrigger( Q_NULLPTR )
+    , mpTimer( Q_NULLPTR )
+    , mpAlias( Q_NULLPTR )
+    , mpAction( Q_NULLPTR )
+    , mpScript( Q_NULLPTR )
+    , mpKey( pT )
 {
 }
 
@@ -198,7 +198,9 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
 
     auto future = QtConcurrent::run(this, &XMLexport::saveXml, fileName);
     auto watcher = new QFutureWatcher<bool>;
-    QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(fileName); });
+    QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() {
+        mpHost->xmlSaved(fileName);
+    });
     watcher->setFuture(future);
     saveFutures.append(future);
 }
@@ -210,7 +212,9 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
     auto future = QtConcurrent::run(this, &XMLexport::saveXml, filename_pugi_xml);
 
     auto watcher = new QFutureWatcher<bool>;
-    QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(QStringLiteral("profile")); });
+    QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() {
+        mpHost->xmlSaved(QStringLiteral("profile"));
+    });
     watcher->setFuture(future);
     saveFutures.append(future);
 }
@@ -242,43 +246,43 @@ void inline XMLexport::replaceAll(std::string& source, const std::string& from, 
 void XMLexport::sanitizeForQxml(std::string& output)
 {
     QMap<std::string, std::string> replacements{
-            {"&#1;", "\uFFFC\u2401"},   // SOH
-            {"&#01;", "\uFFFC\u2401"},   // SOH
-            {"&#2;", "\uFFFC\u2402"},   // STX
-            {"&#02;", "\uFFFC\u2402"},   // STX
-            {"&#3;", "\uFFFC\u2403"},   // ETX
-            {"&#03;", "\uFFFC\u2403"},   // ETX
-            {"&#4;", "\uFFFC\u2404"},   // EOT
-            {"&#04;", "\uFFFC\u2404"},   // EOT
-            {"&#5;", "\uFFFC\u2405"},   // ENQ
-            {"&#05;", "\uFFFC\u2405"},   // ENQ
-            {"&#6;", "\uFFFC\u2406"},   // ACK
-            {"&#06;", "\uFFFC\u2406"},   // ACK
-            {"&#7;", "\uFFFC\u2407"},   // BEL
-            {"&#07;", "\uFFFC\u2407"},   // BEL
-            {"&#8;", "\uFFFC\u2408"},   // BS
-            {"&#08;", "\uFFFC\u2408"},   // BS
-            {"&#11;", "\uFFFC\u240B"},  // VT
-            {"&#12;", "\uFFFC\u240C"},  // FF
-            {"&#14;", "\uFFFC\u240E"},  // SS
-            {"&#15;", "\uFFFC\u240F"},  // SI
-            {"&#10;", "\uFFFC\u2410"},  // DLE
-            {"&#16;", "\uFFFC\u2411"},  // DC1
-            {"&#18;", "\uFFFC\u2412"},  // DC2
-            {"&#19;", "\uFFFC\u2413"},  // DC3
-            {"&#20;", "\uFFFC\u2414"},  // DC4
-            {"&#21;", "\uFFFC\u2415"},  // NAK
-            {"&#22;", "\uFFFC\u2416"},  // SYN
-            {"&#17;", "\uFFFC\u2417"},  // ETB
-            {"&#23;", "\uFFFC\u2418"},  // CAN
-            {"&#25;", "\uFFFC\u2419"},  // EM
-            {"&#26;", "\uFFFC\u241A"},  // SUB
-            {"&#27;", "\uFFFC\u241B"},  // ESC
-            {"&#28;", "\uFFFC\u241C"},  // FS
-            {"&#29;", "\uFFFC\u241D"},  // GS
-            {"&#30;", "\uFFFC\u241E"},  // RS
-            {"&#31;", "\uFFFC\u241F"},  // US
-            {"&#127;", "\uFFFC\u2421"}, // DEL
+        {"&#1;", "\uFFFC\u2401"},   // SOH
+        {"&#01;", "\uFFFC\u2401"},   // SOH
+        {"&#2;", "\uFFFC\u2402"},   // STX
+        {"&#02;", "\uFFFC\u2402"},   // STX
+        {"&#3;", "\uFFFC\u2403"},   // ETX
+        {"&#03;", "\uFFFC\u2403"},   // ETX
+        {"&#4;", "\uFFFC\u2404"},   // EOT
+        {"&#04;", "\uFFFC\u2404"},   // EOT
+        {"&#5;", "\uFFFC\u2405"},   // ENQ
+        {"&#05;", "\uFFFC\u2405"},   // ENQ
+        {"&#6;", "\uFFFC\u2406"},   // ACK
+        {"&#06;", "\uFFFC\u2406"},   // ACK
+        {"&#7;", "\uFFFC\u2407"},   // BEL
+        {"&#07;", "\uFFFC\u2407"},   // BEL
+        {"&#8;", "\uFFFC\u2408"},   // BS
+        {"&#08;", "\uFFFC\u2408"},   // BS
+        {"&#11;", "\uFFFC\u240B"},  // VT
+        {"&#12;", "\uFFFC\u240C"},  // FF
+        {"&#14;", "\uFFFC\u240E"},  // SS
+        {"&#15;", "\uFFFC\u240F"},  // SI
+        {"&#10;", "\uFFFC\u2410"},  // DLE
+        {"&#16;", "\uFFFC\u2411"},  // DC1
+        {"&#18;", "\uFFFC\u2412"},  // DC2
+        {"&#19;", "\uFFFC\u2413"},  // DC3
+        {"&#20;", "\uFFFC\u2414"},  // DC4
+        {"&#21;", "\uFFFC\u2415"},  // NAK
+        {"&#22;", "\uFFFC\u2416"},  // SYN
+        {"&#17;", "\uFFFC\u2417"},  // ETB
+        {"&#23;", "\uFFFC\u2418"},  // CAN
+        {"&#25;", "\uFFFC\u2419"},  // EM
+        {"&#26;", "\uFFFC\u241A"},  // SUB
+        {"&#27;", "\uFFFC\u241B"},  // ESC
+        {"&#28;", "\uFFFC\u241C"},  // FS
+        {"&#29;", "\uFFFC\u241D"},  // GS
+        {"&#30;", "\uFFFC\u241E"},  // RS
+        {"&#31;", "\uFFFC\u241F"},  // US
+        {"&#127;", "\uFFFC\u2421"}, // DEL
     };
 
     // Look for each replacement in data and if not present remove it from the
@@ -437,7 +441,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     }
     host.append_attribute("mDoubleClickIgnore") = ignore.toUtf8().constData();
 
-    { // Blocked so that indentation reflects that of the XML file
+    {   // Blocked so that indentation reflects that of the XML file
         host.append_child("name").text().set(pHost->mHostName.toUtf8().constData());
 
         auto mInstalledPackages = host.append_child("mInstalledPackages");
@@ -543,7 +547,7 @@ void XMLexport::writeVariablePackage(Host* pHost, pugi::xml_node& mudletPackage)
     LuaInterface* lI = pHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
     //do hidden variables first
-    { // Blocked so that indentation reflects that of the XML file
+    {   // Blocked so that indentation reflects that of the XML file
         auto hiddenVariables = variablePackage.append_child("HiddenVariables");
         QSetIterator<QString> itHiddenVariableName(vu->hiddenByUser);
         while (itHiddenVariableName.hasNext()) {
@@ -671,7 +675,9 @@ bool XMLexport::exportProfile(const QString& exportFileName)
     if (writeGenericPackage(mpHost, mudletPackage)) {
         auto future = QtConcurrent::run(this, &XMLexport::saveXml, exportFileName);
         auto watcher = new QFutureWatcher<bool>;
-        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(QStringLiteral("profile")); });
+        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() {
+            mpHost->xmlSaved(QStringLiteral("profile"));
+        });
         watcher->setFuture(future);
         saveFutures.append(future);
 
@@ -767,7 +773,7 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
         trigger.append_attribute("isColorTriggerFg") = (pT->mColorTriggerFgAnsi != TTrigger::scmIgnored) ? "yes" : "no";
         trigger.append_attribute("isColorTriggerBg") = (pT->mColorTriggerBgAnsi != TTrigger::scmIgnored) ? "yes" : "no";
 
-        { // Blocked so that indentation reflects that of the XML file
+        {   // Blocked so that indentation reflects that of the XML file
 
             trigger.append_child("name").text().set(pT->mName.toUtf8().constData());
             writeScriptElement(pT->mScript, trigger);
@@ -841,7 +847,7 @@ void XMLexport::writeAlias(TAlias* pT, pugi::xml_node xmlParent)
         aliasContents.append_attribute("isActive") = pT->shouldBeActive() ? "yes" : "no";
         aliasContents.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
 
-        { // Blocked so that indentation reflects that of the XML file
+        {   // Blocked so that indentation reflects that of the XML file
             aliasContents.append_child("name").text().set(pT->mName.toUtf8().constData());
             writeScriptElement(pT->mScript, aliasContents);
 
@@ -897,7 +903,7 @@ void XMLexport::writeAction(TAction* pT, pugi::xml_node xmlParent)
         actionContents.append_attribute("isFlatButton") = pT->mButtonFlat ? "yes" : "no";
         actionContents.append_attribute("useCustomLayout") = pT->mUseCustomLayout ? "yes" : "no";
 
-        { // Blocked so that indentation reflects that of the XML file
+        {   // Blocked so that indentation reflects that of the XML file
             actionContents.append_child("name").text().set(pT->mName.toUtf8().constData());
             actionContents.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
             writeScriptElement(pT->mScript, actionContents);
@@ -966,7 +972,7 @@ void XMLexport::writeTimer(TTimer* pT, pugi::xml_node xmlParent)
         timerContents.append_attribute("isTempTimer") = pT->isTemporary() ? "yes" : "no";
         timerContents.append_attribute("isOffsetTimer") = pT->isOffsetTimer() ? "yes" : "no";
 
-        { // Blocked so that indentation reflects that of the XML file
+        {   // Blocked so that indentation reflects that of the XML file
             timerContents.append_child("name").text().set(pT->mName.toUtf8().constData());
 
             writeScriptElement(pT->mScript, timerContents);
@@ -1020,7 +1026,7 @@ void XMLexport::writeScript(TScript* pT, pugi::xml_node xmlParent)
         scriptContents.append_attribute("isActive") = pT->shouldBeActive() ? "yes" : "no";
         scriptContents.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
 
-        { // Blocked so that indentation reflects that of the XML file
+        {   // Blocked so that indentation reflects that of the XML file
             scriptContents.append_child("name").text().set(pT->mName.toUtf8().constData());
             scriptContents.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
             writeScriptElement(pT->mScript, scriptContents);
@@ -1075,7 +1081,7 @@ void XMLexport::writeKey(TKey* pT, pugi::xml_node xmlParent)
         keyContents.append_attribute("isActive") = pT->shouldBeActive() ? "yes" : "no";
         keyContents.append_attribute("isFolder") = pT->isFolder() ? "yes" : "no";
 
-        { // Blocked so that indentation reflects that of the XML file
+        {   // Blocked so that indentation reflects that of the XML file
             keyContents.append_child("name").text().set(pT->mName.toUtf8().constData());
             keyContents.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
             writeScriptElement(pT->mScript, keyContents);
@@ -1128,24 +1134,56 @@ QStringList XMLexport::remapAnsiToColorNumber(const QStringList & patternList, c
                         if (isFgOk) {
                             // clang-format off
                             switch (fg) {
-                            case 0:     fg = 2;     break; // black
-                            case 1:     fg = 4;     break; // red
-                            case 2:     fg = 6;     break; // green
-                            case 3:     fg = 8;     break; // yellow
-                            case 4:     fg = 10;    break; // blue
-                            case 5:     fg = 12;    break; // magenta
-                            case 6:     fg = 14;    break; // cyan
-                            case 7:     fg = 16;    break; // white (light gray)
-                            case 8:     fg = 1;     break; // light black (dark gray)
-                            case 9:     fg = 3;     break; // light red
-                            case 10:    fg = 5;     break; // light green
-                            case 11:    fg = 7;     break; // light yellow
-                            case 12:    fg = 9;     break; // light blue
-                            case 13:    fg = 11;    break; // light magenta
-                            case 14:    fg = 13;    break; // light cyan
-                            case 15:    fg = 15;    break; // light white
+                            case 0:
+                                fg = 2;
+                                break; // black
+                            case 1:
+                                fg = 4;
+                                break; // red
+                            case 2:
+                                fg = 6;
+                                break; // green
+                            case 3:
+                                fg = 8;
+                                break; // yellow
+                            case 4:
+                                fg = 10;
+                                break; // blue
+                            case 5:
+                                fg = 12;
+                                break; // magenta
+                            case 6:
+                                fg = 14;
+                                break; // cyan
+                            case 7:
+                                fg = 16;
+                                break; // white (light gray)
+                            case 8:
+                                fg = 1;
+                                break; // light black (dark gray)
+                            case 9:
+                                fg = 3;
+                                break; // light red
+                            case 10:
+                                fg = 5;
+                                break; // light green
+                            case 11:
+                                fg = 7;
+                                break; // light yellow
+                            case 12:
+                                fg = 9;
+                                break; // light blue
+                            case 13:
+                                fg = 11;
+                                break; // light magenta
+                            case 14:
+                                fg = 13;
+                                break; // light cyan
+                            case 15:
+                                fg = 15;
+                                break; // light white
                             default:
-                                   ; // No-op for other color codes
+                                ; // No-op for other color codes
                             }
                             // clang-format on
                         } else {
@@ -1170,24 +1208,56 @@ QStringList XMLexport::remapAnsiToColorNumber(const QStringList & patternList, c
                         if (isBgOk) {
                             // clang-format off
                             switch (bg) {
-                            case 0:     bg = 2;     break; // black
-                            case 1:     bg = 4;     break; // red
-                            case 2:     bg = 6;     break; // green
-                            case 3:     bg = 8;     break; // yellow
-                            case 4:     bg = 10;    break; // blue
-                            case 5:     bg = 12;    break; // magenta
-                            case 6:     bg = 14;    break; // cyan
-                            case 7:     bg = 16;    break; // white (light gray)
-                            case 8:     bg = 1;     break; // light black (dark gray)
-                            case 9:     bg = 3;     break; // light red
-                            case 10:    bg = 5;     break; // light green
-                            case 11:    bg = 7;     break; // light yellow
-                            case 12:    bg = 9;     break; // light blue
-                            case 13:    bg = 11;    break; // light magenta
-                            case 14:    bg = 13;    break; // light cyan
-                            case 15:    bg = 15;    break; // light white
+                            case 0:
+                                bg = 2;
+                                break; // black
+                            case 1:
+                                bg = 4;
+                                break; // red
+                            case 2:
+                                bg = 6;
+                                break; // green
+                            case 3:
+                                bg = 8;
+                                break; // yellow
+                            case 4:
+                                bg = 10;
+                                break; // blue
+                            case 5:
+                                bg = 12;
+                                break; // magenta
+                            case 6:
+                                bg = 14;
+                                break; // cyan
+                            case 7:
+                                bg = 16;
+                                break; // white (light gray)
+                            case 8:
+                                bg = 1;
+                                break; // light black (dark gray)
+                            case 9:
+                                bg = 3;
+                                break; // light red
+                            case 10:
+                                bg = 5;
+                                break; // light green
+                            case 11:
+                                bg = 7;
+                                break; // light yellow
+                            case 12:
+                                bg = 9;
+                                break; // light blue
+                            case 13:
+                                bg = 11;
+                                break; // light magenta
+                            case 14:
+                                bg = 13;
+                                break; // light cyan
+                            case 15:
+                                bg = 15;
+                                break; // light white
                             default:
-                                   ; // No-op for other color codes
+                                ; // No-op for other color codes
                             }
                             // clang-format on
                         } else {

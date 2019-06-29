@@ -91,53 +91,53 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     enum SearchDataRole {
         // Value is the ID of the item found MUST BE Qt::UserRole to avoid
         // having to modify existing code that puts it into the item:
-              IdRole = Qt::UserRole,
+        IdRole = Qt::UserRole,
         // Was the "name" field inserted into the search widget tree {as
         // pItem->text(1)} but since we now suppress that for subsequent
         // elements for the same "item" we need to carry the same data
         // internally even when we do not insert the text in the display:
-            NameRole = Qt::UserRole + 1,
+        NameRole = Qt::UserRole + 1,
         // What the Item is (one of the cmXxxxxView values) so we know how to
         // interpret the search result:
-            ItemRole = Qt::UserRole + 2,
+        ItemRole = Qt::UserRole + 2,
         // Value of one of SearchDataResultType (below)
-            TypeRole = Qt::UserRole + 3,
+        TypeRole = Qt::UserRole + 3,
         // When the result is a pattern or event handler ("Script" item) type or
         // lua script this is the pattern number (0-49 for "Triggers"), (event
         // handler index for "Scripts") or script line (so we know which
         // field/line to jump to)
-   PatternOrLineRole = Qt::UserRole + 4,
+        PatternOrLineRole = Qt::UserRole + 4,
         // Value is the position (starting at 0, counting in QChars) of the
         // particular find used to position cursor at start of match:
         PositionRole = Qt::UserRole + 5,
         // Value is the index (starting at 0) of the particular find used to
         // disambiguate multiple finds in the same "thing" (so we know which one
         // to jump to) - may not be as much use as it seems...
-           IndexRole = Qt::UserRole + 6
+        IndexRole = Qt::UserRole + 6
     };
 
     // Classify the search result - so we know where to position the cursor as
     // we implement moving the focus to the origin of the result:
     enum SearchDataResultType {
         // Unset (?):
-               SearchResultIsUnknown = 0x0,
+        SearchResultIsUnknown = 0x0,
         // The contents in the Edbee Editor widget:
-                SearchResultIsScript = 0x1,
+        SearchResultIsScript = 0x1,
         // The item's "Name":
-                  SearchResultIsName = 0x2,
+        SearchResultIsName = 0x2,
         // Only for "Triggers"/"Aliases" (and only the former has multiples):
-               SearchResultIsPattern = 0x3,
+        SearchResultIsPattern = 0x3,
         // All but "Variable" - the simple "Command":
-               SearchResultIsCommand = 0x4,
+        SearchResultIsCommand = 0x4,
         // Only Push-down "Buttons" - the additional "Up" "Command" field:
-          SearchResultIsExtraCommand = 0x5,
+        SearchResultIsExtraCommand = 0x5,
         // Only "Buttons" - "Css" - unlikely to be useful currently but might be
         //useful in future if we really get into stylesheets:
-                  SearchResultsIsCss = 0x6,
+        SearchResultsIsCss = 0x6,
         // Only "Scripts":
-          SearchResultIsEventHandler = 0x7,
+        SearchResultIsEventHandler = 0x7,
         // Only "Variables":
-                 SearchResultIsValue = 0x8
+        SearchResultIsValue = 0x8
     };
 
     enum SearchOption {

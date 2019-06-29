@@ -37,26 +37,26 @@
 
 
 XMLimport::XMLimport(Host* pH)
-: mpHost(pH)
-, mPackageName(QString())
-, mpTrigger(Q_NULLPTR)
-, mpTimer(Q_NULLPTR)
-, mpAlias(Q_NULLPTR)
-, mpKey(Q_NULLPTR)
-, mpAction(Q_NULLPTR)
-, mpScript(Q_NULLPTR)
-, mpVar(Q_NULLPTR)
-, gotTrigger(false)
-, gotTimer(false)
-, gotAlias(false)
-, gotKey(false)
-, gotAction(false)
-, gotScript(false)
-, module(0)
-, mMaxRoomId(0)
-, mMaxAreaId(-1)
-, mVersionMajor(1) // 0 to 255
-, mVersionMinor(0) // 0 to 999 for 3 digit decimal value
+    : mpHost(pH)
+    , mPackageName(QString())
+    , mpTrigger(Q_NULLPTR)
+    , mpTimer(Q_NULLPTR)
+    , mpAlias(Q_NULLPTR)
+    , mpKey(Q_NULLPTR)
+    , mpAction(Q_NULLPTR)
+    , mpScript(Q_NULLPTR)
+    , mpVar(Q_NULLPTR)
+    , gotTrigger(false)
+    , gotTimer(false)
+    , gotAlias(false)
+    , gotKey(false)
+    , gotAction(false)
+    , gotScript(false)
+    , module(0)
+    , mMaxRoomId(0)
+    , mMaxAreaId(-1)
+    , mVersionMajor(1) // 0 to 255
+    , mVersionMinor(0) // 0 to 999 for 3 digit decimal value
 {
 }
 
@@ -160,14 +160,14 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
                 }
 
                 if (mVersionMajor > 1
-                    /*||(mVersionMajor==1&&mVersionMinor)*/) {
+                        /*||(mVersionMajor==1&&mVersionMinor)*/) {
                     // Minor check is not currently relevant, just abort on 2.000f or more
 
                     QString moanMsg = tr("[ ALERT ] - Sorry, the file being read:\n"
                                          "\"%1\"\n"
                                          "reports it has a version (%2) it must have come from a later Mudlet version,\n"
                                          "and this one cannot read it, you need a newer Mudlet!")
-                                              .arg(pfile->fileName(), versionString);
+                                      .arg(pfile->fileName(), versionString);
                     mpHost->postMessage(moanMsg);
                     return false;
                 }
@@ -178,7 +178,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
                 mpHost->mpMap->audit();
             } else {
                 qDebug().nospace() << "XMLimport::importPackage(...) ERROR: "
-                                      "unrecognised element with name: "
+                                   "unrecognised element with name: "
                                    << name().toString() << " and content: " << text().toString();
             }
         }
@@ -459,8 +459,8 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
 
         if (Q_UNLIKELY(pT->id < 1)) {
             continue; // Skip further tests on exits as we'd have to throw away
-                      // this invalid room and it would mess up the
-                      // entranceMultiHash
+            // this invalid room and it would mess up the
+            // entranceMultiHash
         } else if (Q_LIKELY(name() == QStringLiteral("exit"))) {
             QString dir = attributes().value(QStringLiteral("direction")).toString();
             int e = attributes().value(QStringLiteral("target")).toString().toInt();
@@ -603,7 +603,7 @@ void XMLimport::readUnknownPackage()
     while (!atEnd()) {
         readNext();
         qDebug().nospace() << "XMLimport::readUnknownPackage(): ERROR: UNKNOWN "
-                              "Package Element name: "
+                           "Package Element name: "
                            << name().toString() << " and content: " << text().toString();
 
         if (isEndElement()) {
@@ -621,7 +621,7 @@ void XMLimport::readUnknownHostElement()
     while (!atEnd()) {
         readNext();
         qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
-                              "Host Package Element, name: "
+                           "Host Package Element, name: "
                            << name().toString() << " and content: " << text().toString();
 
         if (isEndElement()) {
@@ -639,7 +639,7 @@ void XMLimport::readUnknownTriggerElement()
     while (!atEnd()) {
         readNext();
         qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
-                              "Trigger Package Element, name: "
+                           "Trigger Package Element, name: "
                            << name().toString() << " and content: " << text().toString();
 
         if (isEndElement()) {
@@ -657,7 +657,7 @@ void XMLimport::readUnknownTimerElement()
     while (!atEnd()) {
         readNext();
         qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
-                              "Timer Package Element, name: "
+                           "Timer Package Element, name: "
                            << name().toString() << " and content: " << text().toString();
 
         if (isEndElement()) {
@@ -675,7 +675,7 @@ void XMLimport::readUnknownAliasElement()
     while (!atEnd()) {
         readNext();
         qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
-                              "Alias Package Element, name: "
+                           "Alias Package Element, name: "
                            << name().toString() << " and content: " << text().toString();
 
         if (isEndElement()) {
@@ -693,7 +693,7 @@ void XMLimport::readUnknownActionElement()
     while (!atEnd()) {
         readNext();
         qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
-                              "Action Package Element, name: "
+                           "Action Package Element, name: "
                            << name().toString() << " and content: " << text().toString();
 
         if (isEndElement()) {
@@ -711,7 +711,7 @@ void XMLimport::readUnknownScriptElement()
     while (!atEnd()) {
         readNext();
         qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
-                              "Script Package Element, name: "
+                           "Script Package Element, name: "
                            << name().toString() << " and content: " << text().toString();
 
         if (isEndElement()) {
@@ -729,7 +729,7 @@ void XMLimport::readUnknownKeyElement()
     while (!atEnd()) {
         readNext();
         qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
-                              "Key Package Element, name: "
+                           "Key Package Element, name: "
                            << name().toString() << " and content: " << text().toString();
 
         if (isEndElement()) {
@@ -834,7 +834,7 @@ void XMLimport::readHostPackage(Host* pHost)
     } else {
         pHost->mTimerDebugOutputSuppressionInterval = QTime();
     }
-  
+
     if (attributes().hasAttribute(QLatin1String("mDiscordAccessFlags"))) {
         pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(attributes().value("mDiscordAccessFlags").toString().toInt());
     }
@@ -1141,10 +1141,10 @@ int XMLimport::readTriggerGroup(TTrigger* pParent)
                 readIntegerList(pT->mRegexCodePropertyList, pT->getName());
                 if (Q_UNLIKELY(pT->mRegexCodeList.count() != pT->mRegexCodePropertyList.count())) {
                     qWarning().nospace() << "XMLimport::readTriggerGroup(...) ERROR: "
-                                            "mis-match in regexCode details for Trigger: "
+                                         "mis-match in regexCode details for Trigger: "
                                          << pT->getName() << " there were " << pT->mRegexCodeList.count() << " 'regexCodeList' sub-elements and " << pT->mRegexCodePropertyList.count()
                                          << " 'regexCodePropertyList' sub-elements so "
-                                            "something is broken!";
+                                         "something is broken!";
                 }
                 // Fixup the first 16 incorrect ANSI colour numbers from old
                 // code if there are any
@@ -1161,7 +1161,7 @@ int XMLimport::readTriggerGroup(TTrigger* pParent)
 
     if (!pT->setRegexCodeList(pT->mRegexCodeList, pT->mRegexCodePropertyList)) {
         qDebug().nospace() << "XMLimport::readTriggerGroup(...): ERROR: can not "
-                              "initialize pattern list for trigger: "
+                           "initialize pattern list for trigger: "
                            << pT->getName();
     }
 
@@ -1675,24 +1675,60 @@ void XMLimport::remapColorsToAnsiNumber(QStringList & patternList, const QList<i
                 } else {
                     // clang-format off
                     switch (fg) {
-                    case -2:    ansifg = TTrigger::scmIgnored;  break; // Ignored colour - not handled by old code
-                    case 0:     ansifg = TTrigger::scmDefault;  break; // Default colour
-                    case 1:     ansifg = 8;     break; // Light black (dark gray)
-                    case 2:     ansifg = 0;     break; // Black
-                    case 3:     ansifg = 9;     break; // Light red
-                    case 4:     ansifg = 1;     break; // Red
-                    case 5:     ansifg = 10;    break; // Light green
-                    case 6:     ansifg = 2;     break; // Green
-                    case 7:     ansifg = 11;    break; // Light yellow
-                    case 8:     ansifg = 3;     break; // Yellow
-                    case 9:     ansifg = 12;    break; // Light blue
-                    case 10:    ansifg = 4;     break; // Blue
-                    case 11:    ansifg = 13;    break; // Light magenta
-                    case 12:    ansifg = 5;     break; // Magenta
-                    case 13:    ansifg = 14;    break; // Light cyan
-                    case 14:    ansifg = 6;     break; // Cyan
-                    case 15:    ansifg = 15;    break; // Light white
-                    case 16:    ansifg = 7;     break; // White (light gray)
+                    case -2:
+                        ansifg = TTrigger::scmIgnored;
+                        break; // Ignored colour - not handled by old code
+                    case 0:
+                        ansifg = TTrigger::scmDefault;
+                        break; // Default colour
+                    case 1:
+                        ansifg = 8;
+                        break; // Light black (dark gray)
+                    case 2:
+                        ansifg = 0;
+                        break; // Black
+                    case 3:
+                        ansifg = 9;
+                        break; // Light red
+                    case 4:
+                        ansifg = 1;
+                        break; // Red
+                    case 5:
+                        ansifg = 10;
+                        break; // Light green
+                    case 6:
+                        ansifg = 2;
+                        break; // Green
+                    case 7:
+                        ansifg = 11;
+                        break; // Light yellow
+                    case 8:
+                        ansifg = 3;
+                        break; // Yellow
+                    case 9:
+                        ansifg = 12;
+                        break; // Light blue
+                    case 10:
+                        ansifg = 4;
+                        break; // Blue
+                    case 11:
+                        ansifg = 13;
+                        break; // Light magenta
+                    case 12:
+                        ansifg = 5;
+                        break; // Magenta
+                    case 13:
+                        ansifg = 14;
+                        break; // Light cyan
+                    case 14:
+                        ansifg = 6;
+                        break; // Cyan
+                    case 15:
+                        ansifg = 15;
+                        break; // Light white
+                    case 16:
+                        ansifg = 7;
+                        break; // White (light gray)
                     default:
                         ansifg = fg;
                     }
@@ -1706,24 +1742,60 @@ void XMLimport::remapColorsToAnsiNumber(QStringList & patternList, const QList<i
                 } else {
                     // clang-format off
                     switch (bg) {
-                    case -2:    ansibg = TTrigger::scmIgnored;  break; // Ignored colour - not handled by old code
-                    case 0:     ansibg = TTrigger::scmDefault;  break; // Default colour
-                    case 1:     ansibg = 8;     break; // Light black (dark gray)
-                    case 2:     ansibg = 0;     break; // Black
-                    case 3:     ansibg = 9;     break; // Light red
-                    case 4:     ansibg = 1;     break; // Red
-                    case 5:     ansibg = 10;    break; // Light green
-                    case 6:     ansibg = 2;     break; // Green
-                    case 7:     ansibg = 11;    break; // Light yellow
-                    case 8:     ansibg = 3;     break; // Yellow
-                    case 9:     ansibg = 12;    break; // Light blue
-                    case 10:    ansibg = 4;     break; // Blue
-                    case 11:    ansibg = 13;    break; // Light magenta
-                    case 12:    ansibg = 5;     break; // Magenta
-                    case 13:    ansibg = 14;    break; // Light cyan
-                    case 14:    ansibg = 6;     break; // Cyan
-                    case 15:    ansibg = 15;    break; // Light white
-                    case 16:    ansibg = 7;     break; // White (light gray)
+                    case -2:
+                        ansibg = TTrigger::scmIgnored;
+                        break; // Ignored colour - not handled by old code
+                    case 0:
+                        ansibg = TTrigger::scmDefault;
+                        break; // Default colour
+                    case 1:
+                        ansibg = 8;
+                        break; // Light black (dark gray)
+                    case 2:
+                        ansibg = 0;
+                        break; // Black
+                    case 3:
+                        ansibg = 9;
+                        break; // Light red
+                    case 4:
+                        ansibg = 1;
+                        break; // Red
+                    case 5:
+                        ansibg = 10;
+                        break; // Light green
+                    case 6:
+                        ansibg = 2;
+                        break; // Green
+                    case 7:
+                        ansibg = 11;
+                        break; // Light yellow
+                    case 8:
+                        ansibg = 3;
+                        break; // Yellow
+                    case 9:
+                        ansibg = 12;
+                        break; // Light blue
+                    case 10:
+                        ansibg = 4;
+                        break; // Blue
+                    case 11:
+                        ansibg = 13;
+                        break; // Light magenta
+                    case 12:
+                        ansibg = 5;
+                        break; // Magenta
+                    case 13:
+                        ansibg = 14;
+                        break; // Light cyan
+                    case 14:
+                        ansibg = 6;
+                        break; // Cyan
+                    case 15:
+                        ansibg = 15;
+                        break; // Light white
+                    case 16:
+                        ansibg = 7;
+                        break; // White (light gray)
                     default:
                         ansibg = bg;
                     }

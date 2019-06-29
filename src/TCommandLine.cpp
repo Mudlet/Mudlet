@@ -33,19 +33,19 @@
 
 
 TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
-: QPlainTextEdit(parent)
-, mpHost(pHost)
-, mpKeyUnit(pHost->getKeyUnit())
-, mpConsole(pConsole)
-, mTabCompletionCount()
-, mAutoCompletionCount()
-, mUserKeptOnTyping()
-, mHistoryBuffer()
-, mSelectionStart(0)
-, mSystemDictionarySuggestionsCount()
-, mUserDictionarySuggestionsCount()
-, mpSystemSuggestionsList()
-, mpUserSuggestionsList()
+    : QPlainTextEdit(parent)
+    , mpHost(pHost)
+    , mpKeyUnit(pHost->getKeyUnit())
+    , mpConsole(pConsole)
+    , mTabCompletionCount()
+    , mAutoCompletionCount()
+    , mUserKeptOnTyping()
+    , mHistoryBuffer()
+    , mSelectionStart(0)
+    , mSystemDictionarySuggestionsCount()
+    , mUserDictionarySuggestionsCount()
+    , mpSystemSuggestionsList()
+    , mpUserSuggestionsList()
 {
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -431,7 +431,7 @@ bool TCommandLine::event(QEvent* event)
 
         case Qt::Key_C:
             if (((ke->modifiers() & allModifiers) == Qt::ControlModifier)
-                && (mpConsole->mUpperPane->mSelectedRegion != QRegion(0, 0, 0, 0))) {
+                    && (mpConsole->mUpperPane->mSelectedRegion != QRegion(0, 0, 0, 0))) {
 
                 // Only process as a Control-C if it is EXACTLY those two keys
                 // and no other AND there is a selection active in the TConsole
@@ -589,24 +589,24 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 //                }
                 if (mudlet::self()->mUsingMudletDictionaries) {
                     action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲",
-                                                                         // Intentional separator
-                                                                         "This line is shown in the list of spelling suggestions on the profile's command-"
-                                                                         "line context menu to clearly divide up where the suggestions for correct "
-                                                                         "spellings are coming from.  The precise format might be modified as long as it "
-                                                                         "is clear that the entries below this line in the menu come from the spelling "
-                                                                         "dictionary that the user has chosen in the profile setting which we have "
-                                                                         "bundled with Mudlet; the entries about this line are the ones that the user "
-                                                                         "has personally added."));
+                            // Intentional separator
+                            "This line is shown in the list of spelling suggestions on the profile's command-"
+                            "line context menu to clearly divide up where the suggestions for correct "
+                            "spellings are coming from.  The precise format might be modified as long as it "
+                            "is clear that the entries below this line in the menu come from the spelling "
+                            "dictionary that the user has chosen in the profile setting which we have "
+                            "bundled with Mudlet; the entries about this line are the ones that the user "
+                            "has personally added."));
                 } else {
                     action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲",
-                                                                         // Intentional separator
-                                                                         "This line is shown in the list of spelling suggestions on the profile's command-"
-                                                                         "line context menu to clearly divide up where the suggestions for correct "
-                                                                         "spellings are coming from.  The precise format might be modified as long as it "
-                                                                         "is clear that the entries below this line in the menu come from the spelling "
-                                                                         "dictionary that the user has chosen in the profile setting which is provided "
-                                                                         "as part of the OS; the entries about this line are the ones that the user has "
-                                                                         "personally added."));
+                            // Intentional separator
+                            "This line is shown in the list of spelling suggestions on the profile's command-"
+                            "line context menu to clearly divide up where the suggestions for correct "
+                            "spellings are coming from.  The precise format might be modified as long as it "
+                            "is clear that the entries below this line in the menu come from the spelling "
+                            "dictionary that the user has chosen in the profile setting which is provided "
+                            "as part of the OS; the entries about this line are the ones that the user has "
+                            "personally added."));
                 }
                 action_dictionarySeparatorLine->setEnabled(false);
             }
@@ -693,36 +693,36 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
                     QAction* pA = nullptr;
                     if (mpConsole->isUsingSharedDictionary()) {
                         pA = new QAction(tr("no suggestions (shared)",
-                                                 // Intentional comment
-                                                 "used when the command spelling checker using the dictionary shared between profile has no words to suggest"));
+                                            // Intentional comment
+                                            "used when the command spelling checker using the dictionary shared between profile has no words to suggest"));
                     } else {
                         pA = new QAction(tr("no suggestions (profile)",
-                                                 // Intentional comment
-                                                 "used when the command spelling checker using the profile's own dictionary has no words to suggest"));
+                                            // Intentional comment
+                                            "used when the command spelling checker using the profile's own dictionary has no words to suggest"));
                     }
                     pA->setEnabled(false);
                     spellings_profile << pA;
                 }
             }
 
-           /*
-            * Build up the extra context menu items from the BOTTOM up, so that
-            * the top of the context menu looks like:
-            *
-            * profile dictionary suggestions
-            * --------- separator_aboveDictionarySeparatorLine
-            * \/ System dictionary suggestions /\ Profile  <== Text
-            * --------- separator_aboveSystemDictionarySuggestions
-            * system dictionary suggestions
-            * --------- separator_aboveAddAndRemove
-            * Add word action
-            * Remove word action
-            * --------- separator_aboveStandardMenu
-            *
-            * The insertAction[s](...)/(Separator(...)) insert their things
-            * second argument (or generated by themself) before the first (or
-            * only) argument given.
-            */
+            /*
+             * Build up the extra context menu items from the BOTTOM up, so that
+             * the top of the context menu looks like:
+             *
+             * profile dictionary suggestions
+             * --------- separator_aboveDictionarySeparatorLine
+             * \/ System dictionary suggestions /\ Profile  <== Text
+             * --------- separator_aboveSystemDictionarySuggestions
+             * system dictionary suggestions
+             * --------- separator_aboveAddAndRemove
+             * Add word action
+             * Remove word action
+             * --------- separator_aboveStandardMenu
+             *
+             * The insertAction[s](...)/(Separator(...)) insert their things
+             * second argument (or generated by themself) before the first (or
+             * only) argument given.
+             */
 
             auto separator_aboveStandardMenu = popup->insertSeparator(popup->actions().first());
             if (handle_profile) {

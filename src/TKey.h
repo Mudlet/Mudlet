@@ -43,10 +43,16 @@ public:
     TKey(TKey* parent, Host* pHost);
     TKey(QString name, Host* pHost);
     void compileAll();
-    QString getName() { return mName; }
+    QString getName() {
+        return mName;
+    }
     void setName(const QString & name);
-    int getKeyCode() { return mKeyCode; }
-    void setKeyCode(int code) { mKeyCode = code; }
+    int getKeyCode() {
+        return mKeyCode;
+    }
+    void setKeyCode(int code) {
+        mKeyCode = code;
+    }
     QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers> getKeyModifiers() const {
         return qMakePair(mPresentModifiers, mAbsentModifiers);
     }
@@ -62,10 +68,16 @@ public:
     void compile();
     bool compileScript();
     void execute();
-    QString getScript() { return mScript; }
+    QString getScript() {
+        return mScript;
+    }
     bool setScript(QString& script);
-    void setCommand(QString command) { mCommand = command; }
-    QString getCommand() { return mCommand; }
+    void setCommand(QString command) {
+        mCommand = command;
+    }
+    QString getCommand() {
+        return mCommand;
+    }
 
     bool match(const int, const Qt::KeyboardModifiers modifiers, const bool);
     bool registerKey();

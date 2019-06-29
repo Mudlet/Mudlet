@@ -31,29 +31,29 @@
 using namespace std;
 
 TKey::TKey(TKey* parent, Host* pHost)
-: Tree<TKey>( parent )
-, exportItem(true)
-, mModuleMasterFolder(false)
-, mpHost( pHost )
-, mNeedsToBeCompiled( true )
-, mModuleMember(false)
-, mKeyCode()
-, mPresentModifiers()
-, mAbsentModifiers()
+    : Tree<TKey>( parent )
+    , exportItem(true)
+    , mModuleMasterFolder(false)
+    , mpHost( pHost )
+    , mNeedsToBeCompiled( true )
+    , mModuleMember(false)
+    , mKeyCode()
+    , mPresentModifiers()
+    , mAbsentModifiers()
 {
 }
 
 TKey::TKey(QString name, Host* pHost)
-: Tree<TKey>( nullptr )
-, exportItem( true )
-, mModuleMasterFolder( false )
-, mName( name )
-, mpHost( pHost )
-, mNeedsToBeCompiled( true )
-, mModuleMember(false)
-, mKeyCode()
-, mPresentModifiers()
-, mAbsentModifiers()
+    : Tree<TKey>( nullptr )
+    , exportItem( true )
+    , mModuleMasterFolder( false )
+    , mName( name )
+    , mpHost( pHost )
+    , mNeedsToBeCompiled( true )
+    , mModuleMember(false)
+    , mKeyCode()
+    , mPresentModifiers()
+    , mAbsentModifiers()
 {
 }
 
@@ -80,8 +80,8 @@ bool TKey::match(const int key, const Qt::KeyboardModifiers modifiers, const boo
     if (isActive()) {
         if (!isFolder()) {
             if (  (mKeyCode == key) // The key matches
-               && ((modifiers & mPresentModifiers) == mPresentModifiers) // All of the required present modifiers are present and thus this matches
-               && (!(modifiers & mAbsentModifiers))) { // None of the required to be absent modifiers are present and thus this matches
+                    && ((modifiers & mPresentModifiers) == mPresentModifiers) // All of the required present modifiers are present and thus this matches
+                    && (!(modifiers & mAbsentModifiers))) { // None of the required to be absent modifiers are present and thus this matches
 
                 execute();
                 if (isToMatchAll) {
