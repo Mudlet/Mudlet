@@ -1369,7 +1369,8 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="2611"/>
       <source>No search results, sorry!
 </source>
-      <translation type="unfinished"/>
+      <translation>未找到搜索结果
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="369"/>
@@ -1447,7 +1448,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1596"/>
       <source>Loading map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>正在加载地图(1) &quot;%1&quot; 在 %2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1638"/>
@@ -1875,7 +1876,7 @@ please wait...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1447"/>
       <source>[ INFO ]  - Reading map (format version:%1) file: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[信息] - 读取地图文件中 (版本: %1) 文件: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1558"/>
@@ -1907,7 +1908,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1714"/>
       <source>[ INFO ]  - Checking map file: &quot;%1&quot;, format version:%2...</source>
-      <translation type="unfinished"/>
+      <translation>[信息]-检查地图文件： &quot;%1&quot;, 版本：%2...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2123"/>
@@ -1922,7 +1923,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2136"/>
       <source>Area id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>区域id: %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2138"/>
@@ -1937,7 +1938,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2154"/>
       <source>Room id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>房间id: %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2156"/>
@@ -2393,7 +2394,7 @@ It was locked, this is recorded as user data with key:
     <message>
       <location filename="../src/TRoom.cpp" line="1654"/>
       <source>  It was locked, this is recorded as user data with key: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>  已锁定，已被记录在用户数据中, Key: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1662"/>
