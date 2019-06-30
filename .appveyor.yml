@@ -17,7 +17,8 @@ environment:
     MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32
 install:
 - cd "%APPVEYOR_BUILD_FOLDER%\CI"
-- powershell ".\appveyor.install.ps1"
+- ps: .\appveyor.install.ps1
+- cmd: SET
 
 build_script:
 - cd "%APPVEYOR_BUILD_FOLDER%\CI"
@@ -28,7 +29,7 @@ on_failure:
 - bash -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
 
 after_build:
-- ps: ".\appveyor.set-build-info.ps1"
+- ps: .\appveyor.set-build-info.ps1
 - cmd: SET
 # - 7z a Mudlet-%VERSION%-%MUDLET_VERSION_BUILD%.zip src\release
 # - tree /F .
