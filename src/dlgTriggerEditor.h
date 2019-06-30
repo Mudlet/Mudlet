@@ -275,6 +275,8 @@ private slots:
     void slot_clearSearchResults();
     void slot_clearSoundFile();
     void slot_editorContextMenu();
+    void slot_updateKeyBindingValue();
+    void slot_regenerateKeyBindingValue(const bool);
 
 public:
     TConsole* mpErrorConsole;

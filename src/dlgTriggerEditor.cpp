@@ -167,7 +167,18 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mpKeysMainArea = new dlgKeysMainArea(this);
     splitter_right->addWidget(mpKeysMainArea);
+    mpKeysMainArea->toolButton_toggleModiferControls->setStyleSheet(QStringLiteral("QToolButton::on{border-image:url(:/icons/arrow-down_grey-16x.png);} "
+                                                                                   "QToolButton{border-image:url(:/icons/arrow-right_grey-16x.png);} "
+                                                                                   "QToolButton::on:hover{border-image:url(:/icons/arrow-down-16x.png);} "
+                                                                                   "QToolButton:hover{border-image:url(:/icons/arrow-right-16x.png);}"));
     connect(mpKeysMainArea->pushButton_key_grabKey, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_key_grab);
+    connect(mpKeysMainArea->toolButton_toggleModiferControls, &QPushButton::clicked, this, &dlgTriggerEditor::slot_regenerateKeyBindingValue);
+    connect(mpKeysMainArea->checkBox_modifier_alt, &QCheckBox::clicked, this, &dlgTriggerEditor::slot_updateKeyBindingValue);
+    connect(mpKeysMainArea->checkBox_modifier_control, &QCheckBox::clicked, this, &dlgTriggerEditor::slot_updateKeyBindingValue);
+    connect(mpKeysMainArea->checkBox_modifier_group, &QCheckBox::clicked, this, &dlgTriggerEditor::slot_updateKeyBindingValue);
+    connect(mpKeysMainArea->checkBox_modifier_keypad, &QCheckBox::clicked, this, &dlgTriggerEditor::slot_updateKeyBindingValue);
+    connect(mpKeysMainArea->checkBox_modifier_meta, &QCheckBox::clicked, this, &dlgTriggerEditor::slot_updateKeyBindingValue);
+    connect(mpKeysMainArea->checkBox_modifier_shift, &QCheckBox::clicked, this, &dlgTriggerEditor::slot_updateKeyBindingValue);
 
     mpVarsMainArea = new dlgVarsMainArea(this);
     splitter_right->addWidget(mpVarsMainArea);
@@ -5114,8 +5125,10 @@ void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem* pItem)
         mpKeysMainArea->lineEdit_key_command->clear();
         mpKeysMainArea->lineEdit_key_command->setText(command);
         mpKeysMainArea->lineEdit_key_name->setText(name);
-        QString keyName = mpHost->getKeyUnit()->getKeyName(pT->getKeyCode());
-        mpKeysMainArea->label_key_binding_value->setText(keyName);
+        QString keyName = mpHost->getKeyUnit()->getKeyName(pT->getKeyCode(), qMakePair(Qt::NoModifier, Qt::NoModifier), false);
+        // Show the full text for the key including the modifiers IF the
+        // modifier controls are NOT shown - otherwise just show the key itself:
+        mpKeysMainArea->label_key_binding_value->setText(mpHost->getKeyUnit()->getKeyName(pT->getKeyCode(), pT->getKeyModifiers(), !mpKeysMainArea->frame_modifiers->isVisible()));
         mpKeysMainArea->setModifiers(pT->getKeyModifiers());
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
@@ -7839,9 +7852,12 @@ void dlgTriggerEditor::key_grab_callback(const int key, const Qt::KeyboardModifi
         return;
     }
 
-    QString keyName = pKeyUnit->getKeyName(key);
+    // Get the base key name without any modifier details:
+    QString keyName = mpHost->getKeyUnit()->getKeyName(key, qMakePair(modifiers, Qt::NoModifier), false);
     QString name = keyName;
-    mpKeysMainArea->label_key_binding_value->setText(name);
+    // Show the full text for the key including the modifiers IF the
+    // modifier controls are NOT shown - otherwise just show the key itself:
+    mpKeysMainArea->label_key_binding_value->setText(mpHost->getKeyUnit()->getKeyName(key, qMakePair(modifiers, Qt::NoModifier), !mpKeysMainArea->frame_modifiers->isVisible()));
     mpKeysMainArea->setModifiers(qMakePair(modifiers, Qt::NoModifier));
     QTreeWidgetItem* pItem = treeWidget_keys->currentItem();
     if (pItem) {
@@ -8439,5 +8455,32 @@ void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
                 slot_showAllTriggerControls(true);
             }
         }
+    }
+}
+
+void dlgTriggerEditor::slot_updateKeyBindingValue()
+{
+    if (!mpCurrentKeyItem) {
+        return;
+    }
+
+    slot_regenerateKeyBindingValue(mpKeysMainArea->frame_modifiers->isVisible());
+}
+
+void dlgTriggerEditor::slot_regenerateKeyBindingValue(const bool modifierControlsVisible)
+{
+    if (!mpCurrentKeyItem) {
+        return;
+    }
+
+    int ID = mpCurrentKeyItem->data(0, Qt::UserRole).toInt();
+    TKey* pT = mpHost->getKeyUnit()->getKey(ID);
+    if (pT) {
+        // Show the full text for the key including the modifiers IF the
+        // modifier controls are NOT shown - otherwise just show the key itself.
+        // Note we have to use the modifiers from the controls rather than the
+        // saved keybinding because the controls may have been modified but that
+        // does not prompt the key-binding to be saved to the Mudlet item:
+        mpKeysMainArea->label_key_binding_value->setText(mpHost->getKeyUnit()->getKeyName(pT->getKeyCode(), mpKeysMainArea->getModifiers(), !modifierControlsVisible));
     }
 }

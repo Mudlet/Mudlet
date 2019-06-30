@@ -116,70 +116,32 @@ dlgKeysMainArea::dlgKeysMainArea(QWidget* pF)
                                            // Intentional comment
                                            "This is the tooltip for the modifier that Qt identifies as the group switch modifier, it may only be present on Unix like platforms (not Windows, not MacOs)."));
 #endif
+    slot_showModifierControls(false);
+    connect(toolButton_toggleModiferControls, &QPushButton::clicked, this, &dlgKeysMainArea::slot_showModifierControls);
 }
 
 // Sets the modifiers without causing any signals to be emitted
+void dlgKeysMainArea::setModifier(QCheckBox* checkBox_modifier, const bool isPresentModifierSet, const bool isAbsentModifierSet)
+{
+    checkBox_modifier->blockSignals(true);
+    if (isPresentModifierSet) {
+        checkBox_modifier->setCheckState(Qt::Checked);
+    } else if (isAbsentModifierSet) {
+        checkBox_modifier->setCheckState(Qt::Unchecked);
+    } else {
+        checkBox_modifier->setCheckState(Qt::PartiallyChecked);
+    }
+    checkBox_modifier->blockSignals(false);
+}
+
 void dlgKeysMainArea::setModifiers(const QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers> modifiers)
 {
-    checkBox_modifier_shift->blockSignals(true);
-    if (modifiers.first & Qt::ShiftModifier) {
-        checkBox_modifier_shift->setCheckState(Qt::Checked);
-    } else if (modifiers.second & Qt::ShiftModifier) {
-        checkBox_modifier_shift->setCheckState(Qt::Unchecked);
-    } else {
-        checkBox_modifier_shift->setCheckState(Qt::PartiallyChecked);
-    }
-    checkBox_modifier_shift->blockSignals(false);
-
-    checkBox_modifier_control->blockSignals(true);
-    if (modifiers.first & Qt::ControlModifier) {
-        checkBox_modifier_control->setCheckState(Qt::Checked);
-    } else if (modifiers.second & Qt::ControlModifier) {
-        checkBox_modifier_control->setCheckState(Qt::Unchecked);
-    } else {
-        checkBox_modifier_control->setCheckState(Qt::PartiallyChecked);
-    }
-    checkBox_modifier_control->blockSignals(false);
-
-    checkBox_modifier_alt->blockSignals(true);
-    if (modifiers.first & Qt::AltModifier) {
-        checkBox_modifier_alt->setCheckState(Qt::Checked);
-    } else if (modifiers.second & Qt::AltModifier) {
-        checkBox_modifier_alt->setCheckState(Qt::Unchecked);
-    } else {
-        checkBox_modifier_alt->setCheckState(Qt::PartiallyChecked);
-    }
-    checkBox_modifier_alt->blockSignals(false);
-
-    checkBox_modifier_meta->blockSignals(true);
-    if (modifiers.first & Qt::MetaModifier) {
-        checkBox_modifier_meta->setCheckState(Qt::Checked);
-    } else if (modifiers.second & Qt::MetaModifier) {
-        checkBox_modifier_meta->setCheckState(Qt::Unchecked);
-    } else {
-        checkBox_modifier_meta->setCheckState(Qt::PartiallyChecked);
-    }
-    checkBox_modifier_meta->blockSignals(false);
-
-    checkBox_modifier_keypad->blockSignals(true);
-    if (modifiers.first & Qt::KeypadModifier) {
-        checkBox_modifier_keypad->setCheckState(Qt::Checked);
-    } else if (modifiers.second & Qt::KeypadModifier) {
-        checkBox_modifier_keypad->setCheckState(Qt::Unchecked);
-    } else {
-        checkBox_modifier_keypad->setCheckState(Qt::PartiallyChecked);
-    }
-    checkBox_modifier_keypad->blockSignals(false);
-
-    checkBox_modifier_group->blockSignals(true);
-    if (modifiers.first & Qt::GroupSwitchModifier) {
-        checkBox_modifier_group->setCheckState(Qt::Checked);
-    } else if (modifiers.second & Qt::GroupSwitchModifier) {
-        checkBox_modifier_group->setCheckState(Qt::Unchecked);
-    } else {
-        checkBox_modifier_group->setCheckState(Qt::PartiallyChecked);
-    }
-    checkBox_modifier_group->blockSignals(false);
+    setModifier(checkBox_modifier_shift, modifiers.first & Qt::ShiftModifier, modifiers.second & Qt::ShiftModifier);
+    setModifier(checkBox_modifier_control, modifiers.first & Qt::ControlModifier, modifiers.second & Qt::ControlModifier);
+    setModifier(checkBox_modifier_alt, modifiers.first & Qt::AltModifier, modifiers.second & Qt::AltModifier);
+    setModifier(checkBox_modifier_meta, modifiers.first & Qt::MetaModifier, modifiers.second & Qt::MetaModifier);
+    setModifier(checkBox_modifier_keypad, modifiers.first & Qt::KeypadModifier, modifiers.second & Qt::KeypadModifier);
+    setModifier(checkBox_modifier_group, modifiers.first & Qt::GroupSwitchModifier, modifiers.second & Qt::GroupSwitchModifier);
 }
 
 QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>  dlgKeysMainArea::getModifiers() const
@@ -229,4 +191,22 @@ void dlgKeysMainArea::slot_modifierKeyToggled_keypad(const bool s)
 void dlgKeysMainArea::slot_modifierKeyToggled_group(const bool s)
 {
     emit signal_modifierKeyToggled(Qt::GroupSwitchModifier, s);
+}
+
+void dlgKeysMainArea::slot_showModifierControls(const bool s)
+{
+    if (toolButton_toggleModiferControls->isChecked() != s) {
+        toolButton_toggleModiferControls->setChecked(s);
+    }
+    frame_modifiers->setVisible(s);
+    label_key_modifiers_label->setVisible(s);
+    if (s) {
+        label_key_binding_label->setText(tr("Key:",
+                                            // Intentional comment
+                                            "Text shown for the key-binding control label when the modifier controls are visible"));
+    } else {
+        label_key_binding_label->setText(tr("Key-binding:",
+                                            // Intentional comment
+                                            "Text shown for the key-binding control label when the modifier controls are not shown"));
+    }
 }

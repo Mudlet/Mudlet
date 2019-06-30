@@ -66,7 +66,7 @@ public:
     void reParentKey(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
     QString assembleReport();
     int getNewID();
-    QString getKeyName(const int keyCode);
+    QString getKeyName(const int keyCode, const QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers>, const bool showModifersDetails = false);
     void setupKeyNames();
     void uninstall(const QString&);
     void _uninstall(TKey* pChild, const QString& packageName);

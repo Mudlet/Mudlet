@@ -353,12 +353,152 @@ int KeyUnit::getNewID()
     return ++mMaxID;
 }
 
-QString KeyUnit::getKeyName(const int keyCode)
+QString KeyUnit::getKeyName(const int keyCode, const QPair<Qt::KeyboardModifiers, Qt::KeyboardModifiers> modifiers, const bool showModifersDetails)
 {
-    return mKeys.value(keyCode, tr("Unknown key (0x%1)",
-                                   // Intentional comment
-                                   "This text is part of the display of the keybinding and is shown if the actual key is not one that is known with a specific name.")
-                       .arg(keyCode, 0, 16, QLatin1Char('0')));
+    QString separator = tr(" + ",
+                           // Intentional comment to separate arguments
+                           "This is the text that is put between the key involved in a keybinding and any modifiers (and between those modifiers if there are more than one).");
+
+    if (!showModifersDetails) {
+        return mKeys.value(keyCode, tr("Unknown key (0x%1)",
+                                       // Intentional comment to separate arguments
+                                       "This text is part of the display of the keybinding and is shown if the actual key is not one that is known with a specific name.")
+                           .arg(keyCode, 0, 16, QLatin1Char('0')));
+    }
+
+    QStringList modifierText;
+    if (modifiers.first == Qt::NoModifier && modifiers.second == Qt::NoModifier) {
+        // We have been asked to show the modifiers but there are not any
+        if (mKeys.contains(keyCode)) {
+            return tr("%1%2No modifiers").arg(mKeys.value(keyCode), separator);
+        }
+
+        return tr("Unknown key (0x%1)%2No modifiers",
+                  // Intentional comment to separate arguments
+                  "This text is part of the display of the keybinding and is shown if the actual key is not one that is known with a specific name and has no modifers though we have been asked to show them.")
+                .arg(keyCode, 0, 16, QLatin1Char('0'))
+                .arg(separator);
+    }
+
+    if (modifiers.first & Qt::ShiftModifier) {
+        modifierText << tr("Shift",
+                           // Intentional comment to separate arguments
+                           "Text to show when the SHIFT modifier MUST be present in a key-binding.");
+    } else if (modifiers.second & Qt::ShiftModifier) {
+        modifierText << tr("NOT Shift",
+                           // Intentional comment to separate arguments
+                           "Text to show when the SHIFT modifier must NOT be present in a key-binding.");
+    }
+
+#if defined(Q_OS_MACOS)
+    if (modifiers.first & Qt::ControlModifier) {
+        modifierText << tr("Command",
+                           // Intentional comment to separate arguments
+                           "Text to show when the COMMAND modifier {macOS specific, CONTROL on all other OSs} MUST be present in a key-binding.");
+    } else if (modifiers.second & Qt::ControlModifier) {
+        modifierText << tr("NOT Command",
+                           // Intentional comment to separate arguments
+                           "Text to show when the COMMAND modifier {macOS specific, CONTROL on all other OSs} must NOT be present in a key-binding.");
+    }
+#else
+    if (modifiers.first & Qt::ControlModifier) {
+        modifierText << tr("Control",
+                           // Intentional comment to separate arguments
+                           "Text to show when the CONTROL modifier {COMMAND on macOS} MUST be present in a key-binding.");
+    } else if (modifiers.second & Qt::ControlModifier) {
+        modifierText << tr("NOT Control",
+                           // Intentional comment to separate arguments
+                           "Text to show when the CONTROL modifier {COMMAND on macOS} must NOT be present in a key-binding.");
+    }
+#endif
+
+#if defined(Q_OS_MACOS)
+    if (modifiers.first & Qt::AltModifier) {
+        modifierText << tr("Option",
+                           // Intentional comment to separate arguments
+                           "Text to show when the OPTION modifier {macOs specific, ALT on all other OSs} MUST be present in a key-binding.");
+    } else if (modifiers.second & Qt::AltModifier) {
+        modifierText << tr("NOT Option",
+                           // Intentional comment to separate arguments
+                           "Text to show when the OPTION modifier {macOs specific, ALT on all other OSs} must NOT be present in a key-binding.");
+    }
+#else
+    if (modifiers.first & Qt::AltModifier) {
+        modifierText << tr("Alt",
+                           // Intentional comment to separate arguments
+                           "Text to show when the ALT modifier {OPTION on macOs} MUST be present in a key-binding.");
+    } else if (modifiers.second & Qt::AltModifier) {
+        modifierText << tr("NOT Alt",
+                           // Intentional comment to separate arguments
+                           "Text to show when the ALT modifier {OPTION on macOs} must NOT be present in a key-binding.");
+    }
+#endif
+
+#if defined(Q_OS_MACOS)
+    if (modifiers.first & Qt::MetaModifier) {
+        modifierText << tr("Control",
+                           // Intentional comment to separate arguments
+                           "Text to show when the CONTROL modifier {macOS specific, WINDOWS key on Windows, META on all other OSs) MUST be present in a key-binding.");
+    } else if (modifiers.second & Qt::MetaModifier) {
+        modifierText << tr("NOT Control",
+                           // Intentional comment to separate arguments
+                           "Text to show when the CONTROL modifier {macOS specific, WINDOWS key on Windows, META on all other OSs) must NOT be present in a key-binding.");
+    }
+#elif defined(Q_OS_WIN32)
+    if (modifiers.first & Qt::MetaModifier) {
+        modifierText << tr("Windows",
+                           // Intentional comment to separate arguments
+                           "Text to show when the WINDOW modifier {Windows specific, CONTROL on macOS, META on all other OSs) MUST be present in a key-binding.");
+    } else if (modifiers.second & Qt::MetaModifier) {
+        modifierText << tr("NOT Windows",
+                           // Intentional comment to separate arguments
+                           "Text to show when the WINDOW modifier {Windows specific, CONTROL on macOS, META on all other OSs) must NOT be present in a key-binding.");
+    }
+#else
+    if (modifiers.first & Qt::MetaModifier) {
+        modifierText << tr("Meta",
+                           // Intentional comment to separate arguments
+                           "Text to show when the META modifier (CONTROL on MacOS and WINDOWS on Windows OSs) MUST be present in a key-binding.");
+    } else if (modifiers.second & Qt::MetaModifier) {
+        modifierText << tr("NOT Meta",
+                           // Intentional comment to separate arguments
+                           "Text to show when the META modifier (CONTROL on MacOS and WINDOWS on Windows OSs) must NOT be present in a key-binding.");
+    }
+#endif
+
+    if (modifiers.first & Qt::KeypadModifier) {
+        modifierText << tr("Keypad",
+                           // Intentional comment to separate arguments
+                           "Text to show when the KEYPAD modifier MUST be present in a key-binding.");
+    } else if (modifiers.second & Qt::KeypadModifier) {
+        modifierText << tr("NOT Keypad",
+                           // Intentional comment to separate arguments
+                           "Text to show when the KEYPAD modifier must NOT be present in a key-binding.");
+    }
+
+    if (modifiers.first & Qt::GroupSwitchModifier) {
+        modifierText << tr("Group-Switch",
+                           // Intentional comment to separate arguments
+                           "Text to show when the GROUPSWITCH modifier {Unix systems (FreeBSD and Linux, not macOS) with X11 display system} MUST be present in a key-binding.");
+    } else if (modifiers.second & Qt::GroupSwitchModifier) {
+        modifierText << tr("NOT Group-Switch",
+                           // Intentional comment to separate arguments
+                           "Text to show when the GROUPSWITCH modifier {Unix systems (FreeBSD and Linux, not macOS) with X11 display system} must NOT be present in a key-binding.");
+    }
+
+    // We have been asked to show the modifiers but there are not any
+    if (mKeys.contains(keyCode)) {
+        return tr("%1%2%3",
+                  // Intentional comment to separate arguments
+                  "This text is part of the display of the keybinding and is shown if the actual key is known with a specific name and has modifers and we have been asked to show them. %1 is the name for the key; %2 is the separator and %3 is the list of present modifiers joined together with the same separator.")
+                  .arg(mKeys.value(keyCode), separator, modifierText.join(separator));
+    }
+
+    return tr("Unknown key (0x%1)%2%3",
+              // Intentional comment to separate arguments
+              "This text is part of the display of the keybinding and is shown if the actual key is not one that is known with a specific name and has modifers and we have been asked to show them. %1 is a hex code for the key; %2 is the separator and %3 is the list of present modifiers joined together with the same separator.")
+            .arg(keyCode, 0, 16, QLatin1Char('0'))
+            .arg(separator, modifierText.join(separator));
 }
 
 void KeyUnit::initStats()

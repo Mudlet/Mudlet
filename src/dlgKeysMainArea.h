@@ -50,7 +50,10 @@ private slots:
     void slot_modifierKeyToggled_meta(const bool);
     void slot_modifierKeyToggled_keypad(const bool);
     void slot_modifierKeyToggled_group(const bool);
+    void slot_showModifierControls(const bool);
 
+private:
+    void setModifier(QCheckBox*, const bool isPresentModifierSet, const bool isAbsentModifierSet);
 };
 
 #endif // MUDLET_DLGKEYSMAINAREA_H
