@@ -16,7 +16,8 @@ environment:
   - QT_BASE_DIR: C:\Qt\5.12.2\mingw73_32
     MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32
 install:
-- ps: .\CI\appveyor.install.ps1
+- cd "%APPVEYOR_BUILD_FOLDER%\CI"
+- powershell ".\appveyor.install.ps1"
 
 build_script:
 - cd "%APPVEYOR_BUILD_FOLDER%\CI"
@@ -26,9 +27,15 @@ on_failure:
 - cd C:\src
 - bash -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
 
-artifacts:
-- path: src\release
-  name: mudlet
+after_build:
+- ps: .\appveyor.set-build-info.ps1
+- cmd: SET
+# - 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%.zip src\release
+# - tree /F .
+
+# artifacts:
+# - path: src\release
+#   name: mudlet
 
 notifications:
 - provider: Webhook
