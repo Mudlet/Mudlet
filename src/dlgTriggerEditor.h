@@ -468,6 +468,13 @@ private:
     QString msgInfoAddButton;
     QString msgInfoAddVar;
     QString msgInfoAddKey;
+    void searchTriggers(const QString& s);
+    void searchAliases(const QString& s);
+    void searchScripts(const QString& s);
+    void searchActions(const QString& s);
+    void searchTimers(const QString& s);
+    void searchKeys(const QString& s);
+    void searchVariables(const QString& s);
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)
