@@ -28,8 +28,9 @@ on_failure:
 - bash -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
 
 after_build:
-- 7z a Mudlet-%VERSION%-%MUDLET_VERSION_BUILD%.zip src\release
-- tree /F .
+- SET
+# - 7z a Mudlet-%VERSION%-%MUDLET_VERSION_BUILD%.zip src\release
+# - tree /F .
 
 notifications:
 - provider: Webhook
