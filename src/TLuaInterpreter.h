@@ -496,6 +496,7 @@ public:
     static int spellSuggestWord(lua_State*);
     static int getDictionaryWordList(lua_State*);
     static int getTextFormat(lua_State*);
+    static int getWindowsCodepage(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 

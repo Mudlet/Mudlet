@@ -948,6 +948,20 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::getWindowsCodepage(lua_State* L)
+{
+#if defined (Q_OS_WIN32)
+    QSettings registry(R"(HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Nls\CodePage)",
+                       QSettings::NativeFormat);
+    auto value = registry.value("ACP");
+    lua_pushstring(L, value.toUtf8().constData());
+    return 1;
+#else
+    lua_pushnil(L);
+    lua_pushstring(L, "this function is only needed, and only works on Windows");
+    return 2;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#wrapLine
 int TLuaInterpreter::wrapLine(lua_State* L)
 {
@@ -14857,6 +14871,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "spellSuggestWord", TLuaInterpreter::spellSuggestWord);
     lua_register(pGlobalLua, "getDictionaryWordList", TLuaInterpreter::getDictionaryWordList);
     lua_register(pGlobalLua, "getTextFormat", TLuaInterpreter::getTextFormat);
+    lua_register(pGlobalLua, "getWindowsCodepage", TLuaInterpreter::getWindowsCodepage);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     // prepend profile path to package.path and package.cpath
@@ -14905,7 +14920,7 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2", 
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
             "%1 is the name of the module. %2 can be an additional message about the expected effect.")
             .arg(QStringLiteral("rex_pcre"),
                  QStringLiteral("\n%1\n"))
@@ -14913,7 +14928,7 @@ void TLuaInterpreter::initLuaGlobals()
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
             "%1 is the name of the module.")
             .arg(QStringLiteral("rex_pcre"));
         mpHost->postMessage(msg);
@@ -14926,14 +14941,14 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2", 
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
             "%1 is the name of the module. %2 can be an additional message about the expected effect.")
             .arg(QLatin1String("zip"),
                  QString());
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
             "%1 is the name of the module.")
             .arg(QLatin1String("zip"));
         mpHost->postMessage(msg);
@@ -14946,7 +14961,7 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2", 
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
             "%1 is the name of the module. %2 can be an additional message about the expected effect.")
             .arg(QLatin1String("lfs (Lua File System)"),
                  QLatin1String("\n%1\n"))
@@ -14954,7 +14969,7 @@ void TLuaInterpreter::initLuaGlobals()
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
             "%1 is the name of the module.")
             .arg(QLatin1String("lfs"));
         mpHost->postMessage(msg);
@@ -14967,7 +14982,7 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2", 
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
             "%1 is the name of the module. %2 can be an additional message about the expected effect.")
             .arg(QLatin1String("luasql.sqlite3"),
                  QLatin1String("\n%1\n"))
@@ -14975,7 +14990,7 @@ void TLuaInterpreter::initLuaGlobals()
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
             "%1 is the name of the module.")
             .arg(QLatin1String("sqlite3"));
         mpHost->postMessage(msg);
@@ -14988,7 +15003,7 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2", 
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
             "%1 is the name of the module. %2 can be an additional message about the expected effect.")
             .arg(QLatin1String("utf8"),
                  QLatin1String("\n%1\n"))
@@ -14996,7 +15011,7 @@ void TLuaInterpreter::initLuaGlobals()
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
             "%1 is the name of the module.")
             .arg(QLatin1String("utf8"));
         mpHost->postMessage(msg);
@@ -15009,7 +15024,7 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2", 
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
             "%1 is the name of the module. %2 can be an additional message about the expected effect.")
             .arg(QLatin1String("yajl"),
                  QLatin1String("\n%1\n"))
@@ -15017,7 +15032,7 @@ void TLuaInterpreter::initLuaGlobals()
         msg.append(e);
         mpHost->postMessage(msg);
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.", 
+        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
             "%1 is the name of the module.")
             .arg(QLatin1String("yajl"));
         mpHost->postMessage(msg);
