@@ -5681,7 +5681,6 @@ void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem* pItem)
     }
 }
 
-
 void dlgTriggerEditor::fillout_form()
 {
     mCurrentView = EditorViewType::cmUnknownView;
@@ -5730,6 +5729,7 @@ void dlgTriggerEditor::fillout_form()
     populateKeys();
     mpKeyBaseItem->setExpanded(true);
 }
+
 void dlgTriggerEditor::populateKeys()
 {
     list<TKey*> baseNodeList_key = mpHost->getKeyUnit()->getKeyRootNodeList();
