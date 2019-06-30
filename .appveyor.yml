@@ -30,7 +30,8 @@ on_failure:
 after_build:
 - ps: .\appveyor.set-build-info.ps1
 - cmd: SET
-- cmd: 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%.zip ..\src\release
+- cmd: tree /F .
+- cmd: 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%.zip "%APPVEYOR_BUILD_FOLDER%\src\release"
 - cmd: tree /F .
 
 # artifacts:
