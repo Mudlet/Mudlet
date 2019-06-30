@@ -351,25 +351,25 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3212"/>
       <location filename="../src/T2DMap.cpp" line="4877"/>
       <source>Solid line</source>
-      <translation type="unfinished"/>
+      <translation>实线</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3213"/>
       <location filename="../src/T2DMap.cpp" line="4878"/>
       <source>Dot line</source>
-      <translation type="unfinished"/>
+      <translation>点线</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3214"/>
       <location filename="../src/T2DMap.cpp" line="4879"/>
       <source>Dash line</source>
-      <translation type="unfinished"/>
+      <translation>虚线</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3215"/>
       <location filename="../src/T2DMap.cpp" line="4880"/>
       <source>Dash-dot line</source>
-      <translation type="unfinished"/>
+      <translation>点虚相间线</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3216"/>
