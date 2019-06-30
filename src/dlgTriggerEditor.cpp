@@ -715,8 +715,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 #if QT_VERSION < QT_VERSION_CHECK(5, 9, 0)
         startTimer(mAutosaveInterval * 1000 * 60);
 #else
-//        startTimer(mAutosaveInterval * 1min);
-#endif
+        startTimer(mAutosaveInterval * 1min);
+#endifs
     }
 }
 
