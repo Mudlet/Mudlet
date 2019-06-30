@@ -453,7 +453,8 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2015"/>
       <source>Mapper: Cannot find a path to this room using known exits.
 </source>
-      <translation type="unfinished"/>
+      <translation>Mapper: 找不到通往此房间的有效路径。
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2168"/>
@@ -493,7 +494,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2375"/>
       <source>Text label or image label?</source>
       <comment>2D Mapper create label dialog text</comment>
-      <translation type="unfinished"/>
+      <translation>文本标签或图像标签?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2376"/>
@@ -511,7 +512,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2381"/>
       <source>Enter label text.</source>
       <comment>2D Mapper create label dialog title/text</comment>
-      <translation type="unfinished"/>
+      <translation>输入标签文字</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2388"/>
@@ -523,7 +524,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2389"/>
       <source>Foreground color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>前景色</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2393"/>
@@ -571,13 +572,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2805"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)</comment>
-      <translation type="unfinished"/>
+      <translation>属性</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2807"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)</comment>
-      <translation type="unfinished"/>
+      <translation>属性...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2808"/>
@@ -589,7 +590,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2811"/>
       <source>Finish</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>完成</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2812"/>
@@ -601,19 +602,19 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2833"/>
       <source>Create new map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>新建地图</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2836"/>
       <source>Load map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>载入地图</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2849"/>
       <source>Create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>创建房间</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2855"/>
@@ -781,19 +782,19 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2913"/>
       <source>Create Label</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>创建标签</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2914"/>
       <source>Create labels to show text or images</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>创建标签以显示文本或图像</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2917"/>
       <source>Set location</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>设定位置</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2919"/>
@@ -895,7 +896,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3018"/>
       <source>Delete line</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>删除线</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3019"/>
@@ -1268,19 +1269,19 @@ rooms:</source>
     <message>
       <location filename="../src/TCommandLine.cpp" line="587"/>
       <source>Remove from user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>从用户字典中删除</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="591"/>
       <source>▼Mudlet▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which we have bundled with Mudlet; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼ Mudlet ▼ │ 字典建议 │ ▲ 用户 ▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="601"/>
       <source>▼System▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which is provided as part of the OS; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼ 系统 ▼ │ 字典建议 │ ▲ 用户 ▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="669"/>
@@ -1361,7 +1362,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2425"/>
       <source>System Message: %1</source>
-      <translation type="unfinished"/>
+      <translation>系统消息: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2572"/>
