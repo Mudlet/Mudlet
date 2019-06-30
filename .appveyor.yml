@@ -16,8 +16,10 @@ environment:
   - QT_BASE_DIR: C:\Qt\5.12.2\mingw73_32
     MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32
 install:
+- cd "%APPVEYOR_BUILD_FOLDER%\CI"
 - ps: .\CI\appveyor.set-build-info.ps1
 - cmd: SET
+- cd "%APPVEYOR_BUILD_FOLDER%\CI"
 - ps: .\CI\appveyor.install.ps1
 
 build_script:
