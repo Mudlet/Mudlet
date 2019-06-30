@@ -486,7 +486,6 @@ QString KeyUnit::getKeyName(const int keyCode, const QPair<Qt::KeyboardModifiers
                            "Text to show when the GROUPSWITCH modifier {Unix systems (FreeBSD and Linux, not macOS) with X11 display system} must NOT be present in a key-binding.");
     }
 
-    // We have been asked to show the modifiers but there are not any
     if (mKeys.contains(keyCode)) {
         return tr("%1%2%3",
                   // Intentional comment to separate arguments
