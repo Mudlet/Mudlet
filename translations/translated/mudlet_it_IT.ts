@@ -4403,7 +4403,7 @@ Utilizzi</translation>
       <location filename="../src/TLuaInterpreter.cpp" line="15087"/>
       <source>i</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>i</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15089"/>
@@ -4415,7 +4415,7 @@ Utilizzi</translation>
       <location filename="../src/TLuaInterpreter.cpp" line="15091"/>
       <source>o</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>o</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15093"/>
@@ -4427,7 +4427,7 @@ Utilizzi</translation>
       <location filename="../src/TLuaInterpreter.cpp" line="15095"/>
       <source>u</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>u</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15097"/>
@@ -4439,7 +4439,7 @@ Utilizzi</translation>
       <location filename="../src/TLuaInterpreter.cpp" line="15099"/>
       <source>d</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>d</translation>
     </message>
   </context>
   <context>
@@ -5058,7 +5058,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="90"/>
       <source>What do you wish to call the package:</source>
-      <translation type="unfinished"/>
+      <translation>Come vuoi chiamare questo package:</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="157"/>
@@ -5087,7 +5087,7 @@ Utilizzi</translation>
       <location filename="../src/dlgPackageExporter.cpp" line="347"/>
       <source>Failed to open package file. Error is: &quot;%1&quot;.</source>
       <comment>This error message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing file anywhere in the computer&apos;s file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.</comment>
-      <translation type="unfinished"/>
+      <translation>Impossibile aprire il file del package. L'errore è: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="441"/>
@@ -5108,7 +5108,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="539"/>
       <source>Package &quot;%1&quot; exported to: %2</source>
-      <translation type="unfinished"/>
+      <translation>Pacchetto &quot;%1&quot; esportato in: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="835"/>
@@ -11223,7 +11223,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="476"/>
       <source>&lt;p&gt;Enter text here to search through your code.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Inserisci il testo qui per cercare nel tuo codice.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="513"/>
