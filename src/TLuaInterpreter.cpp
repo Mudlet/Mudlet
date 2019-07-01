@@ -15231,7 +15231,11 @@ void TLuaInterpreter::loadGlobal()
 #endif
 
     QFile relativeLuaGlobal(path);
-    int error = luaL_dostring(pGlobalLua, relativeLuaGlobal.readAll());
+    int error = 1;
+
+    if (relativeLuaGlobal.exists()) {
+        error = luaL_dostring(pGlobalLua, relativeLuaGlobal.readAll());
+    }
     if (error != 0) {
         qWarning() << "load 1 failed " << lua_tostring(pGlobalLua, -1);
         // For the installer we do not go down a level to search for this. So
@@ -15246,13 +15250,13 @@ void TLuaInterpreter::loadGlobal()
         QFile absoluteLuaGlobal(path);
         error = luaL_dostring(pGlobalLua, absoluteLuaGlobal.readAll());
         if (error == 0) {
-            mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
+            mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded.1"));
             return;
         } else {
             qWarning() << "load 2 failed" << lua_tostring(pGlobalLua, -1);
         }
     } else {
-        mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
+        mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded.2"));
         return;
     }
 
@@ -15270,7 +15274,7 @@ void TLuaInterpreter::loadGlobal()
         }
         mpHost->postMessage(e);
     } else {
-        mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
+        mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded.3"));
         return;
     }
 }
