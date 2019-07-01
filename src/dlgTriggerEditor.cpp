@@ -506,7 +506,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar2->addAction(viewActionAction);
 
     toolBar2->addSeparator();
-    
+
     toolBar2->addAction(viewErrorsAction);
     toolBar2->addAction(viewStatsAction);
     toolBar2->addAction(showDebugAreaAction);
@@ -716,7 +716,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         startTimer(mAutosaveInterval * 1000 * 60);
 #else
         startTimer(mAutosaveInterval * 1min);
-#endifs
+#endif
     }
 }
 
