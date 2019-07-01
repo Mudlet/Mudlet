@@ -102,7 +102,7 @@ private:
     int mUserDictionarySuggestionsCount;
     char** mpSystemSuggestionsList;
     char** mpUserSuggestionsList;
-    void spellCheckWord(QTextCursor& c);
+    void spellCheckWord(QTextCursor& c, bool skipIfCorrect=false);
 };
 
 #endif // MUDLET_TCOMMANDLINE_H

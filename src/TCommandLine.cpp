@@ -1129,7 +1129,7 @@ void TCommandLine::slot_addWord()
     spellCheck();
 }
 
-void TCommandLine::spellCheckWord(QTextCursor& c)
+void TCommandLine::spellCheckWord(QTextCursor& c, bool skipIfCorrect)
 {
     if (!mpHost||!mpHost->mEnableSpellCheck) {
         return;
@@ -1165,6 +1165,11 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
         }
 
     } else {
+        // Because setCharFormat takes linear time, recheckWholeLine is quadratic time.
+        // This optimization makes it only quadratic in (# incorrect words), not (# words).
+        if (skipIfCorrect) {
+            return;
+        }
         // Word is spelt correctly
         f.setFontUnderline(false);
     }
@@ -1183,6 +1188,8 @@ void TCommandLine::recheckWholeLine()
 
     QTextCharFormat f;
     QTextCursor c = textCursor();
+    c.select(QTextCursor::Document);
+    c.setCharFormat(f);
     // Move Cursor AND selection anchor to start:
     c.setPosition(rl_prompt_len);
     //c.movePosition(QTextCursor::Start);
@@ -1194,7 +1201,7 @@ void TCommandLine::recheckWholeLine()
     c.movePosition(QTextCursor::EndOfWord, QTextCursor::KeepAnchor);
 
     while (c.hasSelection()) {
-        spellCheckWord(c);
+        spellCheckWord(c, true);
         c.movePosition(QTextCursor::NextWord);
         c.movePosition(QTextCursor::EndOfWord, QTextCursor::KeepAnchor);
     }
