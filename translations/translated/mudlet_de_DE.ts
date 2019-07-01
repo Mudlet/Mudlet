@@ -5147,7 +5147,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="90"/>
       <source>What do you wish to call the package:</source>
-      <translation type="unfinished"/>
+      <translation>Wie möchtest du das Paket nennen:</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="157"/>
@@ -5197,13 +5197,13 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="539"/>
       <source>Package &quot;%1&quot; exported to: %2</source>
-      <translation type="unfinished"/>
+      <translation>Paket &quot;%1&quot; exportiert nach: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="835"/>
       <source>Why not &lt;a href=&quot;https://forums.mudlet.org/viewforum.php?f=6&quot;&gt;upload&lt;/a&gt; your package for other Mudlet users?</source>
       <comment>Only the text outside of the &apos;a&apos; (HTML anchor) tags PLUS the verb &apos;upload&apos; in between them in the source text, (associated with uploading the resulting package to the Mudlet forums) should be translated.</comment>
-      <translation type="unfinished"/>
+      <translation>Warum nicht dein Paket für andere Mudlet-Benutzer &lt;a href=&quot;https://forums.mudlet.org/viewforum.php?f=6&quot;&gt;hochladen&lt;/a&gt;?</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="32"/>
