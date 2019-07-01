@@ -15139,6 +15139,10 @@ void TLuaInterpreter::initIndenterGlobals()
 // No documentation available in wiki - internal function
 void TLuaInterpreter::loadGlobal()
 {
+#if defined(Q_OS_WIN32)
+    loadUtf8Filenames();
+#endif
+
 #if defined(Q_OS_MACOS)
     // Load relatively to MacOS inside Resources when we're in a .app bundle,
     // as mudlet-lua always gets copied in by the build script into the bundle
@@ -15186,6 +15190,28 @@ void TLuaInterpreter::loadGlobal()
         return;
     }
 }
+
+#if defined(Q_OS_WIN32)
+// No documentation available in wiki - internal function
+// loads utf8_filenames from the resource system directly so it is not affected by
+// non-ASCII characters that might be present in the users filesystem
+void TLuaInterpreter::loadUtf8Filenames()
+{
+    QFile file(QStringLiteral(":/mudlet-lua/lua/utf8_filenames.lua"));
+    if (!file.open(QFile::ReadOnly | QFile::Text)) {
+        qWarning() << "TLuaInterpreter::loadUtf8Filenames() ERROR: couldn't open :/mudlet-lua/lua/utf8_filenames.lua";
+        return;
+    }
+
+    QTextStream in(&file);
+    QString text = in.readAll();
+    file.close();
+
+    if (!mpHost->getLuaInterpreter()->compileAndExecuteScript(text)) {
+        qWarning() << "TLuaInterpreter::loadUtf8Filenames() ERROR: there was an error running the script";
+    }
+}
+#endif
 
 // No documentation available in wiki - internal function
 QPair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function)
