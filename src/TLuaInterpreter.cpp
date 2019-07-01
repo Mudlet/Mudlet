@@ -960,6 +960,7 @@ int TLuaInterpreter::getWindowsCodepage(lua_State* L)
     lua_pushnil(L);
     lua_pushstring(L, "this function is only needed, and only works on Windows");
     return 2;
+#endif
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#wrapLine
