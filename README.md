@@ -1,6 +1,6 @@
 <h1 align="center">
   <br>
-  <a href="https://github.com/Mudlet/Mudlet"><img src="https://raw.githubusercontent.com/health-validator/Hammer/master/assets/hammer-logo.png" alt="Mudlet" width="200"></a>
+  <a href="https://github.com/Mudlet/Mudlet"><img src="https://bazaar.launchpad.net/~mudlet-makers/mudlet/artwork/download/head:/mudlet_main_256px.pn-20171109060211-hidv2woj9dffwyql-11/mudlet_main_256px.png" alt="Mudlet"></a>
   <br>
   Mudlet
   <br>
@@ -35,7 +35,7 @@
 </p>
 
 <p align="center">
-  <img alt="Hammer demo" src="https://raw.githubusercontent.com/health-validator/Hammer/master/assets/hammer-demo.gif">
+  <img alt="Interfaces players have created with Mudlet" src="https://bazaar.launchpad.net/~mudlet-makers/mudlet/artwork/download/head:/samplemudletuis.gif-20190701193442-s3gex5fzreha37jz-1/sample-mudlet-uis.gif?sort=date">
 </p>
 
 ## About
