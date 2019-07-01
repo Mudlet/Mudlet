@@ -47,6 +47,7 @@
 
 #include "pre_guard.h"
 #include <QCollator>
+#include <QCoreApplication>
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QVector>
@@ -15052,6 +15053,80 @@ void TLuaInterpreter::initLuaGlobals()
 }
 
 // No documentation available in wiki - internal function
+// Creates a 'mudlet.translations' table with directions
+void TLuaInterpreter::setupLanguageData()
+{
+    lua_State* L = pGlobalLua;
+
+    // 'mudlet' global table
+    lua_createtable(L, 0, 1);
+    // language-specific table
+    lua_createtable(L, 0, 1);
+    // language-specific directions table
+    lua_createtable(L, 0, 24);
+
+    // this cannot be generated programmatically since lupdate needs the explicit string at extraction time
+    lua_pushstring(L, QCoreApplication::translate("directions", "north", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "north");
+    lua_pushstring(L, QCoreApplication::translate("directions", "n", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "n");
+    lua_pushstring(L, QCoreApplication::translate("directions", "east", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "east");
+    lua_pushstring(L, QCoreApplication::translate("directions", "e", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "s");
+    lua_pushstring(L, QCoreApplication::translate("directions", "south", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "south");
+    lua_pushstring(L, QCoreApplication::translate("directions", "s", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "s");
+    lua_pushstring(L, QCoreApplication::translate("directions", "west", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "west");
+    lua_pushstring(L, QCoreApplication::translate("directions", "w", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "w");
+    lua_pushstring(L, QCoreApplication::translate("directions", "northeast", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "northeast");
+    lua_pushstring(L, QCoreApplication::translate("directions", "ne", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "ne");
+    lua_pushstring(L, QCoreApplication::translate("directions", "southeast", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "southeast");
+    lua_pushstring(L, QCoreApplication::translate("directions", "se", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "se");
+    lua_pushstring(L, QCoreApplication::translate("directions", "southwest", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "southwest");
+    lua_pushstring(L, QCoreApplication::translate("directions", "sw", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "sw");
+    lua_pushstring(L, QCoreApplication::translate("directions", "northwest", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "northwest");
+    lua_pushstring(L, QCoreApplication::translate("directions", "nw", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "nw");
+    lua_pushstring(L, QCoreApplication::translate("directions", "in", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "in");
+    lua_pushstring(L, QCoreApplication::translate("directions", "i", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "i");
+    lua_pushstring(L, QCoreApplication::translate("directions", "out", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "out");
+    lua_pushstring(L, QCoreApplication::translate("directions", "o", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "o");
+    lua_pushstring(L, QCoreApplication::translate("directions", "up", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "up");
+    lua_pushstring(L, QCoreApplication::translate("directions", "u", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "u");
+    lua_pushstring(L, QCoreApplication::translate("directions", "down", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "down");
+    lua_pushstring(L, QCoreApplication::translate("directions", "d", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_setfield(L, -2, "d");
+
+    // finalize language-specific directions table
+    lua_setfield(L, -2, mudlet::self()->mInterfaceLanguage.toUtf8().constData());
+
+    lua_pushstring(L, mudlet::self()->mInterfaceLanguage.toUtf8().constData());
+    lua_setfield(L, -2, "interfacelanguage");
+
+    lua_setfield(L, -2, "translations");
+    lua_setglobal(L, "mudlet");
+    lua_pop(L, lua_gettop(L));
+}
+
+// No documentation available in wiki - internal function
 // Initialised a slimmed-down Lua state just to run the indenter in a separate sandbox.
 // The indenter by default pollutes the global environment with some utility functions
 // and we don't want to tie ourselves to it by exposing them for scripting.
@@ -15142,6 +15217,8 @@ void TLuaInterpreter::loadGlobal()
 #if defined(Q_OS_WIN32)
     loadUtf8Filenames();
 #endif
+
+    setupLanguageData();
 
 #if defined(Q_OS_MACOS)
     // Load relatively to MacOS inside Resources when we're in a .app bundle,

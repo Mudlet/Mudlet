@@ -516,6 +516,8 @@ private:
     QByteArray encodeBytes(const char*);
     void setMatches(lua_State* L);
     static std::pair<bool, QString> discordApiEnabled(lua_State* L, bool writeAccess = false);
+    void setupLanguageData();
+
 #if defined(Q_OS_WIN32)
     void loadUtf8Filenames();
 #endif
