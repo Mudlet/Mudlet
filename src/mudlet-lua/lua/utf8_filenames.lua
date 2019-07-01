@@ -164,17 +164,9 @@ local function modify_lua_functions(all_compressed_mappings)
       print"-------------------------------------------------"
    end
 
-   if (os.getenv"os" or ""):match"^Windows" then
+   if getOS() == "windows" then
 
-      local function get_windows_ansi_codepage()
-         -- returns string "1253" for Greek, "1251" for Russian, etc.
-         local pipe = assert(io.popen[[reg query HKLM\SYSTEM\CurrentControlSet\Control\Nls\CodePage /v ACP]])
-         local codepage = pipe:read"*a":match"%sACP%s+REG_SZ%s+(.-)%s*$"
-         pipe:close()
-         return assert(codepage, "Failed to determine Windows ANSI codepage from Windows registry")
-      end
-
-      local codepage = get_windows_ansi_codepage()
+      local codepage = getWindowsCodepage()
       -- print("Your codepage is "..codepage)
       local compressed_mapping = all_compressed_mappings[codepage]
       if compressed_mapping then
