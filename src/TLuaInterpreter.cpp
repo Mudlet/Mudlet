@@ -951,10 +951,10 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
 int TLuaInterpreter::getWindowsCodepage(lua_State* L)
 {
 #if defined (Q_OS_WIN32)
-    QSettings registry(R"(HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Nls\CodePage)",
+    QSettings registry(QStringLiteral(R"(HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Nls\CodePage)"),
                        QSettings::NativeFormat);
-    auto value = registry.value("ACP");
-    lua_pushstring(L, value.toUtf8().constData());
+    auto value = registry.value(QStringLiteral("ACP"));
+    lua_pushstring(L, value.toString().toUtf8().constData());
     return 1;
 #else
     lua_pushnil(L);
