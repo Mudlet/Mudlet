@@ -57,24 +57,22 @@ static void cb_linehandler (char *line)
 static void redisplay_function ()
 {
     //Put the readline buffer into the display in the TCommandLine stored at rl_tc
-    QTextCursor cursor = rl_tc->textCursor();
-
-    QString promptText = QString::fromLocal8Bit(rl_display_prompt);
-    QByteArray lineBytes = rl_line_buffer;
-    QString beforeCursor = promptText + QString::fromLocal8Bit(lineBytes.left(rl_point));
-    QString afterCursor = QString::fromLocal8Bit(lineBytes.right(lineBytes.length() - rl_point));
+    QString text = QString::fromLocal8Bit(rl_display_prompt);
+    rl_prompt_len = text.length();
+    text.append(QString::fromLocal8Bit(rl_line_buffer, rl_point));
+    int cursorPosition = text.length();
+    text.append(QString::fromLocal8Bit(rl_line_buffer + rl_point));
 
     // The docs suggest setPlainText should reset currentCharFormat(),
     // but it doesn't seem to work: if the current cursor is in an underlined region,
     // without this the line is inserted entirely underlined.
     QTextCharFormat f;
     f.setFontUnderline(false);
+    QTextCursor cursor = rl_tc->textCursor();
     cursor.setCharFormat(f);
     rl_tc->setTextCursor(cursor);
-
-    rl_tc->setPlainText(beforeCursor + afterCursor);
-    rl_prompt_len = promptText.length();
-    cursor.setPosition(beforeCursor.length());
+    rl_tc->setPlainText(text);
+    cursor.setPosition(cursorPosition);
     rl_tc->setTextCursor(cursor);
 }
 
