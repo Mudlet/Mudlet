@@ -15056,7 +15056,7 @@ void TLuaInterpreter::setupLanguageData()
     lua_setfield(L, -2, "n");
     lua_pushstring(L, QCoreApplication::translate("directions", "east", "Entering this direction will move the player in the game").toUtf8().constData());
     lua_setfield(L, -2, "east");
-    lua_pushstring(L, QCoreApplication::translate("directions", "s", "Entering this direction will move the player in the game").toUtf8().constData());
+    lua_pushstring(L, QCoreApplication::translate("directions", "e", "Entering this direction will move the player in the game").toUtf8().constData());
     lua_setfield(L, -2, "s");
     lua_pushstring(L, QCoreApplication::translate("directions", "south", "Entering this direction will move the player in the game").toUtf8().constData());
     lua_setfield(L, -2, "south");
