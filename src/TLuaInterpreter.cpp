@@ -15231,6 +15231,7 @@ void TLuaInterpreter::loadGlobal()
     };
     QStringList failedMessages{};
 
+    // load via Qt so UTF8 paths work on Windows - Lua can't handle it
     auto readAllText = [=](const QString& path) -> QString {
         QFile file(path);
         if (!file.open(QFile::ReadOnly | QFile::Text)) {
