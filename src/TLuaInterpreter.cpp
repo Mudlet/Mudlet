@@ -15227,10 +15227,11 @@ void TLuaInterpreter::loadGlobal()
 #else
     // Additional "../src/" allows location of lua code when object code is in a
     // directory alongside src directory as occurs using Qt Creator "Shadow Builds"
-    QString path = "../src/mudlet-lua/lua/LuaGlobal.lua";
+    QString path = QStringLiteral("../src/mudlet-lua/lua/LuaGlobal.lua");
 #endif
 
-    int error = luaL_dofile(pGlobalLua, path.toUtf8().constData());
+    QFile relativeLuaGlobal(path);
+    int error = luaL_dostring(pGlobalLua, relativeLuaGlobal.readAll());
     if (error != 0) {
         qWarning() << "load 1 failed " << lua_tostring(pGlobalLua, -1);
         // For the installer we do not go down a level to search for this. So
@@ -15242,7 +15243,8 @@ void TLuaInterpreter::loadGlobal()
         if (!QFileInfo::exists(path)) {
             path = QStringLiteral("mudlet-lua/lua/LuaGlobal.lua");
         }
-        error = luaL_dofile(pGlobalLua, path.toUtf8().constData());
+        QFile absoluteLuaGlobal(path);
+        error = luaL_dostring(pGlobalLua, absoluteLuaGlobal.readAll());
         if (error == 0) {
             mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
             return;
@@ -15256,7 +15258,8 @@ void TLuaInterpreter::loadGlobal()
 
     // Finally try loading from LUA_DEFAULT_PATH
     path = LUA_DEFAULT_PATH "/LuaGlobal.lua";
-    error = luaL_dofile(pGlobalLua, path.toUtf8().constData());
+    QFile defaultLuaGlobal(path);
+    error = luaL_dostring(pGlobalLua, defaultLuaGlobal.readAll());
     if (error != 0) {
         qWarning() << "load 3 failed" << lua_tostring(pGlobalLua, -1);
         QString e = tr("no error message available from Lua");
