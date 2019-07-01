@@ -113,6 +113,7 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
     setContextMenuPolicy(Qt::PreventContextMenu);
 
     //Initialize readline
+    setlocale(LC_CTYPE, "UTF-8");
     rl_state = nullptr;
     rl_history_state = nullptr;
     switch_rl_here();
