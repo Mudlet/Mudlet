@@ -85,7 +85,7 @@ echo "******************************************************"
 echo ""
 echo "Finished building Mudlet $Env:VERSION$Env:MUDLET_VERSION_BUILD"
 if (Test-Path variable:DEPLOY_URL) {
-    echo "Deployed the output to $DEPLOY_URL"
+    echo "Deployed the output to $env:DEPLOY_URL"
 }
 echo ""
 echo "******************************************************"
