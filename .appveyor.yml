@@ -30,7 +30,7 @@ on_failure:
 after_build:
 - ps: .\appveyor.set-build-info.ps1
 - cmd: 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip "%APPVEYOR_BUILD_FOLDER%\src\release"
-- ps: $env:DEPLOY_URL = curl https://make.mudlet.org/snapshots/Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip --upload-file Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip
+- ps: $env:DEPLOY_URL = curl.exe https://make.mudlet.org/snapshots/Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip --upload-file Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip
 
 artifacts:
 - path: src\release
