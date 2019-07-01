@@ -4499,49 +4499,49 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15071"/>
       <source>ne</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>ne</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15073"/>
       <source>southeast</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>юго-восток</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15075"/>
       <source>se</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>se</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15077"/>
       <source>southwest</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>юго-запад</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15079"/>
       <source>sw</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>sw</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15081"/>
       <source>northwest</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>северо-запад</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15083"/>
       <source>nw</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>nw</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15085"/>
       <source>in</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>в</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15087"/>
@@ -4553,7 +4553,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15089"/>
       <source>out</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>из</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15091"/>
@@ -4565,7 +4565,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15093"/>
       <source>up</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>вверх</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15095"/>
@@ -4577,7 +4577,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15097"/>
       <source>down</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>вниз</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15099"/>
@@ -5191,7 +5191,7 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="80"/>
       <source>Export</source>
       <comment>Text for button to perform the package export on the items the user has selected.</comment>
-      <translation type="unfinished"/>
+      <translation>Экспорт</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="90"/>
