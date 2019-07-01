@@ -15220,63 +15220,55 @@ void TLuaInterpreter::loadGlobal()
 
     setupLanguageData();
 
+    QStringList pathsToTry = {
 #if defined(Q_OS_MACOS)
-    // Load relatively to MacOS inside Resources when we're in a .app bundle,
-    // as mudlet-lua always gets copied in by the build script into the bundle
-    QString path = QCoreApplication::applicationDirPath() + "/../Resources/mudlet-lua/lua/LuaGlobal.lua";
-#else
-    // Additional "../src/" allows location of lua code when object code is in a
-    // directory alongside src directory as occurs using Qt Creator "Shadow Builds"
-    QString path = QStringLiteral("../src/mudlet-lua/lua/LuaGlobal.lua");
+        QCoreApplication::applicationDirPath() + "/../Resources/mudlet-lua/lua/LuaGlobal.lua",
 #endif
+        QCoreApplication::applicationDirPath() + "/mudlet-lua/lua/LuaGlobal.lua",
+        "../src/mudlet-lua/lua/LuaGlobal.lua",
+        "mudlet-lua/lua/LuaGlobal.lua",
+        LUA_DEFAULT_PATH "/LuaGlobal.lua"
+    };
+    QStringList failedMessages{};
 
-    QFile relativeLuaGlobal(path);
-    int error = 1;
-
-    if (relativeLuaGlobal.exists()) {
-        error = luaL_dostring(pGlobalLua, relativeLuaGlobal.readAll());
-    }
-    if (error != 0) {
-        qWarning() << "load 1 failed " << lua_tostring(pGlobalLua, -1);
-        // For the installer we do not go down a level to search for this. So
-        // we check again for the user case of a windows install.
-
-        // overload previous behaviour to check by absolute path as well
-        // TODO this sould be cleaned up and refactored to just use an array and a for loop
-        path = QCoreApplication::applicationDirPath() + "/mudlet-lua/lua/LuaGlobal.lua";
-        if (!QFileInfo::exists(path)) {
-            path = QStringLiteral("mudlet-lua/lua/LuaGlobal.lua");
+    auto readAllText = [=](const QString& path) -> QString {
+        QFile file(path);
+        if (!file.open(QFile::ReadOnly | QFile::Text)) {
+            qWarning() << "TLuaInterpreter::loadGlobal() ERROR: couldn't open " << path;
+            return QString();
         }
-        QFile absoluteLuaGlobal(path);
-        error = luaL_dostring(pGlobalLua, absoluteLuaGlobal.readAll());
+
+        QTextStream in(&file);
+        QString text = in.readAll();
+        file.close();
+
+        return text;
+    };
+
+    int error;
+    for (const auto& path : qAsConst(pathsToTry)) {
+        if (!QFileInfo::exists(path)) {
+            failedMessages << tr("%1 (doesn't exist)", "This file doesn't exist").arg(path);
+            continue;
+        }
+
+        auto luaGlobal = readAllText(path);
+        if (luaGlobal.isEmpty()) {
+            failedMessages << tr("%1 (couldn't read file)", "This file could not be read for some reason (for example, no permission)").arg(path);
+            continue;
+        }
+
+        error = luaL_dostring(pGlobalLua, luaGlobal.toUtf8().constData());
         if (error == 0) {
-            mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded.1"));
+            mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
             return;
         } else {
-            qWarning() << "load 2 failed" << lua_tostring(pGlobalLua, -1);
+            qWarning() << "TLuaInterpreter::loadGlobal() loading " << path << " failed: " << lua_tostring(pGlobalLua, -1);
+            failedMessages << QStringLiteral("%1 (%2)").arg(path, lua_tostring(pGlobalLua, -1));
         }
-    } else {
-        mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded.2"));
-        return;
     }
 
-    // Finally try loading from LUA_DEFAULT_PATH
-    path = LUA_DEFAULT_PATH "/LuaGlobal.lua";
-    QFile defaultLuaGlobal(path);
-    error = luaL_dostring(pGlobalLua, defaultLuaGlobal.readAll());
-    if (error != 0) {
-        qWarning() << "load 3 failed" << lua_tostring(pGlobalLua, -1);
-        QString e = tr("no error message available from Lua");
-        if (lua_isstring(pGlobalLua, -1)) {
-            e = tr("[ ERROR ] - LuaGlobal.lua compile error - please report!\n"
-                   "Error from Lua: ");
-            e += lua_tostring(pGlobalLua, -1);
-        }
-        mpHost->postMessage(e);
-    } else {
-        mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded.3"));
-        return;
-    }
+    mpHost->postMessage(tr("[ ERROR ] - Couldn't to load LuaGlobal; your Mudlet broken! Tried these locations:\n%1").arg(failedMessages.join(QStringLiteral("\n"))));
 }
 
 #if defined(Q_OS_WIN32)
