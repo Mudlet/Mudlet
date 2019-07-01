@@ -75,6 +75,10 @@ Mudlet features a scripting framework using [Lua](https://www.lua.org/) – a sm
 
 We believe in making Mudlet available to people on all major platforms, and we work on keeping cross-platform compatibility right from start. Mudlet is available on Linux (both 32bit and 64bit), Windows, and macOS; you may be able to run it on additional platforms as well.
 
+## Download
+
+Download for free from [mudlet.org](https://www.mudlet.org/download/)
+
 ## How To Use
 
 1. Download and double-click on Mudlet to run
@@ -121,5 +125,5 @@ GPL2+
 ---
 
 > [website](https://www.mudlet.org/) &nbsp;&middot;&nbsp;
-> [forums](hhttps://forums.mudlet.org/)
+> [forums](https://forums.mudlet.org/)
 
