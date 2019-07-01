@@ -959,7 +959,7 @@ int TLuaInterpreter::getWindowsCodepage(lua_State* L)
     return 1;
 #else
     lua_pushnil(L);
-    lua_pushstring(L, "this function is only needed, and only works on Windows");
+    lua_pushstring(L, "this function is only needed on Windows, and does not work here");
     return 2;
 #endif
 }
@@ -15269,7 +15269,7 @@ void TLuaInterpreter::loadGlobal()
         }
     }
 
-    mpHost->postMessage(tr("[ ERROR ] - Couldn't to load LuaGlobal; your Mudlet broken! Tried these locations:\n%1").arg(failedMessages.join(QStringLiteral("\n"))));
+    mpHost->postMessage(tr("[ ERROR ] - Couldn't to load LuaGlobal; your Mudlet is broken! Tried these locations:\n%1").arg(failedMessages.join(QStringLiteral("\n"))));
 }
 
 #if defined(Q_OS_WIN32)
