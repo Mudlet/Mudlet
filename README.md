@@ -19,8 +19,8 @@
   <a href="https://github.com/mudlet/mudlet/issues">
     <img src="https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat">
   </a>
-  <a href="https://img.shields.io/github/stars/Mudlet/Mudlet.svg">
-    <img src="https://github.com/Mudlet/Mudlet/stargazers"/>
+  <a href="https://github.com/Mudlet/Mudlet/stargazers">
+    <img src="https://img.shields.io/github/stars/Mudlet/Mudlet.svg"/>
   </a>
 </p>
 
