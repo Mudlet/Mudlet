@@ -4463,7 +4463,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15059"/>
       <source>e</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>в</translation>
+      <translation>вo</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15061"/>
