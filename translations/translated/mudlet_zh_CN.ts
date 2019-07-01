@@ -884,13 +884,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3010"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)</comment>
-      <translation type="unfinished"/>
+      <translation>属性</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3014"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise</comment>
-      <translation type="unfinished"/>
+      <translation>属性...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3018"/>
@@ -4320,103 +4320,103 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15053"/>
       <source>north</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>北</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15055"/>
       <source>n</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>n</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15057"/>
       <source>east</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>东</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15059"/>
       <source>e</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>e</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15061"/>
       <source>south</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>南</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15063"/>
       <source>s</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>s</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15065"/>
       <source>west</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>西</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15067"/>
       <source>w</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>w</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15069"/>
       <source>northeast</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>东北</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15071"/>
       <source>ne</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>ne</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15073"/>
       <source>southeast</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>东南</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15075"/>
       <source>se</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>se</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15077"/>
       <source>southwest</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>西南</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15079"/>
       <source>sw</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>sw</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15081"/>
       <source>northwest</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>西北</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15083"/>
       <source>nw</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>nw</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15085"/>
       <source>in</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>in</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15087"/>
@@ -4428,7 +4428,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15089"/>
       <source>out</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>out</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15091"/>
@@ -4440,7 +4440,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15093"/>
       <source>up</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>up</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15095"/>
@@ -4452,7 +4452,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15097"/>
       <source>down</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>down</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15099"/>
@@ -5026,7 +5026,7 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="80"/>
       <source>Export</source>
       <comment>Text for button to perform the package export on the items the user has selected.</comment>
-      <translation type="unfinished"/>
+      <translation>导出</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="90"/>
