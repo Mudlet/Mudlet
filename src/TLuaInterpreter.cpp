@@ -949,6 +949,7 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getWindowsCodepage
 int TLuaInterpreter::getWindowsCodepage(lua_State* L)
 {
 #if defined (Q_OS_WIN32)
