@@ -15232,6 +15232,7 @@ void TLuaInterpreter::loadGlobal()
 
     int error = luaL_dofile(pGlobalLua, path.toUtf8().constData());
     if (error != 0) {
+        qWarning() << "load 1 failed " << lua_tostring(pGlobalLua, -1);
         // For the installer we do not go down a level to search for this. So
         // we check again for the user case of a windows install.
 
@@ -15239,12 +15240,14 @@ void TLuaInterpreter::loadGlobal()
         // TODO this sould be cleaned up and refactored to just use an array and a for loop
         path = QCoreApplication::applicationDirPath() + "/mudlet-lua/lua/LuaGlobal.lua";
         if (!QFileInfo::exists(path)) {
-            path = "mudlet-lua/lua/LuaGlobal.lua";
+            path = QStringLiteral("mudlet-lua/lua/LuaGlobal.lua");
         }
         error = luaL_dofile(pGlobalLua, path.toUtf8().constData());
         if (error == 0) {
             mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
             return;
+        } else {
+            qWarning() << "load 2 failed" << lua_tostring(pGlobalLua, -1);
         }
     } else {
         mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
@@ -15255,6 +15258,7 @@ void TLuaInterpreter::loadGlobal()
     path = LUA_DEFAULT_PATH "/LuaGlobal.lua";
     error = luaL_dofile(pGlobalLua, path.toUtf8().constData());
     if (error != 0) {
+        qWarning() << "load 3 failed" << lua_tostring(pGlobalLua, -1);
         QString e = tr("no error message available from Lua");
         if (lua_isstring(pGlobalLua, -1)) {
             e = tr("[ ERROR ] - LuaGlobal.lua compile error - please report!\n"
@@ -15284,7 +15288,9 @@ void TLuaInterpreter::loadUtf8Filenames()
     QString text = in.readAll();
     file.close();
 
-    if (!mpHost->getLuaInterpreter()->compileAndExecuteScript(text)) {
+    if (mpHost->getLuaInterpreter()->compileAndExecuteScript(text)) {
+        qDebug() << "TLuaInterpreter::loadUtf8Filenames() - patched Lua IO functions to work on Windows with UTF8";
+    } else {
         qWarning() << "TLuaInterpreter::loadUtf8Filenames() ERROR: there was an error running the script";
     }
 }
