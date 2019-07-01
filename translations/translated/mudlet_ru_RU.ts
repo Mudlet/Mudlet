@@ -4499,7 +4499,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15071"/>
       <source>ne</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>ne</translation>
+      <translation>св</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15073"/>
@@ -4511,7 +4511,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15075"/>
       <source>se</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>se</translation>
+      <translation>юв</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15077"/>
@@ -4523,7 +4523,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15079"/>
       <source>sw</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>sw</translation>
+      <translation>юз</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15081"/>
@@ -4535,7 +4535,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15083"/>
       <source>nw</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>nw</translation>
+      <translation>сз</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15085"/>
@@ -4547,7 +4547,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15087"/>
       <source>i</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>в</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15089"/>
@@ -4571,7 +4571,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15095"/>
       <source>u</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>в</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15097"/>
@@ -4583,7 +4583,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15099"/>
       <source>d</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>вн</translation>
     </message>
   </context>
   <context>
