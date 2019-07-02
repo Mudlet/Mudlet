@@ -935,7 +935,9 @@ the highlighted room (%1) to:</source>
       <source>Enter the symbol to use
 for this/these %n room(s):</source>
       <comment>this is for when applying a new room symbol to one or more rooms and none have a symbol at present; use line feeds to format text into a reasonable rectangle, %n is the number of rooms involved</comment>
-      <translation type="unfinished">
+      <translation>
+        <numerusform>Enter the symbol to use
+for these %n rooms:</numerusform>
         <numerusform>Enter the symbol to use
 for these %n rooms:</numerusform>
       </translation>
@@ -947,7 +949,11 @@ more of the selected %n room(s), delete this to
 clear it from all selected rooms or replace
 with a new symbol to use for all the rooms:</source>
       <comment>This is for when applying a new room symbol to one or more rooms and some have the SAME symbol (others may have none) at present, %n is the total number of rooms involved and is at least two. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished">
+      <translation>
+        <numerusform>The only used symbol is &quot;%1&quot; in one or
+more of the selected %n rooms, delete this to
+clear it from those rooms or replace with a new
+symbol to use in them all:</numerusform>
         <numerusform>The only used symbol is &quot;%1&quot; in one or
 more of the selected %n rooms, delete this to
 clear it from those rooms or replace with a new
@@ -3344,7 +3350,9 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTrigger.cpp" line="1065"/>
       <source>Trigger name=%1 will fire %n more time(s).
 </source>
-      <translation type="unfinished">
+      <translation>
+        <numerusform>Trigger name=%1 will fire %n more times.
+</numerusform>
         <numerusform>Trigger name=%1 will fire %n more times.
 </numerusform>
       </translation>
@@ -9182,7 +9190,8 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="4408"/>
       <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
       <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
-      <translation type="unfinished">
+      <translation>
+        <numerusform>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n updates are now available!&lt;/i&gt;&lt;p&gt;</numerusform>
         <numerusform>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n updates are now available!&lt;/i&gt;&lt;p&gt;</numerusform>
       </translation>
     </message>
@@ -9199,7 +9208,8 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="4431"/>
       <source>&lt;p&gt;Review the update(s) available...&lt;/p&gt;</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
-      <translation type="unfinished">
+      <translation>
+        <numerusform>&lt;p&gt;Review the updates available...&lt;/p&gt;</numerusform>
         <numerusform>&lt;p&gt;Review the updates available...&lt;/p&gt;</numerusform>
       </translation>
     </message>
