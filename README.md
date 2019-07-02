@@ -58,8 +58,8 @@ It’s a modern breed of a client on the gaming scene – with an intuitive user
 * Discord integration
 * Completely themable
 * Open-source and Free
-* Cross platform: Windows, macOS and Linux
-    * full compatibility: run same scripts on any of the above
+* Cross platform: runs on Windows, macOS and Linux
+* Full compatibility: run same scripts on any of the above
 
 <details>
   <summary>Explain?</summary>
