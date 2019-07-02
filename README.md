@@ -62,7 +62,7 @@ It’s a modern breed of a client on the gaming scene – with an intuitive user
   - Windows, macOS and Linux.
 
 <details>
-  <summary>Why Mudlet?</summary>
+  <summary>Explain?</summary>
   
 ### Easy to use client
 
