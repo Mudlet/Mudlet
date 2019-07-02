@@ -1,5 +1,5 @@
 workflow "Update translations" {
-  resolves = ["Commit back changes"]
+  resolves = ["Commit changes"]
   on = "pull_request"
 }
 
