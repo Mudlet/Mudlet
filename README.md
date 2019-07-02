@@ -48,6 +48,8 @@ It’s a modern breed of a client on the gaming scene – with an intuitive user
 
 * Simple to use
 * Very, very fast
+* Active development
+* Big, thriving community
 * Poweful trigger engine
 * Backed by a thorough Lua engine
 * Excellent script editor
@@ -58,6 +60,9 @@ It’s a modern breed of a client on the gaming scene – with an intuitive user
 * Open-source and Free
 * Cross platform
   - Windows, macOS and Linux.
+
+<details>
+  <summary>Why Mudlet?</summary>
   
 ### Easy to use client
 
@@ -74,6 +79,7 @@ Mudlet features a scripting framework using [Lua](https://www.lua.org/) – a sm
 ### Cross-Platform love
 
 We believe in making Mudlet available to people on all major platforms, and we work on keeping cross-platform compatibility right from start. Mudlet is available on Linux (both 32bit and 64bit), Windows, and macOS; you may be able to run it on additional platforms as well.
+</details>
 
 ## Download
 
@@ -109,14 +115,6 @@ This software wouldnt've been possible without these open source packages:
 - [Hunspell](https://hunspell.github.io/)
 
 Credit to [Markdownify](https://github.com/amitmerchant1990/electron-markdownify) for the README inspiration.
-
-## You may also like...
-
-- [FHIR](http://hl7.org/fhir/) - Official HL7 FHIR® specification
-- [FRED](https://github.com/smart-on-fhir/fred) - FHIR instance editor
-- [Ontoserver](http://ontoserver.csiro.au/) - Production-grade terminology server
-- [Simplifier](https://simplifier.net/) - The FHIR hub
-- [Vonk](https://fire.ly/products/vonk) - Production-grade FHIR server
 
 ## License
 
