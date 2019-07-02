@@ -3627,7 +3627,7 @@ Reason: </source>
       <location filename="../src/ctelnet.cpp" line="1768"/>
       <source>ERROR</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation>错误</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1780"/>
@@ -3657,7 +3657,7 @@ Reason: </source>
       <location filename="../src/ctelnet.cpp" line="1824"/>
       <source>OK</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation>好</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2013"/>
@@ -3785,7 +3785,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="123"/>
       <source>Cancel</source>
-      <translation>取消</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="136"/>
@@ -3795,7 +3795,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="139"/>
       <source>Save</source>
-      <translation>保存</translation>
+      <translation type="unfinished"/>
     </message>
   </context>
   <context>
@@ -3813,7 +3813,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2115"/>
       <source>Copy</source>
-      <translation>复制</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2140"/>
@@ -3833,12 +3833,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2234"/>
       <source>Server address:</source>
-      <translation>服务器地址:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2257"/>
       <source>Port:</source>
-      <translation>端口:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2301"/>
@@ -3931,17 +3931,17 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="46"/>
       <source>Line Settings:</source>
-      <translation>路径线设置:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="84"/>
       <source>Color:</source>
-      <translation>颜色：</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="58"/>
       <source>Style:</source>
-      <translation>样式:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="43"/>
@@ -3951,7 +3951,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="122"/>
       <source>Ends with an arrow:</source>
-      <translation>以箭头结尾:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="138"/>
@@ -3966,7 +3966,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="226"/>
       <source>Destination:</source>
-      <translation>目的地:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="188"/>
@@ -3989,22 +3989,22 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="63"/>
       <source>Line Settings:</source>
-      <translation>路径线设置:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="97"/>
       <source>Ends with an arrow:</source>
-      <translation>以箭头结尾:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="110"/>
       <source>Style:</source>
-      <translation>样式:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="126"/>
       <source>Color:</source>
-      <translation>颜色：</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="47"/>
@@ -4125,17 +4125,17 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="511"/>
       <source> Destination </source>
-      <translation> 目的地 </translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="522"/>
       <source> Command</source>
-      <translation> 命令</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="567"/>
       <source>Cancel</source>
-      <translation>取消</translation>
+      <translation type="unfinished"/>
     </message>
   </context>
   <context>
@@ -4155,12 +4155,12 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="54"/>
       <source>Delete</source>
-      <translation>删除</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="61"/>
       <source>Cancel</source>
-      <translation>取消</translation>
+      <translation type="unfinished"/>
     </message>
   </context>
   <context>
@@ -4196,7 +4196,7 @@ Count</source>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="67"/>
       <source>Rooms</source>
-      <translation>房间</translation>
+      <translation type="unfinished"/>
     </message>
   </context>
   <context>
@@ -4205,7 +4205,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15053"/>
       <source>north</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>北</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15055"/>
@@ -4217,7 +4217,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15057"/>
       <source>east</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>东</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15059"/>
@@ -4229,7 +4229,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15061"/>
       <source>south</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>南</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15063"/>
@@ -4241,7 +4241,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15065"/>
       <source>west</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>西</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15067"/>
@@ -4253,7 +4253,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15069"/>
       <source>northeast</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>东北</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15071"/>
@@ -4265,7 +4265,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15073"/>
       <source>southeast</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>东南</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15075"/>
@@ -4277,7 +4277,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15077"/>
       <source>southwest</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>西南</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15079"/>
@@ -4289,7 +4289,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15081"/>
       <source>northwest</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>西北</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15083"/>
@@ -4301,7 +4301,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15085"/>
       <source>in</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>入口</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15087"/>
@@ -4313,7 +4313,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15089"/>
       <source>out</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>出口</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15091"/>
@@ -4325,7 +4325,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15093"/>
       <source>up</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation>上</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15095"/>
@@ -4549,7 +4549,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="80"/>
       <source>Yellow</source>
-      <translation>黄色</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="81"/>
@@ -4579,37 +4579,37 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="87"/>
       <source>Light red</source>
-      <translation>浅红色</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="88"/>
       <source>Light green</source>
-      <translation>浅绿色</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="89"/>
       <source>Light yellow</source>
-      <translation>淡黄色</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="90"/>
       <source>Light blue</source>
-      <translation>浅蓝色</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="91"/>
       <source>Light magenta</source>
-      <translation>浅洋红色</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="92"/>
       <source>Light cyan</source>
-      <translation>浅青色</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="93"/>
       <source>Light white</source>
-      <translation>浅白色</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="218"/>
@@ -4628,7 +4628,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="70"/>
       <source>Connect</source>
-      <translation>连接</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1094"/>
@@ -4880,38 +4880,38 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="59"/>
       <source>Triggers</source>
-      <translation>触发器</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="60"/>
       <source>Aliases</source>
-      <translation>别名</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="61"/>
       <source>Timers</source>
-      <translation>定时器</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="62"/>
       <source>Scripts</source>
-      <translation>脚本</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="63"/>
       <source>Keys</source>
-      <translation>按键</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="64"/>
       <source>Buttons</source>
-      <translation>按钮</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="80"/>
       <source>Export</source>
       <comment>Text for button to perform the package export on the items the user has selected.</comment>
-      <translation>导出</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="90"/>
@@ -5011,7 +5011,7 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="135"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2}).</comment>
-      <translation>日志文件</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="181"/>
@@ -7385,7 +7385,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="296"/>
       <source>Compact input line</source>
-      <translation>简洁的输入行</translation>
+      <translation type="unfinished"/>
     </message>
   </context>
   <context>
@@ -7433,17 +7433,17 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/mapper.ui" line="502"/>
       <source>Area:</source>
-      <translation>区域:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="571"/>
       <source>Rooms</source>
-      <translation>房间</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="600"/>
       <source>Exits</source>
-      <translation>出口</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="629"/>
@@ -7521,12 +7521,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/module_manager.ui" line="128"/>
       <source>Uninstall</source>
-      <translation>卸载</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="141"/>
       <source>Install</source>
-      <translation>安装</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="148"/>
@@ -8741,7 +8741,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="536"/>
       <source>Connect</source>
-      <translation>连接</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="537"/>
@@ -8751,7 +8751,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="545"/>
       <source>Triggers</source>
-      <translation>触发器</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="546"/>
@@ -8761,7 +8761,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="551"/>
       <source>Aliases</source>
-      <translation>别名</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="552"/>
@@ -8771,7 +8771,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="557"/>
       <source>Timers</source>
-      <translation>定时器</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="558"/>
@@ -8781,7 +8781,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="563"/>
       <source>Buttons</source>
-      <translation>按钮</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="564"/>
@@ -8791,7 +8791,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="569"/>
       <source>Scripts</source>
-      <translation>脚本</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="570"/>
@@ -8801,7 +8801,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="575"/>
       <source>Keys</source>
-      <translation>按键</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="576"/>
@@ -8811,7 +8811,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="581"/>
       <source>Variables</source>
-      <translation>变量</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="582"/>
@@ -8831,7 +8831,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="593"/>
       <source>Map</source>
-      <translation>地图</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="594"/>
@@ -8861,7 +8861,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="614"/>
       <source>Notepad</source>
-      <translation>记事本</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="615"/>
@@ -8882,7 +8882,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="626"/>
       <source>Module Manager</source>
-      <translation>模块管理器</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="627"/>
@@ -8897,7 +8897,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="637"/>
       <source>Reconnect</source>
-      <translation>重新连接</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="638"/>
@@ -8918,14 +8918,14 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="649"/>
       <location filename="../src/mudlet.cpp" line="4414"/>
       <source>About</source>
-      <translation>关于</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="650"/>
       <location filename="../src/mudlet.cpp" line="4397"/>
       <source>&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
-      <translation>&lt;p&gt;告知你自己Mudlet的版本号、谁创造了它、你在什么协议下可以分享它。&lt;/p&gt;</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="669"/>
@@ -9019,12 +9019,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="3306"/>
       <source>Pre-Map loading(3) report</source>
-      <translation>加载地图前 (3) 的报告</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3316"/>
       <source>Loading map(3) at %1 report</source>
-      <translation>加载地图中 (3) 的报告，时间：%1</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3388"/>
@@ -9050,7 +9050,7 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="3693"/>
       <location filename="../src/mudlet.cpp" line="3712"/>
       <source>Compact input line</source>
-      <translation>简洁的输入行</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3697"/>
@@ -9126,12 +9126,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/package_manager.ui" line="44"/>
       <source>Install</source>
-      <translation>安装</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/package_manager.ui" line="57"/>
       <source>Uninstall</source>
-      <translation>卸载</translation>
+      <translation type="unfinished"/>
     </message>
   </context>
   <context>
@@ -9147,7 +9147,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="20"/>
       <source>Profile preferences</source>
-      <translation>配置设定</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="55"/>
@@ -9351,7 +9351,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="646"/>
       <source>Font:</source>
-      <translation>字体:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="669"/>
@@ -9477,7 +9477,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1257"/>
       <source>Updating themes from colorsublime.github.io...</source>
-      <translation>从colorsublime.github.io更新主题……</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1281"/>
@@ -9492,12 +9492,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1293"/>
       <source>Foreground:</source>
-      <translation>前景:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1316"/>
       <source>Background:</source>
-      <translation>背景:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1336"/>
@@ -9767,7 +9767,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1486"/>
       <location filename="../src/ui/profile_preferences.ui" line="2172"/>
       <source>Light red:</source>
-      <translation>浅红色:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1493"/>
@@ -9789,7 +9789,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1526"/>
       <location filename="../src/ui/profile_preferences.ui" line="2206"/>
       <source>Light green:</source>
-      <translation>浅绿色:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1533"/>
@@ -9800,7 +9800,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1546"/>
       <location filename="../src/ui/profile_preferences.ui" line="2223"/>
       <source>Yellow:</source>
-      <translation>黄色:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1553"/>
@@ -9811,7 +9811,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1566"/>
       <location filename="../src/ui/profile_preferences.ui" line="2240"/>
       <source>Light yellow:</source>
-      <translation>淡黄色:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1573"/>
@@ -9833,7 +9833,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1606"/>
       <location filename="../src/ui/profile_preferences.ui" line="2274"/>
       <source>Light blue:</source>
-      <translation>浅蓝色:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1613"/>
@@ -9855,7 +9855,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1646"/>
       <location filename="../src/ui/profile_preferences.ui" line="2308"/>
       <source>Light magenta:</source>
-      <translation>浅洋红色:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1653"/>
@@ -9877,7 +9877,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1686"/>
       <location filename="../src/ui/profile_preferences.ui" line="2342"/>
       <source>Light cyan:</source>
-      <translation>浅青色:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1693"/>
@@ -9899,7 +9899,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1726"/>
       <location filename="../src/ui/profile_preferences.ui" line="2376"/>
       <source>Light white:</source>
-      <translation>浅白色:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1733"/>
@@ -10070,7 +10070,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1859"/>
       <source>Press to pick destination(s)</source>
-      <translation>按下来选择目标位置</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1872"/>
@@ -10096,7 +10096,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1931"/>
       <source>Map download</source>
-      <translation>地图下载</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1953"/>
@@ -10172,7 +10172,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2104"/>
       <source>Background color:</source>
-      <translation>背景色:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2417"/>
@@ -10301,7 +10301,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2669"/>
       <source>Port:</source>
-      <translation>端口:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2707"/>
@@ -10316,7 +10316,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2652"/>
       <source>Server address:</source>
-      <translation>服务器地址:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2700"/>
@@ -10361,7 +10361,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4910"/>
       <source>Save</source>
-      <translation>保存</translation>
+      <translation type="unfinished"/>
     </message>
   </context>
   <context>
@@ -10415,12 +10415,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="767"/>
       <source>ID:</source>
-      <translation>编号:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="790"/>
       <source>Weight:</source>
-      <translation>权重:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="866"/>
@@ -10739,7 +10739,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1978"/>
       <source>&amp;Save</source>
-      <translation>&amp;保存</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1886"/>
@@ -10749,7 +10749,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
       <source>&amp;Cancel</source>
-      <translation>&amp;取消</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2001"/>
@@ -10825,7 +10825,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation>名称:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="40"/>
@@ -10889,7 +10889,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="29"/>
       <source>Name:</source>
-      <translation>名称:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="69"/>
@@ -11187,7 +11187,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="146"/>
       <source>match on the prompt line</source>
-      <translation>在提示行匹配</translation>
+      <translation type="unfinished"/>
     </message>
   </context>
   <context>
@@ -11195,7 +11195,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="109"/>
       <source>Name:</source>
-      <translation>名称:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="175"/>
@@ -11237,7 +11237,7 @@ or LUA script</source>
       <location filename="../src/ui/vars_main_area.ui" line="71"/>
       <location filename="../src/ui/vars_main_area.ui" line="160"/>
       <source>table</source>
-      <translation>表</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="165"/>
@@ -11264,22 +11264,22 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="56"/>
       <source>string</source>
-      <translation>字符串</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="61"/>
       <source>number</source>
-      <translation>数字</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="66"/>
       <source>boolean</source>
-      <translation>布尔值</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="76"/>
       <source>function</source>
-      <translation>函数</translation>
+      <translation type="unfinished"/>
     </message>
   </context>
 </TS>
