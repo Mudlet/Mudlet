@@ -50,16 +50,16 @@ It’s a modern breed of a client on the gaming scene – with an intuitive user
 * Very, very fast
 * Active development
 * Big, thriving community
-* Poweful trigger engine
-* Backed by a thorough Lua engine
+* Powerful trigger engine
+* Rich Lua-based coding functionality (API)
 * Excellent script editor
 * 2D and 3D mapper with autowalk
 * Powerful and simple to use GMCP
 * Discord integration
 * Completely themable
 * Open-source and Free
-* Cross platform
-  - Windows, macOS and Linux.
+* Cross platform: Windows, macOS and Linux
+    * full compatibility: run same scripts on any of the above
 
 <details>
   <summary>Explain?</summary>
@@ -90,10 +90,10 @@ Download for free from [mudlet.org](https://www.mudlet.org/download/)
 1. Download and double-click on Mudlet to run
 1. Pick an existing game and hit `Connect`
 1. ... or play one of your choosing:
-  1. Click `New`
-  1. Enter `Server address` and `Port` of your game (found on the game's website, e.g. `mygame.com` and `2003`)
-  1. Pick a `Profile name`
-  1. Hit `Connect`
+    1. Click `New`
+    1. Enter `Server address` and `Port` of your game (found on the game's website, e.g. `mygame.com` and `2003`)
+    1. Pick a `Profile name`
+    1. Hit `Connect`
 
 ## Roadmap
 
@@ -123,5 +123,5 @@ GPL2+
 ---
 
 > [website](https://www.mudlet.org/) &nbsp;&middot;&nbsp;
-> [forums](https://forums.mudlet.org/)
-
+> [forums](https://forums.mudlet.org/) &nbsp;&middot;&nbsp;
+> [manual](https://wiki.mudlet.org/w/Manual:Contents)
