@@ -11,7 +11,7 @@ action "Check out correct branch" {
 action "Run lupdate" {
   uses = "Mudlet/lupdate-action@master"
   needs = ["Check out correct branch"]
-  args = "src/mudlet.pro"
+  args = "./src/ -ts ./translations/mudlet.ts"
 }
 
 
