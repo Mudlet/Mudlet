@@ -15232,20 +15232,6 @@ void TLuaInterpreter::loadGlobal()
     };
     QStringList failedMessages{};
 
-    // load via Qt so UTF8 paths work on Windows - Lua can't handle it
-    auto readAllText = [=](const QString& path) -> QString {
-        QFile file(path);
-        if (!file.open(QFile::ReadOnly | QFile::Text)) {
-            qWarning() << "TLuaInterpreter::loadGlobal() ERROR: couldn't open " << path;
-            return QString();
-        }
-
-        QTextStream in(&file);
-        QString text = in.readAll();
-        file.close();
-
-        return text;
-    };
 
     int error;
     for (const auto& path : qAsConst(pathsToTry)) {
@@ -15254,7 +15240,8 @@ void TLuaInterpreter::loadGlobal()
             continue;
         }
 
-        auto luaGlobal = readAllText(path);
+        // load via Qt so UTF8 paths work on Windows - Lua can't handle it
+        auto luaGlobal = readScriptFile(path);
         if (luaGlobal.isEmpty()) {
             failedMessages << tr("%1 (couldn't read file)", "This file could not be read for some reason (for example, no permission)").arg(path);
             continue;
@@ -15273,21 +15260,34 @@ void TLuaInterpreter::loadGlobal()
     mpHost->postMessage(tr("[ ERROR ] - Couldn't to load LuaGlobal; your Mudlet is broken! Tried these locations:\n%1").arg(failedMessages.join(QStringLiteral("\n"))));
 }
 
+// No documentation available in wiki - internal function
+// Returns contents of the file or empty string if it couldn't be read
+QString TLuaInterpreter::readScriptFile(const QString& path) const
+{
+    QFile file(path);
+    if (!file.open(QFile::ReadOnly | QFile::Text)) {
+        return QString();
+    }
+
+    QTextStream in(&file);
+    QString text = in.readAll();
+    file.close();
+
+    return text;
+}
+
 #if defined(Q_OS_WIN32)
 // No documentation available in wiki - internal function
 // loads utf8_filenames from the resource system directly so it is not affected by
 // non-ASCII characters that might be present in the users filesystem
 void TLuaInterpreter::loadUtf8Filenames()
 {
-    QFile file(QStringLiteral(":/mudlet-lua/lua/utf8_filenames.lua"));
-    if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        qWarning() << "TLuaInterpreter::loadUtf8Filenames() ERROR: couldn't open :/mudlet-lua/lua/utf8_filenames.lua";
+    auto path = QStringLiteral(":/mudlet-lua/lua/utf8_filenames.lua");
+    auto text = readScriptFile(path);
+    if (text.isEmpty()) {
+        qWarning() << "TLuaInterpreter::loadUtf8Filenames() ERROR: couldn't file for reading: " << path;
         return;
     }
-
-    QTextStream in(&file);
-    QString text = in.readAll();
-    file.close();
 
     if (mpHost->getLuaInterpreter()->compileAndExecuteScript(text)) {
         qDebug() << "TLuaInterpreter::loadUtf8Filenames() - patched Lua IO functions to work on Windows with UTF8";
