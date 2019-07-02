@@ -904,3 +904,21 @@ creplaceLine = function(str)
 	replace("")
 	cinsertText(str)
 end
+
+function translateTable(data, language)
+  language = language or mudlet.translations.interfacelanguage
+  assert(type(data) == "table", string.format("translateTable: bad argument #1 type (input as table expected, got %s!)", type(data)))
+
+  local t, translations = {}, mudlet.translations[language]
+
+  if not translations then
+    return nil, language.." doesn't have any translations for it"
+  end
+
+  for i = 1, #data do
+    local key = data[i]
+    t[#t+1] = translations[key]
+  end
+
+  return t
+end
