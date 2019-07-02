@@ -140,6 +140,8 @@ before_script: |
   source CI/travis.set-build-info.sh
   # set the luarocks path here for OSX as we installed it later for that OS.
   if [ "${TRAVIS_OS_NAME}" = "osx" ]; then eval $(luarocks --lua-dir="$(brew --prefix lua@5.1)" path); fi
+  # set additional packageconfig path here for OSX.
+  if [ "${TRAVIS_OS_NAME}" = "osx" ]; then export PKG_CONFIG_PATH="${PKG_CONFIG_PATH}:/usr/local/opt/readline/lib/pkgconfig"; fi
   mkdir -p build
 script:
 - ./CI/travis.compile.sh
