@@ -178,5 +178,6 @@
         <file>ui/set_room_area.ui</file>
         <file>mudlet-lua/lua/generic-mapper/generic_mapper.xml</file>
         <file>icons/clessidra.jpg</file>
+        <file>mudlet-lua/lua/utf8_filenames.lua</file>
     </qresource>
 </RCC>

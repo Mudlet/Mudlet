@@ -715,7 +715,8 @@ LUA.files = \
     $${PWD}/mudlet-lua/lua/LuaGlobal.lua \
     $${PWD}/mudlet-lua/lua/Other.lua \
     $${PWD}/mudlet-lua/lua/StringUtils.lua \
-    $${PWD}/mudlet-lua/lua/TableUtils.lua
+    $${PWD}/mudlet-lua/lua/TableUtils.lua \
+    $${PWD}/mudlet-lua/lua/utf8_filenames.lua
 LUA.depends = mudlet
 
 # Geyser lua files:
