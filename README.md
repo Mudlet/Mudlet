@@ -35,7 +35,7 @@
 </p>
 
 <p align="center">
-  <img alt="Interfaces players have created with Mudlet" src="https://bazaar.launchpad.net/~mudlet-makers/mudlet/artwork/download/head:/samplemudletuis.gif-20190701193442-s3gex5fzreha37jz-1/sample-mudlet-uis.gif?sort=date">
+  <img alt="Interfaces players have created with Mudlet" src="https://bazaar.launchpad.net/~mudlet-makers/mudlet/artwork/download/head:/samplemudletuis.gif-20190701193442-s3gex5fzreha37jz-1/sample-mudlet-uis.gif">
 </p>
 
 ## About
