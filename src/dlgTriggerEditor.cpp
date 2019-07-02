@@ -184,7 +184,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     // And the new edbee widget
     mpSourceEditorEdbee = mpSourceEditorArea->edbeeEditorWidget;
-    mpSourceEditorEdbee->setAutoScrollMargin(12);
+    mpSourceEditorEdbee->setAutoScrollMargin(20);
     mpSourceEditorEdbeeDocument = mpSourceEditorEdbee->textDocument();
 
     // Update the status bar on changes
@@ -507,7 +507,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar2->addAction(viewActionAction);
 
     toolBar2->addSeparator();
-    
+
     toolBar2->addAction(viewErrorsAction);
     toolBar2->addAction(viewStatsAction);
     toolBar2->addAction(showDebugAreaAction);
