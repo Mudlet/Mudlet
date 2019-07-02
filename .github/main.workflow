@@ -18,6 +18,6 @@ action "Run lupdate" {
 action "Commit back changes" {
   uses = "docker://cdssnc/auto-commit-github-action"
   needs = ["Run lupdate"]
-  args = "This is an auto-commit"
+  args = "Updated texts for translators"
   secrets = ["GITHUB_TOKEN"]
 }
