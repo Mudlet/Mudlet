@@ -2625,7 +2625,11 @@ Mudlet - в вашей системе не хватает ли памяти?</tr
       <source>[ INFO ]  - The missing area(s) are now called:
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished">
+      <translation>
+        <numerusform>[ ИНФО ]  - Недостающие области теперь называются:
+(ID) ==&gt; &quot;имя&quot;</numerusform>
+        <numerusform>[ ИНФО ]  - Недостающие области теперь называются:
+(ID) ==&gt; &quot;имя&quot;</numerusform>
         <numerusform>[ ИНФО ]  - Недостающие области теперь называются:
 (ID) ==&gt; &quot;имя&quot;</numerusform>
         <numerusform>[ ИНФО ]  - Недостающие области теперь называются:
