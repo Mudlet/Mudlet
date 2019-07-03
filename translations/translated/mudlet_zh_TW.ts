@@ -108,7 +108,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="204"/>
       <source>! %1 has %2 users</source>
-      <translation type="unfinished"/>
+      <translation>! %1 有 %2 用户</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="210"/>
@@ -166,7 +166,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="320"/>
       <source>! %1 has left %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 已离开 %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="322"/>
@@ -191,7 +191,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="358"/>
       <source>! %1 has quit</source>
-      <translation type="unfinished"/>
+      <translation>! %1 已退出</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="360"/>
@@ -301,7 +301,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="438"/>
       <source>%1 days</source>
-      <translation type="unfinished"/>
+      <translation>%1 天</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="441"/>
@@ -436,7 +436,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="138"/>
       <source>Name</source>
       <comment>Room name in the mapper widget</comment>
-      <translation type="unfinished"/>
+      <translation>名称</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="140"/>
@@ -536,13 +536,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2401"/>
       <source>Background</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>背景</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2402"/>
       <source>Foreground</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>前景</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2646"/>
@@ -909,13 +909,13 @@ the highlighted room (%1) to:</source>
       <location filename="../src/T2DMap.cpp" line="3507"/>
       <source>OK</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation type="unfinished"/>
+      <translation>好</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3512"/>
       <source>Cancel</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation type="unfinished"/>
+      <translation>取消</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3601"/>
@@ -955,13 +955,13 @@ for all of the %n selected room(s):</source>
       <location filename="../src/T2DMap.cpp" line="3809"/>
       <source>OK</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation type="unfinished"/>
+      <translation>好</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3814"/>
       <source>Cancel</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation type="unfinished"/>
+      <translation>取消</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3871"/>
@@ -1316,12 +1316,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="809"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>无法保存用户配置文件</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="809"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>对不起, 以下错误导致无法保存用户配置文件: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="882"/>
@@ -1376,7 +1376,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="391"/>
       <source>Start logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>开始向日志文件写入游戏输出.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="402"/>
@@ -1538,12 +1538,12 @@ your only warning about this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="11669"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>正在玩 %1</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13942"/>
       <source>ERROR</source>
-      <translation type="unfinished"/>
+      <translation>错误</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13943"/>
@@ -1757,25 +1757,25 @@ your only warning about this command...!</source>
       <location filename="../src/TMap.cpp" line="1005"/>
       <source>up</source>
       <comment>This translation converts the direction that DIR_UP codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>上</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1006"/>
       <source>down</source>
       <comment>This translation converts the direction that DIR_DOWN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>下</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1007"/>
       <source>in</source>
       <comment>This translation converts the direction that DIR_IN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>入口</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1008"/>
       <source>out</source>
       <comment>This translation converts the direction that DIR_OUT codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>出口</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1047"/>
@@ -2678,7 +2678,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1180"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>复制</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1191"/>
@@ -2693,7 +2693,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1198"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>选择全部</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1203"/>
@@ -3383,7 +3383,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="62"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>名称:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="115"/>
@@ -3458,7 +3458,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="256"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>命令:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="266"/>
@@ -3491,7 +3491,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="35"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>名称:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="57"/>
@@ -3501,7 +3501,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="76"/>
       <source>Pattern:</source>
-      <translation type="unfinished"/>
+      <translation>匹配:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="103"/>
@@ -3511,7 +3511,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="110"/>
       <source>Type:</source>
-      <translation type="unfinished"/>
+      <translation>类型:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="124"/>
@@ -3526,7 +3526,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="149"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>命令:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="176"/>
@@ -3794,7 +3794,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="123"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>取消</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="136"/>
@@ -3822,7 +3822,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2115"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>复制</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2140"/>
@@ -3945,7 +3945,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="84"/>
       <source>Color:</source>
-      <translation type="unfinished"/>
+      <translation>颜色:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="58"/>
@@ -4013,7 +4013,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="126"/>
       <source>Color:</source>
-      <translation type="unfinished"/>
+      <translation>颜色:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="47"/>
@@ -4139,12 +4139,12 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="522"/>
       <source> Command</source>
-      <translation type="unfinished"/>
+      <translation> 命令</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="567"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>取消</translation>
     </message>
   </context>
   <context>
@@ -4169,7 +4169,7 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="61"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>取消</translation>
     </message>
   </context>
   <context>
@@ -4214,7 +4214,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15070"/>
       <source>north</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>北</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15072"/>
@@ -4226,7 +4226,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15074"/>
       <source>east</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>东</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15076"/>
@@ -4238,7 +4238,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15078"/>
       <source>south</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>南</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15080"/>
@@ -4250,7 +4250,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15082"/>
       <source>west</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>西</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15084"/>
@@ -4262,7 +4262,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15086"/>
       <source>northeast</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>东北</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15088"/>
@@ -4274,7 +4274,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15090"/>
       <source>southeast</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>东南</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15092"/>
@@ -4286,7 +4286,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15094"/>
       <source>southwest</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>西南</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15096"/>
@@ -4298,7 +4298,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15098"/>
       <source>northwest</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>西北</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15100"/>
@@ -4310,7 +4310,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15102"/>
       <source>in</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>入口</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15104"/>
@@ -4322,7 +4322,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15106"/>
       <source>out</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>出口</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15108"/>
@@ -4334,7 +4334,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15110"/>
       <source>up</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>上</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15112"/>
@@ -4346,7 +4346,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15114"/>
       <source>down</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>下</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15116"/>
@@ -4889,7 +4889,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="59"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>触发器</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="60"/>
@@ -4899,12 +4899,12 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="61"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>定时器</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="62"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>脚本</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="63"/>
@@ -4914,13 +4914,13 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="64"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>按钮</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="80"/>
       <source>Export</source>
       <comment>Text for button to perform the package export on the items the user has selected.</comment>
-      <translation type="unfinished"/>
+      <translation>导出</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="90"/>
@@ -5777,62 +5777,62 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1743"/>
       <source>northwest</source>
-      <translation type="unfinished"/>
+      <translation>西北</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1744"/>
       <source>north</source>
-      <translation type="unfinished"/>
+      <translation>北</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1745"/>
       <source>northeast</source>
-      <translation type="unfinished"/>
+      <translation>东北</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1746"/>
       <source>up</source>
-      <translation type="unfinished"/>
+      <translation>上</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1747"/>
       <source>west</source>
-      <translation type="unfinished"/>
+      <translation>西</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1748"/>
       <source>east</source>
-      <translation type="unfinished"/>
+      <translation>东</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1749"/>
       <source>down</source>
-      <translation type="unfinished"/>
+      <translation>下</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1750"/>
       <source>southwest</source>
-      <translation type="unfinished"/>
+      <translation>西南</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1751"/>
       <source>south</source>
-      <translation type="unfinished"/>
+      <translation>南</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1752"/>
       <source>southeast</source>
-      <translation type="unfinished"/>
+      <translation>东南</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1753"/>
       <source>in</source>
-      <translation type="unfinished"/>
+      <translation>入口</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1754"/>
       <source>out</source>
-      <translation type="unfinished"/>
+      <translation>出口</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1832"/>
@@ -5904,7 +5904,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="340"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5712"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>触发器</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="341"/>
@@ -5915,7 +5915,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="344"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5736"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>按钮</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="345"/>
@@ -5925,7 +5925,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="349"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>别名</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="350"/>
@@ -5936,7 +5936,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="354"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5718"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>定时器</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="355"/>
@@ -5947,7 +5947,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="358"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5724"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>脚本</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="359"/>
@@ -5957,7 +5957,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="362"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>按键</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="363"/>
@@ -6073,7 +6073,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="442"/>
       <source>Export</source>
-      <translation type="unfinished"/>
+      <translation>导出</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="446"/>
@@ -6164,7 +6164,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="626"/>
       <source>Name</source>
       <comment>Heading for the second column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>名称</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="627"/>
@@ -6427,7 +6427,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="5485"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7878"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>命令:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5524"/>
@@ -6723,7 +6723,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2305"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2379"/>
       <source>Name</source>
-      <translation type="unfinished"/>
+      <translation>名称</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1373"/>
@@ -6747,7 +6747,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2391"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2396"/>
       <source>Command</source>
-      <translation type="unfinished"/>
+      <translation>命令</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1838"/>
@@ -6965,7 +6965,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>名称:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
@@ -6975,7 +6975,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="40"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>命令:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="50"/>
@@ -8760,7 +8760,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="545"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>触发器</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="546"/>
@@ -8770,7 +8770,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="551"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>别名</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="552"/>
@@ -8780,7 +8780,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="557"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>定时器</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="558"/>
@@ -8790,7 +8790,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="563"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>按钮</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="564"/>
@@ -8800,7 +8800,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="569"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>脚本</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="570"/>
@@ -8810,7 +8810,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="575"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>按键</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="576"/>
@@ -8820,7 +8820,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="581"/>
       <source>Variables</source>
-      <translation type="unfinished"/>
+      <translation>变量</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="582"/>
@@ -8840,7 +8840,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="593"/>
       <source>Map</source>
-      <translation type="unfinished"/>
+      <translation>地图</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="594"/>
@@ -8891,7 +8891,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="626"/>
       <source>Module Manager</source>
-      <translation type="unfinished"/>
+      <translation>模块管理器</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="627"/>
@@ -9360,7 +9360,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="646"/>
       <source>Font:</source>
-      <translation type="unfinished"/>
+      <translation>字体:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="669"/>
@@ -9501,12 +9501,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1293"/>
       <source>Foreground:</source>
-      <translation type="unfinished"/>
+      <translation>前景:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1316"/>
       <source>Background:</source>
-      <translation type="unfinished"/>
+      <translation>背景:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1336"/>
@@ -10105,7 +10105,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1931"/>
       <source>Map download</source>
-      <translation type="unfinished"/>
+      <translation>地图下载</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1953"/>
@@ -10758,7 +10758,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
       <source>&amp;Cancel</source>
-      <translation type="unfinished"/>
+      <translation>&amp;取消</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2001"/>
@@ -10834,7 +10834,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>名称:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="40"/>
@@ -10898,17 +10898,17 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="29"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>名称:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="69"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>命令:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="171"/>
       <source>Time:</source>
-      <translation type="unfinished"/>
+      <translation>时间:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="39"/>
@@ -11037,7 +11037,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="59"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>名称:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="79"/>
@@ -11047,7 +11047,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="105"/>
       <source>Command:</source>
-      <translation type="unfinished"/>
+      <translation>命令:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="192"/>
@@ -11186,17 +11186,17 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="95"/>
       <source>Foreground color ignored</source>
-      <translation type="unfinished"/>
+      <translation>忽略的前景色</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="119"/>
       <source>Background color ignored</source>
-      <translation type="unfinished"/>
+      <translation>忽略的背景色</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="146"/>
       <source>match on the prompt line</source>
-      <translation type="unfinished"/>
+      <translation>在提示行匹配</translation>
     </message>
   </context>
   <context>
@@ -11204,7 +11204,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="109"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>名称:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="175"/>
