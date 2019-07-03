@@ -47,7 +47,7 @@ workflow "Approve translation texts PRs" {
   resolves = ["hmarr/auto-approve-action@master"]
 }
 
-action "Filters for GitHub Actions-1" {
+action "Run only on translation PRs" {
   uses = "actions/bin/filter@master"
   args = "label translations"
 }
@@ -60,6 +60,26 @@ action "label PR" {
 
 action "hmarr/auto-approve-action@master" {
   uses = "hmarr/auto-approve-action@master"
-  needs = ["Filters for GitHub Actions-1"]
+  needs = ["Run only on translation PRs"]
+  secrets = ["GITHUB_TOKEN"]
+}
+
+workflow "automerge pull requests on updates" {
+  on = "pull_request"
+  resolves = ["automerge"]
+}
+
+workflow "automerge pull requests on reviews" {
+  on = "pull_request_review"
+  resolves = ["automerge"]
+}
+
+workflow "automerge pull requests on status updates" {
+  on = "status"
+  resolves = ["automerge"]
+}
+
+action "automerge" {
+  uses = "pascalgn/automerge-action@master"
   secrets = ["GITHUB_TOKEN"]
 }
