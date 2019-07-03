@@ -769,8 +769,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         spinBox_playerRoomOuterDiameter->setValue(pHost->mpMap->mPlayerRoomOuterDiameterPercentage);
         spinBox_playerRoomInnerDiameter->setValue(pHost->mpMap->mPlayerRoomInnerDiameterPercentage);
         spinBox_playerRoomInnerDiameter->setEnabled(pHost->mpMap->mPlayerRoomStyle != 0);
-        setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomColorPrimary);
-        setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomColorSecondary);
+        setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor);
+        setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor);
         connect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changePlayerRoomStyle);
         connect(pushButton_playerRoomPrimaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomPrimaryColor);
         connect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomSecondaryColor);
@@ -3452,10 +3452,10 @@ void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
         pushButton_playerRoomSecondaryColor->setEnabled(false);
         spinBox_playerRoomInnerDiameter->setEnabled(false);
     }
-    setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomColorPrimary);
-    setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomColorSecondary);
-    pHost->mPlayerRoomColorPrimary = pHost->mpMap->mPlayerRoomColorPrimary;
-    pHost->mPlayerRoomColorSecondary = pHost->mpMap->mPlayerRoomColorSecondary;
+    setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor);
+    setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor);
+    pHost->mPlayerRoomOuterColor = pHost->mpMap->mPlayerRoomOuterColor;
+    pHost->mPlayerRoomInnerColor = pHost->mpMap->mPlayerRoomInnerColor;
     pHost->mpMap->mPlayerRoomStyle = static_cast<quint8>(style);
     pHost->mPlayerRoomStyle = static_cast<quint8>(style);
     if (!mpHost->mpMap->mpMapper || !mpHost->mpMap->mpMapper->mp2dMap) {
@@ -3473,7 +3473,7 @@ void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()
         return;
     }
 
-    setPlayerRoomColor(pushButton_playerRoomPrimaryColor, mpHost->mpMap->mPlayerRoomColorPrimary);
+    setPlayerRoomColor(pushButton_playerRoomPrimaryColor, mpHost->mpMap->mPlayerRoomOuterColor);
     if (comboBox_playerRoomStyle->currentIndex() != 3) {
         return;
     }
@@ -3491,7 +3491,7 @@ void dlgProfilePreferences::slot_setPlayerRoomSecondaryColor()
         return;
     }
 
-    setPlayerRoomColor(pushButton_playerRoomSecondaryColor, mpHost->mpMap->mPlayerRoomColorSecondary);
+    setPlayerRoomColor(pushButton_playerRoomSecondaryColor, mpHost->mpMap->mPlayerRoomInnerColor);
     if (comboBox_playerRoomStyle->currentIndex() != 3) {
         return;
     }
@@ -3542,8 +3542,8 @@ void dlgProfilePreferences::setPlayerRoomColor(QPushButton* b, QColor& c)
     }
 
     auto color = QColorDialog::getColor(c, this, (b == pushButton_playerRoomPrimaryColor
-                                                  ? tr("Set outer color of player room marking.")
-                                                  : tr("Set innercolor of player room marking.")),
+                                                  ? tr("Set outer color of player room mark.")
+                                                  : tr("Set inner color of player room mark.")),
                                         QColorDialog::ShowAlphaChannel);
     if (color.isValid()) {
         c = color;

@@ -228,6 +228,9 @@ public:
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
+    // Store/retrieve all the settings in one call:
+    void setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter = 120, const quint8 innerDiameter = 70, const QColor& outerColor = QColor(), const QColor& innerColor = QColor());
+    void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
@@ -426,25 +429,6 @@ public:
     // An invalid/null value is treated as the "show all"/inactive case:
     QTime mTimerDebugOutputSuppressionInterval;
 
-    // This hold copies of variables from the TMap class which are saved with
-    // the profile - as that class is not necessarily instantiated when the
-    // profile is read.
-    // Base color(s) for the player room in the mappers:
-    QColor mPlayerRoomColorPrimary;
-    QColor mPlayerRoomColorSecondary;
-    // Mode selected - 0 is closest to original style:
-    quint8 mPlayerRoomStyle;
-    // Percentage of the room size (actually width) for the outer diameter of
-    // the circular marking, integer percentage clamped in the preferences
-    // between 200 and 50 - default 120:
-    quint8 mPlayerRoomOuterDiameterPercentage;
-    // Percentage of the outer size for the inner diameter of the circular
-    // marking, integer percentage clamped in the preferences between 83 and 0,
-    // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
-    // one):
-    quint8 mPlayerRoomInnerDiameterPercentage;
-
-
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:
@@ -458,6 +442,9 @@ private slots:
 
 private:
     void installPackageFonts(const QString &packageName);
+    void processGMCPDiscordStatus(const QJsonObject& discordInfo);
+    void processGMCPDiscordInfo(const QJsonObject& discordInfo);
+    void updateModuleZips() const;
 
     QStringList mModulesToSync;
 
@@ -549,9 +536,27 @@ private:
     bool mEnableUserDictionary;
     bool mUseSharedDictionary;
 
-    void processGMCPDiscordStatus(const QJsonObject& discordInfo);
-    void processGMCPDiscordInfo(const QJsonObject& discordInfo);
-    void updateModuleZips() const;
+    // These hold values that are needed in the TMap clas which are saved with
+    // the profile - but which cannot be kept there as that class is not
+    // necessarily instantiated when the profile is read.
+    // Base color(s) for the player room in the mappers:
+    // Mode selected:
+    // 0 is closest to original style with adjustable outer diameter
+    // 1 is Fixed red color ring with adjustable outer/inner diameter
+    // 2 is fixed blue/yellow colors ring with adjustable outer/inner diameter
+    // 3 is adjustable outer(primary)/inner(secondary) colors ring with adjustable outer/inner diameter
+    quint8 mPlayerRoomStyle;
+    QColor mPlayerRoomOuterColor;
+    QColor mPlayerRoomInnerColor;
+    // Percentage of the room size (actually width) for the outer diameter of
+    // the circular marking, integer percentage clamped in the preferences
+    // between 200 and 50 - default 120:
+    quint8 mPlayerRoomOuterDiameterPercentage;
+    // Percentage of the outer size for the inner diameter of the circular
+    // marking, integer percentage clamped in the preferences between 83 and 0,
+    // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
+    // one):
+    quint8 mPlayerRoomInnerDiameterPercentage;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

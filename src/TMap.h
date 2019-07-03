@@ -233,8 +233,8 @@ public:
     QString mMmpMapLocation;
 
     // Base color(s) for the player room in the mappers:
-    QColor mPlayerRoomColorPrimary;
-    QColor mPlayerRoomColorSecondary;
+    QColor mPlayerRoomOuterColor;
+    QColor mPlayerRoomInnerColor;
     // Mode selected - 0 is closest to original style:
     quint8 mPlayerRoomStyle;
     // Percentage of the room size (actually width) for the outer diameter of

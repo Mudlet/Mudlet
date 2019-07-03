@@ -140,11 +140,7 @@ TMap::~TMap()
 
 void TMap::initialiseMembersFromHost()
 {
-    mPlayerRoomColorPrimary = mpHost->mPlayerRoomColorPrimary;
-    mPlayerRoomColorSecondary = mpHost->mPlayerRoomColorSecondary;
-    mPlayerRoomStyle = mpHost->mPlayerRoomStyle;
-    mPlayerRoomOuterDiameterPercentage = mpHost->mPlayerRoomOuterDiameterPercentage;
-    mPlayerRoomInnerDiameterPercentage = mpHost->mPlayerRoomInnerDiameterPercentage;
+    mpHost->getPlayerRoomStyleDetails(mPlayerRoomStyle, mPlayerRoomOuterDiameterPercentage, mPlayerRoomInnerDiameterPercentage, mPlayerRoomOuterColor, mPlayerRoomInnerColor);
 }
 
 void TMap::mapClear()

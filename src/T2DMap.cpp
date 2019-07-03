@@ -5166,20 +5166,20 @@ void T2DMap::setPlayerRoomStyle(const int type)
     case 3: { // User set ring:
         if (solid) {
             mPlayerRoomColorGradentStops.resize(3);
-            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, mpMap->mPlayerRoomColorSecondary);
-            mPlayerRoomColorGradentStops[1] = QGradientStop(0.990, mpMap->mPlayerRoomColorPrimary);
-            QColor transparentColor(mpMap->mPlayerRoomColorPrimary);
+            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, mpMap->mPlayerRoomInnerColor);
+            mPlayerRoomColorGradentStops[1] = QGradientStop(0.990, mpMap->mPlayerRoomOuterColor);
+            QColor transparentColor(mpMap->mPlayerRoomOuterColor);
             transparentColor.setAlpha(0);
             mPlayerRoomColorGradentStops[2] = QGradientStop(1.000, transparentColor);
         } else  {
             mPlayerRoomColorGradentStops.resize(5);
-            QColor transparentColor(mpMap->mPlayerRoomColorSecondary);
+            QColor transparentColor(mpMap->mPlayerRoomInnerColor);
             transparentColor.setAlpha(0);
             mPlayerRoomColorGradentStops[0] = QGradientStop(1.000, transparentColor);
             mPlayerRoomColorGradentStops[1] = QGradientStop(factor * 0.950, transparentColor);
-            mPlayerRoomColorGradentStops[2] = QGradientStop(factor * 1.050, mpMap->mPlayerRoomColorSecondary);
-            mPlayerRoomColorGradentStops[3] = QGradientStop(1.000 - (factor * 0.100), mpMap->mPlayerRoomColorPrimary);
-            transparentColor = mpMap->mPlayerRoomColorPrimary;
+            mPlayerRoomColorGradentStops[2] = QGradientStop(factor * 1.050, mpMap->mPlayerRoomInnerColor);
+            mPlayerRoomColorGradentStops[3] = QGradientStop(1.000 - (factor * 0.100), mpMap->mPlayerRoomOuterColor);
+            transparentColor = mpMap->mPlayerRoomOuterColor;
             transparentColor.setAlpha(0);
             mPlayerRoomColorGradentStops[4] = QGradientStop(1.000, transparentColor);
         }

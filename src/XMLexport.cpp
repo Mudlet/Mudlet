@@ -432,8 +432,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mRequiredDiscordUserDiscriminator") = pHost->mRequiredDiscordUserDiscriminator.toUtf8().constData();
     host.append_attribute("mSGRCodeHasColSpaceId") = pHost->getHaveColorSpaceId() ? "yes" : "no";
     host.append_attribute("mServerMayRedefineColors") = pHost->getMayRedefineColors() ? "yes" : "no";
-    host.append_attribute("playerRoomPrimaryColor") = pHost->mPlayerRoomColorPrimary.name().toLatin1().constData();
-    host.append_attribute("playerRoomSecondaryColor") = pHost->mPlayerRoomColorSecondary.name().toLatin1().constData();
+    host.append_attribute("playerRoomPrimaryColor") = pHost->mPlayerRoomOuterColor.name().toLatin1().constData();
+    host.append_attribute("playerRoomSecondaryColor") = pHost->mPlayerRoomInnerColor.name().toLatin1().constData();
     host.append_attribute("playerRoomStyle") = QString::number(pHost->mPlayerRoomStyle).toLatin1().constData();
     host.append_attribute("playerRoomOuterDiameter") = QString::number(pHost->mPlayerRoomOuterDiameterPercentage).toLatin1().constData();
     host.append_attribute("playerRoomInnerDiameter") = QString::number(pHost->mPlayerRoomInnerDiameterPercentage).toLatin1().constData();

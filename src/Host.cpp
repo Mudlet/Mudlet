@@ -153,11 +153,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpDockableMapWidget()
 , mEnableTextAnalyzer(false)
 , mTimerDebugOutputSuppressionInterval(QTime())
-, mPlayerRoomColorPrimary(Qt::red)
-, mPlayerRoomColorSecondary(Qt::white)
-, mPlayerRoomStyle(0)
-, mPlayerRoomOuterDiameterPercentage(120)
-, mPlayerRoomInnerDiameterPercentage(70)
 , mTriggerUnit(this)
 , mTimerUnit(this)
 , mScriptUnit(this)
@@ -181,6 +176,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 // DISABLED: - Prevent "None" option for user dictionary - changed to true and not changed anywhere else
 , mEnableUserDictionary(true)
 , mUseSharedDictionary(false)
+, mPlayerRoomStyle(0)
+, mPlayerRoomOuterColor(Qt::red)
+, mPlayerRoomInnerColor(Qt::white)
+, mPlayerRoomOuterDiameterPercentage(120)
+, mPlayerRoomInnerDiameterPercentage(70)
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
@@ -1770,4 +1770,32 @@ void Host::setName(const QString& newName)
         mpConsole->setProfileName(newName);
     }
     mTimerUnit.changeHostName(newName);
+}
+
+void Host::setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter, const quint8 innerDiameter, const QColor& outerColor, const QColor& innerColor)
+{
+    QMutexLocker locker(& mLock);
+    // Now we have the exclusive lock on this class's protected members
+
+    mPlayerRoomStyle = styleCode;
+    mPlayerRoomOuterDiameterPercentage = outerDiameter;
+    mPlayerRoomInnerDiameterPercentage = innerDiameter;
+    mPlayerRoomOuterColor = outerColor;
+    mPlayerRoomInnerColor = innerColor;
+    // We have made the change to the protected aspects of this class so can unlock the mutex locker and proceed:
+    locker.unlock();
+}
+
+void Host::getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& primaryColor, QColor& secondaryColor)
+{
+    QMutexLocker locker(& mLock);
+    // Now we have the exclusive lock on this class's protected members
+
+    styleCode = mPlayerRoomStyle;
+    outerDiameter = mPlayerRoomOuterDiameterPercentage;
+    innerDiameter = mPlayerRoomInnerDiameterPercentage;
+    primaryColor = mPlayerRoomOuterColor;
+    secondaryColor = mPlayerRoomInnerColor;
+    // We have accessed the protected aspects of this class so can unlock the mutex locker and proceed:
+    locker.unlock();
 }

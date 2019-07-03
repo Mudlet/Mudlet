@@ -867,8 +867,8 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->mPlayerRoomStyle = static_cast<quint8>(qBound(0, attributes().value(QLatin1String("playerRoomStyle")).toInt(), 255));
         pHost->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(qBound(0, attributes().value(QLatin1String("playerRoomOuterDiameter")).toInt(), 255));
         pHost->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(qBound(0, attributes().value(QLatin1String("playerRoomInnerDiameter")).toInt(), 255));
-        pHost->mPlayerRoomColorPrimary.setNamedColor(attributes().value(QLatin1String("playerRoomPrimaryColor")).toString());
-        pHost->mPlayerRoomColorSecondary.setNamedColor(attributes().value(QLatin1String("playerRoomSecondaryColor")).toString());
+        pHost->mPlayerRoomOuterColor.setNamedColor(attributes().value(QLatin1String("playerRoomPrimaryColor")).toString());
+        pHost->mPlayerRoomInnerColor.setNamedColor(attributes().value(QLatin1String("playerRoomSecondaryColor")).toString());
     }
 
     pHost->mFORCE_MXP_NEGOTIATION_OFF = (attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes");
