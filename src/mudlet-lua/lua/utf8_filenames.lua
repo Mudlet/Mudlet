@@ -292,6 +292,13 @@ local function modify_lua_functions(all_compressed_mappings)
             return orig_io_output(file)
          end
 
+         local orig_lfs_attributes = lfs.attributes
+
+         function lfs.attributes(file, optional)
+            file = convert_from_utf8(file)
+            return orig_lfs_attributes(file, optional)
+         end
+
       else
          -- print("Mapping for codepage "..codepage.." not found")
       end
