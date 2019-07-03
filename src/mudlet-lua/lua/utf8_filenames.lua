@@ -299,6 +299,54 @@ local function modify_lua_functions(all_compressed_mappings)
             return orig_lfs_attributes(file, optional)
          end
 
+         local orig_lfs_chdir = lfs.chdir
+
+         function lfs.chdir(path)
+            path = convert_from_utf8(path)
+            return orig_lfs_chdir(path)
+         end
+
+         local orig_lfs_lock_dir = lfs.lock_dir
+
+         function lfs.lock_dir(path, seconds_stale)
+            path = convert_from_utf8(path)
+            return orig_lfs_lock_dir(path)
+         end
+
+         local orig_lfs_dir = lfs.dir
+
+         function lfs.dir(path)
+            path = convert_from_utf8(path)
+            return orig_lfs_dir(path)
+         end
+
+         local orig_lfs_mkdir = lfs.mkdir
+
+         function lfs.mkdir(dirname)
+            dirname = convert_from_utf8(dirname)
+            return orig_lfs_mkdir(dirname)
+         end
+
+         local orig_lfs_rmdir = lfs.rmdir
+
+         function lfs.rmdir(dirname)
+            dirname = convert_from_utf8(dirname)
+            return orig_lfs_rmdir(dirname)
+         end
+
+         local orig_lfs_symlinkattributes = lfs.symlinkattributes
+
+         function lfs.symlinkattributes(filepath, aname)
+            filepath = convert_from_utf8(filepath)
+            return orig_lfs_symlinkattributes(filepath, aname)
+         end
+
+         local orig_lfs_touch = lfs.touch
+
+         function lfs.touch(filepath, atime, mtime)
+            filepath = convert_from_utf8(filepath)
+            return orig_lfs_touch(filepath, atime, mtime))
+         end
       else
          -- print("Mapping for codepage "..codepage.." not found")
       end
