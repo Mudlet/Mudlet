@@ -1728,13 +1728,13 @@ your only warning about this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15239"/>
       <source>%1 (doesn&apos;t exist)</source>
       <comment>This file doesn&apos;t exist</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (не существует)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15246"/>
       <source>%1 (couldn&apos;t read file)</source>
       <comment>This file could not be read for some reason (for example, no permission)</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (не удалось прочитать файл)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15252"/>
@@ -1745,7 +1745,8 @@ your only warning about this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15260"/>
       <source>[ ERROR ] - Couldn&apos;t to load LuaGlobal; your Mudlet is broken! Tried these locations:
 %1</source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Не удалось загрузить LuaGlobal; ваш Мудлет сломан! Попробовали эти места:
+%1</translation>
     </message>
   </context>
   <context>
