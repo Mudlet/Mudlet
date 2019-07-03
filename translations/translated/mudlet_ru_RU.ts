@@ -1867,7 +1867,7 @@ your only warning about this command...!</source>
       <source>[ ALERT ] - Saving map in a format {%1} that is different than the one it was
 loaded as {%2}. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation>[ Предупреждение ] - при сохранении карты в формате {%1}, которая отличается от той, что была загружена, как
+      <translation>[ ВНИМ ] - при сохранении карты в формате {%1}, которая отличается от той, что была загружена, как
 {%2}. Это может быть проблемой, если вы захотите поделиться данной картой с другими, полагаясь на оригинальный формат.</translation>
     </message>
     <message>
@@ -1900,7 +1900,7 @@ recommended format {%2} for this version of Mudlet.</source>
       <location filename="../src/TMap.cpp" line="1088"/>
       <source>[ ALERT ] - Map User data has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!</source>
-      <translation>[ALERT] - Данные карты были потеряны в сохраненном файле . Повторите сохранение в формате
+      <translation>[ ВНИМ ] - Данные карты были потеряны в сохраненном файле . Повторите сохранение в формате
 по крайней мере 17й версии, чтобы сохранить его перед выходом!</translation>
     </message>
     <message>
@@ -1908,7 +1908,7 @@ format of at least 17 to preserve it before quitting!</source>
       <source>[ ALERT ] - User data for this area has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!
 </source>
-      <translation>[ Предупреждение ] - пользовательские данные для этой зоны было потеряны в файле карты. Пересохраните в формате как минимум 17й версии, чтобы избежать потерь, перед выходом!
+      <translation>[ ВНИМ ] - пользовательские данные для этой зоны было потеряны в файле карты. Пересохраните в формате как минимум 17й версии, чтобы избежать потерь, перед выходом!
 </translation>
     </message>
     <message>
@@ -1916,7 +1916,7 @@ format of at least 17 to preserve it before quitting!
       <source>[ ALERT ] - Area User data has been lost in saved map file.  Re-save in a
 format of at least 17 to preserve it before quitting!
 Areas id affected: %1.</source>
-      <translation>[ ПРЕДУПРЕЖДЕНИЕ ] - Пользовательские данные для этой зоны было потеряны в файле карты. Пересохраните в формате как минимум 17й версии, чтобы избежать потерь, перед выходом!
+      <translation>[ ВНИМ ] - Пользовательские данные для этой зоны было потеряны в файле карты. Пересохраните в формате как минимум 17й версии, чтобы избежать потерь, перед выходом!
 Идентификатор зоны: %1.</translation>
     </message>
     <message>
@@ -3552,7 +3552,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
 &quot;%1&quot;
 reports it has a version (%2) it must have come from a later Mudlet version,
 and this one cannot read it, you need a newer Mudlet!</source>
-      <translation>[ Предупреждение ] - К сожалению, читаемый файл:
+      <translation>[ ВНИМ ] - К сожалению, читаемый файл:
 &quot;%1&quot;
 сообщает, что он имеет версию (%2) - он должен быть из более поздней версии Mudlet,
 и ета не может прочитать его, вам необходима более новая Mudlet!</translation>
@@ -3866,7 +3866,8 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="492"/>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: </source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - Подключение отключилось.
+Причина: </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1768"/>
@@ -5208,7 +5209,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="90"/>
       <source>What do you wish to call the package:</source>
-      <translation type="unfinished"/>
+      <translation>Как вы хотите назвать пакет:</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="157"/>
@@ -5225,24 +5226,24 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="184"/>
       <source>Failed to export. Could not open the folder &quot;%1&quot; for writing in. - Do you have the necessary permissions and free disk-space to write to that folder?</source>
-      <translation type="unfinished"/>
+      <translation>Не смогли экспортировать - не удалось открыть &quot;%1&quot; для записи. Есть ли у вас необходимые разрешения на запись в эту папку и места на диске?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="264"/>
       <source>Failed to export. Could not write Mudlet items to the file &quot;%1&quot;.</source>
       <comment>This error message is shown when all the Mudlet items cannot be written to the &apos;packageName&apos;.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened.</comment>
-      <translation type="unfinished"/>
+      <translation>Не удалось экспортировать. Не удалось записать элементы Mudlet в файл &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="347"/>
       <source>Failed to open package file. Error is: &quot;%1&quot;.</source>
       <comment>This error message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing file anywhere in the computer&apos;s file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.</comment>
-      <translation type="unfinished"/>
+      <translation>Не удалось открыть файл пакета. Ошибка: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="441"/>
       <source>Failed to add directory &quot;%1&quot; to package. Error is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Не удалось добавить папку &quot;%1&quot; в пакет. Ошибка: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="497"/>
