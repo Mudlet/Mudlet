@@ -5162,46 +5162,46 @@ Nutzungen</translation>
       <location filename="../src/dlgPackageExporter.cpp" line="157"/>
       <source>Failed to open file &quot;%1&quot; to place into package. Error message was: &quot;%2&quot;.</source>
       <comment>This error message will appear when a file is to be placed into the package but the code cannot open it.</comment>
-      <translation type="unfinished"/>
+      <translation>Fehler beim Öffnen der Datei &quot;%1&quot;, die in das Paket eingefügt werden soll. Fehlernachricht: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="165"/>
       <source>Failed to add file &quot;%1&quot; to package &quot;%2&quot;. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when a file is to be placed into the package but cannot be done for some reason.</comment>
-      <translation type="unfinished"/>
+      <translation>Fehler beim Hinzufügen der Datei &quot;%1&quot; in das Paket &quot;%2&quot;. Fehlernachricht: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="184"/>
       <source>Failed to export. Could not open the folder &quot;%1&quot; for writing in. - Do you have the necessary permissions and free disk-space to write to that folder?</source>
-      <translation type="unfinished"/>
+      <translation>Fehler beim Exportieren. Der Ordner &quot;%1&quot; konnte nicht zum Schreiben geöffnet werden. - Hast du die notwendigen Berechtigungen und freien Speicherplatz, um in diesen Ordner zu schreiben?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="264"/>
       <source>Failed to export. Could not write Mudlet items to the file &quot;%1&quot;.</source>
       <comment>This error message is shown when all the Mudlet items cannot be written to the &apos;packageName&apos;.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened.</comment>
-      <translation type="unfinished"/>
+      <translation>Fehler beim Exportieren. Mudlet-Elemente konnten nicht in die Datei &quot;%1&quot; geschrieben werden.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="347"/>
       <source>Failed to open package file. Error is: &quot;%1&quot;.</source>
       <comment>This error message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing file anywhere in the computer&apos;s file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.</comment>
-      <translation type="unfinished"/>
+      <translation>Fehler beim Öffnen der Paketdatei. Fehlermeldung: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="441"/>
       <source>Failed to add directory &quot;%1&quot; to package. Error is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Fehler beim Hinzufügen des Verzeichnisses &quot;%1&quot; zum Paket. Fehlermeldung: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="497"/>
       <source>Required file &quot;%1&quot; was not found in the staging area. This area contains the Mudlet items chosen for the package, which you selected to be included in the package file. This suggests there may be a problem with that directory: &quot;%2&quot; - Do you have the necessary permissions and free disk-space?</source>
-      <translation type="unfinished"/>
+      <translation>Die erforderliche Datei &quot;%1&quot; wurde im Bereitstellungsbereich nicht gefunden. Dieser Bereich enthält die Mudlet-Elemente, die du für die Aufnahme in das Paket ausgewählt hast. Dies deutet darauf hin, dass es ein Problem mit diesem Verzeichnis geben könnte: &quot;%2&quot; - Hast du die notwendigen Berechtigungen und freien Speicherplatz?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="519"/>
       <source>Failed to write files into and then close the package. Error is: &quot;%1&quot;.</source>
       <comment>This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...</comment>
-      <translation type="unfinished"/>
+      <translation>Fehler beim Schreiben von Dateien und anschließenden Schließen des Pakets. Fehlermeldung: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="539"/>
