@@ -87,3 +87,14 @@ action "automerge" {
     MERGE_METHOD = "rebase"
   }
 }
+
+workflow "delete translation branch" {
+  on = "pull_request"
+  resolves = ["branch cleanup"]
+}
+
+action "branch cleanup" {
+  needs = "Run only on translation PRs"
+  uses = "jessfraz/branch-cleanup-action@master"
+  secrets = ["GITHUB_TOKEN"]
+}
