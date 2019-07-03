@@ -4724,6 +4724,12 @@ Count</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="1889"/>
+        <source>Port number must be above zero and below 65535.
+</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <location filename="../src/dlgConnectionProfiles.cpp" line="1953"/>
         <source>&lt;p&gt;Load profile without connecting.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
@@ -4741,12 +4747,6 @@ Count</source>
     <message>
         <location filename="../src/dlgConnectionProfiles.cpp" line="1897"/>
         <source>Mudlet is not configured for secure connections.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="1889"/>
-        <source>Port number must be above zero and below 65535.
-</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
