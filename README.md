@@ -14,7 +14,7 @@
          alt="Build status">
   </a>
   <a href="https://discord.gg/kuYvMQ9">
-    <img src="https://img.shields.io/badge/discord-join%20chat-7289DA.svg">
+    <img src="https://discordapp.com/api/guilds/283581582550237184/embed.png?style=shield">
   </a>
   <a href="https://github.com/mudlet/mudlet/issues">
     <img src="https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat">
