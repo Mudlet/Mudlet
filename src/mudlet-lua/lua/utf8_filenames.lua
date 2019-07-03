@@ -310,7 +310,7 @@ local function modify_lua_functions(all_compressed_mappings)
 
          function lfs.lock_dir(path, seconds_stale)
             path = convert_from_utf8(path)
-            return orig_lfs_lock_dir(path)
+            return orig_lfs_lock_dir(path, seconds_stale)
          end
 
          local orig_lfs_dir = lfs.dir
