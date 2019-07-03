@@ -11,7 +11,7 @@ action "Filters for GitHub Actions" {
 action "cpp fileses were touched" {
   uses = "docker://cdssnc/touched-github-action"
   needs = ["Filters for GitHub Actions"]
-  args = "**cpp"
+  args = "{**cpp, **ui}"
 }
 
 action "run lupdate" {
