@@ -82,4 +82,8 @@ workflow "automerge pull requests on status updates" {
 action "automerge" {
   uses = "pascalgn/automerge-action@master"
   secrets = ["GITHUB_TOKEN"]
+  env = {
+    AUTOMERGE = "translations"
+    MERGE_METHOD = "rebase"
+  }
 }
