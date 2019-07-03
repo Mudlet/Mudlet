@@ -498,6 +498,7 @@ public:
     static int getTextFormat(lua_State*);
     static int getKeyModifiers(lua_State*);
     static int setKeyModifiers(lua_State*);
+    static int getWindowsCodepage(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 
@@ -517,6 +518,11 @@ private:
     QByteArray encodeBytes(const char*);
     void setMatches(lua_State* L);
     static std::pair<bool, QString> discordApiEnabled(lua_State* L, bool writeAccess = false);
+    void setupLanguageData();
+    QString readScriptFile(const QString& path) const;
+#if defined(Q_OS_WIN32)
+    void loadUtf8Filenames();
+#endif
 
     QNetworkAccessManager* mpFileDownloader;
 

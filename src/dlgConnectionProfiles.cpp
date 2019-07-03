@@ -1497,6 +1497,7 @@ void dlgConnectionProfiles::fillout_form()
         }
     }
 
+#if defined(QT_DEBUG)
     mudServer = QStringLiteral("Mudlet self-test");
     if (!deletedDefaultMuds.contains(mudServer) && !mProfileList.contains(mudServer)) {
         for (int i = mProfileList.size() - 1; i >= 0; --i) {
@@ -1506,6 +1507,7 @@ void dlgConnectionProfiles::fillout_form()
             }
         }
     }
+#endif
 
     for (int i = 0; i < mProfileList.size(); i++) {
         QString s = mProfileList.at(i);
