@@ -1723,13 +1723,13 @@ Die Einrückungungsfunktion wird nicht verfügbar sein.
       <location filename="../src/TLuaInterpreter.cpp" line="15239"/>
       <source>%1 (doesn&apos;t exist)</source>
       <comment>This file doesn&apos;t exist</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (nicht vorhanden)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15246"/>
       <source>%1 (couldn&apos;t read file)</source>
       <comment>This file could not be read for some reason (for example, no permission)</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (konnte Datei nicht lesen)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15252"/>
@@ -1740,7 +1740,8 @@ Die Einrückungungsfunktion wird nicht verfügbar sein.
       <location filename="../src/TLuaInterpreter.cpp" line="15260"/>
       <source>[ ERROR ] - Couldn&apos;t to load LuaGlobal; your Mudlet is broken! Tried these locations:
 %1</source>
-      <translation type="unfinished"/>
+      <translation>[FEHLER] - Konnte LuaGlobal nicht laden; dein Mudlet ist kaputt! Versuchte diese Orte:
+%1</translation>
     </message>
   </context>
   <context>
