@@ -31,17 +31,6 @@ action "Commit to a branch and push" {
   }
 }
 
-action "Create PR" {
-  uses = "vsoch/pull-request-action@master"
-  needs = ["Commit to a branch and push"]
-  secrets = ["GITHUB_TOKEN"]
-  env = {
-    BRANCH_PREFIX = "translations/"
-    PULL_REQUEST_BRANCH = "development"
-    PULL_REQUEST_TITLE = "Update texts for translators"
-  }
-}
-
 workflow "Approve translation texts PRs" {
   on = "pull_request"
   resolves = ["hmarr/auto-approve-action@master"]
@@ -50,12 +39,6 @@ workflow "Approve translation texts PRs" {
 action "Run only on translation PRs" {
   uses = "actions/bin/filter@master"
   args = "label translations"
-}
-
-action "label PR" {
-  uses = "TimonVS/pr-labeler@master"
-  needs = ["Create PR"]
-  secrets = ["GITHUB_TOKEN"]
 }
 
 action "hmarr/auto-approve-action@master" {
@@ -96,5 +79,30 @@ workflow "delete translation branch" {
 action "branch cleanup" {
   needs = "Run only on translation PRs"
   uses = "jessfraz/branch-cleanup-action@master"
+  secrets = ["GITHUB_TOKEN"]
+}
+
+workflow "Create translation update PR" {
+  on = "push"
+  resolves = ["Create PR"]
+}
+
+action "Create PR" {
+  uses = "vsoch/pull-request-action@master"
+  secrets = ["GITHUB_TOKEN"]
+  env = {
+    BRANCH_PREFIX = "translations/"
+    PULL_REQUEST_BRANCH = "development"
+    PULL_REQUEST_TITLE = "Update texts for translators"
+  }
+}
+
+workflow "Label translation update PR" {
+  on = "pull_request"
+  resolves = ["label PR"]
+}
+
+action "label PR" {
+  uses = "TimonVS/pr-labeler@master"
   secrets = ["GITHUB_TOKEN"]
 }
