@@ -1,6 +1,6 @@
 workflow "Update translation texts" {
   on = "push"
-  resolves = ["label PR"]
+  resolves = ["Commit to a branch and push"]
 }
 
 action "Filters for GitHub Actions" {
