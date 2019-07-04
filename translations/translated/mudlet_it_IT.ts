@@ -1546,7 +1546,11 @@ format to a newer version to be able to SAVE this feature&apos;s data.
 
 To avoid filling the screen up with repeated messages, this is
 your only warning about this command...!</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Questa funzione richiede un formato del file di mappa più recente. 
+Cambiare il formato in una versione più recente per SALVARE senza perdere dati.
+
+Per evitare di riempire la finestra con messaggi informativi, questo è
+l'unico avvertimento fornito per questa funzione...!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="10005"/>
@@ -1892,7 +1896,8 @@ ma verrà effettuato un tentativo!  Il file è: &quot;%2&quot;.</translation>
       <source>[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!
 There is so much data that it DOES NOT have that you could be
 better off starting again...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Potresti donare questa mappa al Museo di Mudlet!
+Ci sono così tanti dati MANCANTI che forse è meglio iniziare da capo ...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1445"/>
@@ -3891,7 +3896,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/composer.ui" line="136"/>
       <source>&lt;p&gt;Save (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Salva (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="139"/>
@@ -6497,7 +6502,8 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4118"/>
       <source>Alias &lt;em&gt;%1&lt;/em&gt; has an infinite loop - substitution matches its own pattern. Please fix it - this alias isn&apos;t good as it&apos;ll call itself forever.</source>
-      <translation type="unfinished"/>
+      <translation>L'alias &lt;em&gt;%1&lt;/em&gt; crea un ciclo infinito - la sostituzione inserita contiene il pattern. Correggilo!
+Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguito all'infinito.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4639"/>
