@@ -8,7 +8,7 @@ action "Filters for GitHub Actions" {
   args = "branch development"
 }
 
-action "cpp fileses were touched" {
+action "cpp or ui files updated" {
   uses = "docker://cdssnc/touched-github-action"
   needs = ["Filters for GitHub Actions"]
   args = "{**cpp, **ui}"
@@ -16,7 +16,7 @@ action "cpp fileses were touched" {
 
 action "run lupdate" {
   uses = "Mudlet/lupdate-action@master"
-  needs = ["cpp fileses were touched"]
+  needs = ["cpp or ui files updated"]
   args = "./src/ -ts ./translations/mudlet.ts"
 }
 
