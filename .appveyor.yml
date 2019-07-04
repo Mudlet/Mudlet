@@ -32,7 +32,7 @@ artifacts:
   name: mudlet
 
 cache:
-  - '%MINGW_BASE_DIR%'
+  - '%MINGW_BASE_DIR%' -> CI\appveyor.install.ps1
 
 notifications:
 - provider: Webhook
