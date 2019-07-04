@@ -20,9 +20,15 @@ action "run lupdate" {
   args = "./src/ -ts ./translations/mudlet.ts"
 }
 
+action "xmlstarlet" {
+  uses = "Mudlet/xmlstarlet-action@master"
+  needs = ["run lupdate"]
+  args = "ed -P -L -d translations/mudlet.ts //@line"
+}
+
 action "Commit to a branch and push" {
   uses = "Mudlet/commit-action-branch@master"
-  needs = ["run lupdate"]
+  needs = ["xmlstarlet"]
   secrets = ["GITHUB_TOKEN"]
   env = {
     USERNAME = "mudlet-bot"
