@@ -2352,7 +2352,10 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1270"/>
       <source>[ INFO ]  - Room had special exit &quot;%1&quot; that was to room with an invalid room: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ]  - Комната имела специальный выход &quot;%1&quot; идущий в: %2 но этой комнаты не существует.  Выход будет удалён
+(но помер назначенной комнаты будет храниться в
+данных комнаты пользователя под ключом: 
+&quot;%3&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1303"/>
@@ -5567,7 +5570,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="129"/>
       <source>&lt;p&gt;Reset the directory so that logs are saved to the profile&apos;s &lt;i&gt;log&lt;/i&gt; directory.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Сбросить опцию, чтобы журналы сохранялись в папке профиля &lt;i&gt;log&lt;/i&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="130"/>
@@ -5857,7 +5860,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="231"/>
       <location filename="../src/dlgRoomExits.cpp" line="1957"/>
       <source>No door symbol is drawn on 2D Map for this exit (only functional choice currently).</source>
-      <translation type="unfinished"/>
+      <translation>В двухмерной карте для данного выхода не отображается символ дверцы (в настоящее время доступен только функциональный выбор).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="234"/>
