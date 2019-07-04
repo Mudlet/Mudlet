@@ -4777,12 +4777,12 @@ Utilizzi</translation>
       <translation>Questo profilo è attualmente caricato - devi chiuderlo prima di cambiare i parametri di connessione.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1877"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1879"/>
       <source>You have to enter a number. Other characters are not permitted.</source>
       <translation>Devi inserire un numero. Non sono consentiti altri caratteri.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1866"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1868"/>
       <source>This profile name is already in use.</source>
       <translation>Questo nome profilo è già in uso.</translation>
     </message>
@@ -4833,7 +4833,7 @@ Utilizzi</translation>
       <translation>Seleziona per abilitare l'integrazione con Discord</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1854"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1856"/>
       <source>The %1 character is not permitted. Use one of the following:
 &quot;%2&quot;.
 </source>
@@ -4842,34 +4842,34 @@ Utilizzi</translation>
 </translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1887"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1953"/>
+      <source>&lt;p&gt;Load profile without connecting.&lt;/p&gt;</source>
+      <translation>&lt;p&gt;Carica il profilo senza connetterti al gioco.&lt;/p&gt;</translation>
+    </message>
+    <message>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1967"/>
+      <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before loading.&lt;/p&gt;</source>
+      <translation>&lt;p&gt;Per favore imposta un nome profilo valido, l'indirizzo e la porta del server di gioco prima del caricamento.&lt;/p&gt;</translation>
+    </message>
+    <message>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1971"/>
+      <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before connecting.&lt;/p&gt;</source>
+      <translation>&lt;p&gt;Per favore imposta un nome profilo valido, l'indirizzo e la porta del server di gioco prima del caricamento.&lt;/p&gt;</translation>
+    </message>
+    <message>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1897"/>
+      <source>Mudlet is not configured for secure connections.</source>
+      <translation>Mudlet non è configurato per connessioni sicure.</translation>
+    </message>
+    <message>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1889"/>
       <source>Port number must be above zero and below 65535.
 </source>
       <translation>Il numero di porta deve essere superiore a 0 e inferiore a 65535.
 </translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1951"/>
-      <source>&lt;p&gt;Load profile without connecting.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Carica il profilo senza connetterti al gioco.&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1965"/>
-      <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before loading.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Per favore imposta un nome profilo valido, l'indirizzo e la porta del server di gioco prima del caricamento.&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1969"/>
-      <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before connecting.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Per favore imposta un nome profilo valido, l'indirizzo e la porta del server di gioco prima del caricamento.&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1895"/>
-      <source>Mudlet is not configured for secure connections.</source>
-      <translation>Mudlet non è configurato per connessioni sicure.</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1898"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1900"/>
       <source>Mudlet is not configured for secure connections.
 
 </source>
@@ -4878,7 +4878,7 @@ Utilizzi</translation>
 </translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1907"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1909"/>
       <source>Mudlet can not load support for secure connections.
 
 </source>
@@ -4887,7 +4887,7 @@ Utilizzi</translation>
 </translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1921"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1923"/>
       <source>Please enter the URL or IP address of the Game server.
 
 %1</source>
@@ -4896,7 +4896,7 @@ Utilizzi</translation>
 %1</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1930"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1932"/>
       <source>SSL connections require the URL of the Game server.
 
 %1</source>
