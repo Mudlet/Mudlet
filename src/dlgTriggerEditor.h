@@ -46,12 +46,9 @@
 #include "pre_guard.h"
 #include <QDialog>
 #include <QFlag>
-#include <QFile>
-#include <QListWidget>
 #include <QListWidgetItem>
 #include <QScrollArea>
 #include <QTreeWidget>
-#include <QTreeWidgetItem>
 #include "post_guard.h"
 
 // Edbee editor includes
@@ -283,6 +280,12 @@ public:
     bool mNeedUpdateData;
 
 private:
+    void populateTriggers();
+    void populateTimers();
+    void populateScripts();
+    void populateAliases();
+    void populateActions();
+    void populateKeys();
     void saveOpenChanges();
     void saveTrigger();
     void saveAlias();
@@ -373,7 +376,13 @@ private:
         pItem->setData(0, IndexRole, subInstance);
     }
 
-    // These were declared as "public slots" but they are not used as SLOTs...
+    void searchTriggers(const QString& s);
+    void searchAliases(const QString& s);
+    void searchScripts(const QString& s);
+    void searchActions(const QString& s);
+    void searchTimers(const QString& s);
+    void searchKeys(const QString& s);
+    void searchVariables(const QString& s);
     void recursiveSearchTriggers(TTrigger*, const QString&);
     void recursiveSearchAlias(TAlias*, const QString& s);
     void recursiveSearchScripts(TScript*, const QString& s);

@@ -35,7 +35,6 @@
 #include <QWidget>
 #include "post_guard.h"
 
-#include <hunspell/hunspell.hxx>
 #include <hunspell/hunspell.h>
 
 #include <list>

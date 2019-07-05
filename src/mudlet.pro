@@ -715,7 +715,8 @@ LUA.files = \
     $${PWD}/mudlet-lua/lua/LuaGlobal.lua \
     $${PWD}/mudlet-lua/lua/Other.lua \
     $${PWD}/mudlet-lua/lua/StringUtils.lua \
-    $${PWD}/mudlet-lua/lua/TableUtils.lua
+    $${PWD}/mudlet-lua/lua/TableUtils.lua \
+    $${PWD}/mudlet-lua/lua/utf8_filenames.lua
 LUA.depends = mudlet
 
 # Geyser lua files:
@@ -1181,10 +1182,10 @@ LUA_LCF.depends = mudlet
 
 # Test lua files:
 LUA_TESTS.files = \
-    $${PWD}/mudlet-lua/tests/DB.lua \
-    $${PWD}/mudlet-lua/tests/GUIUtils.lua \
+    $${PWD}/mudlet-lua/tests/DB_spec.lua \
+    $${PWD}/mudlet-lua/tests/GUIUtils_spec.lua \
     $${PWD}/mudlet-lua/tests/MudletBusted_spec.lua \
-    $${PWD}/mudlet-lua/tests/Other.lua
+    $${PWD}/mudlet-lua/tests/Other_spec.lua
 LUA_TESTS.depends = mudlet
 
 
