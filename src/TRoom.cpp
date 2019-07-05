@@ -1159,8 +1159,8 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                 QString auditMessage = tr("[ INFO ]  - Room with ID %1 needed correcting of special exit \"%2\". "
                                           "It was to room with an exit to invalid room with ID %3 to now go to: %4.") 
                                           // This text looks bogus. Please clarify!
-                                            .arg(QString::number(id), exitName, QString::number(exitRoomId), roomRemapping.value(exitRoomId));
-                if (mudlet::self()->showMapAuditErrors()) { mpRoomDB->mpMap->postMessage(infoMsg); }
+                                            .arg(QString::number(id), exitName, QString::number(exitRoomId), QString::number(roomRemapping.value(exitRoomId)));
+                if (mudlet::self()->showMapAuditErrors()) { mpRoomDB->mpMap->postMessage(auditMessage); }
                 mpRoomDB->mpMap->appendRoomErrorMsg(id, auditMessage);
                 replacements.insert(roomRemapping.value(exitRoomId), exitText);
                 it.remove();
@@ -1409,7 +1409,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         userData.insert(auditKey, QString::number(exitRoomId));
         QString auditMessage = tr("[ INFO ]  - Room with ID %1 had an exit \"%1\" that was to a room with invalid ID %2. "
                                   "It was corrected to now go to the room with ID %3.")
-                                    .arg(QString::number(id), displayName, QString::number(exitRoomId), roomRemapping.value(exitRoomId));
+                                    .arg(QString::number(id), displayName, QString::number(exitRoomId), QString::number(roomRemapping.value(exitRoomId)));
         if (mudlet::self()->showMapAuditErrors()) { mpRoomDB->mpMap->postMessage(auditMessage); }
         mpRoomDB->mpMap->appendRoomErrorMsg(id, auditMessage, true);
         exitRoomId = roomRemapping.value(exitRoomId);
