@@ -31,6 +31,9 @@ artifacts:
 - path: src\release
   name: mudlet
 
+cache:
+  - '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1'
+
 notifications:
 - provider: Webhook
   url: https://webhooks.gitter.im/e/2d6f7bea328a9dd60769
