@@ -1,10 +1,6 @@
 #!/bin/bash
 compile_line=()
-if [ "${TRAVIS_EVENT_TYPE}" = "cron" ]; then
-  if [ "${DEPLOY}" != "deploy" ] || [ "${TRAVIS_OS_NAME}" = "osx" ]; then
-    echo Job not executed under cron run
-    exit 0
-  fi
+if [ "${TRAVIS_EVENT_TYPE}" = "cron" ] && [ "${TRAVIS_OS_NAME}" = "linux" ]; then
   export CCACHE_DISABLE=1
   compile_line+=(cov-build --dir cov-int)
 fi

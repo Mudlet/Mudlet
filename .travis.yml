@@ -53,6 +53,7 @@ matrix:
     - Q_OR_C_MAKE=qmake
 
   - os: osx
+    if: type != cron
     osx_image: xcode9.2
     compiler: clang
     env:
@@ -77,6 +78,7 @@ matrix:
         - qt512speech
 
   - os: linux
+    if: type != cron
     compiler: gcc
     env:
     - Q_OR_C_MAKE=cmake
@@ -88,6 +90,7 @@ matrix:
         - *qt512-packages
 
   - os: linux
+    if: type != cron
     compiler: clang
     env:
     - Q_OR_C_MAKE=qmake
@@ -99,6 +102,7 @@ matrix:
         - *qt512-packages
 
   - os: linux
+    if: type != cron
     compiler: clang
     env:
     - Q_OR_C_MAKE=cmake
@@ -110,6 +114,7 @@ matrix:
         - *qt512-packages
 
   - os: linux
+    if: type != cron
     compiler: gcc
     env:
     - Q_OR_C_MAKE=cmake

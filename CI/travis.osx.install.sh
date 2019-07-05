@@ -1,8 +1,4 @@
 #!/bin/bash
-if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
-  echo Job not executed under cron run
-  exit
-fi
 
 set +e
 shopt -s expand_aliases
