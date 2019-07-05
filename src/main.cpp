@@ -231,7 +231,6 @@ int main(int argc, char* argv[])
                                 "                       --dograb wins over --nograb even when --nograb is last on\n"
                                 "                       the command line.\n");
 #if defined(Q_OS_LINUX)
-        // Need to split these into actually seperate strings, as Crowdin translation would not split strings on #if otherwise.
         texts << QStringLiteral("       --nograb        the application should never grab the mouse or the\n"
                                 "                       keyboard. This option is set by default when Mudlet is\n"
                                 "                       running in the gdb debugger under Linux.\n");
