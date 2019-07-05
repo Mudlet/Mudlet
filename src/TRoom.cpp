@@ -1113,7 +1113,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
             QString _cmd = it.value();
             if (_cmd.size() <= 0) {
                 QString auditMessage = tr("[ WARN ]  - Room with ID %1 had an invalid (special) exit to %2 with no name! It was removed.")
-                    .arg(QString::(id)).arg(it.key(), 6, QLatin1Char('0'));
+                    .arg(QString::number(id)).arg(it.key(), 6, QLatin1Char('0'));
                     // If size is less than or equal to 0 then there is nothing to print!!!
                 if (mudlet::self()->showMapAuditErrors()) { mpRoomDB->mpMap->postMessage(auditMessage); }
                 mpRoomDB->mpMap->appendRoomErrorMsg(id, auditMessage);
@@ -1127,7 +1127,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                 it.remove();
                 QString auditMessage = tr("[ INFO ]  - Room with ID %1 needed a patch of its (special) exit to %2. "
                                           "The exit was: \"%3\" and is now: \"%4\".")
-                                            .arg(QString::(id))
+                                            .arg(QString::number(id))
                                             .arg(_nk, 6, QLatin1Char('0'))
                                             .arg(_cmd, _nc);
                 if (mudlet::self()->showMapAuditErrors()) { mpRoomDB->mpMap->postMessage(auditMessage); }
@@ -1159,7 +1159,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                 QString auditMessage = tr("[ INFO ]  - Room with ID %1 needed correcting of special exit \"%2\". "
                                           "It was to room with an exit to invalid room with ID %3 to now go to: %4.") 
                                           // This text looks bogus. Please clarify!
-                                            .arg(QString::(id), exitName, QString::(exitRoomId), roomRemapping.value(exitRoomId));
+                                            .arg(QString::number(id), exitName, QString::number(exitRoomId), roomRemapping.value(exitRoomId));
                 if (mudlet::self()->showMapAuditErrors()) { mpRoomDB->mpMap->postMessage(infoMsg); }
                 mpRoomDB->mpMap->appendRoomErrorMsg(id, auditMessage);
                 replacements.insert(roomRemapping.value(exitRoomId), exitText);
@@ -1190,7 +1190,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                     QString auditKey = QStringLiteral("audit.removed_valid_but_missing_special_exit.%1").arg(exitName);
                     QString auditMessage = tr("[ WARN ]  - Room with ID %1 had a special exit \"%2\" to a non-existing room with ID %3. "
                                               "The exit was removed. The destination room's ID was stored in the original room's user data under the key: \"%4\".")
-                                                 .arg(QString::(id), exitName, QString::(exitRoomId), auditKey);
+                                                 .arg(QString::number(id), exitName, QString::number(exitRoomId), auditKey);
                     if (mudlet::self()->showMapAuditErrors()) { mpRoomDB->mpMap->postMessage(auditMessage); }
                     mpRoomDB->mpMap->appendRoomErrorMsg(id, auditMessage, true);
                     userData.insert(auditKey, QString::number(exitRoomId));
@@ -1228,7 +1228,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                 userData.insert(auditKey, QString::number(exitRoomId));
                 QString auditMessage = tr("[ INFO ]  - Room with ID %1 had a special exit \"%2\" to a room with an invalid ID %3. "
                                           "The exit was removed. The destination room's ID was stored in the room user data under the key: \"%4\".")
-                                            .arg(QString::(id), exitName, QString::(exitRoomId), auditKey);
+                                            .arg(QString::number(id), exitName, QString::number(exitRoomId), auditKey);
                 if (mudlet::self()->showMapAuditErrors()) { mpRoomDB->mpMap->postMessage(auditMessage); }
                 mpRoomDB->mpMap->appendRoomErrorMsg(id, auditMessage, true);
                 it.remove();
@@ -1275,7 +1275,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
             }
         }
         QString auditMessage = tr("[ INFO ]  - Room with ID %1 had one or more surplus door items. They were removed: %2.")
-                                    .arg(QString::(id), extras.join(QStringLiteral(", ")));
+                                    .arg(QString::number(id), extras.join(QStringLiteral(", ")));
         if (mudlet::self()->showMapAuditErrors()) { mpRoomDB->mpMap->postMessage(auditMessage); }
         mpRoomDB->mpMap->appendRoomErrorMsg(id, auditMessage, true);
     }
@@ -1290,7 +1290,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
             extras.append(QStringLiteral("\"%1\"(%2)").arg(itSpareExitWeight.key()).arg(itSpareExitWeight.value()));
         }
         QString auditMessage = tr("[ INFO ]  - Room with ID %1 had one or more surplus weight items. They were removed: %2.")
-                                    .arg(QString::(id), extras.join(QStringLiteral(", ")));
+                                    .arg(QString::number(id), extras.join(QStringLiteral(", ")));
         if (mudlet::self()->showMapAuditErrors()) { mpRoomDB->mpMap->postMessage(auditMessage); }
         mpRoomDB->mpMap->appendRoomErrorMsg(id, auditMessage, true);
     }
@@ -1305,7 +1305,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
             exitLocks.removeAll(dirCode);
         }
         QString auditMessage = tr("[ INFO ]  - Room with ID %1 had one or more surplus exit lock items. They were removed: %2.")
-                                    .arg(QString::(id), extras.join(QStringLiteral(", ")));
+                                    .arg(QString::number(id), extras.join(QStringLiteral(", ")));
         if (mudlet::self()->showMapAuditErrors()) { mpRoomDB->mpMap->postMessage(auditMessage); }
         mpRoomDB->mpMap->appendRoomErrorMsg(id, auditMessage, true);
     }
@@ -1383,7 +1383,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
         if (!extras.isEmpty()) {
             QString auditMessage = tr("[ INFO ]  - Room with ID %1 had one or more surplus custom line elements. They were removed: %2.")
-                                        .arg(QString::(id), extras.join(QStringLiteral(", ")));
+                                        .arg(QString::number(id), extras.join(QStringLiteral(", ")));
             if (mudlet::self()->showMapAuditErrors()) { mpRoomDB->mpMap->postMessage(auditMessage); }
             mpRoomDB->mpMap->appendRoomErrorMsg(id, auditMessage, true);
         }
@@ -1409,7 +1409,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         userData.insert(auditKey, QString::number(exitRoomId));
         QString auditMessage = tr("[ INFO ]  - Room with ID %1 had an exit \"%1\" that was to a room with invalid ID %2. "
                                   "It was corrected to now go to the room with ID %3.")
-                                    .arg(QString::(id), displayName, QString::(exitRoomId), roomRemapping.value(exitRoomId));
+                                    .arg(QString::number(id), displayName, QString::number(exitRoomId), roomRemapping.value(exitRoomId));
         if (mudlet::self()->showMapAuditErrors()) { mpRoomDB->mpMap->postMessage(auditMessage); }
         mpRoomDB->mpMap->appendRoomErrorMsg(id, auditMessage, true);
         exitRoomId = roomRemapping.value(exitRoomId);
@@ -1423,7 +1423,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             QString auditKey = QStringLiteral("audit.made_stub_of_valid_but_missing_exit.%1").arg(dirCode);
             QString auditMessage = tr("[ WARN ]  - Room with ID %1 had an exit \"%2\" to a non-existing room with ID %3. "
                                       "The exit was turned into a stub. The destination room's ID was stored in the original room's user data under the key: \"%4\".")
-                                        .arg(QString::(id), displayName, QString::(exitRoomId), auditKey);
+                                        .arg(QString::number(id), displayName, QString::number(exitRoomId), auditKey);
             if (mudlet::self()->showMapAuditErrors()) { mpRoomDB->mpMap->postMessage(auditMessage); }
             mpRoomDB->mpMap->appendRoomErrorMsg(id, auditMessage, true);
             userData.insert(auditKey, QString::number(exitRoomId));
@@ -1466,7 +1466,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             if (exitStubs.contains(dirCode)) {
                 QString auditMessage = tr("([ ALERT ] - Room with ID %1 had an exit \"%2\" to the room with ID %3, but also had a stub exit in the same direction! "
                                           "The stub exit was removed, as a real exit precludes a stub.")
-                                            .arg(QString::(id), displayName, QString::(exitRoomId));
+                                            .arg(QString::number(id), displayName, QString::number(exitRoomId));
                 if (mudlet::self()->showMapAuditErrors()) { mpRoomDB->mpMap->postMessage(auditMessage); }
                 mpRoomDB->mpMap->appendRoomErrorMsg(id, auditMessage, true);
                 exitStubs.removeAll(dirCode);
@@ -1522,7 +1522,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
         QString infoMsg;
         QString auditMessage = tr("([ INFO ]  - Room with ID %1 had an exit \"%2\" to a room with an invalid ID %3. "
                                   "The exit was turned into a stub. The destination room's bad ID was stored in the original room's user data under the key: \"%4\".")
-                                    .arg(QString::(id), displayName, QString::(exitRoomId), auditKey);
+                                    .arg(QString::number(id), displayName, QString::number(exitRoomId), auditKey);
         if (mudlet::self()->showMapAuditErrors()) { infoMsg = auditMessage; }
         QString logMsg = auditMessage;
         exitRoomId = -1;
