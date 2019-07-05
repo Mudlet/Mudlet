@@ -46,17 +46,18 @@ git:
 matrix:
   include:
   - os: osx
+    if: type = cron
     osx_image: xcode9.2
     compiler: clang
     env:
     - Q_OR_C_MAKE=qmake
-      DEPLOY=deploy
 
   - os: osx
     osx_image: xcode9.2
     compiler: clang
     env:
     - Q_OR_C_MAKE=cmake
+      DEPLOY=deploy
 
   - os: linux
     compiler: gcc
@@ -121,6 +122,7 @@ matrix:
         - qt57base
         - qt57multimedia
         - qt57tools
+
 before_cache:
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew cleanup; fi
 before_install:
