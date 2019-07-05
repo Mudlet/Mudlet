@@ -1945,7 +1945,8 @@ older format.</source>
       <source>[ ALERT ] - Map file is really old, its file format (%1) is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try!  The file is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - Файл карты действительно старый; его формат файла (%1) настолько древний, что
+эта версия Mudlet не сможет получить достаточно информации из не го, но он попытается!  Файл: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1436"/>
