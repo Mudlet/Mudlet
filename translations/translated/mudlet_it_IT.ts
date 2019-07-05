@@ -4660,12 +4660,12 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="66"/>
       <source>&lt;p&gt;Click to make the color trigger when the text&apos;s background color has not been modified from its normal value.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Seleziona per attivare il trigger quando il colore di sfondo non è stata modificato rispetto al suo valore normale.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="67"/>
       <source>&lt;p&gt;Click to make the color trigger when the text&apos;s foreground color has not been modified from its normal value.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Seleziona per attivare il trigger quando il colore del testo non è stata modificato rispetto al suo valore normale.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="71"/>
