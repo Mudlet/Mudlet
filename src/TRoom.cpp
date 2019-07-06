@@ -855,10 +855,36 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
                     || direction == QLatin1String("NW")
                     || direction == QLatin1String("IN")
                     || direction == QLatin1String("OUT")) {
-                    customLinesColor.insert(itCustomLineColor.key().toLower(), QColor(itCustomLineColor.value().at(0), itCustomLineColor.value().at(1), itCustomLineColor.value().at(2)));
+
+                    // Fixup broken custom lines caused by maps saved prior to
+                    // https://github.com/Mudlet/Mudlet/pull/2559 going into the
+                    // code by only adding the value if it contains enough
+                    // colour components to be a valid colour:
+                    if (itCustomLineColor.value().count() > 2) {
+                        customLinesColor.insert(itCustomLineColor.key().toLower(), QColor(itCustomLineColor.value().at(0), itCustomLineColor.value().at(1), itCustomLineColor.value().at(2)));
+                    }
+                    // Otherwise we will fixup both empty
+                    // itCustomLineColor.value() entites AND altogether missing
+                    // ones outside of the while() {...}:
                 } else {
-                    customLinesColor.insert(itCustomLineColor.key(), QColor(itCustomLineColor.value().at(0), itCustomLineColor.value().at(1), itCustomLineColor.value().at(2)));
+                    if (itCustomLineColor.value().count() > 2) {
+                        customLinesColor.insert(itCustomLineColor.key(), QColor(itCustomLineColor.value().at(0), itCustomLineColor.value().at(1), itCustomLineColor.value().at(2)));
+                    }
                 }
+            }
+
+            // Create new (RED) colour customLinesColor entities for any custom
+            // exit lines that does not have one or has an empty one as a result
+            // of https://github.com/Mudlet/Mudlet/issues/2558 - use a QSet
+            // rather than a QList when manipulating the present/absent
+            // direction keys as there won't be any duplicate keys and the
+            // operation we want to perform (obtain the directions of all custom
+            // exit lines and remove those which are already included in the
+            // colours) is much easier to perform on a QSet rather than a QList:
+            QSet<QString> missingKeys = customLines.keys().toSet().subtract(customLinesColor.keys().toSet());
+            QSetIterator<QString> itMissingCustomLineColourKey(missingKeys);
+            while (itMissingCustomLineColourKey.hasNext()) {
+                customLinesColor.insert(itMissingCustomLineColourKey.next(), QColor(Qt::red));
             }
 
             QMap<QString, QString> oldLineStyleData;
