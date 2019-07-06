@@ -13099,7 +13099,7 @@ int TLuaInterpreter::getServerEncodingsList(lua_State* L)
     return 1;
 }
 
-// Documentation: ?
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getOS
 int TLuaInterpreter::getOS(lua_State* L)
 {
 #if defined(Q_OS_CYGWIN)
