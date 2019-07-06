@@ -490,25 +490,34 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
 
 void TCommandLine::adjustHeight()
 {
-    int lines = document()->size().height();
-    int fontH = QFontMetrics(mpHost->mDisplayFont).height();
-    if (lines < 1) {
-        lines = 1;
+    int lineCount = std::min(document()->lineCount(), 10);
+
+    int newHeight;
+    int characterHeight;
+
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 8, 0))
+    if (Q_LIKELY(lineCount == 1)) {
+        // height() is not accurate enough for one line, cuts off bottom from character 'y'
+        newHeight = QFontMetrics(mpHost->mDisplayFont).capHeight() * 2;
+    } else {
+        // however multiple lines don't take up capHeight*2 space, but less - so revert to height
+        characterHeight = QFontMetrics(mpHost->mDisplayFont).height();
+        // add an extra line in because without it, Qt will add a blank one below
+        newHeight = (characterHeight * lineCount) + characterHeight;
     }
-    if (lines > 10) {
-        lines = 10;
-    }
-    int _baseHeight = fontH * lines;
-    int _height = _baseHeight + fontH;
-    if (_height < mpHost->commandLineMinimumHeight) {
-        _height = mpHost->commandLineMinimumHeight;
-    }
-    if (_height > height() || _height < height()) {
-        mpConsole->layerCommandLine->setMinimumHeight(_height);
-        mpConsole->layerCommandLine->setMaximumHeight(_height);
-        int x = mpConsole->width();
-        int y = mpConsole->height();
-        QSize s = QSize(x, y);
+#else
+    characterHeight = QFontMetrics(mpHost->mDisplayFont).height();
+    newHeight = (characterHeight * lineCount) + characterHeight;
+#endif
+
+    newHeight = std::max(newHeight, mpHost->commandLineMinimumHeight);
+
+    if (newHeight != height()) {
+        mpConsole->layerCommandLine->setMinimumHeight(newHeight);
+        mpConsole->layerCommandLine->setMaximumHeight(newHeight);
+        int width = mpConsole->width();
+        int height = mpConsole->height();
+        QSize s = QSize(width, height);
         QResizeEvent event(s, s);
         QApplication::sendEvent(mpConsole, &event);
     }
