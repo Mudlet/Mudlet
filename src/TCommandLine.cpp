@@ -510,7 +510,7 @@ void TCommandLine::adjustHeight()
     newHeight = (characterHeight * lineCount) + characterHeight;
 #endif
 
-    newHeight = std::max(newHeight, mpHost->commandLineMinimumHeight);
+    newHeight = std::max(newHeight, std::max(mpHost->commandLineMinimumHeight, characterHeight));
 
     if (newHeight != height()) {
         mpConsole->layerCommandLine->setMinimumHeight(newHeight);
