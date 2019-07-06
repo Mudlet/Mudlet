@@ -450,7 +450,7 @@ einem neuen Symbol für diesen Raum:</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="140"/>
       <source>&lt;p&gt;Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Klick auf eine Zeile, um diese Raumnummer an- oder abzuwählen. Wenn der Raum einen Namen hat, wird dieser auch ausgewählt. Durch einen Klick auf die entsprechende Kopfzelle wird nach der Spalte sortiert. Hinweis: Die Spalte "Name" erscheint nur, wenn mindestens ein Raum einen Namen hat.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Klick auf eine Zeile, um diese Raumnummer an- oder abzuwählen. Wenn der Raum einen Namen hat, wird dieser auch ausgewählt. Durch einen Klick auf die entsprechende Kopfzelle wird nach der Spalte sortiert. Hinweis: Die Spalte "Name" erscheint nur, wenn mindestens ein Raum einen Namen hat.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1641"/>
@@ -490,8 +490,7 @@ einem neuen Symbol für diesen Raum:</translation>
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected; %1 is the room number for which %2-%4 are the x,y and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</comment>
       <translation>
-        <numerusform>Raum%1ID:%1%2 Position%1auf%1der%1Karte: (%3,%4,%5) ‑%1Mittelpunkt der %n ausgewählten Räume
-</numerusform>
+        <numerusform>Raum%1ID:%1%2 Position%1auf%1der%1Karte: (%3,%4,%5) ‑%1Mittelpunkt der %n ausgewählten Räume</numerusform>
         <numerusform>Raum%1ID:%1%2 Position%1auf%1der%1Karte: (%3,%4,%5) ‑%1Mittelpunkt der %n ausgewählten Räume</numerusform>
       </translation>
     </message>
@@ -511,13 +510,13 @@ einem neuen Symbol für diesen Raum:</translation>
       <location filename="../src/T2DMap.cpp" line="2376"/>
       <source>Text Label</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation>Textmarke</translation>
+      <translation>Textmarkierung</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2377"/>
       <source>Image Label</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation>Bildmarke</translation>
+      <translation>Bildmarkierung</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2381"/>
@@ -565,7 +564,7 @@ einem neuen Symbol für diesen Raum:</translation>
       <location filename="../src/T2DMap.cpp" line="2646"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
-      <translation>Ziehen zum Auswählen mehrerer Räume oder Marken, loslassen zum Beenden...</translation>
+      <translation>Ziehen zum Auswählen mehrerer Räume oder Markierungen, loslassen zum Beenden...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2797"/>
@@ -799,7 +798,7 @@ einem neuen Symbol für diesen Raum:</translation>
       <location filename="../src/T2DMap.cpp" line="2914"/>
       <source>Create labels to show text or images</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation>Erstelle Marken und Text oder Bilder anzuzeigen</translation>
+      <translation>Erstelle Markierungen, um Text oder Bilder anzuzeigen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2917"/>
@@ -829,7 +828,7 @@ einem neuen Symbol für diesen Raum:</translation>
       <location filename="../src/T2DMap.cpp" line="2951"/>
       <source>Move label</source>
       <comment>2D Mapper context menu item (label) tooltip</comment>
-      <translation>Verschiebe Marke</translation>
+      <translation>Verschiebe Markierung</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2953"/>
@@ -841,7 +840,7 @@ einem neuen Symbol für diesen Raum:</translation>
       <location filename="../src/T2DMap.cpp" line="2954"/>
       <source>Delete label</source>
       <comment>2D Mapper context menu (label) item tooltip</comment>
-      <translation>Lösche Marke</translation>
+      <translation>Lösche Markierung</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2970"/>
@@ -950,7 +949,7 @@ for this/these %n room(s):</source>
       <comment>this is for when applying a new room symbol to one or more rooms and none have a symbol at present; use line feeds to format text into a reasonable rectangle, %n is the number of rooms involved</comment>
       <translation>
         <numerusform>Wähle das Symbol, das für 
-diesen Raum zu verwenden ist:</numerusform>
+diese %n Räume zu verwenden ist:</numerusform>
         <numerusform>Wähle das Symbol, das für 
 diese %n Räume zu verwenden ist:</numerusform>
       </translation>
@@ -992,7 +991,7 @@ for all of the %n selected room(s):</source>
  • ein existierendes Symbol aus der Liste unten (sortiert nach Häufigkeit der Nutzung)
  • tippe ein oder mehrere Grapheme (&quot;sichtbare Zeichen&quot;) als neues Symbol
  • tippe ein Leerzeichen, um die bestehenden Symbole zu entfernen
-für den ausgewählten Raum:</numerusform>
+für alle %n ausgewählten Räume:</numerusform>
         <numerusform>Wähle:
  • ein existierendes Symbol aus der Liste unten (sortiert nach Häufigkeit der Nutzung)
  • tippe ein oder mehrere Grapheme (&quot;sichtbare Zeichen&quot;) als neues Symbol
@@ -1130,7 +1129,7 @@ Ganzzahl eingeben:</translation>
       <location filename="../src/T2DMap.cpp" line="5069"/>
       <source>Left-click and drag a square for the size and position of your label</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
-      <translation>Links klicken und ein Rechteck aufziehen für die Größe und Position der Marke</translation>
+      <translation>Links klicken und ein Rechteck aufziehen für die Größe und Position der Markierung</translation>
     </message>
   </context>
   <context>
@@ -2583,8 +2582,8 @@ Arbeitsspeicher frei?</translation>
  to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ ACHTUNG ] - Fehlenden Bereich in der Karte entdeckt und ergänzt.
- Achte auf weitere Nachrichten zu Räumen, die in diesem Bereich
+        <numerusform>[ ACHTUNG ] - Fehlende Bereiche in der Karte entdeckt und ergänzt.
+ Achte auf weitere Nachrichten zu Räumen, die in diesen Bereichen
  sein sollten...</numerusform>
         <numerusform>[ ACHTUNG ] - Fehlende Bereiche in der Karte entdeckt und ergänzt.
  Achte auf weitere Nachrichten zu Räumen, die in diesen Bereichen
@@ -2612,7 +2611,7 @@ Arbeitsspeicher frei?</translation>
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ INFO ]  - Der fehlende Bereich heißt nun:
+        <numerusform>[ INFO ] - Die fehlenden Bereiche heißen nun:
 (ID) ==&gt; &quot;Name&quot;</numerusform>
         <numerusform>[ INFO ] - Die fehlenden Bereiche heißen nun:
 (ID) ==&gt; &quot;Name&quot;</numerusform>
@@ -2764,7 +2763,7 @@ Sie wurden aus dem Bereich entfernt.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1156"/>
       <source>It has been detected that &quot;_###&quot; form suffixes have already been used, for simplicity in the renaming algorithm these will have been removed and possibly changed as Mudlet sorts this matter out, if a number assigned in this way &lt;b&gt;is&lt;/b&gt; important to you, you can change it back, provided you rename the area that has been allocated the suffix that was wanted first...!&lt;/p&gt;</source>
-      <translation>Es wurde erkannt, dass Suffixe in der Form &quot;_###&quot; bereits verwendet wurden. Diese wurden zur Einfachheit der Umbenennung entfernt und eventuell geändert. Wenn eine zugewiesene Nummer auf diese Weise wichtig ist, kann sie zurückgeändert werden. Dazu muss zuerst der Bereich umbenannt werden, dem das gewünschte Suffix zugewiesen wurde.&lt;/p&gt;</translation>
+      <translation>Es wurde erkannt, dass Suffixe in der Form &quot;_###&quot; bereits verwendet wurden. Diese wurden zur Einfachheit der Umbenennung entfernt und eventuell geändert. Wenn eine zugewiesene Nummer auf diese Weise wichtig ist, kann sie zurückgeändert werden. Dazu muss zuerst der Bereich umbenannt werden, dem das gewünschte Suffix zugewiesen wurde.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1160"/>
@@ -2778,7 +2777,7 @@ Sie wurden aus dem Bereich entfernt.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1167"/>
       <source>&lt;nothing&gt;</source>
-      <translation>&lt;nothing&gt;</translation>
+      <translation>&lt;bnothing&gt;</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1170"/>
@@ -2891,7 +2890,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1230"/>
       <source>&lt;p&gt;Hover on this item to display the Unicode codepoints in the selection &lt;i&gt;(only the first line!)&lt;/i&gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Auf dieses Element zeigen, um die Unicode Codepoints der Auswahl anzuzeigen &lt;i&gt;(nur die erste Zeile!)&lt;/i&gt;&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Auf dieses Element zeigen, um die Unicode Codepoints der Auswahl anzuzeigen &lt;bi&gt;(nur die erste Zeile!)&lt;b/i&gt;&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1239"/>
@@ -3413,7 +3412,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2214"/>
       <source>U+&lt;i&gt;####&lt;/i&gt; Unicode Code-point &lt;i&gt;(High:Low Surrogates)&lt;/i&gt;</source>
       <comment>2nd Row heading for Text analyser output, table item is the unicode code point (will be between 000001 and 10FFFF in hexadecimal) {this translation used 2 times}</comment>
-      <translation>U+&lt;i&gt;####&lt;/i&gt; Unicode-Codepoint &lt;i&gt;(High:Low-Surrogates)&lt;/i&gt;</translation>
+      <translation>U+&lt;bi&gt;####&lt;b/i&gt; Unicode-Codepoint &lt;bi&gt;(High:Low-Surrogates)&lt;b/i&gt;</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2157"/>
@@ -3472,7 +3471,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTrigger.cpp" line="254"/>
       <source>Error: in item %1, no colors to match were set - at least &lt;i&gt;one&lt;/i&gt; of the foreground or background must not be &lt;i&gt;ignored&lt;/i&gt;.</source>
-      <translation>Fehler bei Element %1: Keine zu suchenden Farben gewählt - mindestens &lt;i&gt;eine&lt;/i&gt; der Vordergrund- oder Hintergrundfarben darf nicht &lt;i&gt;ignoriert&lt;/i&gt; werden.</translation>
+      <translation>Fehler bei Element %1: Keine zu suchenden Farben gewählt - mindestens &lt;bi&gt;eine&lt;b/i&gt; der Vordergrund- oder Hintergrundfarben darf nicht &lt;bi&gt;ignoriert&lt;b/i&gt; werden.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="1062"/>
@@ -3655,12 +3654,12 @@ diese Version kann diese Datei nicht lesen. Du benötigst ein aktuelleres Mudlet
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="266"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game if it is pressed. (Optional)&lt;/p&gt;&lt;p&gt;If this is a &lt;i&gt;push-down&lt;/i&gt; button then this is sent only when the button goes from the &lt;i&gt;up&lt;/i&gt; to &lt;i&gt;down&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Tippe ein oder mehrere Befehle, die der Button direkt an das Spiel senden soll, wenn er gedrückt wird. (Optional)&lt;/p&gt;&lt;p&gt;Falls dies ein &lt;i&gt;einrastender&lt;/i&gt; Button ist, dann wird dies nur gesendet, sobald der Button den Status von &lt;i&gt;oben&lt;/i&gt; nach &lt;i&gt;unten&lt;/i&gt; wechselt.&lt;/p&gt;&lt;p&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Tippe ein oder mehrere Befehle, die der Button direkt an das Spiel senden soll, wenn er gedrückt wird. (Optional)&lt;b/p&gt;&lt;bp&gt;Falls dies ein &lt;bi&gt;einrastender&lt;b/i&gt; Button ist, dann wird dies nur gesendet, sobald der Button den Status von &lt;bi&gt;oben&lt;b/i&gt; nach &lt;bi&gt;unten&lt;b/i&gt; wechselt.&lt;b/p&gt;&lt;bp&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;bi&gt;stattdessen&lt;b/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;b/p&gt;&lt;bp&gt;Man darf auch hier etwas &lt;bi&gt;und&lt;b/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;bb&gt;bevor&lt;b/b&gt; das Skript ausgeführt wird.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="283"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game when this button goes from the &lt;i&gt;down&lt;/i&gt; to &lt;i&gt;up&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Tippe ein oder mehrere Befehle, die der Button direkt an das Spiel senden soll, wenn der Button vom &lt;i&gt;unten&lt;/i&gt; in den &lt;i&gt;oben&lt;/i&gt; Status wechselt.&lt;/p&gt;&lt;p&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Tippe ein oder mehrere Befehle, die der Button direkt an das Spiel senden soll, wenn der Button vom &lt;bi&gt;unten&lt;b/i&gt; in den &lt;bi&gt;oben&lt;b/i&gt; Status wechselt.&lt;b/p&gt;&lt;bp&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;bi&gt;stattdessen&lt;b/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;b/p&gt;&lt;bp&gt;Man darf auch hier etwas &lt;bi&gt;und&lt;b/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;bb&gt;bevor&lt;b/b&gt; das Skript ausgeführt wird.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="273"/>
@@ -3723,7 +3722,7 @@ diese Version kann diese Datei nicht lesen. Du benötigst ein aktuelleres Mudlet
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="176"/>
       <source>&lt;p&gt;Type in one or more commands you want the alias to send directly to the game if the keys entered match the pattern. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Tippe ein oder mehrere Befehle, die das Alias direkt an das Spiel senden soll, wenn der eingegebene Text dem Muster entspricht. (Optional)&lt;/p&gt;&lt;p&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Tippe ein oder mehrere Befehle, die das Alias direkt an das Spiel senden soll, wenn der eingegebene Text dem Muster entspricht. (Optional)&lt;b/p&gt;&lt;bp&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;bi&gt;stattdessen&lt;b/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;b/p&gt;&lt;bp&gt;Man darf auch hier etwas &lt;bi&gt;und&lt;b/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;bb&gt;bevor&lt;b/b&gt; das Skript ausgeführt wird.&lt;b/p&gt;</translation>
     </message>
   </context>
   <context>
@@ -3916,10 +3915,10 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
 &lt;li&gt;click the &lt;i&gt;Default&lt;/i&gt; or &lt;i&gt;Ignore&lt;/i&gt; buttons at the bottom for a pair of other special cases&lt;/li&gt;
 &lt;li&gt;click &lt;i&gt;Cancel&lt;/i&gt; to close this dialog without making any changes&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</source>
       <comment>Ensure that &quot;Default&quot;, &quot;Ignore&quot; and &quot;Cancel&quot; in this instruction are the same as used for the controls elsewhere on this dialog.</comment>
-      <translation>&lt;small&gt;Wähle:&lt;ul&gt;&lt;li&gt;eine der 16 Grundfarben unten&lt;/li&gt;
-&lt;li&gt;Klicke auf &lt;i&gt;mehr&lt;/i&gt;, damit die restlichen Farben des 256-Farbspektrums angezeigt werden, dann folge den Anweisungen, um eine dieser 256 unterstützten Farben zu wählen; Falls eine solche Farbe schon benutzt wird, dann wird dieser Bereich bereits angezeigt&lt;/li&gt;
-&lt;li&gt;Klicke unten auf die Schaltflächen &lt;i&gt;Standard&lt;/i&gt; oder &lt;i&gt;Ignorieren&lt;/i&gt; für zwei weitere besondere Möglichkeiten&lt;/li&gt;
-&lt;li&gt;Klicke &lt;i&gt;Abbrechen&lt;/i&gt;, um dieses Fenster zu schließen, ohne irgendwelche Änderungen durchzuführen&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</translation>
+      <translation>&lt;bsmall&gt;Wähle:&lt;bul&gt;&lt;bli&gt;eine der 16 Grundfarben unten&lt;b/li&gt;
+&lt;bli&gt;Klicke auf &lt;bi&gt;mehr&lt;b/i&gt;, damit die restlichen Farben des 256-Farbspektrums angezeigt werden, dann folge den Anweisungen, um eine dieser 256 unterstützten Farben zu wählen; Falls eine solche Farbe schon benutzt wird, dann wird dieser Bereich bereits angezeigt&lt;b/li&gt;
+&lt;bli&gt;Klicke unten auf die Schaltflächen &lt;bi&gt;Standard&lt;b/i&gt; oder &lt;bi&gt;Ignorieren&lt;b/i&gt; für zwei weitere besondere Möglichkeiten&lt;b/li&gt;
+&lt;bli&gt;Klicke &lt;bi&gt;Abbrechen&lt;b/i&gt;, um dieses Fenster zu schließen, ohne irgendwelche Änderungen durchzuführen&lt;b/li&gt;&lt;b/ul&gt;&lt;b/small&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="58"/>
@@ -4002,7 +4001,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/composer.ui" line="136"/>
       <source>&lt;p&gt;Save (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</source>
-      <translation>&lt;p&gt; Speichern (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt; Speichern (&lt;bspan style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;b/span&gt;)&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="139"/>
@@ -4158,7 +4157,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="43"/>
       <source>&lt;p&gt;Select Style, Color and whether to end the line with an arrow head.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wählen Sie den Stil, die Farbe und ob die Linie mit einem Pfeil enden soll.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wählen Sie den Stil, die Farbe und ob die Linie mit einem Pfeil enden soll.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="122"/>
@@ -4221,17 +4220,17 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="47"/>
       <source>&lt;p&gt;Selecting an exit immediately proceeds to drawing the first line segment from the centre point of the room.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Einen Ausgang auswählen führt unmittelbar dazu, dass das erste Liniensegment ab der Mitte des Raums gezeichnet wird.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Einen Ausgang auswählen führt unmittelbar dazu, dass das erste Liniensegment ab der Mitte des Raums gezeichnet wird.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="60"/>
       <source>&lt;p&gt;Select Style, Color and whether to end the line with an arrow head BEFORE then choosing the exit to draw the line for...&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle ZUERST Design und Farbe der Linie, und ob das Ende eine Pfeilspitze haben soll, dann wähle den Ausgang zu dem du die Linie zeichnen willst...&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle ZUERST Design und Farbe der Linie, und ob das Ende eine Pfeilspitze haben soll, dann wähle den Ausgang zu dem du die Linie zeichnen willst...&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="187"/>
       <source>&lt;p&gt;Select a normal exit to commence drawing a line for it, buttons are shown depressed if they already have such a custom line and disabled if there is not exit in that direction.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle einen normalen Ausgang, um das Zeichnen einer Linie dorthin zu beginnen. Die Buttons sehen gedrückt aus, wenn es sie schon so eine benutzerdefinierte Linie haben, und sind deaktiviert, wenn es keinen Ausgang in die Richtung gibt.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle einen normalen Ausgang, um das Zeichnen einer Linie dorthin zu beginnen. Die Buttons sehen gedrückt aus, wenn es sie schon so eine benutzerdefinierte Linie haben, und sind deaktiviert, wenn es keinen Ausgang in die Richtung gibt.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="190"/>
@@ -4301,28 +4300,28 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="444"/>
       <source>&lt;p&gt;Select a special exit to commence drawing a line for it, the first column is checked if the exit already has such a custom line.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle einen besonderen Ausgang, um das Zeichnen einer Linie dorthin zu beginnen. Die erste Spalte ist markiert, wenn der Ausgang schon so eine benutzerdefinierte Linie hat.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle einen besonderen Ausgang, um das Zeichnen einer Linie dorthin zu beginnen. Die erste Spalte ist markiert, wenn der Ausgang schon so eine benutzerdefinierte Linie hat.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="503"/>
       <source>&lt;p&gt;Indicates if there is already a custom line for this special exit, will be replaced if the exit is selected.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Gibt an, ob es schon eine benutzerdefinierte für diesen besonderen Ausgang gibt. Dieser wird ersetzt, wenn der Ausgang gewählt wird.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Gibt an, ob es schon eine benutzerdefinierte für diesen besonderen Ausgang gibt. Dieser wird ersetzt, wenn der Ausgang gewählt wird.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="514"/>
       <source>&lt;p&gt;The room this special exit leads to.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Der Raum, zu dem dieser spezielle Ausgang führt.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Der Raum, zu dem dieser spezielle Ausgang führt.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="525"/>
       <source>&lt;p&gt;The command or LUA script that goes to the given room.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Der Befehl oder das LUA Skript, das in den gegebenen Raum führt.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Der Befehl oder das LUA Skript, das in den gegebenen Raum führt.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="561"/>
       <source>&lt;p&gt;To remove a custom line: cancel this dialog, select the line and right-click to obtain a &amp;quot;delete&amp;quot; option.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Um eine benutzerdefinierte Linie zu entfernen, breche diesen Dialog ab,
-wähle die Linie und rechtsklicke für die Möglichkeit zu &quot;löschen&quot;.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Um eine benutzerdefinierte Linie zu entfernen, breche diesen Dialog ab,
+wähle die Linie und rechtsklicke für die Möglichkeit zu &quot;löschen&quot;.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="447"/>
@@ -4629,7 +4628,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="472"/>
       <source>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; is built upon the shoulders of other projects in the FOSS world; as well as using many GPL components we also make use of some third-party software with other licenses:&lt;/p&gt;</source>
-      <translation>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; wurde auf den Schultern von anderen Projekten der FOSS Welt aufgebaut; Einerseits werden viele GPL-Komponenten benutzt, andererseits auch einige Software von Dritten mit anderen Lizenzen:&lt;/p&gt;</translation>
+      <translation>&lt;bp align=&quot;center&quot;&gt;&lt;bb&gt;Mudlet&lt;b/b&gt; wurde auf den Schultern von anderen Projekten der FOSS Welt aufgebaut; Einerseits werden viele GPL-Komponenten benutzt, andererseits auch einige Software von Dritten mit anderen Lizenzen:&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="643"/>
@@ -4664,7 +4663,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="668"/>
       <source>The &lt;b&gt;edbee-lib&lt;/b&gt; widget itself incorporates other components with licences that must be noted as well, they are:</source>
-      <translation>Das &lt;b&gt;edbee-lib&lt;/b&gt; Widget selbst beinhaltet andere Komponenten, deren Lizenzen ebenfalls vermerkt werden müssen, nämlich:</translation>
+      <translation>Das &lt;bb&gt;edbee-lib&lt;b/b&gt; Widget selbst beinhaltet andere Komponenten, deren Lizenzen ebenfalls vermerkt werden müssen, nämlich:</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="670"/>
@@ -4742,22 +4741,22 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="66"/>
       <source>&lt;p&gt;Click to make the color trigger when the text&apos;s background color has not been modified from its normal value.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Klicke hier, um den Trigger auszulösen, wenn die Hintergrundfarbe des Textes nicht vom Normalwert geändert wurde.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Klicke hier, um den Trigger auszulösen, wenn die Hintergrundfarbe des Textes nicht vom Normalwert geändert wurde.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="67"/>
       <source>&lt;p&gt;Click to make the color trigger when the text&apos;s foreground color has not been modified from its normal value.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Klicke hier, um den Trigger auszulösen, wenn die Vordergrundfarbe des Textes nicht vom Normalwert geändert wurde.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Klicke hier, um den Trigger auszulösen, wenn die Vordergrundfarbe des Textes nicht vom Normalwert geändert wurde.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="71"/>
       <source>&lt;p&gt;Click a color to make the trigger fire only when the text&apos;s background color matches the color number indicated.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle eine Farbe, um den Trigger nur dann auszulösen, wenn die Hintergrundfarbe des Textes mit der angegebenen Farbnummer übereinstimmt.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle eine Farbe, um den Trigger nur dann auszulösen, wenn die Hintergrundfarbe des Textes mit der angegebenen Farbnummer übereinstimmt.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="72"/>
       <source>&lt;p&gt;Click a color to make the trigger fire only when the text&apos;s foreground color matches the color number indicated.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle eine Farbe, um den Trigger nur dann auszulösen, wenn die Vordergrundfarbe des Textes mit der angegebenen Farbnummer übereinstimmt.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle eine Farbe, um den Trigger nur dann auszulösen, wenn die Vordergrundfarbe des Textes mit der angegebenen Farbnummer übereinstimmt.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="77"/>
@@ -4792,7 +4791,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="83"/>
       <source>Cyan</source>
-      <translation>Cyan</translation>
+      <translation>Türkis</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="84"/>
@@ -4832,7 +4831,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="92"/>
       <source>Light cyan</source>
-      <translation>Helles Cyan</translation>
+      <translation>Helles Türkis</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="93"/>
@@ -4882,7 +4881,7 @@ Nutzungen</translation>
       <location filename="../src/dlgConnectionProfiles.cpp" line="80"/>
       <source>&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;Welcome to Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;b&gt;Click on one of the games on the list to play.&lt;/b&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;To play a game not in the list, click on %1 &lt;span style=&quot; color:#555753;&quot;&gt;New&lt;/span&gt;, fill in the &lt;i&gt;Profile Name&lt;/i&gt;, &lt;i&gt;Server address&lt;/i&gt;, and &lt;i&gt;Port&lt;/i&gt; fields in the &lt;i&gt;Required &lt;/i&gt; area.&lt;/p&gt;&lt;p&gt;After that, click %2 &lt;span style=&quot; color:#555753;&quot;&gt;Connect&lt;/span&gt; to play.&lt;/p&gt;&lt;p&gt;Have fun!&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;The Mudlet Team &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</source>
       <comment>Welcome message. Both %1 and %2 may be replaced by icons when this text is used.</comment>
-      <translation>&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;Willkommen bei Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;b&gt;Klicke zum Spielen auf eines der Spiele aus der Liste.&lt;/b&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;Um ein Spiel zu spielen, das nicht aufgelistet ist, klicke auf %1 &lt;span style=&quot; color:#555753;&quot;&gt;Neu&lt;/span&gt;, fülle die Felder &lt;i&gt;Profilname&lt;/i&gt;, &lt;i&gt;Serveradresse&lt;/i&gt;, und &lt;i&gt;Port&lt;/i&gt; unter &lt;i&gt;Benötigt&lt;/i&gt; aus.&lt;/p&gt;&lt;p&gt;Klicke danach auf %2 &lt;span style=&quot; color:#555753;&quot;&gt;Verbinden&lt;/span&gt; zum Spielen.&lt;/p&gt;&lt;p&gt;Viel Spaß!&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;Das Mudlet Team &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;&lt;bcenter&gt;&lt;bbig&gt;&lt;bb&gt;Willkommen bei Mudlet!&lt;b/b&gt;&lt;b/big&gt;&lt;b/center&gt;&lt;b/p&gt;&lt;bp&gt;&lt;bcenter&gt;&lt;bb&gt;Klicke zum Spielen auf eines der Spiele aus der Liste.&lt;b/b&gt;&lt;b/center&gt;&lt;b/p&gt;&lt;bp&gt;Um ein Spiel zu spielen, das nicht aufgelistet ist, klicke auf %1 &lt;bspan style=&quot; color:#555753;&quot;&gt;Neu&lt;b/span&gt;, fülle die Felder &lt;bi&gt;Profilname&lt;b/i&gt;, &lt;bi&gt;Serveradresse&lt;b/i&gt;, und &lt;bi&gt;Port&lt;b/i&gt; unter &lt;bi&gt;Benötigt&lt;b/i&gt; aus.&lt;b/p&gt;&lt;bp&gt;Klicke danach auf %2 &lt;bspan style=&quot; color:#555753;&quot;&gt;Verbinden&lt;b/span&gt; zum Spielen.&lt;b/p&gt;&lt;bp&gt;Viel Spaß!&lt;b/p&gt;&lt;bp align=&quot;right&quot;&gt;&lt;bspan style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;Das Mudlet Team &lt;b/span&gt;&lt;bimg src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="71"/>
@@ -4931,17 +4930,17 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1953"/>
       <source>&lt;p&gt;Load profile without connecting.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Profil laden ohne zu verbinden.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Profil laden ohne zu verbinden.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1967"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before loading.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Bitte setze einen gültigen Profilnamen sowie Adresse und Port des Spielservers vor dem Laden.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Bitte setze einen gültigen Profilnamen sowie Adresse und Port des Spielservers vor dem Laden.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1971"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before connecting.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Bitte setze einen gültigen Profilnamen sowie Adresse und Port des Spielservers vor dem Verbinden.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Bitte setze einen gültigen Profilnamen sowie Adresse und Port des Spielservers vor dem Verbinden.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1897"/>
@@ -5032,7 +5031,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgIRC.cpp" line="144"/>
       <source>$ Type &lt;b&gt;/help&lt;/b&gt; for commands or &lt;b&gt;/help [command]&lt;/b&gt; for command syntax.</source>
-      <translation>$ Tippe &lt;b&gt;/help&lt;/b&gt; für alle Befehle oder &lt;b&gt;/help [Befehl]&lt;/b&gt; für die Syntax eines Befehls.</translation>
+      <translation>$ Tippe &lt;bb&gt;/help&lt;b/b&gt; für alle Befehle oder &lt;bb&gt;/help [Befehl]&lt;b/b&gt; für die Syntax eines Befehls.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="203"/>
@@ -5042,7 +5041,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgIRC.cpp" line="376"/>
       <source>[Error] MSGLIMIT requires &lt;limit&gt; to be a whole number greater than zero!</source>
-      <translation>[Error] MSGLIMIT erfordert, dass &lt;limit&gt; eine ganze Zahl und größer als Null ist!</translation>
+      <translation>[Error] MSGLIMIT erfordert, dass &lt;blimit&gt; eine ganze Zahl und größer als Null ist!</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="406"/>
@@ -5130,7 +5129,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="61"/>
       <source>Timers</source>
-      <translation>Timers</translation>
+      <translation>Timer</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="62"/>
@@ -5212,7 +5211,7 @@ Nutzungen</translation>
       <location filename="../src/dlgPackageExporter.cpp" line="835"/>
       <source>Why not &lt;a href=&quot;https://forums.mudlet.org/viewforum.php?f=6&quot;&gt;upload&lt;/a&gt; your package for other Mudlet users?</source>
       <comment>Only the text outside of the &apos;a&apos; (HTML anchor) tags PLUS the verb &apos;upload&apos; in between them in the source text, (associated with uploading the resulting package to the Mudlet forums) should be translated.</comment>
-      <translation>Warum nicht dein Paket für andere Mudlet-Benutzer &lt;a href=&quot;https://forums.mudlet.org/viewforum.php?f=6&quot;&gt;hochladen&lt;/a&gt;?</translation>
+      <translation>Warum nicht dein Paket für andere Mudlet-Benutzer &lt;ba href=&quot;https://forums.mudlet.org/viewforum.php?f=6&quot;&gt;hochladen&lt;b/a&gt;?</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="32"/>
@@ -5245,7 +5244,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="127"/>
       <source>&lt;p&gt;Location which will be used to store log files - matching logs will be appended to.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Standort, der zum Speichern von Log-Dateien verwendet wird - übereinstimmende Logs werden angehängt.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Standort, der zum Speichern von Log-Dateien verwendet wird - übereinstimmende Logs werden angehängt.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="135"/>
@@ -5256,12 +5255,12 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="181"/>
       <source>&lt;p&gt;This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specifed font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.&lt;p&gt;</source>
-      <translation>&lt;p&gt;Hiermit werden alle Symbole angezeigt, die in der aktuellen Karte genutzt werden, und ob sie nur mit der angegebenen Schriftart dargestellt werden können, mit einer anderen Schriftart, oder überhaupt nicht. Es wird auch eine Sequenz von Unicode-&lt;i&gt;Code-Punkten&lt;/i&gt; angezeigt, aus denen das Symbol zusammengesetzt wird, damit es auch identifiziert werden kann, falls es nicht dargestellt werden kann. Außerdem werden bis zu 32 Räume aufgelistet, die dieses Symbol benutzen, wodurch man unerwartete oder seltsame Fälle aufdecken kann.&lt;p&gt;</translation>
+      <translation>&lt;bp&gt;Hiermit werden alle Symbole angezeigt, die in der aktuellen Karte genutzt werden, und ob sie nur mit der angegebenen Schriftart dargestellt werden können, mit einer anderen Schriftart, oder überhaupt nicht. Es wird auch eine Sequenz von Unicode-&lt;bi&gt;Code-Punkten&lt;b/i&gt; angezeigt, aus denen das Symbol zusammengesetzt wird, damit es auch identifiziert werden kann, falls es nicht dargestellt werden kann. Außerdem werden bis zu 32 Räume aufgelistet, die dieses Symbol benutzen, wodurch man unerwartete oder seltsame Fälle aufdecken kann.&lt;bp&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="187"/>
       <source>&lt;p&gt;Select the only or the primary font used (depending on &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; setting) to produce the 2D mapper room symbols.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle die einzige oder hauptsächlich benutzte Schriftart (je nach der Einstellung &lt;i&gt;Verwende nur Symbole (Glyphen) aus der gewählten Schriftart&lt;/i&gt;), um die Symbole der Räume auf der 2D-Karte erstellen.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle die einzige oder hauptsächlich benutzte Schriftart (je nach der Einstellung &lt;bi&gt;Verwende nur Symbole (Glyphen) aus der gewählten Schriftart&lt;b/i&gt;), um die Symbole der Räume auf der 2D-Karte erstellen.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="221"/>
@@ -5504,32 +5503,32 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="189"/>
       <source>&lt;p&gt;Using a single font is likely to produce a more consistent style but may cause the &lt;i&gt;font replacement character&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos; to show if the font does not have a needed glyph (a font&apos;s individual character/symbol) to represent the grapheme (what is to be represented).  Clearing this checkbox will allow the best alternative glyph from another font to be used to draw that grapheme.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Mit einer einzigen Schriftart ist es wahrscheinlicher, einen einheitlicheren Stil zu erzeugen, aber das &lt;i&gt;Ersetzungszeichen&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos; könnte gezeigt werden, falls die Schriftart ein benötigte Glyphe nicht hat (ein einzelnes Zeichen oder Symbol der Schriftart), um das gewünschte Graphem darzustellen. Diese Markierung zu löschen führt dazu, dass die beste alternative Glyphe einer anderen Schriftart benutzt wird, um das Graphem zu zeichnen.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Mit einer einzigen Schriftart ist es wahrscheinlicher, einen einheitlicheren Stil zu erzeugen, aber das &lt;bi&gt;Ersetzungszeichen&lt;b/i&gt; &apos;&lt;bb&gt;�&lt;b/b&gt;&apos; könnte gezeigt werden, falls die Schriftart ein benötigte Glyphe nicht hat (ein einzelnes Zeichen oder Symbol der Schriftart), um das gewünschte Graphem darzustellen. Diese Markierung zu löschen führt dazu, dass die beste alternative Glyphe einer anderen Schriftart benutzt wird, um das Graphem zu zeichnen.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="128"/>
       <source>&lt;p&gt;Select a directory where logs will be saved.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle ein Verzeichnis, in dem Protokolle gespeichert werden.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle ein Verzeichnis, in dem Protokolle gespeichert werden.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="129"/>
       <source>&lt;p&gt;Reset the directory so that logs are saved to the profile&apos;s &lt;i&gt;log&lt;/i&gt; directory.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Setze das Verzeichnis zurück, damit Protokolle in den &lt;i&gt;log&lt;/i&gt;-Ordner des Profils gespeichert werden.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Setze das Verzeichnis zurück, damit Protokolle in den &lt;bi&gt;log&lt;b/i&gt;-Ordner des Profils gespeichert werden.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="130"/>
       <source>&lt;p&gt;This option sets the format of the log name.&lt;/p&gt;&lt;p&gt;If &lt;i&gt;Named file&lt;/i&gt; is selected, you can set a custom file name. (Logs are appended if a log file of the same name already exists.)&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Diese Option bestimmt das Format des Namens der Protokolldatei.&lt;/p&gt;&lt;p&gt;Wenn &lt;i&gt;Benannte Datei&lt;/i&gt; ausgewählt wird, kannst du einen eigenen Namen definieren. (Die Protokolle werden angehängt, wenn bereits eine Datei mit dem gleichen Namen existiert.)&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Diese Option bestimmt das Format des Namens der Protokolldatei.&lt;b/p&gt;&lt;bp&gt;Wenn &lt;bi&gt;Benannte Datei&lt;b/i&gt; ausgewählt wird, kannst du einen eigenen Namen definieren. (Die Protokolle werden angehängt, wenn bereits eine Datei mit dem gleichen Namen existiert.)&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="133"/>
       <source>&lt;p&gt;Set a custom name for your log. (New logs are appended if a log file of the same name already exists).&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Bestimme einen eigenen Namens für deine Protokolldatei. (Neue Protokolle werden angehängt, wenn bereits eine Datei mit dem gleichen Namen existiert.)&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Bestimme einen eigenen Namens für deine Protokolldatei. (Neue Protokolle werden angehängt, wenn bereits eine Datei mit dem gleichen Namen existiert.)&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="154"/>
       <source>&lt;p&gt;Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Automatische Updates sind in Entwicklungsversionen deaktiviert, um zu verhindern, dass ein Update dein Mudlet überschreibt.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Automatische Updates sind in Entwicklungsversionen deaktiviert, um zu verhindern, dass ein Update dein Mudlet überschreibt.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="175"/>
@@ -5566,7 +5565,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="503"/>
       <source>&lt;p&gt;From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Aus der Wörterbuchdatei &lt;tt&gt;%1.dic&lt;/tt&gt; (und der begleitenden Affix &lt;tt&gt;.aff&lt;/tt&gt; Datei).&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Aus der Wörterbuchdatei &lt;btt&gt;%1.dic&lt;b/tt&gt; (und der begleitenden Affix &lt;btt&gt;.aff&lt;b/tt&gt; Datei).&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="505"/>
@@ -5576,7 +5575,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="506"/>
       <source>&lt;p&gt;Mudlet does not recognise the code &quot;%1&quot;, please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!&lt;/p&gt;&lt;p&gt;The file &lt;tt&gt;%2.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file) is still usable.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Mudlet erkennt den Code &quot;%1&quot; nicht. Bitte melde ihn bei den Mudlet-Entwicklern, damit wir ihn in zukünftigen Mudlet-Versionen richtig beschreiben können!&lt;/p&gt;&lt;p&gt;Die Datei &lt;tt&gt;%2.dic&lt;/tt&gt; (und die zugehörige &lt;tt&gt;.aff&lt;/tt&gt; Affix-Datei) ist weiterhin verwendbar.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Mudlet erkennt den Code &quot;%1&quot; nicht. Bitte melde ihn bei den Mudlet-Entwicklern, damit wir ihn in zukünftigen Mudlet-Versionen richtig beschreiben können!&lt;b/p&gt;&lt;bp&gt;Die Datei &lt;btt&gt;%2.dic&lt;b/tt&gt; (und die zugehörige &lt;btt&gt;.aff&lt;b/tt&gt; Affix-Datei) ist weiterhin verwendbar.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="531"/>
@@ -5592,12 +5591,12 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2939"/>
       <source>&lt;p&gt;The room symbol will appear like this if only symbols (glyphs) from the specfic font are used.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Das Raumsymbol erscheint wie folgt, wenn nur Symbole (Glyphen) aus der spezifischen Schriftart verwendet werden.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Das Raumsymbol erscheint wie folgt, wenn nur Symbole (Glyphen) aus der spezifischen Schriftart verwendet werden.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2945"/>
       <source>&lt;p&gt;The room symbol will appear like this if symbols (glyphs) from any font can be used.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Das Raumsymbol erscheint wie folgt, wenn Symbole (Glyphen) aus jeder Schriftart verwendet werdet dürfen.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Das Raumsymbol erscheint wie folgt, wenn Symbole (Glyphen) aus jeder Schriftart verwendet werdet dürfen.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2974"/>
@@ -5607,7 +5606,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2987"/>
       <source>&lt;p&gt;How many rooms in the whole map have this symbol.</source>
-      <translation>&lt;p&gt;Wie viele Räume in der gesamten Karte haben dieses Symbol.</translation>
+      <translation>&lt;bp&gt;Wie viele Räume in der gesamten Karte haben dieses Symbol.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2999"/>
@@ -5617,17 +5616,17 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3006"/>
       <source>&lt;p&gt;The rooms with this symbol, up to a maximum of thirty-two, if there are more than this, it is indicated but they are not shown.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Die Räume mit diesem Symbol, maximal 32. Falls es mehr sind, wird es angezeigt, aber sie werden nicht gelistet.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Die Räume mit diesem Symbol, maximal 32. Falls es mehr sind, wird es angezeigt, aber sie werden nicht gelistet.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3015"/>
       <source>&lt;p&gt;The symbol can be made entirely from glyphs in the specified font.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Das Symbol kann vollständig aus Glypthen der gewählten Schriftart erstellt werden.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Das Symbol kann vollständig aus Glypthen der gewählten Schriftart erstellt werden.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3025"/>
       <source>&lt;p&gt;The symbol cannot be made entirely from glyphs in the specified font, but, using other fonts in the system, it can. Either un-check the &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; option or try and choose another font that does have the needed glyphs.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You need not close this table to try another font, changing it on the main preferences dialogue will update this table after a slight delay.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Das Symbol kann nicht vollständig aus Glypthen der gewählten Schriftart erstellt werden, aber mit anderen Schriftarten geht es. Bitte deaktiviere entweder die Einstellung &lt;i&gt;Das Symbol kann vollständig aus Glypthen der gewählten Schriftart erstellt werden.&lt;/i&gt; oder versuche eine andere Schriftart mit den benötigten Glyphen.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Du brauchst diese Tabelle nicht zu schließen, um eine andere Schriftart auszuprobieren. Wenn du sie in den Einstellungen änderst, wird sich diese Tabelle kurz darauf aktualisieren.&lt;/i&gt;&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Das Symbol kann nicht vollständig aus Glypthen der gewählten Schriftart erstellt werden, aber mit anderen Schriftarten geht es. Bitte deaktiviere entweder die Einstellung &lt;bi&gt;Das Symbol kann vollständig aus Glypthen der gewählten Schriftart erstellt werden.&lt;b/i&gt; oder versuche eine andere Schriftart mit den benötigten Glyphen.&lt;b/p&gt;&lt;bp&gt;&lt;bi&gt;Du brauchst diese Tabelle nicht zu schließen, um eine andere Schriftart auszuprobieren. Wenn du sie in den Einstellungen änderst, wird sich diese Tabelle kurz darauf aktualisieren.&lt;b/i&gt;&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3035"/>
@@ -5757,7 +5756,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="1919"/>
       <source>&lt;b&gt;Room&lt;/b&gt; Weight of destination: %1.</source>
       <comment>Bold HTML tags are used to emphasis that the value is destination room&apos;s weight whether overridden by a non-zero exit weight here or not.</comment>
-      <translation>&lt;b&gt;Raum&lt;/b&gt; Gewicht des Ziels: %1.</translation>
+      <translation>&lt;bb&gt;Raum&lt;b/b&gt; Gewicht des Ziels: %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="147"/>
@@ -6095,18 +6094,18 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="93"/>
       <source>&lt;p&gt;Alias are input triggers. To make a new alias:&lt;ul&gt;&lt;li&gt;&lt;b&gt;1.&lt;/b&gt; Define an input trigger pattern with a Perl regular expression.&lt;/li&gt;&lt;li&gt;&lt;b&gt;2.&lt;/b&gt; Define a command to send to the MUD in clear text &lt;b&gt;&lt;u&gt;instead of the alias pattern&lt;/u&gt;&lt;/b&gt; or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;b&gt;3. &lt;u&gt;Activate&lt;/u&gt;&lt;/b&gt; the alias.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Alias reagieren auf die Benutzereingaben. So erstellst du einen neuen Alias:&lt;ul&gt;&lt;li&gt;&lt;b&gt;1.&lt;/b&gt; Definiere ein Eingabemuster mit einem regulären Ausdruck (Perl Regex).&lt;/li&gt;&lt;li&gt;&lt;b&gt;2.&lt;/b&gt; Definiere einen Befehl, der als reiner Text &lt;b&gt;&lt;u&gt;anstelle des Alias-Musters&lt;/u&gt;&lt;/b&gt; an das Spiel gesendet werden soll, oder schreibe ein Skript für kompliziertere Anforderungen.&lt;/li&gt;&lt;li&gt;&lt;b&gt;3. &lt;u&gt;Aktiviere&lt;/u&gt;&lt;/b&gt; das Alias.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;Finde &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;weitere Informationen im Handbuch&lt;/a&gt;.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Alias reagieren auf die Benutzereingaben. So erstellst du einen neuen Alias:&lt;bul&gt;&lt;bli&gt;&lt;bb&gt;1.&lt;b/b&gt; Definiere ein Eingabemuster mit einem regulären Ausdruck (Perl Regex).&lt;b/li&gt;&lt;bli&gt;&lt;bb&gt;2.&lt;b/b&gt; Definiere einen Befehl, der als reiner Text &lt;bb&gt;&lt;bu&gt;anstelle des Alias-Musters&lt;b/u&gt;&lt;b/b&gt; an das Spiel gesendet werden soll, oder schreibe ein Skript für kompliziertere Anforderungen.&lt;b/li&gt;&lt;bli&gt;&lt;bb&gt;3. &lt;bu&gt;Aktiviere&lt;b/u&gt;&lt;b/b&gt; das Alias.&lt;b/li&gt;&lt;b/ul&gt;&lt;b/p&gt;&lt;bp&gt;Finde &lt;ba href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;weitere Informationen im Handbuch&lt;b/a&gt;.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="99"/>
       <source>&lt;p&gt;To add a new trigger:&lt;ul&gt;&lt;li&gt;&lt;b&gt;1.&lt;/b&gt; Define a &lt;b&gt;&lt;u&gt;pattern&lt;/u&gt;&lt;/b&gt; that you want to trigger on.&lt;/li&gt;&lt;li&gt;&lt;b&gt;2.&lt;/b&gt; Select the appropriate pattern &lt;b&gt;&lt;u&gt;type&lt;/u&gt;&lt;/b&gt;.&lt;/li&gt;&lt;li&gt;&lt;b&gt;3.&lt;/b&gt; Define a clear text command that you want to send to the MUD if the trigger finds the pattern in the text from the MUD or write a script.&lt;/li&gt;&lt;li&gt;&lt;b&gt;4. &lt;u&gt;Activate&lt;/u&gt;&lt;/b&gt; the trigger.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Um einen neuen Trigger hinzuzufügen:&lt;ul&gt;&lt;li&gt;&lt;b&gt;1.&lt;/b&gt; Definiere ein &lt;b&gt;&lt;u&gt;Muster&lt;/u&gt;&lt;/b&gt;, bei dem ausgelöst werden soll.&lt;/li&gt;&lt;li&gt;&lt;b&gt;2.&lt;/b&gt; Wähle die passende &lt;b&gt;&lt;u&gt;Art&lt;/u&gt;&lt;/b&gt; des Musters aus.&lt;/li&gt;&lt;li&gt;&lt;b&gt;3.&lt;/b&gt; Definiere einen Klartext-Befehl, der an das Spiel gesendet werden soll, wenn der Trigger das Muster im Text aus dem Spiel findet, oder schreibe ein Skript.&lt;/li&gt;&lt;li&gt;&lt;b&gt;4. &lt;u&gt;Aktiviere&lt;/u&gt;&lt;/b&gt; den Trigger.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;Weitere Informationen&lt;/a&gt; finden sich im Handbuch.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Um einen neuen Trigger hinzuzufügen:&lt;bul&gt;&lt;bli&gt;&lt;bb&gt;1.&lt;b/b&gt; Definiere ein &lt;bb&gt;&lt;bu&gt;Muster&lt;b/u&gt;&lt;b/b&gt;, bei dem ausgelöst werden soll.&lt;b/li&gt;&lt;bli&gt;&lt;bb&gt;2.&lt;b/b&gt; Wähle die passende &lt;bb&gt;&lt;bu&gt;Art&lt;b/u&gt;&lt;b/b&gt; des Musters aus.&lt;b/li&gt;&lt;bli&gt;&lt;bb&gt;3.&lt;b/b&gt; Definiere einen Klartext-Befehl, der an das Spiel gesendet werden soll, wenn der Trigger das Muster im Text aus dem Spiel findet, oder schreibe ein Skript.&lt;b/li&gt;&lt;bli&gt;&lt;bb&gt;4. &lt;bu&gt;Aktiviere&lt;b/u&gt;&lt;b/b&gt; den Trigger.&lt;b/li&gt;&lt;b/ul&gt;&lt;b/p&gt;&lt;bp&gt;&lt;ba href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;Weitere Informationen&lt;b/a&gt; finden sich im Handbuch.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="106"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="108"/>
       <source>&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Finde &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;weitere Informationen im Handbuch&lt;/a&gt;.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Finde &lt;ba href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;weitere Informationen im Handbuch&lt;b/a&gt;.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="110"/>
@@ -6369,7 +6368,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="469"/>
       <source>Activates Debug Messages -&gt; system will be &lt;b&gt;&lt;i&gt;slower&lt;/i&gt;&lt;/b&gt;.</source>
-      <translation>Aktiviert Debug-Nachrichten -&gt; Das System wird &lt;b&gt;&lt;i&gt;langsamer&lt;/i&gt;&lt;/b&gt; sein.</translation>
+      <translation>Aktiviert Debug-Nachrichten -&gt; Das System wird &lt;bb&gt;&lt;bi&gt;langsamer&lt;b/i&gt;&lt;b/b&gt; sein.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="470"/>
@@ -6424,87 +6423,87 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2669"/>
       <source>Trying to activate a trigger group, filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation>Triggergruppe, Filter oder Trigger, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; aktiviert.</translation>
+      <translation>Triggergruppe, Filter oder Trigger, oder Teil eines Moduls &quot;&lt;btt&gt;%1&lt;b/tt&gt;&quot;, das sie enthält, &lt;bem&gt;erfolgreich&lt;b/em&gt; aktiviert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2671"/>
       <source>Trying to deactivate a trigger group, filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation>Triggergruppe, Filter oder Trigger, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; deaktiviert.</translation>
+      <translation>Triggergruppe, Filter oder Trigger, oder Teil eines Moduls &quot;&lt;btt&gt;%1&lt;b/tt&gt;&quot;, das sie enthält, &lt;bem&gt;erfolgreich&lt;b/em&gt; deaktiviert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2675"/>
       <source>&lt;b&gt;Unable to activate a filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation>&lt;b&gt;Triggergruppe, Filter oder Trigger, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, konnte nicht aktiviert werden. Grund: %2.&lt;/b&gt;&lt;/p&gt;
-                     &lt;p&gt;&lt;i&gt;Bitte erneut aktivieren, nachdem das Problem gelöst wurde.&lt;/i&gt;&lt;/p&gt;</translation>
+      <translation>&lt;bb&gt;Triggergruppe, Filter oder Trigger, oder Teil eines Moduls &quot;&lt;btt&gt;%1&lt;b/tt&gt;&quot;, das sie enthält, konnte nicht aktiviert werden. Grund: %2.&lt;b/b&gt;&lt;b/p&gt;
+                     &lt;bp&gt;&lt;bi&gt;Bitte erneut aktivieren, nachdem das Problem gelöst wurde.&lt;b/i&gt;&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2812"/>
       <source>Trying to activate a timer group, offset timer, timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation>Timergruppe, Offset-Timer oder Timer, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; aktiviert.</translation>
+      <translation>Timergruppe, Offset-Timer oder Timer, oder Teil eines Moduls &quot;&lt;btt&gt;%1&lt;b/tt&gt;&quot;, das sie enthält, &lt;bem&gt;erfolgreich&lt;b/em&gt; aktiviert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2814"/>
       <source>Trying to deactivate a timer group, offset timer, timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation>Timergruppe, Offset-Timer oder Timer, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; deaktiviert.</translation>
+      <translation>Timergruppe, Offset-Timer oder Timer, oder Teil eines Moduls &quot;&lt;btt&gt;%1&lt;b/tt&gt;&quot;, das sie enthält, &lt;bem&gt;erfolgreich&lt;b/em&gt; deaktiviert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2818"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate an offset timer or timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;&lt;b&gt;Offset-Timer oder Timer, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, konnte nicht aktiviert werden. Grund: %2.&lt;/b&gt;&lt;/p&gt;
-                     &lt;p&gt;&lt;i&gt;Bitte erneut aktivieren, nachdem das Problem gelöst wurde.&lt;/i&gt;&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;&lt;bb&gt;Offset-Timer oder Timer, oder Teil eines Moduls &quot;&lt;btt&gt;%1&lt;b/tt&gt;&quot;, das sie enthält, konnte nicht aktiviert werden. Grund: %2.&lt;b/b&gt;&lt;b/p&gt;
+                     &lt;bp&gt;&lt;bi&gt;Bitte erneut aktivieren, nachdem das Problem gelöst wurde.&lt;b/i&gt;&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2856"/>
       <source>Trying to activate an alias group, alias or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation>Aliasgruppe, Alias, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; aktiviert.</translation>
+      <translation>Aliasgruppe, Alias, oder Teil eines Moduls &quot;&lt;btt&gt;%1&lt;b/tt&gt;&quot;, das sie enthält, &lt;bem&gt;erfolgreich&lt;b/em&gt; aktiviert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2858"/>
       <source>Trying to deactivate an alias group, alias or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation>Aliasgruppe, Alias, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; deaktiviert.</translation>
+      <translation>Aliasgruppe, Alias, oder Teil eines Moduls &quot;&lt;btt&gt;%1&lt;b/tt&gt;&quot;, das sie enthält, &lt;bem&gt;erfolgreich&lt;b/em&gt; deaktiviert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2862"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate an alias or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;&lt;b&gt;Alias oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, konnte nicht aktiviert werden. Grund: %2.&lt;/b&gt;&lt;/p&gt;
-                     &lt;p&gt;&lt;i&gt;Bitte erneut aktivieren, nachdem das Problem gelöst wurde.&lt;/i&gt;&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;&lt;bb&gt;Alias oder Teil eines Moduls &quot;&lt;btt&gt;%1&lt;b/tt&gt;&quot;, das sie enthält, konnte nicht aktiviert werden. Grund: %2.&lt;b/b&gt;&lt;b/p&gt;
+                     &lt;bp&gt;&lt;bi&gt;Bitte erneut aktivieren, nachdem das Problem gelöst wurde.&lt;b/i&gt;&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2960"/>
       <source>Trying to activate a script group, script or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation>Skriptgruppe, Skript, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; aktiviert.</translation>
+      <translation>Skriptgruppe, Skript, oder Teil eines Moduls &quot;&lt;btt&gt;%1&lt;b/tt&gt;&quot;, das sie enthält, &lt;bem&gt;erfolgreich&lt;b/em&gt; aktiviert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2962"/>
       <source>Trying to deactivate a script group, script or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation>Skriptgruppe, Skript, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; deaktiviert.</translation>
+      <translation>Skriptgruppe, Skript, oder Teil eines Moduls &quot;&lt;btt&gt;%1&lt;b/tt&gt;&quot;, das sie enthält, &lt;bem&gt;erfolgreich&lt;b/em&gt; deaktiviert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2966"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate a script group or script or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;&lt;b&gt;Skriptgruppe oder Skript oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, konnte nicht aktiviert werden. Grund: %2.&lt;/b&gt;&lt;/p&gt;
-                     &lt;p&gt;&lt;i&gt;Bitte erneut aktivieren, nachdem das Problem gelöst wurde.&lt;/i&gt;&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;&lt;bb&gt;Skriptgruppe oder Skript oder Teil eines Moduls &quot;&lt;btt&gt;%1&lt;b/tt&gt;&quot;, das sie enthält, konnte nicht aktiviert werden. Grund: %2.&lt;b/b&gt;&lt;b/p&gt;
+                     &lt;bp&gt;&lt;bi&gt;Bitte erneut aktivieren, nachdem das Problem gelöst wurde.&lt;b/i&gt;&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3031"/>
       <source>Trying to activate a button/menu/toolbar or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation>Button, Menu oder Schaltleiste, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; aktiviert.</translation>
+      <translation>Button, Menu oder Schaltleiste, oder Teil eines Moduls &quot;&lt;btt&gt;%1&lt;b/tt&gt;&quot;, das sie enthält, &lt;bem&gt;erfolgreich&lt;b/em&gt; aktiviert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3033"/>
       <source>Trying to deactivate a button/menu/toolbar or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation>Button, Menu oder Schaltleiste, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, &lt;em&gt;erfolgreich&lt;/em&gt; deaktiviert.</translation>
+      <translation>Button, Menu oder Schaltleiste, oder Teil eines Moduls &quot;&lt;btt&gt;%1&lt;b/tt&gt;&quot;, das sie enthält, &lt;bem&gt;erfolgreich&lt;b/em&gt; deaktiviert.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3037"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate a button/menu/toolbar or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;&lt;b&gt;Button, Menu oder Schaltleiste, oder Teil eines Moduls &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, das sie enthält, konnte nicht aktiviert werden. Grund: %2.&lt;/b&gt;&lt;/p&gt;
-                     &lt;p&gt;&lt;i&gt;Bitte erneut aktivieren, nachdem das Problem gelöst wurde.&lt;/i&gt;&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;&lt;bb&gt;Button, Menu oder Schaltleiste, oder Teil eines Moduls &quot;&lt;btt&gt;%1&lt;b/tt&gt;&quot;, das sie enthält, konnte nicht aktiviert werden. Grund: %2.&lt;b/b&gt;&lt;b/p&gt;
+                     &lt;bp&gt;&lt;bi&gt;Bitte erneut aktivieren, nachdem das Problem gelöst wurde.&lt;b/i&gt;&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3151"/>
@@ -6536,7 +6535,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3349"/>
       <source>Variable name...</source>
-      <translation>Name der Variable...</translation>
+      <translation>Variablenname...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3406"/>
@@ -6590,7 +6589,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4118"/>
       <source>Alias &lt;em&gt;%1&lt;/em&gt; has an infinite loop - substitution matches its own pattern. Please fix it - this alias isn&apos;t good as it&apos;ll call itself forever.</source>
-      <translation>Alias &lt;em&gt;%1&lt;/em&gt; weist eine Endlosschleife auf - Die Ersetzung stimmt mit dem eigenen Muster überein. Bitte korrigieren, da das Alias sich immer wieder selbst aufrufen wird.</translation>
+      <translation>Alias &lt;bem&gt;%1&lt;b/em&gt; weist eine Endlosschleife auf - Die Ersetzung stimmt mit dem eigenen Muster überein. Bitte korrigieren, da das Alias sich immer wieder selbst aufrufen wird.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4639"/>
@@ -6798,7 +6797,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7596"/>
       <source>Import Mudlet Package</source>
-      <translation>Mudlet Paket importieren</translation>
+      <translation>Importiere Mudlet Paket</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7603"/>
@@ -7215,7 +7214,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, ideally unique, name for your key or key group. This will be displayed in the key tree.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle einen guten, bestenfalls einzigartigen Namen für deine Taste oder die Gruppe. Dieser wird in der Liste angezeigt werden.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle einen guten, bestenfalls einzigartigen Namen für deine Taste oder die Gruppe. Dieser wird in der Liste angezeigt werden.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="40"/>
@@ -7225,7 +7224,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="50"/>
       <source>&lt;p&gt;Type in one or more commands you want the key to send directly to the game when pressed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Tippe ein oder mehrere Befehle, die die Taste direkt an das Spiel senden soll, wenn sie gedrückt wird. (Optional)&lt;/p&gt;&lt;p&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Tippe ein oder mehrere Befehle, die die Taste direkt an das Spiel senden soll, wenn sie gedrückt wird. (Optional)&lt;b/p&gt;&lt;bp&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;bi&gt;stattdessen&lt;b/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;b/p&gt;&lt;bp&gt;Man darf auch hier etwas &lt;bi&gt;und&lt;b/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;bb&gt;bevor&lt;b/b&gt; das Skript ausgeführt wird.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="57"/>
@@ -7248,7 +7247,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="35"/>
       <source>&lt;p&gt;It seems that you don&apos;t have any &lt;a href=&quot;http://wiki.mudlet.org/w/Mapping_script&quot;&gt;mapping scripts&lt;/a&gt; installed yet - the mapper needs you to have one for your game, so it can track where you are and autowalk you. You can either make one yourself, or import an existing one that someone else made.&lt;/p&gt;&lt;p&gt;Would you like to see if any are available?&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Es scheint, dass noch keine &lt;a href=&quot;http://wiki.mudlet.org/w/Mapping_script&quot;&gt;Kartenskripte&lt;/a&gt; installiert sind - Der Mapper braucht eins für dieses Spiel, um deine Bewegungen zu verfolgen und dich automatisch bewegen zu können. Du kannst entweder selbst eins erstellen oder ein vorhandenes importieren, das jemand anderes erstellt hat.&lt;/p&gt;&lt;p&gt;Würdest du gerne prüfen, ob welche zur Verfügung stehen?&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Es scheint, dass noch keine &lt;ba href=&quot;http://wiki.mudlet.org/w/Mapping_script&quot;&gt;Kartenskripte&lt;b/a&gt; installiert sind - Der Mapper braucht eins für dieses Spiel, um deine Bewegungen zu verfolgen und dich automatisch bewegen zu können. Du kannst entweder selbst eins erstellen oder ein vorhandenes importieren, das jemand anderes erstellt hat.&lt;b/p&gt;&lt;bp&gt;Würdest du gerne prüfen, ob welche zur Verfügung stehen?&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="86"/>
@@ -7485,78 +7484,78 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/ui/main_window.ui" line="150"/>
       <source>&lt;p&gt;Configure connection details of, and make a connection to, game servers.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Konfiguriere die Details der Verbindungen und verbinde zu Spielservern.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Konfiguriere die Details der Verbindungen und verbinde zu Spielservern.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="158"/>
       <source>&lt;p&gt;Disconnect from the current game server.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Trenne die Verbindung zum aktuellen Spielserver.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Trenne die Verbindung zum aktuellen Spielserver.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="166"/>
       <source>&lt;p&gt;Disconnect and then reconnect to the current game server.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Trenne und verbinde dann wieder zum aktuellen Spielserver.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Trenne und verbinde dann wieder zum aktuellen Spielserver.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="174"/>
       <source>&lt;p&gt;Configure setting for the Mudlet application globally and for the current profile.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Konfiguriere Einstellungen für die Mudlet Anwendung insgesamt und für das aktuelle Profil.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Konfiguriere Einstellungen für die Mudlet Anwendung insgesamt und für das aktuelle Profil.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="182"/>
       <source>&lt;p&gt;Opens the Editor for the different types of things that can be scripted by the user.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Öffne den Editor für die verschiedenen Arten von Dingen, für die ein Benutzer ein Skript erstellen kann&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Öffne den Editor für die verschiedenen Arten von Dingen, für die ein Benutzer ein Skript erstellen kann&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="214"/>
       <location filename="../src/ui/main_window.ui" line="251"/>
       <source>&lt;p&gt;Opens a built-in IRC chat on the #mudlet channel on Freenode IRC servers.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Öffne einen eingebauten IRC-Client auf dem #mudlet Kanal der Freenode IRC-Server.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Öffne einen eingebauten IRC-Client auf dem #mudlet Kanal der Freenode IRC-Server.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="222"/>
       <source>&lt;p&gt;Opens an (on-line) collection of &quot;Educational Mudlet screencasts&quot; in your system web-browser.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Öffne eine Online-Sammlung von &quot;Mudlet Lernvideos&quot; mit dem Webbrowser deines Systems.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Öffne eine Online-Sammlung von &quot;Mudlet Lernvideos&quot; mit dem Webbrowser deines Systems.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="230"/>
       <source>&lt;p&gt;Load a previous saved game session that can be used to test Mudlet lua systems (off-line!).&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Lade eine zuvor gespeicherte Spielsitzung, mit der Mudlets Lua Systeme (offline!) getestet werden können.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Lade eine zuvor gespeicherte Spielsitzung, mit der Mudlets Lua Systeme (offline!) getestet werden können.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="238"/>
       <source>&lt;p&gt;Opens the (on-line) Mudlet Forum in your system web-browser.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Öffne das Mudlet Online-Forum mit dem Webbrowser deines Systems.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Öffne das Mudlet Online-Forum mit dem Webbrowser deines Systems.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="259"/>
       <source>&lt;p&gt;Show or hide the game map.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Zeige oder verstecke die Karte des Spiels.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Zeige oder verstecke die Karte des Spiels.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="267"/>
       <source>&lt;p&gt;Install and remove collections of Mudlet lua items (packages).&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Installiere und entferne Sammlungen von Mudlet Lua-Elementen (Pakete).&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Installiere und entferne Sammlungen von Mudlet Lua-Elementen (Pakete).&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="275"/>
       <source>&lt;p&gt;Install and remove (share- &amp; sync-able) collections of Mudlet lua items (modules).&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Installiere und entferne (gemeinsam nutzbare und synchronisierbare) Sammlungen von Mudlet Lua-Elementen (Module).&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Installiere und entferne (gemeinsam nutzbare und synchronisierbare) Sammlungen von Mudlet Lua-Elementen (Module).&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="283"/>
       <source>&lt;p&gt;Gather and bundle up collections of Mudlet Lua items and other reasources into a module.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Sammle und bündle einige Mudlet Lua-Elemente und anderen Ressourcen in ein Modul.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Sammle und bündle einige Mudlet Lua-Elemente und anderen Ressourcen in ein Modul.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="291"/>
       <source>&lt;p&gt;Share the screen area between multiple open profiles.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Teile den Bildschirm zwischen mehreren offenen Profilen.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Teile den Bildschirm zwischen mehreren offenen Profilen.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="299"/>
       <source>&lt;p&gt;Hide or show the search area and the bottom buttons to the right of the input area on the input line.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Zeige oder verstecke den Suchbereich und die Schaltflächen unten rechts neben dem Eingabefeld in der Eingabezeile.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Zeige oder verstecke den Suchbereich und die Schaltflächen unten rechts neben dem Eingabefeld in der Eingabezeile.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="155"/>
@@ -7566,7 +7565,7 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/ui/main_window.ui" line="163"/>
       <source>Reconnect</source>
-      <translation>Neu verbinden</translation>
+      <translation>Wiederverbinden</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="171"/>
@@ -7581,7 +7580,7 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/ui/main_window.ui" line="187"/>
       <source>Notepad</source>
-      <translation>Notizblock</translation>
+      <translation>Notiz</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="195"/>
@@ -7601,18 +7600,18 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/ui/main_window.ui" line="190"/>
       <source>&lt;p&gt;Opens a free form text editor window for this profile that is saved between sessions.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Öffne einen formlosen Texteditor für dieses Profil, der zwischen den Sitzungen gespeichert wird.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Öffne einen formlosen Texteditor für dieses Profil, der zwischen den Sitzungen gespeichert wird.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="198"/>
       <source>&lt;p&gt;Opens the Mudlet manual in your web browser.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Öffnet das Mudlet-Handbuch in deinem Webbrowser.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Öffnet das Mudlet-Handbuch in deinem Webbrowser.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="206"/>
       <source>&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
-      <translation>&lt;p&gt;Informiere dich über diese Version von Mudlet, die Menschen, die daran beteiligt waren, und die Lizenz, unter der du es teilen kannst.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Informiere dich über diese Version von Mudlet, die Menschen, die daran beteiligt waren, und die Lizenz, unter der du es teilen kannst.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="211"/>
@@ -8117,7 +8116,7 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="222"/>
       <source>English</source>
-      <translation>Englisch (American English)</translation>
+      <translation>Englisch (English)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="223"/>
@@ -9179,7 +9178,7 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="637"/>
       <source>Reconnect</source>
-      <translation>Neu verbinden</translation>
+      <translation>Wiederverbinden</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="638"/>
@@ -9207,7 +9206,7 @@ Starte... Viel Spaß!
       <location filename="../src/mudlet.cpp" line="4397"/>
       <source>&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
-      <translation>&lt;p&gt;Informiere dich über diese Version von Mudlet, die Menschen, die daran beteiligt waren, und die Lizenz, unter der du es teilen kannst.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Informiere dich über diese Version von Mudlet, die Menschen, die daran beteiligt waren, und die Lizenz, unter der du es teilen kannst.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="669"/>
@@ -9243,7 +9242,7 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="969"/>
       <source>Checking this box will cause the module to be saved and &lt;i&gt;resynchronised&lt;/i&gt; across all sessions that share it when the &lt;i&gt;Save Profile&lt;/i&gt; button is clicked in the Editor or if it is saved at the end of the session.</source>
-      <translation>Wenn diese Box aktiviert ist, wird das Modul gespeichert und über alle Sitzungen hinweg &lt;i&gt;neu synchronisiert&lt;/i&gt;, die es teilen, sobald die &lt;i&gt;Profil speichern&lt;/i&gt; Taste im Editor angeklickt wird, oder wenn es am Ende der Sitzung gespeichert wird.</translation>
+      <translation>Wenn diese Box aktiviert ist, wird das Modul gespeichert und über alle Sitzungen hinweg &lt;bi&gt;neu synchronisiert&lt;b/i&gt;, die es teilen, sobald die &lt;bi&gt;Profil speichern&lt;b/i&gt; Taste im Editor angeklickt wird, oder wenn es am Ende der Sitzung gespeichert wird.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1029"/>
@@ -9276,18 +9275,18 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="1220"/>
       <source>Import Mudlet Package:</source>
-      <translation>Importiere Mudlet Paket:</translation>
+      <translation>Mudlet Paket importieren:</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1633"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Disabled until a profile is loaded.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Lade eine Mudlet Wiederholung.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Deaktiviert, bis ein Profil geladen ist.&lt;/i&gt;&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Lade eine Mudlet Wiederholung.&lt;b/p&gt;&lt;bp&gt;&lt;bi&gt;Deaktiviert, bis ein Profil geladen ist.&lt;b/i&gt;&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1667"/>
       <location filename="../src/mudlet.cpp" line="3857"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Lade eine Mudlet Wiederholung.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Lade eine Mudlet Wiederholung.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1896"/>
@@ -9344,7 +9343,7 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="3759"/>
       <source>&lt;p&gt;Cannot load a replay as one is already in progress in this or another profile.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wiederholung kann nicht geladen werden, da schon eine in diesem oder einem anderen Profil läuft.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wiederholung kann nicht geladen werden, da schon eine in diesem oder einem anderen Profil läuft.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3776"/>
@@ -9354,7 +9353,7 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="3779"/>
       <source>&lt;p&gt;Replay each step with a shorter time interval between steps.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Jeden Schritt mit kürzerem zeitlichen Abstand abspielen.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Jeden Schritt mit kürzerem zeitlichen Abstand abspielen.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3783"/>
@@ -9364,7 +9363,7 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="3786"/>
       <source>&lt;p&gt;Replay each step with a longer time interval between steps.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Jeden Schritt mit längerem zeitlichen Abstand abspielen.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Jeden Schritt mit längerem zeitlichen Abstand abspielen.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3796"/>
@@ -9384,8 +9383,8 @@ Starte... Viel Spaß!
       <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
       <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
       <translation>
-        <numerusform>&lt;p&gt;Über Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;Eine neue Version ist jetzt verfügbar!&lt;/i&gt;&lt;p&gt;</numerusform>
-        <numerusform>&lt;p&gt;Über Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n neue Versionen sind jetzt verfügbar!&lt;/i&gt;&lt;p&gt;</numerusform>
+        <numerusform>&lt;bp&gt;Über Mudlet&lt;b/p&gt;&lt;bp&gt;&lt;bi&gt;%n neue Versionen sind jetzt verfügbar!&lt;b/i&gt;&lt;bp&gt;</numerusform>
+        <numerusform>&lt;bp&gt;Über Mudlet&lt;b/p&gt;&lt;bp&gt;&lt;bi&gt;%n neue Versionen sind jetzt verfügbar!&lt;b/i&gt;&lt;bp&gt;</numerusform>
       </translation>
     </message>
     <message numerus="yes">
@@ -9402,8 +9401,8 @@ Starte... Viel Spaß!
       <source>&lt;p&gt;Review the update(s) available...&lt;/p&gt;</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
       <translation>
-        <numerusform>&lt;p&gt;Prüfe die neue Version...&lt;/p&gt;</numerusform>
-        <numerusform>&lt;p&gt;Prüfe die neue Versionen...&lt;/p&gt;</numerusform>
+        <numerusform>&lt;bp&gt;Prüfe die neue Versionen...&lt;b/p&gt;</numerusform>
+        <numerusform>&lt;bp&gt;Prüfe die neue Versionen...&lt;b/p&gt;</numerusform>
       </translation>
     </message>
     <message>
@@ -9608,7 +9607,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="187"/>
       <source>&lt;p&gt;Can you help translate Mudlet? &lt;span style=&quot;font-weight:600;&quot;&gt;https://www.mudlet.org/translate&lt;/span&gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Kannst du helfen, Mudlet zu übersetzen? &lt;span style=&quot;font-weight:600;&quot;&gt;https://https://www.mudlet.org/translate&lt;/span&gt;&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Kannst du helfen, Mudlet zu übersetzen? &lt;bspan style=&quot;font-weight:600;&quot;&gt;https://https://www.mudlet.org/translate&lt;b/span&gt;&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="479"/>
@@ -9814,17 +9813,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="209"/>
       <source>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren&apos;t showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;Note: While this will allow Mudlet to show text in other languages, internalisation is still in development so triggers or Lua code won&apos;t work yet.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wenn du ein nicht-englisches Spiel spielst und � siehst anstelle von Text oder spezielle Buchstaben wie das &lt;span style=&quot; font-weight:600;&quot;&gt;ä&lt;/span&gt; nicht richtig angezeigt werden - versuche, die Kodierung auf UTF-8 umzustellen, oder einen Vorschlag von deinem Spiel.&lt;/p&gt;&lt;p&gt;Hinweis: Während dies Mudlet die Anzeige von Text in anderen Sprachen ermöglicht, ist die Internationalisierung noch in Entwicklung, daher werden Trigger oder Lua-code noch nicht funktionieren.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wenn du ein nicht-englisches Spiel spielst und � siehst anstelle von Text oder spezielle Buchstaben wie das &lt;bspan style=&quot; font-weight:600;&quot;&gt;ä&lt;b/span&gt; nicht richtig angezeigt werden - versuche, die Kodierung auf UTF-8 umzustellen, oder einen Vorschlag von deinem Spiel.&lt;b/p&gt;&lt;bp&gt;Hinweis: Während dies Mudlet die Anzeige von Text in anderen Sprachen ermöglicht, ist die Internationalisierung noch in Entwicklung, daher werden Trigger oder Lua-code noch nicht funktionieren.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="267"/>
       <source>&lt;p&gt;Enables GMCP - note that if you have MSDP enabled as well, some servers will prefer one over the other&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Aktiviere GMCP - Hinweis: Wenn auch MSDP aktiviert ist, werden manche Server eins von beidem bevorzugen&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Aktiviere GMCP - Hinweis: Wenn auch MSDP aktiviert ist, werden manche Server eins von beidem bevorzugen&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="277"/>
       <source>&lt;p&gt;Enables MSDP - note that if you have GMCP enabled as well, some servers will prefer one over the other&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Aktiviere MSDP - Hinweis: Wenn auch GMCP aktiviert ist, werden manche Server eins von beidem bevorzugen&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Aktiviere MSDP - Hinweis: Wenn auch GMCP aktiviert ist, werden manche Server eins von beidem bevorzugen&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="320"/>
@@ -9874,7 +9873,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="538"/>
       <source>&lt;p&gt;This option controls spell-checking on the command line in the main console for this profile.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Diese Option steuert die Rechtschreibprüfung der Befehlszeile in der Hauptkonsole für dieses Profil.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Diese Option steuert die Rechtschreibprüfung der Befehlszeile in der Hauptkonsole für dieses Profil.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="541"/>
@@ -9884,7 +9883,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="548"/>
       <source>&lt;p&gt;Select one dictionary which will be available on the command line and in the lua sub-system.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle ein Wörterbuch, das in der Befehlszeile und im Lua-Subsystem verfügbar sein wird.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle ein Wörterbuch, das in der Befehlszeile und im Lua-Subsystem verfügbar sein wird.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="576"/>
@@ -9894,7 +9893,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="582"/>
       <source>&lt;p&gt;A user dictionary specific to this profile will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Das Benutzerwörterbuch wird spezifisch für dieses Profil genutzt. Dies wird in der Befehlszeile angezeigt (Wörter aus dem Wörterbuch werden blau unterstrichen) und ist im Lua-Subsystem verfügbar.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Das Benutzerwörterbuch wird spezifisch für dieses Profil genutzt. Dies wird in der Befehlszeile angezeigt (Wörter aus dem Wörterbuch werden blau unterstrichen) und ist im Lua-Subsystem verfügbar.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="585"/>
@@ -9904,7 +9903,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="592"/>
       <source>&lt;p&gt;A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Das Benutzerwörterbuch wird von allen Profilen gemeinsam genutzt (wenn sie diese Option ausgewählt haben). Dies wird in der Befehlszeile angezeigt (Wörter aus dem Wörterbuch werden blau unterstrichen) und ist im Lua-Subsystem verfügbar.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Das Benutzerwörterbuch wird von allen Profilen gemeinsam genutzt (wenn sie diese Option ausgewählt haben). Dies wird in der Befehlszeile angezeigt (Wörter aus dem Wörterbuch werden blau unterstrichen) und ist im Lua-Subsystem verfügbar.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="595"/>
@@ -9915,25 +9914,25 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="716"/>
       <location filename="../src/ui/profile_preferences.ui" line="732"/>
       <source>&lt;p&gt;Extra space to have before text on top - can be set to negative to move text up beyond the screen&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Mehr Platz vor dem Text oben - kann negativ gesetzt werden, um Text oben vom Bildschirm verschwinden zu lassen&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Mehr Platz vor dem Text oben - kann negativ gesetzt werden, um Text oben vom Bildschirm verschwinden zu lassen&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="760"/>
       <location filename="../src/ui/profile_preferences.ui" line="776"/>
       <source>&lt;p&gt;Extra space to have before text on the left - can be set to negative to move text left beyond the screen&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Mehr Platz vor dem Text links - kann negativ gesetzt werden, um Text links vom Bildschirm verschwinden zu lassen&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Mehr Platz vor dem Text links - kann negativ gesetzt werden, um Text links vom Bildschirm verschwinden zu lassen&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="804"/>
       <location filename="../src/ui/profile_preferences.ui" line="820"/>
       <source>&lt;p&gt;Extra space to have before text on the bottom - can be set to negative to allow text to go down beyond the screen&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Mehr Platz vor dem Text unten - kann negativ gesetzt werden, um Text unten vom Bildschirm verschwinden zu lassen&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Mehr Platz vor dem Text unten - kann negativ gesetzt werden, um Text unten vom Bildschirm verschwinden zu lassen&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="848"/>
       <location filename="../src/ui/profile_preferences.ui" line="864"/>
       <source>&lt;p&gt;Extra space to have before text on the right - can be set to negative to move text right beyond the screen&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Mehr Platz vor dem Text rechts - kann negativ gesetzt werden, um Text rechts vom Bildschirm verschwinden zu lassen&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Mehr Platz vor dem Text rechts - kann negativ gesetzt werden, um Text rechts vom Bildschirm verschwinden zu lassen&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1010"/>
@@ -9953,17 +9952,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1042"/>
       <source>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.&lt;/p&gt;</source>
-      <translation>&lt;body&gt;&lt;p&gt;Bei der Anzeige von Lua Inhalten im Hauptfenster des Editors werden Tabulatoren und Leerzeichen sichtbar markiert.&lt;/p&gt;</translation>
+      <translation>&lt;bbody&gt;&lt;bp&gt;Bei der Anzeige von Lua Inhalten im Hauptfenster des Editors werden Tabulatoren und Leerzeichen sichtbar markiert.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1052"/>
       <source>&lt;p&gt;Select this option for better compatability if you are using a netbook, or some other computer model that has a small screen.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle diese Option für bessere Kompatibilität für Netbooks oder andere Computermodelle mit kleinem Bildschirm.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle diese Option für bessere Kompatibilität für Netbooks oder andere Computermodelle mit kleinem Bildschirm.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1062"/>
       <source>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show  line and paragraphs ends with visible marks as well as whitespace.&lt;/p&gt;</source>
-      <translation>&lt;body&gt;&lt;p&gt;Bei der Anzeige von Lua Inhalten im Hauptfenster des Editors werden Enden von Zeilen und Absätzen sichtbar markiert.&lt;/p&gt;</translation>
+      <translation>&lt;bbody&gt;&lt;bp&gt;Bei der Anzeige von Lua Inhalten im Hauptfenster des Editors werden Enden von Zeilen und Absätzen sichtbar markiert.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1072"/>
@@ -9990,32 +9989,32 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1300"/>
       <source>&lt;p&gt;The foreground color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Die Vordergrundfarbe wird standardmäßig für die Hauptkonsole verwendet (es sei denn, dies wurde geändert durch einen Lua-Befehl oder vom Spielserver).&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Die Vordergrundfarbe wird standardmäßig für die Hauptkonsole verwendet (es sei denn, dies wurde geändert durch einen Lua-Befehl oder vom Spielserver).&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1323"/>
       <source>&lt;p&gt;The background color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Die Hintergrundfarbe wird standardmäßig für die Hauptkonsole verwendet (es sei denn, dies wurde geändert durch einen Lua-Befehl oder vom Spielserver).&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Die Hintergrundfarbe wird standardmäßig für die Hauptkonsole verwendet (es sei denn, dies wurde geändert durch einen Lua-Befehl oder vom Spielserver).&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1343"/>
       <source>&lt;p&gt;The foreground color used for the main input area.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Die Vordergrundfarbe wird standardmäßig für den Eingabebereich verwendet.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Die Vordergrundfarbe wird standardmäßig für den Eingabebereich verwendet.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1360"/>
       <source>&lt;p&gt;The background color used for the main input area.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Die Hintergrundfarbe wird standardmäßig für den Eingabebereich verwendet.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Die Hintergrundfarbe wird standardmäßig für den Eingabebereich verwendet.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1377"/>
       <source>&lt;p&gt;The foreground color used for text sent to the game server.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Die Vordergrundfarbe wird für Text verwendet, der an den Spielserver geschickt wird.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Die Vordergrundfarbe wird für Text verwendet, der an den Spielserver geschickt wird.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1397"/>
       <source>&lt;p&gt;The background color used for text sent to the game server.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Die Hintergrundfarbe wird für Text verwendet, der an den Spielserver geschickt wird.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Die Hintergrundfarbe wird für Text verwendet, der an den Spielserver geschickt wird.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1416"/>
@@ -10262,7 +10261,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1910"/>
       <source>&lt;p&gt;Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so will lose the extra data available in the current map format&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Ändere dies auf eine kleinere Version, wenn du deine Karte in einem Format speichern möchtest, die von älteren Mudlet Versionen gelesen werden kann. Dadurch werden zusätzliche Daten aus dem aktuellen Kartenformat verloren gehen&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Ändere dies auf eine kleinere Version, wenn du deine Karte in einem Format speichern möchtest, die von älteren Mudlet Versionen gelesen werden kann. Dadurch werden zusätzliche Daten aus dem aktuellen Kartenformat verloren gehen&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1940"/>
@@ -10272,12 +10271,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2008"/>
       <source>&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you&apos;re on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Dies ermöglicht Kantenglättung (Anti-Aliasing) der 2D-Kartenansicht, die so glatter und schöner aussieht. Deaktiviere dies auf sehr langsamen Computern.&lt;/p&gt;&lt;p&gt;Die 3D-Kartenansicht hat immer Kantenglättung aktiviert.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Dies ermöglicht Kantenglättung (Anti-Aliasing) der 2D-Kartenansicht, die so glatter und schöner aussieht. Deaktiviere dies auf sehr langsamen Computern.&lt;b/p&gt;&lt;bp&gt;Die 3D-Kartenansicht hat immer Kantenglättung aktiviert.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2018"/>
       <source>&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Der Standard-Bereich (Bereich-ID -1) wird von einigen Mapper-Skripten als temporärer &apos;Wartebereich&apos; für Räume verwendet, bevor diese in den richtigen Bereich platziert werden&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Der Standard-Bereich (Bereich-ID -1) wird von einigen Mapper-Skripten als temporärer &apos;Wartebereich&apos; für Räume verwendet, bevor diese in den richtigen Bereich platziert werden&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2423"/>
@@ -10362,7 +10361,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1859"/>
       <source>Press to pick destination(s)</source>
-      <translation>Wähle Ziel(e)</translation>
+      <translation>Drücken, um Ziel(e) zu wählen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1872"/>
@@ -10485,7 +10484,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="2443"/>
       <source>This option adds a line line break &lt;LF&gt; or &quot;
 &quot; to your command input on empty commands. This option will rarely be necessary.</source>
-      <translation>Diese Option ergänzt einen Zeilenumbruch &lt;LF&gt; oder &quot;
+      <translation>Diese Option ergänzt einen Zeilenumbruch &lt;bLF&gt; oder &quot;
 &quot; zu deiner Befehlszeile bei leeren Befehlen. Diese Option wird nur selten notwendig sein.</translation>
     </message>
     <message>
@@ -10529,7 +10528,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="2605"/>
       <location filename="../src/ui/profile_preferences.ui" line="2621"/>
       <source>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Mudlet wird Informationen zur Rich Presence nur zeigen, während du diesen Discord Benutzernamen benutzt (hilfreich, falls du mehrere Discord Konten hast). Leer lassen, um sie für jedes eingeloggtes Discord Konto anzuzeigen.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Mudlet wird Informationen zur Rich Presence nur zeigen, während du diesen Discord Benutzernamen benutzt (hilfreich, falls du mehrere Discord Konten hast). Leer lassen, um sie für jedes eingeloggtes Discord Konto anzuzeigen.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2582"/>
@@ -10554,7 +10553,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2560"/>
       <source>&lt;p&gt;Allow Lua to set Discord status&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Erlaube Lua, den Status des Discord zu setzen&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Erlaube Lua, den Status des Discord zu setzen&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2563"/>
@@ -10609,7 +10608,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2652"/>
       <source>Server address:</source>
-      <translation>Server-Adresse:</translation>
+      <translation>Serveradresse:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2700"/>
@@ -10683,7 +10682,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1591"/>
       <location filename="../src/ui/room_exits.ui" line="1731"/>
       <source>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle einen positiven Wert, um die normale Gewichtung des Raums für diese Ausgangsrichtung zu setzen. Null setzt wieder den Standard.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle einen positiven Wert, um die normale Gewichtung des Raums für diese Ausgangsrichtung zu setzen. Null setzt wieder den Standard.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="236"/>
@@ -10780,7 +10779,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1692"/>
       <location filename="../src/ui/room_exits.ui" line="2057"/>
       <source>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Verhindere die Erstellung von Routen durch diesen Ausgang. Das entspricht einem unendlichen Gewicht des Ausgangs.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Verhindere die Erstellung von Routen durch diesen Ausgang. Das entspricht einem unendlichen Gewicht des Ausgangs.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="83"/>
@@ -10796,12 +10795,12 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1568"/>
       <location filename="../src/ui/room_exits.ui" line="1708"/>
       <source>&lt;p&gt;Create an exit in this direction with unknown destination, mutually exclusive with an actual exit roomID.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Erstelle einen Ausgang in diese Richtung mit unbekanntem Ziel. Kann gleichzeitig keinen Ausgang mit tatsächlicher RaumID haben.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Erstelle einen Ausgang in diese Richtung mit unbekanntem Ziel. Kann gleichzeitig keinen Ausgang mit tatsächlicher RaumID haben.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="93"/>
       <source>&lt;p&gt;Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Nordwesten von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle die ID des Raums in Richtung Nordwesten von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="119"/>
@@ -10817,7 +10816,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1604"/>
       <location filename="../src/ui/room_exits.ui" line="1744"/>
       <source>&lt;p&gt;No door symbol is drawn on 2D Map for this exit.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Für diesen Ausgang wird kein Symbol für die Tür auf der 2D Karte gezeichnet.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Für diesen Ausgang wird kein Symbol für die Tür auf der 2D Karte gezeichnet.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="138"/>
@@ -10829,7 +10828,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1343"/>
       <location filename="../src/ui/room_exits.ui" line="1483"/>
       <source>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Ein grünes Symbol für die (offene) Tür wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Ein grünes Symbol für die (offene) Tür wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="154"/>
@@ -10841,7 +10840,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1359"/>
       <location filename="../src/ui/room_exits.ui" line="1499"/>
       <source>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Ein oranges Symbol für die (geschlossene) Tür wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Ein oranges Symbol für die (geschlossene) Tür wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="170"/>
@@ -10853,22 +10852,22 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1375"/>
       <location filename="../src/ui/room_exits.ui" line="1515"/>
       <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Ein rotes Symbol für die (versperrte) Tür wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Ein rotes Symbol für die (versperrte) Tür wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="233"/>
       <source>&lt;p&gt;Set the number of the room north of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Norden von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle die ID des Raums in Richtung Norden von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="373"/>
       <source>&lt;p&gt;Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Nordosten von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle die ID des Raums in Richtung Nordosten von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="513"/>
       <source>&lt;p&gt;Set the number of the room up from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Oben von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle die ID des Raums in Richtung Oben von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="558"/>
@@ -10876,7 +10875,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1623"/>
       <location filename="../src/ui/room_exits.ui" line="1763"/>
       <source>&lt;p&gt;A symbol is drawn with a green (Open) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Ein Symbol mit grüner (offener) Füllung wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Ein Symbol mit grüner (offener) Füllung wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="574"/>
@@ -10884,7 +10883,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1639"/>
       <location filename="../src/ui/room_exits.ui" line="1779"/>
       <source>&lt;p&gt;A symbol is drawn with an orange (Closed) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Ein Symbol mit oranger (geschlossener) Füllung wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Ein Symbol mit oranger (geschlossener) Füllung wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="590"/>
@@ -10892,62 +10891,62 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1655"/>
       <location filename="../src/ui/room_exits.ui" line="1795"/>
       <source>&lt;p&gt;A symbol is drawn with a red (Locked) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Ein Symbol mit roter (versperrter) Füllung wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Ein Symbol mit roter (versperrter) Füllung wird auf der 2D Karte gezeichnet, passt entweder zu einem Platzhalter oder einem echten Ausgang.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="653"/>
       <source>&lt;p&gt;Set the number of the room west of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Westen von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle die ID des Raums in Richtung Westen von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="780"/>
       <source>&lt;p&gt;This is the Room ID Number for this room - it cannot be changed here!</source>
-      <translation>&lt;p&gt;Dies ist die Raum ID des aktuellen Raums - sie kann hier nicht geändert werden!</translation>
+      <translation>&lt;bp&gt;Dies ist die Raum ID des aktuellen Raums - sie kann hier nicht geändert werden!</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="803"/>
       <source>&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set - this value cannot be changed here.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Dies ist die normale Gewichtung dieses Raums. Sie wird für jeden Ausgang benutzt, der &lt;i&gt;zu &lt;u&gt;diesem Raum&lt;/u&gt; hinführt&lt;/i&gt; und keinen eigenen Wert gesetzt hat - Dieser Wert kann hier nicht geändert werden.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Dies ist die normale Gewichtung dieses Raums. Sie wird für jeden Ausgang benutzt, der &lt;bi&gt;zu &lt;bu&gt;diesem Raum&lt;b/u&gt; hinführt&lt;b/i&gt; und keinen eigenen Wert gesetzt hat - Dieser Wert kann hier nicht geändert werden.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="863"/>
       <source>&lt;p&gt;Set the number of the room east of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Osten von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle die ID des Raums in Richtung Osten von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1000"/>
       <source>&lt;p&gt;Set the number of the room down from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Unten von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle die ID des Raums in Richtung Unten von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1152"/>
       <source>&lt;p&gt;Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Südwesten von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle die ID des Raums in Richtung Südwesten von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1298"/>
       <source>&lt;p&gt;Set the number of the room south of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Süden von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle die ID des Raums in Richtung Süden von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1438"/>
       <source>&lt;p&gt;Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Südosten von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle die ID des Raums in Richtung Südosten von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1578"/>
       <source>&lt;p&gt;Set the number of the room in from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Innen von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle die ID des Raums in Richtung Innen von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1718"/>
       <source>&lt;p&gt;Set the number of the room out from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Außen von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle die ID des Raums in Richtung Außen von hier aus. Gültige Zahlen werden blau, ungültige werden rot.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1871"/>
       <source>&lt;p&gt;Set the number of the room that&apos;s to the southwest here.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle die ID des Raums in Richtung Südwesten von hier aus.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle die ID des Raums in Richtung Südwesten von hier aus.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1874"/>
@@ -10977,57 +10976,57 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1975"/>
       <source>&lt;p&gt;Use this button to save any changes, will also remove any invalid Special exits.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Benutze diese Schaltfläche, um alle Änderungen zu speichern, und auch alle ungültigen besonderen Ausgänge zu entfernen.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Benutze diese Schaltfläche, um alle Änderungen zu speichern, und auch alle ungültigen besonderen Ausgänge zu entfernen.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1991"/>
       <source>&lt;p&gt;Use this button to close the dialogue without changing anything.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Mit dieser Schaltfläche schließt du den Dialog ohne etwas zu ändern.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Mit dieser Schaltfläche schließt du den Dialog ohne etwas zu ändern.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2010"/>
       <source>&lt;p&gt;Click on an item to edit/change it, to DELETE a Special Exit set its Exit Room ID to zero.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Klicke auf ein Element, um es zu bearbeiten. Um einen besonderen Ausgang zu LÖSCHEN, setze die Raum ID des Ausgangs auf Null.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Klicke auf ein Element, um es zu bearbeiten. Um einen besonderen Ausgang zu LÖSCHEN, setze die Raum ID des Ausgangs auf Null.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2048"/>
       <source>&lt;p&gt;Set the number of the room that this exit leads to, if set to zero the exit will be removed on saving the exits.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle die ID des Raums zu dem dieser Ausgang hinführt. Bei Null wird dieser Ausgang beim Speichern entfernt.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle die ID des Raums zu dem dieser Ausgang hinführt. Bei Null wird dieser Ausgang beim Speichern entfernt.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2075"/>
       <source>&lt;p&gt;No door symbol is drawn on 2D Map for this exit (only functional choice currently).&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Für diesen Ausgang wird kein Symbol für die Tür auf der 2D Karte gezeichnet (derzeit einzige funktionale Auswahl).&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Für diesen Ausgang wird kein Symbol für die Tür auf der 2D Karte gezeichnet (derzeit einzige funktionale Auswahl).&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2084"/>
       <source>&lt;p&gt;Green (Open) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Ein grünes Symbol für die (offene) Tür würde auf der 2D Karte gezeichnet (derzeit aber nicht).&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Ein grünes Symbol für die (offene) Tür würde auf der 2D Karte gezeichnet (derzeit aber nicht).&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2093"/>
       <source>&lt;p&gt;Orange (Closed) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Ein oranges Symbol für die (geschlossene) Tür würde auf der 2D Karte gezeichnet (derzeit aber nicht).&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Ein oranges Symbol für die (geschlossene) Tür würde auf der 2D Karte gezeichnet (derzeit aber nicht).&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2102"/>
       <source>&lt;p&gt;Red (Locked) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Ein rotes Symbol für die (versperrte) Tür würde auf der 2D Karte gezeichnet (derzeit aber nicht).&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Ein rotes Symbol für die (versperrte) Tür würde auf der 2D Karte gezeichnet (derzeit aber nicht).&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2111"/>
       <source>&lt;p&gt;(Lua scripts need to be prefixed with &quot;script:&quot;).&lt;/p&gt;</source>
-      <translation>&lt;p&gt;(Lua Skripte brauchen &quot;script:&quot; vorangestellt).&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;(Lua Skripte brauchen &quot;script:&quot; vorangestellt).&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2128"/>
       <source>&lt;p&gt;Add an empty item to Special exits to be edited as required.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Ergänze ein leeres Element zu den besonderen Ausgängen, damit es wie benötigt bearbeitet werden kann.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Ergänze ein leeres Element zu den besonderen Ausgängen, damit es wie benötigt bearbeitet werden kann.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2147"/>
       <source>&lt;p&gt;Press this button to deactivate the selection of a Special exit.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Klicke diese Schaltfläche um die Auswahl des besonderen Ausgangs zu deaktivieren.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Klicke diese Schaltfläche um die Auswahl des besonderen Ausgangs zu deaktivieren.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1978"/>
@@ -11073,7 +11072,7 @@ Gewicht</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2066"/>
       <source>&lt;p&gt;Set to a positive integer value to override the default (Room) Weight for using this Exit route, a zero value assigns the default.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle einen positiven Wert, um die normale Gewichtung des Raums für diese Ausgangsrichtung zu setzen. Null setzt wieder den Standard.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle einen positiven Wert, um die normale Gewichtung des Raums für diese Ausgangsrichtung zu setzen. Null setzt wieder den Standard.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2071"/>
@@ -11136,12 +11135,12 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your script or script group. This will be displayed in the script tree.&lt;/p&gt;&lt;p&gt;If a function withn the script is to be used to handle events entered in the list below &lt;b&gt;&lt;u&gt;it must have the same name as is entered here.&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle einen guten (bestenfalls einzigartigen, aber muss nicht sein) Namen für dein Skript oder die Gruppe. Dieser wird in der Liste angezeigt werden.&lt;/p&gt;&lt;p&gt;Falls eine Funktion innerhalb des Skriptes zur Behandlung von Ereignissen aus der Liste unten vorgesehen ist, dann &lt;b&gt;&lt;u&gt;muss sie den gleichen Namen haben, der hier eigegeben wird.&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle einen guten (bestenfalls einzigartigen, aber muss nicht sein) Namen für dein Skript oder die Gruppe. Dieser wird in der Liste angezeigt werden.&lt;b/p&gt;&lt;bp&gt;Falls eine Funktion innerhalb des Skriptes zur Behandlung von Ereignissen aus der Liste unten vorgesehen ist, dann &lt;bb&gt;&lt;bu&gt;muss sie den gleichen Namen haben, der hier eigegeben wird.&lt;b/u&gt;&lt;b/b&gt;&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="88"/>
       <source>&lt;p&gt;Remove (selected) event handler from list.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Entferne (ausgewählte) Ereignisbehandler aus der Liste.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Entferne (ausgewählte) Ereignisbehandler aus der Liste.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="91"/>
@@ -11156,7 +11155,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="133"/>
       <source>&lt;p&gt;Add entered event handler name to list.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Ergänze den eingegebenen Namen des Ereignisbehandler auf der Liste.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Ergänze den eingegebenen Namen des Ereignisbehandler auf der Liste.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="136"/>
@@ -11205,37 +11204,37 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="39"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your timer, offset-timer or timer group. This will be displayed in the timer tree.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle einen guten (bestenfalls einzigartigen, aber muss nicht sein) Namen für deinen Timer, Offset-Timer oder die Gruppe. Dieser wird in der Liste angezeigt werden.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle einen guten (bestenfalls einzigartigen, aber muss nicht sein) Namen für deinen Timer, Offset-Timer oder die Gruppe. Dieser wird in der Liste angezeigt werden.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="79"/>
       <source>&lt;p&gt;Type in one or more commands you want the timer to send directly to the game when the time has elapsed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Tippe ein oder mehrere Befehle, die der Timer direkt an das Spiel senden soll, wenn die Zeit abgelaufen ist. (Optional)&lt;/p&gt;&lt;p&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Tippe ein oder mehrere Befehle, die der Timer direkt an das Spiel senden soll, wenn die Zeit abgelaufen ist. (Optional)&lt;b/p&gt;&lt;bp&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;bi&gt;stattdessen&lt;b/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;b/p&gt;&lt;bp&gt;Man darf auch hier etwas &lt;bi&gt;und&lt;b/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;bb&gt;bevor&lt;b/b&gt; das Skript ausgeführt wird.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="91"/>
       <source>&lt;p&gt;hours&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Stunden&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Stunden&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="106"/>
       <source>&lt;p&gt;minutes&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Minuten&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Minuten&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="121"/>
       <source>&lt;p&gt;seconds&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Sekunden&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Sekunden&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="136"/>
       <source>&lt;p&gt;miliseconds&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Millisekunden&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Millisekunden&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="186"/>
       <source>&lt;p&gt;The &lt;b&gt;hour&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Der &lt;b&gt;Stunden&lt;/b&gt;-Teil des Intervalls, nach dem der Timer ausgelöst wird.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Der &lt;bb&gt;Stunden&lt;b/b&gt;-Teil des Intervalls, nach dem der Timer ausgelöst wird.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="217"/>
@@ -11251,27 +11250,27 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="262"/>
       <source>&lt;p&gt;The &lt;b&gt;minute&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Der &lt;b&gt;Minuten&lt;/b&gt;-Teil des Intervalls, nach dem der Timer ausgelöst wird.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Der &lt;bb&gt;Minuten&lt;b/b&gt;-Teil des Intervalls, nach dem der Timer ausgelöst wird.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="328"/>
       <source>&lt;p&gt;The &lt;b&gt;second&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Der &lt;b&gt;Sekunden&lt;/b&gt;-Teil des Intervalls, nach dem der Timer ausgelöst wird.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Der &lt;bb&gt;Sekunden&lt;b/b&gt;-Teil des Intervalls, nach dem der Timer ausgelöst wird.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="331"/>
       <source>&lt;p&gt;The &lt;b&gt;second&lt;/b&gt; interval that the timer will go off at&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Das &lt;b&gt;Sekunden&lt;/b&gt;-Intervall, nach dem der Timer ausgelöst wird.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Das &lt;bb&gt;Sekunden&lt;b/b&gt;-Intervall, nach dem der Timer ausgelöst wird.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="397"/>
       <source>&lt;p&gt;The &lt;b&gt;milisecond&lt;/b&gt; part of the interval that the timer will go off at (1000 miliseconds = 1 second).&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Der &lt;b&gt;Millisekunden&lt;/b&gt;-Teil des Intervalls, nach dem der Timer ausgelöst wird. (1000 Millisekunden = 1 Sekunde).&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Der &lt;bb&gt;Millisekunden&lt;b/b&gt;-Teil des Intervalls, nach dem der Timer ausgelöst wird. (1000 Millisekunden = 1 Sekunde).&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="400"/>
       <source>&lt;p&gt;The &lt;b&gt;milisecond&lt;/b&gt; interval that the timer will go off at (1000 miliseconds = 1 second)&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Das &lt;b&gt;Millisekunden&lt;/b&gt;-Intervall, nach dem der Timer ausgelöst wird. (1000 Millisekunden = 1 Sekunde)&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Das &lt;bb&gt;Millisekunden&lt;b/b&gt;-Intervall, nach dem der Timer ausgelöst wird. (1000 Millisekunden = 1 Sekunde)&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="283"/>
@@ -11321,7 +11320,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="513"/>
       <source>&lt;p&gt;Toggles the display of the search results area.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Steuert die Anzeige des Bereichs für Suchergebnisse.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Steuert die Anzeige des Bereichs für Suchergebnisse.&lt;b/p&gt;</translation>
     </message>
   </context>
   <context>
@@ -11334,7 +11333,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="79"/>
       <source>&lt;p&gt;Use this control to show or hide the extra controls for the trigger; this can be used to allow more space to show the trigger &lt;i&gt;items&lt;/i&gt; on smaller screen.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Benutze dieses Steuerelement zum Anzeigen oder Ausblenden der zusätzlichen Bedienelemente des Triggers. Damit bleibt auf kleineren Bildschirmen mehr Raum für die einzelnen Trigger-&lt;i&gt;Elemente&lt;/i&gt;.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Benutze dieses Steuerelement zum Anzeigen oder Ausblenden der zusätzlichen Bedienelemente des Triggers. Damit bleibt auf kleineren Bildschirmen mehr Raum für die einzelnen Trigger-&lt;bi&gt;Elemente&lt;b/i&gt;.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="105"/>
@@ -11345,8 +11344,8 @@ LUA Skript</translation>
       <location filename="../src/ui/triggers_main_area.ui" line="192"/>
       <source>&lt;p&gt;The trigger will only fire if &lt;u&gt;all&lt;/u&gt; conditions on the list have been met within the specified line delta, and captures will be saved in &lt;tt&gt;multimatches&lt;/tt&gt; instead of &lt;tt&gt;matches&lt;/tt&gt;.&lt;/p&gt;
 &lt;p&gt;If this option is &lt;b&gt;not&lt;/b&gt; set the trigger will fire if &lt;u&gt;any&lt;/u&gt; condition on the list have been met.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Der Trigger wird nur ausgelöst, wenn &lt;u&gt;alle&lt;/u&gt; Bedingungen der Liste innerhalb des angegebenen Zeilenabstands erfüllt sind. Erfasstes wird als &lt;tt&gt;multimatches&lt;/tt&gt; gespeichert werden, anstelle von &lt;tt&gt;matches&lt;/tt&gt;.&lt;/p&gt; 
-&lt;p&gt;Wenn diese Option &lt;b&gt;nicht&lt;/b&gt; gesetzt ist, wird der Trigger ausgelöst, wenn &lt;u&gt;eine&lt;/u&gt; Bedingung der Liste erfüllt worden ist.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Der Trigger wird nur ausgelöst, wenn &lt;bu&gt;alle&lt;b/u&gt; Bedingungen der Liste innerhalb des angegebenen Zeilenabstands erfüllt sind. Erfasstes wird als &lt;btt&gt;multimatches&lt;b/tt&gt; gespeichert werden, anstelle von &lt;btt&gt;matches&lt;b/tt&gt;.&lt;b/p&gt; 
+&lt;bp&gt;Wenn diese Option &lt;bb&gt;nicht&lt;b/b&gt; gesetzt ist, wird der Trigger ausgelöst, wenn &lt;bu&gt;eine&lt;b/u&gt; Bedingung der Liste erfüllt worden ist.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="199"/>
@@ -11356,12 +11355,12 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="238"/>
       <source>&lt;p&gt;Within how many lines must all condition be true to fire the trigger?&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Innerhalb von wie vielen Zeilen müssen alle Bedingungen wahr sein, um den Trigger auszulösen?&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Innerhalb von wie vielen Zeilen müssen alle Bedingungen wahr sein, um den Trigger auszulösen?&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="254"/>
       <source>&lt;p&gt;When checked, only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters).&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wenn aktiviert, wird nur gefilterter Inhalt (=erfasste Gruppen, capture groups) an die untergeordneten Trigger weitergeleitet, nicht die ursprüngliche Zeile (siehe Anleitung zu Filtern).&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wenn aktiviert, wird nur gefilterter Inhalt (=erfasste Gruppen, capture groups) an die untergeordneten Trigger weitergeleitet, nicht die ursprüngliche Zeile (siehe Anleitung zu Filtern).&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="257"/>
@@ -11376,7 +11375,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="318"/>
       <source>&lt;p&gt;Choose this option if you want to include all possible matches of the pattern in the line.&lt;/p&gt;&lt;p&gt;Without this option, the pattern matching will stop after the first successful match.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle diese Option, wenn du alle möglichen Treffer des Musters in der Zeile aufnehmen möchtest.&lt;/p&gt;&lt;p&gt;Ohne diese Option wird nach dem ersten erfolgreichen Treffer des Musters nicht weitergemacht.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle diese Option, wenn du alle möglichen Treffer des Musters in der Zeile aufnehmen möchtest.&lt;b/p&gt;&lt;bp&gt;Ohne diese Option wird nach dem ersten erfolgreichen Treffer des Musters nicht weitergemacht.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="351"/>
@@ -11386,7 +11385,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="406"/>
       <source>&lt;p&gt;Keep firing the script for this many more lines, after the trigger or chain has matched.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Löse das Skript noch für so viele weitere Zeilen aus, nachdem der Trigger oder die Kette übergestimmt haben.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Löse das Skript noch für so viele weitere Zeilen aus, nachdem der Trigger oder die Kette übergestimmt haben.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="412"/>
@@ -11396,7 +11395,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="470"/>
       <source>&lt;p&gt;Play a sound file if the trigger fires.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Eine Audiodatei wiedergeben, wenn der Trigger ausgelöst wird.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Eine Audiodatei wiedergeben, wenn der Trigger ausgelöst wird.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="515"/>
@@ -11404,8 +11403,8 @@ LUA Skript</translation>
 &lt;p&gt;&lt;i&gt;Cancelling from the file dialogue will not make any changes; to clear the file use the clear button to the right of the file name display.&lt;/i&gt;&lt;/p&gt;</source>
       <comment>This is the button used to select a sound file to be played when a trigger fires.</comment>
       <extracomment>Please ensure the text used here is duplicated within the tooltip for the QLineEdit that displays the file name selected.</extracomment>
-      <translation>&lt;p&gt;Wähle hier eine Audiodatei, die beim Auslösen abgespielt werden soll.&lt;/p&gt;
-&lt;p&gt;&lt;i&gt;Um die Datei zu entfernen, klicke die Schaltfläche rechts neben dem Dateinamen.&lt;/i&gt;&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle hier eine Audiodatei, die beim Auslösen abgespielt werden soll.&lt;b/p&gt;
+&lt;bp&gt;&lt;bi&gt;Um die Datei zu entfernen, klicke die Schaltfläche rechts neben dem Dateinamen.&lt;b/i&gt;&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="519"/>
@@ -11417,7 +11416,7 @@ LUA Skript</translation>
       <source>&lt;p&gt;This displays the file selected to play when the trigger fires. To change this used the &lt;i&gt;Choose file...&lt;/i&gt; button or to remove it use the clear button.&lt;/p&gt;</source>
       <comment>This is the tooltip for the QLineEdit that shows - but does not permit changing - the sound file used for a trigger.</comment>
       <extracomment>Please ensure that the text used for &quot;Choose file ,,,&quot; here is the same as is used for the button that it refers to.</extracomment>
-      <translation>&lt;p&gt;Dies zeigt die Datei, die beim Auslösen abgespielt wird. Zum Ändern eine neue Datei wählen oder die aktuelle mit der Schaltfläche entfernen.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Dies zeigt die Datei, die beim Auslösen abgespielt wird. Zum Ändern eine neue Datei wählen oder die aktuelle mit der Schaltfläche entfernen.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="550"/>
@@ -11427,12 +11426,12 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="563"/>
       <source>&lt;p&gt;Click to remove a sound file set for this trigger.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Hier klicken, um die Audiodatei für diesen Trigger zu entfernen.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Hier klicken, um die Audiodatei für diesen Trigger zu entfernen.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="614"/>
       <source>&lt;p&gt;Enable this to highlight the matching text by changing the fore and background colors to the ones selected here.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Aktiviere diese Option, um passenden Text hervorzuheben, indem Vorder- und Hintergrundfarben in die hier ausgewählten Farben geändert werden.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Aktiviere diese Option, um passenden Text hervorzuheben, indem Vorder- und Hintergrundfarben in die hier ausgewählten Farben geändert werden.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="666"/>
@@ -11452,12 +11451,12 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="72"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your trigger or trigger group. This will be displayed in the trigger tree.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Wähle einen guten (bestenfalls einzigartigen, aber muss nicht sein) Namen für deinen Trigger oder die Gruppe. Dieser wird in der Liste angezeigt werden.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Wähle einen guten (bestenfalls einzigartigen, aber muss nicht sein) Namen für deinen Trigger oder die Gruppe. Dieser wird in der Liste angezeigt werden.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="118"/>
       <source>&lt;p&gt;Type in one or more commands you want the trigger to send directly to the game if it fires. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissable to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Tippe ein oder mehrere Befehle, die der Trigger direkt an das Spiel senden soll, wenn der eingegebene Text dem Muster entspricht. (Optional)&lt;/p&gt;&lt;p&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Tippe ein oder mehrere Befehle, die der Trigger direkt an das Spiel senden soll, wenn der eingegebene Text dem Muster entspricht. (Optional)&lt;b/p&gt;&lt;bp&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;bi&gt;stattdessen&lt;b/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;b/p&gt;&lt;bp&gt;Man darf auch hier etwas &lt;bi&gt;und&lt;b/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;bb&gt;bevor&lt;b/b&gt; das Skript ausgeführt wird.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="321"/>
@@ -11508,12 +11507,12 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="125"/>
       <source>&lt;p&gt;Set the &lt;i&gt;global variable&lt;/i&gt; or the &lt;i&gt;table entry&lt;/i&gt; name here. The name has to start with a letter, but can contain a mix of letters and numbers.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Setze hier den Namen der &lt;i&gt;globalen Variable&lt;/i&gt; oder des &lt;i&gt;Tabelleneintrags&lt;/i&gt;. Der Name muss mit einem Buchstaben beginnen, aber kann Buchstaben und Zahlen enthalten.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Setze hier den Namen der &lt;bi&gt;globalen Variable&lt;b/i&gt; oder des &lt;bi&gt;Tabelleneintrags&lt;b/i&gt;. Der Name muss mit einem Buchstaben beginnen, aber kann Buchstaben und Zahlen enthalten.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="138"/>
       <source>&lt;p&gt;Tables can store values either in a list, and/or a hashmap.&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;list&lt;/b&gt;, &lt;i&gt;unique indexed keys&lt;/i&gt; represent values - so you can have values at &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;map&lt;/b&gt; {a.k.a. an &lt;i&gt;associative array}&lt;/i&gt;, &lt;i&gt;unique keys&lt;/i&gt; represent values - so you can have values under any identifier you would like (theoretically even a function or other lua entity although this GUI only supports strings).&lt;/p&gt;&lt;p&gt;This, for a newly created table (group) selects whenever you would like your table to be an indexed or an associative one.&lt;/p&gt;&lt;p&gt;In other cases it displays other entities (&lt;span style=&quot; font-style:italic;&quot;&gt;functions&lt;/span&gt;) which cannot be modifed from here.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Tabellen können Werte entweder als Liste und/oder als Hashtabelle speichern.&lt;/p&gt;&lt;p&gt;In einer &lt;b&gt;Liste&lt;/b&gt;, repräsentieren &lt;i&gt;einzigartige nummerierte Schlüssel&lt;/i&gt; die Werte - also kannst du Werte haben bei &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;In einer &lt;b&gt;Hashtabelle&lt;/b&gt; {bzw. einem &lt;i&gt;assoziativen Datenfeld&lt;/i&gt;} repräsentieren &lt;i&gt;einzigartige Schlüssel&lt;/i&gt; die Werte - du kannst also jeden Wert unter jeder gewünschten Bezeichnung eintragen (theoretisch sogar einer Funktion oder anderen Lua Objekten, aber diese GUI unterstützt nur Strings).&lt;/p&gt;&lt;p&gt;Hier wählst du für neu erstellte Tabellen(-gruppen), ob es eine nummerierte oder assoziative Tabelle sein soll.&lt;/p&gt;&lt;p&gt;Andernfalls werden andere Objekte (&lt;span style=&quot; font-style:italic;&quot;&gt;Funktionen&lt;/span&gt;) angezeigt, die von hier nicht verändert werden können.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Tabellen können Werte entweder als Liste und/oder als Hashtabelle speichern.&lt;b/p&gt;&lt;bp&gt;In einer &lt;bb&gt;Liste&lt;b/b&gt;, repräsentieren &lt;bi&gt;einzigartige nummerierte Schlüssel&lt;b/i&gt; die Werte - also kannst du Werte haben bei &lt;bi&gt;1, 2, 3...&lt;b/i&gt;&lt;b/p&gt;&lt;bp&gt;In einer &lt;bb&gt;Hashtabelle&lt;b/b&gt; {bzw. einem &lt;bi&gt;assoziativen Datenfeld&lt;b/i&gt;} repräsentieren &lt;bi&gt;einzigartige Schlüssel&lt;b/i&gt; die Werte - du kannst also jeden Wert unter jeder gewünschten Bezeichnung eintragen (theoretisch sogar einer Funktion oder anderen Lua Objekten, aber diese GUI unterstützt nur Strings).&lt;b/p&gt;&lt;bp&gt;Hier wählst du für neu erstellte Tabellen(-gruppen), ob es eine nummerierte oder assoziative Tabelle sein soll.&lt;b/p&gt;&lt;bp&gt;Andernfalls werden andere Objekte (&lt;bspan style=&quot; font-style:italic;&quot;&gt;Funktionen&lt;b/span&gt;) angezeigt, die von hier nicht verändert werden können.&lt;b/p&gt;&lt;bp&gt;&lt;bbr/&gt;&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="51"/>
@@ -11524,7 +11523,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="128"/>
       <source>Variable name ...</source>
-      <translation>Name der Variable ...</translation>
+      <translation>Variablenname ...</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="150"/>
@@ -11554,7 +11553,7 @@ erstellbar)</translation>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="185"/>
       <source>&lt;p&gt;If checked this item (and its children, if applicable) does not show in area to the left unless &lt;b&gt;Show normally hidden variables&lt;/b&gt; is checked.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Falls gewählt, wird dieses Objekt (und wo möglich seine Kinder) nicht in dem Bereich links angezeigt, außer &lt;b&gt;Zeige normalerweise verborgene Variablen&lt;/b&gt; ist ausgewählt.&lt;/p&gt;</translation>
+      <translation>&lt;bp&gt;Falls gewählt, wird dieses Objekt (und wo möglich seine Kinder) nicht in dem Bereich links angezeigt, außer &lt;bb&gt;Zeige normalerweise verborgene Variablen&lt;b/b&gt; ist ausgewählt.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="188"/>
