@@ -270,7 +270,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                 comboBox_guiLanguage->addItem(QIcon(":/icons/rating_silver.png"),
                                               tr("%1 (%2% done)",
                                                  // Intentional argument to separate arguments
-                                                 "%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done, which is high enough to show a silver star!")
+                                                 "%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done, (this text used in two places, for one, if %2 is greater than or equal to 75% a silver star will additionally be shown).")
                                               .arg(nativeName, QString::number(translatedPc)),
                                               code);
             } else {
@@ -281,7 +281,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                 comboBox_guiLanguage->addItem(QIcon(),
                                               tr("%1 (%2% done)",
                                                  // Intentional argument to separate arguments
-                                                 "%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done, which is not high enough to show a gold or silver star!")
+                                                 "%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done, (this text used in two places, for one, if %2 is greater than or equal to 75% a silver star will additionally be shown).")
                                               .arg(nativeName, QString::number(translatedPc)),
                                               code);
             }
