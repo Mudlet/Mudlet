@@ -1264,7 +1264,7 @@ rooms:</source>
     <message>
       <location filename="../src/TCommandLine.cpp" line="585"/>
       <source>Add to user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>添加到用户字典</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="587"/>
@@ -1287,19 +1287,19 @@ rooms:</source>
       <location filename="../src/TCommandLine.cpp" line="669"/>
       <source>no suggestions (system)</source>
       <comment>used when the command spelling checker using the selected system dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>没有建议 (系统)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="695"/>
       <source>no suggestions (shared)</source>
       <comment>used when the command spelling checker using the dictionary shared between profile has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>没有建议 (共享)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="699"/>
       <source>no suggestions (profile)</source>
       <comment>used when the command spelling checker using the profile&apos;s own dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>没有建议 (配置文件)</translation>
     </message>
   </context>
   <context>
@@ -1588,7 +1588,7 @@ your only warning about this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15027"/>
       <location filename="../src/TLuaInterpreter.cpp" line="15201"/>
       <source>Lua error:</source>
-      <translation type="unfinished"/>
+      <translation>Lua 错误：</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14926"/>
@@ -1599,12 +1599,12 @@ your only warning about this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15030"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2</source>
       <comment>%1 is the name of the module. %2 can be an additional message about the expected effect.</comment>
-      <translation type="unfinished"/>
+      <translation>[ 错误 ] - 找不到 Lua 模块 %1.%2</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14930"/>
       <source>Some functions may not be available.</source>
-      <translation type="unfinished"/>
+      <translation>有些功能可能无法使用。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14934"/>
@@ -1802,7 +1802,7 @@ map with others relying on the original format.</source>
     <message>
       <location filename="../src/TMap.cpp" line="437"/>
       <source>[ INFO ]  - Map audit starting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - 开始地图审核...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1031"/>
@@ -2801,7 +2801,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1221"/>
       <source>Analyse characters</source>
-      <translation type="unfinished"/>
+      <translation>分析字符</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1230"/>
@@ -3868,7 +3868,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="353"/>
       <source>Set to RGB value</source>
-      <translation type="unfinished"/>
+      <translation>设置为 RGB 值</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="363"/>
@@ -4658,17 +4658,17 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="77"/>
       <source>Black</source>
-      <translation type="unfinished"/>
+      <translation>黑色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="78"/>
       <source>Red</source>
-      <translation type="unfinished"/>
+      <translation>红色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="79"/>
       <source>Green</source>
-      <translation type="unfinished"/>
+      <translation>绿色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="80"/>
@@ -4678,27 +4678,27 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="81"/>
       <source>Blue</source>
-      <translation type="unfinished"/>
+      <translation>蓝色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="82"/>
       <source>Magenta</source>
-      <translation type="unfinished"/>
+      <translation>品红色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="83"/>
       <source>Cyan</source>
-      <translation type="unfinished"/>
+      <translation>青色</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="84"/>
       <source>White (Light gray)</source>
-      <translation type="unfinished"/>
+      <translation>白色 (浅灰色)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="86"/>
       <source>Light black (Dark gray)</source>
-      <translation type="unfinished"/>
+      <translation>浅黑色 (暗灰色)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="87"/>
@@ -4762,17 +4762,17 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1879"/>
       <source>You have to enter a number. Other characters are not permitted.</source>
-      <translation type="unfinished"/>
+      <translation>你必须输入一个数字。 不允许使用其他字符。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1868"/>
       <source>This profile name is already in use.</source>
-      <translation type="unfinished"/>
+      <translation>此配置文件名称已经使用。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="399"/>
       <source>Could not rename your profile data on the computer.</source>
-      <translation type="unfinished"/>
+      <translation>无法重命名计算机上的配置文件数据。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="80"/>
@@ -4793,12 +4793,12 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="502"/>
       <source>new profile name</source>
-      <translation type="unfinished"/>
+      <translation>新配置文件名称</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="600"/>
       <source>Deleting &apos;%1&apos;</source>
-      <translation type="unfinished"/>
+      <translation>删除 &apos;%1&apos;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1147"/>
