@@ -345,7 +345,7 @@ local function modify_lua_functions(all_compressed_mappings)
 
          function lfs.touch(filepath, atime, mtime)
             filepath = convert_from_utf8(filepath)
-            return orig_lfs_touch(filepath, atime, mtime))
+            return orig_lfs_touch(filepath, atime, mtime)
          end
       else
          -- print("Mapping for codepage "..codepage.." not found")
