@@ -258,17 +258,71 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     comboBox_guiLanguage->clear();
     for (auto& code : pMudlet->getAvailableTranslationCodes()) {
-        auto& translatedName = pMudlet->mLanguageCodeMap.value(code).first;
-        int translatedPc = pMudlet->mLanguageCodeMap.value(code).second;
-        comboBox_guiLanguage->addItem(translatedName, code);
-        if (translatedPc >= pMudlet->mTranslationStar) {
-            comboBox_guiLanguage->setItemIcon(comboBox_guiLanguage->count()-1, QIcon(":/icons/rating.png"));
+        auto& translation = pMudlet->mTranslationsMap.value(code);
+        auto& nativeName = translation.getNativeName();
+        if (translation.getIsFromResourceFile()) {
+            auto& translatedPc = translation.getTranslatedPercentage();
+            if (translatedPc >= pMudlet->mTranslationGoldStar) {
+                comboBox_guiLanguage->addItem(QIcon(":/icons/rating.png"),
+                                              nativeName,
+                                              code);
+            } else if (translatedPc >= pMudlet->mTranslationSilverStar) {
+                comboBox_guiLanguage->addItem(QIcon(":/icons/rating_silver.png"),
+                                              tr("%1 (%2% done)",
+                                                 // Intentional argument to separate arguments
+                                                 "%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done, which is high enough to show a silver star!")
+                                              .arg(nativeName, QString::number(translatedPc)),
+                                              code);
+            } else {
+                // This will also be used if the percentage is set to zero
+                // because it was not found in the translation statistics file
+                // during compilation even though the Mudlet translation is in
+                // the resources file:
+                comboBox_guiLanguage->addItem(QIcon(),
+                                              tr("%1 (%2% done)",
+                                                 // Intentional argument to separate arguments
+                                                 "%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done, which is not high enough to show a gold or silver star!")
+                                              .arg(nativeName, QString::number(translatedPc)),
+                                              code);
+            }
+        } else {
+            // For translations that come from somewhere else we are not likely
+            // to have the translations statistics - instead show a floppy disk
+            // icon to show that it is coming from a file from the file-system
+            comboBox_guiLanguage->addItem(QIcon(":/icons/document-save.png"),
+                                          nativeName,
+                                          code);
         }
     }
     comboBox_guiLanguage->model()->sort(0);
-    auto current = pMudlet->mInterfaceLanguage;
-    comboBox_guiLanguage->setCurrentText(pMudlet->mLanguageCodeMap.value(current).first);
-    connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
+    auto currentLanguage = pMudlet->getInterfaceLanguage();
+    int currentIndex = comboBox_guiLanguage->findData(currentLanguage);
+    if (Q_LIKELY(currentIndex != -1)) {
+        // The langauge code has been found in the UserData role for one of the
+        // entries - so select it
+        comboBox_guiLanguage->setCurrentIndex(currentIndex);
+        connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
+    } else {
+        currentIndex = comboBox_guiLanguage->findData(QStringLiteral("en_US"));
+        if (Q_LIKELY(currentIndex != -1)) {
+           // The default code has been found in the UserData role for one of
+           // the entries - so select it as a fallback
+            comboBox_guiLanguage->setCurrentIndex(currentIndex);
+            connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
+        } else if (comboBox_guiLanguage->count()) {
+            // There is at least ONE entry but it is not the expected one
+            // or the American English default - so select that first one as a
+            // last ditch effort:
+            comboBox_guiLanguage->setCurrentIndex(0);
+            connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
+        } else {
+            // Nothing available - so disable the control:
+            comboBox_guiLanguage->setEnabled(false);
+            // And insert an Engineering English warning text - this is probably
+            // a sign of significant borkage in the translation system!
+            comboBox_guiLanguage->addItem(QStringLiteral("No translations available!"));
+        }
+    }
 }
 
 void dlgProfilePreferences::disableHostDetails()
@@ -276,9 +330,9 @@ void dlgProfilePreferences::disableHostDetails()
     // The Host pointer is a nullptr so disable every control that depends on it
 
     // on tab_general:
-    // groupBox_iconsAndToolbars is NOT dependent on pHost - leave it alone
-    label_encoding->setEnabled(false);
-    comboBox_encoding->setEnabled(false);
+    // groupBox_iconsAndToolbars and groupBox_guiLanguage are NOT dependent on
+    // pHost - so leave them alone
+    groupBox_encoding->setEnabled(false);
     groupBox_miscellaneous->setEnabled(false);
     groupBox_protocols->setEnabled(false);
     need_reconnect_for_data_protocol->hide();
@@ -358,8 +412,8 @@ void dlgProfilePreferences::disableHostDetails()
 
 void dlgProfilePreferences::enableHostDetails()
 {
-    label_encoding->setEnabled(true);
-    comboBox_encoding->setEnabled(true);
+    // on tab_general:
+    groupBox_encoding->setEnabled(true);
     groupBox_miscellaneous->setEnabled(true);
     groupBox_protocols->setEnabled(true);
 
@@ -3371,12 +3425,6 @@ void dlgProfilePreferences::slot_changeGuiLanguage(const QString &language)
     Q_UNUSED(language);
 
     auto languageCode = comboBox_guiLanguage->currentData().toString();
-    // WIP remove hardcoding when PR is done and languages have names in Preferences
-    if (languageCode == QStringLiteral("English")) {
-        mudlet::self()->setInterfaceLanguage(QStringLiteral("en_US"));
-    } else {
-        mudlet::self()->setInterfaceLanguage(languageCode);
-    }
-
+    mudlet::self()->setInterfaceLanguage(languageCode);
     label_languageChangeWarning->show();
 }

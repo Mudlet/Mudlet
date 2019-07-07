@@ -15117,9 +15117,9 @@ void TLuaInterpreter::setupLanguageData()
     lua_setfield(L, -2, "d");
 
     // finalize language-specific directions table
-    lua_setfield(L, -2, mudlet::self()->mInterfaceLanguage.toUtf8().constData());
+    lua_setfield(L, -2, mudlet::self()->getInterfaceLanguage().toUtf8().constData());
 
-    lua_pushstring(L, mudlet::self()->mInterfaceLanguage.toUtf8().constData());
+    lua_pushstring(L, mudlet::self()->getInterfaceLanguage().toUtf8().constData());
     lua_setfield(L, -2, "interfacelanguage");
 
     lua_setfield(L, -2, "translations");
