@@ -63,10 +63,10 @@ workflow "automerge pull requests on reviews" {
   resolves = ["automerge"]
 }
 
-workflow "automerge pull requests on status updates" {
-  on = "status"
-  resolves = ["automerge"]
-}
+# workflow "automerge pull requests on status updates" {
+#   on = "status"
+#   resolves = ["automerge"]
+# }
 
 action "automerge" {
   uses = "pascalgn/automerge-action@master"
