@@ -6256,7 +6256,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="451"/>
       <source>Saves your profile. (Ctrl+Shift+S)&lt;p&gt;Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.&lt;/p&gt;&lt;p&gt;It also makes a backup of your profile, you can load an older version of it when connecting.&lt;/p&gt;&lt;p&gt;Should there be any modules that are marked to be &quot;&lt;i&gt;synced&lt;/i&gt;&quot; this will also cause them to be saved and reloaded into other profiles if they too are active.</source>
-      <translation type="unfinished"/>
+      <translation>Salva il tuo profilo. (Ctrl+Maiusc+S)&lt;p&gt;Salva il tuo intero profilo (trigger, alias, script, timer, bottoni e tasti, ma non la mappa o le impostazioni specifiche degli script) sul disco fisso quindi in caso di un arresto anomalo del computer o del programma, tutte le modifiche che hai fatto verranno mantenute.&lt;/p&gt;&lt;p&gt;Fa anche un backup del tuo profilo così da poter caricare una versione precedente al momento della connessione.&lt;/p&gt;&lt;p&gt;Se sono presenti moduli contrassegnati come &quot;&lt;i&gt;sincronizzati&lt;/i&gt;&quot; questo causerà anche il salvataggio e l'aggiornamento degli stessi in altri profili se sono attivi.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="453"/>
@@ -11354,7 +11354,7 @@ o script LUA</translation>
       <source>&lt;p&gt;This displays the file selected to play when the trigger fires. To change this used the &lt;i&gt;Choose file...&lt;/i&gt; button or to remove it use the clear button.&lt;/p&gt;</source>
       <comment>This is the tooltip for the QLineEdit that shows - but does not permit changing - the sound file used for a trigger.</comment>
       <extracomment>Please ensure that the text used for &quot;Choose file ,,,&quot; here is the same as is used for the button that it refers to.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Questa voce mostra il file da mandare in play quando il trigger viene attivato. Per modificare il file audio usa il bottone &lt;i&gt;Scegli file...&lt;/i&gt; o per rimuoverlo utilizza il pulsante con la X a fianco del nome.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="550"/>
@@ -11369,7 +11369,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="614"/>
       <source>&lt;p&gt;Enable this to highlight the matching text by changing the fore and background colors to the ones selected here.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Abilita questa opzione per evidenziare il testo corrispondente modificando i colori del testo e dello sfondo come indicato qui.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="666"/>
