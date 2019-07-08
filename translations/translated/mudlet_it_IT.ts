@@ -398,7 +398,9 @@ attendere prego...</translation>
 delete this to clear the symbol or replace
 it with a new symbol for this room:</source>
       <comment>This is for when applying a new room symbol to one room. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Il simbolo è &quot;%1&quot; nella stanza selezionata,
+elimina il valore per ripulire il simbolo o sostituiscilo
+con un nuovo simbolo per questa stanza:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3659"/>
@@ -5502,7 +5504,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="506"/>
       <source>&lt;p&gt;Mudlet does not recognise the code &quot;%1&quot;, please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!&lt;/p&gt;&lt;p&gt;The file &lt;tt&gt;%2.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file) is still usable.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet non riconosce il codice &quot;%1&quot;, segnalalo agli sviluppatori in modo che venga descritto correttamente nelle future versioni di Mudlet!&lt;/p&gt;&lt;p&gt;Il file &lt;tt&gt;%2.dic&lt;/tt&gt; (e relative inflessioni e derivazioni &lt;tt&gt;.aff&lt;/tt&gt;) sono ancora utilizzabili.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="531"/>
@@ -9831,7 +9833,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="582"/>
       <source>&lt;p&gt;A user dictionary specific to this profile will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Un dizionario utente specifico è disponibile in questo profilo. E'utilizzato nella riga dei comandi (le parole digitate avranno una sottolineatura tratteggiata in ciano) e nel sottosistema lua.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="585"/>
@@ -9841,7 +9843,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="592"/>
       <source>&lt;p&gt;A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Un dizionario utente è disponibile per la condivisone con tutti i profili (che hanno quest'opzione abilitata). E'utilizzato nella riga dei comandi (le parole digitate avranno una sottolineatura tratteggiata in ciano) e nel sottosistema lua.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="595"/>
