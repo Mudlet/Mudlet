@@ -5492,7 +5492,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="503"/>
       <source>&lt;p&gt;From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dal file di dizionario &lt;tt&gt;%1.dic&lt;/tt&gt; (e relative inflessioni e derivazioni &lt;tt&gt;.aff&lt;/tt&gt; file).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="505"/>
@@ -10620,7 +10620,7 @@ tenta di nuovo quando sarà terminato.</translation>
       <location filename="../src/ui/room_exits.ui" line="1591"/>
       <location filename="../src/ui/room_exits.ui" line="1731"/>
       <source>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Imposta un valore numerico positivo per sovrascrivere il peso dell'uscita della stanza. Il valore zero ripristina il valore predefinito.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="236"/>
@@ -11010,7 +11010,7 @@ Peso</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2066"/>
       <source>&lt;p&gt;Set to a positive integer value to override the default (Room) Weight for using this Exit route, a zero value assigns the default.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Imposta un valore numerico positivo per sovrascrivere il peso dell'uscita della stanza. Il valore zero ripristina il valore predefinito.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2071"/>
