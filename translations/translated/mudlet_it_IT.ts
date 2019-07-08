@@ -11491,7 +11491,7 @@ dalla GUI)</translation>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="185"/>
       <source>&lt;p&gt;If checked this item (and its children, if applicable) does not show in area to the left unless &lt;b&gt;Show normally hidden variables&lt;/b&gt; is checked.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Seleziona questa voce (e quella dei figli, se applicabile) per non mostrarla nell'area a sinistra a meno che sia attiva l'opzione &lt;b&gt;Mostra variabili nascoste&lt;/b&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="188"/>
