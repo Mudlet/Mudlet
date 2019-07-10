@@ -584,11 +584,26 @@ mudlet::mudlet()
     mpActionVariables->setObjectName(QStringLiteral("variables_action"));
     mpMainToolBar->widgetForAction(mpActionVariables)->setObjectName(mpActionVariables->objectName());
 
-    mpActionIRC = new QAction(QIcon(QStringLiteral(":/icons/internet-telephony.png")), tr("IRC"), this);
-    mpActionIRC->setToolTip(tr("Open the Mudlet IRC client"));
-    mpMainToolBar->addAction(mpActionIRC);
-    mpActionIRC->setObjectName(QStringLiteral("irc_action"));
-    mpMainToolBar->widgetForAction(mpActionIRC)->setObjectName(mpActionIRC->objectName());
+    mpButtonDiscord = new QToolButton(this);
+    mpButtonDiscord->setText(tr("Discord"));
+    mpButtonDiscord->setObjectName(QStringLiteral("discord"));
+    mpButtonDiscord->setContextMenuPolicy(Qt::ActionsContextMenu);
+    mpButtonDiscord->setPopupMode(QToolButton::MenuButtonPopup);
+    mpButtonDiscord->setAutoRaise(true);
+    mpMainToolBar->addWidget(mpButtonDiscord);
+
+    mpActionDiscord = new QAction(tr("Open Discord"), this);
+    mpActionDiscord->setIcon(QIcon(QStringLiteral(":/icons/Discord-Logo-Color.png")));
+    mpActionDiscord->setIconText(tr("Discord"));
+    mpActionDiscord->setObjectName(QStringLiteral("openDiscord"));
+
+    mpActionIRC = new QAction(tr("Open IRC"), this);
+    mpActionIRC->setIcon(QIcon(QStringLiteral(":/icons/internet-telephony.png")));
+    mpActionIRC->setObjectName(QStringLiteral("openIRC"));
+
+    mpButtonDiscord->addAction(mpActionDiscord);
+    mpButtonDiscord->addAction(mpActionIRC);
+    mpButtonDiscord->setDefaultAction(mpActionDiscord);
 
     mpActionMapper = new QAction(QIcon(QStringLiteral(":/icons/applications-internet.png")), tr("Map"), this);
     mpActionMapper->setToolTip(tr("Show/hide the map"));
@@ -714,6 +729,7 @@ mudlet::mudlet()
     connect(mpActionNotes.data(), &QAction::triggered, this, &mudlet::slot_notes);
     connect(mpActionMapper.data(), &QAction::triggered, this, &mudlet::slot_mapper);
     connect(mpActionIRC.data(), &QAction::triggered, this, &mudlet::slot_irc);
+    connect(mpActionDiscord.data(), &QAction::triggered, this, &mudlet::slot_discord);
     connect(mpActionPackageManager.data(), &QAction::triggered, this, &mudlet::slot_package_manager);
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_module_manager);
 
@@ -2912,8 +2928,10 @@ void mudlet::setToolBarIconSize(const int s)
     mpMainToolBar->setIconSize(QSize(s * 8, s * 8));
     if (mToolbarIconSize > 2) {
         mpMainToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+        mpButtonDiscord->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     } else {
         mpMainToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        mpButtonDiscord->setToolButtonStyle(Qt::ToolButtonIconOnly);
     }
 
     if (mpToolBarReplay) {
@@ -3408,6 +3426,12 @@ void mudlet::slot_irc()
     }
     mpIrcClientMap.value(pHost)->raise();
     mpIrcClientMap.value(pHost)->show();
+}
+
+
+void mudlet::slot_discord()
+{
+    openWebPage(QStringLiteral("https://discord.gg/kuYvMQ9"));
 }
 
 void mudlet::slot_reconnect()
