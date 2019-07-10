@@ -7939,6 +7939,11 @@ int TLuaInterpreter::deleteArea(lua_State* L)
                             "area name).",
                             name.toUtf8().constData());
             return 2;
+        } else if (name == host.mpMap->mpRoomDB->getDefaultAreaName()) {
+            lua_pushnil(L);
+            lua_pushfstring(L,
+                            "deleteArea: bad argument #1 value (you can't delete the default area).");
+            return 2;
         }
     } else {
         lua_pushfstring(L,
