@@ -14,17 +14,17 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="273"/>
       <source>Too many redirects.</source>
-      <translation type="unfinished"/>
+      <translation>Слишком много перенаправлений.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="282"/>
       <source>No data received from server</source>
-      <translation type="unfinished"/>
+      <translation>Данные не получены с сервера</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="293"/>
       <source>Could not verify download integrity.</source>
-      <translation type="unfinished"/>
+      <translation>Не удалось проверить целостность загруженных данных.</translation>
     </message>
   </context>
   <context>
@@ -343,27 +343,27 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="55"/>
       <source>Start element not found!</source>
-      <translation type="unfinished"/>
+      <translation>Начальный элемент не найден!</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
       <source>line %1: %2</source>
-      <translation type="unfinished"/>
+      <translation>линия %1: %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="149"/>
       <source>Expected %1 while parsing</source>
-      <translation type="unfinished"/>
+      <translation>Ожидается %1 при разборе</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.cpp" line="145"/>
       <source>%1 @ line %2</source>
-      <translation type="unfinished"/>
+      <translation>%1 @ линия %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="82"/>
       <source>No data found!</source>
-      <translation type="unfinished"/>
+      <translation>Нет данных!</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="89"/>
@@ -380,7 +380,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="369"/>
       <source>Error parsing %1: %2 </source>
-      <translation type="unfinished"/>
+      <translation>Ошибка при анализе %1: %2 </translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/textgrammar.cpp" line="305"/>
@@ -415,7 +415,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="462"/>
       <source> (%1)</source>
-      <translation type="unfinished"/>
+      <translation> (%1)</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="399"/>
@@ -425,7 +425,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="404"/>
       <source>Error theme not found %1.</source>
-      <translation type="unfinished"/>
+      <translation>Ошибка, тема не найденa %1.</translation>
     </message>
   </context>
   <context>
@@ -3670,7 +3670,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="177"/>
       <source>There are currently no updates available.</source>
-      <translation type="unfinished"/>
+      <translation>В настоящее время нет новых обновлений.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="193"/>
@@ -3680,32 +3680,32 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="303"/>
       <source>Automatically download future updates</source>
-      <translation type="unfinished"/>
+      <translation>Автоматически загружать будущие обновления</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="350"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Отменить</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="370"/>
       <source>Install update now</source>
-      <translation type="unfinished"/>
+      <translation>Установить обновление</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="377"/>
       <source>OK</source>
-      <translation type="unfinished"/>
+      <translation>ОК</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="387"/>
       <source>Remind me later</source>
-      <translation type="unfinished"/>
+      <translation>Напомнить позже</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="392"/>
       <source>Skip this version</source>
-      <translation type="unfinished"/>
+      <translation>Пропустить эту версию</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.cpp" line="542"/>
@@ -7407,22 +7407,22 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="504"/>
       <source>Cut</source>
-      <translation type="unfinished"/>
+      <translation>Вырезать</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="505"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Скопировать</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="506"/>
       <source>Paste</source>
-      <translation type="unfinished"/>
+      <translation>Вставить</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="508"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>Выбрать все</translation>
     </message>
   </context>
   <context>
