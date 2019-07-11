@@ -1163,7 +1163,12 @@ selected rooms, minimum
 the only current value
 used is:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Inserisci il nuovo peso della stanza
+(= tempo di viaggio) per tutte le
+stanze selezionate, minimo
+(e predefinito) è 1.
+Lunico valore corrente
+utilizzato è:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4113"/>
@@ -4435,7 +4440,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="503"/>
       <source>&lt;p&gt;Indicates if there is already a custom line for this special exit, will be replaced if the exit is selected.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Indica se c'è già una linea personalizzata per questa uscita speciale, verrà sostituita se viene selezionata l'uscita.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="514"/>
