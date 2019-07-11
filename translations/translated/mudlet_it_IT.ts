@@ -1925,7 +1925,8 @@ attendere...</translation>
       <location filename="../src/TMap.cpp" line="1557"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Area predefinita (reset) (per le stanze che non sono state assegnate
+ad una zona) non trovata. Aggiungo l'Area ID riservato -1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1641"/>
@@ -5520,12 +5521,12 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2939"/>
       <source>&lt;p&gt;The room symbol will appear like this if only symbols (glyphs) from the specfic font are used.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Il simbolo della stanza sarà come questo in caso si possano utilizzare i simboli (glifi) del carattere in uso.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2945"/>
       <source>&lt;p&gt;The room symbol will appear like this if symbols (glyphs) from any font can be used.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Il simbolo della stanza sarà come questo in caso si possano utilizzare i simboli (glifi) del carattere in uso.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2974"/>
@@ -5545,12 +5546,12 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3006"/>
       <source>&lt;p&gt;The rooms with this symbol, up to a maximum of thirty-two, if there are more than this, it is indicated but they are not shown.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Stanze con questo simbolo, fino ad un massimo di trentadue. In caso ce ne siano un numero maggiore, sono indicate, ma non sono mostrate.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3015"/>
       <source>&lt;p&gt;The symbol can be made entirely from glyphs in the specified font.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Il simbolo può essere fatto interamente da glifi nel carattere specificato.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3025"/>
@@ -5726,7 +5727,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
       <location filename="../src/dlgRoomExits.cpp" line="229"/>
       <location filename="../src/dlgRoomExits.cpp" line="1950"/>
       <source>Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.</source>
-      <translation type="unfinished"/>
+      <translation>Imposta un valore numerico positivo per sovrascrivere il peso dell'uscita della stanza quando viene utilizzata per creare un percorso. Inserisci zero per utilizzare il valore predefinito.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="231"/>
@@ -9767,7 +9768,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="209"/>
       <source>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren&apos;t showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;Note: While this will allow Mudlet to show text in other languages, internalisation is still in development so triggers or Lua code won&apos;t work yet.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Se stai giocando ad un gioco in lingua differente dall'inglese e vedi � invece del testo o di lettere speciali come &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren&apos;t - prova a modificare la codifica in UTF-8 o in quella suggerita dal tuo gioco.&lt;/p&gt;&lt;p&gt;Nota: questo consentirà a Mudlet di mostrare testo in altre lingue, ma le funzioni di internalizzazione sono ancora in sviluppo, quindi i trigger o il codice Lua potrebbero non funzioneranno correttamente.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="267"/>
@@ -9901,7 +9902,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1032"/>
       <source>&lt;p&gt;Some games (notably all IRE MUDs) suffer from a bug where they don&apos;t properly communicate with the client on where a newline should be. Enable this to fix text from getting appended to the previous prompt line.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Alcuni giochi (in particolare tutti i MUD IRE) soffrono di un problema per cui non comunicano correttamente a Mudlet quando inserire il carattere di nuova linea. Abilita questa opzione per evitare che il testo sia accodato erroneamente alla riga precedente.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1042"/>
