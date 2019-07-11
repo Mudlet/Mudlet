@@ -245,8 +245,10 @@ local function modify_lua_functions(all_compressed_mappings)
          function io.lines(filename, ...)
             if filename then
                filename = convert_from_utf8(filename)
+               return orig_io_lines(filename, ...)
+            else
+               return orig_io_lines()
             end
-            return orig_io_lines(filename, ...)
          end
 
          local orig_dofile = dofile
