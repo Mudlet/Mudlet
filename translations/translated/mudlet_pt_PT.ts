@@ -522,7 +522,7 @@ it with a new symbol for this room:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="3801"/>
       <source>Define new color</source>
-      <translation type="unfinished"/>
+      <translation>Definir nova cor</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4115"/>
@@ -536,31 +536,32 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2385"/>
       <source>no text</source>
       <comment>Default text if a label is created in mapper with no text</comment>
-      <translation type="unfinished"/>
+      <translation>sem texto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="138"/>
       <source>ID</source>
       <comment>Room ID in the mapper widget</comment>
-      <translation type="unfinished"/>
+      <translation>ID</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="138"/>
       <source>Name</source>
       <comment>Room name in the mapper widget</comment>
-      <translation type="unfinished"/>
+      <translation>Nome</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="140"/>
       <source>&lt;p&gt;Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Clique em uma linha para selecionar ou cancelar a seleção desse número da sala (com o nome dado se as salas forem nomeadas) para incluir ou remover a sala da seleção.  Clique no cabeçalho relevante para classificar por esse método.  Observe que a coluna do nome mostrará apenas se pelo menos um dos espaços tem um nome.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1641"/>
       <location filename="../src/T2DMap.cpp" line="2015"/>
       <source>Mapper: Cannot find a path to this room using known exits.
 </source>
-      <translation type="unfinished"/>
+      <translation>Mapeador: Não é possível localizar um caminho para esta sala usando saídas conhecidas.
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2168"/>
@@ -600,7 +601,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2375"/>
       <source>Text label or image label?</source>
       <comment>2D Mapper create label dialog text</comment>
-      <translation type="unfinished"/>
+      <translation>Rótulo de texto ou etiqueta de imagem?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2376"/>
@@ -618,19 +619,19 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2381"/>
       <source>Enter label text.</source>
       <comment>2D Mapper create label dialog title/text</comment>
-      <translation type="unfinished"/>
+      <translation>Insira o texto do rótulo.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2388"/>
       <source>Background color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Cor de fundo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2389"/>
       <source>Foreground color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Cor de primeiro plano</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2393"/>
@@ -666,7 +667,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2797"/>
       <source>Undo</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>Desfazer</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2798"/>
@@ -678,13 +679,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2805"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)</comment>
-      <translation type="unfinished"/>
+      <translation>Propriedades</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2807"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)</comment>
-      <translation type="unfinished"/>
+      <translation>propriedades ...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2808"/>
@@ -696,7 +697,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2811"/>
       <source>Finish</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>Concluir</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2812"/>
@@ -708,25 +709,25 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2833"/>
       <source>Create new map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>Criar novo mapa</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2836"/>
       <source>Load map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>Carregar mapa</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2849"/>
       <source>Create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Criar sala</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2855"/>
       <source>Move</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Mover</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2856"/>
@@ -738,7 +739,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2859"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Excluir</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2860"/>
@@ -750,7 +751,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2863"/>
       <source>Color</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Cor</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2864"/>
