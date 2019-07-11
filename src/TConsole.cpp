@@ -2741,7 +2741,7 @@ void TConsole::setSystemSpellDictionary(const QString& newDict)
     QString spell_aff = QStringLiteral(R"(\\?\%1%2.aff)").arg(path, newDict);
     QString spell_dic = QStringLiteral(R"(\\?\%1%2.dic)").arg(path, newDict);
     // while normally not a an issue, you can't mix forward and back slashes with the prefix
-    spell_dic = spell_aff.replace(QChar('/'), QStringLiteral("\\"));
+    spell_aff = spell_aff.replace(QChar('/'), QStringLiteral("\\"));
     spell_dic = spell_dic.replace(QChar('/'), QStringLiteral("\\"));
 
 
@@ -2755,7 +2755,7 @@ void TConsole::setSystemSpellDictionary(const QString& newDict)
     if (mpHunspell_system) {
         Hunspell_destroy(mpHunspell_system);
     }
-    qDebug() << "right before Hunspell_create";
+    qDebug() << "right before Hunspell_create, aff:" << spell_aff << "dic:" << dic;
     mpHunspell_system = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
     qDebug() << "right after Hunspell_create";
     if (mpHunspell_system) {
