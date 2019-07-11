@@ -369,13 +369,15 @@ please wait...</source>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="89"/>
       <source>Expected object in keymap
 </source>
-      <translation type="unfinished"/>
+      <translation>Ожидается объект в 'keymap'
+</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="129"/>
       <source>Invalid keysequence used %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Недопустимое сочитание клавиш %1
+</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="369"/>
@@ -385,32 +387,32 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/textgrammar.cpp" line="305"/>
       <source>Error reading file %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>Ошибка при чтении файла %1:%2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="435"/>
       <source>%1 ranges</source>
-      <translation type="unfinished"/>
+      <translation>%1 диапазон</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="441"/>
       <source>Line %1, Column %2</source>
-      <translation type="unfinished"/>
+      <translation>Строка %1, столбец %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="444"/>
       <source>, Offset %1</source>
-      <translation type="unfinished"/>
+      <translation>, смещение %1</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="448"/>
       <source> | %1 chars selected</source>
-      <translation type="unfinished"/>
+      <translation> | %1 символов выбранного</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="452"/>
       <source> | scope: </source>
-      <translation type="unfinished"/>
+      <translation> | область действия: </translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="462"/>
@@ -420,7 +422,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="399"/>
       <source>Error parsing theme %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>Ошибка при анализе темы %1:%2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="404"/>
@@ -1851,7 +1853,8 @@ your only warning about this command...!</source>
       <source>[ ERROR ] - Couldn&apos;t find and load LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Не удалось загрузить LuaGlobal; ваш Мудлет сломан! Попробовали эти места:
+%1</translation>
     </message>
   </context>
   <context>
@@ -3644,28 +3647,29 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="47"/>
       <source>Loading update information …</source>
-      <translation type="unfinished"/>
+      <translation>Загрузка информации о обновлении …</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="84"/>
       <source>A new version of %APPNAME% is available!</source>
-      <translation type="unfinished"/>
+      <translation>Доступна новая версия %APPNAME%!</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="107"/>
       <source>%APPNAME% %UPDATE_VERSION% is available (you have %CURRENT_VERSION%).
 Would you like to update now?</source>
-      <translation type="unfinished"/>
+      <translation>%APPNAME% %UPDATE_VERSION% доступен (у вас %CURRENT_VERSION%).
+Обновить сейчас?</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="142"/>
       <source>Changelog for %APPNAME%</source>
-      <translation type="unfinished"/>
+      <translation>Список изменений для %APPNAME%</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="149"/>
       <source>You are using version %CURRENT_VERSION%.</source>
-      <translation type="unfinished"/>
+      <translation>Вы используете версию %CURRENT_VERSION%.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="177"/>
@@ -3675,7 +3679,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="193"/>
       <source>You are using %APPNAME% %CURRENT_VERSION%.</source>
-      <translation type="unfinished"/>
+      <translation>Вы используете %APPNAME% %CURRENT_VERSION%.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="303"/>
@@ -3710,7 +3714,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.cpp" line="542"/>
       <source>Could not open downloaded file %1</source>
-      <translation type="unfinished"/>
+      <translation>Не удалось открыть загруженный файл %1</translation>
     </message>
   </context>
   <context>
