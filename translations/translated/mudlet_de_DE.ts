@@ -343,12 +343,12 @@ Bitte warten...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="55"/>
       <source>Start element not found!</source>
-      <translation type="unfinished"/>
+      <translation>Start-Element nicht gefunden!</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
       <source>line %1: %2</source>
-      <translation type="unfinished"/>
+      <translation>Zeile %1: %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="149"/>
@@ -358,18 +358,19 @@ Bitte warten...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.cpp" line="145"/>
       <source>%1 @ line %2</source>
-      <translation type="unfinished"/>
+      <translation>%1 @ Zeile %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="82"/>
       <source>No data found!</source>
-      <translation type="unfinished"/>
+      <translation>Keine Daten gefunden!</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="89"/>
       <source>Expected object in keymap
 </source>
-      <translation type="unfinished"/>
+      <translation>Erwartetes Objekt in 'keymap'
+</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="129"/>
@@ -415,7 +416,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="462"/>
       <source> (%1)</source>
-      <translation type="unfinished"/>
+      <translation> (%1)</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="399"/>
@@ -3644,7 +3645,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="350"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Abbrechen</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="370"/>
@@ -3654,7 +3655,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="377"/>
       <source>OK</source>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="387"/>
@@ -7382,22 +7383,22 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="504"/>
       <source>Cut</source>
-      <translation type="unfinished"/>
+      <translation>Ausschneiden</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="505"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopieren</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="506"/>
       <source>Paste</source>
-      <translation type="unfinished"/>
+      <translation>Einfügen</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="508"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>Alles auswählen</translation>
     </message>
   </context>
   <context>
