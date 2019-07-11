@@ -2575,7 +2575,8 @@ Vecchio ==&gt; Nuovo</translation>
       <location filename="../src/TRoomDB.cpp" line="833"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map, now working
 out what new id numbers to use.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Molto male, ho trovato più di uno Stanza ID (conteggio: %1) per la stessa stanza
+nel file di mappa, ora cerco di capire quale ID utilizzare.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="838"/>
@@ -5191,7 +5192,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="187"/>
       <source>&lt;p&gt;Select the only or the primary font used (depending on &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; setting) to produce the 2D mapper room symbols.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Seleziona l'unico o il font primario utilizzato (a seconda dell'opzione &lt;i&gt;Utilizzare solo simboli (glifi) dal carattere selezionato&lt;/i&gt;) per produrre i simboli delle stanze della mappa 2D.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="221"/>
@@ -5733,7 +5734,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
       <location filename="../src/dlgRoomExits.cpp" line="231"/>
       <location filename="../src/dlgRoomExits.cpp" line="1957"/>
       <source>No door symbol is drawn on 2D Map for this exit (only functional choice currently).</source>
-      <translation type="unfinished"/>
+      <translation>Nessuna porta è disegnato sulla Mappa 2D per questa uscita (attualmente ha solo un utilizzo funzionale).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="234"/>
@@ -10393,7 +10394,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2041"/>
       <source>Only use symbols (glyphs) from chosen font</source>
-      <translation>Utilizza solo i simboli (glyphs) dal carattere selezionato</translation>
+      <translation>Utilizza solo i simboli (glifi) dal carattere selezionato</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2048"/>
@@ -10734,7 +10735,7 @@ tenta di nuovo quando sarà terminato.</translation>
       <location filename="../src/ui/room_exits.ui" line="1692"/>
       <location filename="../src/ui/room_exits.ui" line="2057"/>
       <source>&lt;p&gt;Prevent a route being created via this exit, equivalent to an infinite exit weight.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Impedisci l'utilizzo di questa uscita per creare un percorso, equivale a un uscita di peso infinito.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="83"/>
@@ -10951,7 +10952,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2075"/>
       <source>&lt;p&gt;No door symbol is drawn on 2D Map for this exit (only functional choice currently).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Nessuna porta è disegnato sulla Mappa 2D per questa uscita (attualmente ha solo un utilizzo funzionale).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2084"/>
