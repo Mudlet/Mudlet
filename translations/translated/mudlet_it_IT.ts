@@ -877,7 +877,7 @@ con un nuovo simbolo per questa stanza:</translation>
       <location filename="../src/T2DMap.cpp" line="3000"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action)</comment>
-      <translation type="unfinished"/>
+      <translation>utilizza &quot;elimina linea&quot; per rimuovere l'unico segmento che termina in un punto editabile</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3006"/>
@@ -4131,7 +4131,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="60"/>
       <source>&lt;p&gt;Select Style, Color and whether to end the line with an arrow head BEFORE then choosing the exit to draw the line for...&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Seleziona stile, colore e se terminare la linea con una freccia PRIMA di scegliere l'uscita con cui collegarla...&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="187"/>
@@ -4226,7 +4226,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="561"/>
       <source>&lt;p&gt;To remove a custom line: cancel this dialog, select the line and right-click to obtain a &amp;quot;delete&amp;quot; option.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Per rimuovere una linea personalizzata: annulla questa finestra di dialogo, seleziona la linea e fare clic con il tasto destro del mouse per visualizzare l'opzione &amp;quot;Elimina&amp;quot;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="447"/>
@@ -7297,7 +7297,20 @@ meno utili per un uso normale di questa applicazione:
                        are relative to the Style Sheet file&apos;s path.
        --stylesheet stylesheet  is the same as listed above.
 </source>
-      <translation type="unfinished"/>
+      <translation>       --reverse       imposta la direzione del testo da destra verso sinistra
+       --style= style  imposta lo stile della GUI. I valori possibili dipendono
+                       dalla configurazione del tuo sistema. Se Qt è compilato con
+                       fogli di stile addizionali o ha degli stili addizionali come plugin
+                       questi saranno disponibili con l'opzione da linea di comando 
+                       -style. Puoi anche impostare lo stile per tutte le applicazioni Qt
+                       utilizzando la variabile di sistema QT_STYLE_OVERRIDE.
+       --style style   vedi il parametro precedente
+       --stylesheet= imposta il foglio di stile per l'applicazione.
+                       Il valore deve essere un percorso di un file che contiene
+                       il foglio di stile. Note: le URL relative utilizzate nel foglio di stile
+                       hanno come riferimento il percorso del file del file che le richiama.
+       --stylesheet stylesheet  vedi il parametro precedente.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="258"/>
@@ -10186,7 +10199,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1826"/>
       <source>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands. However if significant problems are found the report can be quite extensive, in particular for larger maps.&lt;/p&gt;&lt;p&gt;Unless this option is set, Mudlet will reduce the amount of on-screen messages by hiding many texts and showing a suggestion to review the report file instead.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudlet ora esegue alcuni controlli e riparazioni per risolvere i problemi che potrebbero essere sorti nella versione precedente a causa di codice difettoso o comandi mal documentati. Tuttavia, se si riscontrano problemi significativi, il rapporto può essere piuttosto esteso, in particolare per i file di mappa più grandi.&lt;/p&gt;&lt;p&gt;A meno che questa opzione non sia impostata, Mudlet ridurrà la quantità di messaggi sullo schermo e mostrando un suggerimento per rivedere il file contenente il rapporto.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1856"/>
