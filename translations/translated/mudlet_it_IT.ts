@@ -2602,12 +2602,13 @@ L'uscita ha un peso, questa informazione è registrata nei dati utenti con chiav
       <location filename="../src/TRoom.cpp" line="1703"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but
 it has not been possible to salvage this, it has been lost!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - C'era una linea personalizzata associata all'uscita non valida, ma
+non è stato possibile recuperarla, è andata persa!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1708"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but it has not been possible to salvage this, it has been lost!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - C'era una linea personalizzata associata all'uscita non valida, ma non è stato possibile recuperarla, è andata persa!</translation>
     </message>
   </context>
   <context>
