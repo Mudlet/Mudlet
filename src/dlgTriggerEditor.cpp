@@ -96,7 +96,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                          "<li>Define a 'substitution' command to send to the game in clear text <strong>instead of the alias pattern</strong>, or write a script for more complicated needs.</li>"
                          "<li><strong>Activate</strong> the alias.</li></ol></p>"
                          "<p><strong>Note:</strong> Aliases can also be defined from the command line in the main profile window like this:</p>"
-                         "<p><code>lua tempAlias(&quot;^hi$&quot;, function() send (&quot;say Greetings, traveller!&quot;) echo (&quot;We said hi!&quot;) end)</code> - You can now greet by typing 'hi'</p>"
+                         "<p><code>lua permAlias(&quot;my greets&quot;, &quot;&quot;, &quot;^hi$&quot;, [[send (&quot;say Greetings, traveller!&quot;) echo (&quot;We said hi!&quot;)]])</code> - You can now greet by typing 'hi'</p>"
                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
     msgInfoAddTrigger = tr("<p>Triggers react on game output. To add a new trigger:"
@@ -106,7 +106,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                            "<li>Define a clear text command that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..</li>"
                            "<li><strong>Activate</strong> the trigger.</li></ol></p>"
                            "<p><strong>Note:</strong> Triggers can also be defined from the command line in the main profile window like this:</p>"
-                           "<p><code>lua tempTrigger(&quot;You are thirsty.&quot;, function() send(&quot;drink water&quot;) end)</code> - This will keep you refreshed.</p>"
+                           "<p><code>lua permSubstringTrigger(&quot;My drink trigger&quot;, &quot;&quot;, &quot;You are thirsty.&quot;, function() send(&quot;drink water&quot;) end)</code> - This will keep you refreshed.</p>"
                            "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
     msgInfoAddScript = tr("<p>Scripts organize code and can react to events. To add a new script:"
@@ -141,18 +141,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     msgInfoAddKey = tr("<p>Keys react on keyboard presses. To add a new key binding:"
                        "<ol><li>Click on the 'Add Item' icon above.</li>"
-                       "<li>Click on <strong>'grab key'</strong> and then press your key combination."
-                       "<strong>NOTE:</strong> If you want to bind a key combination you must hold down the modifier keys (e.g. Control, Shift, etc.) down before clicking on 'grab key'.</li>"
-                       "<li>Define a command that is executed when the key is hit.</li>"
+                       "<li>Click on <strong>'grab key'</strong> and then press your key combination, e.g. including modifier keys like Control, Shift, etc.</li>"
+                       "<li>Define a clear text command that you want to send to the game if the button is pressed, or write a script for more complicated needs.</li>"
                        "<li><strong>Activate</strong> the new key binding.</li></ol></p>"
                        "<p><strong>Note:</strong> Keys can also be defined from the command line in the main profile window like this:</p>"
-                       "<p><code>lua tempKey(mudlet.key.F8, function() send(&quot;jump&quot;) end)</code> - Pressing F8 will make you jump.</p>"
-                       "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
-
-    msgInfoAddVar = tr("<p>To make a new variable (can be a string, integer, boolean) click on the <tt>Add Item</tt> icon above.</p>"
-                       "<p>To add a table click <tt>Add Group</tt>.</p>"
-                       "<p>To remove a variable set it to nil or for it or a table click on the <tt>Delete</tt> icon above.</p>"
-                       "<p><i>Variables and table can also be defined on the command line in the main profile window.</i></p>"
+                       "<p><code>lua permKey(&quot;my jump key&quot;, &quot;&quot;, mudlet.key.F8, [[send(&quot;jump&quot;]]) end)</code> - Pressing F8 will make you jump.</p>"
                        "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
     msgInfoAddVar = tr("<p>Variables store information. To make a new variable:"
