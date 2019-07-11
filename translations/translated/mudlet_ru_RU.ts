@@ -5879,7 +5879,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="240"/>
       <location filename="../src/dlgRoomExits.cpp" line="1969"/>
       <source>Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).</source>
-      <translation>Красный (заблокированный) символ двери будет нарисирован на пользовательской линии выхода для данного выхода на двухмерной карте (но не в данный момент).</translation>
+      <translation>Красный (заблокированный) символ двери будет нарисован на пользовательской линии выхода для данного выхода на двухмерной карте (но не в данный момент).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="87"/>
@@ -10897,7 +10897,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1359"/>
       <location filename="../src/ui/room_exits.ui" line="1499"/>
       <source>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Оранжевая (закрытая) дверца нарисована на двухмерной карте.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="170"/>
@@ -10909,7 +10909,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1375"/>
       <location filename="../src/ui/room_exits.ui" line="1515"/>
       <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;Красный (заблокированный) символ дверцы нарисирован на двухмерной карте.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="233"/>
