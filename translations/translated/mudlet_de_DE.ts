@@ -14,17 +14,17 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="273"/>
       <source>Too many redirects.</source>
-      <translation type="unfinished"/>
+      <translation>Zu viele Weiterleitungen.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="282"/>
       <source>No data received from server</source>
-      <translation type="unfinished"/>
+      <translation>Keine Daten vom Server empfangen</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="293"/>
       <source>Could not verify download integrity.</source>
-      <translation type="unfinished"/>
+      <translation>Die Integrität des Downloads konnte nicht überprüft werden.</translation>
     </message>
   </context>
   <context>
@@ -353,7 +353,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="149"/>
       <source>Expected %1 while parsing</source>
-      <translation type="unfinished"/>
+      <translation>%1 erwartet während der Analyse</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.cpp" line="145"/>
@@ -376,42 +376,43 @@ Bitte warten...</translation>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="129"/>
       <source>Invalid keysequence used %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Ungültige Tastenfolge verwendet %1
+</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="369"/>
       <source>Error parsing %1: %2 </source>
-      <translation type="unfinished"/>
+      <translation>Fehler beim Parsen von %1: %2 </translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/textgrammar.cpp" line="305"/>
       <source>Error reading file %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>Fehler beim Lesen der Datei %1:%2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="435"/>
       <source>%1 ranges</source>
-      <translation type="unfinished"/>
+      <translation>%1 Bereiche</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="441"/>
       <source>Line %1, Column %2</source>
-      <translation type="unfinished"/>
+      <translation>Zeile %1, Spalte %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="444"/>
       <source>, Offset %1</source>
-      <translation type="unfinished"/>
+      <translation>, Versatz %1</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="448"/>
       <source> | %1 chars selected</source>
-      <translation type="unfinished"/>
+      <translation> | %1 Zeichen ausgewählt</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="452"/>
       <source> | scope: </source>
-      <translation type="unfinished"/>
+      <translation> | Umfang: </translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="462"/>
@@ -421,12 +422,12 @@ Bitte warten...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="399"/>
       <source>Error parsing theme %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>Fehler beim Analysieren des Themas %1:%2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="404"/>
       <source>Error theme not found %1.</source>
-      <translation type="unfinished"/>
+      <translation>Fehler: Thema nicht gefunden %1.</translation>
     </message>
   </context>
   <context>
