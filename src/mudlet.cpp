@@ -747,7 +747,7 @@ mudlet::mudlet()
     connect(dactionForum, &QAction::triggered, this, &mudlet::slot_show_help_dialog_forum);
     connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
     connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_discord);
-    connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_irc);
+    connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_discord);
 #if !defined(INCLUDE_UPDATER)
     // Hide the update menu item if the code is not included
     dactionUpdate->setVisible(false);
