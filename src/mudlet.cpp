@@ -3428,10 +3428,59 @@ void mudlet::slot_irc()
     mpIrcClientMap.value(pHost)->show();
 }
 
-
 void mudlet::slot_discord()
 {
-    openWebPage(QStringLiteral("https://discord.gg/kuYvMQ9"));
+    openWebPage(mMudletDiscordInvite);
+}
+
+void mudlet::updateMudletDiscordInvite()
+{
+    QDir dir;
+    QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    if (!dir.mkpath(cacheDir)) {
+        qWarning() << "Couldn't create cache directory for Mudlet's Discord JSON file: " << cacheDir;
+        return;
+    }
+
+    auto manager = new QNetworkAccessManager(this);
+    auto diskCache = new QNetworkDiskCache(this);
+    diskCache->setCacheDirectory(cacheDir);
+    manager->setCache(diskCache);
+
+
+    QUrl url(QStringLiteral("https://discordapp.com/api/guilds/283581582550237184/widget.json"));
+    QNetworkRequest request(url);
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
+    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
+    request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
+
+    QNetworkReply* getReply = manager->get(request);
+
+    connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
+        qWarning() << "mudlet::updateMudletDiscordInvite() WARNING - couldn't download " << url.url() << " to update Mudlet's Discord invite link";
+        getReply->deleteLater();
+    });
+
+    connect(getReply,
+            &QNetworkReply::finished,
+            this,
+            std::bind(
+                    [=](QNetworkReply* reply) {
+                        if (reply->error() != QNetworkReply::NoError) {
+                            return;
+                        }
+
+                        auto widgetJson = QJsonDocument::fromJson(reply->readAll()).object();
+                        auto inviteKey = widgetJson.value(QStringLiteral("instant_invite"));
+                        if (inviteKey == QJsonValue::Undefined) {
+                            qWarning() << "mudlet::updateMudletDiscordInvite() WARNING - no 'instant_invite' key available in Discord's JSON";
+                            return;
+                        }
+
+                        mMudletDiscordInvite = inviteKey.toString();
+                        reply->deleteLater();
+                    },
+                    getReply));
 }
 
 void mudlet::slot_reconnect()

@@ -214,6 +214,7 @@ public:
     int getRowCount(Host* pHost, QString& name);
     QStringList getAvailableFonts();
     void hideMudletsVariables(Host *pHost);
+    void updateMudletDiscordInvite();
 
     static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;
@@ -636,6 +637,8 @@ private:
     QSet<QString> mWordSet_shared;
     // Prevent problems when updating the dictionary:
     QReadWriteLock mDictionaryReadWriteLock;
+
+    QString mMudletDiscordInvite = QStringLiteral("https://discordapp.com/invite/kuYvMQ9");
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
