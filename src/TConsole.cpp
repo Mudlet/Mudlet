@@ -2740,6 +2740,9 @@ void TConsole::setSystemSpellDictionary(const QString& newDict)
     // use on Windows platforms which can have non ASCII characters and prefix of "\\?\"
     QString spell_aff = QStringLiteral(R"(\\?\%1%2.aff)").arg(path, newDict);
     QString spell_dic = QStringLiteral(R"(\\?\%1%2.dic)").arg(path, newDict);
+    // while normally not a an issue, you can't mix forward and back slashes with the prefix
+    spell_dic = spell_aff.replace(QChar('/'), QStringLiteral("\\"));
+    spell_dic = spell_dic.replace(QChar('/'), QStringLiteral("\\"));
 #else
     QString spell_aff = QStringLiteral("%1%2.aff").arg(path, newDict);
     QString spell_dic = QStringLiteral("%1%2.dic").arg(path, newDict);
