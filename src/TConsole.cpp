@@ -2735,14 +2735,22 @@ void TConsole::setSystemSpellDictionary(const QString& newDict)
 
     QString path = mudlet::getMudletPath(mudlet::hunspellDictionaryPath, mpHost->getSpellDic());
 
+#if defined(Q_OS_WIN32)
+    // The man page for hunspell advises Utf8 encoding of the pathFileNames for
+    // use on Windows platforms which can have non ASCII characters and prefix of "\\?\"
+    QString spell_aff = QStringLiteral(R"(\\?\%1%2.aff)").arg(path, newDict);
+    QString spell_dic = QStringLiteral(R"(\\?\%1%2.dic)").arg(path, newDict);
+#else
     QString spell_aff = QStringLiteral("%1%2.aff").arg(path, newDict);
     QString spell_dic = QStringLiteral("%1%2.dic").arg(path, newDict);
-    // The man page for hunspell advises Utf8 encoding of the pathFileNames for
-    // use on Windows platforms which can have non ASCII characters...
+#endif
+
     if (mpHunspell_system) {
         Hunspell_destroy(mpHunspell_system);
     }
+    qDebug() << "right before Hunspell_create";
     mpHunspell_system = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
+    qDebug() << "right after Hunspell_create";
     if (mpHunspell_system) {
         mHunspellCodecName_system = QByteArray(Hunspell_get_dic_encoding(mpHunspell_system));
         qDebug().noquote().nospace() << "TCommandLine::setSystemSpellDictionary(\"" << newDict << "\") INFO - System Hunspell dictionary loaded for profile, it uses a \"" << Hunspell_get_dic_encoding(mpHunspell_system) << "\" encoding...";
