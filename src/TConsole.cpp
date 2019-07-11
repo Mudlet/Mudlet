@@ -2752,6 +2752,8 @@ void TConsole::setSystemSpellDictionary(const QString& newDict)
         Hunspell_destroy(mpHunspell_system);
     }
     qDebug() << "right before Hunspell_create";
+    qDebug() << "aff exists?" << QFileInfo::exists(spell_aff);
+    qDebug() << "dic exists?" << QFileInfo::exists(spell_dic);
     mpHunspell_system = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
     qDebug() << "right after Hunspell_create";
     if (mpHunspell_system) {
