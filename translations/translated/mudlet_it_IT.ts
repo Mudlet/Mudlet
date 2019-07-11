@@ -348,7 +348,7 @@ attendere prego...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
       <source>line %1: %2</source>
-      <translation type="unfinished"/>
+      <translation>riga %1: %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="149"/>
@@ -358,12 +358,12 @@ attendere prego...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.cpp" line="145"/>
       <source>%1 @ line %2</source>
-      <translation type="unfinished"/>
+      <translation>%1 @ riga %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="82"/>
       <source>No data found!</source>
-      <translation type="unfinished"/>
+      <translation>Nessun dato trovato!</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="89"/>
@@ -415,7 +415,7 @@ attendere prego...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="462"/>
       <source> (%1)</source>
-      <translation type="unfinished"/>
+      <translation> (%1)</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="399"/>
@@ -592,7 +592,12 @@ con un nuovo simbolo per questa stanza:</translation>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected; %1 is the room number for which %2-%4 are the x,y and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Stanza%1ID:%1%2 Posizione%1sulla%1Mappa: (%3,%4,%5) -%1centrata su %n stanze selezionate
+</numerusform>
+        <numerusform>Stanza%1ID:%1%2 Posizione%1sulla%1Mappa: (%3,%4,%5) -%1centrata su %n stanze selezionate
+</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2266"/>
@@ -1047,7 +1052,12 @@ la stanza evidenziata (%1) a:</translation>
       <source>Enter the symbol to use
 for this/these %n room(s):</source>
       <comment>this is for when applying a new room symbol to one or more rooms and none have a symbol at present; use line feeds to format text into a reasonable rectangle, %n is the number of rooms involved</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Inserisci il simbolo da utilizzare
+per questa/queste %n stanza(e):</numerusform>
+        <numerusform>Inserisci il simbolo da utilizzare
+per questa/queste %n stanza(e):</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3620"/>
@@ -1066,7 +1076,18 @@ with a new symbol to use for all the rooms:</source>
  • enter a space to clear any existing symbols
 for all of the %n selected room(s):</source>
       <comment>Use line feeds to format text into a reasonable rectangle if needed, %n is the number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Scegli:
+ • un simbolo esistente dalla lista sottostante (precedenza ai più comunemente usato)
+ • inserisci uno o più grafemi (&quot;caratteri visibili&quot;) come nuovo simbolo
+ • inserisci uno spazio per cancellare qualsiasi simbolo esistente
+per tutte le %n stanze selezionate:</numerusform>
+        <numerusform>Scegli:
+ • un simbolo esistente dalla lista sottostante (precedenza ai più comunemente usato)
+ • inserisci uno o più grafemi (&quot;caratteri visibili&quot;) come nuovo simbolo
+ • inserisci uno spazio per cancellare qualsiasi simbolo esistente
+per tutte le %n stanze selezionate:</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3809"/>
@@ -2640,7 +2661,12 @@ Mudlet - is your system running out of memory?</source>
       <source>[ INFO ]  - The missing area(s) are now called:
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ INFO ] - L'area mancante(i) è ora chiamata:
+(ID) ==&gt; &quot;name&quot;</numerusform>
+        <numerusform>[ INFO ] - L'area mancante(i) è ora chiamata:
+(ID) ==&gt; &quot;name&quot;</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="748"/>
@@ -3551,7 +3577,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="350"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Annulla</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="370"/>
@@ -3561,17 +3587,17 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="377"/>
       <source>OK</source>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="387"/>
       <source>Remind me later</source>
-      <translation type="unfinished"/>
+      <translation>Ricordamelo in seguito</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="392"/>
       <source>Skip this version</source>
-      <translation type="unfinished"/>
+      <translation>Salta questa versione</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.cpp" line="542"/>
@@ -7288,22 +7314,22 @@ dalla GUI)</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="504"/>
       <source>Cut</source>
-      <translation type="unfinished"/>
+      <translation>Taglia</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="505"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Copia</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="506"/>
       <source>Paste</source>
-      <translation type="unfinished"/>
+      <translation>Incolla</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="508"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona Tutto</translation>
     </message>
   </context>
   <context>
@@ -9522,19 +9548,28 @@ Avvio in corso... Buon divertimento!
       <location filename="../src/mudlet.cpp" line="4408"/>
       <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
       <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>&lt;p&gt;Informazioni su Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n aggiornamenti sono disponibili!&lt;/i&gt;&lt;p&gt;</numerusform>
+        <numerusform>&lt;p&gt;Informazioni su Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n aggiornamenti sono disponibili!&lt;/i&gt;&lt;p&gt;</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="4426"/>
       <source>Review %n update(s)...</source>
       <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Mostra %n aggiornamento(i)...</numerusform>
+        <numerusform>Mostra %n aggiornamento(i)...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="4431"/>
       <source>&lt;p&gt;Review the update(s) available...&lt;/p&gt;</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>&lt;p&gt;Mostra gli aggiornamenti disponibili...&lt;/p&gt;</numerusform>
+        <numerusform>&lt;p&gt;Mostra gli aggiornamenti disponibili...&lt;/p&gt;</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4522"/>
