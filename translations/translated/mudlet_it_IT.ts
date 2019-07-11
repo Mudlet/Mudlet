@@ -2136,7 +2136,7 @@ the file:
       <translation>[ ALERT ] - Ho rilevato almeno un problema durante le ultime operazioni sul file
 di mappa. Consiglio di esaminare il report più recente nel file:
 &quot;%1&quot;
-- ricercare il (ultimo) report dal titolo:
+- ricerca il (ultimo) report dal titolo:
 &quot;%2&quot;.</translation>
     </message>
     <message>
@@ -2147,7 +2147,11 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Ho salvato un riepilogo degli messaggi relativi all'ultimo file di mappa.
+Consiglio di esaminare il report più recente nel file:
+&quot;%1&quot;
+- ricerca il (ultimo) report dal titolo:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2253"/>
@@ -2373,7 +2377,8 @@ nella finestra principale!</translation>
       <location filename="../src/TRoom.cpp" line="1156"/>
       <source>[ INFO ]  - In room id:%1 patching {internal fixup} of (special) exit to
 %2, was: &quot;%3&quot; now: &quot;%4&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Correzione della Stanza ID:%1 l'uscita (special) a
+%2, era: &quot;%3&quot; ora è: &quot;%4&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1164"/>
@@ -2401,14 +2406,15 @@ be removed (but the destination room id will be stored in
 the room user data under a key:
 &quot;%4&quot;).</source>
       <translation>[ WARN ]  - Nella stanza con id: %1 l'uscita speciale &quot;%2&quot; punta ad una stanza
-non valida: %3 che non esiste.  L'uscita sarà rimossa (l'id della stanza di destinazione
+non valida: %3 che non esiste.  L'uscita sarà rimossa (lo Stanza ID di destinazione
 sarà memorizzato nei dati utente della stanza con la chiave:
 &quot;%4&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1244"/>
       <source>[ WARN ]  - Room has a special exit &quot;%1&quot; with an exit to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - La stanza ha un uscita speciale &quot;%1&quot; che punta a: %2, ma la destinazione non esiste. L'uscita sarà rimossa (lo Stanza ID di destinazione sarà memorizzato nei dati utente della stanza con la chiave:
+&quot;%3&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1283"/>
@@ -2419,14 +2425,15 @@ room user data under a key:
 &quot;%4&quot;).</source>
       <translation>[ INFO ]  - Nella stanza con id: %1 l'uscita &quot;%2&quot;
 punta ad una stanza non valida: %3 che non esiste.
-L'uscita sarà rimossa (l'id della stanza di destinazione sarà memorizzato
+L'uscita sarà rimossa (lo Stanza ID di destinazione sarà memorizzato
 nei dati utente della stanza con la chiave:
 &quot;%4&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1296"/>
       <source>[ INFO ]  - Room had special exit &quot;%1&quot; that was to room with an invalid room: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - La stanza ha un uscita speciale &quot;%1&quot; che punta a: %2, ma la destinazione non esiste. L'uscita sarà rimossa (lo Stanza ID di destinazione sarà memorizzato nei dati utente della stanza con la chiave:
+&quot;%3&quot;).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1329"/>
@@ -2547,7 +2554,7 @@ room id will be stored in the room user data under a key:
 &quot;%4&quot;)
 and the exit will be turned into a stub.</source>
       <translation>[ INFO ]  - Nella stanza con id: %1 l'uscita &quot;%2&quot; punta ad una stanza
-non valida: %3 che non esiste.  L'uscita sarà rimossa (l'id della stanza di destinazione
+non valida: %3 che non esiste.  L'uscita sarà rimossa (lo Stanza ID di destinazione
 sarà memorizzato nei dati utente della stanza con la chiave:
 &quot;%4&quot;)
 e l'uscita verrà trasformata in uno stub.</translation>
