@@ -1191,7 +1191,13 @@ new (positive) integer
 value for all selected
 rooms:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Seleziona un peso della
+stanza (= tempo di viaggio)
+dalla lista (ordinata in
+base all'utilizzo) o inserisci
+un nuovo numero (positivo)
+da utilizzare come valore
+per le stanze selezionate:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4174"/>
@@ -2532,7 +2538,11 @@ does not exist.  The exit will be removed (but the destination room
 Id will be stored in the room user data under a key:
 &quot;%4&quot;)
 and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Nella stanza con id: %1 l'uscita &quot;%2&quot; punta ad una stanza
+non valida: %3 che non esiste.  L'uscita sarà rimossa (l'id della stanza di destinazione
+sarà memorizzato nei dati utente della stanza con la chiave:
+&quot;%4&quot;)
+e l'uscita verrà trasformata in uno stub.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1539"/>
@@ -2544,7 +2554,10 @@ and the exit will be turned into a stub.</source>
       <source>[ ALERT ] - Room with id: %1 has an exit &quot;%2&quot; to: %3 but also
 has a stub exit!  As a real exit precludes a stub, the latter will
 be removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Stanza ID: %1 ha un'uscita &quot;%2&quot; verso: %3 ma anche
+ha un'uscita stub! La presenza di un'uscita reale impedisce l'utilizzo di stub,
+quindi quest'ultimo sarà rimosso.
+.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1593"/>
@@ -2817,7 +2830,10 @@ sono state aggiunte.</translation>
 should be recording as possessing, they were:
 %3
 they have been removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Nell' Area ID: %1 erano presenti %2 stanze in più rispetto
+a quelle indicate, sono:
+%3
+sono state cancellate.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1057"/>
@@ -2916,7 +2932,8 @@ set one area&apos;s name to that of another that exists at the time.</source>
       <location filename="../src/TRoomDB.cpp" line="1239"/>
       <source>[ INFO ]  - Default (reset) area name (for rooms that have not been assigned to an
 area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Area predefinita (per le stanze che non sono state assegnate
+ad una zona) non trovata. Aggiungo &quot;%1&quot; invece che l'Area ID riservato -1.</translation>
     </message>
   </context>
   <context>
@@ -4439,7 +4456,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="444"/>
       <source>&lt;p&gt;Select a special exit to commence drawing a line for it, the first column is checked if the exit already has such a custom line.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Selezionare un'uscita speciale per iniziare a disegnare la riga di collegamento, la prima colonna è selezionata se l'uscita dispone già di una stile di linea personalizzato.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="503"/>
