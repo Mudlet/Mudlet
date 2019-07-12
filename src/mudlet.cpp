@@ -809,7 +809,7 @@ void mudlet::loadDictionaryLanguageMap()
 void mudlet::scanForMudletTranslations(const QString& path)
 {
     mMudletTranslationsPathName = path;
-    qDebug().nospace().noquote() << "mudlet::scanForMudletTranslations(\"" << path << "\") INFO - Seeking Mudlet translations files in given location.";
+    qDebug().nospace().noquote() << "mudlet::scanForMudletTranslations(\"" << path << "\") INFO - Seeking Mudlet translation files:";
     mTranslationsMap.clear();
 
     QDir translationDir(path);
@@ -835,10 +835,11 @@ void mudlet::scanForMudletTranslations(const QString& path)
         languageCode.remove(QStringLiteral(".qm"), Qt::CaseInsensitive);
         int percentageTranslated = -1;
 
-        auto pMudletTranslator = new QTranslator();
+        auto* pTranslator = new QTranslator();
+        std::unique_ptr<QTranslator> pMudletTranslator(pTranslator);
         auto translationPathFileName(path % QLatin1Char('/') % translationFileName);
         if (Q_LIKELY(pMudletTranslator->load(translationPathFileName, path))) {
-            qDebug().noquote().nospace() << "mudlet::scanForMudletTranslations(...) INFO - found a suitable Mudlet translation for locale code:\"" << languageCode << "\".";
+            qDebug().noquote().nospace() << "    found a Mudlet translation for locale code:\"" << languageCode << "\".";
             if (!translationStats.isEmpty()) {
                 // For this to not be empty then we are reading the translations
                 // from the expected resource file and the translation
@@ -852,45 +853,46 @@ void mudlet::scanForMudletTranslations(const QString& path)
                 }
             }
             // PLACEMARKER: Start of locale codes to native language decoding - insert an entry here for any futher Mudlet supported languages
-            translation translation(percentageTranslated);
+            translation currentTranslation(percentageTranslated);
             if (!languageCode.compare(QLatin1String("en_US"), Qt::CaseInsensitive)) {
-                translation.mNativeName = QStringLiteral("English (American)");
+                currentTranslation.mNativeName = QStringLiteral("English (American)");
             } else if (!languageCode.compare(QLatin1String("en_GB"), Qt::CaseInsensitive)) {
-                translation.mNativeName = QStringLiteral("English (British)");
+                currentTranslation.mNativeName = QStringLiteral("English (British)");
             } else if (!languageCode.compare(QLatin1String("zh_CN"), Qt::CaseInsensitive)) {
-                translation.mNativeName = QStringLiteral("简化字");
+                currentTranslation.mNativeName = QStringLiteral("简化字");
             } else if (!languageCode.compare(QLatin1String("zh_TW"), Qt::CaseInsensitive)) {
-                translation.mNativeName = QStringLiteral("繁體字");
+                currentTranslation.mNativeName = QStringLiteral("繁體字");
             } else if (!languageCode.compare(QLatin1String("nl_NL"), Qt::CaseInsensitive)) {
-                translation.mNativeName = QStringLiteral("Nederlands");
+                currentTranslation.mNativeName = QStringLiteral("Nederlands");
             } else if (!languageCode.compare(QLatin1String("fr_FR"), Qt::CaseInsensitive)) {
-                translation.mNativeName = QStringLiteral("Français");
+                currentTranslation.mNativeName = QStringLiteral("Français");
             } else if (!languageCode.compare(QLatin1String("de_DE"), Qt::CaseInsensitive)) {
-                translation.mNativeName = QStringLiteral("Deutsch");
+                currentTranslation.mNativeName = QStringLiteral("Deutsch");
             } else if (!languageCode.compare(QLatin1String("el_GR"), Qt::CaseInsensitive)) {
-                translation.mNativeName = QStringLiteral("ελληνικά");
+                currentTranslation.mNativeName = QStringLiteral("ελληνικά");
             } else if (!languageCode.compare(QLatin1String("it_IT"), Qt::CaseInsensitive)) {
-                translation.mNativeName = QStringLiteral("Italiano");
+                currentTranslation.mNativeName = QStringLiteral("Italiano");
             } else if (!languageCode.compare(QLatin1String("pl_PL"), Qt::CaseInsensitive)) {
-                translation.mNativeName = QStringLiteral("Polszczyzna");
+                currentTranslation.mNativeName = QStringLiteral("Polszczyzna");
             } else if (!languageCode.compare(QLatin1String("ru_RU"), Qt::CaseInsensitive)) {
-                translation.mNativeName = QStringLiteral("Pусский");
+                currentTranslation.mNativeName = QStringLiteral("Pусский");
             } else if (!languageCode.compare(QLatin1String("es_ES"), Qt::CaseInsensitive)) {
-                translation.mNativeName = QStringLiteral("Español");
+                currentTranslation.mNativeName = QStringLiteral("Español");
             } else if (!languageCode.compare(QLatin1String("pt_PT"), Qt::CaseInsensitive)) {
-                translation.mNativeName = QStringLiteral("Portugês");
+                currentTranslation.mNativeName = QStringLiteral("Portugês");
             } else {
-                translation.mNativeName = languageCode;
+                currentTranslation.mNativeName = languageCode;
             }
             translation.mMudletTranslationPathFileName = path % QLatin1Char('/') % translationFileName;
-            mTranslationsMap.insert(languageCode, translation);
+            mTranslationsMap.insert(languageCode, currentTranslation);
         } else {
             // This is very unlikely to be reached as it means that a file that
             // matched the naming to be a Mudlet translation file was not infact
             // one...
-            qDebug().noquote().nospace() << "mudlet::scanForMudletTranslations(...) INFO - no Mudlet translation found for locale code:\"" << languageCode << "\".";
+            qDebug().noquote().nospace() << "    no Mudlet translation found for locale code:\"" << languageCode << "\".";
         }
-        delete pMudletTranslator;
+        // As pQtTranslator goes out of scope at the end of each loop it will
+        // dispose of the temporarily created QTranslator for us...
     }
 }
 
@@ -901,15 +903,16 @@ void mudlet::scanForMudletTranslations(const QString& path)
 void mudlet::scanForQtTranslations(const QString& path)
 {
     mQtTranslationsPathName = path;
-    qDebug().nospace().noquote() << "mudlet::scanForQtTranslations(\"" << path << "\") INFO - Seeking Qt translations files in given location.";
-    QMutableHashIterator<QString, translation> itTranslation(mTranslationsMap);
+    qDebug().nospace().noquote() << "mudlet::scanForQtTranslations(\"" << path << "\") INFO - Seeking Qt translation files:";
+    QMutableMapIterator<QString, translation> itTranslation(mTranslationsMap);
     while (itTranslation.hasNext()) {
         itTranslation.next();
         const QString languageCode = itTranslation.key();
-        auto pQtTranslator = new QTranslator();
+        auto* pTranslator = new QTranslator();
+        std::unique_ptr<QTranslator> pQtTranslator(pTranslator);
         QString translationPathFileName(QStringLiteral("%1/qt_%2.qm").arg(path, languageCode));
         if (pQtTranslator->load(translationPathFileName, path)) {
-            qDebug().noquote().nospace() << "mudlet::scanForQtTranslations(...) INFO - found a suitable Qt translation for locale code:\"" << languageCode << "\".";
+            qDebug().noquote().nospace() << "    found a Qt translation for locale code: \"" << languageCode << "\"";
             /*
              * Unfortunately, success in this operation does not mean that
              * the qt_xx_YY.qm translation file has been located and used as
@@ -937,16 +940,15 @@ void mudlet::scanForQtTranslations(const QString& path)
             current.mQtTranslationPathFileName = translationPathFileName;
             itTranslation.setValue(current);
         } else {
-            qDebug().noquote().nospace() << "mudlet::scanForQtTranslations(...) INFO - no Qt translation found for locale code:\"" << languageCode << "\".";
+            qDebug().noquote().nospace() << "    no Qt translation found for locale code: \"" << languageCode << "\"";
         }
-        delete pQtTranslator;
     }
 }
 
 void mudlet::loadTranslators(const QString& languageCode)
 {
     if (!mTranslatorsLoadedList.isEmpty()) {
-        qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - uninstalling some existing translations that were previously loaded...";
+        qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - uninstalling existing translation previously loaded...";
         QMutableListIterator<QPointer<QTranslator>> itTranslator(mTranslatorsLoadedList);
         itTranslator.toBack();
         while (itTranslator.hasPrevious()) {
@@ -965,7 +967,7 @@ void mudlet::loadTranslators(const QString& languageCode)
     if (!qtTranslatorPathFileName.isEmpty()) {
         pQtTranslator->load(qtTranslatorPathFileName, mQtTranslationsPathName);
         if (!pQtTranslator->isEmpty()) {
-            qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Qt libraries' translations in: \"" << qtTranslatorPathFileName << "\"...";
+            qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Qt libraries' translation from a path and file name specified as: \"" << qtTranslatorPathFileName << "\"...";
             qApp->installTranslator(pQtTranslator);
             mTranslatorsLoadedList.append(pQtTranslator);
         }
@@ -976,7 +978,7 @@ void mudlet::loadTranslators(const QString& languageCode)
     if (!mudletTranslatorPathFileName.isEmpty()) {
         pMudletTranslator->load(mudletTranslatorPathFileName, mMudletTranslationsPathName);
         if (!pMudletTranslator->isEmpty()) {
-            qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Mudlet translations in: \"" << mudletTranslatorPathFileName << "\"...";
+            qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Mudlet translation from: \"" << mudletTranslatorPathFileName << "\"...";
             qApp->installTranslator(pMudletTranslator);
             mTranslatorsLoadedList.append(pMudletTranslator);
         }
@@ -3802,6 +3804,19 @@ mudlet::~mudlet()
     if (mHunspell_sharedDictionary) {
         saveDictionary(getMudletPath(mainDataItemPath, QStringLiteral("mudlet")), mWordSet_shared);
         mHunspell_sharedDictionary = nullptr;
+    }
+    if (!mTranslatorsLoadedList.isEmpty()) {
+        qDebug().nospace().noquote() << "mudlet::~mudlet() INFO - uninstalling translation...";
+        QMutableListIterator<QPointer<QTranslator>> itTranslator(mTranslatorsLoadedList);
+        itTranslator.toBack();
+        while (itTranslator.hasPrevious()) {
+            QPointer<QTranslator> pTranslator = itTranslator.previous();
+            if (pTranslator) {
+                qApp->removeTranslator(pTranslator);
+                itTranslator.remove();
+                delete pTranslator;
+            }
+        }
     }
     mudlet::_self = nullptr;
 }

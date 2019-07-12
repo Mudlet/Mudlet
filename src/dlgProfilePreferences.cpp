@@ -251,6 +251,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_menuBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeMenuBarVisibility);
     connect(pMudlet, &mudlet::signal_toolBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeToolBarVisibility);
     connect(pMudlet, &mudlet::signal_showIconsOnMenusChanged, this, &dlgProfilePreferences::slot_changeShowIconsOnMenus);
+    connect(pMudlet, &mudlet::signal_guiLanguageChanged, this, &dlgProfilePreferences::slot_guiLanguageChanged);
 
     generateDiscordTooltips();
 
@@ -266,13 +267,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                 comboBox_guiLanguage->addItem(QIcon(":/icons/rating.png"),
                                               nativeName,
                                               code);
-            } else if (translatedPc >= pMudlet->mTranslationSilverStar) {
-                comboBox_guiLanguage->addItem(QIcon(":/icons/rating_silver.png"),
-                                              tr("%1 (%2% done)",
-                                                 // Intentional argument to separate arguments
-                                                 "%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done, (this text used in two places, for one, if %2 is greater than or equal to 75% a silver star will additionally be shown).")
-                                              .arg(nativeName, QString::number(translatedPc)),
-                                              code);
             } else {
                 // This will also be used if the percentage is set to zero
                 // because it was not found in the translation statistics file
@@ -281,7 +275,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                 comboBox_guiLanguage->addItem(QIcon(),
                                               tr("%1 (%2% done)",
                                                  // Intentional argument to separate arguments
-                                                 "%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done, (this text used in two places, for one, if %2 is greater than or equal to 75% a silver star will additionally be shown).")
+                                                 "%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done.")
                                               .arg(nativeName, QString::number(translatedPc)),
                                               code);
             }
@@ -298,7 +292,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     auto currentLanguage = pMudlet->getInterfaceLanguage();
     int currentIndex = comboBox_guiLanguage->findData(currentLanguage);
     if (Q_LIKELY(currentIndex != -1)) {
-        // The langauge code has been found in the UserData role for one of the
+        // The language code has been found in the UserData role for one of the
         // entries - so select it
         comboBox_guiLanguage->setCurrentIndex(currentIndex);
         connect(comboBox_guiLanguage, QOverload<const QString &>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeGuiLanguage);
@@ -330,9 +324,9 @@ void dlgProfilePreferences::disableHostDetails()
     // The Host pointer is a nullptr so disable every control that depends on it
 
     // on tab_general:
-    // groupBox_iconsAndToolbars and groupBox_guiLanguage are NOT dependent on
-    // pHost - so leave them alone
-    groupBox_encoding->setEnabled(false);
+    // groupBox_iconsAndToolbars is NOT dependent on pHost - so leave it alone
+    label_encoding->setEnabled(false);
+    comboBox_encoding->setEnabled(false);
     groupBox_miscellaneous->setEnabled(false);
     groupBox_protocols->setEnabled(false);
     need_reconnect_for_data_protocol->hide();
@@ -413,7 +407,8 @@ void dlgProfilePreferences::disableHostDetails()
 void dlgProfilePreferences::enableHostDetails()
 {
     // on tab_general:
-    groupBox_encoding->setEnabled(true);
+    label_encoding->setEnabled(true);
+    comboBox_encoding->setEnabled(true);
     groupBox_miscellaneous->setEnabled(true);
     groupBox_protocols->setEnabled(true);
 
@@ -3420,11 +3415,55 @@ void dlgProfilePreferences::slot_changeShowIconsOnMenus(const Qt::CheckState sta
     }
 }
 
-void dlgProfilePreferences::slot_changeGuiLanguage(const QString &language)
+// This slot is called when the QComboBox for the locale/language in this dialog
+// is changed by the user.
+void dlgProfilePreferences::slot_changeGuiLanguage(const QString& language)
 {
     Q_UNUSED(language);
 
     auto languageCode = comboBox_guiLanguage->currentData().toString();
     mudlet::self()->setInterfaceLanguage(languageCode);
     label_languageChangeWarning->show();
+}
+
+// This slot is called when the mudlet singleton tells everything that the
+// locale/language selection has been changed (new translators installed)
+// It probably came about because the control for it on this dialog was changed
+// but it need not - the most obvious example would be if multi-playing and
+// the preferences were open for more than one profile and the control was
+// changed in another profile's preferences.
+void dlgProfilePreferences::slot_guiLanguageChanged(const QString& language)
+{
+    // First ensure our QComboBox is set to the given value:
+    if (comboBox_guiLanguage->currentData().toString() != language) {
+        // Ah, it wasn't us who changed it - so we must adopt the new value
+        // but not signal anything to prevent endless loops:
+        comboBox_guiLanguage->blockSignals(true);
+        comboBox_guiLanguage->setCurrentIndex(comboBox_guiLanguage->findData(language));
+        comboBox_guiLanguage->blockSignals(false);
+    }
+
+    // Now change the displayed texts that are translated - importantly this
+    // is done so that the message that says "restart Mudlet to finish changing
+    // the language" is shown in the newly selected langauge - on the basis that
+    // it is the one the user understands rather than the currently used one.
+    retranslateUi(this);
+
+    // If we wanted to support changing the locale/language without
+    // having to restart then the above retranslateUi(...) call would have to
+    // be done in a similiar manner for all classes that, at least, contain
+    // persistent text. In addition further code here and in other classes
+    // would have to be provided to regenerate any texts that are assembled
+    // after the class instance was created {i.e. outside of the setupUi(...)
+    // call in the constructor}
+
+    // Re identify which Profile we are showing the settings for (otherwise if
+    // multiple profiles have this dialog open they revert to a plain
+    // "Profile preferences" dialog title except that duplicates get a " <#>"
+    // suffix to the title to tell them apart which is not good for telling
+    // which profile is represented by each dialog when we were previously
+    // showing the profile name as well):
+    if (mpHost) {
+        setWindowTitle(tr("Profile preferences - %1").arg(mpHost->getName()));
+    }
 }

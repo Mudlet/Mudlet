@@ -404,7 +404,7 @@ public:
     // approximate max duration that 'Copy as image' is allowed to take (seconds)
     int mCopyAsImageTimeout;
 
-    QHash<QString, translation> mTranslationsMap;
+    QMap<QString, translation> mTranslationsMap;
 
     // translations done high enough will get a gold star to hide the last few percent
     // as well as encourage translators to maintain it;
