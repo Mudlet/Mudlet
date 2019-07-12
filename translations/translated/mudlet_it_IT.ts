@@ -2796,12 +2796,15 @@ L'anomalia è stata risolta facilmente.</translation>
 should be recording as possessing, they were:
 %3
 they have been added.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Nell' Area ID: %1 erano presenti %2 stanze mancanti rispetto
+a quelle indicate, sono:
+%3
+sono state aggiunte.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1022"/>
       <source>[ INFO ]  - In this area there were %1 rooms missing from those it should be recorded as possessing.  They are: %2.  They have been added.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - In questa Area c'erano %1 stanze mancanti. Erano: %2. Sono state cancellate.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1043"/>
@@ -2819,7 +2822,7 @@ they have been removed.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1057"/>
       <source>[ INFO ]  - In this area there were %1 extra rooms that it should not be recorded as possessing.  They were: %2.  They have been removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - In questa Area c'erano %1 stanze in più che non dovrebbero essere registrate. Erano: %2. Sono state cancellate.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1156"/>
@@ -4356,7 +4359,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="47"/>
       <source>&lt;p&gt;Selecting an exit immediately proceeds to drawing the first line segment from the centre point of the room.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Seleziona un'uscita per iniziare a disegnare il primo segmento di linea dal centro della stanza a cui appartiene.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="60"/>
@@ -10147,7 +10150,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1052"/>
       <source>&lt;p&gt;Select this option for better compatability if you are using a netbook, or some other computer model that has a small screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Seleziona questa opzione per una migliore compatibilità in caso si utilizzi un netbook o qualche altro modello di computer che dispone di uno schermo piccolo.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1062"/>
