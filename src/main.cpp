@@ -523,6 +523,10 @@ int main(int argc, char* argv[])
 #endif // Q_OS_LINUX
 #endif // INCLUDE_UPDATER
 
+    QTimer::singleShot(2 * 1000, qApp, []() {
+        mudlet::self()->updateMudletDiscordInvite();
+    });
+
     app->restoreOverrideCursor();
 
     // NOTE: Must restore cursor - BEWARE DEBUGGERS if you terminate application

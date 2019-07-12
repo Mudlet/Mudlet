@@ -214,6 +214,7 @@ public:
     int getRowCount(Host* pHost, QString& name);
     QStringList getAvailableFonts();
     void hideMudletsVariables(Host *pHost);
+    void updateMudletDiscordInvite();
 
     static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;
@@ -446,6 +447,7 @@ public slots:
     void slot_close_profile_requested(int);
     void startAutoLogin();
     void slot_irc();
+    void slot_discord();
     void slot_uninstall_package();
     void slot_install_package();
     void slot_package_manager();
@@ -578,7 +580,9 @@ private:
     QPointer<QAction> mpActionDisconnect;
     QPointer<QAction> mpActionFullScreenView;
     QPointer<QAction> mpActionHelp;
+    QPointer<QAction> mpActionDiscord;
     QPointer<QAction> mpActionIRC;
+    QPointer<QToolButton> mpButtonDiscord;
     QPointer<QAction> mpActionKeys;
     QPointer<QAction> mpActionMapper;
     QPointer<QAction> mpActionModuleManager;
@@ -633,6 +637,8 @@ private:
     QSet<QString> mWordSet_shared;
     // Prevent problems when updating the dictionary:
     QReadWriteLock mDictionaryReadWriteLock;
+
+    QString mMudletDiscordInvite = QStringLiteral("https://discordapp.com/invite/kuYvMQ9");
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
