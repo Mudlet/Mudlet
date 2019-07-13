@@ -437,6 +437,7 @@ include_directories(
     ${PCRE_INCLUDE_DIR}
     ${YAJL_INCLUDE_DIR}
     ${PUGIXML_INCLUDE_DIR}
+    ${READLINE_INCLUDE_DIR}
 )
 
 if(Qt5TextToSpeech_FOUND)
@@ -503,6 +504,7 @@ target_link_libraries(mudlet
     ${YAJL_LIBRARIES}
     ${ZLIB_LIBRARIES}
     ${PUGIXML_LIBRARIES}
+    ${READLINE_LIBRARIES}
     communi
     edbee-lib
 )
