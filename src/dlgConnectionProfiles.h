@@ -74,6 +74,9 @@ private:
     bool validateProfile();
     void loadProfile(bool alsoConnect);
 
+    // split into 3 properties so each one can be checked individually
+    // important for creation of a folder on disk, for example: name has
+    // to be valid, but other properties don't have to be
     bool validName;
     bool validUrl;
     bool validPort;

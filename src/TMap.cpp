@@ -30,7 +30,6 @@
 #include "TRoomDB.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
-#include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"

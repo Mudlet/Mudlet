@@ -45,7 +45,7 @@ public:
     std::list<TAlias*> getAliasRootNodeList() { return mAliasRootNodeList; }
     TAlias* getAlias(int id);
     void compileAll();
-    TAlias* findAlias(const QString& name);
+    TAlias* findFirstAlias(const QString& name);
     bool enableAlias(const QString&);
     bool disableAlias(const QString&);
     bool killAlias(const QString& name);

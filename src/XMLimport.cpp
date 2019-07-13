@@ -23,7 +23,6 @@
 #include "XMLimport.h"
 
 
-#include "dlgColorTrigger.h"
 #include "LuaInterface.h"
 #include "TConsole.h"
 #include "TMap.h"

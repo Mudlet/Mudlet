@@ -46,7 +46,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       echo "Signed final .dmg"
     fi
 
-    DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/${appBaseName}.dmg"  "https://transfer.sh/${appBaseName}.dmg" -O - -q)
+    DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/${appBaseName}.dmg"  "https://make.mudlet.org/snapshots/${appBaseName}.dmg" -O - -q)
 
   else # release build
 
