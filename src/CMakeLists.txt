@@ -391,6 +391,7 @@ find_package(ZLIB REQUIRED)
 find_package(PCRE REQUIRED)
 find_package(YAJL REQUIRED)
 find_package(PUGIXML REQUIRED)
+find_package(READLINE REQUIRED)
 
 # Fall back on original FIND_PACKAGE process on Apple if Package Config failed
 # Originally we did use that but it started to fail on Travis C.I. in June 2016
