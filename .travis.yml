@@ -4,6 +4,7 @@ cache:
   ccache: true
   directories:
     - $HOME/Library/Caches/Homebrew
+    - /usr/local/Homebrew
 dist: xenial
 sudo: false
 addons:
@@ -146,6 +147,12 @@ script:
 after_success:
   - cd "${TRAVIS_BUILD_DIR}"
   - bash CI/travis.after_success.sh
+
+before_cache:
+# Credit https://discourse.brew.sh/t/best-practice-for-homebrew-on-travis-brew-update-is-5min-to-build-time/5215/9
+# Cache only .git files under "/usr/local/Homebrew" so "brew update" does not take 5min every build
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then find . \! -regex ".+\.git.+" -delete; fi
+
 notifications:
   webhooks:
     urls:
