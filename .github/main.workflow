@@ -17,7 +17,7 @@ action "cpp or ui files updated" {
 action "run lupdate" {
   uses = "Mudlet/lupdate-action@master"
   needs = ["cpp or ui files updated"]
-  args = "./src/ -ts ./translations/mudlet.ts"
+  args = "-recursive ./src/ ./3rdparty/dblsqd/dblsqd ./3rdparty/edbee-lib/edbee-lib -ts ./translations/mudlet.ts"
 }
 
 action "xmlstarlet" {
@@ -63,10 +63,10 @@ workflow "automerge pull requests on reviews" {
   resolves = ["automerge"]
 }
 
-workflow "automerge pull requests on status updates" {
-  on = "status"
-  resolves = ["automerge"]
-}
+# workflow "automerge pull requests on status updates" {
+#   on = "status"
+#   resolves = ["automerge"]
+# }
 
 action "automerge" {
   uses = "pascalgn/automerge-action@master"

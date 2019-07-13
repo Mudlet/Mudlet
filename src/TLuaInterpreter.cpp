@@ -7939,6 +7939,11 @@ int TLuaInterpreter::deleteArea(lua_State* L)
                             "area name).",
                             name.toUtf8().constData());
             return 2;
+        } else if (name == host.mpMap->mpRoomDB->getDefaultAreaName()) {
+            lua_pushnil(L);
+            lua_pushfstring(L,
+                            "deleteArea: bad argument #1 value (you can't delete the default area).");
+            return 2;
         }
     } else {
         lua_pushfstring(L,
@@ -15257,7 +15262,7 @@ void TLuaInterpreter::loadGlobal()
         }
     }
 
-    mpHost->postMessage(tr("[ ERROR ] - Couldn't to load LuaGlobal; your Mudlet is broken! Tried these locations:\n%1").arg(failedMessages.join(QStringLiteral("\n"))));
+    mpHost->postMessage(tr("[ ERROR ] - Couldn't find and load LuaGlobal.lua - your Mudlet is broken!\nTried these locations:\n%1").arg(failedMessages.join(QChar::LineFeed)));
 }
 
 // No documentation available in wiki - internal function
@@ -15285,7 +15290,7 @@ void TLuaInterpreter::loadUtf8Filenames()
     auto path = QStringLiteral(":/mudlet-lua/lua/utf8_filenames.lua");
     auto text = readScriptFile(path);
     if (text.isEmpty()) {
-        qWarning() << "TLuaInterpreter::loadUtf8Filenames() ERROR: couldn't file for reading: " << path;
+        qWarning() << "TLuaInterpreter::loadUtf8Filenames() ERROR: couldn't read file: " << path;
         return;
     }
 
