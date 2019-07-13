@@ -898,7 +898,7 @@ void mudlet::scanForMudletTranslations(const QString& path)
             } else {
                 currentTranslation.mNativeName = languageCode;
             }
-            translation.mMudletTranslationPathFileName = path % QLatin1Char('/') % translationFileName;
+            currentTranslation.mMudletTranslationPathFileName = path % QLatin1Char('/') % translationFileName;
             mTranslationsMap.insert(languageCode, currentTranslation);
         } else {
             // This is very unlikely to be reached as it means that a file that
