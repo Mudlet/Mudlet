@@ -24,7 +24,6 @@
 
 
 #include "pre_guard.h"
-#include <QMap>
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QString>

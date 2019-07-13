@@ -1,24 +1,5 @@
 describe("Tests the GUI utilities as far as possible without mudlet", function()
 
-  setup(function()
-    -- add in the location of our files
-    package.path = "../lua/?.lua;"
-
-    -- add in the location of Lua libraries on Ubuntu 12.04
-    package.path = package.path ..
-"/usr/local/share/lua/5.1/?.lua;/usr/local/share/lua/5.1/?/init.lua;/usr/local/lib/lua/5.1/?.lua;/usr/local/lib/lua/5.1/?/init.lua;/usr/share/lua/5.1/?.lua;/usr/share/lua/5.1/?/init.lua"
-
-    rex    = require"rex_pcre"
-
-    -- define some common Mudlet functions essential to operation
-
-    -- load rrequired other functions
-    require"StringUtils"
-
-    -- load the functions
-    require"GUIUtils"
-  end)
-
   describe("Test the operation of the ansi2decho function", function()
 
     it("Should have loaded the function successfully", function()
@@ -144,15 +125,16 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         {"FFFFFF", { r = 255, g = 255, b = 255 }},
         {"B22222", { r = 178, g = 34, b = 34 }},
       }
-      local origSetFgColor = setFgColor
+      local origSetFgColor = _G.setFgColor
       local outputTable
-      setFgColor = function(r, g, b)
+      _G.setFgColor = function(r, g, b)
         outputTable = { r = r, g = g, b = b }
       end
       for _, pair in ipairs(hexStrings) do
         setHexFgColor(pair[1])
         assert.are.same(pair[2], outputTable)
       end
+      _G.setFgColor = origSetFgColor
     end)
 
   end)
@@ -165,15 +147,16 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         {"FFFFFF", { r = 255, g = 255, b = 255 }},
         {"B22222", { r = 178, g = 34, b = 34 }},
       }
-      local origSetFgColor = setFgColor
+      local origSetBgColor = _G.setBgColor
       local outputTable
-      setBgColor = function(r, g, b)
+      _G.setBgColor = function(r, g, b)
         outputTable = { r = r, g = g, b = b }
       end
       for _, pair in ipairs(hexStrings) do
         setHexBgColor(pair[1])
         assert.are.same(pair[2], outputTable)
       end
+      _G.setBgColor = origSetBgColor
     end)
 
   end)

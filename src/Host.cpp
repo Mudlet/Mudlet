@@ -57,7 +57,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBorderRightWidth(0)
 , mBorderTopHeight(0)
 , mCommandLineFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
-, mCommandSeparator(QLatin1String(";"))
+, mCommandSeparator(QLatin1String(";;"))
 , mDisplayFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
 , mEnableGMCP(true)
 , mEnableMSDP(false)
@@ -1204,8 +1204,11 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
         return;
     } else {
         // error
-        std::string e = "no error message available from Lua";
-        e = lua_tostring(L, -1);
+        std::string e = lua_tostring(L, -1);
+        if (e.empty()) {
+            e = "no error message available from Lua";
+        }
+
         std::string reason;
         switch (error) {
         case 4:
@@ -1226,10 +1229,10 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
         }
 
         if (mudlet::debugMode) {
-            qDebug() << reason.c_str() << " in config.lua:" << e.c_str();
+            qDebug() << reason.c_str() << " in config.lua: " << e.c_str();
         }
         // should print error to main display
-        QString msg = QString("%1 in config.lua: %2\n").arg(reason.c_str(), e.c_str());
+        QString msg = QStringLiteral("%1 in config.lua: %2\n").arg(reason.c_str(), e.c_str());
         mpConsole->printSystemMessage(msg);
 
 

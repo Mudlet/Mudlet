@@ -144,9 +144,9 @@ function CheckAndInstall([string] $dependencyName, [string] $signalFile, [script
 # installation functions
 function InstallSevenZ() {
   if($64Bit){
-    $downloadUrl = "https://www.7-zip.org/a/7z1805-x64.exe"
+    $downloadUrl = "https://www.7-zip.org/a/7z1900-x64.exe"
   } else {
-    $downloadUrl = "https://www.7-zip.org/a/7z1805.exe"
+    $downloadUrl = "https://www.7-zip.org/a/7z1900.exe"
   }
   DownloadFile "$downloadUrl" "7z-installer.exe"
   Step "installing 7z"
@@ -154,7 +154,7 @@ function InstallSevenZ() {
 }
 
 function InstallCmake() {
-  DownloadFile "https://cmake.org/files/v3.9/cmake-3.9.6-win32-x86.msi" "cmake-installer.msi"
+  DownloadFile "https://github.com/Kitware/CMake/releases/download/v3.14.4/cmake-3.14.4-win32-x86.msi" "cmake-installer.msi"
   Step "installing cmake"
   exec "msiexec.exe" @("/q", "/li", "$workingBaseDir\cmake-installer.log", "/i", "cmake-installer.msi")
   if(Test-Path -Path "$workingBaseDir\cmake-installer.log" -PathType Leaf){
@@ -163,7 +163,7 @@ function InstallCmake() {
 }
 
 function InstallMingwGet() {
-  DownloadFile "https://downloads.sourceforge.net/project/mingw/Installer/mingw-get/mingw-get-0.6.2-beta-20131004-1/mingw-get-0.6.2-mingw32-beta-20131004-1-bin.zip?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fmingw%2Ffiles%2FInstaller%2Fmingw-get%2Fmingw-get-0.6.2-beta-20131004-1%2Fmingw-get-0.6.2-mingw32-beta-20131004-1-bin.zip%2Fdownload%3Fuse_mirror%3Dautoselect&ts=1524054843&use_mirror=autoselect" "mingw-get.zip"
+  DownloadFile "https://osdn.net/frs/redir.php?m=rwthaachen&f=mingw%2F68260%2Fmingw-get-0.6.3-mingw32-pre-20170905-1-bin.zip" "mingw-get.zip"
   if (!(Test-Path -Path "C:\MinGW" -PathType Container)) {
     Step "Creating MinGW path"
     New-Item -Path "C:\MinGW" -ItemType "directory" >> "$logFile" 2>&1
@@ -204,16 +204,16 @@ function InstallPython() {
 }
 
 function InstallOpenssl() {
-  DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.0.2o-win32.zip" "openssl-1.0.2o-i386-win32.zip"
-  ExtractZip "openssl-1.0.2o-i386-win32.zip" "openssl-1.0.2o"
+  DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.0.2s-win32.zip" "openssl-win32.zip"
+  ExtractZip "openssl-win32.zip" "openssl"
   Step "installing"
-  exec "XCOPY" @("/S", "/I", "/Q", "openssl-1.0.2o", "$Env:MINGW_BASE_DIR\bin")
+  exec "XCOPY" @("/S", "/I", "/Q", "openssl", "$Env:MINGW_BASE_DIR\bin")
 }
 
 function InstallHunspell() {
-  DownloadFile "https://github.com/hunspell/hunspell/archive/v1.6.2.tar.gz" "hunspell-1.6.2.tar.gz"
-  ExtractTar "hunspell-1.6.2.tar.gz" "hunspell-1.6.2"
-  Set-Location "hunspell-1.6.2\hunspell-1.6.2"
+  DownloadFile "https://github.com/hunspell/hunspell/archive/v1.6.2.tar.gz" "hunspell.tar.gz"
+  ExtractTar "hunspell.tar.gz" "hunspell"
+  Set-Location "hunspell\hunspell-1.6.2"
   Step "Changing src\tools\Makefile.am"
   (Get-Content src\tools\Makefile.am -Raw) -replace 'hzip ', '' | Out-File -encoding ASCII src\tools\Makefile.am >> "$logFile" 2>&1
   RunAutoReconfig
@@ -258,18 +258,18 @@ function InstallLua() {
 }
 
 function InstallPcre() {
-  DownloadFile "https://ftp.pcre.org/pub/pcre/pcre-8.42.tar.gz" "pcre-8.42.tar.gz"
-  ExtractTar "pcre-8.42.tar.gz" "pcre-8.42"
-  Set-Location pcre-8.42\pcre-8.42
+  DownloadFile "https://ftp.pcre.org/pub/pcre/pcre-8.43.zip" "pcre.zip"
+  ExtractZip "pcre.zip" "pcre"
+  Set-Location pcre\pcre-8.43
   RunConfigure "--enable-utf --enable-unicode-properties --enable-pcre16 --prefix=$Env:MINGW_BASE_DIR_BASH"
   RunMake
   RunMakeInstall
 }
 
 function InstallSqlite() {
-  DownloadFile "https://www.sqlite.org/2018/sqlite-autoconf-3230100.tar.gz" "sqlite-autoconf-3230100.tar.gz"
-  ExtractTar "sqlite-autoconf-3230100.tar.gz" "sqlite"
-  Set-Location sqlite\sqlite-autoconf-3230100
+  DownloadFile "https://sqlite.org/2019/sqlite-autoconf-3280000.tar.gz" "sqlite.tar.gz"
+  ExtractTar "sqlite.tar.gz" "sqlite"
+  Set-Location sqlite\sqlite-autoconf-3280000
   Step "building sqlite"
   exec "gcc" @("-c", "sqlite3.c", "-O2", "-DSQLITE_ENABLE_FTS4", "-DSQLITE_ENABLE_RTREE")
   exec "ar" @("rcs", "libsqlite3.a", "sqlite3.o")
@@ -293,9 +293,9 @@ function InstallZlib() {
 
 function InstallLibzip() {
   $Env:Path = $NoShPath
-  DownloadFile "https://libzip.org/download/libzip-1.5.1.tar.gz" "libzip-1.5.1.tar.gz"
-  ExtractTar "libzip-1.5.1.tar.gz" "libzip"
-  Set-Location libzip\libzip-1.5.1
+  DownloadFile "https://libzip.org/download/libzip-1.5.2.tar.gz" "libzip.tar.gz"
+  ExtractTar "libzip.tar.gz" "libzip"
+  Set-Location libzip\libzip-1.5.2
   if (!(Test-Path -Path "build" -PathType Container)) {
     Step "Creating libzip build path"
     New-Item build -ItemType Directory >> "$logFile" 2>&1
@@ -322,12 +322,12 @@ function InstallZziplib() {
 }
 
 function InstallLuarocks() {
-  DownloadFile "http://luarocks.github.io/luarocks/releases/luarocks-2.4.4-win32.zip" "luarocks-2.4.4-win32.zip"
-  ExtractZip "luarocks-2.4.4-win32.zip" "luarocks"
-  Set-Location luarocks\luarocks-2.4.4-win32
+  DownloadFile "http://luarocks.github.io/luarocks/releases/luarocks-3.1.2-win32.zip" "luarocks.zip"
+  ExtractZip "luarocks.zip" "luarocks"
+  Set-Location luarocks\luarocks-3.1.2-win32
   Step "installing luarocks"
   exec ".\install.bat" @("/P", "C:\LuaRocks", "/MW", "/Q")
-  Set-Location \LuaRocks\lua\luarocks
+  Set-Location \LuaRocks\lua\luarocks\core
   Step "changing luarocks config"
   (Get-Content cfg.lua) -replace 'mingw32-gcc', 'gcc' | Out-File -encoding ASCII cfg.lua >> "$logFile" 2>&1
 }
@@ -349,22 +349,33 @@ function InstallPugixml() {
   $Env:Path = $ShPath
 }
 
-function InstallLuaModules(){
-  StartPart "Installing lua modules"
+function InstallLfs() {
   Set-Location \LuaRocks
-  Step "installing lfs"
-  exec ".\luarocks" @("install", "LuaFileSystem")
-  Step "installing luasql.sqlite3"
-  exec ".\luarocks" @("install", "LuaSQL-SQLite3", "SQLITE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"", "SQLITE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"")
-  Step "installing rex.pcre"
-  exec ".\luarocks" @("install", "lrexlib-pcre", "PCRE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"", "PCRE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
-  Step "installing lua-utf8"
-  exec ".\luarocks" @("install", "luautf8")
-  Step "installing lua-yajl"
-  $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin"
-  exec ".\luarocks" @("install", "lua-yajl", "YAJL_LIBDIR=`"$Env:MINGW_BASE_DIR\bin`"", "YAJL_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
+  exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "LuaFileSystem")
+}
 
-  Step "installing luazip"
+function InstallLuasql() {
+  Set-Location \LuaRocks
+  exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "LuaSQL-SQLite3", "SQLITE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"", "SQLITE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"")
+}
+
+function InstallRexPcre() {
+  Set-Location \LuaRocks
+  exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lrexlib-pcre", "PCRE_LIBDIR=`"$Env:MINGW_BASE_DIR\lib`"", "PCRE_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
+}
+
+function InstallLuaUtf8() {
+  Set-Location \LuaRocks
+  exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "luautf8")
+}
+
+function InstallLuaYajl() {
+  Set-Location \LuaRocks
+  $Env:LIBRARY_PATH = "$Env:LIBRARY_PATH;$Env:MINGW_BASE_DIR/bin"
+  exec ".\luarocks" @("--tree=`"$Env:MINGW_BASE_DIR`"", "install", "lua-yajl", "YAJL_LIBDIR=`"$Env:MINGW_BASE_DIR\bin`"", "YAJL_INCDIR=`"$Env:MINGW_BASE_DIR\include`"")
+}
+
+function InstallLuaZip () {
   Set-Location "$workingBaseDir"
   DownloadFile "https://github.com/rjpcomputing/luazip/archive/master.zip" "luazip.zip"
   ExtractZip "luazip.zip" "luazip"
@@ -373,7 +384,15 @@ function InstallLuaModules(){
   exec "gcc" @("-O2", "-c", "-o", "src/luazip.o", "-I`"$Env:MINGW_BASE_DIR/include`"", "src/luazip.c")
   exec "gcc" @("-shared", "-o", "zip.dll", "src/luazip.o", "-L`"$Env:MINGW_BASE_DIR/lib`"", "-lzzip", "-lz", "`"$Env:MINGW_BASE_DIR/bin/lua51.dll`"", "-lm")
   Copy-Item "zip.dll" "$Env:MINGW_BASE_DIR\lib\lua\5.1"
-  FinishPart "Installing lua modules"
+}
+
+function InstallLuaModules(){
+  CheckAndInstall "lfs" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\lfs.dll" { InstallLfs }
+  CheckAndInstall "luasql.sqlite3" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\luasql\sqlite3.dll" { InstallLuasql }
+  CheckAndInstall "rex.pcre" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\rex_pcre.dll" { InstallRexPcre }
+  CheckAndInstall "lua-utf8" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\lua-utf8.dll" { InstallLuaUtf8 }
+  CheckAndInstall "lua-yajl" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\yajl.dll" { InstallLuaYajl }
+  CheckAndInstall "luazip" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\zip.dll" { InstallLuaZip }
 }
 
 # install dependencies

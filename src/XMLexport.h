@@ -28,7 +28,6 @@
 #include <QClipboard>
 #include <QPointer>
 #include <QFuture>
-#include <pugiconfig.hpp>
 #include <pugixml.hpp>
 #include "post_guard.h"
 

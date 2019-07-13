@@ -26,7 +26,6 @@
 #include "Host.h"
 
 #include "pre_guard.h"
-#include <QList>
 #include <QMap>
 #include <QReadWriteLock>
 #include <QString>

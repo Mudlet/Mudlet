@@ -117,6 +117,7 @@
     </property>
     <addaction name="dactionHelp"/>
     <addaction name="dactionVideo"/>
+    <addaction name="dactionDiscord"/>
     <addaction name="dactionIRC"/>
     <addaction name="dactionForum"/>
    </widget>
@@ -208,7 +209,7 @@
   </action>
   <action name="dactionIRC">
    <property name="text">
-    <string>IRC help channel</string>
+    <string>IRC</string>
    </property>
    <property name="toolTip">
     <string>&lt;p&gt;Opens a built-in IRC chat on the #mudlet channel on Freenode IRC servers.&lt;/p&gt;</string>
@@ -297,6 +298,11 @@
    </property>
    <property name="toolTip">
     <string>&lt;p&gt;Hide or show the search area and the bottom buttons to the right of the input area on the input line.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionDiscord">
+   <property name="text">
+    <string>Discord help channel</string>
    </property>
   </action>
  </widget>

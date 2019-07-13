@@ -147,7 +147,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.20.1
+VERSION = 3.22.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -157,7 +157,7 @@ BUILD = $$(MUDLET_VERSION_BUILD)
 isEmpty( BUILD ) {
 # Leave the value of the following empty for a release build
 # i.e. the line should be "BUILD =" without quotes
-  BUILD = "-dev"
+   BUILD = "-dev"
 }
 
 # Changing BUILD and VERSION values affects: ctelnet.cpp, main.cpp, mudlet.cpp
@@ -280,7 +280,7 @@ unix:!macx {
 } else:win32 {
     MINGW_BASE_DIR = $$(MINGW_BASE_DIR)
     isEmpty(MINGW_BASE_DIR) {
-        MINGW_BASE_DIR = "C:\\Qt\\Tools\\mingw530_32"
+        MINGW_BASE_DIR = "C:\\Qt\\Tools\\mingw730_32"
     }
     LIBS +=  \
         -llua51 \
@@ -315,10 +315,12 @@ unix:!macx {
         LUA.path = $${LUA_DEFAULT_DIR}
         LUA_GEYSER.path = $${LUA.path}/geyser
         LUA_LCF.path = $${LUA.path}/lcf
+        LUA_TESTS.path = $${LUA.path}/tests
 # and say what will happen:
         message("Lua files will be installed to "$${LUA.path}"...")
         message("Geyser lua files will be installed to "$${LUA_GEYSER.path}"...")
         message("Lua Code Formatter lua files will be installed to "$${LUA_LCF.path}"...")
+        message("Test lua files will be installed to "$${LUA_TESTS.path}"...")
     }
 }
 
@@ -713,7 +715,8 @@ LUA.files = \
     $${PWD}/mudlet-lua/lua/LuaGlobal.lua \
     $${PWD}/mudlet-lua/lua/Other.lua \
     $${PWD}/mudlet-lua/lua/StringUtils.lua \
-    $${PWD}/mudlet-lua/lua/TableUtils.lua
+    $${PWD}/mudlet-lua/lua/TableUtils.lua \
+    $${PWD}/mudlet-lua/lua/utf8_filenames.lua
 LUA.depends = mudlet
 
 # Geyser lua files:
@@ -1177,6 +1180,14 @@ LUA_LCF_L3_WORKSHOP_TABLE_ORDERED__PASS.files = $${PWD}/../3rdparty/lcf/workshop
 LUA_LCF_L3_WORKSHOP_TABLE_ORDERED__PASS.path = $${LUA_LCF_L1_WORKSHOP.path}/table/ordered_pass
 LUA_LCF.depends = mudlet
 
+# Test lua files:
+LUA_TESTS.files = \
+    $${PWD}/mudlet-lua/tests/DB_spec.lua \
+    $${PWD}/mudlet-lua/tests/GUIUtils_spec.lua \
+    $${PWD}/mudlet-lua/tests/MudletBusted_spec.lua \
+    $${PWD}/mudlet-lua/tests/Other_spec.lua
+LUA_TESTS.depends = mudlet
+
 
 macx {
     # Copy mudlet-lua into the .app bundle
@@ -1268,6 +1279,7 @@ win32 {
 OTHER_FILES += \
     ${LUA.files} \
     ${LUA_GEYSER.files} \
+    ${LUA_TESTS.files} \
     ${DISTFILES} \
     ../README \
     ../COMPILE \
@@ -1339,7 +1351,8 @@ unix:!macx {
         LUA_LCF_L2_WORKSHOP_STRUC \
         LUA_LCF_L2_WORKSHOP_SYSTEM \
         LUA_LCF_L2_WORKSHOP_TABLE \
-        LUA_LCF_L3_WORKSHOP_TABLE_ORDERED__PASS
+        LUA_LCF_L3_WORKSHOP_TABLE_ORDERED__PASS \
+        LUA_TESTS
     }
 # Unfortunately, because (it seems) there are some directories in the above
 # that do not, themselves contain any actual files and only sub-directories

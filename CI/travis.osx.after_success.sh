@@ -7,8 +7,8 @@ if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
   exit
 fi
 
-# we deploy only qmake and clang combination for macOS
-if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "clang" ]; then
+# we deploy only certain builds
+if [ "${DEPLOY}" = "deploy" ]; then
   git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
 
   cd "${TRAVIS_BUILD_DIR}/../installers/osx"
@@ -46,7 +46,7 @@ if [ "${Q_OR_C_MAKE}" = "qmake" ] && [ "${CC}" = "clang" ]; then
       echo "Signed final .dmg"
     fi
 
-    DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/${appBaseName}.dmg"  "https://transfer.sh/${appBaseName}.dmg" -O - -q)
+    DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/${appBaseName}.dmg"  "https://make.mudlet.org/snapshots/${appBaseName}.dmg" -O - -q)
 
   else # release build
 
