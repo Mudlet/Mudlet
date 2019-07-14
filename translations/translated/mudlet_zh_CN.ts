@@ -1048,7 +1048,9 @@ the highlighted room (%1) to:</source>
       <source>Enter the symbol to use
 for this/these %n room(s):</source>
       <comment>this is for when applying a new room symbol to one or more rooms and none have a symbol at present; use line feeds to format text into a reasonable rectangle, %n is the number of rooms involved</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>输入符号以便使用这个/这些 %n 房间:</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3620"/>
@@ -1631,7 +1633,7 @@ rooms:</source>
     <message>
       <location filename="../src/TEasyButtonBar.cpp" line="72"/>
       <source>Easybutton Bar - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>简单按钮栏 - %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -1649,7 +1651,10 @@ format to a newer version to be able to SAVE this feature&apos;s data.
 
 To avoid filling the screen up with repeated messages, this is
 your only warning about this command...!</source>
-      <translation type="unfinished"/>
+      <translation>[信息]-这个功能需要更新的地图格式。 请更新你的地图
+格式以保存这个特性&apos;s数据。
+
+为了避免重复信息提示，此警告只会提示这一次!</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="10005"/>
@@ -1671,7 +1676,7 @@ your only warning about this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="13954"/>
       <source>object</source>
       <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>对象</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13943"/>
@@ -1689,7 +1694,7 @@ your only warning about this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15025"/>
       <location filename="../src/TLuaInterpreter.cpp" line="15199"/>
       <source>no error message available from Lua</source>
-      <translation type="unfinished"/>
+      <translation>lua没有错误消息</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14923"/>
@@ -1727,12 +1732,12 @@ your only warning about this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15038"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name of the module.</comment>
-      <translation type="unfinished"/>
+      <translation>[ 完成 ] -已加载Lua模块 %1。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14971"/>
       <source>Probably will not be able to access Mudlet Lua code.</source>
-      <translation type="unfinished"/>
+      <translation>可能将无法访问 Mudlet Lua 代码。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14992"/>
