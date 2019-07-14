@@ -1742,7 +1742,7 @@ your only warning about this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14992"/>
       <source>Database support will not be available.</source>
-      <translation type="unfinished"/>
+      <translation>数据库支持不可用。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15013"/>
