@@ -421,12 +421,12 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="399"/>
       <source>Error parsing theme %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>解析主题 %1时出错:%2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="404"/>
       <source>Error theme not found %1.</source>
-      <translation type="unfinished"/>
+      <translation>未找到主题 %1.</translation>
     </message>
   </context>
   <context>
@@ -481,7 +481,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3216"/>
       <location filename="../src/T2DMap.cpp" line="4881"/>
       <source>Dash-dot-dot line</source>
-      <translation type="unfinished"/>
+      <translation>点虚相间线</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3490"/>
@@ -516,12 +516,12 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3783"/>
       <source>Delete color</source>
       <comment>Deletes an environment colour</comment>
-      <translation type="unfinished"/>
+      <translation>删除颜色</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3801"/>
       <source>Define new color</source>
-      <translation type="unfinished"/>
+      <translation>定义新颜色</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4115"/>
@@ -535,7 +535,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2385"/>
       <source>no text</source>
       <comment>Default text if a label is created in mapper with no text</comment>
-      <translation type="unfinished"/>
+      <translation>无文本</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="138"/>
@@ -567,28 +567,34 @@ it with a new symbol for this room:</source>
       <source>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and non-breaking hyphens which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. %2 is the (text) name of the area, %3 is the number for it, %4 to %9 are pairs (min &lt;-&gt; max) of extremes for each of x,y and z coordinates</comment>
-      <translation type="unfinished"/>
+      <translation>区域：%1%2 ID:%1%3 x：%1%4%1&lt;‑&gt;%1%5 y：%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2205"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when NO rooms are selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the current player&apos;s room.</comment>
-      <translation type="unfinished"/>
+      <translation>房间%1ID:%1%2 位置%1on%1地图: (%3,%4,%5) ‑%1当前玩家位置
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2222"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when ONE room is selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the selected Room.</comment>
-      <translation type="unfinished"/>
+      <translation>房间%1ID:%1%2 位置%1on%1地图: (%3,%4,%5) ‑%1选中的房间
+</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="2240"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected; %1 is the room number for which %2-%4 are the x,y and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>房间%1ID:%1%2 位置%1on%1地图: (%3,%4,%5) ‑%1 %n 选择房间的中心
+</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2266"/>
@@ -864,13 +870,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2900"/>
       <source>Set room&apos;s area number</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>设置房间&apos;的区域编号</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2903"/>
       <source>Custom exit line</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>自定义退出行</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2905"/>
@@ -912,7 +918,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2923"/>
       <source>Can only set location when exactly one room is selected</source>
       <comment>2D Mapper context menu (room) item tooltip (disabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>仅当选择一个房间时才能设置位置</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2950"/>
@@ -942,7 +948,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2970"/>
       <source>Add point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>添加点</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2977"/>
@@ -960,7 +966,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2984"/>
       <source>Remove point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>删除点</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2991"/>
