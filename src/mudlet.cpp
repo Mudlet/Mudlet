@@ -854,7 +854,7 @@ void mudlet::scanForMudletTranslations(const QString& path)
         std::unique_ptr<QTranslator> pMudletTranslator(pTranslator);
         auto translationPathFileName(path % QLatin1Char('/') % translationFileName);
         if (Q_LIKELY(pMudletTranslator->load(translationPathFileName, path))) {
-            qDebug().noquote().nospace() << "    found a Mudlet translation for locale code:\"" << languageCode << "\".";
+            qDebug().noquote().nospace() << "    found a Mudlet translation for locale code: \"" << languageCode << "\".";
             if (!translationStats.isEmpty()) {
                 // For this to not be empty then we are reading the translations
                 // from the expected resource file and the translation
@@ -914,7 +914,7 @@ void mudlet::scanForMudletTranslations(const QString& path)
 // To be used AFTER scanForMudletTranslations(...) has been called, this will
 // insert the corresponding Qt system translation pathFileNames (path to
 // filenames: qt_xx.qm or qt_xx_YY.qm) into the entries in the mTranslationsMap
-// QHash.
+// QMap.
 void mudlet::scanForQtTranslations(const QString& path)
 {
     mQtTranslationsPathName = path;
@@ -925,34 +925,22 @@ void mudlet::scanForQtTranslations(const QString& path)
         const QString languageCode = itTranslation.key();
         auto* pTranslator = new QTranslator();
         std::unique_ptr<QTranslator> pQtTranslator(pTranslator);
-        QString translationPathFileName(QStringLiteral("%1/qt_%2.qm").arg(path, languageCode));
-        if (pQtTranslator->load(translationPathFileName, path)) {
+        QString translationFileName(QStringLiteral("qt_%1.qm").arg(languageCode));
+        if (pQtTranslator->load(translationFileName, path)) {
             qDebug().noquote().nospace() << "    found a Qt translation for locale code: \"" << languageCode << "\"";
             /*
              * Unfortunately, success in this operation does not mean that
-             * the qt_xx_YY.qm translation file has been located and used as
-             * (bool) QTranslator::load(const QString &filename,
-             *                          const QString &directory = QString(),
-             *                          const QString &search_delimiters = QString(),
-             *                          const QString &suffix = QString())
+             * a qt_xx_YY.qm translation file has been located, as the
+             * (bool) QTranslator::load(...)
              * call can forget about both the _YY and even the _xx if filenames
-             * with those eleements are not found but a less detailed filename
+             * with those elements are not found but a less detailed filename
              * IS detected.
-             * As I noted for https://bugreports.qt.io/browse/QTBUG-64416 there
-             * is also the possibilty to use QTranslator::load(...) form that
-             * looks in the user settings for their locale preferences - which
-             * can include several locale specifiers and then the Qt code will
-             * look the first one it can find - but it does not report back
-             * which one that was.
              *
-             * So although we can note the success pathFileName it might not be
-             * what it appears to be - it could be something less specific, e.g.
-             * /path/to/Qt lib translations/qt_en.qm
-             * even if we asked for
-             * /path/to/Qt lib translations/qt_en_GB.qm...
+             * So although we can note the load of a given pathFileName is
+             * sucessful it might not be exactly what it seems to be!
              */
             translation current = itTranslation.value();
-            current.mQtTranslationPathFileName = translationPathFileName;
+            current.mQtTranslationPathFileName = path % QLatin1Char('/') % translationFileName;
             itTranslation.setValue(current);
         } else {
             qDebug().noquote().nospace() << "    no Qt translation found for locale code: \"" << languageCode << "\"";
@@ -978,9 +966,13 @@ void mudlet::loadTranslators(const QString& languageCode)
 
     translation currentTranslation = mTranslationsMap.value(languageCode);
     QPointer<QTranslator> pQtTranslator = new QTranslator;
-    QString qtTranslatorPathFileName = currentTranslation.getQtTranslationPathFile();
+    QString qtTranslatorPathFileName = currentTranslation.getQtTranslationPathFileName();
     if (!qtTranslatorPathFileName.isEmpty()) {
-        pQtTranslator->load(qtTranslatorPathFileName, mQtTranslationsPathName);
+        // Need to use load(fileName (e.g. {qt_xx_YY.qm"}, pathName) form - Qt
+        // mangles the former to find the actual best one to use, but we
+        // shouldn't include the path in the first element as it seems to mess
+        // up the process of locating the file:
+        pQtTranslator->load(QFileInfo(qtTranslatorPathFileName).completeBaseName(), mQtTranslationsPathName);
         if (!pQtTranslator->isEmpty()) {
             qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Qt libraries' translation from a path and file name specified as: \"" << qtTranslatorPathFileName << "\"...";
             qApp->installTranslator(pQtTranslator);
@@ -989,9 +981,9 @@ void mudlet::loadTranslators(const QString& languageCode)
     }
 
     QPointer<QTranslator> pMudletTranslator = new QTranslator;
-    QString mudletTranslatorPathFileName = currentTranslation.getMudletTranslationPathFile();
+    QString mudletTranslatorPathFileName = currentTranslation.getMudletTranslationPathFileName();
     if (!mudletTranslatorPathFileName.isEmpty()) {
-        pMudletTranslator->load(mudletTranslatorPathFileName, mMudletTranslationsPathName);
+        pMudletTranslator->load(QFileInfo(mudletTranslatorPathFileName).completeBaseName(), mMudletTranslationsPathName);
         if (!pMudletTranslator->isEmpty()) {
             qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Mudlet translation from: \"" << mudletTranslatorPathFileName << "\"...";
             qApp->installTranslator(pMudletTranslator);

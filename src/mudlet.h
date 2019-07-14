@@ -682,8 +682,8 @@ public:
     translation(const int translationPercent = -1) : mTranslatedPercentage(translationPercent) {}
 
     const QString& getNativeName() const { return mNativeName; }
-    const QString& getMudletTranslationPathFile() const { return mMudletTranslationPathFileName; }
-    const QString& getQtTranslationPathFile() const { return mQtTranslationPathFileName; }
+    const QString& getMudletTranslationPathFileName() const { return mMudletTranslationPathFileName; }
+    const QString& getQtTranslationPathFileName() const { return mQtTranslationPathFileName; }
     const int& getTranslatedPercentage() const { return mTranslatedPercentage; }
     bool getIsFromResourceFile() const { return mTranslatedPercentage >= 0; }
 
