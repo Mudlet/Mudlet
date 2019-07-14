@@ -682,8 +682,8 @@ public:
     translation(const int translationPercent = -1) : mTranslatedPercentage(translationPercent) {}
 
     const QString& getNativeName() const { return mNativeName; }
-    const QString& getMudletTranslationPathFileName() const { return mMudletTranslationPathFileName; }
-    const QString& getQtTranslationPathFileName() const { return mQtTranslationPathFileName; }
+    const QString& getMudletTranslationFileName() const { return mMudletTranslationFileName; }
+    const QString& getQtTranslationFileName() const { return mQtTranslationFileName; }
     const int& getTranslatedPercentage() const { return mTranslatedPercentage; }
     bool getIsFromResourceFile() const { return mTranslatedPercentage >= 0; }
 
@@ -697,15 +697,15 @@ private:
     // mudlet_xx_YY.qm files placed into the embedded resource file during
     // building the application:
     int mTranslatedPercentage;
-    // Where in the file-system (or probably the Application resources) the
-    // mudlet translation file was found to be:
-    QString mMudletTranslationPathFileName;
-    // Where in the file-system the Qt translation file was found to be,
-    // note that in most cases it will be a "xx" language only file:
-    QString mQtTranslationPathFileName;
+    // What the usable Mudlet translation file-was found to be:
+    QString mMudletTranslationFileName;
+    // What the usable Qt translation file was found to be, note that in most
+    // cases the loaded file will be a "xx" language only file even though it
+    // is an "xx_YY" one here:
+    QString mQtTranslationFileName;
     // Further items like the above pair may be needed should some of the
     // separate libraries with a textual content have their own translations
-    // that we will need, e.g. the edbee-lib editor widget
+    // that we do not provide ourselves.
 };
 
 #endif // MUDLET_MUDLET_H
