@@ -65,6 +65,7 @@ public slots:
     void slot_load();
     void slot_cancel();
     void slot_copy_profile();
+    void slot_copy_profilesettings_only();
 
 private:
     void copyFolder(const QString& sourceFolder, const QString& destFolder);

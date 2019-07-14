@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>760</width>
-    <height>671</height>
+    <height>682</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -373,6 +373,15 @@
                    </color>
                   </brush>
                  </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
+                    <red>0</red>
+                    <green>0</green>
+                    <blue>0</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
                 </active>
                 <inactive>
                  <colorrole role="WindowText">
@@ -510,6 +519,15 @@
                    </color>
                   </brush>
                  </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
+                    <red>0</red>
+                    <green>0</green>
+                    <blue>0</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
                 </inactive>
                 <disabled>
                  <colorrole role="WindowText">
@@ -641,6 +659,15 @@
                  <colorrole role="ToolTipText">
                   <brush brushstyle="SolidPattern">
                    <color alpha="255">
+                    <red>0</red>
+                    <green>0</green>
+                    <blue>0</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
                     <red>0</red>
                     <green>0</green>
                     <blue>0</blue>
@@ -822,6 +849,15 @@
                    </color>
                   </brush>
                  </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
+                    <red>0</red>
+                    <green>0</green>
+                    <blue>0</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
                 </active>
                 <inactive>
                  <colorrole role="WindowText">
@@ -959,6 +995,15 @@
                    </color>
                   </brush>
                  </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
+                    <red>0</red>
+                    <green>0</green>
+                    <blue>0</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
                 </inactive>
                 <disabled>
                  <colorrole role="WindowText">
@@ -1090,6 +1135,15 @@
                  <colorrole role="ToolTipText">
                   <brush brushstyle="SolidPattern">
                    <color alpha="255">
+                    <red>0</red>
+                    <green>0</green>
+                    <blue>0</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
                     <red>0</red>
                     <green>0</green>
                     <blue>0</blue>
@@ -1271,6 +1325,15 @@
                    </color>
                   </brush>
                  </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
+                    <red>0</red>
+                    <green>0</green>
+                    <blue>0</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
                 </active>
                 <inactive>
                  <colorrole role="WindowText">
@@ -1408,6 +1471,15 @@
                    </color>
                   </brush>
                  </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
+                    <red>0</red>
+                    <green>0</green>
+                    <blue>0</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
                 </inactive>
                 <disabled>
                  <colorrole role="WindowText">
@@ -1539,6 +1611,15 @@
                  <colorrole role="ToolTipText">
                   <brush brushstyle="SolidPattern">
                    <color alpha="255">
+                    <red>0</red>
+                    <green>0</green>
+                    <blue>0</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
                     <red>0</red>
                     <green>0</green>
                     <blue>0</blue>
@@ -1720,6 +1801,15 @@
                    </color>
                   </brush>
                  </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
+                    <red>0</red>
+                    <green>0</green>
+                    <blue>0</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
                 </active>
                 <inactive>
                  <colorrole role="WindowText">
@@ -1851,6 +1941,15 @@
                  <colorrole role="ToolTipText">
                   <brush brushstyle="SolidPattern">
                    <color alpha="255">
+                    <red>0</red>
+                    <green>0</green>
+                    <blue>0</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
                     <red>0</red>
                     <green>0</green>
                     <blue>0</blue>
@@ -1994,6 +2093,15 @@
                    </color>
                   </brush>
                  </colorrole>
+                 <colorrole role="PlaceholderText">
+                  <brush brushstyle="NoBrush">
+                   <color alpha="128">
+                    <red>0</red>
+                    <green>0</green>
+                    <blue>0</blue>
+                   </color>
+                  </brush>
+                 </colorrole>
                 </disabled>
                </palette>
               </property>
@@ -2080,14 +2188,30 @@
                 <height>25</height>
                </size>
               </property>
-              <property name="maximumSize">
+              <property name="text">
+               <string>Remove</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QToolButton" name="copy_profile_toolbutton">
+              <property name="minimumSize">
                <size>
-                <width>16777215</width>
-                <height>16777215</height>
+                <width>0</width>
+                <height>25</height>
                </size>
               </property>
               <property name="text">
-               <string>Remove</string>
+               <string>Copy</string>
+              </property>
+              <property name="popupMode">
+               <enum>QToolButton::MenuButtonPopup</enum>
+              </property>
+              <property name="toolButtonStyle">
+               <enum>Qt::ToolButtonFollowStyle</enum>
+              </property>
+              <property name="autoRaise">
+               <bool>true</bool>
               </property>
              </widget>
             </item>
@@ -2103,12 +2227,6 @@
                <size>
                 <width>0</width>
                 <height>25</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
                </size>
               </property>
               <property name="text">
@@ -2128,12 +2246,6 @@
                <size>
                 <width>0</width>
                 <height>25</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
                </size>
               </property>
               <property name="text">
@@ -2533,11 +2645,11 @@
               <property name="toolTip">
                <string>Game description</string>
               </property>
-              <property name="readOnly">
-               <bool>false</bool>
-              </property>
               <property name="tabChangesFocus">
                <bool>true</bool>
+              </property>
+              <property name="readOnly">
+               <bool>false</bool>
               </property>
              </widget>
             </item>
