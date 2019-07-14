@@ -868,6 +868,7 @@ void mudlet::loadTranslationFile(const QString& fileName, const QString& filePat
     QPointer<QTranslator> pMudletTranslator = new QTranslator();
     auto translatorList = mTranslatorsMap.value(languageCode);
 
+qDebug().nospace().noquote() << "TRANSLATOR (MUDLET {WORKS}/QT {FAILS}, SCAN & LOAD) DEBUG: load(...) called with arguments, 1: \"" << fileName << "\", 2: \"" << filePath << "\"";
     if (pMudletTranslator->load(fileName, filePath)) {
         translatorList.append(pMudletTranslator);
 
