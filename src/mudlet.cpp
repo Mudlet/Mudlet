@@ -2930,9 +2930,11 @@ void mudlet::setToolBarIconSize(const int s)
     if (mToolbarIconSize > 2) {
         mpMainToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         mpButtonDiscord->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+        mpButtonAbout->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     } else {
         mpMainToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
         mpButtonDiscord->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        mpButtonAbout->setToolButtonStyle(Qt::ToolButtonIconOnly);
     }
 
     if (mpToolBarReplay) {
