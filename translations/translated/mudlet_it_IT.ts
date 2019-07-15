@@ -2547,7 +2547,8 @@ e l'uscita verrà trasformata in uno stub.</translation>
     <message>
       <location filename="../src/TRoom.cpp" line="1539"/>
       <source>[ WARN ]  - Room has an exit &quot;%1&quot; to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key: &quot;%4&quot;) and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - La stanza ha un uscita &quot;%1&quot; che punta ad una stanza: %2 che non esiste.  L'uscita sarà rimossa (l'id della stanza di destinazione sarà memorizzato nei dati utente della stanza con la chiave:
+&quot;%4&quot;) e l'uscita verrà trasformata in uno stub.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1583"/>
@@ -10175,7 +10176,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1062"/>
       <source>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show  line and paragraphs ends with visible marks as well as whitespace.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;body&gt;&lt;p&gt;Mostra linee e paragrafi con segni visibili invece di spazi bianchi, quando si visualizzi il contenuto Lua nell'editor di testo principale.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1072"/>
