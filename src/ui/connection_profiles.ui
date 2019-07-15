@@ -2173,9 +2173,6 @@
             </item>
             <item>
              <widget class="QPushButton" name="remove_profile_button">
-              <property name="enabled">
-               <bool>true</bool>
-              </property>
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                 <horstretch>0</horstretch>
@@ -2195,6 +2192,12 @@
             </item>
             <item>
              <widget class="QToolButton" name="copy_profile_toolbutton">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
               <property name="minimumSize">
                <size>
                 <width>0</width>
@@ -2209,9 +2212,6 @@
               </property>
               <property name="toolButtonStyle">
                <enum>Qt::ToolButtonFollowStyle</enum>
-              </property>
-              <property name="autoRaise">
-               <bool>true</bool>
               </property>
              </widget>
             </item>
