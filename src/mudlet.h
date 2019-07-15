@@ -585,11 +585,13 @@ private:
     QPointer<QToolButton> mpButtonDiscord;
     QPointer<QAction> mpActionKeys;
     QPointer<QAction> mpActionMapper;
-    QPointer<QAction> mpActionModuleManager;
     QPointer<QAction> mpActionMultiView;
     QPointer<QAction> mpActionNotes;
     QPointer<QAction> mpActionOptions;
+    QPointer<QToolButton> mpButtonPackageManagers;
     QPointer<QAction> mpActionPackageManager;
+    QPointer<QAction> mpActionModuleManager;
+    QPointer<QAction> mpActionPackageExporter;
     QPointer<QAction> mpActionReconnect;
     QPointer<QAction> mpActionScripts;
     QPointer<QAction> mpActionTimers;

@@ -475,7 +475,7 @@ mudlet::mudlet()
         // have to invert the sense because the attribute is a negative one:
         qApp->setAttribute(Qt::AA_DontShowIconsInMenus, (mShowIconsOnMenuCheckedState == Qt::Unchecked));
     }
-    
+
     qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
 
     loadTranslators();
@@ -632,17 +632,31 @@ mudlet::mudlet()
     mpActionNotes->setObjectName(QStringLiteral("notepad_action"));
     mpMainToolBar->widgetForAction(mpActionNotes)->setObjectName(mpActionNotes->objectName());
 
-    mpActionPackageManager = new QAction(QIcon(QStringLiteral(":/icons/package-manager.png")), tr("Package Manager"), this);
-    mpActionPackageManager->setToolTip(tr("Package Manager - allows you to install xmls, .mpackages"));
-    mpMainToolBar->addAction(mpActionPackageManager);
-    mpActionPackageManager->setObjectName(QStringLiteral("package_action"));
-    mpMainToolBar->widgetForAction(mpActionPackageManager)->setObjectName(mpActionPackageManager->objectName());
+    mpButtonPackageManagers = new QToolButton(this);
+    mpButtonPackageManagers->setText(tr("Package Manager"));
+    mpButtonPackageManagers->setObjectName(QStringLiteral("package_manager"));
+    mpButtonPackageManagers->setContextMenuPolicy(Qt::ActionsContextMenu);
+    mpButtonPackageManagers->setPopupMode(QToolButton::MenuButtonPopup);
+    mpButtonPackageManagers->setAutoRaise(true);
+    mpMainToolBar->addWidget(mpButtonPackageManagers);
 
-    mpActionModuleManager = new QAction(QIcon(QStringLiteral(":/icons/module-manager.png")), tr("Module Manager"), this);
-    mpActionModuleManager->setToolTip(tr("Module Manager - allows you to install xmls, .mpackages that are syncronized across multiple profile (good for scripts that you use on several profiles)"));
-    mpMainToolBar->addAction(mpActionModuleManager);
-    mpActionModuleManager->setObjectName(QStringLiteral("module_action"));
-    mpMainToolBar->widgetForAction(mpActionModuleManager)->setObjectName(mpActionModuleManager->objectName());
+    mpActionPackageManager = new QAction(tr("Package Manager"), this);
+    mpActionPackageManager->setIcon(QIcon(QStringLiteral(":/icons/package-manager.png")));
+    mpActionPackageManager->setIconText(tr("Package Manager"));
+    mpActionPackageManager->setObjectName(QStringLiteral("package_manager"));
+
+    mpActionModuleManager = new QAction(tr("Module Manager"), this);
+    mpActionModuleManager->setIcon(QIcon(QStringLiteral(":/icons/module-manager.png")));
+    mpActionModuleManager->setObjectName(QStringLiteral("module_manager"));
+
+    mpActionPackageExporter = new QAction(tr("Package Exporter"), this);
+    mpActionPackageExporter->setObjectName(QStringLiteral("package_exporter"));
+
+    mpButtonPackageManagers->addAction(mpActionPackageManager);
+    mpButtonPackageManagers->addAction(mpActionModuleManager);
+    mpButtonPackageManagers->addAction(mpActionPackageExporter);
+    mpButtonPackageManagers->setDefaultAction(mpActionPackageManager);
+
 
     mpActionReplay = new QAction(QIcon(QStringLiteral(":/icons/media-optical.png")), tr("Replay"), this);
     mpActionReplay->setObjectName(QStringLiteral("replay_action"));
@@ -732,6 +746,7 @@ mudlet::mudlet()
     connect(mpActionDiscord.data(), &QAction::triggered, this, &mudlet::slot_discord);
     connect(mpActionPackageManager.data(), &QAction::triggered, this, &mudlet::slot_package_manager);
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_module_manager);
+    connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_package_exporter);
 
     // PLACEMARKER: Save for later restoration (1 of 2) (by adding a "Close" (profile) option to first menu on menu bar:
     // QAction* mactionCloseProfile = new QAction(tr("Close"), this);
@@ -2849,7 +2864,7 @@ void mudlet::forceClose()
         }
 
         console->close();
-    }    
+    }
 
     // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
     hide();
@@ -2930,9 +2945,11 @@ void mudlet::setToolBarIconSize(const int s)
     if (mToolbarIconSize > 2) {
         mpMainToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         mpButtonDiscord->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+        mpButtonPackageManagers->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     } else {
         mpMainToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
         mpButtonDiscord->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        mpButtonPackageManagers->setToolButtonStyle(Qt::ToolButtonIconOnly);
     }
 
     if (mpToolBarReplay) {
