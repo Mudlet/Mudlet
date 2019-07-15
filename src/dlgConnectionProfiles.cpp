@@ -1728,9 +1728,9 @@ void dlgConnectionProfiles::slot_copy_profilesettings_only()
 
 bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const
 {
-    profile_name= profile_name_entry->text().trimmed();
-    oldname= profile_name;
-    pItem= new QListWidgetItem(profile_name);
+    profile_name = profile_name_entry->text().trimmed();
+    oldname = profile_name;
+    pItem = new QListWidgetItem(profile_name);
     if (profile_name.isEmpty()) {
         return false;
     }
@@ -1760,6 +1760,7 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
     profiles_tree_widget->setCurrentItem(pItem);
     profiles_tree_widget->setItemSelected(pItem, true);
 
+    qDebug() << "new profile name" << profile_name;
     profile_name_entry->setText(profile_name);
     profile_name_entry->setFocus();
     profile_name_entry->selectAll();
@@ -1838,7 +1839,6 @@ void dlgConnectionProfiles::saveProfileCopy(const QDir& newProfiledir, const pug
     std::stringstream saveStringStream(std::ios::out);
     newProfileXml.save(saveStringStream);
     std::string output(saveStringStream.str());
-    std::cout << output;
     file.write(output.data());
     file.close();
 }
