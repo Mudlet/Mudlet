@@ -91,7 +91,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 
     auto pWelcome_document = new QTextDocument(this);
 
-
     auto copyProfile = new QAction(tr("Copy"), this);
     copyProfile->setObjectName(QStringLiteral("copyProfile"));
     auto copyProfileSettings = new QAction(tr("Copy profile (settings only)"), this);
@@ -1911,7 +1910,6 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    qDebug() << entries;
     bool needsGenericPackagesInstall = false;
     mudlet::self()->hideMudletsVariables(pHost);
     if (entries.isEmpty()) {
