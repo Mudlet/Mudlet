@@ -1600,7 +1600,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1686"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
-      <translation>[ INFO ] - 地图文件已找到，但无法打开，请检查许可权: &quot;%1&quot;。</translation>
+      <translation>[ 信息 ] - 地图文件已找到，但无法打开，请检查许可权: &quot;%1&quot;。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1689"/>
@@ -1764,7 +1764,7 @@ your only warning about this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15204"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
-      <translation>[ ERROR ] - 无法加载代码格式化程序，缩进功能将不可用。
+      <translation>[ 错误 ] - 无法加载代码格式化程序，缩进功能将不可用。
 </translation>
     </message>
     <message>
@@ -1794,7 +1794,7 @@ your only warning about this command...!</source>
       <source>[ ERROR ] - Couldn&apos;t find and load LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
-      <translation>[ ERROR ] - 无法找到并加载LuaGlobal.lua - 您的Mudlet已损坏!
+      <translation>[ 错误 ] - 无法找到并加载LuaGlobal.lua - 您的Mudlet已损坏!
 已尝试以下位置:
 %1</translation>
     </message>
@@ -1924,7 +1924,7 @@ map with others relying on the original format.</source>
       <location filename="../src/TMap.cpp" line="185"/>
       <source>[MAP ERROR:]%1
 </source>
-      <translation>[MAP ERROR:]%1
+      <translation>[MAP 错误:]%1
 </translation>
     </message>
     <message>
@@ -1936,14 +1936,15 @@ map with others relying on the original format.</source>
       <location filename="../src/TMap.cpp" line="1031"/>
       <source>[ ERROR ] - The format {%1} you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version {%2}.</source>
-      <translation>[ ERROR ] - 您尝试保存的地图格式{%1} 对于此版本的Mudlet而言太新
+      <translation>[ 错误 ] - 您尝试保存的地图格式{%1} 对于此版本的Mudlet而言太新
 。 支持的格式仅为版本{%2}。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1057"/>
       <source>[ WARN ]  - Saving map in a format {%1} different from the
 recommended format {%2} for this version of Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>[ 警告 ] - 保存的地图格式 {%1} 不同于
+当前Mudlet版本推荐的格式 {%2} 。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1088"/>
@@ -1971,7 +1972,7 @@ Areas id affected: %1.</source>
       <location filename="../src/TMap.cpp" line="1406"/>
       <location filename="../src/TMap.cpp" line="1700"/>
       <source>[ ERROR ] - Unable to open (for reading) map file: &quot;%1&quot;!</source>
-      <translation type="unfinished"/>
+      <translation>[ 错误 ] - 无法打开(读取) 地图文件: &quot;%1&quot;！</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1415"/>
