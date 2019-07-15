@@ -2554,15 +2554,18 @@ e l'uscita verrà trasformata in uno stub.</translation>
       <source>[ ALERT ] - Room with id: %1 has an exit &quot;%2&quot; to: %3 but also
 has a stub exit!  As a real exit precludes a stub, the latter will
 be removed.</source>
-      <translation>[ ALERT ] - Stanza ID: %1 ha un'uscita &quot;%2&quot; verso: %3 ma anche
-ha un'uscita stub! La presenza di un'uscita reale impedisce l'utilizzo di stub,
+      <translation>[ ALERT ] - Stanza ID: %1 ha un'uscita &quot;%2&quot; verso: %3 ma ha anche
+un'uscita stub! La presenza di un'uscita reale impedisce l'utilizzo di stub,
 quindi quest'ultimo sarà rimosso.
 .</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1593"/>
       <source>[ ALERT ] - Room has an exit &quot;%1&quot; to: %2 but also has a stub exit in the same direction!  As a real exit precludes a stub, the latter will be removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - La stanza ha un'uscita &quot;%1&quot; verso: %2 ma ha anche
+un'uscita stub! La presenza di un'uscita reale impedisce l'utilizzo di stub,
+quindi quest'ultimo sarà rimosso.
+.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1649"/>
@@ -10162,7 +10165,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1042"/>
       <source>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;body&gt;&lt;p&gt;Mostra tabulazioni e spazi con segni visibili invece di spazi bianchi, quando si visualizzi il contenuto Lua nell'editor di testo principale.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1052"/>
