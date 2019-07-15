@@ -1761,7 +1761,6 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
     profiles_tree_widget->setCurrentItem(pItem);
     profiles_tree_widget->setItemSelected(pItem, true);
 
-    qDebug() << "new profile name" << profile_name;
     profile_name_entry->setText(profile_name);
     profile_name_entry->setFocus();
     profile_name_entry->selectAll();
