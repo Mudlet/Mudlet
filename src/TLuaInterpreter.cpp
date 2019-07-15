@@ -263,7 +263,7 @@ int TLuaInterpreter::Wait(lua_State* L)
     return 0;
 }
 
-// Documentation: PRIVATE function with no documentation in wiki.
+// No documentation available in wiki - internal function
 // dirToString wiil now catch and validate pretty much any string that could
 // be a normal direction in a case insensitive manner and convert it to a
 // standard value (one of: "n", "ne", ..., "nw", "up", "down", "in" or
@@ -347,7 +347,7 @@ QString TLuaInterpreter::dirToString(lua_State* L, int position)
     }
 }
 
-// Documentation: ? - public function missing documentation in wiki
+// No documentation available in wiki - internal function
 int TLuaInterpreter::dirToNumber(lua_State* L, int position)
 {
     QString dir;
@@ -1096,7 +1096,6 @@ int TLuaInterpreter::getLines(lua_State* L)
         return 1;
     }
 }
-
 
 // Documentation: ? - public function missing documentation in wiki
 // Should have been called loadReplay(...) but this name is already in the
@@ -1982,6 +1981,7 @@ int TLuaInterpreter::enableScrollBar(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableScrollBar
 int TLuaInterpreter::disableScrollBar(lua_State* L)
 {
     int n = lua_gettop(L);
@@ -2627,6 +2627,7 @@ int TLuaInterpreter::killTrigger(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#remainingTime
 int TLuaInterpreter::remainingTime(lua_State* L)
 {
     if (!lua_isstring(L, 1)) {
@@ -4268,6 +4269,7 @@ int TLuaInterpreter::getRoomHashByID(lua_State* L)
     return 2;
 }
 
+// Documentation: ? - public function missing documentation in wiki
 int TLuaInterpreter::solveRoomCollisions(lua_State* L)
 {
     return 0;
@@ -6345,6 +6347,7 @@ int TLuaInterpreter::tempTrigger(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#tempPromptTrigger
 int TLuaInterpreter::tempPromptTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -7245,6 +7248,7 @@ int TLuaInterpreter::permSubstringTrigger(lua_State* L)
     return 1;
 }
 
+// Documentation: ? - public function missing documentation in wiki
 int TLuaInterpreter::permPromptTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -10482,7 +10486,6 @@ int TLuaInterpreter::getGridMode(lua_State* L)
     }
 }
 
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setGridMode
 int TLuaInterpreter::setGridMode(lua_State* L)
 {
@@ -12585,7 +12588,6 @@ int TLuaInterpreter::ttsSkip(lua_State* L)
     return 0;
 }
 
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetRate
 int TLuaInterpreter::ttsSetRate(lua_State* L)
 {
@@ -12620,7 +12622,6 @@ int TLuaInterpreter::ttsSetRate(lua_State* L)
     return 0;
 }
 
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetPitch
 int TLuaInterpreter::ttsSetPitch(lua_State* L)
 {
@@ -12654,7 +12655,6 @@ int TLuaInterpreter::ttsSetPitch(lua_State* L)
 
     return 0;
 }
-
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetVolume
 int TLuaInterpreter::ttsSetVolume(lua_State* L)
@@ -12717,7 +12717,6 @@ int TLuaInterpreter::ttsGetPitch(lua_State* L)
     return 1;
 }
 
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsGetVoices
 int TLuaInterpreter::ttsGetVoices(lua_State* L)
 {
@@ -12735,7 +12734,6 @@ int TLuaInterpreter::ttsGetVoices(lua_State* L)
     return 1;
 }
 
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsGetCurrentVoice
 int TLuaInterpreter::ttsGetCurrentVoice(lua_State* L)
 {
@@ -12745,7 +12743,6 @@ int TLuaInterpreter::ttsGetCurrentVoice(lua_State* L)
     lua_pushstring(L, currentVoice.toUtf8().constData());
     return 1;
 }
-
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetVoiceByName
 int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
@@ -12782,7 +12779,6 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
     lua_pushboolean(L, false);
     return 1;
 }
-
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetVoiceByIndex
 int TLuaInterpreter::ttsSetVoiceByIndex(lua_State* L)
@@ -12862,7 +12858,6 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 
     return;
 }
-
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsQueue
 int TLuaInterpreter::ttsQueue(lua_State* L)
@@ -13733,6 +13728,7 @@ void TLuaInterpreter::setChannel102Table(int& var, int& arg)
     host.raiseEvent(event);
 }
 
+// No documentation available in wiki - internal function
 void TLuaInterpreter::setMatches(lua_State* L)
 {
     if (!mCaptureGroupList.empty()) {
@@ -14453,6 +14449,7 @@ int TLuaInterpreter::check_for_mappingscript()
 
 #define LUA_CLIENT_TYPE (_CLIENT_BLOCK | ((('L' << 8) | 'U') << 16))
 
+// No documentation available in wiki - internal function
 static void* l_alloc(void* ud, void* ptr, size_t osize, size_t nsize)
 {
     (void)ud;
@@ -14465,12 +14462,14 @@ static void* l_alloc(void* ud, void* ptr, size_t osize, size_t nsize)
     }
 }
 
+// No documentation available in wiki - internal function
 static int panic(lua_State* L)
 {
     fprintf(stderr, "PANIC: unprotected error in call to Lua API (%s)\n", lua_tostring(L, -1));
     return 0;
 }
 
+// No documentation available in wiki - internal function
 static lua_State* newstate()
 {
     lua_State* L = lua_newstate(l_alloc, NULL);
@@ -14482,6 +14481,7 @@ static lua_State* newstate()
 
 #else
 
+// No documentation available in wiki - internal function
 static lua_State* newstate()
 {
     return luaL_newstate();
@@ -14489,6 +14489,7 @@ static lua_State* newstate()
 
 #endif // _MSC_VER && _DEBUG
 
+// No documentation available in wiki - internal function
 static void storeHostInLua(lua_State* L, Host* h);
 
 // No documentation available in wiki - internal function
@@ -15871,6 +15872,7 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Mapper_Functions#enableClickthrough
 int TLuaInterpreter::enableClickthrough(lua_State* L)
 {
     int n = lua_gettop(L);
@@ -15891,6 +15893,7 @@ int TLuaInterpreter::enableClickthrough(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Mapper_Functions#disableClickthrough
 int TLuaInterpreter::disableClickthrough(lua_State* L)
 {
     int n = lua_gettop(L);
