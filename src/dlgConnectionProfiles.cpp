@@ -93,7 +93,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 
     auto copyProfile = new QAction(tr("Copy"), this);
     copyProfile->setObjectName(QStringLiteral("copyProfile"));
-    auto copyProfileSettings = new QAction(tr("Copy profile (settings only)"), this);
+    auto copyProfileSettings = new QAction(tr("Copy settings only"), this);
     copyProfileSettings->setObjectName(QStringLiteral("copyProfileSettingsOnly"));
 
     copy_profile_toolbutton->addAction(copyProfile);
@@ -1671,46 +1671,12 @@ void dlgConnectionProfiles::slot_cancel()
 
 void dlgConnectionProfiles::slot_copy_profile()
 {
-    QString profile_name = profile_name_entry->text().trimmed();
-    QString oldname = profile_name;
-
-    if (profile_name.isEmpty()) {
+    QString profile_name;
+    QString oldname;
+    QListWidgetItem* pItem;
+    if (!copyProfileWidget(profile_name, oldname, pItem)) {
         return;
     }
-
-    // prepend n+1 to end of the profile name
-    if (profile_name.at(profile_name.size() - 1).isDigit()) {
-        int i = 1;
-        do {
-            profile_name = profile_name.left(profile_name.size() - 1) + QString::number(profile_name.at(profile_name.size() - 1).digitValue() + i++);
-        } while (mProfileList.contains(profile_name));
-    } else {
-        int i = 1;
-        QString profile_name2;
-        do {
-            profile_name2 = profile_name + QString::number(i++);
-        } while (mProfileList.contains(profile_name2));
-        profile_name = profile_name2;
-    }
-
-    auto pItem = new QListWidgetItem(profile_name);
-    if (!pItem) {
-        return;
-    }
-
-    // add the new widget in
-    profiles_tree_widget->setSelectionMode(QAbstractItemView::SingleSelection);
-    profiles_tree_widget->addItem(pItem);
-    profiles_tree_widget->setItemSelected(profiles_tree_widget->currentItem(), false); // Unselect previous item
-    profiles_tree_widget->setCurrentItem(pItem);
-    profiles_tree_widget->setItemSelected(pItem, true);
-
-    profile_name_entry->setText(profile_name);
-    profile_name_entry->setFocus();
-    profile_name_entry->selectAll();
-    profile_name_entry->setReadOnly(false);
-    host_name_entry->setReadOnly(false);
-    port_entry->setReadOnly(false);
 
     // copy the folder on-disk
     QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, oldname));
@@ -1730,46 +1696,12 @@ void dlgConnectionProfiles::slot_copy_profile()
 
 void dlgConnectionProfiles::slot_copy_profilesettings_only()
 {
-    QString profile_name = profile_name_entry->text().trimmed();
-    QString oldname = profile_name;
-
-    if (profile_name.isEmpty()) {
+    QString profile_name;
+    QString oldname;
+    QListWidgetItem* pItem;
+    if (!copyProfileWidget(profile_name, oldname, pItem)) {
         return;
     }
-
-    // prepend n+1 to end of the profile name
-    if (profile_name.at(profile_name.size() - 1).isDigit()) {
-        int i = 1;
-        do {
-            profile_name = profile_name.left(profile_name.size() - 1) + QString::number(profile_name.at(profile_name.size() - 1).digitValue() + i++);
-        } while (mProfileList.contains(profile_name));
-    } else {
-        int i = 1;
-        QString profile_name2;
-        do {
-            profile_name2 = profile_name + QString::number(i++);
-        } while (mProfileList.contains(profile_name2));
-        profile_name = profile_name2;
-    }
-
-    auto pItem = new QListWidgetItem(profile_name);
-    if (!pItem) {
-        return;
-    }
-
-    // add the new widget in
-    profiles_tree_widget->setSelectionMode(QAbstractItemView::SingleSelection);
-    profiles_tree_widget->addItem(pItem);
-    profiles_tree_widget->setItemSelected(profiles_tree_widget->currentItem(), false); // Unselect previous item
-    profiles_tree_widget->setCurrentItem(pItem);
-    profiles_tree_widget->setItemSelected(pItem, true);
-
-    profile_name_entry->setText(profile_name);
-    profile_name_entry->setFocus();
-    profile_name_entry->selectAll();
-    profile_name_entry->setReadOnly(false);
-    host_name_entry->setReadOnly(false);
-    port_entry->setReadOnly(false);
 
     QDir newProfileDir(mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
     newProfileDir.mkpath(newProfileDir.path());
@@ -1792,6 +1724,50 @@ void dlgConnectionProfiles::slot_copy_profilesettings_only()
     // one may have had it enabled does not mean we can assume the new one would
     // want it set:
     discord_optin_checkBox->setChecked(false);
+}
+
+bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const
+{
+    profile_name= profile_name_entry->text().trimmed();
+    oldname= profile_name;
+    pItem= new QListWidgetItem(profile_name);
+    if (profile_name.isEmpty()) {
+        return false;
+    }
+
+    // prepend n+1 to end of the profile name
+    if (profile_name.at(profile_name.size() - 1).isDigit()) {
+        int i = 1;
+        do {
+            profile_name = profile_name.left(profile_name.size() - 1) + QString::number(profile_name.at(profile_name.size() - 1).digitValue() + i++);
+        } while (mProfileList.contains(profile_name));
+    } else {
+        int i = 1;
+        QString profile_name2;
+        do {
+            profile_name2 = profile_name + QString::number(i++);
+        } while (mProfileList.contains(profile_name2));
+        profile_name = profile_name2;
+    }
+    if (!pItem) {
+        return false;
+    }
+
+    // add the new widget in
+    profiles_tree_widget->setSelectionMode(QAbstractItemView::SingleSelection);
+    profiles_tree_widget->addItem(pItem);
+    profiles_tree_widget->setItemSelected(profiles_tree_widget->currentItem(), false); // Unselect previous item
+    profiles_tree_widget->setCurrentItem(pItem);
+    profiles_tree_widget->setItemSelected(pItem, true);
+
+    profile_name_entry->setText(profile_name);
+    profile_name_entry->setFocus();
+    profile_name_entry->selectAll();
+    profile_name_entry->setReadOnly(false);
+    host_name_entry->setReadOnly(false);
+    port_entry->setReadOnly(false);
+
+    return true;
 }
 
 void dlgConnectionProfiles::copyProfileSettingsOnly(const QString& oldname, const QString& newname)
@@ -1842,10 +1818,8 @@ bool dlgConnectionProfiles::extractSettingsFromProfile(pugi::xml_document& newPr
     const auto hostPackageResults = oldProfile.select_nodes("/MudletPackage/HostPackage");
     pugi::xml_node hostPackage = hostPackageResults.first().node();
     auto host = hostPackage.child("Host");
-    hostPackage.print(std::cout, "  ", pugi::format_default);
     host.remove_child("mInstalledPackages");
     host.remove_child("mInstalledModules");
-    hostPackage.print(std::cout, "  ", pugi::format_default);
 
     // copy in the /Mudlet/HostPackage
     mudletPackage.append_copy(hostPackage);
