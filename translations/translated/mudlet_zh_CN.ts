@@ -1069,7 +1069,13 @@ with a new symbol to use for all the rooms:</source>
  • enter a space to clear any existing symbols
 for all of the %n selected room(s):</source>
       <comment>Use line feeds to format text into a reasonable rectangle if needed, %n is the number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>从以下列表中选择：
+ • 现有符号（按最常用的第一顺序排序）
+ • 输入一个或多个字形（&quot;可见字符&quot;）作为新符号
+ • 输入空格以清除所有符号
+适用于所有选中的 %n 房间：</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3809"/>
@@ -1190,7 +1196,7 @@ rooms:</source>
     <message>
       <location filename="../src/TAlias.cpp" line="255"/>
       <source>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>错误：在 &quot;的模式:&quot;，错误的正则表达式，原因是: &quot;%1&quot;.</translation>
     </message>
   </context>
   <context>
@@ -1589,12 +1595,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1683"/>
       <source>Importing map(1) &quot;%1&quot; at %2 report</source>
-      <translation type="unfinished"/>
+      <translation>正在加载地图(1) &quot;%1&quot; 在 %2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1686"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - 地图文件已找到，但无法打开，请检查许可权: &quot;%1&quot;。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1689"/>
@@ -1758,7 +1764,8 @@ your only warning about this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15204"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - 无法加载代码格式化程序，缩进功能将不可用。
+</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15208"/>
@@ -1787,7 +1794,9 @@ your only warning about this command...!</source>
       <source>[ ERROR ] - Couldn&apos;t find and load LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - 无法找到并加载LuaGlobal.lua - 您的Mudlet已损坏!
+已尝试以下位置:
+%1</translation>
     </message>
   </context>
   <context>
@@ -1915,7 +1924,8 @@ map with others relying on the original format.</source>
       <location filename="../src/TMap.cpp" line="185"/>
       <source>[MAP ERROR:]%1
 </source>
-      <translation type="unfinished"/>
+      <translation>[MAP ERROR:]%1
+</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="437"/>
@@ -1926,7 +1936,8 @@ map with others relying on the original format.</source>
       <location filename="../src/TMap.cpp" line="1031"/>
       <source>[ ERROR ] - The format {%1} you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version {%2}.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - 您尝试保存的地图格式{%1} 对于此版本的Mudlet而言太新
+。 支持的格式仅为版本{%2}。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1057"/>
