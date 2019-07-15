@@ -24,6 +24,8 @@
 
 #include "pre_guard.h"
 #include "ui_connection_profiles.h"
+#include "QDir"
+#include <pugixml.hpp>
 #include "post_guard.h"
 
 class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
@@ -74,6 +76,9 @@ private:
     void updateDiscordStatus();
     bool validateProfile();
     void loadProfile(bool alsoConnect);
+    void copyProfileSettingsOnly(const QString& oldname, const QString& newname);
+    bool extractSettingsFromProfile(pugi::xml_document& newProfile, const QString& copySettingsFrom);
+    void saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const;
 
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
