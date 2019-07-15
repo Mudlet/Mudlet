@@ -1730,7 +1730,6 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
 {
     profile_name = profile_name_entry->text().trimmed();
     oldname = profile_name;
-    pItem = new QListWidgetItem(profile_name);
     if (profile_name.isEmpty()) {
         return false;
     }
@@ -1749,6 +1748,8 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
         } while (mProfileList.contains(profile_name2));
         profile_name = profile_name2;
     }
+
+    pItem = new QListWidgetItem(profile_name);
     if (!pItem) {
         return false;
     }
