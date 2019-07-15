@@ -19,12 +19,12 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="282"/>
       <source>No data received from server</source>
-      <translation type="unfinished"/>
+      <translation>未从服务器接收任何数据</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="293"/>
       <source>Could not verify download integrity.</source>
-      <translation type="unfinished"/>
+      <translation>无法验证下载完整性。</translation>
     </message>
   </context>
   <context>
@@ -343,7 +343,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="55"/>
       <source>Start element not found!</source>
-      <translation type="unfinished"/>
+      <translation>未找到启动元素！</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
@@ -391,7 +391,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="435"/>
       <source>%1 ranges</source>
-      <translation type="unfinished"/>
+      <translation>%1 范围</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="441"/>
@@ -1747,12 +1747,12 @@ your only warning about this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15013"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>utf8.* Lua函数不可用。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15034"/>
       <source>yajl.* Lua functions won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>yajl.* Lua函数不可用。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15204"/>
@@ -1763,24 +1763,24 @@ your only warning about this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15208"/>
       <source>[  OK  ]  - Lua code formatter loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Lua代码格式化程序已加载。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15239"/>
       <source>%1 (doesn&apos;t exist)</source>
       <comment>This file doesn&apos;t exist</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (不存在)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15246"/>
       <source>%1 (couldn&apos;t read file)</source>
       <comment>This file could not be read for some reason (for example, no permission)</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (不能读取文件)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15252"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Mudlet-lua API &amp; Geyser Layout管理器已加载。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15260"/>
