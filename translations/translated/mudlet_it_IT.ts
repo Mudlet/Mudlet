@@ -10493,7 +10493,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2018"/>
       <source>&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;L'area predefinita (Area Id -1) è utilizzata da alcuni script mapper come area temporanea &apos;per posizionare&apos; le stanze prima di &apos;salvarle nell'area corretta&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2423"/>
@@ -11550,7 +11550,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="79"/>
       <source>&lt;p&gt;Use this control to show or hide the extra controls for the trigger; this can be used to allow more space to show the trigger &lt;i&gt;items&lt;/i&gt; on smaller screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Utilizza questo bottone per mostrare/nascondere le opzioni avanzate per il trigger; in questo modo hai a disposizione più spazio per mostrare i &lt;i&gt;trigger&lt;/i&gt; sugli schermi di piccole dimensioni.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="105"/>
