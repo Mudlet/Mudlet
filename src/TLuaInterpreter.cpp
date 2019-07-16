@@ -7249,7 +7249,7 @@ int TLuaInterpreter::permSubstringTrigger(lua_State* L)
     return 1;
 }
 
-// Documentation: ? - public function missing documentation in wiki
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permPromptTrigger
 int TLuaInterpreter::permPromptTrigger(lua_State* L)
 {
     Host& host = getHostFromLua(L);
