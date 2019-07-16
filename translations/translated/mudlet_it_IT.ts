@@ -5486,12 +5486,12 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="866"/>
       <source>Profile preferences - %1</source>
-      <translation>Preferenze profilo - %1</translation>
+      <translation>Impostazioni profilo - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1118"/>
       <source>Profile preferences</source>
-      <translation>Preferenze profilo</translation>
+      <translation>Impostazioni profilo</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1784"/>
@@ -7695,7 +7695,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/ui/main_window.ui" line="147"/>
       <source>Play</source>
-      <translation>Riproduci</translation>
+      <translation>Connetti</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="150"/>
@@ -7786,7 +7786,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/ui/main_window.ui" line="171"/>
       <source>Preferences</source>
-      <translation>Preferenze</translation>
+      <translation>Impostazioni</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="179"/>
@@ -9655,7 +9655,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="20"/>
       <source>Profile preferences</source>
-      <translation>Preferenze profilo</translation>
+      <translation>Impostazioni profilo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="55"/>
