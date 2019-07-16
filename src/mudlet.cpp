@@ -450,7 +450,7 @@ mudlet::mudlet()
 , mCopyAsImageTimeout{3}
 , mUsingMudletDictionaries(false)
 , mIsGoingDown(false)
-, mMenuBarVisibility(visibleAlways)
+, mMenuBarVisibility(visibleNever)
 , mToolbarVisibility(visibleAlways)
 , mpActionReplaySpeedDown(nullptr)
 , mpActionReplaySpeedUp(nullptr)
