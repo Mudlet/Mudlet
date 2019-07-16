@@ -1801,8 +1801,7 @@ l'unico avvertimento fornito per questa funzione...!</translation>
       <location filename="../src/TLuaInterpreter.cpp" line="15204"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
-      <translation>[ ERRORE ] - Impossibile caricare il modulo di formattazione codice
-L'indentazione del codice non sarà disponibile.
+      <translation>[ ERROR ] - Impossibile caricare il modulo di formattazione codice, l'indentazione automatico non sarà disponibile.
 </translation>
     </message>
     <message>
@@ -3910,10 +3909,10 @@ per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
 Connection cannot be established.
 The server name is not correct, not working properly,
 or your nameservers are not working properly.</source>
-      <translation>[ ERRORE ] -Impossibile trovare il nome host!
-La connessione non può essere effettuato.
-Il nome server non è corretto, non funziona correttamente
-o il tuo DNS non funziona correttamente.</translation>
+      <translation>[ ERROR ] - Impossibile trovare il nome host!
+La connessione non può essere effettuata.
+Il nome server non è corretto o non funziona correttamente
+o il tuo DNS non è raggiungibile.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="366"/>
