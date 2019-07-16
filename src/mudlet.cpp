@@ -2985,12 +2985,15 @@ void mudlet::adjustMenuBarVisibility()
 {
     // Are there any profiles loaded - note that the dummy "default_host" counts
     // as the first one
+    qDebug() <<"adjustMenuBarVisibility():" << mMenuBarVisibility;
     if ((mHostManager.getHostCount() < 2 && mMenuBarVisibility & visibleAlways)
       ||(mMenuBarVisibility & visibleMaskNormally)) {
 
         menuBar()->show();
+        qDebug() << "showing menubar";
     } else {
         menuBar()->hide();
+        qDebug() << "hiding menubar";
     }
 }
 
