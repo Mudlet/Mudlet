@@ -1787,8 +1787,6 @@ void dlgConnectionProfiles::copyProfileSettingsOnly(const QString& oldname, cons
     if (extractSettingsFromProfile(newProfileXml, copySettingsFromFile)) {
         saveProfileCopy(newProfiledir, newProfileXml);
     }
-
-    return;
 }
 
 bool dlgConnectionProfiles::extractSettingsFromProfile(pugi::xml_document& newProfile, const QString& copySettingsFrom)
