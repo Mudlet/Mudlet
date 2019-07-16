@@ -832,6 +832,8 @@ mudlet::mudlet()
         setToolBarIconSize(mEnableFullScreenMode ? 2 : 3);
     }
 
+    adjustMenuBarVisibility();
+
 #if defined(QT_GAMEPAD_LIB)
     connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonPressEvent, this, &mudlet::slot_gamepadButtonPress);
     connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonReleaseEvent, this, &mudlet::slot_gamepadButtonRelease);
