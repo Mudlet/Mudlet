@@ -10478,7 +10478,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1910"/>
       <source>&lt;p&gt;Change this to a lower version if you need to save your map in a format that can be read by older versions of Mudlet. Doing so will lose the extra data available in the current map format&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Cambia la versione del tuo file di mappa in una inferiore, in modo che sia leggibile dalle versioni precedenti di Mudlet. Andranno persi i dati aggiuntivi disponibili nel formato di mappa corrente&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1940"/>
@@ -10488,7 +10488,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2008"/>
       <source>&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you&apos;re on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Questa opzione abilita l'anti-aliasing (AA) per la vista mappa 2D, rendendola più leggibile e bella. Disabilita questo se utilizzi un computer molto lento.&lt;/p&gt;&lt;p&gt;La vista mappa mappa 3D ha sempre l'opzione anti-aliasing abilitata.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2018"/>
@@ -11591,7 +11591,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="318"/>
       <source>&lt;p&gt;Choose this option if you want to include all possible matches of the pattern in the line.&lt;/p&gt;&lt;p&gt;Without this option, the pattern matching will stop after the first successful match.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Seleziona questa opzione se desideri includere tutte le possibili corrispondenze del pattern nella linea.&lt;/p&gt;&lt;p&gt;Senza questa opzione la ricerca restituisce solo il primo risultato.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="351"/>
