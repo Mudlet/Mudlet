@@ -467,7 +467,6 @@ mudlet::mudlet()
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
 , mHunspell_sharedDictionary(nullptr)
 {
-    qDebug() << "mudlet constructor start:" << mMenuBarVisibility;
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     mpSettings = getQSettings();
     readEarlySettings(*mpSettings);
@@ -848,8 +847,6 @@ mudlet::mudlet()
     // load bundled fonts
     mFontManager.addFonts();
     loadLanguagesMap();
-
-    qDebug() << "mudlet constructor end:" << mMenuBarVisibility;
 }
 
 QSettings* mudlet::getQSettings()
@@ -2978,7 +2975,6 @@ void mudlet::setEditorTreeWidgetIconSize(const int s)
 void mudlet::setMenuBarVisibility(const controlsVisibility state)
 {
     mMenuBarVisibility = state;
-    qDebug() << "setMenuBarVisibility()" << mMenuBarVisibility;
 
     adjustMenuBarVisibility();
     emit signal_menuBarVisibilityChanged(state);
@@ -2989,15 +2985,12 @@ void mudlet::adjustMenuBarVisibility()
 {
     // Are there any profiles loaded - note that the dummy "default_host" counts
     // as the first one
-    qDebug() <<"adjustMenuBarVisibility():" << mMenuBarVisibility;
     if ((mHostManager.getHostCount() < 2 && mMenuBarVisibility & visibleAlways)
       ||(mMenuBarVisibility & visibleMaskNormally)) {
 
         menuBar()->show();
-        qDebug() << "showing menubar";
     } else {
         menuBar()->hide();
-        qDebug() << "hiding menubar";
     }
 }
 
