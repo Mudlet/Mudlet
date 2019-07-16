@@ -576,6 +576,7 @@ private:
     QPointer<QToolButton> mpButtonAbout;
     QPointer<QAction> mpActionAliases;
     QPointer<QAction> mpActionButtons;
+    QPointer<QToolButton> mpButtonConnect;
     QPointer<QAction> mpActionConnect;
     QPointer<QAction> mpActionDisconnect;
     QPointer<QAction> mpActionFullScreenView;
