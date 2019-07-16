@@ -549,11 +549,11 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
     }
 
     TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
-    bool isBold = attributes & TChar::Bold;
-    bool isItalics = attributes & TChar::Italic;
-    bool isOverline = attributes & TChar::Overline;
-    bool isStrikeOut = attributes & TChar::StrikeOut;
-    bool isUnderline = attributes & TChar::Underline;
+    const bool isBold = attributes & TChar::Bold;
+    const bool isItalics = attributes & TChar::Italic;
+    const bool isOverline = attributes & TChar::Overline;
+    const bool isStrikeOut = attributes & TChar::StrikeOut;
+    const bool isUnderline = attributes & TChar::Underline;
     if ((painter.font().bold() != isBold)
             || (painter.font().italic() != isItalics)
             || (painter.font().overline() != isOverline)
