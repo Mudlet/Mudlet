@@ -988,12 +988,37 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
 
 int TTextEdit::convertMouseXToBufferX(const int mouseX, const int line) const
 {
-    int x = mouseX / mFontWidth;
-    if (mShowTimeStamps) {
-        x -= 13;
+    // start at -1 because 0 is the position of the first character
+    int characterIndex = -1;
+    if (Q_LIKELY(line < mpBuffer->lineBuffer.size())) {
+        int characterWidth = 1;
+        int xSoFar = 0;
+        for (const auto character : mpBuffer->lineBuffer.at(line)) {
+            uint unicode = getGraphemeBaseCharacter(character);
+            if (unicode == '\t') {
+                //                characterWidth = column / 8 * 8 + 8;
+                //                ???
+            } else {
+                characterWidth = getGraphemeWidth(unicode);
+            }
+            xSoFar += characterWidth * mFontWidth;
+            characterIndex++;
+            if (xSoFar >= mouseX) {
+                if (mShowTimeStamps) {
+                    characterIndex -= 13;
+                }
+                characterIndex = std::max(characterIndex, 0);
+                return characterIndex;
+            }
+        }
+    } else {
+        characterIndex = mouseX / mFontWidth;
+        if (mShowTimeStamps) {
+            characterIndex -= 13;
+        }
+        characterIndex = std::max(characterIndex, 0);
+        return characterIndex;
     }
-    x = std::max(x, 0);
-    return x;
 }
 
 void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
