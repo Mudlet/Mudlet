@@ -838,6 +838,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     y = std::max(y, 0);
 
     int x = convertMouseXToBufferX(event->x(), y);
+//    qDebug() << "got x:" << x;
 
     if (y < static_cast<int>(mpBuffer->buffer.size())) {
         if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
@@ -986,22 +987,22 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
 
 int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber) const
 {
-    // start at -1 because 0 is the position of the first character
     int characterIndex = -1;
-    if (Q_LIKELY(lineNumber < mpBuffer->lineBuffer.size())) {
+    if (lineNumber < mpBuffer->lineBuffer.size()) {
         int characterWidth = 1;
         int currentX = 0;
+        //
+        const int adjustedMouseX = mouseX - (mFontWidth/2);
         for (const auto character : mpBuffer->lineBuffer.at(lineNumber)) {
-            uint unicode = getGraphemeBaseCharacter(character);
+            const uint unicode = getGraphemeBaseCharacter(character);
             if (unicode == '\t') {
-                //                characterWidth = column / 8 * 8 + 8;
-                //                ???
+                characterWidth = 8;
             } else {
                 characterWidth = getGraphemeWidth(unicode);
             }
             currentX += characterWidth * mFontWidth;
             characterIndex++;
-            if (currentX >= mouseX) {
+            if (currentX >= adjustedMouseX) {
                 if (mShowTimeStamps) {
                     characterIndex -= 13;
                 }
@@ -1009,14 +1010,14 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber) co
                 return characterIndex;
             }
         }
-    } else {
-        characterIndex = mouseX / mFontWidth;
-        if (mShowTimeStamps) {
-            characterIndex -= 13;
-        }
-        characterIndex = std::max(characterIndex, 0);
-        return characterIndex;
     }
+
+    characterIndex = mouseX / mFontWidth;
+    if (mShowTimeStamps) {
+        characterIndex -= 13;
+    }
+    characterIndex = std::max(characterIndex, 0);
+    return characterIndex;
 }
 
 void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
