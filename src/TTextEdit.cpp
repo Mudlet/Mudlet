@@ -838,7 +838,6 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     y = std::max(y, 0);
 
     int x = convertMouseXToBufferX(event->x(), y);
-//    qDebug() << "got x:" << x;
 
     if (y < static_cast<int>(mpBuffer->buffer.size())) {
         if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
