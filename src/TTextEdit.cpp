@@ -560,10 +560,10 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
     // (negative) special values:
     // mWideAmbigousWidthGlyphs
     switch (widechar_wcwidth(unicode)) {
-    case 2: // Draw as wide
-        return 2;
     case 1: // Draw as normal/narrow
         return 1;
+    case 2: // Draw as wide
+        return 2;
     case widechar_nonprint:     // -1 = The character is not printable.
         qDebug().nospace().noquote() << "TTextEdit::drawGrapheme(...) WARN - trying to draw a Unicode character which is unprintable, codepoint number: U+" << QString::number(unicode, 16) << ".";
         return 1;
