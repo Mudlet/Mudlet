@@ -984,14 +984,14 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     highlight();
 }
 
-int TTextEdit::convertMouseXToBufferX(const int mouseX, const int line) const
+int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber) const
 {
     // start at -1 because 0 is the position of the first character
     int characterIndex = -1;
-    if (Q_LIKELY(line < mpBuffer->lineBuffer.size())) {
+    if (Q_LIKELY(lineNumber < mpBuffer->lineBuffer.size())) {
         int characterWidth = 1;
-        int xSoFar = 0;
-        for (const auto character : mpBuffer->lineBuffer.at(line)) {
+        int currentX = 0;
+        for (const auto character : mpBuffer->lineBuffer.at(lineNumber)) {
             uint unicode = getGraphemeBaseCharacter(character);
             if (unicode == '\t') {
                 //                characterWidth = column / 8 * 8 + 8;
@@ -999,9 +999,9 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int line) const
             } else {
                 characterWidth = getGraphemeWidth(unicode);
             }
-            xSoFar += characterWidth * mFontWidth;
+            currentX += characterWidth * mFontWidth;
             characterIndex++;
-            if (xSoFar >= mouseX) {
+            if (currentX >= mouseX) {
                 if (mShowTimeStamps) {
                     characterIndex -= 13;
                 }
