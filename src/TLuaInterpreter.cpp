@@ -1584,7 +1584,14 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         text = lua_tostring(L, 1);
     }
 
+    QString previousEncoding = host.mTelnet.getEncoding();
+    if (previousEncoding.isEmpty()) {
+        previousEncoding = QStringLiteral("ASCII");
+    }
+    // ensure encoding is utf-8 because that is what the Lua subsystem works with
+    host.mTelnet.setEncoding(QStringLiteral("UTF-8"));
     host.mpConsole->printOnDisplay(text);
+    host.mTelnet.setEncoding(previousEncoding);
     return 0;
 }
 
