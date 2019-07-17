@@ -427,7 +427,7 @@ Por favor aguarde...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="404"/>
       <source>Error theme not found %1.</source>
-      <translation type="unfinished"/>
+      <translation>Erro tema não encontrado %1.</translation>
     </message>
   </context>
   <context>
@@ -464,19 +464,19 @@ Por favor aguarde...</translation>
       <location filename="../src/T2DMap.cpp" line="3213"/>
       <location filename="../src/T2DMap.cpp" line="4878"/>
       <source>Dot line</source>
-      <translation type="unfinished"/>
+      <translation>Linha pontilhada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3214"/>
       <location filename="../src/T2DMap.cpp" line="4879"/>
       <source>Dash line</source>
-      <translation type="unfinished"/>
+      <translation>Linha tracejada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3215"/>
       <location filename="../src/T2DMap.cpp" line="4880"/>
       <source>Dash-dot line</source>
-      <translation type="unfinished"/>
+      <translation>Linha traço-ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3216"/>
