@@ -1824,7 +1824,7 @@ l'unico avvertimento fornito per questa funzione...!</translation>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15252"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
-      <translation>[  OK  ] - Mudlet-lua API &amp; Geyser Layout manager caricato.</translation>
+      <translation>[  OK  ] - Modulo Lua API &amp; Geyser Layout caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15260"/>
