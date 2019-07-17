@@ -833,7 +833,7 @@ void TTextEdit::swap(QPoint& p1, QPoint& p2)
 
 void TTextEdit::mouseMoveEvent(QMouseEvent* event)
 {
-    if ((mFontWidth == 0) | (mFontHeight == 0)) {
+    if (mFontWidth == 0 || mFontHeight == 0) {
         return;
     }
     int x = event->x() / mFontWidth; // bugfix by BenH (used to be mFontWidth-1)
