@@ -775,7 +775,6 @@ void TTextEdit::highlight()
             if (currentX < static_cast<int>(mpBuffer->buffer.at(currentY).size())) {
                 if (!(mpBuffer->buffer.at(currentY).at(currentX).isSelected())) {
                     mpBuffer->buffer.at(currentY).at(currentX).select();
-                    qDebug() << "marked for selection:" << startY << currentY << currentX;
                     mpBuffer->dirty[currentY] = true;
                 }
             } else {
@@ -867,7 +866,6 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         return;
     }
 
-    qDebug() << "x: " << x;
     QPoint PC(x, y);
 
     if (mCtrlSelecting) {
