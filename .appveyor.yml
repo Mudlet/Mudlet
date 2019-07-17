@@ -16,6 +16,7 @@ environment:
   - QT_BASE_DIR: C:\Qt\5.12.2\mingw73_32
     MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32
 install:
+- tree /F C:\msys64
 - pacman -Ss hunspell
 - pacman -sy mingw-w64-i686-hunspell
 - pacman -Ql mingw-w64-i686-hunspell
