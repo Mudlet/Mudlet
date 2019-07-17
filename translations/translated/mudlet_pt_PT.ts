@@ -916,13 +916,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2923"/>
       <source>Can only set location when exactly one room is selected</source>
       <comment>2D Mapper context menu (room) item tooltip (disabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Só é possível configurar o local apenas quando exatamente uma sala estiver selecionada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2950"/>
       <source>Move</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>Mover</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2951"/>
@@ -934,7 +934,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2953"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>Excluir</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2954"/>
@@ -946,7 +946,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2970"/>
       <source>Add point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Adicionar ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2977"/>
@@ -964,7 +964,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2984"/>
       <source>Remove point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Remover Ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2991"/>
