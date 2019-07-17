@@ -124,7 +124,7 @@ matrix:
         - qt57tools
 
 before_install:
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then cp -f -R "/usr/local/Homebrew-cache" "/usr/local/Homebrew"; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" && -d "/usr/local/Homebrew-cache" ]; then cp -f -R "/usr/local/Homebrew-cache" "/usr/local/Homebrew"; fi
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | tee -a "${HOME}/ca-file.pem"; fi
   # add to the path here to pick up things as soon as its installed
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="${HOME}/.npm-global/bin:$PATH"; fi
