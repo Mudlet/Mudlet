@@ -5365,7 +5365,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="539"/>
       <source>Package &quot;%1&quot; exported to: %2</source>
-      <translation>Pacchetto &quot;%1&quot; esportato in: %2</translation>
+      <translation>Package &quot;%1&quot; esportato in: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="835"/>
@@ -7795,7 +7795,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/ui/main_window.ui" line="187"/>
       <source>Notepad</source>
-      <translation>Blocco note</translation>
+      <translation>Note</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="195"/>
@@ -7861,7 +7861,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/ui/main_window.ui" line="264"/>
       <source>Package manager</source>
-      <translation>Gestione pacchetti</translation>
+      <translation>Gestione package</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="272"/>
@@ -7871,7 +7871,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/ui/main_window.ui" line="280"/>
       <source>Package exporter (experimental)</source>
-      <translation>Esportatore di pacchetti (sperimentale)</translation>
+      <translation>Esportatore package (sperimentale)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="288"/>
@@ -9357,7 +9357,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="614"/>
       <source>Notepad</source>
-      <translation>Blocco note</translation>
+      <translation>Note</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="615"/>
@@ -9368,12 +9368,12 @@ Avvio in corso... Buon divertimento!
       <location filename="../src/mudlet.cpp" line="620"/>
       <location filename="../src/mudlet.cpp" line="1203"/>
       <source>Package Manager</source>
-      <translation>Gestione Pacchetti</translation>
+      <translation>Gestione Package</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="621"/>
       <source>Package Manager - allows you to install xmls, .mpackages</source>
-      <translation>Gestione Pacchetti: consente di installare xmls, .mpackages</translation>
+      <translation>Gestione Package: consente di installare xmls, .mpackages</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="626"/>
@@ -9541,7 +9541,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="3668"/>
       <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
-      <translation>[  OK  ]  - Profilo &quot;%1&quot; caricato in modalità offline.</translation>
+      <translation>[  OK  ] - Profilo &quot;%1&quot; caricato in modalità offline.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3693"/>
