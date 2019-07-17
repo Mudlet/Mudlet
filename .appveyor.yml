@@ -19,7 +19,7 @@ install:
 - cd "%APPVEYOR_BUILD_FOLDER%\CI"
 - set PATH=%PATH%;C:\msys64\usr\bin
 - powershell ".\appveyor.set-environment.ps1"
-- pacman -S --noconfirm mingw-w64-i686-hunspell
+- pacman -S --noconfirm mingw-w64-i686-hunspell --root "C:\Qt\Tools\mingw730_32"
 - pacman -Ql mingw-w64-i686-hunspell
 - powershell ".\appveyor.install.ps1"
 
