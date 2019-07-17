@@ -1069,20 +1069,12 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         if (event->modifiers() & Qt::ControlModifier) {
             mCtrlSelecting = true;
         }
-        int x = event->x() / mFontWidth;
-        if (mShowTimeStamps) {
-            if (x < 13) {
-                mCtrlSelecting = true;
-            }
-            x -= 13;
-        }
+
         int y = (event->y() / mFontHeight) + imageTopLine();
-        if (x < 0) {
-            x = 0;
-        }
-        if (y < 0) {
-            y = 0;
-        }
+        y = std::max(y, 0);
+
+        int x = convertMouseXToBufferX(event->x(), y);
+
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
             if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
                 if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
@@ -1164,17 +1156,11 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
     }
 
     if (event->button() == Qt::RightButton) {
-        int x = event->x() / mFontWidth;
-        if (mShowTimeStamps) {
-            x -= 13;
-        }
         int y = (event->y() / mFontHeight) + imageTopLine();
-        if (x < 0) {
-            x = 0;
-        }
-        if (y < 0) {
-            y = 0;
-        }
+        y = std::max(y, 0);
+
+        int x = convertMouseXToBufferX(event->x(), y);
+
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
             if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
                 if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
