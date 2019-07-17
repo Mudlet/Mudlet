@@ -124,7 +124,7 @@ matrix:
         - qt57tools
 
 before_install:
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then cp --force --recursive "/usr/local/Homebrew-cache" "/usr/local/Homebrew"; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then cp -f -R "/usr/local/Homebrew-cache" "/usr/local/Homebrew"; fi
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | tee -a "${HOME}/ca-file.pem"; fi
   # add to the path here to pick up things as soon as its installed
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="${HOME}/.npm-global/bin:$PATH"; fi
@@ -150,7 +150,7 @@ before_cache:
 # Credit https://discourse.brew.sh/t/best-practice-for-homebrew-on-travis-brew-update-is-5min-to-build-time/5215/9
 # Cache only .git files under "/usr/local/Homebrew" so "brew update" does not take 5min every build
 # Find workaround on macOS due to https://superuser.com/a/1459901/151744
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then rm -rf "/usr/local/Homebrew-cache" && cp --force --recursive "/usr/local/Homebrew" "/usr/local/Homebrew-cache"; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then rm -rf "/usr/local/Homebrew-cache" && cp -f -R "/usr/local/Homebrew" "/usr/local/Homebrew-cache"; fi
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then cd "/usr/local/Homebrew-cache" && find . \! -regex ".+\.git.+" -delete; fi
   # - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew install tree && tree -a -h "/usr/local/Homebrew"; fi
   # - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew install tree && tree -a -h "/usr/local/Homebrew"; fi
