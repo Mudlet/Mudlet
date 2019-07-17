@@ -18,7 +18,7 @@ environment:
 install:
 - set PATH=%PATH%;C:\msys64\usr\bin
 - pacman -Ss hunspell
-- pacman -Sy mingw-w64-i686-hunspell
+- pacman -S --noconfirm mingw-w64-i686-hunspell
 - pacman -Ql mingw-w64-i686-hunspell
 - cd "%APPVEYOR_BUILD_FOLDER%\CI"
 - powershell ".\appveyor.install.ps1"
