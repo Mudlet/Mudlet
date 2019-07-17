@@ -425,7 +425,3 @@ CheckAndInstall "zziplib" "$Env:MINGW_BASE_DIR\lib\libzzip.la" { InstallZziplib 
 CheckAndInstall "luarocks" "C:\LuaRocks\luarocks.bat" { InstallLuarocks }
 CheckAndInstall "pugixml" "$Env:MINGW_BASE_DIR\lib\libpugixml.a" { InstallPugixml }
 InstallLuaModules
-
-pacman -Ss hunspell
-pacman -sy mingw-w64-i686-hunspell
-pacman -Ql mingw-w64-i686-hunspell

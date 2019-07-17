@@ -16,6 +16,9 @@ environment:
   - QT_BASE_DIR: C:\Qt\5.12.2\mingw73_32
     MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32
 install:
+- pacman -Ss hunspell
+- pacman -sy mingw-w64-i686-hunspell
+- pacman -Ql mingw-w64-i686-hunspell
 - cd "%APPVEYOR_BUILD_FOLDER%\CI"
 - powershell ".\appveyor.install.ps1"
 
