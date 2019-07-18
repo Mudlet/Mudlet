@@ -10044,7 +10044,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="320"/>
       <source>&lt;p&gt;When checked will cause the date-stamp named log file to be HTML (file extention &apos;.html&apos;) which can convey color, font and other formatting information rather than a plain text (file extension &apos;.txt&apos;) format.  If changed whilst logging is already in progress it is necessary to stop and restart logging for this setting to take effect in a new log file.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Seleziona questa opzione per salvare i file di log in formato HTML (estensione &apos;.html&apos;) in modo che contenga colori, tipi di carattere e altre informazioni di formattazione invece che solamente il testo ricevuto dal gioco (estensione &apos;.txt&apos;).  Se cambi l'opzione mentre il logging è attivo è necessario riavviarlo affinché la variazione venga applicata.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="174"/>
@@ -11618,7 +11618,8 @@ o script LUA</translation>
 &lt;p&gt;&lt;i&gt;Cancelling from the file dialogue will not make any changes; to clear the file use the clear button to the right of the file name display.&lt;/i&gt;&lt;/p&gt;</source>
       <comment>This is the button used to select a sound file to be played when a trigger fires.</comment>
       <extracomment>Please ensure the text used here is duplicated within the tooltip for the QLineEdit that displays the file name selected.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Utilizza questa opzione per aprire la finestra di dialogo con cui selezionare il file audio da avviare quando il trigger viene attivato.&lt;/p&gt;
+&lt;p&gt;&lt;i&gt;Annullare la finestra di dialogo non apporterà alcuna modifica; per eliminare l'associazione con il file utilizza il pulsante a destra del pannello nome file.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="519"/>
@@ -11640,7 +11641,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="563"/>
       <source>&lt;p&gt;Click to remove a sound file set for this trigger.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Premi per eliminare un file sonoro impostato per questo trigger.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Premi per eliminare il file audio impostato per questo trigger.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="614"/>
