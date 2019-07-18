@@ -32,6 +32,7 @@
 #include "pre_guard.h"
 #include <QtUiTools>
 #include "post_guard.h"
+#include <sstream>
 
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 : QDialog( parent )
@@ -89,6 +90,16 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
                                     "Welcome message. Both %1 and %2 may be replaced by icons when this text is used.");
 
     auto pWelcome_document = new QTextDocument(this);
+
+    auto copyProfile = new QAction(tr("Copy"), this);
+    copyProfile->setObjectName(QStringLiteral("copyProfile"));
+    auto copyProfileSettings = new QAction(tr("Copy settings only"), this);
+    copyProfileSettings->setObjectName(QStringLiteral("copyProfileSettingsOnly"));
+
+    copy_profile_toolbutton->addAction(copyProfile);
+    copy_profile_toolbutton->addAction(copyProfileSettings);
+    copy_profile_toolbutton->setDefaultAction(copyProfile);
+
     if (mudlet::self()->mShowIconsOnDialogs) {
         // Since I've switched to allowing the possibility of theme replacement
         // of icons we need a way to insert the current theme icons for
@@ -113,8 +124,11 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         offline_button->setIcon(QIcon(QStringLiteral(":/icons/mudlet_editor.png")));
         connect_button->setIcon(icon_connect);
         new_profile_button->setIcon(icon_new);
-        copy_profile_button->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
         remove_profile_button->setIcon(QIcon::fromTheme(QStringLiteral("edit-delete"), QIcon(QStringLiteral(":/icons/edit-delete.png"))));
+
+        copy_profile_toolbutton->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
+        copy_profile_toolbutton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        copyProfile->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
 
         QTextCursor cursor = pWelcome_document->find(QStringLiteral("NEW_PROFILE_ICON"), 0, QTextDocument::FindWholeWords);
         // The indicated piece of marker text should be selected by the cursor
@@ -138,13 +152,15 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         pWelcome_document->setHtml(QStringLiteral("<html><head/><body>%1</body></html>")
                                    .arg(Welcome_text_template.arg(QString(), QString())));
     }
+
     welcome_message->setDocument(pWelcome_document);
 
     connect(offline_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_load);
     connect(connect_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::accept);
     connect(abort, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_cancel);
     connect(new_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_addProfile);
-    connect(copy_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_copy_profile);
+    connect(copyProfile, &QAction::triggered, this, &dlgConnectionProfiles::slot_copy_profile);
+    connect(copyProfileSettings, &QAction::triggered, this, &dlgConnectionProfiles::slot_copy_profilesettings_only);
     connect(remove_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_deleteProfile);
     connect(profile_name_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_name);
     connect(profile_name_entry, &QLineEdit::editingFinished, this, &dlgConnectionProfiles::slot_save_name);
@@ -1655,11 +1671,67 @@ void dlgConnectionProfiles::slot_cancel()
 
 void dlgConnectionProfiles::slot_copy_profile()
 {
-    QString profile_name = profile_name_entry->text().trimmed();
-    QString oldname = profile_name;
-
-    if (profile_name.isEmpty()) {
+    QString profile_name;
+    QString oldname;
+    QListWidgetItem* pItem;
+    if (!copyProfileWidget(profile_name, oldname, pItem)) {
         return;
+    }
+
+    // copy the folder on-disk
+    QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, oldname));
+    if (!dir.exists()) {
+        return;
+    }
+
+    copyFolder(mudlet::getMudletPath(mudlet::profileHomePath, oldname),
+               mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
+    mProfileList << profile_name;
+    slot_item_clicked(pItem);
+    // Clear the Discord optin on the copied profile - just because the source
+    // one may have had it enabled does not mean we can assume the new one would
+    // want it set:
+    discord_optin_checkBox->setChecked(false);
+}
+
+void dlgConnectionProfiles::slot_copy_profilesettings_only()
+{
+    QString profile_name;
+    QString oldname;
+    QListWidgetItem* pItem;
+    if (!copyProfileWidget(profile_name, oldname, pItem)) {
+        return;
+    }
+
+    QDir newProfileDir(mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
+    newProfileDir.mkpath(newProfileDir.path());
+    if (!newProfileDir.exists()) {
+        return;
+    }
+
+    // copy relevant profile files
+    for (QString file : {"url", "port", "password", "login", "description"}) {
+        auto filePath = QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileHomePath, oldname), file);
+        auto newFilePath = QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileHomePath, profile_name), file);
+        QFile::copy(filePath, newFilePath);
+    }
+
+    copyProfileSettingsOnly(oldname, profile_name);
+
+    mProfileList << profile_name;
+    slot_item_clicked(pItem);
+    // Clear the Discord optin on the copied profile - just because the source
+    // one may have had it enabled does not mean we can assume the new one would
+    // want it set:
+    discord_optin_checkBox->setChecked(false);
+}
+
+bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const
+{
+    profile_name = profile_name_entry->text().trimmed();
+    oldname = profile_name;
+    if (profile_name.isEmpty()) {
+        return false;
     }
 
     // prepend n+1 to end of the profile name
@@ -1677,9 +1749,9 @@ void dlgConnectionProfiles::slot_copy_profile()
         profile_name = profile_name2;
     }
 
-    auto pItem = new QListWidgetItem(profile_name);
+    pItem = new QListWidgetItem(profile_name);
     if (!pItem) {
-        return;
+        return false;
     }
 
     // add the new widget in
@@ -1696,20 +1768,77 @@ void dlgConnectionProfiles::slot_copy_profile()
     host_name_entry->setReadOnly(false);
     port_entry->setReadOnly(false);
 
-    // copy the folder on-disk
-    QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, oldname));
-    if (!dir.exists()) {
+    return true;
+}
+
+void dlgConnectionProfiles::copyProfileSettingsOnly(const QString& oldname, const QString& newname)
+{
+    QDir oldProfiledir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, oldname));
+    QDir newProfiledir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, newname));
+    newProfiledir.mkpath(newProfiledir.absolutePath());
+    QStringList entries = oldProfiledir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
+    if (entries.empty()) {
         return;
     }
 
-    copyFolder(mudlet::getMudletPath(mudlet::profileHomePath, oldname),
-               mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
-    mProfileList << profile_name;
-    slot_item_clicked(pItem);
-    // Clear the Discord optin on the copied profile - just because the source
-    // one may have had it enabled does not mean we can assume the new one would
-    // want it set:
-    discord_optin_checkBox->setChecked(false);
+    auto copySettingsFromFile = oldProfiledir.absoluteFilePath(entries.first());
+
+    pugi::xml_document newProfileXml;
+    if (extractSettingsFromProfile(newProfileXml, copySettingsFromFile)) {
+        saveProfileCopy(newProfiledir, newProfileXml);
+    }
+}
+
+bool dlgConnectionProfiles::extractSettingsFromProfile(pugi::xml_document& newProfile, const QString& copySettingsFrom)
+{
+    pugi::xml_document oldProfile;
+    pugi::xml_parse_result result = oldProfile.load_file(copySettingsFrom.toUtf8().constData());
+    if (!result) {
+        qWarning() << "dlgConnectionProfiles::copyProfileSettingsOnly() ERROR: couldn't parse" << copySettingsFrom;
+        qWarning() << "Parse error: " << result.description() << ", character pos= " << result.offset;
+        return false;
+    }
+
+    // write header
+    auto declaration = newProfile.prepend_child(pugi::node_declaration);
+    declaration.append_attribute("version") = "1.0";
+    declaration.append_attribute("encoding") = "UTF-8";
+    newProfile.append_child(pugi::node_doctype).set_value("MudletPackage");
+
+    // copy /MudletPackage attributes
+    auto mudletPackage = newProfile.append_child("MudletPackage");
+    const auto attributeNodes = oldProfile.select_nodes("/MudletPackage/attribute::*");
+    for (pugi::xpath_node_set::const_iterator it = attributeNodes.begin(); it != attributeNodes.end(); ++it) {
+        auto node = *it;
+        mudletPackage.append_attribute(node.attribute().name()) = node.attribute().value();
+    }
+
+    // remove installed packages/modules
+    const auto hostPackageResults = oldProfile.select_nodes("/MudletPackage/HostPackage");
+    pugi::xml_node hostPackage = hostPackageResults.first().node();
+    auto host = hostPackage.child("Host");
+    host.remove_child("mInstalledPackages");
+    host.remove_child("mInstalledModules");
+
+    // copy in the /Mudlet/HostPackage
+    mudletPackage.append_copy(hostPackage);
+    return true;
+}
+
+// save profile using Qt's API's which handle non-ASCII characters in Windows paths fine
+void dlgConnectionProfiles::saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const
+{
+    QFile file(newProfiledir.absoluteFilePath(QStringLiteral("Copied profile (settings only).xml")));
+    if (!file.open(QFile::WriteOnly)) {
+        qDebug() << "dlgConnectionProfiles::copyProfileSettingsOnly ERROR - couldn't create new profile file:" << file.fileName() << "-" << file.errorString();
+        return;
+    }
+
+    std::stringstream saveStringStream(std::ios::out);
+    newProfileXml.save(saveStringStream);
+    std::string output(saveStringStream.str());
+    file.write(output.data());
+    file.close();
 }
 
 void dlgConnectionProfiles::slot_load()
@@ -1755,15 +1884,20 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
     bool needsGenericPackagesInstall = false;
     mudlet::self()->hideMudletsVariables(pHost);
-    if (!entries.isEmpty()) {
+    if (entries.isEmpty()) {
+        needsGenericPackagesInstall = true;
+    } else {
         QFile file(QStringLiteral("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString()));
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
         importer.importPackage(&file, nullptr); // TODO: Missing false return value handler
         pHost->refreshPackageFonts();
-    } else {
-        needsGenericPackagesInstall = true;
+
+        // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
+        if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {
+            needsGenericPackagesInstall = true;
+        }
     }
 
     // overwrite the generic profile with user supplied name, url and login information
