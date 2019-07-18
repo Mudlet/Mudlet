@@ -159,7 +159,6 @@ before_cache:
 after_success:
   - cd "${TRAVIS_BUILD_DIR}"
   - bash CI/travis.after_success.sh
-
 notifications:
   webhooks:
     urls:

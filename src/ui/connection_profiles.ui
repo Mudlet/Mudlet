@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>760</width>
-    <height>671</height>
+    <height>682</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -2065,9 +2065,6 @@
             </item>
             <item>
              <widget class="QPushButton" name="remove_profile_button">
-              <property name="enabled">
-               <bool>true</bool>
-              </property>
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                 <horstretch>0</horstretch>
@@ -2078,12 +2075,6 @@
                <size>
                 <width>0</width>
                 <height>25</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
                </size>
               </property>
               <property name="text">
@@ -2092,7 +2083,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="copy_profile_button">
+             <widget class="QToolButton" name="copy_profile_toolbutton">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                 <horstretch>0</horstretch>
@@ -2105,14 +2096,14 @@
                 <height>25</height>
                </size>
               </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
-              </property>
               <property name="text">
                <string>Copy</string>
+              </property>
+              <property name="popupMode">
+               <enum>QToolButton::MenuButtonPopup</enum>
+              </property>
+              <property name="toolButtonStyle">
+               <enum>Qt::ToolButtonFollowStyle</enum>
               </property>
              </widget>
             </item>
@@ -2128,12 +2119,6 @@
                <size>
                 <width>0</width>
                 <height>25</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
                </size>
               </property>
               <property name="text">
@@ -2533,11 +2518,11 @@
               <property name="toolTip">
                <string>Game description</string>
               </property>
-              <property name="readOnly">
-               <bool>false</bool>
-              </property>
               <property name="tabChangesFocus">
                <bool>true</bool>
+              </property>
+              <property name="readOnly">
+               <bool>false</bool>
               </property>
              </widget>
             </item>
