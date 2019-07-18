@@ -11560,7 +11560,8 @@ o script LUA</translation>
       <location filename="../src/ui/triggers_main_area.ui" line="192"/>
       <source>&lt;p&gt;The trigger will only fire if &lt;u&gt;all&lt;/u&gt; conditions on the list have been met within the specified line delta, and captures will be saved in &lt;tt&gt;multimatches&lt;/tt&gt; instead of &lt;tt&gt;matches&lt;/tt&gt;.&lt;/p&gt;
 &lt;p&gt;If this option is &lt;b&gt;not&lt;/b&gt; set the trigger will fire if &lt;u&gt;any&lt;/u&gt; condition on the list have been met.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Il trigger viene attivato solo se &lt;u&gt;Tutte&lt;/u&gt; le condizioni dell'elenco sono verificate all'interno di un determinato numero di linee (delta). Tutti i riscontri saranno salvati nella variabile &lt;tt&gt;multimatches&lt;/tt&gt; invece che &lt;tt&gt;matches&lt;/tt&gt;.&lt;/p&gt;
+&lt;p&gt;Se questa opzione &lt;b&gt;Non&lt;/b&gt; è selezionata il trigger sarà attivato quando &lt;u&gt;una qualsiasi&lt;/u&gt; condizione dell'elenco viene soddisfatta.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="199"/>
