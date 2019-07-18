@@ -7432,7 +7432,7 @@ dalla GUI)</translation>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="35"/>
       <source>&lt;p&gt;It seems that you don&apos;t have any &lt;a href=&quot;http://wiki.mudlet.org/w/Mapping_script&quot;&gt;mapping scripts&lt;/a&gt; installed yet - the mapper needs you to have one for your game, so it can track where you are and autowalk you. You can either make one yourself, or import an existing one that someone else made.&lt;/p&gt;&lt;p&gt;Would you like to see if any are available?&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Sembra che tu non abbia script del &lt;a href=&quot;http://wiki.mudlet.org/w/Mapping_script&quot;&gt;mapper&lt;/a&gt; installati - il mapper ha bisogno di avere script specifici per ogni gioco in modo da poter tenere traccia della stanza corrente. Puoi farne uno tu stesso o importarne uno esistente che qualcun altro ha fatto.&lt;/p&gt;&lt;p&gt;Vuoi visitare il sito internet e verificare se ce ne sono disponibili?&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/lacking_mapper_script.ui" line="86"/>
