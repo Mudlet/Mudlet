@@ -42,6 +42,7 @@ env:
   - secure: CaZAZW5shaYve0gauA0rdRn/Bxdf5itfAFb7FuaOHmk999AQ/aB013huCcdeeBDhon2CxQ3BRLTkRzHR00DBA7rPgR1Y/4/kHa71xisUY7CqDlHYktQI69CpqGot2Bb1eE2Rs7ZQcYKhfMbMJacE6zNBZwUq0I0OWI1Ux3PKkJs=
   - secure: bbgK1psr0ZUYPJanjnyzsbkQk2QHLkS39iiycnb4GVUUlNKRcdxqEFqoVFssOKvrQQr2RVe/k8RSb9D57KiCiQaAqksnmGJ9nTDNiNJefgTO+bTjGVIzBSyMyLDX/ltQkyHm5bBF48+64sAv5jYkbfgfj9H0/ihtwt6wqh5AdJQ=
   - secure: N4fBA3ul3DBM0/RJjQ+R64EGoQb9AaKmvgyFq9TdTT4JQ2TB956yHq/iwOfnYAjY0zW238lWE1n+mlQlKwW7MrOPlZylsKO1oBTjEkm8d7SezPnLZWPBB5tGv1wrWOcI+k1nYFPPRFtTopcCwvLyFoN7d/Z7ViuqNAK8QSzCKps=
+  - HOMEBREW_AUTO_UPDATE_SECS=86400
 git:
   submodules: false # We selectively pull in the wanted submodules ourselves now
 matrix:
@@ -150,8 +151,8 @@ before_cache:
 # Credit https://discourse.brew.sh/t/best-practice-for-homebrew-on-travis-brew-update-is-5min-to-build-time/5215/9
 # Cache only .git files under "/usr/local/Homebrew" so "brew update" does not take 5min every build
 # Find workaround on macOS due to https://superuser.com/a/1459901/151744
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then rm -rf "${HOME}/.homebrew-cache" && sudo cp -f -R "/usr/local/Homebrew" "${HOME}/.homebrew-cache"; fi
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then cd "${HOME}/.homebrew-cache" && sudo find . \! -regex ".+\.git.+" -delete; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then rm -rf "${HOME}/.homebrew-cache" && cp -f -R "/usr/local/Homebrew" "${HOME}/.homebrew-cache"; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then cd "${HOME}/.homebrew-cache" && find . \! -regex ".+\.git.+" -delete; fi
   # - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew install tree && tree -a -h "/usr/local/Homebrew"; fi
   # - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew install tree && tree -a -h "/usr/local/Homebrew"; fi
 
