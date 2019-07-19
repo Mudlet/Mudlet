@@ -3204,7 +3204,7 @@ int TLuaInterpreter::hideUserWindow(lua_State* L)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::setBorderSize(int size, int position)
+void TLuaInterpreter::setBorderSize(int size, int position, bool updateEvent = true)
 {
     Host& host = getHostFromLua(L);
     // position: 0 = top, 1 = right, 2 = bottom, 3 = left
@@ -3214,12 +3214,14 @@ void TLuaInterpreter::setBorderSize(int size, int position)
         case 2: host.mBorderBottomHeight = size; break;
         case 3: host.mBorderLeftWidth = size; break;
     }
-    int x, y;
-    x = host.mpConsole->width();
-    y = host.mpConsole->height();
-    QSize s = QSize(x, y);
-    QResizeEvent event(s, s);
-    QApplication::sendEvent(host.mpConsole, &event);
+    if updateEvent {
+        int x, y;
+        x = host.mpConsole->width();
+        y = host.mpConsole->height();
+        QSize s = QSize(x, y);
+        QResizeEvent event(s, s);
+        QApplication::sendEvent(host.mpConsole, &event);
+    }
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderSizes
