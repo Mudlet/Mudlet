@@ -4080,7 +4080,10 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
 &lt;li&gt;click the &lt;i&gt;Default&lt;/i&gt; or &lt;i&gt;Ignore&lt;/i&gt; buttons at the bottom for a pair of other special cases&lt;/li&gt;
 &lt;li&gt;click &lt;i&gt;Cancel&lt;/i&gt; to close this dialog without making any changes&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</source>
       <comment>Ensure that &quot;Default&quot;, &quot;Ignore&quot; and &quot;Cancel&quot; in this instruction are the same as used for the controls elsewhere on this dialog.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;small&gt;Scegli cosa fare:&lt;ul&gt;&lt;li&gt;seleziona uno dei 16 colori basi presenti nell'elenco sottostante&lt;/li&gt;
+&lt;li&gt;utilizza il bottone &lt;i&gt;Altri colori&lt;/i&gt; per visualizzare fino a 256 colori, poi segui le istruzioni per selezionarne la parte supportata dal tuo gioco; se uno dei colori è già in uso sarà evidenziato in modo differente&lt;/li&gt;
+&lt;li&gt;utilizza i bottoni &lt;i&gt;Predefinito&lt;/i&gt; o &lt;i&gt;Ignora&lt;/i&gt;, rispettivamente, per ripristinare i valori di base della colorazione o per ignorare il colore del carattere/sfondo&lt;/li&gt;
+&lt;li&gt;utilizza il bottone &lt;i&gt;Annulla&lt;/i&gt; per chiudere la finestra di dialogo senza effettuare modifiche&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="58"/>
