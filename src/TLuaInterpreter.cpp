@@ -3222,6 +3222,48 @@ void TLuaInterpreter::setBorderSize(int size, int position)
     QApplication::sendEvent(host.mpConsole, &event);
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderSizes
+int TLuaInterpreter::setBorderSizes(lua_State* L)
+{
+    int sizeTop;
+    if (!lua_isnumber(L, 1)) {
+        lua_pushstring(L, "setBorderSizes: bad argument #1 value (new top size as number expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    } else {
+        sizeTop = lua_tonumber(L, 1);
+    }
+    int sizeRight;
+    if (!lua_isnumber(L, 2)) {
+        lua_pushstring(L, "setBorderSizes: bad argument #2 value (new right size as number expected, got %s!)", luaL_typename(L, 2));
+        lua_error(L);
+        return 1;
+    } else {
+        sizeRight = lua_tonumber(L, 2);
+    }
+    int sizeBottom;
+    if (!lua_isnumber(L, 3)) {
+        lua_pushstring(L, "setBorderSizes: bad argument #3 value (new bottom size as number expected, got %s!)", luaL_typename(L, 3));
+        lua_error(L);
+        return 1;
+    } else {
+        sizeBottom = lua_tonumber(L, 3);
+    }
+    int sizeLeft;
+    if (!lua_isnumber(L, 4)) {
+        lua_pushstring(L, "setBorderSizes: bad argument #4 value (new left size as number expected, got %s!)", luaL_typename(L, 4));
+        lua_error(L);
+        return 1;
+    } else {
+        sizeLeft = lua_tonumber(L, 4);
+    }
+    setBorderSize(sizeTop, 0, false);
+    setBorderSize(sizeRight, 1, false);
+    setBorderSize(sizeBottom, 2, false);
+    setBorderSize(sizeLeft, 3, true); // only now send update event
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderTop
 int TLuaInterpreter::setBorderTop(lua_State* L)
 {
@@ -14625,10 +14667,11 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "isAnsiBgColor", TLuaInterpreter::isAnsiBgColor);
     lua_register(pGlobalLua, "stopSounds", TLuaInterpreter::stopSounds);
     lua_register(pGlobalLua, "playSoundFile", TLuaInterpreter::playSoundFile);
+    lua_register(pGlobalLua, "setBorderSizes", TLuaInterpreter::setBorderSizes);
     lua_register(pGlobalLua, "setBorderTop", TLuaInterpreter::setBorderTop);
+    lua_register(pGlobalLua, "setBorderRight", TLuaInterpreter::setBorderRight);
     lua_register(pGlobalLua, "setBorderBottom", TLuaInterpreter::setBorderBottom);
     lua_register(pGlobalLua, "setBorderLeft", TLuaInterpreter::setBorderLeft);
-    lua_register(pGlobalLua, "setBorderRight", TLuaInterpreter::setBorderRight);
     lua_register(pGlobalLua, "setBorderColor", TLuaInterpreter::setBorderColor);
     lua_register(pGlobalLua, "setConsoleBufferSize", TLuaInterpreter::setConsoleBufferSize);
     lua_register(pGlobalLua, "enableScrollBar", TLuaInterpreter::enableScrollBar);
