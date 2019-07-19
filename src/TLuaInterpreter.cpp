@@ -3204,7 +3204,7 @@ int TLuaInterpreter::hideUserWindow(lua_State* L)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::setBorderSize(lua_State* L, int size, int position, bool updateEvent = true)
+void TLuaInterpreter::setBorderSize(lua_State* L, int size, int position, bool updateEvent)
 {
     Host& host = getHostFromLua(L);
     // position: 0 = top, 1 = right, 2 = bottom, 3 = left
@@ -3214,7 +3214,7 @@ void TLuaInterpreter::setBorderSize(lua_State* L, int size, int position, bool u
         case 2: host.mBorderBottomHeight = size; break;
         case 3: host.mBorderLeftWidth = size; break;
     }
-    if updateEvent {
+    if (updateEvent) {
         int x, y;
         x = host.mpConsole->width();
         y = host.mpConsole->height();
@@ -3330,7 +3330,7 @@ int TLuaInterpreter::setBorderLeft(lua_State* L)
 int TLuaInterpreter::getBorderTop(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    lua_pushnumber(L, host.mBorderTopWidth);
+    lua_pushnumber(L, host.mBorderTopHeight);
     return 0;
 }
 
@@ -3346,7 +3346,7 @@ int TLuaInterpreter::getBorderLeft(lua_State* L)
 int TLuaInterpreter::getBorderBottom(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    lua_pushnumber(L, host.mBorderBottomWidth);
+    lua_pushnumber(L, host.mBorderBottomHeight);
     return 0;
 }
 
