@@ -533,19 +533,32 @@ mudlet::mudlet()
         mAutolog = false;
     }
 
-    mpActionConnect = new QAction(QIcon(QStringLiteral(":/icons/preferences-web-browser-cache.png")), tr("Connect"), this);
-    mpActionConnect->setToolTip(tr("Connect to a game"));
-    mpMainToolBar->addAction(mpActionConnect);
+    mpButtonConnect = new QToolButton(this);
+    mpButtonConnect->setText(tr("Connect"));
+    mpButtonConnect->setObjectName(QStringLiteral("connect"));
+    mpButtonConnect->setContextMenuPolicy(Qt::ActionsContextMenu);
+    mpButtonConnect->setPopupMode(QToolButton::MenuButtonPopup);
+    mpButtonConnect->setAutoRaise(true);
+    mpMainToolBar->addWidget(mpButtonConnect);
 
-    // add name to the action's widget in the toolbar, which doesn't have one by default
-    // see https://stackoverflow.com/a/32460562/72944
-    mpActionConnect->setObjectName(QStringLiteral("connect_action"));
-    mpMainToolBar->widgetForAction(mpActionConnect)->setObjectName(mpActionConnect->objectName());
+    mpActionConnect = new QAction(tr("Connect"), this);
+    mpActionConnect->setIcon(QIcon(QStringLiteral(":/icons/preferences-web-browser-cache.png")));
+    mpActionConnect->setIconText(tr("Connect"));
+    mpActionConnect->setObjectName(QStringLiteral("connect"));
+
+    mpActionDisconnect = new QAction(tr("Disconnect"), this);
+    mpActionDisconnect->setObjectName(QStringLiteral("disconnect"));
+
+    mpButtonConnect->addAction(mpActionConnect);
+    mpButtonConnect->addAction(mpActionDisconnect);
+    mpButtonConnect->setDefaultAction(mpActionConnect);
 
     mpActionTriggers = new QAction(QIcon(QStringLiteral(":/icons/tools-wizard.png")), tr("Triggers"), this);
     mpActionTriggers->setToolTip(tr("Show and edit triggers"));
     mpMainToolBar->addAction(mpActionTriggers);
     mpActionTriggers->setObjectName(QStringLiteral("triggers_action"));
+    // add name to the action's widget in the toolbar, which doesn't have one by default
+    // see https://stackoverflow.com/a/32460562/72944
     mpMainToolBar->widgetForAction(mpActionTriggers)->setObjectName(mpActionTriggers->objectName());
 
     mpActionAliases = new QAction(QIcon(QStringLiteral(":/icons/system-users.png")), tr("Aliases"), this);
@@ -740,6 +753,7 @@ mudlet::mudlet()
     connect(mpActionAbout.data(), &QAction::triggered, this, &mudlet::slot_show_about_dialog);
     connect(mpActionMultiView.data(), &QAction::triggered, this, &mudlet::slot_multi_view);
     connect(mpActionReconnect.data(), &QAction::triggered, this, &mudlet::slot_reconnect);
+    connect(mpActionDisconnect.data(), &QAction::triggered, this, &mudlet::slot_disconnect);
     connect(mpActionReplay.data(), &QAction::triggered, this, &mudlet::slot_replay);
     connect(mpActionNotes.data(), &QAction::triggered, this, &mudlet::slot_notes);
     connect(mpActionMapper.data(), &QAction::triggered, this, &mudlet::slot_mapper);
@@ -1673,6 +1687,7 @@ void mudlet::disableToolbarButtons()
 
     dactionReplay->setEnabled(false);
     mpActionReconnect->setEnabled(false);
+    mpActionDisconnect->setEnabled(false);
 }
 
 void mudlet::enableToolbarButtons()
@@ -1706,6 +1721,7 @@ void mudlet::enableToolbarButtons()
     }
 
     mpActionReconnect->setEnabled(true);
+    mpActionDisconnect->setEnabled(true);
 
     // As this is called when a profile is loaded it is time to check whether
     // we need to continue to show the main menu and/or the main toolbar
@@ -2945,6 +2961,7 @@ void mudlet::setToolBarIconSize(const int s)
     mpMainToolBar->setIconSize(QSize(s * 8, s * 8));
     if (mToolbarIconSize > 2) {
         mpMainToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+        mpButtonConnect->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         mpButtonDiscord->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         if (!mpButtonAbout.isNull()) {
             mpButtonAbout->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
@@ -2952,6 +2969,7 @@ void mudlet::setToolBarIconSize(const int s)
         mpButtonPackageManagers->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     } else {
         mpMainToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        mpButtonConnect->setToolButtonStyle(Qt::ToolButtonIconOnly);
         mpButtonDiscord->setToolButtonStyle(Qt::ToolButtonIconOnly);
         if (!mpButtonAbout.isNull()) {
             mpButtonAbout->setToolButtonStyle(Qt::ToolButtonIconOnly);
