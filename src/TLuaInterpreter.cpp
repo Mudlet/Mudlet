@@ -3358,6 +3358,23 @@ int TLuaInterpreter::getBorderRight(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getBorderSizes
+int TLuaInterpreter::getBorderSizes(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    int n = lua_gettop(L);
+    lua_createtable(L, 0, 4);
+    lua_pushinteger(L, host.mBorderTopHeight);
+    lua_setfield(L, -2, "top");
+    lua_pushinteger(L, host.mBorderRightWidth);
+    lua_setfield(L, -2, "right");
+    lua_pushinteger(L, host.mBorderBottomHeight);
+    lua_setfield(L, -2, "bottom");
+    lua_pushinteger(L, host.mBorderLeftWidth);
+    lua_setfield(L, -2, "left");
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resizeWindow -- not resizeUserWindow - compare initLuaGlobals()
 int TLuaInterpreter::resizeWindow(lua_State* L)
 {
