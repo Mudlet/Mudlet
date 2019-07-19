@@ -224,8 +224,10 @@ local function modify_lua_functions(all_compressed_mappings)
          function os.execute(command)
             if command then
                command = convert_from_utf8(command)
+               return orig_os_execute(command)
+            else
+               return orig_os_execute()
             end
-            return orig_os_execute(command)
          end
 
          local orig_io_open = io.open
@@ -256,8 +258,10 @@ local function modify_lua_functions(all_compressed_mappings)
          function dofile(filename)
             if filename then
                filename = convert_from_utf8(filename)
+               return orig_dofile(filename)
+            else
+               return orig_dofile()
             end
-            return orig_dofile(filename)
          end
 
          local orig_loadfile = loadfile
@@ -265,8 +269,10 @@ local function modify_lua_functions(all_compressed_mappings)
          function loadfile(filename, ...)
             if filename then
                filename = convert_from_utf8(filename)
+               return orig_loadfile(filename, ...)
+            else
+               return orig_loadfile()
             end
-            return orig_loadfile(filename, ...)
          end
 
          local orig_require = require

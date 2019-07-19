@@ -280,7 +280,7 @@ unix:!macx {
 } else:win32 {
     MINGW_BASE_DIR = $$(MINGW_BASE_DIR)
     isEmpty(MINGW_BASE_DIR) {
-        MINGW_BASE_DIR = "C:\\Qt\\Tools\\mingw530_32"
+        MINGW_BASE_DIR = "C:\\Qt\\Tools\\mingw730_32"
     }
     LIBS +=  \
         -llua51 \

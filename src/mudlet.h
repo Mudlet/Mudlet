@@ -214,9 +214,11 @@ public:
     int getRowCount(Host* pHost, QString& name);
     QStringList getAvailableFonts();
     void hideMudletsVariables(Host *pHost);
+    void updateMudletDiscordInvite();
 #if defined(Q_OS_WIN32)
     void sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const;
 #endif
+=======
 
     static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;
@@ -449,6 +451,7 @@ public slots:
     void slot_close_profile_requested(int);
     void startAutoLogin();
     void slot_irc();
+    void slot_discord();
     void slot_uninstall_package();
     void slot_install_package();
     void slot_package_manager();
@@ -577,18 +580,23 @@ private:
     QPointer<QToolButton> mpButtonAbout;
     QPointer<QAction> mpActionAliases;
     QPointer<QAction> mpActionButtons;
+    QPointer<QToolButton> mpButtonConnect;
     QPointer<QAction> mpActionConnect;
     QPointer<QAction> mpActionDisconnect;
     QPointer<QAction> mpActionFullScreenView;
     QPointer<QAction> mpActionHelp;
+    QPointer<QAction> mpActionDiscord;
     QPointer<QAction> mpActionIRC;
+    QPointer<QToolButton> mpButtonDiscord;
     QPointer<QAction> mpActionKeys;
     QPointer<QAction> mpActionMapper;
-    QPointer<QAction> mpActionModuleManager;
     QPointer<QAction> mpActionMultiView;
     QPointer<QAction> mpActionNotes;
     QPointer<QAction> mpActionOptions;
+    QPointer<QToolButton> mpButtonPackageManagers;
     QPointer<QAction> mpActionPackageManager;
+    QPointer<QAction> mpActionModuleManager;
+    QPointer<QAction> mpActionPackageExporter;
     QPointer<QAction> mpActionReconnect;
     QPointer<QAction> mpActionScripts;
     QPointer<QAction> mpActionTimers;
@@ -636,6 +644,8 @@ private:
     QSet<QString> mWordSet_shared;
     // Prevent problems when updating the dictionary:
     QReadWriteLock mDictionaryReadWriteLock;
+
+    QString mMudletDiscordInvite = QStringLiteral("https://discordapp.com/invite/kuYvMQ9");
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
