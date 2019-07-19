@@ -2742,26 +2742,10 @@ void TConsole::setSystemSpellDictionary(const QString& newDict)
     }
 
 //#if defined(Q_OS_WIN32)
-#if true
-    static auto findNonAscii = QRegularExpression(QStringLiteral("([^ -~])"));
-    findNonAscii.optimize();
+//#if true
+    sanitizeUtf8Path(newDict, spell_aff);
 
-    auto match = findNonAscii.match(spell_aff);
-    if (match.hasMatch()) {
-        const QString spell_aff_noascii = QStringLiteral("C:\\Windows\\Temp\\%1.aff").arg(newDict);
-        const QString spell_dic_noascii = QStringLiteral("C:\\Windows\\Temp\\%1.dic").arg(newDict);
-        if (!QFile::copy(spell_aff, spell_aff_noascii)) {
-            qWarning() << "TConsole::setSystemSpellDictionary() ERROR: couldn't copy" << spell_aff << "to location without ASCII characters";
-        } else {
-            spell_aff = spell_aff_noascii;
-        }
-        if (!QFile::copy(spell_dic, spell_dic_noascii)) {
-            qWarning() << "TConsole::setSystemSpellDictionary() ERROR: couldn't copy" << spell_dic << "to location without ASCII characters";
-        } else {
-            spell_dic = spell_dic_noascii;
-        }
-    }
-#endif
+    //#endif
 
     qDebug() << "right before Hunspell_create, aff:" << spell_aff << "dic:" << spell_dic;
     mpHunspell_system = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
@@ -2770,6 +2754,25 @@ void TConsole::setSystemSpellDictionary(const QString& newDict)
         mHunspellCodecName_system = QByteArray(Hunspell_get_dic_encoding(mpHunspell_system));
         qDebug().noquote().nospace() << "TCommandLine::setSystemSpellDictionary(\"" << newDict << "\") INFO - System Hunspell dictionary loaded for profile, it uses a \"" << Hunspell_get_dic_encoding(mpHunspell_system) << "\" encoding...";
         mpHunspellCodec_system = QTextCodec::codecForName(mHunspellCodecName_system);
+    }
+}
+void TConsole::sanitizeUtf8Path(const QString& fileName, QString& originalLocation) const
+{
+    static auto findNonAscii = QRegularExpression(QStringLiteral("([^ -~])"));
+    findNonAscii.optimize();
+
+    auto match = findNonAscii.match(originalLocation);
+    if (!match.hasMatch()) {
+        return;
+    }
+
+    const QString spell_aff_noascii = QStringLiteral("C:\\Windows\\Temp\\mudlet_%1.aff").arg(fileName);
+    if (!QFileInfo::exists(spell_aff_noascii)) {
+        if (!QFile::copy(originalLocation, spell_aff_noascii)) {
+            qWarning() << "TConsole::setSystemSpellDictionary() ERROR: couldn't copy" << originalLocation << "to location without ASCII characters";
+        } else {
+            originalLocation = spell_aff_noascii;
+        }
     }
 }
 
