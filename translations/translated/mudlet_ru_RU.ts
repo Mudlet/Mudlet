@@ -5473,7 +5473,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="181"/>
       <source>&lt;p&gt;This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specifed font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.&lt;p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Это покажет дисплей показывающий все символы, используемые на текущей карте, и могут ли они быть нарисованы только с помощью определенного шрифта, любого другого шрифта, или нет вообще.  Он также показывает последовательность Unicode &lt;i&gt;кодов&lt;/i&gt; которые составляют этот символ, так что они могут быть идентифицированы, даже если они не могут быть отображены. Кроме того, первые тридцать две комнат использующих этот символ перечислены, что может помочь определить любые неожиданные или странные случаи.&lt;p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="187"/>
