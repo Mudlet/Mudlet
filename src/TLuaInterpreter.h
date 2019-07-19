@@ -372,7 +372,7 @@ public:
     static int getBorderBottom(lua_State*);
     static int getBorderLeft(lua_State*);
     static int getBorderRight(lua_State*);
-    static int getBorderSizes(lua_State* L)
+    static int getBorderSizes(lua_State* L);
     static int setConsoleBufferSize(lua_State*);
     static int enableScrollBar(lua_State*);
     static int disableScrollBar(lua_State*);
