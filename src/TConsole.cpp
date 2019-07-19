@@ -2734,27 +2734,35 @@ void TConsole::setSystemSpellDictionary(const QString& newDict)
     mSpellDic = newDict;
 
     QString path = mudlet::getMudletPath(mudlet::hunspellDictionaryPath, mpHost->getSpellDic());
-
-#if defined(Q_OS_WIN32)
-    // The man page for hunspell advises Utf8 encoding of the pathFileNames for
-    // use on Windows platforms which can have non ASCII characters and prefix of "\\?\"
-    QString spell_aff = QStringLiteral(R"(\\?\%1%2.aff)").arg(path, newDict);
-    QString spell_dic = QStringLiteral(R"(\\?\%1%2.dic)").arg(path, newDict);
-    // while normally not a an issue, you can't mix forward and back slashes with the prefix
-    spell_aff = spell_aff.replace(QChar('/'), QStringLiteral("\\"));
-    spell_dic = spell_dic.replace(QChar('/'), QStringLiteral("\\"));
-
-
-    qDebug() << "aff exists?" << QFileInfo::exists(QStringLiteral("%1%2.aff").arg(path, newDict));
-    qDebug() << "dic exists?" << QFileInfo::exists(QStringLiteral("%1%2.dic").arg(path, newDict));
-#else
     QString spell_aff = QStringLiteral("%1%2.aff").arg(path, newDict);
     QString spell_dic = QStringLiteral("%1%2.dic").arg(path, newDict);
-#endif
 
     if (mpHunspell_system) {
         Hunspell_destroy(mpHunspell_system);
     }
+
+//#if defined(Q_OS_WIN32)
+#if true
+    static auto findNonAscii = QRegularExpression(QStringLiteral("([^ -~])"));
+    findNonAscii.optimize();
+
+    auto match = findNonAscii.match(spell_aff);
+    if (match.hasMatch()) {
+        const QString spell_aff_noascii = QStringLiteral("C:\\Windows\\Temp\\%1.aff").arg(newDict);
+        const QString spell_dic_noascii = QStringLiteral("C:\\Windows\\Temp\\%1.dic").arg(newDict);
+        if (!QFile::copy(spell_aff, spell_aff_noascii)) {
+            qWarning() << "TConsole::setSystemSpellDictionary() ERROR: couldn't copy" << spell_aff << "to location without ASCII characters";
+        } else {
+            spell_aff = spell_aff_noascii;
+        }
+        if (!QFile::copy(spell_dic, spell_dic_noascii)) {
+            qWarning() << "TConsole::setSystemSpellDictionary() ERROR: couldn't copy" << spell_dic << "to location without ASCII characters";
+        } else {
+            spell_dic = spell_dic_noascii;
+        }
+    }
+#endif
+
     qDebug() << "right before Hunspell_create, aff:" << spell_aff << "dic:" << spell_dic;
     mpHunspell_system = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
     qDebug() << "right after Hunspell_create";
