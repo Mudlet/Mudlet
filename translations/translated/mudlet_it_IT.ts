@@ -4196,7 +4196,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2208"/>
       <source>Required</source>
-      <translation>Richiesto</translation>
+      <translation>Dati Richiesti</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2214"/>
@@ -5069,7 +5069,7 @@ Utilizzi</translation>
       <location filename="../src/dlgConnectionProfiles.cpp" line="80"/>
       <source>&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;Welcome to Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;b&gt;Click on one of the games on the list to play.&lt;/b&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;To play a game not in the list, click on %1 &lt;span style=&quot; color:#555753;&quot;&gt;New&lt;/span&gt;, fill in the &lt;i&gt;Profile Name&lt;/i&gt;, &lt;i&gt;Server address&lt;/i&gt;, and &lt;i&gt;Port&lt;/i&gt; fields in the &lt;i&gt;Required &lt;/i&gt; area.&lt;/p&gt;&lt;p&gt;After that, click %2 &lt;span style=&quot; color:#555753;&quot;&gt;Connect&lt;/span&gt; to play.&lt;/p&gt;&lt;p&gt;Have fun!&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;The Mudlet Team &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</source>
       <comment>Welcome message. Both %1 and %2 may be replaced by icons when this text is used.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;Benvenuti in Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;b&gt;Selezionare una dei giochi nella lista per iniziare a giocare.&lt;/b&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;Per collegarti ad un gioco non in lista, premi %1 &lt;span style=&quot; color:#555753;&quot;&gt;Nuovo&lt;/span&gt;, poi inserisci &lt;i&gt;Nome Profilo&lt;/i&gt;, &lt;i&gt;Indirizzo Server&lt;/i&gt; e la &lt;i&gt;Porta&lt;/i&gt; nel pannello &lt;i&gt;Dati Richiesti &lt;/i&gt;.&lt;/p&gt;&lt;p&gt;Una volta completato premi %2 &lt;span style=&quot; color:#555753;&quot;&gt;Connetti&lt;/span&gt; per iniziare a giocare.&lt;/p&gt;&lt;p&gt;Buon divertimento!&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;Il Team di Mudlet &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="71"/>
