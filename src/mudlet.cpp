@@ -24,13 +24,6 @@
 
 
 #include "mudlet.h"
-#include "Host.h"
-#include "TSplitter.h"
-#include <QTextBoundaryFinder>
-#include <QTextCodec>
-#include <QLineEdit>
-#include <QRegularExpression>
-#include <QShortcut>
 
 #include "EAction.h"
 #include "LuaInterface.h"
