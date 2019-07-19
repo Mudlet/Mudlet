@@ -288,13 +288,12 @@ const QString& cTelnet::getFriendlyEncoding()
     return mFriendlyEncodings.at(index);
 }
 
-// Need to set the encoding at the start but it does not need to be written out
-// then. Return values are for Lua subsystem...!
 // newEncoding must be EITHER: one of the FIXED non-translatable values in
 // cTelnet::csmAcceptableEncodings
 // OR "ASCII"
 // OR an empty string (which means the same as the ASCII).
-QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool isToStore)
+// saveValue: if true, record this setting, otherwise it is ephemereal for this session
+QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool saveValue)
 {
     QString reportedEncoding = newEncoding;
     if (newEncoding.isEmpty() || newEncoding == QLatin1String("ASCII")) {
@@ -305,7 +304,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
             // incoming OOB in TLuaInterpreter::encodeBytes(...)
             // output in cTelnet::sendData(...)
             mEncoding.clear();
-            if (isToStore) {
+            if (saveValue) {
                 mpHost->writeProfileData(QStringLiteral("encoding"), reportedEncoding);
             }
         }
@@ -317,7 +316,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
                                  % QLatin1String(R"(".)"));
     } else if (mEncoding != newEncoding) {
         encodingChanged(newEncoding);
-        if (isToStore) {
+        if (saveValue) {
             mpHost->writeProfileData(QStringLiteral("encoding"), mEncoding);
         }
     }

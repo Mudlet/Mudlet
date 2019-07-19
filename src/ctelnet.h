@@ -149,7 +149,7 @@ public:
     void setChannel102Variables(const QString&);
     bool socketOutRaw(std::string& data);
     const QString & getEncoding() const { return mEncoding; }
-    QPair<bool, QString> setEncoding(const QString &, bool isToStore = true);
+    QPair<bool, QString> setEncoding(const QString &, bool saveValue = true);
     void postMessage(QString);
     const QStringList & getEncodingsList() const { return mAcceptableEncodings; }
     const QStringList & getFriendlyEncodingsList() const { return mFriendlyEncodings; }
