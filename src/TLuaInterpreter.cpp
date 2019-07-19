@@ -3204,7 +3204,7 @@ int TLuaInterpreter::hideUserWindow(lua_State* L)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::setBorderSize(int size, int position, bool updateEvent = true)
+void TLuaInterpreter::setBorderSize(lua_State L*, int size, int position, bool updateEvent = true)
 {
     Host& host = getHostFromLua(L);
     // position: 0 = top, 1 = right, 2 = bottom, 3 = left
@@ -3259,10 +3259,10 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
     } else {
         sizeLeft = lua_tonumber(L, 4);
     }
-    setBorderSize(sizeTop, 0, false);
-    setBorderSize(sizeRight, 1, false);
-    setBorderSize(sizeBottom, 2, false);
-    setBorderSize(sizeLeft, 3, true); // only now send update event
+    setBorderSize(L, sizeTop, 0, false);
+    setBorderSize(L, sizeRight, 1, false);
+    setBorderSize(L, sizeBottom, 2, false);
+    setBorderSize(L, sizeLeft, 3, true); // only now send update event
     return 0;
 }
 
@@ -3277,7 +3277,7 @@ int TLuaInterpreter::setBorderTop(lua_State* L)
     } else {
         size = lua_tonumber(L, 1);
     }
-    setBorderSize(size, 0);
+    setBorderSize(L, size, 0);
     return 0;
 }
 
@@ -3292,7 +3292,7 @@ int TLuaInterpreter::setBorderRight(lua_State* L)
     } else {
         size = lua_tonumber(L, 1);
     }
-    setBorderSize(size, 1);
+    setBorderSize(L, size, 1);
     return 0;
 }
 
@@ -3307,7 +3307,7 @@ int TLuaInterpreter::setBorderBottom(lua_State* L)
     } else {
         size = lua_tonumber(L, 1);
     }
-    setBorderSize(size, 2);
+    setBorderSize(L, size, 2);
     return 0;
 }
 
@@ -3322,7 +3322,7 @@ int TLuaInterpreter::setBorderLeft(lua_State* L)
     } else {
         size = lua_tonumber(L, 1);
     }
-    setBorderSize(size, 3);
+    setBorderSize(L, size, 3);
     return 0;
 }
 
