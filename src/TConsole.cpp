@@ -2741,38 +2741,18 @@ void TConsole::setSystemSpellDictionary(const QString& newDict)
         Hunspell_destroy(mpHunspell_system);
     }
 
-//#if defined(Q_OS_WIN32)
-//#if true
-    sanitizeUtf8Path(newDict, spell_aff);
+#if defined(Q_OS_WIN32)
+    // strip non-ASCII characters from the path because hunspell can't handle them
+    // when compiled with MinGW 7.3.0
+    mudlet::self()->sanitizeUtf8Path(spell_aff, QStringLiteral("%1.aff").arg(newDict));
+    mudlet::self()->sanitizeUtf8Path(spell_dic, QStringLiteral("%1.dic").arg(newDict));
+#endif
 
-    //#endif
-
-    qDebug() << "right before Hunspell_create, aff:" << spell_aff << "dic:" << spell_dic;
     mpHunspell_system = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
-    qDebug() << "right after Hunspell_create";
     if (mpHunspell_system) {
         mHunspellCodecName_system = QByteArray(Hunspell_get_dic_encoding(mpHunspell_system));
         qDebug().noquote().nospace() << "TCommandLine::setSystemSpellDictionary(\"" << newDict << "\") INFO - System Hunspell dictionary loaded for profile, it uses a \"" << Hunspell_get_dic_encoding(mpHunspell_system) << "\" encoding...";
         mpHunspellCodec_system = QTextCodec::codecForName(mHunspellCodecName_system);
-    }
-}
-void TConsole::sanitizeUtf8Path(const QString& fileName, QString& originalLocation) const
-{
-    static auto findNonAscii = QRegularExpression(QStringLiteral("([^ -~])"));
-    findNonAscii.optimize();
-
-    auto match = findNonAscii.match(originalLocation);
-    if (!match.hasMatch()) {
-        return;
-    }
-
-    const QString spell_aff_noascii = QStringLiteral("C:\\Windows\\Temp\\mudlet_%1.aff").arg(fileName);
-    if (!QFileInfo::exists(spell_aff_noascii)) {
-        if (!QFile::copy(originalLocation, spell_aff_noascii)) {
-            qWarning() << "TConsole::setSystemSpellDictionary() ERROR: couldn't copy" << originalLocation << "to location without ASCII characters";
-        } else {
-            originalLocation = spell_aff_noascii;
-        }
     }
 }
 

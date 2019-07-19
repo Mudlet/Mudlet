@@ -24,6 +24,13 @@
 
 
 #include "mudlet.h"
+#include "Host.h"
+#include "TSplitter.h"
+#include <QTextBoundaryFinder>
+#include <QTextCodec>
+#include <QLineEdit>
+#include <QRegularExpression>
+#include <QShortcut>
 
 #include "EAction.h"
 #include "LuaInterface.h"
@@ -4909,6 +4916,11 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
     // from the Hunspell library:
 
     wordSet = wordList.toSet();
+
+#if defined(Q_OS_WIN32)
+    mudlet::self()->sanitizeUtf8Path(affixPathFileName, QStringLiteral("profile.dic"));
+    mudlet::self()->sanitizeUtf8Path(dictionaryPathFileName, QStringLiteral("profile.aff"));
+#endif
     return Hunspell_create(affixPathFileName.toUtf8().constData(), dictionaryPathFileName.toUtf8().constData());
 }
 
@@ -4956,6 +4968,10 @@ Hunhandle* mudlet::prepareSharedDictionary()
     }
 
     mWordSet_shared = wordList.toSet();
+#if defined(Q_OS_WIN32)
+    mudlet::self()->sanitizeUtf8Path(affixPathFileName, QStringLiteral("profile.dic"));
+    mudlet::self()->sanitizeUtf8Path(dictionaryPathFileName, QStringLiteral("profile.aff"));
+#endif
     mHunspell_sharedDictionary = Hunspell_create(affixPathFileName.toUtf8().constData(), dictionaryPathFileName.toUtf8().constData());
     return mHunspell_sharedDictionary;
 }
@@ -5062,3 +5078,26 @@ QSet<QString> mudlet::getWordSet()
 
     return wordSet;
 }
+
+#if defined(Q_OS_WIN32)
+// 'strip' non-ASCII characters from the path by copying it to a location without them
+// this is only an issue for the Win32 API; macOS and Linux don't have such issues
+void mudlet::sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const
+{
+    static auto findNonAscii = QRegularExpression(QStringLiteral("([^ -~])"));
+
+    auto match = findNonAscii.match(originalLocation);
+    if (!match.hasMatch()) {
+        return;
+    }
+
+    const QString pureANSIpath = QStringLiteral("C:\\Windows\\Temp\\mudlet_%1").arg(fileName);
+    if (!QFileInfo::exists(pureANSIpath)) {
+        if (!QFile::copy(originalLocation, pureANSIpath)) {
+            qWarning() << "mudlet::sanitizeUtf8Path() ERROR: couldn't copy" << originalLocation << "to location without ASCII characters";
+        } else {
+            originalLocation = pureANSIpath;
+        }
+    }
+}
+#endif

@@ -214,6 +214,9 @@ public:
     int getRowCount(Host* pHost, QString& name);
     QStringList getAvailableFonts();
     void hideMudletsVariables(Host *pHost);
+#if defined(Q_OS_WIN32)
+    void sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const;
+#endif
 
     static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;

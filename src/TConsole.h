@@ -355,7 +355,6 @@ private:
     // for the ".aff" file - this member is for the per profile option only as
     // the shared one is held by the mudlet singleton class:
     QSet<QString> mWordSet_profile;
-    void sanitizeUtf8Path(const QString& fileName, QString& originalLocation) const;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
