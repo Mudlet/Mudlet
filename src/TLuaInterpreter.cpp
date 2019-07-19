@@ -3326,6 +3326,38 @@ int TLuaInterpreter::setBorderLeft(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getBorderTop
+int TLuaInterpreter::getBorderTop(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    lua_pushnumber(L, host.mBorderTopWidth);
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getBorderLeft
+int TLuaInterpreter::getBorderLeft(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    lua_pushnumber(L, host.mBorderLeftWidth);
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getBorderBottom
+int TLuaInterpreter::getBorderBottom(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    lua_pushnumber(L, host.mBorderBottomWidth);
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getBorderRight
+int TLuaInterpreter::getBorderRight(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    lua_pushnumber(L, host.mBorderRightWidth);
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resizeWindow -- not resizeUserWindow - compare initLuaGlobals()
 int TLuaInterpreter::resizeWindow(lua_State* L)
 {
@@ -14675,6 +14707,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setBorderBottom", TLuaInterpreter::setBorderBottom);
     lua_register(pGlobalLua, "setBorderLeft", TLuaInterpreter::setBorderLeft);
     lua_register(pGlobalLua, "setBorderColor", TLuaInterpreter::setBorderColor);
+    lua_register(pGlobalLua, "getBorderTop", TLuaInterpreter::getBorderTop);
+    lua_register(pGlobalLua, "getBorderRight", TLuaInterpreter::getBorderRight);
+    lua_register(pGlobalLua, "getBorderBottom", TLuaInterpreter::getBorderBottom);
+    lua_register(pGlobalLua, "getBorderLeft", TLuaInterpreter::getBorderLeft);
     lua_register(pGlobalLua, "setConsoleBufferSize", TLuaInterpreter::setConsoleBufferSize);
     lua_register(pGlobalLua, "enableScrollBar", TLuaInterpreter::enableScrollBar);
     lua_register(pGlobalLua, "disableScrollBar", TLuaInterpreter::disableScrollBar);
