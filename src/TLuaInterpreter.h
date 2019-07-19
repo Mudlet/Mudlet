@@ -361,7 +361,7 @@ public:
     static int isAnsiBgColor(lua_State*);
     static int stopSounds(lua_State*);
     static int playSoundFile(lua_State*);
-    static void setBorderSize(lua_State*);
+    static void setBorderSize(int size, int position, bool updateEvent = true);
     static int setBorderSizes(lua_State*);
     static int setBorderTop(lua_State*);
     static int setBorderBottom(lua_State*);
