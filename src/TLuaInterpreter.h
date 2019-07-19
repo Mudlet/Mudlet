@@ -368,6 +368,10 @@ public:
     static int setBorderLeft(lua_State*);
     static int setBorderRight(lua_State*);
     static int setBorderColor(lua_State*);
+    static int getBorderTop(lua_State*);
+    static int getBorderBottom(lua_State*);
+    static int getBorderLeft(lua_State*);
+    static int getBorderRight(lua_State*);
     static int setConsoleBufferSize(lua_State*);
     static int enableScrollBar(lua_State*);
     static int disableScrollBar(lua_State*);
