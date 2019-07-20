@@ -1060,7 +1060,9 @@ more of the selected %n room(s), delete this to
 clear it from all selected rooms or replace
 with a new symbol to use for all the rooms:</source>
       <comment>This is for when applying a new room symbol to one or more rooms and some have the SAME symbol (others may have none) at present, %n is the total number of rooms involved and is at least two. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>在一个或多个被选中的 %n房间里，唯一使用的符号是&quot;%1&quot;，删除它将从所有被选中的房间清除，或以新的符号替代。</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3674"/>
@@ -2937,7 +2939,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1230"/>
       <source>&lt;p&gt;Hover on this item to display the Unicode codepoints in the selection &lt;i&gt;(only the first line!)&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;鼠标悬停在该项目上，显示选中的Unicode代码位置 &lt;i&gt;（仅在第一行！）&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1239"/>
