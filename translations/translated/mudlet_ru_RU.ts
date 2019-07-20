@@ -6545,7 +6545,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="451"/>
       <source>Saves your profile. (Ctrl+Shift+S)&lt;p&gt;Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.&lt;/p&gt;&lt;p&gt;It also makes a backup of your profile, you can load an older version of it when connecting.&lt;/p&gt;&lt;p&gt;Should there be any modules that are marked to be &quot;&lt;i&gt;synced&lt;/i&gt;&quot; this will also cause them to be saved and reloaded into other profiles if they too are active.</source>
-      <translation type="unfinished"/>
+      <translation>Сохраняет профиль. (Ctrl + Shift + S)&lt;p&gt;Сохраняет весь профиль (триггеры, алиасы, скрипты, таймеры, кнопки и ключи, но не карту) на вашем компьютере, поэтому в случае сбоя компьютера или программы будут сохранены все сделанные вами изменения.&lt;/p&gt;&lt;p&gt;Также создает резервную копию вашего профиля; вы можете загрузить более старую версию при соединении.&lt;/p&gt;&lt;p&gt;Если есть модули, помеченные как &quot;&lt;i&gt;,синхронизированы&lt;/i&gt;&quot;, это также приведет к их сохранению и перезагрузке в другие профилях где они установлены.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="453"/>
