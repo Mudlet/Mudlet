@@ -80,8 +80,9 @@ private:
     bool extractSettingsFromProfile(pugi::xml_document& newProfile, const QString& copySettingsFrom);
     void saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const;
     bool copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const;
+    bool hasCustomIcon(const QString& profileName) const;
     void setProfileIcon(const QFont& font) const;
-    void loadProfileIcon(const QFont& font, const QString& profileName, const QString& profileIconPath) const;
+    void loadProfileIcon(const QFont& font, const QString& profileName) const;
     void generateProfileIcon(const QFont& font, int i, const QString& profileName) const;
 
     // split into 3 properties so each one can be checked individually
