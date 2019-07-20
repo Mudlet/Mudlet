@@ -1133,6 +1133,44 @@ int TLuaInterpreter::loadRawFile(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setProfileIcon
+int TLuaInterpreter::setProfileIcon(lua_State* L)
+{
+    QString iconPath;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setProfileIcon: bad argument #1 type (icon file path expected, got %s!)",
+                        luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        iconPath = QString::fromUtf8(lua_tostring(L, 1));
+        if (iconPath.isEmpty()) {
+            lua_pushnil(L);
+            lua_pushstring(L, "a blank string is not a valid icon file location");
+            return 2;
+        }
+    }
+
+    if (!QFileInfo::exists(iconPath)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "'%s' doesn't exist", iconPath.toUtf8().constData());
+        return 2;
+    }
+
+    Host& host = getHostFromLua(L);
+    bool success;
+    QString message;
+
+    std::tie(success, message) = host.setProfileIcon(iconPath);
+    if (success) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCurrentLine
 int TLuaInterpreter::getCurrentLine(lua_State* L)
 {
@@ -14604,6 +14642,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setTextFormat", TLuaInterpreter::setTextFormat);
     lua_register(pGlobalLua, "getMainWindowSize", TLuaInterpreter::getMainWindowSize);
     lua_register(pGlobalLua, "getMousePosition", TLuaInterpreter::getMousePosition);
+    lua_register(pGlobalLua, "setProfileIcon", TLuaInterpreter::setProfileIcon);
     lua_register(pGlobalLua, "getCurrentLine", TLuaInterpreter::getCurrentLine);
     lua_register(pGlobalLua, "setMiniConsoleFontSize", TLuaInterpreter::setMiniConsoleFontSize);
     lua_register(pGlobalLua, "selectCurrentLine", TLuaInterpreter::selectCurrentLine);

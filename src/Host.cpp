@@ -1766,3 +1766,20 @@ void Host::setName(const QString& newName)
     }
     mTimerUnit.changeHostName(newName);
 }
+
+std::pair<bool, QString> Host::setProfileIcon(const QString& newIconPath)
+{
+    QDir dir;
+    auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, QStringLiteral("profileicon"));
+    if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
+        qWarning() << "Host::setProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
+        return std::make_pair(false, QStringLiteral("couldn't remove existing icon file"));
+    }
+
+    if (!QFile::copy(newIconPath, profileIconPath)) {
+        qWarning() << "Host::setProfileIcon() ERROR: couldn't copy new icon" << newIconPath<< " to" << profileIconPath;
+        return std::make_pair(false, QStringLiteral("couldn't copy icon file into new location"));
+    }
+
+    return std::make_pair(true, QString());
+}

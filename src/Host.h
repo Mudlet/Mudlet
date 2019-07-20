@@ -228,6 +228,7 @@ public:
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
+    std::pair<bool, QString> setProfileIcon(const QString& newIconPath);
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
