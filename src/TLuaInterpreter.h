@@ -496,6 +496,7 @@ public:
     static int spellSuggestWord(lua_State*);
     static int getDictionaryWordList(lua_State*);
     static int getTextFormat(lua_State*);
+    static int getWindowsCodepage(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 
@@ -516,6 +517,10 @@ private:
     void setMatches(lua_State* L);
     static std::pair<bool, QString> discordApiEnabled(lua_State* L, bool writeAccess = false);
     void setupLanguageData();
+    QString readScriptFile(const QString& path) const;
+#if defined(Q_OS_WIN32)
+    void loadUtf8Filenames();
+#endif
 
     QNetworkAccessManager* mpFileDownloader;
 

@@ -475,7 +475,7 @@ mudlet::mudlet()
         // have to invert the sense because the attribute is a negative one:
         qApp->setAttribute(Qt::AA_DontShowIconsInMenus, (mShowIconsOnMenuCheckedState == Qt::Unchecked));
     }
-    
+
     qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
 
     loadTranslators();
@@ -533,19 +533,32 @@ mudlet::mudlet()
         mAutolog = false;
     }
 
-    mpActionConnect = new QAction(QIcon(QStringLiteral(":/icons/preferences-web-browser-cache.png")), tr("Connect"), this);
-    mpActionConnect->setToolTip(tr("Connect to a game"));
-    mpMainToolBar->addAction(mpActionConnect);
+    mpButtonConnect = new QToolButton(this);
+    mpButtonConnect->setText(tr("Connect"));
+    mpButtonConnect->setObjectName(QStringLiteral("connect"));
+    mpButtonConnect->setContextMenuPolicy(Qt::ActionsContextMenu);
+    mpButtonConnect->setPopupMode(QToolButton::MenuButtonPopup);
+    mpButtonConnect->setAutoRaise(true);
+    mpMainToolBar->addWidget(mpButtonConnect);
 
-    // add name to the action's widget in the toolbar, which doesn't have one by default
-    // see https://stackoverflow.com/a/32460562/72944
-    mpActionConnect->setObjectName(QStringLiteral("connect_action"));
-    mpMainToolBar->widgetForAction(mpActionConnect)->setObjectName(mpActionConnect->objectName());
+    mpActionConnect = new QAction(tr("Connect"), this);
+    mpActionConnect->setIcon(QIcon(QStringLiteral(":/icons/preferences-web-browser-cache.png")));
+    mpActionConnect->setIconText(tr("Connect"));
+    mpActionConnect->setObjectName(QStringLiteral("connect"));
+
+    mpActionDisconnect = new QAction(tr("Disconnect"), this);
+    mpActionDisconnect->setObjectName(QStringLiteral("disconnect"));
+
+    mpButtonConnect->addAction(mpActionConnect);
+    mpButtonConnect->addAction(mpActionDisconnect);
+    mpButtonConnect->setDefaultAction(mpActionConnect);
 
     mpActionTriggers = new QAction(QIcon(QStringLiteral(":/icons/tools-wizard.png")), tr("Triggers"), this);
     mpActionTriggers->setToolTip(tr("Show and edit triggers"));
     mpMainToolBar->addAction(mpActionTriggers);
     mpActionTriggers->setObjectName(QStringLiteral("triggers_action"));
+    // add name to the action's widget in the toolbar, which doesn't have one by default
+    // see https://stackoverflow.com/a/32460562/72944
     mpMainToolBar->widgetForAction(mpActionTriggers)->setObjectName(mpActionTriggers->objectName());
 
     mpActionAliases = new QAction(QIcon(QStringLiteral(":/icons/system-users.png")), tr("Aliases"), this);
@@ -584,11 +597,26 @@ mudlet::mudlet()
     mpActionVariables->setObjectName(QStringLiteral("variables_action"));
     mpMainToolBar->widgetForAction(mpActionVariables)->setObjectName(mpActionVariables->objectName());
 
-    mpActionIRC = new QAction(QIcon(QStringLiteral(":/icons/internet-telephony.png")), tr("IRC"), this);
-    mpActionIRC->setToolTip(tr("Open the Mudlet IRC client"));
-    mpMainToolBar->addAction(mpActionIRC);
-    mpActionIRC->setObjectName(QStringLiteral("irc_action"));
-    mpMainToolBar->widgetForAction(mpActionIRC)->setObjectName(mpActionIRC->objectName());
+    mpButtonDiscord = new QToolButton(this);
+    mpButtonDiscord->setText(tr("Discord"));
+    mpButtonDiscord->setObjectName(QStringLiteral("discord"));
+    mpButtonDiscord->setContextMenuPolicy(Qt::ActionsContextMenu);
+    mpButtonDiscord->setPopupMode(QToolButton::MenuButtonPopup);
+    mpButtonDiscord->setAutoRaise(true);
+    mpMainToolBar->addWidget(mpButtonDiscord);
+
+    mpActionDiscord = new QAction(tr("Open Discord"), this);
+    mpActionDiscord->setIcon(QIcon(QStringLiteral(":/icons/Discord-Logo-Color.png")));
+    mpActionDiscord->setIconText(tr("Discord"));
+    mpActionDiscord->setObjectName(QStringLiteral("openDiscord"));
+
+    mpActionIRC = new QAction(tr("Open IRC"), this);
+    mpActionIRC->setIcon(QIcon(QStringLiteral(":/icons/internet-telephony.png")));
+    mpActionIRC->setObjectName(QStringLiteral("openIRC"));
+
+    mpButtonDiscord->addAction(mpActionDiscord);
+    mpButtonDiscord->addAction(mpActionIRC);
+    mpButtonDiscord->setDefaultAction(mpActionDiscord);
 
     mpActionMapper = new QAction(QIcon(QStringLiteral(":/icons/applications-internet.png")), tr("Map"), this);
     mpActionMapper->setToolTip(tr("Show/hide the map"));
@@ -617,17 +645,32 @@ mudlet::mudlet()
     mpActionNotes->setObjectName(QStringLiteral("notepad_action"));
     mpMainToolBar->widgetForAction(mpActionNotes)->setObjectName(mpActionNotes->objectName());
 
-    mpActionPackageManager = new QAction(QIcon(QStringLiteral(":/icons/package-manager.png")), tr("Package Manager"), this);
-    mpActionPackageManager->setToolTip(tr("Package Manager - allows you to install xmls, .mpackages"));
-    mpMainToolBar->addAction(mpActionPackageManager);
-    mpActionPackageManager->setObjectName(QStringLiteral("package_action"));
-    mpMainToolBar->widgetForAction(mpActionPackageManager)->setObjectName(mpActionPackageManager->objectName());
+    mpButtonPackageManagers = new QToolButton(this);
+    mpButtonPackageManagers->setText(tr("Package Manager"));
+    mpButtonPackageManagers->setObjectName(QStringLiteral("package_manager"));
+    mpButtonPackageManagers->setContextMenuPolicy(Qt::ActionsContextMenu);
+    mpButtonPackageManagers->setPopupMode(QToolButton::MenuButtonPopup);
+    mpButtonPackageManagers->setAutoRaise(true);
+    mpMainToolBar->addWidget(mpButtonPackageManagers);
 
-    mpActionModuleManager = new QAction(QIcon(QStringLiteral(":/icons/module-manager.png")), tr("Module Manager"), this);
-    mpActionModuleManager->setToolTip(tr("Module Manager - allows you to install xmls, .mpackages that are syncronized across multiple profile (good for scripts that you use on several profiles)"));
-    mpMainToolBar->addAction(mpActionModuleManager);
-    mpActionModuleManager->setObjectName(QStringLiteral("module_action"));
-    mpMainToolBar->widgetForAction(mpActionModuleManager)->setObjectName(mpActionModuleManager->objectName());
+    mpActionPackageManager = new QAction(tr("Package Manager"), this);
+    mpActionPackageManager->setIcon(QIcon(QStringLiteral(":/icons/package-manager.png")));
+    mpActionPackageManager->setIconText(tr("Package Manager"));
+    mpActionPackageManager->setObjectName(QStringLiteral("package_manager"));
+
+    mpActionModuleManager = new QAction(tr("Module Manager"), this);
+    mpActionModuleManager->setIcon(QIcon(QStringLiteral(":/icons/module-manager.png")));
+    mpActionModuleManager->setObjectName(QStringLiteral("module_manager"));
+
+    mpActionPackageExporter = new QAction(tr("Package Exporter"), this);
+    mpActionPackageExporter->setIcon(QIcon(QStringLiteral(":/icons/package-exporter.png")));
+    mpActionPackageExporter->setObjectName(QStringLiteral("package_exporter"));
+
+    mpButtonPackageManagers->addAction(mpActionPackageManager);
+    mpButtonPackageManagers->addAction(mpActionModuleManager);
+    mpButtonPackageManagers->addAction(mpActionPackageExporter);
+    mpButtonPackageManagers->setDefaultAction(mpActionPackageManager);
+
 
     mpActionReplay = new QAction(QIcon(QStringLiteral(":/icons/media-optical.png")), tr("Replay"), this);
     mpActionReplay->setObjectName(QStringLiteral("replay_action"));
@@ -710,12 +753,15 @@ mudlet::mudlet()
     connect(mpActionAbout.data(), &QAction::triggered, this, &mudlet::slot_show_about_dialog);
     connect(mpActionMultiView.data(), &QAction::triggered, this, &mudlet::slot_multi_view);
     connect(mpActionReconnect.data(), &QAction::triggered, this, &mudlet::slot_reconnect);
+    connect(mpActionDisconnect.data(), &QAction::triggered, this, &mudlet::slot_disconnect);
     connect(mpActionReplay.data(), &QAction::triggered, this, &mudlet::slot_replay);
     connect(mpActionNotes.data(), &QAction::triggered, this, &mudlet::slot_notes);
     connect(mpActionMapper.data(), &QAction::triggered, this, &mudlet::slot_mapper);
     connect(mpActionIRC.data(), &QAction::triggered, this, &mudlet::slot_irc);
+    connect(mpActionDiscord.data(), &QAction::triggered, this, &mudlet::slot_discord);
     connect(mpActionPackageManager.data(), &QAction::triggered, this, &mudlet::slot_package_manager);
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_module_manager);
+    connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_package_exporter);
 
     // PLACEMARKER: Save for later restoration (1 of 2) (by adding a "Close" (profile) option to first menu on menu bar:
     // QAction* mactionCloseProfile = new QAction(tr("Close"), this);
@@ -730,7 +776,8 @@ mudlet::mudlet()
     connect(dactionVideo, &QAction::triggered, this, &mudlet::slot_show_help_dialog_video);
     connect(dactionForum, &QAction::triggered, this, &mudlet::slot_show_help_dialog_forum);
     connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
-    connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_irc);
+    connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_discord);
+    connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_discord);
 #if !defined(INCLUDE_UPDATER)
     // Hide the update menu item if the code is not included
     dactionUpdate->setVisible(false);
@@ -1640,6 +1687,7 @@ void mudlet::disableToolbarButtons()
 
     dactionReplay->setEnabled(false);
     mpActionReconnect->setEnabled(false);
+    mpActionDisconnect->setEnabled(false);
 }
 
 void mudlet::enableToolbarButtons()
@@ -1673,6 +1721,7 @@ void mudlet::enableToolbarButtons()
     }
 
     mpActionReconnect->setEnabled(true);
+    mpActionDisconnect->setEnabled(true);
 
     // As this is called when a profile is loaded it is time to check whether
     // we need to continue to show the main menu and/or the main toolbar
@@ -2832,7 +2881,7 @@ void mudlet::forceClose()
         }
 
         console->close();
-    }    
+    }
 
     // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
     hide();
@@ -2912,8 +2961,20 @@ void mudlet::setToolBarIconSize(const int s)
     mpMainToolBar->setIconSize(QSize(s * 8, s * 8));
     if (mToolbarIconSize > 2) {
         mpMainToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+        mpButtonConnect->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+        mpButtonDiscord->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+        if (!mpButtonAbout.isNull()) {
+            mpButtonAbout->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+        }
+        mpButtonPackageManagers->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
     } else {
         mpMainToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        mpButtonConnect->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        mpButtonDiscord->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        if (!mpButtonAbout.isNull()) {
+            mpButtonAbout->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        }
+        mpButtonPackageManagers->setToolButtonStyle(Qt::ToolButtonIconOnly);
     }
 
     if (mpToolBarReplay) {
@@ -3408,6 +3469,61 @@ void mudlet::slot_irc()
     }
     mpIrcClientMap.value(pHost)->raise();
     mpIrcClientMap.value(pHost)->show();
+}
+
+void mudlet::slot_discord()
+{
+    openWebPage(mMudletDiscordInvite);
+}
+
+void mudlet::updateMudletDiscordInvite()
+{
+    QDir dir;
+    QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    if (!dir.mkpath(cacheDir)) {
+        qWarning() << "Couldn't create cache directory for Mudlet's Discord JSON file: " << cacheDir;
+        return;
+    }
+
+    auto manager = new QNetworkAccessManager(this);
+    auto diskCache = new QNetworkDiskCache(this);
+    diskCache->setCacheDirectory(cacheDir);
+    manager->setCache(diskCache);
+
+
+    QUrl url(QStringLiteral("https://discordapp.com/api/guilds/283581582550237184/widget.json"));
+    QNetworkRequest request(url);
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
+    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
+    request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
+
+    QNetworkReply* getReply = manager->get(request);
+
+    connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
+        qWarning() << "mudlet::updateMudletDiscordInvite() WARNING - couldn't download " << url.url() << " to update Mudlet's Discord invite link";
+        getReply->deleteLater();
+    });
+
+    connect(getReply,
+            &QNetworkReply::finished,
+            this,
+            std::bind(
+                    [=](QNetworkReply* reply) {
+                        if (reply->error() != QNetworkReply::NoError) {
+                            return;
+                        }
+
+                        auto widgetJson = QJsonDocument::fromJson(reply->readAll()).object();
+                        auto inviteKey = widgetJson.value(QStringLiteral("instant_invite"));
+                        if (inviteKey == QJsonValue::Undefined) {
+                            qWarning() << "mudlet::updateMudletDiscordInvite() WARNING - no 'instant_invite' key available in Discord's JSON";
+                            return;
+                        }
+
+                        mMudletDiscordInvite = inviteKey.toString();
+                        reply->deleteLater();
+                    },
+                    getReply));
 }
 
 void mudlet::slot_reconnect()
@@ -4909,6 +5025,11 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
     // from the Hunspell library:
 
     wordSet = wordList.toSet();
+
+#if defined(Q_OS_WIN32)
+    mudlet::self()->sanitizeUtf8Path(affixPathFileName, QStringLiteral("profile.dic"));
+    mudlet::self()->sanitizeUtf8Path(dictionaryPathFileName, QStringLiteral("profile.aff"));
+#endif
     return Hunspell_create(affixPathFileName.toUtf8().constData(), dictionaryPathFileName.toUtf8().constData());
 }
 
@@ -4956,6 +5077,10 @@ Hunhandle* mudlet::prepareSharedDictionary()
     }
 
     mWordSet_shared = wordList.toSet();
+#if defined(Q_OS_WIN32)
+    mudlet::self()->sanitizeUtf8Path(affixPathFileName, QStringLiteral("profile.dic"));
+    mudlet::self()->sanitizeUtf8Path(dictionaryPathFileName, QStringLiteral("profile.aff"));
+#endif
     mHunspell_sharedDictionary = Hunspell_create(affixPathFileName.toUtf8().constData(), dictionaryPathFileName.toUtf8().constData());
     return mHunspell_sharedDictionary;
 }
@@ -5062,3 +5187,52 @@ QSet<QString> mudlet::getWordSet()
 
     return wordSet;
 }
+
+#if defined(Q_OS_WIN32)
+// credit to Qt Creator (https://github.com/qt-creator/qt-creator/blob/50d93a656789d6e776ecca4adc2e5b487bac0dbc/src/libs/utils/fileutils.cpp)
+static QString getShortPathName(const QString& name)
+{
+    if (name.isEmpty()) {
+        return name;
+    }
+
+    // Determine length, then convert.
+    const LPCTSTR nameC = reinterpret_cast<LPCTSTR>(name.utf16()); // MinGW
+    const DWORD length = GetShortPathNameW(nameC, NULL, 0);
+    if (length == 0) {
+        return name;
+    }
+    QScopedArrayPointer<TCHAR> buffer(new TCHAR[length]);
+    GetShortPathNameW(nameC, buffer.data(), length);
+    const QString rc = QString::fromUtf16(reinterpret_cast<const ushort*>(buffer.data()), length - 1);
+    return rc;
+}
+
+// 'strip' non-ASCII characters from the path by copying it to a location without them
+// this is only an issue for the Win32 API; macOS and Linux don't have such issues
+void mudlet::sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const
+{
+    static auto findNonAscii = QRegularExpression(QStringLiteral("([^ -~])"));
+
+    auto nonAscii = findNonAscii.match(originalLocation);
+    if (!nonAscii.hasMatch()) {
+        return;
+    }
+
+    const auto shortPath = getShortPathName(originalLocation);
+    // short path name might not always work: https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getshortpathnamew#remarks
+    if (shortPath != originalLocation) {
+        originalLocation = shortPath;
+        return;
+    }
+
+    const QString pureANSIpath = QStringLiteral("C:\\Windows\\Temp\\mudlet_%1").arg(fileName);
+    if (!QFileInfo::exists(pureANSIpath)) {
+        if (!QFile::copy(originalLocation, pureANSIpath)) {
+            qWarning() << "mudlet::sanitizeUtf8Path() ERROR: couldn't copy" << originalLocation << "to location without ASCII characters";
+        } else {
+            originalLocation = pureANSIpath;
+        }
+    }
+}
+#endif

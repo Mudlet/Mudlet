@@ -949,6 +949,22 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getWindowsCodepage
+int TLuaInterpreter::getWindowsCodepage(lua_State* L)
+{
+#if defined (Q_OS_WIN32)
+    QSettings registry(QStringLiteral(R"(HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Nls\CodePage)"),
+                       QSettings::NativeFormat);
+    auto value = registry.value(QStringLiteral("ACP"));
+    lua_pushstring(L, value.toString().toUtf8().constData());
+    return 1;
+#else
+    lua_pushnil(L);
+    lua_pushstring(L, "this function is only needed on Windows, and does not work here");
+    return 2;
+#endif
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#wrapLine
 int TLuaInterpreter::wrapLine(lua_State* L)
 {
@@ -1568,7 +1584,14 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         text = lua_tostring(L, 1);
     }
 
+    QString previousEncoding = host.mTelnet.getEncoding();
+    if (previousEncoding.isEmpty()) {
+        previousEncoding = QStringLiteral("ASCII");
+    }
+    // ensure encoding is utf-8 because that is what the Lua subsystem works with
+    host.mTelnet.setEncoding(QStringLiteral("UTF-8"));
     host.mpConsole->printOnDisplay(text);
+    host.mTelnet.setEncoding(previousEncoding);
     return 0;
 }
 
@@ -7923,6 +7946,11 @@ int TLuaInterpreter::deleteArea(lua_State* L)
                             "area name).",
                             name.toUtf8().constData());
             return 2;
+        } else if (name == host.mpMap->mpRoomDB->getDefaultAreaName()) {
+            lua_pushnil(L);
+            lua_pushfstring(L,
+                            "deleteArea: bad argument #1 value (you can't delete the default area).");
+            return 2;
         }
     } else {
         lua_pushfstring(L,
@@ -13083,7 +13111,7 @@ int TLuaInterpreter::getServerEncodingsList(lua_State* L)
     return 1;
 }
 
-// Documentation: ?
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getOS
 int TLuaInterpreter::getOS(lua_State* L)
 {
 #if defined(Q_OS_CYGWIN)
@@ -14858,6 +14886,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "spellSuggestWord", TLuaInterpreter::spellSuggestWord);
     lua_register(pGlobalLua, "getDictionaryWordList", TLuaInterpreter::getDictionaryWordList);
     lua_register(pGlobalLua, "getTextFormat", TLuaInterpreter::getTextFormat);
+    lua_register(pGlobalLua, "getWindowsCodepage", TLuaInterpreter::getWindowsCodepage);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     // prepend profile path to package.path and package.cpath
@@ -15198,55 +15227,87 @@ void TLuaInterpreter::initIndenterGlobals()
 // No documentation available in wiki - internal function
 void TLuaInterpreter::loadGlobal()
 {
-    setupLanguageData();
-
-#if defined(Q_OS_MACOS)
-    // Load relatively to MacOS inside Resources when we're in a .app bundle,
-    // as mudlet-lua always gets copied in by the build script into the bundle
-    QString path = QCoreApplication::applicationDirPath() + "/../Resources/mudlet-lua/lua/LuaGlobal.lua";
-#else
-    // Additional "../src/" allows location of lua code when object code is in a
-    // directory alongside src directory as occurs using Qt Creator "Shadow Builds"
-    QString path = "../src/mudlet-lua/lua/LuaGlobal.lua";
+#if defined(Q_OS_WIN32)
+    loadUtf8Filenames();
 #endif
 
-    int error = luaL_dofile(pGlobalLua, path.toUtf8().constData());
-    if (error != 0) {
-        // For the installer we do not go down a level to search for this. So
-        // we check again for the user case of a windows install.
+    setupLanguageData();
 
-        // overload previous behaviour to check by absolute path as well
-        // TODO this sould be cleaned up and refactored to just use an array and a for loop
-        path = QCoreApplication::applicationDirPath() + "/mudlet-lua/lua/LuaGlobal.lua";
+    QStringList pathsToTry = {
+#if defined(Q_OS_MACOS)
+        QCoreApplication::applicationDirPath() + "/../Resources/mudlet-lua/lua/LuaGlobal.lua",
+#endif
+        QCoreApplication::applicationDirPath() + "/mudlet-lua/lua/LuaGlobal.lua",
+        "../src/mudlet-lua/lua/LuaGlobal.lua",
+        "mudlet-lua/lua/LuaGlobal.lua",
+        LUA_DEFAULT_PATH "/LuaGlobal.lua"
+    };
+    QStringList failedMessages{};
+
+
+    int error;
+    for (const auto& path : qAsConst(pathsToTry)) {
         if (!QFileInfo::exists(path)) {
-            path = "mudlet-lua/lua/LuaGlobal.lua";
+            failedMessages << tr("%1 (doesn't exist)", "This file doesn't exist").arg(path);
+            continue;
         }
-        error = luaL_dofile(pGlobalLua, path.toUtf8().constData());
+
+        // load via Qt so UTF8 paths work on Windows - Lua can't handle it
+        auto luaGlobal = readScriptFile(path);
+        if (luaGlobal.isEmpty()) {
+            failedMessages << tr("%1 (couldn't read file)", "This file could not be read for some reason (for example, no permission)").arg(path);
+            continue;
+        }
+
+        error = luaL_dostring(pGlobalLua, luaGlobal.toUtf8().constData());
         if (error == 0) {
             mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
             return;
+        } else {
+            qWarning() << "TLuaInterpreter::loadGlobal() loading " << path << " failed: " << lua_tostring(pGlobalLua, -1);
+            failedMessages << QStringLiteral("%1 (%2)").arg(path, lua_tostring(pGlobalLua, -1));
         }
-    } else {
-        mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
+    }
+
+    mpHost->postMessage(tr("[ ERROR ] - Couldn't find and load LuaGlobal.lua - your Mudlet is broken!\nTried these locations:\n%1").arg(failedMessages.join(QChar::LineFeed)));
+}
+
+// No documentation available in wiki - internal function
+// Returns contents of the file or empty string if it couldn't be read
+QString TLuaInterpreter::readScriptFile(const QString& path) const
+{
+    QFile file(path);
+    if (!file.open(QFile::ReadOnly | QFile::Text)) {
+        return QString();
+    }
+
+    QTextStream in(&file);
+    QString text = in.readAll();
+    file.close();
+
+    return text;
+}
+
+#if defined(Q_OS_WIN32)
+// No documentation available in wiki - internal function
+// loads utf8_filenames from the resource system directly so it is not affected by
+// non-ASCII characters that might be present in the users filesystem
+void TLuaInterpreter::loadUtf8Filenames()
+{
+    auto path = QStringLiteral(":/mudlet-lua/lua/utf8_filenames.lua");
+    auto text = readScriptFile(path);
+    if (text.isEmpty()) {
+        qWarning() << "TLuaInterpreter::loadUtf8Filenames() ERROR: couldn't read file: " << path;
         return;
     }
 
-    // Finally try loading from LUA_DEFAULT_PATH
-    path = LUA_DEFAULT_PATH "/LuaGlobal.lua";
-    error = luaL_dofile(pGlobalLua, path.toUtf8().constData());
-    if (error != 0) {
-        QString e = tr("no error message available from Lua");
-        if (lua_isstring(pGlobalLua, -1)) {
-            e = tr("[ ERROR ] - LuaGlobal.lua compile error - please report!\n"
-                   "Error from Lua: ");
-            e += lua_tostring(pGlobalLua, -1);
-        }
-        mpHost->postMessage(e);
+    if (mpHost->getLuaInterpreter()->compileAndExecuteScript(text)) {
+        qDebug() << "TLuaInterpreter::loadUtf8Filenames() - patched Lua IO functions to work on Windows with UTF8";
     } else {
-        mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
-        return;
+        qWarning() << "TLuaInterpreter::loadUtf8Filenames() ERROR: there was an error running the script";
     }
 }
+#endif
 
 // No documentation available in wiki - internal function
 QPair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function)

@@ -147,7 +147,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.21.0
+VERSION = 3.22.1
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -157,7 +157,7 @@ BUILD = $$(MUDLET_VERSION_BUILD)
 isEmpty( BUILD ) {
 # Leave the value of the following empty for a release build
 # i.e. the line should be "BUILD =" without quotes
-  BUILD = "-dev"
+   BUILD = "-dev"
 }
 
 # Changing BUILD and VERSION values affects: ctelnet.cpp, main.cpp, mudlet.cpp
@@ -280,7 +280,7 @@ unix:!macx {
 } else:win32 {
     MINGW_BASE_DIR = $$(MINGW_BASE_DIR)
     isEmpty(MINGW_BASE_DIR) {
-        MINGW_BASE_DIR = "C:\\Qt\\Tools\\mingw530_32"
+        MINGW_BASE_DIR = "C:\\Qt\\Tools\\mingw730_32"
     }
     LIBS +=  \
         -llua51 \
@@ -715,7 +715,8 @@ LUA.files = \
     $${PWD}/mudlet-lua/lua/LuaGlobal.lua \
     $${PWD}/mudlet-lua/lua/Other.lua \
     $${PWD}/mudlet-lua/lua/StringUtils.lua \
-    $${PWD}/mudlet-lua/lua/TableUtils.lua
+    $${PWD}/mudlet-lua/lua/TableUtils.lua \
+    $${PWD}/mudlet-lua/lua/utf8_filenames.lua
 LUA.depends = mudlet
 
 # Geyser lua files:

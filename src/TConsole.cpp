@@ -2734,14 +2734,20 @@ void TConsole::setSystemSpellDictionary(const QString& newDict)
     mSpellDic = newDict;
 
     QString path = mudlet::getMudletPath(mudlet::hunspellDictionaryPath, mpHost->getSpellDic());
-
     QString spell_aff = QStringLiteral("%1%2.aff").arg(path, newDict);
     QString spell_dic = QStringLiteral("%1%2.dic").arg(path, newDict);
-    // The man page for hunspell advises Utf8 encoding of the pathFileNames for
-    // use on Windows platforms which can have non ASCII characters...
+
     if (mpHunspell_system) {
         Hunspell_destroy(mpHunspell_system);
     }
+
+#if defined(Q_OS_WIN32)
+    // strip non-ASCII characters from the path because hunspell can't handle them
+    // when compiled with MinGW 7.3.0
+    mudlet::self()->sanitizeUtf8Path(spell_aff, QStringLiteral("%1.aff").arg(newDict));
+    mudlet::self()->sanitizeUtf8Path(spell_dic, QStringLiteral("%1.dic").arg(newDict));
+#endif
+
     mpHunspell_system = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
     if (mpHunspell_system) {
         mHunspellCodecName_system = QByteArray(Hunspell_get_dic_encoding(mpHunspell_system));

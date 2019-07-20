@@ -917,7 +917,7 @@ function translateTable(data, language)
 
   for i = 1, #data do
     local key = data[i]
-    t[#t+1] = translations[key]
+    t[#t+1] = translations[key] or key
   end
 
   return t
