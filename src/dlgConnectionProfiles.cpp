@@ -44,6 +44,10 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 , validName()
 , validUrl()
 , validPort()
+, mDefaultGames({"3Kingdoms", "3Scapes", "Aardwolf", "Achaea", "Aetolia",
+                 "Avalon.de", "BatMUD", "Clessidra", "Imperian", "Luminari",
+                 "Lusternia", "Materia Magica", "Midnight Sun 2", "Realms of Despair",
+                 "Reinos de Leyenda", "StickMUD", "WoTMUD", "ZombieMUD"})
 {
     setupUi(this);
 
@@ -1670,7 +1674,7 @@ void dlgConnectionProfiles::fillout_form()
     updateDiscordStatus();
 }
 
-void dlgConnectionProfiles::    setProfileIcon(const QFont& font) const
+void dlgConnectionProfiles::setProfileIcon(const QFont& font) const
 {
     for (int i = 0; i < mProfileList.size(); i++) {
         const QString& profileName = mProfileList.at(i);
@@ -1678,7 +1682,6 @@ void dlgConnectionProfiles::    setProfileIcon(const QFont& font) const
             continue;
         }
 
-        qDebug() << profileName << "got custom icon?" << hasCustomIcon(profileName);
         if (hasCustomIcon(profileName)) {
             loadProfileIcon(font, profileName);
         } else {
@@ -1686,24 +1689,7 @@ void dlgConnectionProfiles::    setProfileIcon(const QFont& font) const
             // necessarily case preserving for file names so any tests on them
             // should be case insensitive
             // skip creating icons for default MUDs as they are already created above
-            if ((!profileName.compare(QStringLiteral("Avalon.de"), Qt::CaseInsensitive))
-                || (!profileName.compare(QStringLiteral("BatMUD"), Qt::CaseInsensitive))
-                || (!profileName.compare(QStringLiteral("Materia Magica"), Qt::CaseInsensitive))
-                || (!profileName.compare(QStringLiteral("Aardwolf"), Qt::CaseInsensitive))
-                || (!profileName.compare(QStringLiteral("Achaea"), Qt::CaseInsensitive))
-                || (!profileName.compare(QStringLiteral("Aetolia"), Qt::CaseInsensitive))
-                || (!profileName.compare(QStringLiteral("Lusternia"), Qt::CaseInsensitive))
-                || (!profileName.compare(QStringLiteral("Imperian"), Qt::CaseInsensitive))
-                || (!profileName.compare(QStringLiteral("Realms of Despair"), Qt::CaseInsensitive))
-                || (!profileName.compare(QStringLiteral("ZombieMUD"), Qt::CaseInsensitive))
-                || (!profileName.compare(QStringLiteral("3Scapes"), Qt::CaseInsensitive))
-                || (!profileName.compare(QStringLiteral("3Kingdoms"), Qt::CaseInsensitive))
-                || (!profileName.compare(QStringLiteral("Midnight Sun 2"), Qt::CaseInsensitive))
-                || (!profileName.compare(QStringLiteral("Luminari"), Qt::CaseInsensitive))
-                || (!profileName.compare(QStringLiteral("StickMUD"), Qt::CaseInsensitive))
-                || (!profileName.compare(QStringLiteral("Clessidra"), Qt::CaseInsensitive))
-                || (!profileName.compare(QStringLiteral("Reinos de Leyenda"), Qt::CaseInsensitive))
-                || (!profileName.compare(QStringLiteral("WoTMUD"), Qt::CaseInsensitive))) {
+            if (mDefaultGames.contains(profileName, Qt::CaseInsensitive)) {
                 continue;
             }
 
