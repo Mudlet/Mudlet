@@ -1551,7 +1551,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="1041"/>
       <source>&apos;Log session ending at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;日志结束于&apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1054"/>
@@ -2356,7 +2356,7 @@ to: %4.</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1200"/>
       <source>[ INFO ]  - Room needed correcting of special exit &quot;%1&quot; that was to room with an exit to invalid room: %2 to now go to: %3.</source>
-      <translation type="unfinished"/>
+      <translation>【信息】 - 需要更正特殊出口 &quot;%1&quot; 的房间，出口指向无效房间： %2更正为 %3.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1231"/>
@@ -2373,7 +2373,7 @@ the room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1244"/>
       <source>[ WARN ]  - Room has a special exit &quot;%1&quot; with an exit to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>【警告】 - 房间具有特殊出口 &quot;%1&quot; 指向 %2，但该房间不存在。出口将被删除（目标房间ID会被存储在房间用户数剧的关键字&quot;%3&quot; 中）。</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1283"/>
