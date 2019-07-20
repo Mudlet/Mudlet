@@ -2971,12 +2971,12 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1307"/>
       <source>Mudlet, %1 user window extract from %2 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet， %1 用户窗口从 %2 配置文件中提取</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1309"/>
       <source>Mudlet, main console extract from %1 profile</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet，主控制台从 %1 配置文件中提取</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1773"/>
