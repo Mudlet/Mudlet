@@ -3121,79 +3121,79 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1795"/>
       <source>{left-to-right mark}</source>
       <comment>Unicode U+200E codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{left-to-right mark}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1796"/>
       <source>{right-to-left mark}</source>
       <comment>Unicode U+200F codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{right-to-left mark}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1797"/>
       <source>{line separator}</source>
       <comment>Unicode 0x2028 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{line separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1798"/>
       <source>{paragraph separator}</source>
       <comment>Unicode U+2029 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{paragraph separator}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1799"/>
       <source>{Left-to-right embedding}</source>
       <comment>Unicode U+202A codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{Left-to-right embedding}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1800"/>
       <source>{right-to-left embedding}</source>
       <comment>Unicode U+202B codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{right-to-left embedding}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1801"/>
       <source>{pop directional formatting}</source>
       <comment>Unicode U+202C codepoint - pop (undo last) directional formatting.</comment>
-      <translation type="unfinished"/>
+      <translation>{pop directional formatting}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1802"/>
       <source>{Left-to-right override}</source>
       <comment>Unicode U+202D codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{Left-to-right override}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1803"/>
       <source>{right-to-left override}</source>
       <comment>Unicode U+202E codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{right-to-left override}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1804"/>
       <source>{narrow width no-break space}</source>
       <comment>Unicode U+202F codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{narrow width no-break space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1805"/>
       <source>{medium width mathematical space}</source>
       <comment>Unicode U+205F codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{medium width mathematical space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1806"/>
       <source>{zero width non-breaking space}</source>
       <comment>Unicode U+2060 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{zero width non-breaking space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1807"/>
       <source>{function application}</source>
       <comment>Unicode U+2061 codepoint - function application (whatever that means!)</comment>
-      <translation type="unfinished"/>
+      <translation>{function application}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1808"/>
