@@ -2550,7 +2550,7 @@ It had a weight, this is recorded as user data with key:
     <message>
       <location filename="../src/TRoom.cpp" line="1692"/>
       <source>  It had a weight, this is recorded as user data with key: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>  该出口已有权重，以关键字 &quot;%1&quot; 记录在用户数据中。</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1703"/>
@@ -2833,7 +2833,11 @@ another that exists at the time.
   If there were more than one area without a name then all but the
 first will also gain a suffix in this manner.
 %2</source>
-      <translation type="unfinished"/>
+      <translation>[信息】- 因之前检查不完备，Mudlet允许地图上多个区域具有相同的名字或无命名。因导致的混乱，现已禁止。
+为解决这个问题，一个无命名的区域（或新建的）将被自动命名为&quot;%1&quot;。
+重复的区域名会导致除第一个外所有区域获得一个增量的&quot;_###&quot; 样式前缀。你可以改变这些前缀，改成&quot;（子区域名）&quot; 怎样修改完全取决于你。只是不能使用已存在的区域名。
+如果多个区域无命名，则除第一个以外，其他所有区域都会获得这种方式的前缀。
+%2</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1196"/>
@@ -2939,7 +2943,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1230"/>
       <source>&lt;p&gt;Hover on this item to display the Unicode codepoints in the selection &lt;i&gt;(only the first line!)&lt;/i&gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;鼠标悬停在该项目上，显示选中的Unicode代码位置 &lt;i&gt;（仅在第一行！）&lt;/i&gt;&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;鼠标悬停在该项目上，显示选中的Unicode代码 &lt;i&gt;（仅在第一行！）&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1239"/>
