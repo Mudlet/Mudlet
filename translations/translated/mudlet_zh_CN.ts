@@ -2492,7 +2492,7 @@ and the exit will be turned into a stub.</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1539"/>
       <source>[ WARN ]  - Room has an exit &quot;%1&quot; to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key: &quot;%4&quot;) and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>【警告】 - 房间的出口 &quot;%1&quot; 指向不存在的房间%2。该出口将被删除（目标房间ID会存储在房间用户数级的一个关键字&quot;%4&quot; 中），该出口将被回收。</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1583"/>
