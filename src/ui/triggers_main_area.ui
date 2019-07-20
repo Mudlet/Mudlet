@@ -537,6 +537,9 @@
            <property name="focusPolicy">
             <enum>Qt::NoFocus</enum>
            </property>
+           <property name="toolTip">
+            <string comment="This is the tooltip for the QLineEdit that shows - but does not permit changing - the sound file used for a trigger.">&lt;p&gt;Sound file to play when the trigger fires.&lt;/p&gt;</string>
+           </property>
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
            </property>
