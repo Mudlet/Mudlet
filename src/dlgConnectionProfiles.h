@@ -102,8 +102,11 @@ private:
     QLineEdit* delete_profile_lineedit;
     QPushButton* delete_button;
     QString mDiscordApplicationId;
-
     const QStringList mDefaultGames;
+
+private slots:
+    void slot_profile_menu(QPoint pos);
 };
+
 
 #endif // MUDLET_DLGCONNECTIONPROFILES_H

@@ -70,6 +70,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     // and certain architectures.
 
     profiles_tree_widget->setSelectionMode(QAbstractItemView::SingleSelection);
+    profiles_tree_widget->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(profiles_tree_widget, &QWidget::customContextMenuRequested, this, &dlgConnectionProfiles::slot_profile_menu);
 
     QAbstractButton* abort = dialog_buttonbox->button(QDialogButtonBox::Cancel);
     connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
@@ -1773,6 +1775,19 @@ void dlgConnectionProfiles::generateProfileIcon(const QFont& font, int i, const 
     }
         pt.drawText(QRect(30, 0, 90, 30), Qt::AlignHCenter | Qt::AlignVCenter | Qt::TextWordWrap, profileName, &_r);
         pItem->setIcon(QIcon(background));
+}
+
+void dlgConnectionProfiles::slot_profile_menu(QPoint pos)
+{
+    QPoint globalPos = profiles_tree_widget->mapToGlobal(pos);
+
+    QMenu menu;
+    menu.addAction(QIcon(":/icons/mudlet_main_16px.png"),  tr("Set custom icon", "Set a custom picture to show for the profile in the connection dialog"), this, [=]() {
+        auto selectedItem = profiles_tree_widget->currentRow();
+        qDebug() << selectedItem;
+    });
+
+    menu.exec(globalPos);
 }
 
 void dlgConnectionProfiles::slot_cancel()
