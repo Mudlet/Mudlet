@@ -9831,12 +9831,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="449"/>
       <source>use strict UNIX line endings on commands for old UNIX servers that can&apos;t handle windows line endings correctly</source>
-      <translation type="unfinished"/>
+      <translation>использовать только окончания строк в стиле UNIX для команд к старыи серверам, которые не могут правильно обрабатывать окончания строк в стиле Windows</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="452"/>
       <source>Strict UNIX line endings</source>
-      <translation type="unfinished"/>
+      <translation>Оканчивать строки с стиле UNIX</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="469"/>
@@ -11630,7 +11630,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="412"/>
       <source>fire length (extra lines)</source>
-      <translation type="unfinished"/>
+      <translation>быть открытым # строк</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="470"/>
@@ -11792,7 +11792,7 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="185"/>
       <source>&lt;p&gt;If checked this item (and its children, if applicable) does not show in area to the left unless &lt;b&gt;Show normally hidden variables&lt;/b&gt; is checked.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Если флажок установлен, это переменное (и его дети, если есть) не отображается в области слева, кроме когда не установлен флажок &lt;b&gt;Показать обычно скрытые переменные&lt;/b&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="188"/>
