@@ -1783,3 +1783,15 @@ std::pair<bool, QString> Host::setProfileIcon(const QString& newIconPath)
 
     return std::make_pair(true, QString());
 }
+
+std::pair<bool, QString> Host::resetProfileIcon()
+{
+    QDir dir;
+    auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, QStringLiteral("profileicon"));
+    if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
+        qWarning() << "Host::resetProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
+        return std::make_pair(false, QStringLiteral("couldn't remove existing icon file"));
+    }
+
+    return std::make_pair(true, QString());
+}

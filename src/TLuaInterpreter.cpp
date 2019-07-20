@@ -1171,6 +1171,24 @@ int TLuaInterpreter::setProfileIcon(lua_State* L)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetProfileIcon
+int TLuaInterpreter::resetProfileIcon(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    bool success;
+    QString message;
+
+    std::tie(success, message) = host.resetProfileIcon();
+    if (success) {
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCurrentLine
 int TLuaInterpreter::getCurrentLine(lua_State* L)
 {
@@ -14643,6 +14661,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMainWindowSize", TLuaInterpreter::getMainWindowSize);
     lua_register(pGlobalLua, "getMousePosition", TLuaInterpreter::getMousePosition);
     lua_register(pGlobalLua, "setProfileIcon", TLuaInterpreter::setProfileIcon);
+    lua_register(pGlobalLua, "resetProfileIcon", TLuaInterpreter::resetProfileIcon);
     lua_register(pGlobalLua, "getCurrentLine", TLuaInterpreter::getCurrentLine);
     lua_register(pGlobalLua, "setMiniConsoleFontSize", TLuaInterpreter::setMiniConsoleFontSize);
     lua_register(pGlobalLua, "selectCurrentLine", TLuaInterpreter::selectCurrentLine);

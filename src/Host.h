@@ -229,6 +229,7 @@ public:
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
     std::pair<bool, QString> setProfileIcon(const QString& newIconPath);
+    std::pair<bool, QString> resetProfileIcon();
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
