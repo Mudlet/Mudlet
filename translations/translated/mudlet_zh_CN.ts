@@ -369,7 +369,8 @@ please wait...</source>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="89"/>
       <source>Expected object in keymap
 </source>
-      <translation type="unfinished"/>
+      <translation>预期的键映射对象
+</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="129"/>
@@ -2340,7 +2341,7 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1164"/>
       <source>[ INFO ]  - Room needed patching {internal fixup} of (special) exit to %1, was: &quot;%2&quot; now: &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>【信息】 - 通向%1的房间需要修补 {internal fixup} （特别）出口，以前是：&quot;%2&quot; 现在是：&quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1190"/>
