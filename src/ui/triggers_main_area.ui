@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>690</width>
+    <width>692</width>
     <height>270</height>
    </rect>
   </property>
@@ -247,11 +247,11 @@
          </item>
          <item alignment="Qt::AlignTop">
           <widget class="QGroupBox" name="groupBox_filterTrigger">
-           <property name="autoFillBackground">
-            <bool>true</bool>
-           </property>
            <property name="toolTip">
             <string>&lt;p&gt;When checked, only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters).&lt;/p&gt;</string>
+           </property>
+           <property name="autoFillBackground">
+            <bool>true</bool>
            </property>
            <property name="title">
             <string>only pass matches</string>
@@ -311,11 +311,11 @@
          </item>
          <item alignment="Qt::AlignTop">
           <widget class="QGroupBox" name="groupBox_perlSlashGOption">
-           <property name="autoFillBackground">
-            <bool>true</bool>
-           </property>
            <property name="toolTip">
             <string>&lt;p&gt;Choose this option if you want to include all possible matches of the pattern in the line.&lt;/p&gt;&lt;p&gt;Without this option, the pattern matching will stop after the first successful match.&lt;/p&gt;</string>
+           </property>
+           <property name="autoFillBackground">
+            <bool>true</bool>
            </property>
            <property name="title">
             <string>match all</string>
@@ -538,7 +538,7 @@
             <enum>Qt::NoFocus</enum>
            </property>
            <property name="toolTip">
-            <string comment="This is the tooltip for the QLineEdit that shows - but does not permit changing - the sound file used for a trigger." extracomment="Please ensure that the text used for &quot;Choose file ,,,&quot; here is the same as is used for the button that it refers to.">&lt;p&gt;This displays the file selected to play when the trigger fires. To change this used the &lt;i&gt;Choose file...&lt;/i&gt; button or to remove it use the clear button.&lt;/p&gt;</string>
+            <string comment="This is the tooltip for the QLineEdit that shows - but does not permit changing - the sound file used for a trigger.">&lt;p&gt;Sound file to play when the trigger fires.&lt;/p&gt;</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -607,11 +607,11 @@
       </item>
       <item alignment="Qt::AlignTop">
        <widget class="QGroupBox" name="groupBox_triggerColorizer">
-        <property name="autoFillBackground">
-         <bool>true</bool>
-        </property>
         <property name="toolTip">
          <string>&lt;p&gt;Enable this to highlight the matching text by changing the fore and background colors to the ones selected here.&lt;/p&gt;</string>
+        </property>
+        <property name="autoFillBackground">
+         <bool>true</bool>
         </property>
         <property name="title">
          <string>highlight</string>
