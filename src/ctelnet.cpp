@@ -128,7 +128,6 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 
     // initialize the socket after the Host initialisation is complete so we can access mSslTsl
     QTimer::singleShot(0, this, [this]() {
-        qDebug() << mProfileName;
         if (mpHost->mSslTsl) {
             connect(&socket, &QSslSocket::encrypted, this, &cTelnet::handle_socket_signal_connected);
         } else {
