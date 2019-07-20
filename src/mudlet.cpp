@@ -5189,14 +5189,40 @@ QSet<QString> mudlet::getWordSet()
 }
 
 #if defined(Q_OS_WIN32)
+// credit to Qt Creator (https://github.com/qt-creator/qt-creator/blob/50d93a656789d6e776ecca4adc2e5b487bac0dbc/src/libs/utils/fileutils.cpp)
+static QString getShortPathName(const QString& name)
+{
+    if (name.isEmpty()) {
+        return name;
+    }
+
+    // Determine length, then convert.
+    const LPCTSTR nameC = reinterpret_cast<LPCTSTR>(name.utf16()); // MinGW
+    const DWORD length = GetShortPathNameW(nameC, NULL, 0);
+    if (length == 0) {
+        return name;
+    }
+    QScopedArrayPointer<TCHAR> buffer(new TCHAR[length]);
+    GetShortPathNameW(nameC, buffer.data(), length);
+    const QString rc = QString::fromUtf16(reinterpret_cast<const ushort*>(buffer.data()), length - 1);
+    return rc;
+}
+
 // 'strip' non-ASCII characters from the path by copying it to a location without them
 // this is only an issue for the Win32 API; macOS and Linux don't have such issues
 void mudlet::sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const
 {
     static auto findNonAscii = QRegularExpression(QStringLiteral("([^ -~])"));
 
-    auto match = findNonAscii.match(originalLocation);
-    if (!match.hasMatch()) {
+    auto nonAscii = findNonAscii.match(originalLocation);
+    if (!nonAscii.hasMatch()) {
+        return;
+    }
+
+    const auto shortPath = getShortPathName(originalLocation);
+    // short path name might not always work: https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getshortpathnamew#remarks
+    if (shortPath != originalLocation) {
+        originalLocation = shortPath;
         return;
     }
 
