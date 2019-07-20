@@ -37,7 +37,7 @@ public:
     dlgConnectionProfiles(QWidget* parent = nullptr);
     void fillout_form();
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
-    QString readProfileData(const QString& profile, const QString& item);
+    QString readProfileData(const QString& profile, const QString& item) const;
     void accept() override;
 
 signals:
@@ -71,7 +71,7 @@ public slots:
 
 private:
     void copyFolder(const QString& sourceFolder, const QString& destFolder);
-    QString getDescription(const QString& hostUrl, quint16 port, const QString& profile_name);
+    QString getDescription(const QString& hostUrl, quint16 port, const QString& profile_name) const;
     bool validateConnect();
     void updateDiscordStatus();
     bool validateProfile();
@@ -80,6 +80,9 @@ private:
     bool extractSettingsFromProfile(pugi::xml_document& newProfile, const QString& copySettingsFrom);
     void saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const;
     bool copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const;
+    void setProfileIcon(const QFont& font) const;
+    void loadProfileIcon(const QFont& font, const QString& profileName, const QString& profileIconPath) const;
+    void generateProfileIcon(const QFont& font, int i, const QString& profileName) const;
 
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
