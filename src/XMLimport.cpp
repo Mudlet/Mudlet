@@ -834,7 +834,7 @@ void XMLimport::readHostPackage(Host* pHost)
     } else {
         pHost->mTimerDebugOutputSuppressionInterval = QTime();
     }
-  
+
     if (attributes().hasAttribute(QLatin1String("mDiscordAccessFlags"))) {
         pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(attributes().value("mDiscordAccessFlags").toString().toInt());
     }
@@ -883,6 +883,16 @@ void XMLimport::readHostPackage(Host* pHost)
     for (auto character : ignore) {
         pHost->mDoubleClickIgnore.insert(character);
     }
+    pHost->mUseProxy = (attributes().value("mUseProxy") == "yes");
+    pHost->mProxyAddress = attributes().value("mProxyAddress").toString();
+    if (attributes().hasAttribute(QLatin1String("mProxyPort"))) {
+        pHost->mProxyPort = attributes().value("mProxyPort").toInt();
+    } else {
+        pHost->mProxyPort = 0;
+    }
+    pHost->mProxyUsername = attributes().value("mProxyUsername").toString();
+    pHost->mProxyPassword = attributes().value("mProxyPassword").toString();
+
     pHost->mSslTsl = (attributes().value("mSslTsl") == "yes");
     pHost->mAutoReconnect = (attributes().value("mAutoReconnect") == "yes");
     pHost->mSslIgnoreExpired = (attributes().value("mSslIgnoreExpired") == "yes");

@@ -419,6 +419,12 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mThemePreviewType") = pHost->mThemePreviewType.toUtf8().constData();
     host.append_attribute("mSearchEngineName") = pHost->mSearchEngineName.toUtf8().constData();
     host.append_attribute("mTimerSupressionInterval") = pHost->mTimerDebugOutputSuppressionInterval.toString(QLatin1String("HH:mm:ss.zzz")).toUtf8().constData();
+    host.append_attribute("mUseProxy") = pHost->mUseProxy ? "yes" : "no";
+    host.append_attribute("mProxyAddress") = pHost->mProxyAddress.toUtf8().constData();
+    host.append_attribute("mProxyPort") = QString::number(pHost->mProxyPort).toUtf8().constData();
+    host.append_attribute("mProxyUsername") = pHost->mProxyUsername.toUtf8().constData();
+    host.append_attribute("mProxyPassword") = pHost->mProxyPassword.toUtf8().constData();
+    host.append_attribute("mAutoReconnect") = pHost->mAutoReconnect ? "yes" : "no";
     host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";
     host.append_attribute("mAutoReconnect") = pHost->mAutoReconnect ? "yes" : "no";
     host.append_attribute("mSslIgnoreExpired") = pHost->mSslIgnoreExpired ? "yes" : "no";

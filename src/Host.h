@@ -262,6 +262,12 @@ public:
     bool mSslIgnoreSelfSigned;
     bool mSslIgnoreAll;
 
+    bool mUseProxy;
+    QString mProxyAddress;
+    quint16 mProxyPort;
+    QString mProxyUsername;
+    QString mProxyPassword;
+
     bool mIsGoingDown;
     bool mIsProfileLoadingSequence;
 

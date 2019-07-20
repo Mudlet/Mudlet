@@ -85,7 +85,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     groupBox_discordPrivacy->hide();
 
     checkBox_USE_SMALL_SCREEN->setChecked(pMudlet->mEnableFullScreenMode);
-    
+
     // As we demonstrate the options that these next two checkboxes control in
     // the editor "preview" widget (on another tab) we will need to track
     // changes and update the edbee widget straight away. As we can have
@@ -853,6 +853,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_self_signed->setChecked(pHost->mSslIgnoreSelfSigned);
     checkBox_expired->setChecked(pHost->mSslIgnoreExpired);
     checkBox_ignore_all->setChecked(pHost->mSslIgnoreAll);
+
+    groupBox_proxy->setChecked(pHost->mUseProxy);
+    lineEdit_proxyAddress->setText(pHost->mProxyAddress);
+    if (pHost->mProxyPort != 0) {
+        lineEdit_proxyPort->setText(QString::number(pHost->mProxyPort));
+    }
+    lineEdit_proxyUsername->setText(pHost->mProxyUsername);
+    lineEdit_proxyPassword->setText(pHost->mProxyPassword);
 
     checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
@@ -2216,6 +2224,12 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
         pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
         pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
+
+        pHost->mUseProxy = groupBox_proxy->isChecked();
+        pHost->mProxyAddress = lineEdit_proxyAddress->text();
+        pHost->mProxyPort = lineEdit_proxyPort->text().toUInt();
+        pHost->mProxyUsername = lineEdit_proxyUsername->text();
+        pHost->mProxyPassword = lineEdit_proxyPassword->text();
 
         //tab security
         pHost->mSslTsl = checkBox_ssl->isChecked();
