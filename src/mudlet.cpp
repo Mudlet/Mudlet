@@ -5178,3 +5178,32 @@ QSet<QString> mudlet::getWordSet()
 
     return wordSet;
 }
+
+std::pair<bool, QString> mudlet::setProfileIcon(const QString& profile, const QString& newIconPath)
+{
+    QDir dir;
+    auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, QStringLiteral("profileicon"));
+    if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
+        qWarning() << "mudlet::setProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
+        return std::make_pair(false, QStringLiteral("couldn't remove existing icon file"));
+    }
+
+    if (!QFile::copy(newIconPath, profileIconPath)) {
+        qWarning() << "mudlet::setProfileIcon() ERROR: couldn't copy new icon" << newIconPath<< " to" << profileIconPath;
+        return std::make_pair(false, QStringLiteral("couldn't copy icon file into new location"));
+    }
+
+    return std::make_pair(true, QString());
+}
+
+std::pair<bool, QString> mudlet::resetProfileIcon(const QString& profile)
+{
+    QDir dir;
+    auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, QStringLiteral("profileicon"));
+    if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
+        qWarning() << "mudlet::resetProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
+        return std::make_pair(false, QStringLiteral("couldn't remove existing icon file"));
+    }
+
+    return std::make_pair(true, QString());
+}

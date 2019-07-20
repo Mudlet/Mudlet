@@ -106,6 +106,8 @@ private:
 
 private slots:
     void slot_profile_menu(QPoint pos);
+    void slot_set_custom_icon();
+    void slot_reset_custom_icon();
 };
 
 

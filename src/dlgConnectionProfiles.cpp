@@ -1780,14 +1780,50 @@ void dlgConnectionProfiles::generateProfileIcon(const QFont& font, int i, const 
 void dlgConnectionProfiles::slot_profile_menu(QPoint pos)
 {
     QPoint globalPos = profiles_tree_widget->mapToGlobal(pos);
+    auto profileName = profiles_tree_widget->currentItem()->text();
 
     QMenu menu;
-    menu.addAction(QIcon(":/icons/mudlet_main_16px.png"),  tr("Set custom icon", "Set a custom picture to show for the profile in the connection dialog"), this, [=]() {
-        auto selectedItem = profiles_tree_widget->currentRow();
-        qDebug() << selectedItem;
-    });
+    if (hasCustomIcon(profileName)) {
+        menu.addAction(tr("Reset icon", "Reset the custom picture for this profile in the connection dialog and show the default one instead"), this, &dlgConnectionProfiles::slot_reset_custom_icon);
+    } else {
+        menu.addAction(QIcon(":/icons/mudlet_main_16px.png"), tr("Set custom icon", "Set a custom picture to show for the profile in the connection dialog"), this,  &dlgConnectionProfiles::slot_set_custom_icon);
+    }
 
     menu.exec(globalPos);
+}
+
+void dlgConnectionProfiles::slot_set_custom_icon()
+{
+    auto profileName = profiles_tree_widget->currentItem()->text();
+
+    QString imageLocation = QFileDialog::getOpenFileName(this, tr("Select custom image for profile (should be 120x30)"),
+                                                    QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
+                                                    tr("Images (%1)").arg(QStringLiteral("*.png *.gif *.jpg")));
+    if (imageLocation.isEmpty()) {
+        return;
+    }
+
+    bool success = mudlet::self()->setProfileIcon(profileName, imageLocation).first;
+    if (!success) {
+        return;
+    }
+
+    auto icon = QIcon(QPixmap(imageLocation).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+    profiles_tree_widget->currentItem()->setIcon(icon);
+}
+
+void dlgConnectionProfiles::slot_reset_custom_icon()
+{
+    auto profileName = profiles_tree_widget->currentItem()->text();
+
+    bool success = mudlet::self()->resetProfileIcon(profileName).first;
+    if (!success) {
+        return;
+    }
+
+    auto currentRow = profiles_tree_widget->currentRow();
+    fillout_form();
+    profiles_tree_widget->setCurrentRow(currentRow);
 }
 
 void dlgConnectionProfiles::slot_cancel()

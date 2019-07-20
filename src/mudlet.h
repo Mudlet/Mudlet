@@ -215,6 +215,8 @@ public:
     QStringList getAvailableFonts();
     void hideMudletsVariables(Host *pHost);
     void updateMudletDiscordInvite();
+    std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
+    std::pair<bool, QString> resetProfileIcon(const QString& profile);
 
     static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;

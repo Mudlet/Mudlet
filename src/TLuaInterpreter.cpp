@@ -1160,7 +1160,7 @@ int TLuaInterpreter::setProfileIcon(lua_State* L)
     bool success;
     QString message;
 
-    std::tie(success, message) = host.setProfileIcon(iconPath);
+    std::tie(success, message) = mudlet::self()->setProfileIcon(host.getName(), iconPath);
     if (success) {
         lua_pushboolean(L, true);
         return 1;
@@ -1178,7 +1178,7 @@ int TLuaInterpreter::resetProfileIcon(lua_State* L)
     bool success;
     QString message;
 
-    std::tie(success, message) = host.resetProfileIcon();
+    std::tie(success, message) = mudlet::self()->resetProfileIcon(host.getName());
     if (success) {
         lua_pushboolean(L, true);
         return 1;
