@@ -1629,7 +1629,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2641"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation>[好] - ... 系统已完成重新加载地图的请求.</translation>
+      <translation>[ OK ] - ... 系统已完成重新加载地图的请求.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2643"/>
@@ -1933,7 +1933,7 @@ map with others relying on the original format.</source>
     <message>
       <location filename="../src/TMap.cpp" line="437"/>
       <source>[ INFO ]  - Map audit starting...</source>
-      <translation>[ INFO ]  - 开始地图审核...</translation>
+      <translation>[ 信息 ]  - 开始地图审核...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1031"/>
@@ -3925,7 +3925,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1346"/>
       <location filename="../src/ctelnet.cpp" line="1627"/>
       <source>[  OK  ]  - Package is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>[ 完成 ] -软件包已安装。</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1353"/>
@@ -9412,7 +9412,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="3668"/>
       <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
-      <translation type="unfinished"/>
+      <translation>[ 完成 ] - 配置文件 &quot;%1&quot; 在脱机模式下加载完成。</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3693"/>
