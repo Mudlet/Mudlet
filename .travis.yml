@@ -74,6 +74,7 @@ matrix:
         - qt512tools
         - qt512gamepad
         - qt512speech
+        - qt512translations
 
   - os: linux
     compiler: gcc
