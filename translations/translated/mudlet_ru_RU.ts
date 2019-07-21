@@ -11194,7 +11194,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1874"/>
       <source>Exit RoomID number</source>
-      <translation type="unfinished"/>
+      <translation>Выход К</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1901"/>
