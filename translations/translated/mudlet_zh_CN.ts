@@ -5067,7 +5067,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1897"/>
       <source>Mudlet is not configured for secure connections.</source>
-      <translation>Mudelet没有配置安全连接。</translation>
+      <translation>Mudelet 没有配置安全连接.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1900"/>
