@@ -4429,22 +4429,23 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="503"/>
       <source>&lt;p&gt;Indicates if there is already a custom line for this special exit, will be replaced if the exit is selected.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;指明该特殊出口是否已经拥有一条自定义路径, 选择该出口后自定义路径会被替换.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="514"/>
       <source>&lt;p&gt;The room this special exit leads to.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;此特殊房间出口通往 &lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="525"/>
       <source>&lt;p&gt;The command or LUA script that goes to the given room.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;通往指定房间的命令或LUA脚本.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="561"/>
       <source>&lt;p&gt;To remove a custom line: cancel this dialog, select the line and right-click to obtain a &amp;quot;delete&amp;quot; option.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;删除自定义路径线, 请取消此对话框, 
+选择要删除的路径线并右键单击以获取 "删除" 选项。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="447"/>
@@ -4512,7 +4513,8 @@ If you are, please type in the profile name as a confirmation:</source>
       <location filename="../src/ui/glyph_usage.ui" line="44"/>
       <source>Symbol
 (Set Font)</source>
-      <translation type="unfinished"/>
+      <translation>符号
+(设置字体)</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="50"/>
