@@ -8407,6 +8407,7 @@ void dlgTriggerEditor::slot_clearSoundFile()
 {
     mpTriggersMainArea->lineEdit_soundFile->clear();
     mpTriggersMainArea->toolButton_clearSoundFile->setEnabled(false);
+    mpTriggersMainArea->lineEdit_soundFile->setToolTip(tr("<p>Sound file to play when the trigger fires.</p>"));
 }
 
 void dlgTriggerEditor::slot_showAllTriggerControls(const bool isShown)
