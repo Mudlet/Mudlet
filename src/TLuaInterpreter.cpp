@@ -2196,14 +2196,14 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
         return 1;
     }
     if (!pR->exitStubs.contains(dirType)) {
-        lua_pushstring(L, "connectExitStubs: ExitStub doesn't exist");
+        lua_pushstring(L, "connectExitStub: ExitStub doesn't exist");
         lua_error(L);
         return 1;
     }
     if (roomsGiven) {
         TRoom* pR_to = host.mpMap->mpRoomDB->getRoom(toRoom);
         if (!pR_to) {
-            lua_pushstring(L, "connectExitStubs: toRoom doesn't exist");
+            lua_pushstring(L, "connectExitStub: toRoom doesn't exist");
             lua_error(L);
             return 1;
         }
@@ -2211,7 +2211,7 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
         lua_pushboolean(L, host.mpMap->setExit(roomId, toRoom, dirType));
     } else {
         if (!pR->exitStubs.contains(dirType)) {
-            lua_pushstring(L, "connectExitStubs: ExitStub doesn't exist");
+            lua_pushstring(L, "connectExitStub: ExitStub doesn't exist");
             lua_error(L);
             return 1;
         }
