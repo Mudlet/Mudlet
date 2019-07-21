@@ -11600,7 +11600,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="254"/>
       <source>&lt;p&gt;When checked, only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Если этот флажок установлен, дочерним триггерам будет передаваться только отфильтрованное содержимое (что в группах захвата), а не начальная строка (см. руководство по фильтрам).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="257"/>
@@ -11615,7 +11615,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="318"/>
       <source>&lt;p&gt;Choose this option if you want to include all possible matches of the pattern in the line.&lt;/p&gt;&lt;p&gt;Without this option, the pattern matching will stop after the first successful match.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Выберите эту опцию, если вы хотите включить все возможные совпадения шаблона в строке.&lt;/p&gt;&lt;p&gt; Без этой опции, поиск остановится после первого успешного совпадания.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="351"/>
