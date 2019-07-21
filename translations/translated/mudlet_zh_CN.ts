@@ -5057,45 +5057,53 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1967"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before loading.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;请在加载前设置有效的配置文件名称、游戏服务器地址和游戏端口。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1971"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before connecting.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;请在加载前设置有效的配置文件名称、游戏服务器地址和游戏端口。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1897"/>
       <source>Mudlet is not configured for secure connections.</source>
-      <translation type="unfinished"/>
+      <translation>Mudelet没有配置安全连接。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1900"/>
       <source>Mudlet is not configured for secure connections.
 
 </source>
-      <translation type="unfinished"/>
+      <translation>Mudelet没有配置安全连接。
+
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1909"/>
       <source>Mudlet can not load support for secure connections.
 
 </source>
-      <translation type="unfinished"/>
+      <translation>Mudelet 无法加载安全连接支持。
+
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1923"/>
       <source>Please enter the URL or IP address of the Game server.
 
 %1</source>
-      <translation type="unfinished"/>
+      <translation>请输入游戏服务器的URL或IP地址。
+
+%1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1932"/>
       <source>SSL connections require the URL of the Game server.
 
 %1</source>
-      <translation type="unfinished"/>
+      <translation>SSL连接需要游戏服务器的URL。
+
+%1</translation>
     </message>
   </context>
   <context>
@@ -5103,12 +5111,12 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="113"/>
       <source>%1 closed their client.</source>
-      <translation type="unfinished"/>
+      <translation>%1 关闭了客户端。</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="125"/>
       <source>Mudlet IRC Client - %1 - %2 on %3</source>
-      <translation type="unfinished"/>
+      <translation>Mudelet IRC 客户端 - %1 %2 在 %3 上</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="139"/>
@@ -5118,22 +5126,22 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="140"/>
       <source>$ Host: %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>$ 主机: %1:%2</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="141"/>
       <source>$ Nick: %1</source>
-      <translation type="unfinished"/>
+      <translation>$ 昵称: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="142"/>
       <source>$ Auto-Join Channels: %1</source>
-      <translation type="unfinished"/>
+      <translation>$ 自动加入频道：%1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="143"/>
       <source>$ This client supports Auto-Completion using the Tab key.</source>
-      <translation type="unfinished"/>
+      <translation>$ 客户端支持使用 Tab 键自动完成。</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="144"/>
@@ -5148,52 +5156,52 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="376"/>
       <source>[Error] MSGLIMIT requires &lt;limit&gt; to be a whole number greater than zero!</source>
-      <translation type="unfinished"/>
+      <translation>[ 错误 ] MSGLIMIT要求 &lt;limit&gt; 为大于零的整数!</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="406"/>
       <source>[HELP] Available Commands: %1</source>
-      <translation type="unfinished"/>
+      <translation>[ 帮助 ] 可用命令: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="408"/>
       <source>[HELP] Syntax: %1</source>
-      <translation type="unfinished"/>
+      <translation>[ 帮助 ] 语法: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="416"/>
       <source>! Connected to %1.</source>
-      <translation type="unfinished"/>
+      <translation>! 已连接到 %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="417"/>
       <source>! Joining %1...</source>
-      <translation type="unfinished"/>
+      <translation>! 加入 %1...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="422"/>
       <source>! Connecting %1...</source>
-      <translation type="unfinished"/>
+      <translation>! 正在连接到 %1...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="427"/>
       <source>! Disconnected from %1.</source>
-      <translation type="unfinished"/>
+      <translation>! 已从 %1 断开连接.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="489"/>
       <source>[ERROR] Syntax: %1</source>
-      <translation type="unfinished"/>
+      <translation>[ 错误 ] 语法: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="491"/>
       <source>[ERROR] Unknown command: %1</source>
-      <translation type="unfinished"/>
+      <translation>[ 错误 ] 无效命令: %s</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="636"/>
       <source>! The Nickname %1 is reserved. Automatically changing Nickname to: %2</source>
-      <translation type="unfinished"/>
+      <translation>! 昵称 %1 是已被占用。 自动将昵称更改为: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="648"/>
@@ -5207,7 +5215,8 @@ Count</source>
       <location filename="../src/dlgMapper.cpp" line="227"/>
       <source>Cannot find a path to this room.
 </source>
-      <translation type="unfinished"/>
+      <translation>找不到通往此房间的路径。
+</translation>
     </message>
   </context>
   <context>
@@ -5215,12 +5224,12 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="14"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>包导出器</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="21"/>
       <source>Check items to export</source>
-      <translation type="unfinished"/>
+      <translation>检查要导出的项</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="59"/>
@@ -5261,7 +5270,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="90"/>
       <source>What do you wish to call the package:</source>
-      <translation type="unfinished"/>
+      <translation>您想将包命名为:</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="157"/>
