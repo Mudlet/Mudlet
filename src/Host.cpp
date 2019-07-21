@@ -527,6 +527,34 @@ QString Host::getMmpMapLocation() const
     return mpMap->getMmpMapLocation();
 }
 
+bool Host::setDisplayFont(const QFont& font)
+{
+    const QFontMetrics metrics(font);
+    if (metrics.averageCharWidth() == 0) {
+        return false;
+    }
+
+    mDisplayFont = font;
+    return true;
+}
+
+bool Host::setDisplayFont(const QString& fontName)
+{
+    const QFont font(fontName);
+    const QFontMetrics metrics(font);
+    if (metrics.averageCharWidth() == 0) {
+        return false;
+    }
+
+    mDisplayFont = font;
+    return true;
+}
+
+void Host::setDisplayFontSize(int size)
+{
+    mDisplayFont.setPointSize(size);
+}
+
 // Now returns the total weight of the path
 const unsigned int Host::assemblePath()
 {

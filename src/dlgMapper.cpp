@@ -110,14 +110,14 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(showRoomIDs, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
     // Explicitly set the font otherwise it changes between the Application and
     // the default System one as the mapper is docked and undocked!
-    QFont mapperFont = QFont(mpHost->mDisplayFont.family());
+    QFont mapperFont = QFont(mpHost->getDisplayFont().family());
     if (mpHost->mNoAntiAlias) {
         mapperFont.setStyleStrategy(QFont::NoAntialias);
     } else {
         mapperFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality));
     }
     setFont(mapperFont);
-    mp2dMap->mFontHeight = QFontMetrics(mpHost->mDisplayFont).height();
+    mp2dMap->mFontHeight = QFontMetrics(mpHost->getDisplayFont()).height();
     glWidget->hide();
     mpMap->customEnvColors[257] = mpHost->mRed_2;
     mpMap->customEnvColors[258] = mpHost->mGreen_2;

@@ -2749,15 +2749,17 @@ int TLuaInterpreter::setFont(lua_State* L)
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
-            // get host profile display font and alter it, since that is how it's done in Settings.
-            QFont displayFont = pHost->mDisplayFont;
-            displayFont.setFamily(font);
-            pHost->mDisplayFont = displayFont;
+            if (!pHost->setDisplayFont(font)) {
+                lua_pushnil(L);
+                lua_pushstring(L, "specified font is invalid (average character width is 0)");
+                return 2;
+            }
+
             // apply changes to main console and its while-scrolling component too.
-            mudlet::self()->mConsoleMap[pHost]->mUpperPane->setFont(displayFont);
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->setFont(pHost->getDisplayFont());
             mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
             mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();
-            mudlet::self()->mConsoleMap[pHost]->mLowerPane->setFont(displayFont);
+            mudlet::self()->mConsoleMap[pHost]->mLowerPane->setFont(pHost->getDisplayFont());
             mudlet::self()->mConsoleMap[pHost]->mLowerPane->updateScreenView();
             mudlet::self()->mConsoleMap[pHost]->mLowerPane->forceUpdate();
             mudlet::self()->mConsoleMap[pHost]->refresh();
@@ -2848,9 +2850,7 @@ int TLuaInterpreter::setFontSize(lua_State* L)
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
             // get host profile display font and alter it, since that is how it's done in Settings.
-            QFont font = pHost->mDisplayFont;
-            font.setPointSize(size);
-            pHost->mDisplayFont = font;
+            pHost->setDisplayFontSize(size);
             // apply changes to main console and its while-scrolling component too.
             mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
             mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();
@@ -2890,13 +2890,13 @@ int TLuaInterpreter::getFontSize(lua_State* L)
             windowName = QString::fromUtf8(lua_tostring(L, 1));
 
             if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-                rval = pHost->mDisplayFont.pointSize();
+                rval = pHost->getDisplayFont().pointSize();
             } else {
                 rval = mudlet::self()->getFontSize(pHost, windowName);
             }
         }
     } else {
-        rval = pHost->mDisplayFont.pointSize();
+        rval = pHost->getDisplayFont().pointSize();
     }
 
     if (rval <= -1) {
@@ -6144,7 +6144,7 @@ int TLuaInterpreter::getNetworkLatency(lua_State* L)
 int TLuaInterpreter::getMainConsoleWidth(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    int fw = QFontMetrics(host.mDisplayFont).width("W");
+    int fw = QFontMetrics(host.getDisplayFont()).width("W");
     fw *= host.mWrapAt + 1;
     lua_pushnumber(L, fw);
     return 1;

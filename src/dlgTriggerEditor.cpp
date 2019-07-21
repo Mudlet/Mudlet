@@ -551,7 +551,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     auto config = mpSourceEditorEdbee->config();
     config->beginChanges();
     config->setThemeName(mpHost->mEditorTheme);
-    config->setFont(mpHost->mDisplayFont);
+    config->setFont(mpHost->getDisplayFont());
     config->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
                                   ? edbee::TextEditorConfig::ShowWhitespaces
                                   : edbee::TextEditorConfig::HideWhitespaces);
@@ -8152,7 +8152,7 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
     auto config = mpSourceEditorEdbee->config();
     config->beginChanges();
     config->setThemeName(mpHost->mEditorTheme);
-    config->setFont(mpHost->mDisplayFont);
+    config->setFont(mpHost->getDisplayFont());
     config->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
                                   ? edbee::TextEditorConfig::ShowWhitespaces
                                   : edbee::TextEditorConfig::HideWhitespaces);
@@ -8179,7 +8179,7 @@ void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
         auto localConfig = mpSourceEditorEdbee->config();
         localConfig->beginChanges();
         localConfig->setThemeName(theme);
-        localConfig->setFont(mpHost->mDisplayFont);
+        localConfig->setFont(mpHost->getDisplayFont());
         localConfig->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces)
                                            ? edbee::TextEditorConfig::ShowWhitespaces
                                            : edbee::TextEditorConfig::HideWhitespaces);

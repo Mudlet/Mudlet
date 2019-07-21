@@ -555,8 +555,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // same with special connection warnings
     need_reconnect_for_specialoption->hide();
 
-    fontComboBox->setCurrentFont(pHost->mDisplayFont);
-    mFontSize = pHost->mDisplayFont.pointSize();
+    fontComboBox->setCurrentFont(pHost->getDisplayFont());
+    mFontSize = pHost->getDisplayFont().pointSize();
     if (mFontSize < 0) {
         mFontSize = 10;
     }
@@ -1138,7 +1138,7 @@ void dlgProfilePreferences::loadEditorTab()
                                   ? edbee::TextEditorConfig::ShowWhitespaces
                                   : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
-    config->setFont(pHost->mDisplayFont);
+    config->setFont(pHost->getDisplayFont());
     config->endChanges();
     edbeePreviewWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
     // disable shadows as their purpose (notify there is more text) is performed by scrollbars already
@@ -1449,8 +1449,7 @@ void dlgProfilePreferences::setDisplayFont()
     }
     QFont font = fontComboBox->currentFont();
     font.setPointSize(mFontSize);
-    if (pHost->mDisplayFont != font) {
-        pHost->mDisplayFont = font;
+    if (pHost->getDisplayFont() != font && pHost->setDisplayFont(font)) {
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
             mudlet::self()->mConsoleMap[pHost]->changeColors();
 

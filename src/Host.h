@@ -228,6 +228,10 @@ public:
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
+    const QFont& getDisplayFont() const { return mDisplayFont; }
+    bool setDisplayFont(const QFont& font);
+    bool setDisplayFont(const QString& fontName);
+    void setDisplayFontSize(int size);
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
@@ -245,7 +249,6 @@ public:
     int mBorderTopHeight;
     QFont mCommandLineFont;
     QString mCommandSeparator;
-    QFont mDisplayFont;
     bool mEnableGMCP;
     bool mEnableMSDP;
     bool mServerMXPenabled;
@@ -439,7 +442,7 @@ private slots:
 
 private:
     void installPackageFonts(const QString &packageName);
-
+    QFont mDisplayFont;
     QStringList mModulesToSync;
 
     QScopedPointer<LuaInterface> mLuaInterface;

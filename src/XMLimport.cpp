@@ -983,8 +983,8 @@ void XMLimport::readHostPackage(Host* pHost)
             } else if (name() == "mLightWhite") {
                 pHost->mLightWhite.setNamedColor(readElementText());
             } else if (name() == "mDisplayFont") {
-                pHost->mDisplayFont.fromString(readElementText());
-                pHost->mDisplayFont.setFixedPitch(true);
+                pHost->getDisplayFont().fromString(readElementText());
+                pHost->getDisplayFont().setFixedPitch(true);
             } else if (name() == "mCommandLineFont") {
                 pHost->mCommandLineFont.fromString(readElementText());
             } else if (name() == "commandSeperator") {

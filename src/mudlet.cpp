@@ -1910,7 +1910,7 @@ QSize mudlet::calcFontSize(Host* pHost, const QString& windowName)
 
     QFont font;
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        font = pHost->mDisplayFont;
+        font = pHost->getDisplayFont();
     } else {
         auto pC = pHost->mpConsole->mSubConsoleMap.value(windowName);
         if (pC) {
@@ -3444,7 +3444,7 @@ void mudlet::slot_notes()
         pNotes = pHost->mpNotePad;
 
         QTextCharFormat format;
-        format.setFont(pHost->mDisplayFont);
+        format.setFont(pHost->getDisplayFont());
         pNotes->notesEdit->setCurrentCharFormat(format);
         pNotes->setWindowTitle(tr("%1 - notes").arg(pHost->getName()));
         pNotes->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_notepad.png")));
