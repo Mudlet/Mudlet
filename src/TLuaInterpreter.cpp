@@ -3227,38 +3227,26 @@ void TLuaInterpreter::setBorderSize(lua_State* L, int size, int position, bool u
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderSizes
 int TLuaInterpreter::setBorderSizes(lua_State* L)
 {
-    int sizeTop;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setBorderSizes: bad argument #1 value (new top size as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
-    } else {
-        sizeTop = lua_tonumber(L, 1);
-    }
-    int sizeRight;
+        return lua_error(L);
+    } 
+    int sizeTop = lua_tonumber(L, 1);
     if (!lua_isnumber(L, 2)) {
         lua_pushfstring(L, "setBorderSizes: bad argument #2 value (new right size as number expected, got %s!)", luaL_typename(L, 2));
-        lua_error(L);
-        return 1;
-    } else {
-        sizeRight = lua_tonumber(L, 2);
-    }
-    int sizeBottom;
+        return lua_error(L);
+    } 
+    int sizeRight = lua_tonumber(L, 2);
     if (!lua_isnumber(L, 3)) {
         lua_pushfstring(L, "setBorderSizes: bad argument #3 value (new bottom size as number expected, got %s!)", luaL_typename(L, 3));
-        lua_error(L);
-        return 1;
-    } else {
-        sizeBottom = lua_tonumber(L, 3);
-    }
-    int sizeLeft;
+        return lua_error(L);
+    } 
+    int sizeBottom = lua_tonumber(L, 3);
     if (!lua_isnumber(L, 4)) {
         lua_pushfstring(L, "setBorderSizes: bad argument #4 value (new left size as number expected, got %s!)", luaL_typename(L, 4));
-        lua_error(L);
-        return 1;
-    } else {
-        sizeLeft = lua_tonumber(L, 4);
-    }
+        return lua_error(L);
+    } 
+    int sizeLeft = lua_tonumber(L, 4);
     setBorderSize(L, sizeTop, 0, false);
     setBorderSize(L, sizeRight, 1, false);
     setBorderSize(L, sizeBottom, 2, false);
@@ -3272,8 +3260,7 @@ int TLuaInterpreter::setBorderTop(lua_State* L)
     int size;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setBorderTop: bad argument #1 value (new size as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         size = lua_tonumber(L, 1);
     }
@@ -3287,8 +3274,7 @@ int TLuaInterpreter::setBorderRight(lua_State* L)
     int size;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setBorderRight: bad argument #1 value (new size as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         size = lua_tonumber(L, 1);
     }
@@ -3302,8 +3288,7 @@ int TLuaInterpreter::setBorderBottom(lua_State* L)
     int size;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setBorderBottom: bad argument #1 value (new size as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         size = lua_tonumber(L, 1);
     }
@@ -3317,8 +3302,7 @@ int TLuaInterpreter::setBorderLeft(lua_State* L)
     int size;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setBorderLeft: bad argument #1 value (new size as number expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         size = lua_tonumber(L, 1);
     }
