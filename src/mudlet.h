@@ -215,6 +215,9 @@ public:
     QStringList getAvailableFonts();
     void hideMudletsVariables(Host *pHost);
     void updateMudletDiscordInvite();
+#if defined(Q_OS_WIN32)
+    void sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const;
+#endif
 
     static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;
@@ -576,6 +579,7 @@ private:
     QPointer<QToolButton> mpButtonAbout;
     QPointer<QAction> mpActionAliases;
     QPointer<QAction> mpActionButtons;
+    QPointer<QToolButton> mpButtonConnect;
     QPointer<QAction> mpActionConnect;
     QPointer<QAction> mpActionDisconnect;
     QPointer<QAction> mpActionFullScreenView;
