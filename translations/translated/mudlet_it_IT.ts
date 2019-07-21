@@ -10,6 +10,24 @@
     </message>
   </context>
   <context>
+    <name>Feed</name>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="273"/>
+      <source>Too many redirects.</source>
+      <translation>Troppi reindirizzamenti.</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="282"/>
+      <source>No data received from server</source>
+      <translation>Nessun dato ricevuto dal server</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="293"/>
+      <source>Could not verify download integrity.</source>
+      <translation>Impossibile verificare l'integrità del download.</translation>
+    </message>
+  </context>
+  <context>
     <name>Host</name>
     <message>
       <location filename="../src/Host.cpp" line="890"/>
@@ -322,6 +340,95 @@ attendere prego...</translation>
       <source>%1 secs</source>
       <translation>%1 secondi</translation>
     </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="55"/>
+      <source>Start element not found!</source>
+      <translation>Elemento di partenza non trovato!</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
+      <source>line %1: %2</source>
+      <translation>riga %1: %2</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="149"/>
+      <source>Expected %1 while parsing</source>
+      <translation>Previsto %1 durante l'analisi</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.cpp" line="145"/>
+      <source>%1 @ line %2</source>
+      <translation>%1 @ riga %2</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="82"/>
+      <source>No data found!</source>
+      <translation>Nessun dato trovato!</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="89"/>
+      <source>Expected object in keymap
+</source>
+      <translation>Previsto oggetto nella mappa dei tasti
+</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="129"/>
+      <source>Invalid keysequence used %1
+</source>
+      <translation>Sequenza di tasti non valida, utilizzata %1
+</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="369"/>
+      <source>Error parsing %1: %2 </source>
+      <translation>Errore nell'analisi %1: %2 </translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/textgrammar.cpp" line="305"/>
+      <source>Error reading file %1:%2</source>
+      <translation>Errore nella lettura del file %1:%2</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="435"/>
+      <source>%1 ranges</source>
+      <translation>%1 intervalli</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="441"/>
+      <source>Line %1, Column %2</source>
+      <translation>Riga %1, colonna %2</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="444"/>
+      <source>, Offset %1</source>
+      <translation>, Offset %1</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="448"/>
+      <source> | %1 chars selected</source>
+      <translation> | %1 caratteri selezionati</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="452"/>
+      <source> | scope: </source>
+      <translation> | ambito: </translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="462"/>
+      <source> (%1)</source>
+      <translation> (%1)</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="399"/>
+      <source>Error parsing theme %1:%2</source>
+      <translation>Errore nell'analisi del tema %1:%2</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="404"/>
+      <source>Error theme not found %1.</source>
+      <translation>Errore tema non trovato %1.</translation>
+    </message>
   </context>
   <context>
     <name>T2DMap</name>
@@ -487,7 +594,12 @@ con un nuovo simbolo per questa stanza:</translation>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected; %1 is the room number for which %2-%4 are the x,y and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Stanza%1ID:%1%2 Posizione%1sulla%1Mappa: (%3,%4,%5) -%1centrata su %n stanze selezionate
+</numerusform>
+        <numerusform>Stanza%1ID:%1%2 Posizione%1sulla%1Mappa: (%3,%4,%5) -%1centrata su %n stanze selezionate
+</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2266"/>
@@ -942,7 +1054,12 @@ la stanza evidenziata (%1) a:</translation>
       <source>Enter the symbol to use
 for this/these %n room(s):</source>
       <comment>this is for when applying a new room symbol to one or more rooms and none have a symbol at present; use line feeds to format text into a reasonable rectangle, %n is the number of rooms involved</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Inserisci il simbolo da utilizzare
+per questa/queste %n stanza(e):</numerusform>
+        <numerusform>Inserisci il simbolo da utilizzare
+per questa/queste %n stanza(e):</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3620"/>
@@ -961,7 +1078,18 @@ with a new symbol to use for all the rooms:</source>
  • enter a space to clear any existing symbols
 for all of the %n selected room(s):</source>
       <comment>Use line feeds to format text into a reasonable rectangle if needed, %n is the number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Scegli:
+ • un simbolo esistente dalla lista sottostante (precedenza ai più comunemente usato)
+ • inserisci uno o più grafemi (&quot;caratteri visibili&quot;) come nuovo simbolo
+ • inserisci uno spazio per cancellare qualsiasi simbolo esistente
+per tutte le %n stanze selezionate:</numerusform>
+        <numerusform>Scegli:
+ • un simbolo esistente dalla lista sottostante (precedenza ai più comunemente usato)
+ • inserisci uno o più grafemi (&quot;caratteri visibili&quot;) come nuovo simbolo
+ • inserisci uno spazio per cancellare qualsiasi simbolo esistente
+per tutte le %n stanze selezionate:</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3809"/>
@@ -1035,7 +1163,12 @@ selected rooms, minimum
 the only current value
 used is:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Inserisci il nuovo peso della stanza
+(= tempo di viaggio) per tutte le
+stanze selezionate, minimo
+(e predefinito) è 1.
+Lunico valore corrente
+utilizzato è:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4113"/>
@@ -1058,7 +1191,13 @@ new (positive) integer
 value for all selected
 rooms:</source>
       <comment>Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>Seleziona un peso della
+stanza (= tempo di viaggio)
+dalla lista (ordinata in
+base all'utilizzo) o inserisci
+un nuovo numero (positivo)
+da utilizzare come valore
+per le stanze selezionate:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4174"/>
@@ -1690,9 +1829,11 @@ L'indentazione del codice non sarà disponibile.
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15260"/>
-      <source>[ ERROR ] - Couldn&apos;t to load LuaGlobal; your Mudlet is broken! Tried these locations:
+      <source>[ ERROR ] - Couldn&apos;t find and load LuaGlobal.lua - your Mudlet is broken!
+Tried these locations:
 %1</source>
-      <translation>[ ERROR ] - Impossibile caricare LuaGlobal; la tua installazione di Mudlet è danneggiata! Locazioni provate:
+      <translation>[ ERROR ] - Impossibile trovare e caricare LuaGlobal.lua - ; la tua installazione di Mudlet è danneggiata!
+Percorsi analizzati:
 %1</translation>
     </message>
   </context>
@@ -2003,7 +2144,11 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Ho rilevato almeno un problema durante le ultime operazioni sul file
+di mappa. Consiglio di esaminare il report più recente nel file:
+&quot;%1&quot;
+- ricerca il (ultimo) report dal titolo:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2179"/>
@@ -2013,7 +2158,11 @@ the file:
 &quot;%1&quot;
 - look for the (last) report with the title:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Ho salvato un riepilogo degli messaggi relativi all'ultimo file di mappa.
+Consiglio di esaminare il report più recente nel file:
+&quot;%1&quot;
+- ricerca il (ultimo) report dal titolo:
+&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2253"/>
@@ -2119,7 +2268,7 @@ nella finestra principale!</translation>
     <name>TRoom</name>
     <message>
       <location filename="../src/TRoom.cpp" line="107"/>
-      <location filename="../src/TRoom.cpp" line="941"/>
+      <location filename="../src/TRoom.cpp" line="967"/>
       <source>North</source>
       <translation>Nord</translation>
     </message>
@@ -2135,7 +2284,7 @@ nella finestra principale!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="110"/>
-      <location filename="../src/TRoom.cpp" line="983"/>
+      <location filename="../src/TRoom.cpp" line="1009"/>
       <source>South</source>
       <translation>Sud</translation>
     </message>
@@ -2151,37 +2300,37 @@ nella finestra principale!</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="113"/>
-      <location filename="../src/TRoom.cpp" line="1025"/>
+      <location filename="../src/TRoom.cpp" line="1051"/>
       <source>East</source>
       <translation>Est</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="114"/>
-      <location filename="../src/TRoom.cpp" line="1039"/>
+      <location filename="../src/TRoom.cpp" line="1065"/>
       <source>West</source>
       <translation>Ovest</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="115"/>
-      <location filename="../src/TRoom.cpp" line="1053"/>
+      <location filename="../src/TRoom.cpp" line="1079"/>
       <source>Up</source>
       <translation>Alto</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="116"/>
-      <location filename="../src/TRoom.cpp" line="1067"/>
+      <location filename="../src/TRoom.cpp" line="1093"/>
       <source>Down</source>
       <translation>Basso</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="117"/>
-      <location filename="../src/TRoom.cpp" line="1081"/>
+      <location filename="../src/TRoom.cpp" line="1107"/>
       <source>In</source>
       <translation>Entra</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="118"/>
-      <location filename="../src/TRoom.cpp" line="1095"/>
+      <location filename="../src/TRoom.cpp" line="1121"/>
       <source>Out</source>
       <translation>Esci</translation>
     </message>
@@ -2206,48 +2355,49 @@ nella finestra principale!</translation>
       <translation>[ WARN ] - Impossibile impostare l'Area per la StanzaID %1, non è stata selezionata un'area!</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="955"/>
+      <location filename="../src/TRoom.cpp" line="981"/>
       <source>Northeast</source>
       <translation>Nord-est</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="969"/>
+      <location filename="../src/TRoom.cpp" line="995"/>
       <source>Northwest</source>
       <translation>Nord-ovest</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="997"/>
+      <location filename="../src/TRoom.cpp" line="1023"/>
       <source>Southeast</source>
       <translation>Sud-est</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1011"/>
+      <location filename="../src/TRoom.cpp" line="1037"/>
       <source>Southwest</source>
       <translation>Sud-ovest</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1116"/>
+      <location filename="../src/TRoom.cpp" line="1142"/>
       <source>[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}</source>
       <translation>[ WARN ] - Rimossa l'uscita (speciale) non valida nella StanzaID %1 verso %2 {senza nome!}</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1120"/>
+      <location filename="../src/TRoom.cpp" line="1146"/>
       <source>[ WARN ]  - Room had an invalid (special) exit to %1 {with no name!} it was removed.</source>
       <translation>[ WARN ] - La stanza aveva un'uscita (speciale) non valida verso %1 {senza nome!}, è stato rimossa.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1130"/>
+      <location filename="../src/TRoom.cpp" line="1156"/>
       <source>[ INFO ]  - In room id:%1 patching {internal fixup} of (special) exit to
 %2, was: &quot;%3&quot; now: &quot;%4&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Correzione della Stanza ID:%1 l'uscita (special) a
+%2, era: &quot;%3&quot; ora è: &quot;%4&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1138"/>
+      <location filename="../src/TRoom.cpp" line="1164"/>
       <source>[ INFO ]  - Room needed patching {internal fixup} of (special) exit to %1, was: &quot;%2&quot; now: &quot;%3&quot;.</source>
       <translation>[ INFO ]  - La Stanza necessita una correzione dell' uscita (speciale) a %1, era: &quot;%2&quot; ora: &quot;%3&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1164"/>
+      <location filename="../src/TRoom.cpp" line="1190"/>
       <source>[ INFO ]  - In room with id: %1 correcting special exit &quot;%2&quot; that
 was to room with an exit to invalid room: %3 to now go
 to: %4.</source>
@@ -2255,29 +2405,30 @@ to: %4.</source>
 puntava ad un'uscita di una stanza non valida: %3 ora va a %4.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1174"/>
+      <location filename="../src/TRoom.cpp" line="1200"/>
       <source>[ INFO ]  - Room needed correcting of special exit &quot;%1&quot; that was to room with an exit to invalid room: %2 to now go to: %3.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Nella stanza ho corretto l'uscita speciale &quot;%1&quot; che puntava ad un'uscita di una stanza non valida: %2 ora va a %3.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1205"/>
+      <location filename="../src/TRoom.cpp" line="1231"/>
       <source>[ WARN ]  - Room with id: %1 has a special exit &quot;%2&quot; with an
 exit to: %3 but that room does not exist.  The exit will
 be removed (but the destination room id will be stored in
 the room user data under a key:
 &quot;%4&quot;).</source>
       <translation>[ WARN ]  - Nella stanza con id: %1 l'uscita speciale &quot;%2&quot; punta ad una stanza
-non valida: %3 che non esiste.  L'uscita sarà rimossa (l'id della stanza di destinazione
+non valida: %3 che non esiste.  L'uscita sarà rimossa (lo Stanza ID di destinazione
 sarà memorizzato nei dati utente della stanza con la chiave:
 &quot;%4&quot;).</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1218"/>
+      <location filename="../src/TRoom.cpp" line="1244"/>
       <source>[ WARN ]  - Room has a special exit &quot;%1&quot; with an exit to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - La stanza ha un uscita speciale &quot;%1&quot; che punta a: %2, ma la destinazione non esiste. L'uscita sarà rimossa (lo Stanza ID di destinazione sarà memorizzato nei dati utente della stanza con la chiave:
+&quot;%3&quot;).</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1257"/>
+      <location filename="../src/TRoom.cpp" line="1283"/>
       <source>[ INFO ]  - In room with id: %1 special exit &quot;%2&quot;
 that was to room with an invalid room: %3 that does not exist.
 The exit will be removed (the bad destination room id will be stored in the
@@ -2285,146 +2436,154 @@ room user data under a key:
 &quot;%4&quot;).</source>
       <translation>[ INFO ]  - Nella stanza con id: %1 l'uscita &quot;%2&quot;
 punta ad una stanza non valida: %3 che non esiste.
-L'uscita sarà rimossa (l'id della stanza di destinazione sarà memorizzato
+L'uscita sarà rimossa (lo Stanza ID di destinazione sarà memorizzato
 nei dati utente della stanza con la chiave:
 &quot;%4&quot;).</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1270"/>
+      <location filename="../src/TRoom.cpp" line="1296"/>
       <source>[ INFO ]  - Room had special exit &quot;%1&quot; that was to room with an invalid room: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - La stanza ha un uscita speciale &quot;%1&quot; che punta a: %2, ma la destinazione non esiste. L'uscita sarà rimossa (lo Stanza ID di destinazione sarà memorizzato nei dati utente della stanza con la chiave:
+&quot;%3&quot;).</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1303"/>
+      <location filename="../src/TRoom.cpp" line="1329"/>
       <source>%1 {none}</source>
       <translation>%1 {none}</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1306"/>
+      <location filename="../src/TRoom.cpp" line="1332"/>
       <source>%1 (open)</source>
       <translation>%1 (aperto)</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1309"/>
+      <location filename="../src/TRoom.cpp" line="1335"/>
       <source>%1 (closed)</source>
       <translation>%1 (chiuso)</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1312"/>
+      <location filename="../src/TRoom.cpp" line="1338"/>
       <source>%1 (locked)</source>
       <translation>%1 (bloccato)</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1315"/>
+      <location filename="../src/TRoom.cpp" line="1341"/>
       <source>%1 {invalid}</source>
       <translation>%1 {invalid}</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1319"/>
+      <location filename="../src/TRoom.cpp" line="1345"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus door items that were removed:
 %2.</source>
       <translation>[ INFO ]  - Nella stanza con id: %1 ho trovato uno o più porte in surplus che sono
 state rimosse: %2.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1326"/>
+      <location filename="../src/TRoom.cpp" line="1352"/>
       <source>[ INFO ]  - Room had one or more surplus door items that were removed:%1.</source>
       <translation>[ INFO ] - La stanza aveva una o più porte in eccesso che sono state rimosse:%1.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1342"/>
+      <location filename="../src/TRoom.cpp" line="1368"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus weight items that were removed:
 %2.</source>
       <translation>[ INFO ]  - Nella stanza con id: %1 ho trovato uno o più pesi per le uscite in surplus che
 sono stati rimossi: %2.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1349"/>
+      <location filename="../src/TRoom.cpp" line="1375"/>
       <source>[ INFO ]  - Room had one or more surplus weight items that were removed: %1.</source>
       <translation>[ INFO ] - La stanza aveva una o più pesi in eccesso sulle uscite che sono state rimosse:%1.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1365"/>
+      <location filename="../src/TRoom.cpp" line="1391"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus exit lock items that were removed:
 %2.</source>
       <translation>[ INFO ]  - Nella stanza con id: %1 ho trovato una o più uscite bloccate in surplus che
 sono state rimosse: %2.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1372"/>
+      <location filename="../src/TRoom.cpp" line="1398"/>
       <source>[ INFO ]  - Room had one or more surplus exit lock items that were removed: %1.</source>
       <translation>[ INFO ]  - La stanza aveva una o più uscite bloccate in surplus che sono state rimosse: %1.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1451"/>
+      <location filename="../src/TRoom.cpp" line="1477"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus custom line elements that
 were removed: %2.</source>
       <translation>[ INFO ]  - Nella stanza con id: %1 ho trovato una o più linee personalizzate in surplus che
 sono state rimosse: %2.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1457"/>
+      <location filename="../src/TRoom.cpp" line="1483"/>
       <source>[ INFO ]  - Room had one or more surplus custom line elements that were removed: %1.</source>
       <translation>[ INFO ]  - La stanza aveva una o più linee personalizzate in surplus che sono state rimosse: %1.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1480"/>
+      <location filename="../src/TRoom.cpp" line="1506"/>
       <source>[ INFO ]  - In room with id: %1 correcting exit &quot;%2&quot; that was to room with
 an exit to invalid room: %3 to now go to: %4.</source>
       <translation>[ INFO ]  - Nella stanza con id: %1 ho corretto l'uscita &quot;%2&quot; che
 puntava ad un'uscita di una stanza non valida: %3 ora va a %4.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1489"/>
+      <location filename="../src/TRoom.cpp" line="1515"/>
       <source>[ INFO ]  - Correcting exit &quot;%1&quot; that was to invalid room id: %2 to now go to: %3.</source>
       <translation>[ INFO ]  - Ho corretto l'uscita &quot;%1&quot; che puntava alla Stanza ID: %2. Ora va alla: %3.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1500"/>
+      <location filename="../src/TRoom.cpp" line="1526"/>
       <source>[ WARN ]  - Room with id: %1 has an exit &quot;%2&quot; to: %3 but that room
 does not exist.  The exit will be removed (but the destination room
 Id will be stored in the room user data under a key:
 &quot;%4&quot;)
 and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/TRoom.cpp" line="1513"/>
-      <source>[ WARN ]  - Room has an exit &quot;%1&quot; to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key: &quot;%4&quot;) and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/TRoom.cpp" line="1557"/>
-      <source>[ ALERT ] - Room with id: %1 has an exit &quot;%2&quot; to: %3 but also
-has a stub exit!  As a real exit precludes a stub, the latter will
-be removed.</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/TRoom.cpp" line="1567"/>
-      <source>[ ALERT ] - Room has an exit &quot;%1&quot; to: %2 but also has a stub exit in the same direction!  As a real exit precludes a stub, the latter will be removed.</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/TRoom.cpp" line="1623"/>
-      <source>[ INFO ]  - In room with id: %1 exit &quot;%2&quot; that was to room with an invalid
-room: %3 that does not exist.  The exit will be removed (the bad destination
-room id will be stored in the room user data under a key:
-&quot;%4&quot;)
-and the exit will be turned into a stub.</source>
-      <translation>[ INFO ]  - Nella stanza con id: %1 l'uscita &quot;%2&quot; punta ad una stanza
+      <translation>[ WARN ]  - Nella stanza con id: %1 l'uscita &quot;%2&quot; punta ad una stanza
 non valida: %3 che non esiste.  L'uscita sarà rimossa (l'id della stanza di destinazione
 sarà memorizzato nei dati utente della stanza con la chiave:
 &quot;%4&quot;)
 e l'uscita verrà trasformata in uno stub.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1634"/>
+      <location filename="../src/TRoom.cpp" line="1539"/>
+      <source>[ WARN ]  - Room has an exit &quot;%1&quot; to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key: &quot;%4&quot;) and the exit will be turned into a stub.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/TRoom.cpp" line="1583"/>
+      <source>[ ALERT ] - Room with id: %1 has an exit &quot;%2&quot; to: %3 but also
+has a stub exit!  As a real exit precludes a stub, the latter will
+be removed.</source>
+      <translation>[ ALERT ] - Stanza ID: %1 ha un'uscita &quot;%2&quot; verso: %3 ma anche
+ha un'uscita stub! La presenza di un'uscita reale impedisce l'utilizzo di stub,
+quindi quest'ultimo sarà rimosso.
+.</translation>
+    </message>
+    <message>
+      <location filename="../src/TRoom.cpp" line="1593"/>
+      <source>[ ALERT ] - Room has an exit &quot;%1&quot; to: %2 but also has a stub exit in the same direction!  As a real exit precludes a stub, the latter will be removed.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/TRoom.cpp" line="1649"/>
+      <source>[ INFO ]  - In room with id: %1 exit &quot;%2&quot; that was to room with an invalid
+room: %3 that does not exist.  The exit will be removed (the bad destination
+room id will be stored in the room user data under a key:
+&quot;%4&quot;)
+and the exit will be turned into a stub.</source>
+      <translation>[ INFO ]  - Nella stanza con id: %1 l'uscita &quot;%2&quot; punta ad una stanza
+non valida: %3 che non esiste.  L'uscita sarà rimossa (lo Stanza ID di destinazione
+sarà memorizzato nei dati utente della stanza con la chiave:
+&quot;%4&quot;)
+e l'uscita verrà trasformata in uno stub.</translation>
+    </message>
+    <message>
+      <location filename="../src/TRoom.cpp" line="1660"/>
       <source>[ INFO ]  - Room exit &quot;%1&quot; that was to a room with an invalid id: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%4&quot;) and the exit will be turned into a stub.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1650"/>
+      <location filename="../src/TRoom.cpp" line="1676"/>
       <source>
 It was locked, this is recorded as user data with key:
 &quot;%1&quot;.</source>
@@ -2433,12 +2592,12 @@ L'uscita è bloccata, questa informazione è registrata nei dati utenti con chia
 &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1654"/>
+      <location filename="../src/TRoom.cpp" line="1680"/>
       <source>  It was locked, this is recorded as user data with key: &quot;%1&quot;.</source>
       <translation>  L'uscita è bloccata, questa informazione è registrata nei dati utenti con chiave: &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1662"/>
+      <location filename="../src/TRoom.cpp" line="1688"/>
       <source>
 It had a weight, this is recorded as user data with key:
 &quot;%1&quot;.</source>
@@ -2447,21 +2606,22 @@ L'uscita ha un peso, questa informazione è registrata nei dati utenti con chiav
 &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1666"/>
+      <location filename="../src/TRoom.cpp" line="1692"/>
       <source>  It had a weight, this is recorded as user data with key: &quot;%1&quot;.</source>
       <translation>  
  L'uscita ha un peso, questa informazione è registrata nei dati utenti con chiave: &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1677"/>
+      <location filename="../src/TRoom.cpp" line="1703"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but
 it has not been possible to salvage this, it has been lost!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - C'era una linea personalizzata associata all'uscita non valida, ma
+non è stato possibile recuperarla, è andata persa!</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1682"/>
+      <location filename="../src/TRoom.cpp" line="1708"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but it has not been possible to salvage this, it has been lost!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - C'era una linea personalizzata associata all'uscita non valida, ma non è stato possibile recuperarla, è andata persa!</translation>
     </message>
   </context>
   <context>
@@ -2535,18 +2695,24 @@ Mudlet - is your system running out of memory?</source>
       <source>[ INFO ]  - The missing area(s) are now called:
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ INFO ] - L'area mancante(i) è ora chiamata:
+(ID) ==&gt; &quot;name&quot;</numerusform>
+        <numerusform>[ INFO ] - L'area mancante(i) è ora chiamata:
+(ID) ==&gt; &quot;name&quot;</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="748"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1)
 in map, now working out what new id numbers to use...</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Molto male, ho trovato più di uno Stanza ID duplicato (conteggio: %1)
+nel file di mappa (e non è lo Stanza ID riservato -1), ora cerco di capire quale ID utilizzare...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="753"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!  Look for further messsages related to this for each affected area ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Molto male, ho trovato più di un Area ID duplicato (conteggio: %1) nel file di mappa (e non è l'Area ID riservato -1)! Maggiori informazioni sono presenti nei prossimi messaggi che riguarderanno ogni singola area ...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="760"/>
@@ -2575,13 +2741,13 @@ Vecchio ==&gt; Nuovo</translation>
       <location filename="../src/TRoomDB.cpp" line="833"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map, now working
 out what new id numbers to use.</source>
-      <translation>[ ALERT ] - Molto male, ho trovato più di uno Stanza ID (conteggio: %1) per la stessa stanza
+      <translation>[ ALERT ] - Molto male, ho trovato più di uno Stanza ID duplicato (conteggio: %1)
 nel file di mappa, ora cerco di capire quale ID utilizzare.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="838"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!  Look for further messsages related to this for each affected room ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Molto male, ho trovato più di uno stesso Stanza ID duplicato (conteggio: %1) nel file di mappa. Maggiori informazioni sono presenti nei prossimi messaggi che riguarderanno ogni singola stanza ...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="845"/>
@@ -2643,17 +2809,20 @@ L'anomalia è stata risolta facilmente.</translation>
 should be recording as possessing, they were:
 %3
 they have been added.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Nell' Area ID: %1 erano presenti %2 stanze mancanti rispetto
+a quelle indicate, sono:
+%3
+sono state aggiunte.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1022"/>
       <source>[ INFO ]  - In this area there were %1 rooms missing from those it should be recorded as possessing.  They are: %2.  They have been added.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - In questa Area c'erano %1 stanze mancanti. Erano: %2. Sono state cancellate.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1043"/>
       <source>[ INFO ]  - This room was claimed by area id: %1, but it does not belong there.  The area has been updated to not include this room.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Questa stanza crede di appartenere all'Area ID %1, ma non ci sono riferimenti collegati.  L'area è stata aggiornata per includere questa stanza.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1049"/>
@@ -2661,12 +2830,15 @@ they have been added.</source>
 should be recording as possessing, they were:
 %3
 they have been removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Nell' Area ID: %1 erano presenti %2 stanze in più rispetto
+a quelle indicate, sono:
+%3
+sono state cancellate.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1057"/>
       <source>[ INFO ]  - In this area there were %1 extra rooms that it should not be recorded as possessing.  They were: %2.  They have been removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - In questa Area c'erano %1 stanze in più che non dovrebbero essere registrate. Erano: %2. Sono state cancellate.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1156"/>
@@ -2760,7 +2932,8 @@ set one area&apos;s name to that of another that exists at the time.</source>
       <location filename="../src/TRoomDB.cpp" line="1239"/>
       <source>[ INFO ]  - Default (reset) area name (for rooms that have not been assigned to an
 area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Area predefinita (per le stanze che non sono state assegnate
+ad una zona) non trovata. Aggiungo &quot;%1&quot; invece che l'Area ID riservato -1.</translation>
     </message>
   </context>
   <context>
@@ -3398,6 +3571,81 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
         <numerusform>Il trigger nome=%1 verrà eseguito altre %n volte.
 </numerusform>
       </translation>
+    </message>
+  </context>
+  <context>
+    <name>UpdateDialog</name>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="47"/>
+      <source>Loading update information …</source>
+      <translation>Caricamento informazioni di aggiornamento …</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="84"/>
+      <source>A new version of %APPNAME% is available!</source>
+      <translation>È disponibile una nuova versione di %APPNAME%!</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="107"/>
+      <source>%APPNAME% %UPDATE_VERSION% is available (you have %CURRENT_VERSION%).
+Would you like to update now?</source>
+      <translation>%APPNAME% %UPDATE_VERSION% è disponibile (installato %CURRENT_VERSION%).
+Desideri aggiornare ora?</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="142"/>
+      <source>Changelog for %APPNAME%</source>
+      <translation>Note di versione per %APPNAME%</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="149"/>
+      <source>You are using version %CURRENT_VERSION%.</source>
+      <translation>Stai utilizzando la versione %CURRENT_VERSION%.</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="177"/>
+      <source>There are currently no updates available.</source>
+      <translation>Al momento non ci sono aggiornamenti disponibili.</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="193"/>
+      <source>You are using %APPNAME% %CURRENT_VERSION%.</source>
+      <translation>Stai utilizzando %APPNAME% %CURRENT_VERSION%.</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="303"/>
+      <source>Automatically download future updates</source>
+      <translation>Scarica automaticamente gli aggiornamenti futuri</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="350"/>
+      <source>Cancel</source>
+      <translation>Annulla</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="370"/>
+      <source>Install update now</source>
+      <translation>Installa aggiornamento ora</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="377"/>
+      <source>OK</source>
+      <translation>OK</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="387"/>
+      <source>Remind me later</source>
+      <translation>Ricordamelo in seguito</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="392"/>
+      <source>Skip this version</source>
+      <translation>Salta questa versione</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.cpp" line="542"/>
+      <source>Could not open downloaded file %1</source>
+      <translation>Impossibile aprire il file scaricato %1</translation>
     </message>
   </context>
   <context>
@@ -4128,7 +4376,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="47"/>
       <source>&lt;p&gt;Selecting an exit immediately proceeds to drawing the first line segment from the centre point of the room.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Seleziona un'uscita per iniziare a disegnare il primo segmento di linea dal centro della stanza a cui appartiene.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="60"/>
@@ -4208,12 +4456,12 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="444"/>
       <source>&lt;p&gt;Select a special exit to commence drawing a line for it, the first column is checked if the exit already has such a custom line.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Selezionare un'uscita speciale per iniziare a disegnare la riga di collegamento, la prima colonna è selezionata se l'uscita dispone già di una stile di linea personalizzato.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="503"/>
       <source>&lt;p&gt;Indicates if there is already a custom line for this special exit, will be replaced if the exit is selected.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Indica se c'è già una linea personalizzata per questa uscita speciale, verrà sostituita se viene selezionata l'uscita.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="514"/>
@@ -4497,8 +4745,9 @@ Utilizzi</translation>
 &lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Stephen Lyons&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;SlySven&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;slysven@virginmedia.com&lt;/span&gt;) after joining in 2013, has been poking various bits of the C++ code and GUI with a pointy stick; subsequently trying to patch over some of the holes made/found.  Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language other than American English you will be seeing the results of him getting fed up with the spelling differences between what was being used and the British English his brain wanted to see.&lt;/p&gt;
 &lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Damian Monogue&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;demonnic&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;demonnic@gmail.com&lt;/span&gt;) former maintainer of the early Windows and Apple OSX packages. He also administers our server and helps the project in many ways.&lt;/p&gt;
 &lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Florian Scheel&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;keneanung&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;keneanung@googlemail.com&lt;/span&gt;) contributed many improvements to Mudlet&apos;s db: interface, event system, and has been around the project for a very long while assisting users.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Ahmed Charles&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;ahmedcharles&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;acharles@outlook.com&lt;/span&gt;) contributions to the Travis integration, CMake and Visual C++ build, a lot of code quality and memory management improvements.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Chris Mitchell&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;Chris7&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;chrismudlet@gmail.com&lt;/span&gt;) has developed a shared module system that allows script packages to be shared among profiles, a UI for viewing Lua variables, improvements in the mapper and all around.&lt;/p&gt;
+&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Leris&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;Leris/Kebap&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;kebap_spam@gmx.net&lt;/span&gt;) does a ton of work in making Mudlet, the website and the wiki accessible to you regardless of the language you speak - and promoting our genre!&lt;/p&gt;
+&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ahmed Charles&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;ahmedcharles&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;acharles@outlook.com&lt;/span&gt;) contributions to the Travis integration, CMake and Visual C++ build, a lot of code quality and memory management improvements.&lt;/p&gt;
+&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Chris Mitchell&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;Chris7&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;chrismudlet@gmail.com&lt;/span&gt;) has developed a shared module system that allows script packages to be shared among profiles, a UI for viewing Lua variables, improvements in the mapper and all around.&lt;/p&gt;
 &lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ben Carlsen&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;arkholt@gmail.com&lt;/span&gt;) has developed the first version of our Mac OSX installer. He is the former maintainer of the Mac version of Mudlet.&lt;/p&gt;
 &lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ben Smith&lt;/b&gt;&lt;/span&gt; () joined in December 2009 though he&apos;s been around much longer. Contributed to the Lua API and is the former maintainer of the Lua API.&lt;/p&gt;
 &lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Blaine von Roeder&lt;/b&gt;&lt;/span&gt; () joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches and has helped with release management of 1.0.5.&lt;/p&gt;
@@ -4520,37 +4769,10 @@ Utilizzi</translation>
 &lt;p&gt;Special thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Brett Duzevich&lt;/b&gt;&lt;/span&gt; and &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ronny Ho&lt;/b&gt;&lt;/span&gt;. They have contributed many good ideas and thus helped improve the scripting framework substantially.&lt;/p&gt;
 &lt;p&gt;Thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Tomas Mecir&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;kmuddy@kmuddy.com&lt;/span&gt;) who brought us all together and inspired us with his KMuddy project. Mudlet is using some of the telnet code he wrote for his KMuddy project (&lt;a href=&quot;https://cgit.kde.org/kmuddy.git/&quot;&gt;cgit.kde.org/kmuddy.git/&lt;/a&gt;).&lt;/p&gt;
 &lt;p&gt;Special thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Nick Gammon&lt;/b&gt;&lt;/span&gt; (&lt;a href=&quot;http://www.gammon.com.au/mushclient/mushclient.htm&quot;&gt;www.gammon.com.au/mushclient/mushclient.htm&lt;/a&gt;) for giving us some valued pieces of advice.&lt;/p&gt;</source>
-      <translation>&lt;p align=&quot;center&quot;&gt;&lt;big&gt;&lt;b&gt;Original author: &lt;span style=&quot;color:#bc8942;&quot;&gt;Heiko Köhn&lt;/span&gt;&lt;/b&gt; (&lt;b&gt;&lt;span style=&quot;color:#0000ff;&quot;&gt;KoehnHeiko@googlemail.com&lt;/span&gt;&lt;/b&gt;)&lt;/big&gt;&lt;/p&gt;
-&lt;p align=&quot;center&quot;&gt;&lt;big&gt;&lt;b&gt;Credits:&lt;/b&gt;&lt;/big&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Vadim Peretokin&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;vadi2&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;vadim.peretokin@mudlet.org&lt;/span&gt;) GUI design and initial feature planning. He is responsible for the project homepage and the user manual. Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp; user help. With the project from the very beginning and is an official spokesman of the project. Since the retirement of Heiko, he has become the head of the Mudlet project.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Stephen Lyons&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;SlySven&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;slysven@virginmedia.com&lt;/span&gt;) after joining in 2013, has been poking various bits of the C++ code and GUI with a pointy stick; subsequently trying to patch over some of the holes made/found.  Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language other than American English you will be seeing the results of him getting fed up with the spelling differences between what was being used and the British English his brain wanted to see.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Damian Monogue&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;demonnic&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;demonnic@gmail.com&lt;/span&gt;) former maintainer of the early Windows and Apple OSX packages. He also administers our server and helps the project in many ways.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Florian Scheel&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;keneanung&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;keneanung@googlemail.com&lt;/span&gt;) contributed many improvements to Mudlet&apos;s db: interface, event system, and has been around the project for a very long while assisting users.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Ahmed Charles&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;ahmedcharles&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;acharles@outlook.com&lt;/span&gt;) contributions to the Travis integration, CMake and Visual C++ build, a lot of code quality and memory management improvements.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Chris Mitchell&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;Chris7&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;chrismudlet@gmail.com&lt;/span&gt;) has developed a shared module system that allows script packages to be shared among profiles, a UI for viewing Lua variables, improvements in the mapper and all around.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ben Carlsen&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;arkholt@gmail.com&lt;/span&gt;) has developed the first version of our Mac OSX installer. He is the former maintainer of the Mac version of Mudlet.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ben Smith&lt;/b&gt;&lt;/span&gt; () joined in December 2009 though he&apos;s been around much longer. Contributed to the Lua API and is the former maintainer of the Lua API.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Blaine von Roeder&lt;/b&gt;&lt;/span&gt; () joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches and has helped with release management of 1.0.5.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Bruno Bigras&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;bruno@burnbox.net&lt;/span&gt;) developed the original cmake build script and he has committed a number of patches.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Carter Dewey&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;eldarerathis@gmail.com&lt;/span&gt;) contributions to the Lua API.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Erik Pettis&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;Oneymus&lt;/span&gt;) developed the Vyzor GUI Manager for Mudlet.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;&quot;ItsTheFae&quot;&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;Kae&lt;/span&gt;) someone who has worked wonders in rejuventating our Website in 2017 but who prefers a little anonymity - if you are a &lt;i&gt;SpamBot&lt;/i&gt; you will not get onto our Fora now. They have also made some useful C++ core code contributions and we look forward to future reviews on and work in that area.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ian Adkins&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;dicene&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;ieadkins@gmail.com&lt;/span&gt;) joining us 2017 they have given us some useful C++ and Lua contributions.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;James Younquist&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;daemacles@yahoo.com&lt;/span&gt;) contributed the Geyser layout manager for Mudlet in March 2010. It is written in Lua and aims at simplifying user GUI scripting.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;John Dahlström&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;email@johndahlstrom.se&lt;/span&gt;) helped develop and debug the Lua API. &lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Karsten Bock&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;Beliaar&lt;/span&gt;) contributed several improvements and new features for Geyser.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Leigh Stillard&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;leigh.stillard@gmail.com&lt;/span&gt;) is the original author of our windows installer.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Maksym Grinenko&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;maksym.grinenko@gmail.com&lt;/span&gt;) worked on the manual, forum help and helps with GUI design and documentation.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Stephen Hansen&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#5500ff;&quot;&gt;me+mudlet@ixokai.io&lt;/span&gt;) has developed a database Lua API that allows for far easier use of databases and one of the original OSX installers.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Thorsten Wilms&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;t_w_@freenet.de&lt;/span&gt;) has designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. Visit his homepage at &lt;a href=&quot;http://thorwil.wordpress.com/&quot;&gt;thorwil.wordpress.com&lt;/a&gt;.&lt;/p&gt;
-&lt;p&gt;Others too, have make their mark on different aspects of the Mudlet project and if they have not been mentioned here it is by no means intentional! For past contributors you may see them mentioned in the &lt;b&gt;&lt;a href=&quot;https://launchpad.net/~mudlet-makers/+members#active&quot;&gt;Mudlet Makers&lt;/a&gt;&lt;/b&gt; list (on our former bug-tracking site), or for on-going contributors they may well be included in the &lt;b&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/graphs/contributors&quot;&gt;Contributors&lt;/a&gt;&lt;/b&gt; list on GitHub.&lt;/p&gt;
-&lt;br&gt;
-&lt;p&gt;Many icons are taken from the &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;&lt;u&gt;KDE4 oxygen icon theme&lt;/u&gt;&lt;/b&gt;&lt;/span&gt; at &lt;a href=&quot;https://web.archive.org/web/20130921230632/http://www.oxygen-icons.org/&quot;&gt;www.oxygen-icons.org &lt;sup&gt;{wayback machine archive}&lt;/sup&gt;&lt;/a&gt; or &lt;a href=&quot;http://www.kde.org&quot;&gt;www.kde.org&lt;/a&gt;.  Most of the rest are from Thorsten Wilms, or from Stephen Lyons combining bits of Thorsten&apos;s work with the other sources.&lt;/p&gt;
-&lt;p&gt;Special thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Brett Duzevich&lt;/b&gt;&lt;/span&gt; and &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ronny Ho&lt;/b&gt;&lt;/span&gt;. They have contributed many good ideas and thus helped improve the scripting framework substantially.&lt;/p&gt;
-&lt;p&gt;Thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Tomas Mecir&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;kmuddy@kmuddy.com&lt;/span&gt;) who brought us all together and inspired us with his KMuddy project. Mudlet is using some of the telnet code he wrote for his KMuddy project (&lt;a href=&quot;https://cgit.kde.org/kmuddy.git/&quot;&gt;cgit.kde.org/kmuddy.git/&lt;/a&gt;).&lt;/p&gt;
-&lt;p&gt;Special thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Nick Gammon&lt;/b&gt;&lt;/span&gt; (&lt;a href=&quot;http://www.gammon.com.au/mushclient/mushclient.htm&quot;&gt;www.gammon.com.au/mushclient/mushclient.htm&lt;/a&gt;) for giving us some valued pieces of advice.&lt;/p&gt;</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="180"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="181"/>
       <source>&lt;p&gt;Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.&lt;/p&gt;
 &lt;p&gt;Mudlet is released under the GPL license version 2, which is reproduced below:&lt;/p&gt;</source>
       <comment>For non-english language versions please append a translation of the following to explain why the GPL is NOT reproduced in the relevent language: &apos;but only the English form is considered the official version of the license, so the following is reproduced in that language:&apos; to replace &apos;which is reproduced below:&apos;...</comment>
@@ -4558,87 +4780,87 @@ Utilizzi</translation>
 &lt;p&gt;Mudlet is released under the GPL license version 2, which is reproduced below:&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="472"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="473"/>
       <source>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; is built upon the shoulders of other projects in the FOSS world; as well as using many GPL components we also make use of some third-party software with other licenses:&lt;/p&gt;</source>
       <translation>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; is built upon the shoulders of other projects in the FOSS world; as well as using many GPL components we also make use of some third-party software with other licenses:&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="643"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="644"/>
       <source>&lt;h2&gt;&lt;u&gt;Communi IRC Library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008-2016 The Communi Project&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Communi IRC Library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008-2016 The Communi Project&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="646"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="647"/>
       <source>&lt;p&gt;Parts of &lt;tt&gt;irctextformat.cpp&lt;/t&gt; code come from Konversation and are copyrighted to:&lt;br&gt;Copyright © 2002 Dario Abatianni &amp;lt;eisfuchs@tigress.com&amp;gt;&lt;br&gt;Copyright © 2004 Peter Simonsson &amp;lt;psn@linux.se&amp;gt;&lt;br&gt;Copyright © 2006-2008 Eike Hein &amp;lt;hein@kde.org&amp;gt;&lt;br&gt;Copyright © 2004-2009 Eli Mackenzie &amp;lt;argonel@gmail.com&amp;gt;&lt;/p&gt;</source>
       <translation>&lt;p&gt;Parts of &lt;tt&gt;irctextformat.cpp&lt;/t&gt; code come from Konversation and are copyrighted to:&lt;br&gt;Copyright © 2002 Dario Abatianni &amp;lt;eisfuchs@tigress.com&amp;gt;&lt;br&gt;Copyright © 2004 Peter Simonsson &amp;lt;psn@linux.se&amp;gt;&lt;br&gt;Copyright © 2006-2008 Eike Hein &amp;lt;hein@kde.org&amp;gt;&lt;br&gt;Copyright © 2004-2009 Eli Mackenzie &amp;lt;argonel@gmail.com&amp;gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="652"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="653"/>
       <source>&lt;h2&gt;&lt;u&gt;lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="655"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="656"/>
       <source>&lt;h2&gt;&lt;u&gt;lua_yajl - Lua 5.1 interface to yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Brian Maher &amp;lt;maherb at brimworks dot com&amp;gt;&lt;br&gt;Copyright © 2009 Brian Maher&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;lua_yajl - Lua 5.1 interface to yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Brian Maher &amp;lt;maherb at brimworks dot com&amp;gt;&lt;br&gt;Copyright © 2009 Brian Maher&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="660"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="661"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaZip - Reading files inside zip files&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Danilo Tuler&lt;br&gt;Copyright © 2003-2007 Kepler Project&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;LuaZip - Reading files inside zip files&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Danilo Tuler&lt;br&gt;Copyright © 2003-2007 Kepler Project&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="665"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="666"/>
       <source>&lt;h2&gt;&lt;u&gt;edbee - multi-feature editor widget&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2012-2014 by Reliable Bits Software by Blommers IT&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;edbee - multi-feature editor widget&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2012-2014 by Reliable Bits Software by Blommers IT&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="668"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="669"/>
       <source>The &lt;b&gt;edbee-lib&lt;/b&gt; widget itself incorporates other components with licences that must be noted as well, they are:</source>
       <translation>The &lt;b&gt;edbee-lib&lt;/b&gt; widget itself incorporates other components with licences that must be noted as well, they are:</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="670"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="671"/>
       <source>&lt;h2&gt;&lt;u&gt;Onigmo (Oniguruma-mod) LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;Copyright © 2011-2014 K.Takata &amp;lt;kentkt AT csc DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Onigmo (Oniguruma-mod) LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;Copyright © 2011-2014 K.Takata &amp;lt;kentkt AT csc DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="675"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="676"/>
       <source>&lt;h2&gt;&lt;u&gt;Oniguruma LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Oniguruma LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="679"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="680"/>
       <source>&lt;h2&gt;&lt;u&gt;Ruby BSDL&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1993-2013 Yukihiro Matsumoto.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Ruby BSDL&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1993-2013 Yukihiro Matsumoto.&lt;br&gt;All rights reserved.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="683"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="684"/>
       <source>&lt;h2&gt;&lt;u&gt;Qt-Components, QsLog&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;(&lt;span style=&quot;color:red&quot;&gt;&lt;u&gt;https://bitbucket.org/razvapetru/qt-components [broken link]&lt;/u&gt;&lt;/span&gt;&lt;/h3&gt;&lt;small&gt;&lt;a href=&quot;https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components&quot;&gt; {&amp;quot;Wayback Machine&amp;quot; archived version}&lt;/a&gt;&lt;/small&gt;)&lt;br&gt;Copyright © 2013, Razvan Petru&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Qt-Components, QsLog&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;(&lt;span style=&quot;color:red&quot;&gt;&lt;u&gt;https://bitbucket.org/razvapetru/qt-components [broken link]&lt;/u&gt;&lt;/span&gt;&lt;/h3&gt;&lt;small&gt;&lt;a href=&quot;https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components&quot;&gt; {&amp;quot;Wayback Machine&amp;quot; archived version}&lt;/a&gt;&lt;/small&gt;)&lt;br&gt;Copyright © 2013, Razvan Petru&lt;br&gt;All rights reserved.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="690"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="691"/>
       <source>&lt;h2&gt;&lt;u&gt;dblsqd&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Philipp Medien&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;dblsqd&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Philipp Medien&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="693"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="694"/>
       <source>&lt;h2&gt;&lt;u&gt;Sparkle - macOS updater&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2006-2013 Andy Matuschak.&lt;br&gt;Copyright © 2009-2013 Elgato Systems GmbH.&lt;br&gt;Copyright © 2011-2014 Kornel Lesiński.&lt;br&gt;Copyright © 2015-2017 Mayur Pawashe.&lt;br&gt;Copyright © 2014 C.W. Betts.&lt;br&gt;Copyright © 2014 Petroules Corporation.&lt;br&gt;Copyright © 2014 Big Nerd Ranch.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Sparkle - macOS updater&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2006-2013 Andy Matuschak.&lt;br&gt;Copyright © 2009-2013 Elgato Systems GmbH.&lt;br&gt;Copyright © 2011-2014 Kornel Lesiński.&lt;br&gt;Copyright © 2015-2017 Mayur Pawashe.&lt;br&gt;Copyright © 2014 C.W. Betts.&lt;br&gt;Copyright © 2014 Petroules Corporation.&lt;br&gt;Copyright © 2014 Big Nerd Ranch.&lt;br&gt;All rights reserved.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="703"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="704"/>
       <source>&lt;h4&gt;bspatch.c and bsdiff.c, from bsdiff 4.3 &lt;a href=&quot;http://www.daemonology.net/bsdiff/&quot;&gt;http://www.daemonology.net/bsdiff&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2003-2005 Colin Percival.&lt;/h3&gt;&lt;h4&gt;sais.c and sais.c, from sais-lite (2010/08/07) &lt;a href=&quot;https://sites.google.com/site/yuta256/sais&quot;&gt;https://sites.google.com/site/yuta256/sais&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2008-2010 Yuta Mori.&lt;/h3&gt;&lt;h4&gt;SUDSAVerifier.m:&lt;/h4&gt;&lt;h3&gt;Copyright © 2011 Mark Hamlin.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation>&lt;h4&gt;bspatch.c and bsdiff.c, from bsdiff 4.3 &lt;a href=&quot;http://www.daemonology.net/bsdiff/&quot;&gt;http://www.daemonology.net/bsdiff&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2003-2005 Colin Percival.&lt;/h3&gt;&lt;h4&gt;sais.c and sais.c, from sais-lite (2010/08/07) &lt;a href=&quot;https://sites.google.com/site/yuta256/sais&quot;&gt;https://sites.google.com/site/yuta256/sais&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2008-2010 Yuta Mori.&lt;/h3&gt;&lt;h4&gt;SUDSAVerifier.m:&lt;/h4&gt;&lt;h3&gt;Copyright © 2011 Mark Hamlin.&lt;br&gt;All rights reserved.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="711"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="712"/>
       <source>&lt;h2&gt;&lt;u&gt;sparkle-glue&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008 Remko Troncon&lt;br&gt;Copyright © 2017 Vadim Peretokin&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;sparkle-glue&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008 Remko Troncon&lt;br&gt;Copyright © 2017 Vadim Peretokin&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="717"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="718"/>
       <source>&lt;h2&gt;&lt;u&gt;Discord - Rich Presence - RPC library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Discord, Inc.&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Discord - Rich Presence - RPC library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Discord, Inc.&lt;/h3&gt;</translation>
     </message>
@@ -4860,6 +5082,13 @@ Utilizzi</translation>
 </translation>
     </message>
     <message>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1889"/>
+      <source>Port number must be above zero and below 65535.<byte value="xd"/>
+</source>
+      <translation>Il numero di porta deve essere superiore a 0 e inferiore a 65535.
+</translation>
+    </message>
+    <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1953"/>
       <source>&lt;p&gt;Load profile without connecting.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Carica il profilo senza connetterti al gioco.&lt;/p&gt;</translation>
@@ -4878,13 +5107,6 @@ Utilizzi</translation>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1897"/>
       <source>Mudlet is not configured for secure connections.</source>
       <translation>Mudlet non è configurato per connessioni sicure.</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1889"/>
-      <source>Port number must be above zero and below 65535.
-</source>
-      <translation>Il numero di porta deve essere superiore a 0 e inferiore a 65535.
-</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1900"/>
@@ -5176,7 +5398,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="127"/>
       <source>&lt;p&gt;Location which will be used to store log files - matching logs will be appended to.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Posizione dove memorizzare i file di registro - i log corrispondenti verranno aggiunti a.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Percorso in cui memorizzare i file di registro - i log corrispondenti verranno aggiunti a.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="135"/>
@@ -5444,7 +5666,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="129"/>
       <source>&lt;p&gt;Reset the directory so that logs are saved to the profile&apos;s &lt;i&gt;log&lt;/i&gt; directory.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Reimposta il percorso in modo che i &lt;i&gt;log&lt;/i&gt; vengano salvati nella cartella del profilo.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="130"/>
@@ -7128,6 +7350,29 @@ dalla GUI)</translation>
       <location filename="../src/dlgVarsMainArea.cpp" line="83"/>
       <source>function</source>
       <translation>funzione</translation>
+    </message>
+  </context>
+  <context>
+    <name>edbee::TextEditorComponent</name>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="504"/>
+      <source>Cut</source>
+      <translation>Taglia</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="505"/>
+      <source>Copy</source>
+      <translation>Copia</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="506"/>
+      <source>Paste</source>
+      <translation>Incolla</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="508"/>
+      <source>Select All</source>
+      <translation>Seleziona Tutto</translation>
     </message>
   </context>
   <context>
@@ -9201,7 +9446,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="927"/>
       <source>Module Location</source>
-      <translation>Posizione del modulo</translation>
+      <translation>Percorso del modulo</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="969"/>
@@ -9346,19 +9591,28 @@ Avvio in corso... Buon divertimento!
       <location filename="../src/mudlet.cpp" line="4408"/>
       <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
       <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>&lt;p&gt;Informazioni su Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n aggiornamenti sono disponibili!&lt;/i&gt;&lt;p&gt;</numerusform>
+        <numerusform>&lt;p&gt;Informazioni su Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n aggiornamenti sono disponibili!&lt;/i&gt;&lt;p&gt;</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="4426"/>
       <source>Review %n update(s)...</source>
       <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Mostra %n aggiornamento(i)...</numerusform>
+        <numerusform>Mostra %n aggiornamento(i)...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="4431"/>
       <source>&lt;p&gt;Review the update(s) available...&lt;/p&gt;</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>&lt;p&gt;Mostra gli aggiornamenti disponibili...&lt;/p&gt;</numerusform>
+        <numerusform>&lt;p&gt;Mostra gli aggiornamenti disponibili...&lt;/p&gt;</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4522"/>
@@ -9913,7 +10167,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1052"/>
       <source>&lt;p&gt;Select this option for better compatability if you are using a netbook, or some other computer model that has a small screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Seleziona questa opzione per una migliore compatibilità in caso si utilizzi un netbook o qualche altro modello di computer che dispone di uno schermo piccolo.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1062"/>
