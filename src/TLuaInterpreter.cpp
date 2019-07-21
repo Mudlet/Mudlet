@@ -3319,13 +3319,11 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderTop
 int TLuaInterpreter::setBorderTop(lua_State* L)
 {
-    int size;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setBorderTop: bad argument #1 value (new size as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        size = lua_tonumber(L, 1);
-    }
+    } 
+    int size = lua_tonumber(L, 1);
     setBorderSize(L, size, 0);
     return 0;
 }
@@ -3333,13 +3331,11 @@ int TLuaInterpreter::setBorderTop(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderRight
 int TLuaInterpreter::setBorderRight(lua_State* L)
 {
-    int size;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setBorderRight: bad argument #1 value (new size as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        size = lua_tonumber(L, 1);
-    }
+    } 
+    int size = lua_tonumber(L, 1);
     setBorderSize(L, size, 1);
     return 0;
 }
@@ -3347,13 +3343,11 @@ int TLuaInterpreter::setBorderRight(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderBottom
 int TLuaInterpreter::setBorderBottom(lua_State* L)
 {
-    int size;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setBorderBottom: bad argument #1 value (new size as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        size = lua_tonumber(L, 1);
-    }
+    } 
+    int size = lua_tonumber(L, 1);
     setBorderSize(L, size, 2);
     return 0;
 }
@@ -3361,13 +3355,11 @@ int TLuaInterpreter::setBorderBottom(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderLeft
 int TLuaInterpreter::setBorderLeft(lua_State* L)
 {
-    int size;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setBorderLeft: bad argument #1 value (new size as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        size = lua_tonumber(L, 1);
-    }
+    } 
+    int size = lua_tonumber(L, 1);
     setBorderSize(L, size, 3);
     return 0;
 }
