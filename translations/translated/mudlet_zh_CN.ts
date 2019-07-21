@@ -2523,7 +2523,7 @@ and the exit will be turned into a stub.</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1660"/>
       <source>[ INFO ]  - Room exit &quot;%1&quot; that was to a room with an invalid id: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%4&quot;) and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>【信息】 - 房间的特殊出口&quot;%1&quot; 指向不存在的房间： %2 。该出口将被删除（错误目标房间ID会以一个关键字key被存储在房间用户数据:&quot;%4&quot; 中）并且出口将会被stub</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1676"/>
@@ -3549,33 +3549,34 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="47"/>
       <source>Loading update information …</source>
-      <translation type="unfinished"/>
+      <translation>正在加载更新信息 …</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="84"/>
       <source>A new version of %APPNAME% is available!</source>
-      <translation type="unfinished"/>
+      <translation>有新的 %APPNAME% 版本可用！</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="107"/>
       <source>%APPNAME% %UPDATE_VERSION% is available (you have %CURRENT_VERSION%).
 Would you like to update now?</source>
-      <translation type="unfinished"/>
+      <translation>%APPNAME% 已有最新的版本 %UPDATE_VERSION% (您当前版本为 %CURRENT_VERSION%)。
+现在要更新吗?</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="142"/>
       <source>Changelog for %APPNAME%</source>
-      <translation type="unfinished"/>
+      <translation>Changelog for %APPNAME%</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="149"/>
       <source>You are using version %CURRENT_VERSION%.</source>
-      <translation type="unfinished"/>
+      <translation>您当前版本为 %CURRENT_VERSION%。</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="177"/>
       <source>There are currently no updates available.</source>
-      <translation type="unfinished"/>
+      <translation>当前没有可用的更新。</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="193"/>
