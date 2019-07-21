@@ -7092,12 +7092,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7983"/>
       <source>Select foreground trigger color for item %1</source>
-      <translation type="unfinished"/>
+      <translation>Выберите цвет переднего плана для шаблона %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8047"/>
       <source>Select background trigger color for item %1</source>
-      <translation type="unfinished"/>
+      <translation>Выберите цвет заднего плана для шаблона %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8096"/>
@@ -11496,7 +11496,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="328"/>
       <source>&lt;p&gt;The &lt;b&gt;second&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;Вторая&lt;/b&gt; часть интервала, на которой таймер будет срабатывать.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="331"/>
