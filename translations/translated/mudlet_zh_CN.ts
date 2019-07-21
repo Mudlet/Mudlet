@@ -1629,7 +1629,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2641"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
-      <translation>[ OK ] - ... 系统已完成重新加载地图的请求.</translation>
+      <translation>[ 完成 ] - ... 系统已完成重新加载地图的请求.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2643"/>
@@ -1773,7 +1773,7 @@ your only warning about this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15208"/>
       <source>[  OK  ]  - Lua code formatter loaded.</source>
-      <translation>[ OK ] - Lua代码格式化程序已加载。</translation>
+      <translation>[ 完成 ] - Lua代码格式化程序已加载。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15239"/>
@@ -1790,7 +1790,7 @@ your only warning about this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15252"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
-      <translation>[ OK ] - Mudlet-lua API &amp; Geyser Layout管理器已加载。</translation>
+      <translation>[ 完成 ] - Mudlet-lua API &amp; Geyser Layout管理器已加载。</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15260"/>
@@ -1837,12 +1837,12 @@ Tried these locations:
     <message>
       <location filename="../src/TMap.cpp" line="503"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation>[好] - 审核地图完成(%1s). 祝游戏愉快...</translation>
+      <translation>[ 完成 ] - 审核地图完成(%1s). 祝游戏愉快...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="510"/>
       <source>[  OK  ]  - Map loaded successfully (%1s).</source>
-      <translation>[好] - 地图加载成功 (%1s).</translation>
+      <translation>[ 完成 ] - 地图加载成功 (%1s).</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="997"/>
@@ -2661,7 +2661,7 @@ in map, now working out what new id numbers to use...</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="753"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!  Look for further messsages related to this for each affected area ...</source>
-      <translation>[警告] - 在地图中发现了(%1) 个无效的区域编号(小于+1且不等于保留编号-1), 请留意针对这些无效区域的更多消息...</translation>
+      <translation>[ 警告 ] - 在地图中发现了(%1) 个无效的区域编号(小于+1且不等于保留编号-1), 请留意针对这些无效区域的更多消息...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="760"/>
@@ -2696,7 +2696,7 @@ out what new id numbers to use.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="838"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!  Look for further messsages related to this for each affected room ...</source>
-      <translation>[警告] - 在地图中发现了(%1) 个无效的房间编号(小于+1)
+      <translation>[ 警告 ] - 在地图中发现了(%1) 个无效的房间编号(小于+1)
 , 请留意针对这些无效房间的更多消息...</translation>
     </message>
     <message>
@@ -3458,7 +3458,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2212"/>
       <source>Index (UTF-16)</source>
       <comment>1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>索引 (UTF-16)</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2153"/>
@@ -3472,28 +3472,28 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2218"/>
       <source>Visual</source>
       <comment>3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a &apos;{&apos;...&apos;}&apos; wrapped letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>外观</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2161"/>
       <location filename="../src/TTextEdit.cpp" line="2222"/>
       <source>Index (UTF-8)</source>
       <comment>4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>索引 (UTF-8)</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2165"/>
       <location filename="../src/TTextEdit.cpp" line="2226"/>
       <source>Byte</source>
       <comment>5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>字节</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2169"/>
       <location filename="../src/TTextEdit.cpp" line="2230"/>
       <source>Lua character or code</source>
       <comment>6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Lua字符或代码</translation>
     </message>
   </context>
   <context>
@@ -3501,7 +3501,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TToolBar.cpp" line="74"/>
       <source>Toolbar - %1 - %2</source>
-      <translation type="unfinished"/>
+      <translation>工具栏 - %1 - %2</translation>
     </message>
   </context>
   <context>
@@ -3509,7 +3509,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTrigger.cpp" line="182"/>
       <source>Error: This trigger has no patterns defined, yet. Add some to activate it.</source>
-      <translation type="unfinished"/>
+      <translation>错误：此触发器尚未定义模式。 添加模式以激活它。</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="213"/>
@@ -3872,7 +3872,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
 Connection cannot be established.
 The server name is not correct, not working properly,
 or your nameservers are not working properly.</source>
-      <translation>[错误] - 主机名称查找失败!
+      <translation>[ 错误 ] - 主机名称查找失败!
 无法建立连接.
 服务器名称不正确, 不能正常工作,
 或者你的域名服务器没有正常工作.</translation>
@@ -3880,7 +3880,7 @@ or your nameservers are not working properly.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="366"/>
       <source>[ INFO ]  - Looking up the IP address of server:</source>
-      <translation type="unfinished"/>
+      <translation>[ 信息 ] - 正在查找服务器的 IP 地址:</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="388"/>
@@ -4022,7 +4022,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="2070"/>
       <source>[  OK  ]  - The replay has ended.</source>
-      <translation>[好] - 重播已结束.</translation>
+      <translation>[ 完成 ] - 重播已结束.</translation>
     </message>
   </context>
   <context>
