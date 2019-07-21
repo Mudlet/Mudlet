@@ -30,12 +30,7 @@ on_failure:
 after_build:
 - ps: .\appveyor.set-build-info.ps1
 - cmd: 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip "%APPVEYOR_BUILD_FOLDER%\src\release"
-- ps: >-
-    Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip"
-    Set-Variable -Name "inFile" -Value "Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip"
-    Set-Variable -Name "outFile" -Value "upload-result.txt"
-    Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile
-    Get-Content -Path $outFile
+- ps: .\appveyor.upload.ps1
 # - ps: $env:DEPLOY_URL = & curl.exe https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip --upload-file Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip 2>&1
 - ps: echo "$env:DEPLOY_URL - uploaded url"
 
