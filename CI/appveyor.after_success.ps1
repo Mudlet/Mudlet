@@ -9,19 +9,19 @@ windeployqt.exe --release mudlet.exe
 Remove-Item * -include *.cpp, *.o
 
 if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
-  # - ps: .\appveyor.set-build-info.ps1
+
   cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip "%APPVEYOR_BUILD_FOLDER%\src\release"
-  echo "zipped it up"
+
   Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
   Set-Variable -Name "inFile" -Value "Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
-  Set-Variable -Name "outFile" -Value "upload-result.txt";
+  Set-Variable -Name "outFile" -Value "upload-location.txt";
   Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
-  echo "uploaded!"
-  $DEPLOY_URL = Get-Content -Path $outFile -Raw
-  # - ps: $env:DEPLOY_URL = & curl.exe https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip --upload-file Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip 2>&1
-  echo "uploaded url - $DEPLOY_URL"
 
-  # $DEPLOY_URL = "https://ci.appveyor.com/api/buildjobs/$Env:APPVEYOR_JOB_ID/artifacts/src%2Fmudlet.zip"
+  $DEPLOY_URL = Get-Content -Path $outFile -Raw
+
+
+
+
 } else {
   Write-Output "=== Cloning installer project ==="
   git clone https://github.com/Mudlet/installers.git C:\projects\installers
@@ -97,7 +97,7 @@ echo "******************************************************"
 echo ""
 echo "Finished building Mudlet $Env:VERSION$Env:MUDLET_VERSION_BUILD"
 if (Test-Path variable:DEPLOY_URL) {
-    echo "Deployed the output to $env:DEPLOY_URL"
+    echo "Deployed the output to $DEPLOY_URL"
 }
 echo ""
 echo "******************************************************"
