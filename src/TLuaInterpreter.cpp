@@ -3331,7 +3331,7 @@ int TLuaInterpreter::getBorderTop(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     lua_pushnumber(L, host.mBorderTopHeight);
-    return 0;
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getBorderLeft
@@ -3339,7 +3339,7 @@ int TLuaInterpreter::getBorderLeft(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     lua_pushnumber(L, host.mBorderLeftWidth);
-    return 0;
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getBorderBottom
@@ -3347,7 +3347,7 @@ int TLuaInterpreter::getBorderBottom(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     lua_pushnumber(L, host.mBorderBottomHeight);
-    return 0;
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getBorderRight
@@ -3355,7 +3355,7 @@ int TLuaInterpreter::getBorderRight(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     lua_pushnumber(L, host.mBorderRightWidth);
-    return 0;
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getBorderSizes
