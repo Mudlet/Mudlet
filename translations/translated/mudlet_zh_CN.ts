@@ -3595,7 +3595,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="370"/>
       <source>Install update now</source>
-      <translation type="unfinished"/>
+      <translation>正在安装更新</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="377"/>
@@ -3605,17 +3605,17 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="387"/>
       <source>Remind me later</source>
-      <translation type="unfinished"/>
+      <translation>稍候再提示我</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="392"/>
       <source>Skip this version</source>
-      <translation type="unfinished"/>
+      <translation>忽略此版本</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.cpp" line="542"/>
       <source>Could not open downloaded file %1</source>
-      <translation type="unfinished"/>
+      <translation>无法打开下载的文件 %1</translation>
     </message>
   </context>
   <context>
@@ -3886,34 +3886,36 @@ or your nameservers are not working properly.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="388"/>
       <source>[ ERROR ] - TCP/IP socket ERROR:</source>
-      <translation type="unfinished"/>
+      <translation>[ 错误 ] - TCP/IP socket 错误：</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="411"/>
       <source>[ INFO ]  - A secure connection has been established successfully.</source>
-      <translation type="unfinished"/>
+      <translation>[ 信息 ] -已成功建立安全连接。</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="413"/>
       <source>[ INFO ]  - A connection has been established successfully.</source>
-      <translation type="unfinished"/>
+      <translation>[ 信息 ] -已成功建立连接。</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="451"/>
       <source>[ INFO ]  - Connection time: %1
     </source>
-      <translation type="unfinished"/>
+      <translation>[ 信息 ] - 连接时间: %1
+    </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="490"/>
       <source>Secure connections aren&apos;t supported by this game on this port - try turning the option off.</source>
-      <translation type="unfinished"/>
+      <translation>当前游戏端口不支持安全连接 - 尝试关闭该选项</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="535"/>
       <source>[ INFO ]  - Trying secure connection to %1: %2 ...
 </source>
-      <translation type="unfinished"/>
+      <translation>[ 信息 ] - 尝试安全连接到 %1: %2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1335"/>
@@ -4055,27 +4057,27 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="252"/>
       <source>Red (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>红色 (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="262"/>
       <source>Green (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>绿色 (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="272"/>
       <source>Blue (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>蓝色 (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="282"/>
       <source>16 + 36 x R + 6 x G + B =</source>
-      <translation type="unfinished"/>
+      <translation>16 + 36 x R + 6 x G + B =</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="343"/>
       <source>[16]</source>
-      <translation type="unfinished"/>
+      <translation>[16]</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="353"/>
@@ -10931,7 +10933,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1375"/>
       <location filename="../src/ui/room_exits.ui" line="1515"/>
       <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;红色(锁上的)门符号是在二维地图上绘制的，可被标记为未知出口或一个真实房间出口. &lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="233"/>
@@ -10962,7 +10964,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1639"/>
       <location filename="../src/ui/room_exits.ui" line="1779"/>
       <source>&lt;p&gt;A symbol is drawn with an orange (Closed) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;在2D Map上使用橘色(Open)填充颜色绘制符号，可被标记为未知出口或一个真实房间出口.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="590"/>
@@ -10970,7 +10972,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1655"/>
       <location filename="../src/ui/room_exits.ui" line="1795"/>
       <source>&lt;p&gt;A symbol is drawn with a red (Locked) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;在2D Map上使用红色(锁住的)填充颜色绘制符号，可被标记为未知出口或一个真实房间出口.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="653"/>
