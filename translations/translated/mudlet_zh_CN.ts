@@ -5276,18 +5276,18 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="157"/>
       <source>Failed to open file &quot;%1&quot; to place into package. Error message was: &quot;%2&quot;.</source>
       <comment>This error message will appear when a file is to be placed into the package but the code cannot open it.</comment>
-      <translation type="unfinished"/>
+      <translation>无法打开要放入包的文件 &quot;%1&quot; . 错误消息为: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="165"/>
       <source>Failed to add file &quot;%1&quot; to package &quot;%2&quot;. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when a file is to be placed into the package but cannot be done for some reason.</comment>
-      <translation type="unfinished"/>
+      <translation>无法添加文件至包的文件中 &quot;%1&quot; . 错误消息为: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="184"/>
       <source>Failed to export. Could not open the folder &quot;%1&quot; for writing in. - Do you have the necessary permissions and free disk-space to write to that folder?</source>
-      <translation type="unfinished"/>
+      <translation>导出失败。无法写入文件夹 &quot;%1&quot;. - 您是否拥有写入/存储的权限并有足够的磁盘空间来写入到该文件夹？</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="264"/>
@@ -5549,7 +5549,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2041"/>
       <source>Map copied successfully to other profile %1.</source>
-      <translation type="unfinished"/>
+      <translation>地图已成功复制到其他配置文件 %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2053"/>
