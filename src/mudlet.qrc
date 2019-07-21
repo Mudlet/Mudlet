@@ -180,5 +180,6 @@
         <file>mudlet-lua/lua/generic-mapper/generic_mapper.xml</file>
         <file>icons/clessidra.jpg</file>
         <file>mudlet-lua/lua/utf8_filenames.lua</file>
+        <file>icons/Patreon_Mark_Primary.png</file>
     </qresource>
 </RCC>
