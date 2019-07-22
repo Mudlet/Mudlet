@@ -127,6 +127,7 @@ bool TTimer::setIsActive(bool b)
 
 void TTimer::start()
 {
+    // temporary repeating timers are still singleshot not to change the design too much
     mpQTimer->setSingleShot(isTemporary());
 
     if (!isFolder()) {
@@ -217,8 +218,11 @@ void TTimer::execute()
         } else {
             mpHost->mLuaInterpreter.compileAndExecuteScript(mScript);
         }
-        mpQTimer->stop();
-        mpHost->getTimerUnit()->markCleanup(this);
+
+        if (!mRepeating) {
+            mpQTimer->stop();
+            mpHost->getTimerUnit()->markCleanup(this);
+        }
         return;
     }
 
