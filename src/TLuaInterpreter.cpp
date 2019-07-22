@@ -3204,17 +3204,16 @@ int TLuaInterpreter::hideUserWindow(lua_State* L)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::setBorderSize(lua_State* L, int size, int position, bool updateEvent)
+void TLuaInterpreter::setBorderSize(lua_State* L, int size, int position, bool resizeMudlet)
 {
     Host& host = getHostFromLua(L);
-    // position: 0 = top, 1 = right, 2 = bottom, 3 = left
     switch(position) {
-        case 0: host.mBorderTopHeight = size; break;
-        case 1: host.mBorderRightWidth = size; break;
-        case 2: host.mBorderBottomHeight = size; break;
-        case 3: host.mBorderLeftWidth = size; break;
+        case Qt::TopSection: host.mBorderTopHeight = size; break;
+        case Qt::RightSection: host.mBorderRightWidth = size; break;
+        case Qt::BottomSection: host.mBorderBottomHeight = size; break;
+        case Qt::LeftSection: host.mBorderLeftWidth = size; break;
     }
-    if (updateEvent) {
+    if (resizeMudlet) {
         int x, y;
         x = host.mpConsole->width();
         y = host.mpConsole->height();
@@ -3247,11 +3246,11 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
         }
         case 2: {
             if (!lua_isnumber(L, 1)) {
-                lua_pushfstring(L, "setBorderSizes: bad argument #1 value (new heights size as number expected, got %s!)", luaL_typename(L, 1));
+                lua_pushfstring(L, "setBorderSizes: bad argument #1 value (new height as number expected, got %s!)", luaL_typename(L, 1));
                 return lua_error(L);
             } 
             if (!lua_isnumber(L, 2)) {
-                lua_pushfstring(L, "setBorderSizes: bad argument #2 value (new widths size as number expected, got %s!)", luaL_typename(L, 2));
+                lua_pushfstring(L, "setBorderSizes: bad argument #2 value (new width as number expected, got %s!)", luaL_typename(L, 2));
                 return lua_error(L);
             } 
             sizeTop = lua_tonumber(L, 1);
@@ -3266,7 +3265,7 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
                 return lua_error(L);
             } 
             if (!lua_isnumber(L, 2)) {
-                lua_pushfstring(L, "setBorderSizes: bad argument #2 value (new widths size as number expected, got %s!)", luaL_typename(L, 2));
+                lua_pushfstring(L, "setBorderSizes: bad argument #2 value (new width as number expected, got %s!)", luaL_typename(L, 2));
                 return lua_error(L);
             } 
             if (!lua_isnumber(L, 3)) {
@@ -3279,7 +3278,7 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
             sizeLeft = lua_tonumber(L, 2);
             break;
         }
-        case 4: {
+        default: {
             if (!lua_isnumber(L, 1)) {
                 lua_pushfstring(L, "setBorderSizes: bad argument #1 value (new top size as number expected, got %s!)", luaL_typename(L, 1));
                 return lua_error(L);
@@ -3302,15 +3301,11 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
             sizeLeft = lua_tonumber(L, 4);
             break;
         }
-        default: {
-            lua_pushfstring(L, "setBorderSizes: wrong number of arguments (0-4 expected, got %d!)", numberOfArguments);
-            return lua_error(L);
-        }
     }
-    setBorderSize(L, sizeTop, 0, false);
-    setBorderSize(L, sizeRight, 1, false);
-    setBorderSize(L, sizeBottom, 2, false);
-    setBorderSize(L, sizeLeft, 3, true); // only now send update event
+    setBorderSize(L, sizeTop, Qt::TopSection, false);
+    setBorderSize(L, sizeRight, Qt::RightSection, false);
+    setBorderSize(L, sizeBottom, Qt::BottomSection, false);
+    setBorderSize(L, sizeLeft, Qt::LeftSection, true); // only now send update event to resize Mudlet window
     return 0;
 }
 
@@ -3322,7 +3317,7 @@ int TLuaInterpreter::setBorderTop(lua_State* L)
         return lua_error(L);
     } 
     int size = lua_tonumber(L, 1);
-    setBorderSize(L, size, 0);
+    setBorderSize(L, size, Qt::TopSection);
     return 0;
 }
 
@@ -3334,7 +3329,7 @@ int TLuaInterpreter::setBorderRight(lua_State* L)
         return lua_error(L);
     } 
     int size = lua_tonumber(L, 1);
-    setBorderSize(L, size, 1);
+    setBorderSize(L, size, Qt::RightSection);
     return 0;
 }
 
@@ -3346,7 +3341,7 @@ int TLuaInterpreter::setBorderBottom(lua_State* L)
         return lua_error(L);
     } 
     int size = lua_tonumber(L, 1);
-    setBorderSize(L, size, 2);
+    setBorderSize(L, size, Qt::BottomSection);
     return 0;
 }
 
@@ -3358,7 +3353,7 @@ int TLuaInterpreter::setBorderLeft(lua_State* L)
         return lua_error(L);
     } 
     int size = lua_tonumber(L, 1);
-    setBorderSize(L, size, 3);
+    setBorderSize(L, size, Qt::LeftSection);
     return 0;
 }
 
@@ -3398,7 +3393,6 @@ int TLuaInterpreter::getBorderRight(lua_State* L)
 int TLuaInterpreter::getBorderSizes(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    int n = lua_gettop(L);
     lua_createtable(L, 0, 4);
     lua_pushinteger(L, host.mBorderTopHeight);
     lua_setfield(L, -2, "top");
