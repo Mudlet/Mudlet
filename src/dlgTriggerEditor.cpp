@@ -92,28 +92,30 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     msgInfoAddAlias = tr("<p>Alias react on user input. To add a new alias:"
                          "<ol><li>Click on the 'Add Item' icon above.</li>"
-                         "<li>Define an input pattern either literally or with a Perl regular expression.</li>"
-                         "<li>Define a 'substitution' command to send to the game in clear text <strong>instead of the alias pattern</strong>, or write a script for more complicated needs.</li>"
+                         "<li>Define an input <strong>pattern</strong> either literally or with a Perl regular expression.</li>"
+                         "<li>Define a 'substitution' <strong>command</strong> to send to the game in clear text <strong>instead of the alias pattern</strong>, or write a script for more complicated needs.</li>"
                          "<li><strong>Activate</strong> the alias.</li></ol></p>"
                          "<p><strong>Note:</strong> Aliases can also be defined from the command line in the main profile window like this:</p>"
-                         "<p><code>lua permAlias(&quot;my greets&quot;, &quot;&quot;, &quot;^hi$&quot;, [[send (&quot;say Greetings, traveller!&quot;) echo (&quot;We said hi!&quot;)]])</code> - You can now greet by typing 'hi'</p>"
+                         "<p><code>lua permAlias(&quot;my greets&quot;, &quot;&quot;, &quot;^hi$&quot;, [[send (&quot;say Greetings, traveller!&quot;) echo (&quot;We said hi!&quot;)]])</code></p>"
+                         "<p>You can now greet by typing 'hi'</p>"
                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
     msgInfoAddTrigger = tr("<p>Triggers react on game output. To add a new trigger:"
                            "<ol><li>Click on the 'Add Item' icon above.</li>"
                            "<li>Define a <strong>pattern</strong> that you want to trigger on.</li>"
                            "<li>Select the appropriate pattern <strong>type</strong>.</li>"
-                           "<li>Define a clear text command that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..</li>"
+                           "<li>Define a clear text <strong>command</strong> that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..</li>"
                            "<li><strong>Activate</strong> the trigger.</li></ol></p>"
                            "<p><strong>Note:</strong> Triggers can also be defined from the command line in the main profile window like this:</p>"
-                           "<p><code>lua permSubstringTrigger(&quot;My drink trigger&quot;, &quot;&quot;, &quot;You are thirsty.&quot;, function() send(&quot;drink water&quot;) end)</code> - This will keep you refreshed.</p>"
+                           "<p><code>lua permSubstringTrigger(&quot;My drink trigger&quot;, &quot;&quot;, &quot;You are thirsty.&quot;, function() send(&quot;drink water&quot;) end)</code></p>"
+                           "<p>This will keep you refreshed.</p>"
                            "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
     msgInfoAddScript = tr("<p>Scripts organize code and can react to events. To add a new script:"
                           "<ol><li>Click on the 'Add Item' icon above.</li>"
-                          "<li>Enter a script in the box below. You can for example define functions to be called by other triggers, aliases, etc.</li>"
-                          "<li>If you write lua commands without defining a function, they will be run on Mudlet startup and each time you open the script for editing.</li>"
-                          "<li>If needed, you can register a list of events with the + and - symbols. If one of these events take place, the function with the same name as the script item itself will be called.</li>"
+                          "<li>Enter a script in the box below. You can for example define <strong>functions</strong> to be called by other triggers, aliases, etc.</li>"
+                          "<li>If you write lua <strong>commands</strong> without defining a function, they will be run on Mudlet startup and each time you open the script for editing.</li>"
+                          "<li>If needed, you can register a list of <strong>events</strong> with the + and - symbols. If one of these events take place, the function with the same name as the script item itself will be called.</li>"
                           "<li><strong>Activate</strong> the script.</li></ol></p>"
                           "<p><strong>Note:</strong> Scripts are run automatically when viewed, even if they are deactivated.</p>"
                           "<p><strong>Note:</strong> Events can also be added to a script from the command line in the main profile window like this:</p>"
@@ -122,30 +124,33 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     msgInfoAddTimer = tr("<p>Timers react after a timespan once or regularly. To add a new timer:"
                          "<ol><li>Click on the 'Add Item' icon above.</li>"
-                         "<li>Define the timespan after which the timer should react in a this format: hours : minutes : seconds.</li>"
-                         "<li>Define a clear text command that you want to send to the game when the time has passed, or write a script for more complicated needs.</li>"
+                         "<li>Define the <strong>timespan</strong> after which the timer should react in a this format: hours : minutes : seconds.</li>"
+                         "<li>Define a clear text <strong>command</strong> that you want to send to the game when the time has passed, or write a script for more complicated needs.</li>"
                          "<li><strong>Activate</strong> the timer.</li></ol></p>"
                          "<p><strong>Note:</strong> If you want the trigger to react only once and not regularly, use the Lua tempTimer() function instead.</p>"
                          "<p><strong>Note:</strong> Timers can also be defined from the command line in the main profile window like this:</p>"
-                         "<p><code>lua tempTimer(3, function() echo(&quot;hello!\n&quot;) end)</code> - This will greet you exactly 3 seconds after it was made.</p>"
+                         "<p><code>lua tempTimer(3, function() echo(&quot;hello!\n&quot;) end)</code></p>"
+                         "<p>This will greet you exactly 3 seconds after it was made.</p>"
                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
     msgInfoAddButton = tr("<p>Buttons react on mouse clicks. To add a new button:"
-                          "<ol><li>Add a new group to define a new button bar in case you don't have any.</li>"
-                          "<li>Add new groups as menus to a button bar or sub-menus to menus.<li>"
-                          "<li>Add new items as buttons to a button bar or menu or sub-menu.</li>"
-                          "<li>Define a clear text command that you want to send to the game if the button is pressed, or write a script for more complicated needs.</li>"
-                          "<li><strong>Activate</strong> the toolbar, menu or button. <strong>Note:</strong> Deactivated items will be hidden and if they are toolbars or menus then all the items they contain will be also be hidden.</li></ol></p>"
+                          "<ol><li>Add a new group to define a new <strong>button bar</strong> in case you don't have any.</li>"
+                          "<li>Add new groups as <strong>menus</strong> to a button bar or sub-menus to menus.<li>"
+                          "<li>Add new items as <strong>buttons</strong> to a button bar or menu or sub-menu.</li>"
+                          "<li>Define a clear text <strong>command</strong> that you want to send to the game if the button is pressed, or write a script for more complicated needs.</li>"
+                          "<li><strong>Activate</strong> the toolbar, menu or button. </li></ol>"
+                          "<p><strong>Note:</strong> Deactivated items will be hidden and if they are toolbars or menus then all the items they contain will be also be hidden.</p>"
                           "<p><strong>Note:</strong> If a button is made a <strong>click-down</strong> button then you may also define a clear text command that you want to send to the game when the button is pressed a second time to uncheck it or to write a script to run when it happens - within such a script the Lua 'getButtonState()' function reports whether the button is up or down.</p>"
                           "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
     msgInfoAddKey = tr("<p>Keys react on keyboard presses. To add a new key binding:"
                        "<ol><li>Click on the 'Add Item' icon above.</li>"
                        "<li>Click on <strong>'grab key'</strong> and then press your key combination, e.g. including modifier keys like Control, Shift, etc.</li>"
-                       "<li>Define a clear text command that you want to send to the game if the button is pressed, or write a script for more complicated needs.</li>"
+                       "<li>Define a clear text <strong>command</strong> that you want to send to the game if the button is pressed, or write a script for more complicated needs.</li>"
                        "<li><strong>Activate</strong> the new key binding.</li></ol></p>"
                        "<p><strong>Note:</strong> Keys can also be defined from the command line in the main profile window like this:</p>"
-                       "<p><code>lua permKey(&quot;my jump key&quot;, &quot;&quot;, mudlet.key.F8, [[send(&quot;jump&quot;]]) end)</code> - Pressing F8 will make you jump.</p>"
+                       "<p><code>lua permKey(&quot;my jump key&quot;, &quot;&quot;, mudlet.key.F8, [[send(&quot;jump&quot;]]) end)</code></p>"
+                       "<p>Pressing F8 will make you jump.</p>"
                        "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
     msgInfoAddVar = tr("<p>Variables store information. To make a new variable:"
@@ -156,7 +161,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                        "<li>To remove a variable manually, set it to 'nil' or click on the 'Delete' icon above.</li></ol></p>"
                        "<p><strong>Note:</strong> Variables created here won't be saved when Mudlet shuts down unless you check their checkbox in the list of variables to the left. You could also create scripts with the variables instead.</p>"
                        "<p><strong>Note:</strong> Variables and tables can also be defined from the command line in the main profile window like this:</p>"
-                       "<p><code>lua foo = &quot;bar&quot;</code> - This will create a string called 'foo' with 'bar' as its value.</p>"
+                       "<p><code>lua foo = &quot;bar&quot;</code></p>"
+                       "<p>This will create a string called 'foo' with 'bar' as its value.</p>"
                        "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
     setUnifiedTitleAndToolBarOnMac(true); //MAC OSX: make window moveable
@@ -5035,6 +5041,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
         mpTriggersMainArea->spinBox_lineMargin->setValue(pT->getConditionLineDelta());
         mpTriggersMainArea->spinBox_stayOpen->setValue(pT->mStayOpen);
         mpTriggersMainArea->groupBox_soundTrigger->setChecked(pT->mSoundTrigger);
+        mpTriggersMainArea->lineEdit_soundFile->setToolTip(pT->mSoundFile);
         mpTriggersMainArea->lineEdit_soundFile->setText(pT->mSoundFile);
         mpTriggersMainArea->lineEdit_soundFile->setCursorPosition(mpTriggersMainArea->lineEdit_soundFile->text().length());
         mpTriggersMainArea->toolButton_clearSoundFile->setEnabled(!mpTriggersMainArea->lineEdit_soundFile->text().isEmpty());
@@ -7957,6 +7964,7 @@ void dlgTriggerEditor::slot_soundTrigger()
                                                        "This the list of file extensions that are considered for sounds from triggers, the terms inside of the '('...')' and the \";;\" are used programmatically and should not be changed."));
     if (!fileName.isEmpty()) {
         // This will only be executed if the user did not press cancel
+        mpTriggersMainArea->lineEdit_soundFile->setToolTip(fileName);
         mpTriggersMainArea->lineEdit_soundFile->setText(fileName);
         mpTriggersMainArea->lineEdit_soundFile->setCursorPosition(mpTriggersMainArea->lineEdit_soundFile->text().length());
         mpTriggersMainArea->toolButton_clearSoundFile->setEnabled(!mpTriggersMainArea->lineEdit_soundFile->text().isEmpty());

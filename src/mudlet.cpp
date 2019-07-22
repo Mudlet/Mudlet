@@ -5025,6 +5025,11 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
     // from the Hunspell library:
 
     wordSet = wordList.toSet();
+
+#if defined(Q_OS_WIN32)
+    mudlet::self()->sanitizeUtf8Path(affixPathFileName, QStringLiteral("profile.dic"));
+    mudlet::self()->sanitizeUtf8Path(dictionaryPathFileName, QStringLiteral("profile.aff"));
+#endif
     return Hunspell_create(affixPathFileName.toUtf8().constData(), dictionaryPathFileName.toUtf8().constData());
 }
 
@@ -5072,6 +5077,10 @@ Hunhandle* mudlet::prepareSharedDictionary()
     }
 
     mWordSet_shared = wordList.toSet();
+#if defined(Q_OS_WIN32)
+    mudlet::self()->sanitizeUtf8Path(affixPathFileName, QStringLiteral("profile.dic"));
+    mudlet::self()->sanitizeUtf8Path(dictionaryPathFileName, QStringLiteral("profile.aff"));
+#endif
     mHunspell_sharedDictionary = Hunspell_create(affixPathFileName.toUtf8().constData(), dictionaryPathFileName.toUtf8().constData());
     return mHunspell_sharedDictionary;
 }
@@ -5207,3 +5216,52 @@ std::pair<bool, QString> mudlet::resetProfileIcon(const QString& profile)
 
     return std::make_pair(true, QString());
 }
+
+#if defined(Q_OS_WIN32)
+// credit to Qt Creator (https://github.com/qt-creator/qt-creator/blob/50d93a656789d6e776ecca4adc2e5b487bac0dbc/src/libs/utils/fileutils.cpp)
+static QString getShortPathName(const QString& name)
+{
+    if (name.isEmpty()) {
+        return name;
+    }
+
+    // Determine length, then convert.
+    const LPCTSTR nameC = reinterpret_cast<LPCTSTR>(name.utf16()); // MinGW
+    const DWORD length = GetShortPathNameW(nameC, NULL, 0);
+    if (length == 0) {
+        return name;
+    }
+    QScopedArrayPointer<TCHAR> buffer(new TCHAR[length]);
+    GetShortPathNameW(nameC, buffer.data(), length);
+    const QString rc = QString::fromUtf16(reinterpret_cast<const ushort*>(buffer.data()), length - 1);
+    return rc;
+}
+
+// 'strip' non-ASCII characters from the path by copying it to a location without them
+// this is only an issue for the Win32 API; macOS and Linux don't have such issues
+void mudlet::sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const
+{
+    static auto findNonAscii = QRegularExpression(QStringLiteral("([^ -~])"));
+
+    auto nonAscii = findNonAscii.match(originalLocation);
+    if (!nonAscii.hasMatch()) {
+        return;
+    }
+
+    const auto shortPath = getShortPathName(originalLocation);
+    // short path name might not always work: https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getshortpathnamew#remarks
+    if (shortPath != originalLocation) {
+        originalLocation = shortPath;
+        return;
+    }
+
+    const QString pureANSIpath = QStringLiteral("C:\\Windows\\Temp\\mudlet_%1").arg(fileName);
+    if (!QFileInfo::exists(pureANSIpath)) {
+        if (!QFile::copy(originalLocation, pureANSIpath)) {
+            qWarning() << "mudlet::sanitizeUtf8Path() ERROR: couldn't copy" << originalLocation << "to location without ASCII characters";
+        } else {
+            originalLocation = pureANSIpath;
+        }
+    }
+}
+#endif

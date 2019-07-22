@@ -1645,7 +1645,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         previousEncoding = QStringLiteral("ASCII");
     }
     // ensure encoding is utf-8 because that is what the Lua subsystem works with
-    host.mTelnet.setEncoding(QStringLiteral("UTF-8"));
+    host.mTelnet.setEncoding(QStringLiteral("UTF-8"), false);
     host.mpConsole->printOnDisplay(text);
     host.mTelnet.setEncoding(previousEncoding);
     return 0;
