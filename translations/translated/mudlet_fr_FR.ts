@@ -820,7 +820,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2887"/>
       <source>Exits</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Sorties</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2888"/>
@@ -1019,13 +1019,13 @@ the highlighted room (%1) to:</source>
       <location filename="../src/T2DMap.cpp" line="3507"/>
       <source>OK</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3512"/>
       <source>Cancel</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation type="unfinished"/>
+      <translation>Annuler</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3601"/>
@@ -1065,13 +1065,13 @@ for all of the %n selected room(s):</source>
       <location filename="../src/T2DMap.cpp" line="3809"/>
       <source>OK</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3814"/>
       <source>Cancel</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation type="unfinished"/>
+      <translation>Annuler</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3871"/>
