@@ -504,6 +504,7 @@ target_link_libraries(mudlet
     ${PUGIXML_LIBRARIES}
     communi
     edbee-lib
+    -lstdc++
 )
 
 if(Qt5TextToSpeech_FOUND)
