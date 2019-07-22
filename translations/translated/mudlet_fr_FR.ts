@@ -1240,73 +1240,73 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="209"/>
       <source>ISO 8859-9 (Turkish)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-9 (turc)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="228"/>
       <source>ISO 8859-10 (Nordic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-10 (Nordique)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="247"/>
       <source>ISO 8859-11 (Latin/Thai)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-11 (Latin/Thaïlandais)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="266"/>
       <source>ISO 8859-13 (Baltic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-13 (Baltique)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="285"/>
       <source>ISO 8859-14 (Celtic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-14 (celtique)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="304"/>
       <source>ISO 8859-15 (Western)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-15 (occidental)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="323"/>
       <source>ISO 8859-16 (Romanian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-16 (Roumain)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="342"/>
       <source>CP850 (Western Europe)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP850 (Europe occidentale)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="361"/>
       <source>CP866 (Cyrillic/Russian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>CP866 (Cyrillic/Russe)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="399"/>
       <source>KOI8-R (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>KOI8-R (Cyrillique)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="418"/>
       <source>KOI8-U (Cyrillic/Ukrainian)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>KOI8-U (Cyrillique/Ukrainien)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="437"/>
       <source>MACINTOSH</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>MACINTOSH</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="456"/>
@@ -1354,13 +1354,13 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="589"/>
       <source>WINDOWS-1257 (Baltic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1257 (Baltique)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="608"/>
       <source>WINDOWS-1258 (Vietnamese)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1258 (Vietnamien)</translation>
     </message>
   </context>
   <context>
@@ -1476,12 +1476,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="369"/>
       <source>Show Time Stamps.</source>
-      <translation type="unfinished"/>
+      <translation>Afficher les horodatages.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="380"/>
       <source>Record a replay.</source>
-      <translation type="unfinished"/>
+      <translation>Enregistrez une relecture.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="391"/>
@@ -1820,73 +1820,73 @@ Tried these locations:
       <location filename="../src/TMap.cpp" line="997"/>
       <source>n</source>
       <comment>This translation converts the direction that DIR_NORTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>n</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="998"/>
       <source>ne</source>
       <comment>This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>ne</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="999"/>
       <source>e</source>
       <comment>This translation converts the direction that DIR_EAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>e</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1000"/>
       <source>se</source>
       <comment>This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>se</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1001"/>
       <source>s</source>
       <comment>This translation converts the direction that DIR_SOUTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>s</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1002"/>
       <source>sw</source>
       <comment>This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>so</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1003"/>
       <source>w</source>
       <comment>This translation converts the direction that DIR_WEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>o</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1004"/>
       <source>nw</source>
       <comment>This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>no</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1005"/>
       <source>up</source>
       <comment>This translation converts the direction that DIR_UP codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>haut</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1006"/>
       <source>down</source>
       <comment>This translation converts the direction that DIR_DOWN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>bas</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1007"/>
       <source>in</source>
       <comment>This translation converts the direction that DIR_IN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>entrer</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1008"/>
       <source>out</source>
       <comment>This translation converts the direction that DIR_OUT codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>sortir</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1047"/>
@@ -2003,12 +2003,12 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1657"/>
       <source>Download the map</source>
-      <translation type="unfinished"/>
+      <translation>Télécharger la carte</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1658"/>
       <source>Start my own</source>
-      <translation type="unfinished"/>
+      <translation>Commencer ma propre carte</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1713"/>
