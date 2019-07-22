@@ -27,7 +27,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
     exit
   fi
 
-  git clone -b add-chinese-input-method https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
+  git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
 
   cd "${TRAVIS_BUILD_DIR}/../installers/generic-linux"
 
