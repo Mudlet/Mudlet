@@ -108,7 +108,7 @@ public:
     static int dirToNumber(lua_State*, int);
 
 
-    QPair<int, QString> startTempTimer(double, const QString&);
+    QPair<int, QString> startTempTimer(double timeout, const QString& function, const bool repeating = false);
     int startTempAlias(const QString&, const QString&);
     int startTempKey(int&, int&, QString&);
     int startTempTrigger(const QString& regex, const QString& function, int expiryCount = -1);

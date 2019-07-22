@@ -49,7 +49,7 @@ TTimer::TTimer(TTimer* parent, Host* pHost)
     mpQTimer->setProperty(scmProperty_TTimerId, 0);
 }
 
-TTimer::TTimer(const QString& name, QTime time, Host* pHost)
+TTimer::TTimer(const QString& name, QTime time, Host* pHost, bool repeating)
 : Tree<TTimer>(nullptr)
 , mRegisteredAnonymousLuaFunction(false)
 , exportItem(true)
@@ -65,6 +65,7 @@ TTimer::TTimer(const QString& name, QTime time, Host* pHost)
     mpQTimer->setProperty(scmProperty_HostName, mpHost->getName());
     mpHost->getTimerUnit()->mQTimerSet.insert(mpQTimer);
     mpQTimer->setProperty(scmProperty_TTimerId, 0);
+    mRepeating = repeating;
 }
 
 TTimer::~TTimer()
@@ -200,7 +201,7 @@ bool TTimer::compileScript()
 
 bool TTimer::checkRestart()
 {
-    return (!isTemporary() && !isOffsetTimer() && isActive() && !isFolder());
+    return ((!isTemporary() || mRepeating) && !isOffsetTimer() && isActive() && !isFolder());
 }
 
 void TTimer::execute()
