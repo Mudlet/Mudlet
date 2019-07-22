@@ -4745,8 +4745,8 @@ Count</source>
       <source>&lt;p&gt;Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.&lt;/p&gt;
 &lt;p&gt;Mudlet is released under the GPL license version 2, which is reproduced below:&lt;/p&gt;</source>
       <comment>For non-english language versions please append a translation of the following to explain why the GPL is NOT reproduced in the relevent language: &apos;but only the English form is considered the official version of the license, so the following is reproduced in that language:&apos; to replace &apos;which is reproduced below:&apos;...</comment>
-      <translation>&lt;p&gt;Mudelet 最初由Heiko Köhn、KoenhnHeiko@googlemail.com编写。&lt;/p&gt;
-&lt;p&gt;Mudelet 在 GPL 许可证版本2 下发布，下面是转载：&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Mudlet 最初由Heiko Köhn、KoenhnHeiko@googlemail.com编写。&lt;/p&gt;
+&lt;p&gt;Mudlet 在 GPL 许可证版本2 下发布，下面是转载：&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="473"/>
@@ -5073,14 +5073,14 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1897"/>
       <source>Mudlet is not configured for secure connections.</source>
-      <translation>Mudelet 没有配置安全连接.</translation>
+      <translation>Mudlet 没有配置安全连接.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1900"/>
       <source>Mudlet is not configured for secure connections.
 
 </source>
-      <translation>Mudelet没有配置安全连接。
+      <translation>Mudlet没有配置安全连接。
 
 </translation>
     </message>
@@ -5089,7 +5089,7 @@ Count</source>
       <source>Mudlet can not load support for secure connections.
 
 </source>
-      <translation>Mudelet 无法加载安全连接支持。
+      <translation>Mudlet 无法加载安全连接支持。
 
 </translation>
     </message>
@@ -5122,7 +5122,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="125"/>
       <source>Mudlet IRC Client - %1 - %2 on %3</source>
-      <translation>Mudelet IRC 客户端 - %1 %2 在 %3 上</translation>
+      <translation>Mudlet IRC 客户端 - %1 %2 在 %3 上</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="139"/>
