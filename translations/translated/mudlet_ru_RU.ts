@@ -10137,7 +10137,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="582"/>
       <source>&lt;p&gt;A user dictionary specific to this profile will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Будет доступен пользовательский словарь, специфичный для этого профиля. Это будет на командной строке (слова, которые в нем, будут появляться с пунктирным голубым подчеркиванием) и в lua подсистеме.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="585"/>
@@ -10147,7 +10147,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="592"/>
       <source>&lt;p&gt;A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Будет доступен пользовательский словарь, совместно используемый всеми профилями у которых эта опция включена. Это будет на командной строке (слова, которые в нем, будут появляться с пунктирным голубым подчеркиванием) и в lua подсистеме.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="595"/>
@@ -11575,7 +11575,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="79"/>
       <source>&lt;p&gt;Use this control to show or hide the extra controls for the trigger; this can be used to allow more space to show the trigger &lt;i&gt;items&lt;/i&gt; on smaller screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Используйте этот контроль для отображения или скрытия дополнительных элементов управления для триггера; это может использоваться для отображения большего количества места для отображения триггера &lt;i&gt;элементов&lt;/i&gt; на меньшем экране.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="105"/>
