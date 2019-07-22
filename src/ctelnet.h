@@ -130,6 +130,7 @@ public:
     cTelnet(Host* pH, const QString&);
     ~cTelnet();
     void connectIt(const QString& address, int port);
+    void reconnect();
     void disconnectIt();
     void abortConnection();
     bool sendData(QString& data);
