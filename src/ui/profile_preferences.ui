@@ -4888,7 +4888,7 @@
           <item row="0" column="2">
            <widget class="QLineEdit" name="lineEdit_proxyPort">
             <property name="inputMask">
-             <string>dddd9</string>
+             <string>00009</string>
             </property>
             <property name="placeholderText">
              <string>port</string>
