@@ -66,7 +66,6 @@ void FontManager::loadFont(const QString& filePath)
     if (fontAlreadyLoaded(filePath)) {
         return;
     }
-    qDebug() << "loading" << filePath;
 
     auto fontID = QFontDatabase::addApplicationFont(filePath);
 
