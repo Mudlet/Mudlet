@@ -4522,7 +4522,7 @@ If you are, please type in the profile name as a confirmation:</source>
       <location filename="../src/ui/glyph_usage.ui" line="50"/>
       <source>Symbol
 (All Fonts)</source>
-      <translation type="unfinished"/>
+      <translation>符号（所有字体）</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="56"/>
