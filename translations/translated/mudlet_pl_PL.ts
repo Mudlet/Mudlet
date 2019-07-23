@@ -4859,7 +4859,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="94"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopiuj</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="96"/>
@@ -7398,7 +7398,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="212"/>
       <source>IRC</source>
-      <translation type="unfinished"/>
+      <translation>IRC</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="215"/>
@@ -8944,7 +8944,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="665"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>Eksporter pakietów</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="556"/>
