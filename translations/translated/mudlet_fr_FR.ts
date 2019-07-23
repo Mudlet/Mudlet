@@ -760,7 +760,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2867"/>
       <source>Spread</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation>Écarter</translation>
+      <translation>Étendre</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2868"/>
@@ -11452,12 +11452,12 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="66"/>
       <source>boolean</source>
-      <translation type="unfinished"/>
+      <translation>booléen</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="76"/>
       <source>function</source>
-      <translation type="unfinished"/>
+      <translation>fonction</translation>
     </message>
   </context>
 </TS>
