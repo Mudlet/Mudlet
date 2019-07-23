@@ -5340,7 +5340,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="32"/>
       <source>Do you want to add additional files to the package e. g. images, sounds etc. ? The add files button will bring up the file explorer. Copy all files and folders that you want to add to the package in the temporary package directory that is shown in the file explorer. When you are done click on the export button below to start package creation.</source>
-      <translation type="unfinished"/>
+      <translation>是否要向导出包中添加其他文件，例如图像、声音等？点击“添加文件”按钮将显示“文件资源管理器”。将想要添加进导出包中的所有文件和文件夹复制到文件资源管理器中显示的临时包路径里。完成后，单击下面的导出按钮开始创建导出包。</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="45"/>
