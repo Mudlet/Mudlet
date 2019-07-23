@@ -166,6 +166,8 @@ private:
     // Set in constructor for run-time Qt versions less than 5.11 which only
     // supports up to Unicode 8.0:
     bool mUseOldUnicode8;
+    // How many "normal" width "characters" are each tab stop apart:
+    unsigned int mTabStopwidth;
 };
 
 #endif // MUDLET_TTEXTEDIT_H

@@ -64,6 +64,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mpScrollBar(nullptr)
 , mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
 , mUseOldUnicode8(false)
+, mTabStopwidth(8)
 {
     mLastClickTimer.start();
     if (pC->getType() != TConsole::CentralDebugConsole) {
@@ -500,7 +501,7 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
     uint unicode = getGraphemeBaseCharacter(grapheme);
     int charWidth;
     if (unicode == '\t') {
-        charWidth = column / 8 * 8 + 8;
+        charWidth = mTabStopwidth - (column % mTabStopwidth);
     } else {
         charWidth = getGraphemeWidth(unicode);
     }
