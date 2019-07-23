@@ -8996,7 +8996,7 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="601"/>
       <location filename="../src/mudlet.cpp" line="610"/>
       <source>Discord</source>
-      <translation type="unfinished"/>
+      <translation>Discord</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="608"/>
