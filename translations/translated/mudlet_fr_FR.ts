@@ -9860,7 +9860,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1092"/>
       <source>Enable text analyzer</source>
-      <translation type="unfinished"/>
+      <translation>Activer l'analyseur de texte</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1120"/>
@@ -9872,7 +9872,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1154"/>
       <source>h:mm:ss.zzz</source>
       <comment>Used to set a time interval only</comment>
-      <translation type="unfinished"/>
+      <translation>h:mm:ss.zzz</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1300"/>
@@ -9913,7 +9913,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1426"/>
       <location filename="../src/ui/profile_preferences.ui" line="2121"/>
       <source>Black:</source>
-      <translation type="unfinished"/>
+      <translation>Noir :</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1433"/>
@@ -10089,7 +10089,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1746"/>
       <location filename="../src/ui/profile_preferences.ui" line="2393"/>
       <source>Reset all colors to default</source>
-      <translation type="unfinished"/>
+      <translation>Rétablir les couleurs par défaut</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1753"/>
@@ -10109,12 +10109,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1786"/>
       <source>Map files</source>
-      <translation type="unfinished"/>
+      <translation>Fichiers de carte</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1792"/>
       <source>Save your current map:</source>
-      <translation type="unfinished"/>
+      <translation>Enregistrer votre carte en cours :</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1802"/>
@@ -10189,7 +10189,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2800"/>
       <source>SSL</source>
-      <translation type="unfinished"/>
+      <translation>SSL</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2905"/>
@@ -10280,27 +10280,27 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1953"/>
       <source>Download</source>
-      <translation type="unfinished"/>
+      <translation>Télécharger</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1966"/>
       <source>Map backups</source>
-      <translation type="unfinished"/>
+      <translation>Sauvegardes de carte</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1972"/>
       <source>Delete map backups older than:</source>
-      <translation type="unfinished"/>
+      <translation>Supprimer les sauvegardes de carte antérieures à :</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1989"/>
       <source>days since today, keeping newer and monthly backups</source>
-      <translation type="unfinished"/>
+      <translation>jours à compter d'aujourd'hui, en conservant les sauvegardes plus récentes et mensuelles</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2002"/>
       <source>Map view</source>
-      <translation type="unfinished"/>
+      <translation>Vue de la carte</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2031"/>
