@@ -229,6 +229,7 @@ public:
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
     void updateProxySettings(QNetworkAccessManager* manager);
+    std::unique_ptr<QNetworkProxy> getConnectionProxy();
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
