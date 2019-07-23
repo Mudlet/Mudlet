@@ -343,7 +343,7 @@ veuillez patienter...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="55"/>
       <source>Start element not found!</source>
-      <translation type="unfinished"/>
+      <translation>Élément de départ non trouvé !</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
@@ -1130,12 +1130,12 @@ used is:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4113"/>
       <source>%1 {count:%2, default}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {count:%2, default}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4121"/>
       <source>1 {count 0, default}</source>
-      <translation type="unfinished"/>
+      <translation>1 {count 0, default}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4125"/>
@@ -1998,7 +1998,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1656"/>
       <source>No map found. Would you like to download the map or start your own?</source>
-      <translation type="unfinished"/>
+      <translation>Aucune carte trouvée. Souhaitez-vous télécharger la carte ou démarrer la vôtre ?</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1657"/>
@@ -2018,42 +2018,42 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2122"/>
       <source>Map issues</source>
-      <translation type="unfinished"/>
+      <translation>Problèmes de carte</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2129"/>
       <source>Area issues</source>
-      <translation type="unfinished"/>
+      <translation>Problèmes de zone</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2135"/>
       <source>Area id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>ID de zone : %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2137"/>
       <source>Area id: %1</source>
-      <translation type="unfinished"/>
+      <translation>ID de zone : %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2146"/>
       <source>Room issues</source>
-      <translation type="unfinished"/>
+      <translation>Problèmes de salle</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2153"/>
       <source>Room id: %1 &quot;%2&quot;</source>
-      <translation type="unfinished"/>
+      <translation>ID de la salle : %1 &quot;%2&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2155"/>
       <source>Room id: %1</source>
-      <translation type="unfinished"/>
+      <translation>ID de la salle : %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2165"/>
       <source>End of report</source>
-      <translation type="unfinished"/>
+      <translation>Fin du rapport</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2171"/>
@@ -2173,79 +2173,79 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="107"/>
       <location filename="../src/TRoom.cpp" line="967"/>
       <source>North</source>
-      <translation type="unfinished"/>
+      <translation>Nord</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="108"/>
       <source>North-east</source>
-      <translation type="unfinished"/>
+      <translation>Nord-Est</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="109"/>
       <source>North-west</source>
-      <translation type="unfinished"/>
+      <translation>Nord-Ouest</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="110"/>
       <location filename="../src/TRoom.cpp" line="1009"/>
       <source>South</source>
-      <translation type="unfinished"/>
+      <translation>Sud</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="111"/>
       <source>South-east</source>
-      <translation type="unfinished"/>
+      <translation>Sud-Est</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="112"/>
       <source>South-west</source>
-      <translation type="unfinished"/>
+      <translation>Sud-Ouest</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="113"/>
       <location filename="../src/TRoom.cpp" line="1051"/>
       <source>East</source>
-      <translation type="unfinished"/>
+      <translation>Est</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="114"/>
       <location filename="../src/TRoom.cpp" line="1065"/>
       <source>West</source>
-      <translation type="unfinished"/>
+      <translation>Ouest</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="115"/>
       <location filename="../src/TRoom.cpp" line="1079"/>
       <source>Up</source>
-      <translation type="unfinished"/>
+      <translation>Haut</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="116"/>
       <location filename="../src/TRoom.cpp" line="1093"/>
       <source>Down</source>
-      <translation type="unfinished"/>
+      <translation>Bas</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="117"/>
       <location filename="../src/TRoom.cpp" line="1107"/>
       <source>In</source>
-      <translation type="unfinished"/>
+      <translation>A l'intérieur</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="118"/>
       <location filename="../src/TRoom.cpp" line="1121"/>
       <source>Out</source>
-      <translation type="unfinished"/>
+      <translation>A l'extérieur</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="119"/>
       <source>Other</source>
-      <translation type="unfinished"/>
+      <translation>Autre</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="121"/>
       <source>Unknown</source>
-      <translation type="unfinished"/>
+      <translation>Inconnu(e)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="253"/>
