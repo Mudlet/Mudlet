@@ -3461,7 +3461,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="350"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Annuler</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="370"/>
@@ -3471,7 +3471,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="377"/>
       <source>OK</source>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="387"/>
@@ -3802,7 +3802,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1632"/>
       <source>Cancel</source>
       <comment>Cancel download of GUI package from Server</comment>
-      <translation type="unfinished"/>
+      <translation>Annuler</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1342"/>
@@ -3851,7 +3851,7 @@ Reason: </source>
       <location filename="../src/ctelnet.cpp" line="1822"/>
       <source>OK</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2011"/>
@@ -4405,7 +4405,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15084"/>
       <source>n</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>n</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15086"/>
@@ -4417,7 +4417,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15088"/>
       <source>e</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>e</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15090"/>
@@ -4429,7 +4429,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15092"/>
       <source>s</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>s</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15094"/>
@@ -4441,7 +4441,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15096"/>
       <source>w</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>o</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15098"/>
@@ -4453,7 +4453,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15100"/>
       <source>ne</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>ne</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15102"/>
@@ -4465,7 +4465,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15104"/>
       <source>se</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>se</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15106"/>
@@ -4477,7 +4477,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15108"/>
       <source>sw</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>so</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15110"/>
@@ -4489,13 +4489,13 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15112"/>
       <source>nw</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>no</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15114"/>
       <source>in</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>entrer</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15116"/>
@@ -4507,7 +4507,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15118"/>
       <source>out</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>sortir</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15120"/>
@@ -4519,7 +4519,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15122"/>
       <source>up</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>haut</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15124"/>
@@ -4531,7 +4531,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15126"/>
       <source>down</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>bas</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15128"/>
