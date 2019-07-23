@@ -353,7 +353,7 @@ void cTelnet::connectIt(const QString& address, int port)
         mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
 
         if (mpHost->mUseProxy && !mpHost->mProxyAddress.isEmpty() && mpHost->mProxyPort != 0) {
-            unique_ptr<QNetworkProxy> proxy = mpHost->getConnectionProxy();
+            auto& proxy = mpHost->getConnectionProxy();
             socket.setProxy(*proxy);
             mConnectViaProxy = true;
         } else {
