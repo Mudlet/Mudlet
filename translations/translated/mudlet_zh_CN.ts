@@ -5007,7 +5007,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="94"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>复制</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="96"/>
@@ -7560,7 +7560,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="212"/>
       <source>IRC</source>
-      <translation type="unfinished"/>
+      <translation>IRC</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="215"/>
@@ -9089,13 +9089,13 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="549"/>
       <source>Disconnect</source>
-      <translation type="unfinished"/>
+      <translation>断开连接</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="601"/>
       <location filename="../src/mudlet.cpp" line="610"/>
       <source>Discord</source>
-      <translation type="unfinished"/>
+      <translation>Discord</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="608"/>
@@ -9110,7 +9110,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="665"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>包导出器</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="556"/>
@@ -11353,7 +11353,7 @@ or LUA script</source>
       <location filename="../src/ui/trigger_editor.ui" line="428"/>
       <location filename="../src/ui/trigger_editor.ui" line="593"/>
       <source>1</source>
-      <translation type="unfinished"/>
+      <translation>1</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="436"/>
