@@ -10346,7 +10346,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2084"/>
       <source>Link color</source>
-      <translation type="unfinished"/>
+      <translation>Couleur des liens</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2104"/>
@@ -10356,7 +10356,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2417"/>
       <source>Special Options</source>
-      <translation type="unfinished"/>
+      <translation>Options spéciales</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2429"/>
@@ -10505,32 +10505,32 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2686"/>
       <source>Nickname:</source>
-      <translation type="unfinished"/>
+      <translation>Pseudo :</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2679"/>
       <source>6667</source>
-      <translation type="unfinished"/>
+      <translation>6667</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2733"/>
       <source>Search Engine</source>
-      <translation type="unfinished"/>
+      <translation>Moteur de recherche</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2717"/>
       <source>Mudlet updates</source>
-      <translation type="unfinished"/>
+      <translation>Mises à jour de Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2723"/>
       <source>Disable automatic updates</source>
-      <translation type="unfinished"/>
+      <translation>Désactiver les mises à jour automatiques</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2745"/>
       <source>Other Special options</source>
-      <translation type="unfinished"/>
+      <translation>Autres options spéciales</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2751"/>
@@ -10540,7 +10540,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4910"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Enregistrer</translation>
     </message>
   </context>
   <context>
@@ -10843,22 +10843,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1901"/>
       <source>No door</source>
-      <translation type="unfinished"/>
+      <translation>Pas de porte</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1916"/>
       <source>Open door</source>
-      <translation type="unfinished"/>
+      <translation>Porte ouverte</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1928"/>
       <source>Closed door</source>
-      <translation type="unfinished"/>
+      <translation>Porte fermée</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1940"/>
       <source>Locked door</source>
-      <translation type="unfinished"/>
+      <translation>Porte verrouillée</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1975"/>
@@ -10918,7 +10918,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1978"/>
       <source>&amp;Save</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Sauvegarder</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1886"/>
@@ -10933,7 +10933,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2001"/>
       <source>Special exits:</source>
-      <translation type="unfinished"/>
+      <translation>Sorties spéciales :</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2044"/>
@@ -10962,25 +10962,29 @@ Weight</source>
       <location filename="../src/ui/room_exits.ui" line="2071"/>
       <source>Door
 None</source>
-      <translation type="unfinished"/>
+      <translation>Porte
+Aucune</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2080"/>
       <source>Door
 Open</source>
-      <translation type="unfinished"/>
+      <translation>Porte
+Ouverte</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2089"/>
       <source>Door
 Closed</source>
-      <translation type="unfinished"/>
+      <translation>Porte
+Fermée</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2098"/>
       <source>Door
 Locked</source>
-      <translation type="unfinished"/>
+      <translation>Porte
+Verrouillée</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2107"/>
@@ -11118,13 +11122,13 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="217"/>
       <source>hh</source>
-      <translation type="unfinished"/>
+      <translation>hh</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="250"/>
       <location filename="../src/ui/timers_main_area.ui" line="316"/>
       <source>:</source>
-      <translation type="unfinished"/>
+      <translation>:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="262"/>
@@ -11154,12 +11158,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="283"/>
       <source>mm</source>
-      <translation type="unfinished"/>
+      <translation>mm</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="352"/>
       <source>ss</source>
-      <translation type="unfinished"/>
+      <translation>ss</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="385"/>
@@ -11432,22 +11436,22 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="188"/>
       <source>hidden variable</source>
-      <translation type="unfinished"/>
+      <translation>variable cachée</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="84"/>
       <source>⏷ Value type:</source>
-      <translation type="unfinished"/>
+      <translation>⏷ Type de la valeur:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="56"/>
       <source>string</source>
-      <translation type="unfinished"/>
+      <translation>chaîne</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="61"/>
       <source>number</source>
-      <translation type="unfinished"/>
+      <translation>nombre</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="66"/>
