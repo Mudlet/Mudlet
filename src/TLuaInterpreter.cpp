@@ -10218,7 +10218,6 @@ int TLuaInterpreter::downloadFile(lua_State* L)
 #endif
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
-
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->get(request);
     host.mLuaInterpreter.downloadMap.insert(reply, localFile);
     lua_pushboolean(L, true);

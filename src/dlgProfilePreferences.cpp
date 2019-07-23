@@ -2683,7 +2683,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
     request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
     // load from cache if possible
     request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
-
+    mpHost->updateProxySettings(manager);
     QNetworkReply* getReply = manager->get(request);
 
     connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
