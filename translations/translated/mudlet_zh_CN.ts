@@ -5444,7 +5444,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="755"/>
       <source>Show &quot;%1&quot; in the map area selection</source>
-      <translation type="unfinished"/>
+      <translation>在地图区域选择中显示 &quot;%1&quot;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="866"/>
