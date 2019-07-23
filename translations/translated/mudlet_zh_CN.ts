@@ -5360,7 +5360,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="101"/>
       <source>Where do you want to save the package?</source>
-      <translation type="unfinished"/>
+      <translation>你想将压缩包导出到哪个位置？</translation>
     </message>
   </context>
   <context>
