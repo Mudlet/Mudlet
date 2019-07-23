@@ -5075,12 +5075,12 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="94"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Copia</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="96"/>
       <source>Copy settings only</source>
-      <translation type="unfinished"/>
+      <translation>Copia impostazioni</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="423"/>
@@ -7668,7 +7668,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/ui/main_window.ui" line="212"/>
       <source>IRC</source>
-      <translation type="unfinished"/>
+      <translation>IRC</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="215"/>
@@ -7724,7 +7724,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/ui/main_window.ui" line="305"/>
       <source>Discord help channel</source>
-      <translation type="unfinished"/>
+      <translation>Canale di aiuto Discord</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="156"/>
@@ -9193,28 +9193,28 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="549"/>
       <source>Disconnect</source>
-      <translation type="unfinished"/>
+      <translation>Disconnetti</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="601"/>
       <location filename="../src/mudlet.cpp" line="610"/>
       <source>Discord</source>
-      <translation type="unfinished"/>
+      <translation>Discord</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="608"/>
       <source>Open Discord</source>
-      <translation type="unfinished"/>
+      <translation>Apri Discord</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="613"/>
       <source>Open IRC</source>
-      <translation type="unfinished"/>
+      <translation>Apri IRC</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="665"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>Esportatore package</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="556"/>
@@ -11635,7 +11635,7 @@ o script LUA</translation>
       <location filename="../src/ui/triggers_main_area.ui" line="541"/>
       <source>&lt;p&gt;Sound file to play when the trigger fires.&lt;/p&gt;</source>
       <comment>This is the tooltip for the QLineEdit that shows - but does not permit changing - the sound file used for a trigger.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;File audio da riprodurre quando si attiva il trigger.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="617"/>
