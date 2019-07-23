@@ -4966,7 +4966,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="94"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>复制</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="96"/>
@@ -9038,7 +9038,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="549"/>
       <source>Disconnect</source>
-      <translation type="unfinished"/>
+      <translation>断开连接</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="601"/>
