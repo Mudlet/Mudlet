@@ -1625,7 +1625,7 @@ per le stanze selezionate:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="1676"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation>[ INFO ] - File di mappa trovato e aperto, analisi in corso...</translation>
+      <translation>[ INFO ]  - File di mappa trovato e aperto, analisi in corso...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1683"/>
@@ -1635,7 +1635,7 @@ per le stanze selezionate:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="1686"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
-      <translation>[ INFO ] - File di mappa localizzato, ma non è stato possibile aprirlo, controllare le autorizzazioni su:&quot;%1&quot;.</translation>
+      <translation>[ INFO ]  - File di mappa localizzato, ma non è stato possibile aprirlo, controllare le autorizzazioni su:&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1689"/>
@@ -1657,7 +1657,7 @@ per le stanze selezionate:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="2636"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
-      <translation>[INFO] - Richiesta di ricarica della mappa ricevuta dal sistema...</translation>
+      <translation>[ INFO ]  - Richiesta di ricarica della mappa ricevuta dal sistema...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2641"/>
@@ -1775,7 +1775,7 @@ l'unico avvertimento fornito per questa funzione...!</translation>
       <location filename="../src/TLuaInterpreter.cpp" line="15050"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name of the module.</comment>
-      <translation>[  OK  ] - Modulo Lua %1 caricato.</translation>
+      <translation>[  OK  ]  - Modulo Lua %1 caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14983"/>
@@ -1807,7 +1807,7 @@ l'unico avvertimento fornito per questa funzione...!</translation>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15220"/>
       <source>[  OK  ]  - Lua code formatter loaded.</source>
-      <translation>[  OK  ] - Modulo Lua code formatter caricato.</translation>
+      <translation>[  OK  ]  - Modulo Lua code formatter caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15251"/>
@@ -1824,7 +1824,7 @@ l'unico avvertimento fornito per questa funzione...!</translation>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15264"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
-      <translation>[  OK  ] - Modulo Lua API &amp; Geyser Layout caricato.</translation>
+      <translation>[  OK  ]  - Modulo Lua API &amp; Geyser Layout caricato.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15272"/>
@@ -1871,12 +1871,12 @@ Percorsi analizzati:
     <message>
       <location filename="../src/TMap.cpp" line="503"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation>[  OK  ] - Controllo della mappa completato (%1s). Buon divertimento...</translation>
+      <translation>[  OK  ]  - Controllo della mappa completato (%1s). Buon divertimento...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="510"/>
       <source>[  OK  ]  - Map loaded successfully (%1s).</source>
-      <translation>[  OK  ] - Mappa caricata correttamente (%1s).</translation>
+      <translation>[  OK  ]  - Mappa caricata correttamente (%1s).</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="997"/>
@@ -1969,7 +1969,7 @@ condividere la mappa con altri utenti che utilizzano il formato originale.</tran
     <message>
       <location filename="../src/TMap.cpp" line="437"/>
       <source>[ INFO ]  - Map audit starting...</source>
-      <translation>[ INFO ] - Controllo mappa iniziato...</translation>
+      <translation>[ INFO ]  - Controllo mappa iniziato...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1031"/>
@@ -2028,7 +2028,7 @@ Mudlet can handle (%2)!  The file is:
       <location filename="../src/TMap.cpp" line="1422"/>
       <source>[ INFO ]  - You will need to upgrade your Mudlet or find a map file saved in an
 older format.</source>
-      <translation>[ INFO ] - Devi aggiornare Mudlet o trovare un file di mappa salvato in un formato precedente.</translation>
+      <translation>[ INFO ]  - Devi aggiornare Mudlet o trovare un file di mappa salvato in un formato precedente.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1429"/>
@@ -2052,14 +2052,14 @@ Ci sono così tanti dati MANCANTI che forse è meglio iniziare da capo ...</tran
       <source>[ INFO ]  - Reading map (format version:%1) file:
 &quot;%2&quot;,
 please wait...</source>
-      <translation>[ INFO ] - Leggo file di mappa (versione:%1):
+      <translation>[ INFO ]  - Leggo file di mappa (versione:%1):
 &quot;%2&quot;,
 attendere...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1446"/>
       <source>[ INFO ]  - Reading map (format version:%1) file: &quot;%2&quot;.</source>
-      <translation>[ INFO ] - Leggo file di mappa (versione:%1): &quot;%2&quot;.</translation>
+      <translation>[ INFO ]  - Leggo file di mappa (versione:%1): &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1557"/>
@@ -2072,7 +2072,7 @@ ad una zona) non trovata. Aggiungo l'Area ID riservato -1.</translation>
       <location filename="../src/TMap.cpp" line="1641"/>
       <source>[ INFO ]  - Successfully read the map file (%1s), checking some
 consistency details...</source>
-      <translation>[ INFO ] - File di mappa letto con successo (%1s), verifico la coerenza di alcuni dati...
+      <translation>[ INFO ]  - File di mappa letto con successo (%1s), verifico la coerenza di alcuni dati...
 ...</translation>
     </message>
     <message>
@@ -2093,7 +2093,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1713"/>
       <source>[ INFO ]  - Checking map file: &quot;%1&quot;, format version:%2...</source>
-      <translation>[ INFO ] - Controllo del file di mappa: &quot;%1&quot;, versione:%2...</translation>
+      <translation>[ INFO ]  - Controllo del file di mappa: &quot;%1&quot;, versione:%2...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2122"/>
@@ -2166,7 +2166,7 @@ Consiglio di esaminare il report più recente nel file:
     <message>
       <location filename="../src/TMap.cpp" line="2253"/>
       <source>[ INFO ]  - Map download initiated, please wait...</source>
-      <translation>[INFO] - Download del file di mappa avviato, attendere prego...</translation>
+      <translation>[ INFO ]  - Download del file di mappa avviato, attendere prego...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2261"/>
@@ -2246,7 +2246,7 @@ nella finestra principale!</translation>
     <message>
       <location filename="../src/TMap.cpp" line="2439"/>
       <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
-      <translation>[ INFO ] - File di mappa scaricato e salvato, analisi in corso...</translation>
+      <translation>[ INFO ]  - File di mappa scaricato e salvato, analisi in corso...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2465"/>
@@ -2480,7 +2480,7 @@ state rimosse: %2.</translation>
     <message>
       <location filename="../src/TRoom.cpp" line="1352"/>
       <source>[ INFO ]  - Room had one or more surplus door items that were removed:%1.</source>
-      <translation>[ INFO ] - La stanza aveva una o più porte in eccesso che sono state rimosse:%1.</translation>
+      <translation>[ INFO ]  - La stanza aveva una o più porte in eccesso che sono state rimosse:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1368"/>
@@ -2492,7 +2492,7 @@ sono stati rimossi: %2.</translation>
     <message>
       <location filename="../src/TRoom.cpp" line="1375"/>
       <source>[ INFO ]  - Room had one or more surplus weight items that were removed: %1.</source>
-      <translation>[ INFO ] - La stanza aveva una o più pesi in eccesso sulle uscite che sono state rimosse:%1.</translation>
+      <translation>[ INFO ]  - La stanza aveva una o più pesi in eccesso sulle uscite che sono state rimosse:%1.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1391"/>
@@ -2702,7 +2702,7 @@ esecuzione di Mudlet - il tuo sistema ha esaurito la memoria RAM?</translation>
 (ID) ==&gt; &quot;name&quot;</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
       <translation>
-        <numerusform>[ INFO ] - L'area mancante(i) è ora chiamata:
+        <numerusform>[ INFO ]  - L'area mancante(i) è ora chiamata:
 (ID) ==&gt; &quot;name&quot;</numerusform>
         <numerusform>[ INFO ] - L'area mancante(i) è ora chiamata:
 (ID) ==&gt; &quot;name&quot;</numerusform>
@@ -2724,24 +2724,24 @@ nel file di mappa (e non è lo Stanza ID riservato -1), ora cerco di capire qual
       <location filename="../src/TRoomDB.cpp" line="760"/>
       <source>[ INFO ]  - The renumbered area ids will be:
 Old ==&gt; New</source>
-      <translation>[ INFO ] - Gli Area ID rinumerati saranno:
+      <translation>[ INFO ]  - Gli Area ID rinumerati saranno:
 Vecchio ==&gt; Nuovo</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="778"/>
       <source>[ INFO ]  - The area with this bad id was renumbered to: %1.</source>
-      <translation>[ INFO ] - L'area con questo id errato è stata rinumerata in: %1.</translation>
+      <translation>[ INFO ]  - L'area con questo id errato è stata rinumerata in: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="779"/>
       <source>[ INFO ]  - This area was renumbered from the bad id: %1.</source>
-      <translation>[ INFO ] - Questa area è stata rinumerata dall'id errato: %1.</translation>
+      <translation>[ INFO ]  - Questa area è stata rinumerata dall'id errato: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="822"/>
       <location filename="../src/TRoomDB.cpp" line="825"/>
       <source>[ INFO ]  - Area id numbering is satisfactory.</source>
-      <translation>[ INFO ] - La numerazione degli ID area è corretta.</translation>
+      <translation>[ INFO ]  - La numerazione degli ID area è corretta.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="833"/>
@@ -2759,24 +2759,24 @@ nel file di mappa, ora cerco di capire quale ID utilizzare.</translation>
       <location filename="../src/TRoomDB.cpp" line="845"/>
       <source>[ INFO ]  - The renumbered rooms will be:
 </source>
-      <translation>[ INFO ] - Le stanze rinumerate sono:
+      <translation>[ INFO ]  - Le stanze rinumerate sono:
 </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="861"/>
       <source>[ INFO ]  - This room with the bad id was renumbered to: %1.</source>
-      <translation>[ INFO ] - La stanza con questo id errato è stata rinumerata in: %1.</translation>
+      <translation>[ INFO ]  - La stanza con questo id errato è stata rinumerata in: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="862"/>
       <source>[ INFO ]  - This room was renumbered from the bad id: %1.</source>
-      <translation>[ INFO ] - Questa stanza è stata rinumerata dall'id errato: %1.</translation>
+      <translation>[ INFO ]  - Questa stanza è stata rinumerata dall'id errato: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="898"/>
       <location filename="../src/TRoomDB.cpp" line="901"/>
       <source>[ INFO ]  - Room id numbering is satisfactory.</source>
-      <translation>[ INFO ] - La numerazione degli ID stanza è corretta.</translation>
+      <translation>[ INFO ]  - La numerazione degli ID stanza è corretta.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="918"/>
@@ -2815,7 +2815,7 @@ L'anomalia è stata risolta facilmente.</translation>
 should be recording as possessing, they were:
 %3
 they have been added.</source>
-      <translation>[ INFO ] - Nell' Area ID: %1 erano presenti %2 stanze mancanti rispetto
+      <translation>[ INFO ]  - Nell' Area ID: %1 erano presenti %2 stanze mancanti rispetto
 a quelle indicate, sono:
 %3
 sono state aggiunte.</translation>
@@ -2836,7 +2836,7 @@ sono state aggiunte.</translation>
 should be recording as possessing, they were:
 %3
 they have been removed.</source>
-      <translation>[ INFO ] - Nell' Area ID: %1 erano presenti %2 stanze in più rispetto
+      <translation>[ INFO ]  - Nell' Area ID: %1 erano presenti %2 stanze in più rispetto
 a quelle indicate, sono:
 %3
 sono state cancellate.</translation>
@@ -2856,7 +2856,7 @@ sono state cancellate.</translation>
       <source>[  OK  ]  - The changes made are:
 (ID) &quot;old name&quot; ==&gt; &quot;new name&quot;
 </source>
-      <translation>[ OK ] - Le modifiche effettuate sono:
+      <translation>[  OK  ]  - Le modifiche effettuate sono:
 (ID) &quot;vecchio nome&quot; ==&gt; &quot;nuovo nome&quot;
 </translation>
     </message>
@@ -2868,7 +2868,7 @@ sono state cancellate.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1170"/>
       <source>[ INFO ]  - Area name changed to prevent duplicates or unnamed ones; old name: &quot;%1&quot;, new name: &quot;%2&quot;.</source>
-      <translation>[ INFO ] - Nome Area modificato per evitare duplicati o nomi indefiniti; vecchio nome: &quot;%1&quot;, nuovo nome: &quot;%2&quot;.</translation>
+      <translation>[ INFO ]  - Nome Area modificato per evitare duplicati o nomi indefiniti; vecchio nome: &quot;%1&quot;, nuovo nome: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1179"/>
@@ -2891,7 +2891,19 @@ another that exists at the time.
   If there were more than one area without a name then all but the
 first will also gain a suffix in this manner.
 %2</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - A causa di alcuni valori non controllati in passato, Mudlet ha
+permesso all'utente di avere più zone con lo stesso nome o senza nome.
+Queste ha reso alcune situazioni confuse e ora non è più consentito.
+  Per risolvere queste situazioni ad un'area senza nome (anche creata
+in futuro) sarà automaticamente assegnato il nome &quot;%1&quot;.
+  In caso venga rilevato un nome area duplicato, a tutti gli elementi dopo
+il primo, sarà aggiunto un suffisso &quot;_###&quot; dove &quot;###&quot;
+è un numero crescente; puoi cambiare questi nomi aggiungendo per esempio 
+&quot;(nome sotto - area)&quot; o un altro testo a tua discrezione purché
+il nome della zona non sia duplicato con un'altra esistente.
+  Se c'erano più aree senza un nome allora tutte tranne la prima riceveranno
+un suffisso seguendo le regole indicate sopra.
+%2</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1196"/>
@@ -2912,7 +2924,17 @@ another that exists at the time.
   If there were more than one area without a name then all but the
 first will also gain a suffix in this manner.
 %1)</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - A causa di alcuni valori non controllati in passato, Mudlet ha
+permesso all'utente di avere più zone con lo stesso nome.
+Queste ha reso alcune situazioni confuse e ora non è più consentito.
+  In caso venga rilevato un nome area duplicato, a tutti gli elementi dopo
+il primo, sarà aggiunto un suffisso &quot;_###&quot; dove &quot;###&quot;
+è un numero crescente; puoi cambiare questi nomi aggiungendo per esempio 
+&quot;(nome sotto - area)&quot; o un altro testo a tua discrezione purché
+il nome della zona non sia duplicato con un'altra esistente.
+  Se c'erano più aree senza un nome allora tutte tranne la prima riceveranno
+un suffisso seguendo le regole indicate sopra.
+%1)</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1212"/>
@@ -2932,14 +2954,23 @@ suffix where each &quot;###&quot; is an increasing number; you may wish to
 change these, perhaps by adding more meaningful area names but it is
 entirely up to you what is used, other then you will not be able to
 set one area&apos;s name to that of another that exists at the time.</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - A causa di alcuni valori non controllati in passato, Mudlet ha
+permesso all'utente di un'area senza nome.
+Queste ha reso alcune situazioni confuse e ora non è più consentito.
+  Per risolvere queste situazioni, ad un'area senza nome (anche creata
+in futuro) sarà automaticamente assegnato il nome &quot;%1&quot;.
+  In caso venga rilevato un nome area duplicato, a tutti gli elementi dopo
+il primo, sarà aggiunto un suffisso &quot;_###&quot; dove &quot;###&quot;
+è un numero crescente; puoi cambiare questi nomi aggiungendo per esempio 
+&quot;(nome sotto - area)&quot; o un altro testo a tua discrezione purché
+il nome della zona non sia duplicato con un'altra esistente.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1239"/>
       <source>[ INFO ]  - Default (reset) area name (for rooms that have not been assigned to an
 area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
-      <translation>[ INFO ]  - Area predefinita (per le stanze che non sono state assegnate
-ad una zona) non trovata. Aggiungo &quot;%1&quot; invece che l'Area ID riservato -1.</translation>
+      <translation>[ INFO ]  - Nome area predefinito (reimpostazione) (per le sale che non sono state assegnate a una zona
+) non trovata, aggiungendo &quot;%1&quot; contro l'id -1 id riservato.</translation>
     </message>
   </context>
   <context>
@@ -3893,14 +3924,14 @@ per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
       <location filename="../src/ctelnet.cpp" line="540"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2
 </source>
-      <translation>[ INFO ] - L'indirizzo IP di %1 è stato trovato: %2
+      <translation>[ INFO ]  - L'indirizzo IP di %1 è stato trovato: %2
 </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="541"/>
       <source>[ INFO ]  - Trying to connect to %1: %2 ...
 </source>
-      <translation>[ INFO ] - Tentativo di connessione a %1: %2 ...
+      <translation>[ INFO ]  - Tentativo di connessione a %1: %2 ...
 </translation>
     </message>
     <message>
@@ -3917,7 +3948,7 @@ o il tuo DNS non è raggiungibile.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="364"/>
       <source>[ INFO ]  - Looking up the IP address of server:</source>
-      <translation>[ INFO ] - Ricerca dell'indirizzo IP del server:</translation>
+      <translation>[ INFO ]  - Ricerca dell'indirizzo IP del server:</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="386"/>
@@ -3927,18 +3958,18 @@ o il tuo DNS non è raggiungibile.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="409"/>
       <source>[ INFO ]  - A secure connection has been established successfully.</source>
-      <translation>[ INFO ] - La connessione sicura è stata stabilita con successo.</translation>
+      <translation>[ INFO ]  - La connessione sicura è stata stabilita con successo.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="411"/>
       <source>[ INFO ]  - A connection has been established successfully.</source>
-      <translation>[ INFO ] - La connessione è stata stabilita con successo.</translation>
+      <translation>[ INFO ]  - La connessione è stata stabilita con successo.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="449"/>
       <source>[ INFO ]  - Connection time: %1
     </source>
-      <translation>[ INFO ] - Tempo di connessione: %1
+      <translation>[ INFO ]  - Tempo di connessione: %1
     </translation>
     </message>
     <message>
@@ -3950,7 +3981,7 @@ o il tuo DNS non è raggiungibile.</translation>
       <location filename="../src/ctelnet.cpp" line="533"/>
       <source>[ INFO ]  - Trying secure connection to %1: %2 ...
 </source>
-      <translation>[ INFO ] - Tentativo di connessione sicura a %1: %2 ...
+      <translation>[ INFO ]  - Tentativo di connessione sicura a %1: %2 ...
 </translation>
     </message>
     <message>
@@ -3958,14 +3989,14 @@ o il tuo DNS non è raggiungibile.</translation>
       <location filename="../src/ctelnet.cpp" line="1614"/>
       <source>[ INFO ]  - The server wants to upgrade the GUI to new version &apos;%1&apos;.
 Uninstalling old version &apos;%2&apos;.</source>
-      <translation>[ INFO ] - Il server vuole aggiornare la GUI alla nuova versione &apos;%1&apos;.
+      <translation>[ INFO ]  - Il server vuole aggiornare la GUI alla nuova versione &apos;%1&apos;.
 Disinstallazione della vecchia versione &apos;%2&apos;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1344"/>
       <location filename="../src/ctelnet.cpp" line="1625"/>
       <source>[  OK  ]  - Package is already installed.</source>
-      <translation>[  OK  ] - Il package è già installato.</translation>
+      <translation>[  OK  ]  - Il package è già installato.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1351"/>
@@ -3984,7 +4015,7 @@ Disinstallazione della vecchia versione &apos;%2&apos;.</translation>
       <location filename="../src/ctelnet.cpp" line="1342"/>
       <location filename="../src/ctelnet.cpp" line="1623"/>
       <source>[ INFO ]  - Server offers downloadable GUI (url=&apos;%1&apos;) (package=&apos;%2&apos;).</source>
-      <translation>[ INFO ] - Il server offre una GUI scaricabile (url=&apos;%1&apos;) (package=&apos;%2&apos;).</translation>
+      <translation>[ INFO ]  - Il server offre una GUI scaricabile (url=&apos;%1&apos;) (package=&apos;%2&apos;).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="477"/>
@@ -4034,7 +4065,7 @@ Motivo: </translation>
       <location filename="../src/ctelnet.cpp" line="2011"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
-      <translation>[ INFO ] - Caricamento file di replay:
+      <translation>[ INFO ]  - Caricamento file di replay:
 &quot;%1&quot;.</translation>
     </message>
     <message>
@@ -4063,7 +4094,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="2068"/>
       <source>[  OK  ]  - The replay has ended.</source>
-      <translation>[  OK  ] - Il file di replay è terminato.</translation>
+      <translation>[  OK  ]  - Il file di replay è terminato.</translation>
     </message>
   </context>
   <context>
@@ -9495,7 +9526,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="3784"/>
       <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
-      <translation>[  OK  ] - Profilo &quot;%1&quot; caricato in modalità offline.</translation>
+      <translation>[  OK  ]  - Profilo &quot;%1&quot; caricato in modalità offline.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3809"/>
