@@ -5012,7 +5012,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="96"/>
       <source>Copy settings only</source>
-      <translation type="unfinished"/>
+      <translation>仅复制设置</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="423"/>
@@ -5394,7 +5394,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="637"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-mm-dd hh-mm-ss（例如，1970-01-01 00-00-00）</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="639"/>
@@ -5404,22 +5404,22 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="640"/>
       <source>yyyy-MM-dd (concatenate daily logs in, e.g. 1970-01-01%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd（连接每日登录，例如1970-01-01）</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="643"/>
       <source>yyyy-MM (concatenate month logs in, e.g. 1970-01%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-mm（连接月份登录，例如1970-01）</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="644"/>
       <source>Named file (concatenate logs in one file)</source>
-      <translation type="unfinished"/>
+      <translation>命名文件（连接日志到一个文件中）</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="675"/>
       <source>Other profiles to Map to:</source>
-      <translation type="unfinished"/>
+      <translation>要映射到的其他配置文件：</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="713"/>
