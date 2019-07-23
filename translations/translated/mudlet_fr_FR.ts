@@ -1234,7 +1234,7 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="190"/>
       <source>ISO 8859-8 (Hebrew Visual)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-8 (Hébreu visuel)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="209"/>
@@ -1312,43 +1312,43 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="456"/>
       <source>WINDOWS-1250 (Central European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1250 (Europe centrale)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="475"/>
       <source>WINDOWS-1251 (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1251 (Cyrillique)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="494"/>
       <source>WINDOWS-1252 (Western)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1252 (Europe de l'Ouest)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="513"/>
       <source>WINDOWS-1253 (Greek)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1253 (Grec)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="532"/>
       <source>WINDOWS-1254 (Turkish)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1254 (Turc)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="551"/>
       <source>WINDOWS-1255 (Hebrew)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1255 (Hébreu)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="570"/>
       <source>WINDOWS-1256 (Arabic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1256 (Arabe)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="589"/>
@@ -1368,12 +1368,12 @@ rooms:</source>
     <message>
       <location filename="../src/TCommandLine.cpp" line="585"/>
       <source>Add to user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>Ajouter au dictionnaire utilisateur</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="587"/>
       <source>Remove from user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>Supprimer du dictionnaire utilisateur</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="591"/>
@@ -1411,33 +1411,33 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="116"/>
       <source>Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Console de débogage</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="796"/>
       <source>Save profile?</source>
-      <translation type="unfinished"/>
+      <translation>Enregistrer le profil ?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="796"/>
       <source>Do you want to save the profile %1?</source>
-      <translation type="unfinished"/>
+      <translation>Voulez-vous enregistrer le profil %1 ?</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="809"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>Impossible d'enregistrer le profil</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="809"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Désolé, impossible d'enregistrer votre profil - erreur reçue : %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="882"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {2 of 2}).</comment>
-      <translation type="unfinished"/>
+      <translation>fichier journal</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="917"/>
@@ -1454,7 +1454,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="972"/>
       <source>Mudlet MUD Client version: %1%2</source>
-      <translation type="unfinished"/>
+      <translation>Version du Client Mudlet MUD : %1%2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="974"/>
@@ -1464,7 +1464,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2425"/>
       <source>System Message: %1</source>
-      <translation type="unfinished"/>
+      <translation>Message système : %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2572"/>
@@ -1653,21 +1653,21 @@ your only warning about this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13954"/>
       <source>ERROR</source>
-      <translation type="unfinished"/>
+      <translation>ERREUR</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13955"/>
       <location filename="../src/TLuaInterpreter.cpp" line="13966"/>
       <source>object</source>
       <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>objet</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="13955"/>
       <location filename="../src/TLuaInterpreter.cpp" line="13966"/>
       <source>function</source>
       <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>fonction</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14933"/>
@@ -1678,7 +1678,7 @@ your only warning about this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15037"/>
       <location filename="../src/TLuaInterpreter.cpp" line="15211"/>
       <source>no error message available from Lua</source>
-      <translation type="unfinished"/>
+      <translation>aucun message d'erreur disponible depuis Lua</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14935"/>
@@ -1689,7 +1689,7 @@ your only warning about this command...!</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15039"/>
       <location filename="../src/TLuaInterpreter.cpp" line="15213"/>
       <source>Lua error:</source>
-      <translation type="unfinished"/>
+      <translation>Erreur Lua :</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14938"/>
