@@ -5108,7 +5108,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="94"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Скопировать</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="96"/>
@@ -6023,7 +6023,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="229"/>
       <location filename="../src/dlgRoomExits.cpp" line="1950"/>
       <source>Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.</source>
-      <translation type="unfinished"/>
+      <translation>Задайте положительное значение, чтобы переопределить значение по умолчанию (Room) для использования этого маршрута выхода, нулевое значение назначает значение по умолчанию.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="231"/>
@@ -7697,7 +7697,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="212"/>
       <source>IRC</source>
-      <translation type="unfinished"/>
+      <translation>IRC</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="215"/>
@@ -9222,13 +9222,13 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="549"/>
       <source>Disconnect</source>
-      <translation type="unfinished"/>
+      <translation>Отключиться</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="601"/>
       <location filename="../src/mudlet.cpp" line="610"/>
       <source>Discord</source>
-      <translation type="unfinished"/>
+      <translation>Discord</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="608"/>
@@ -9243,7 +9243,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="665"/>
       <source>Package Exporter</source>
-      <translation type="unfinished"/>
+      <translation>Экспортер пакетов</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="556"/>
