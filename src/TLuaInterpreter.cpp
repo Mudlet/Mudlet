@@ -10216,6 +10216,26 @@ int TLuaInterpreter::downloadFile(lua_State* L)
         request.setSslConfiguration(config);
     }
 #endif
+
+    if (host.mUseProxy && !host.mProxyAddress.isEmpty() && host.mProxyPort != 0) {
+        if (!host.mLuaInterpreter.mpDownloaderProxy) {
+            host.mLuaInterpreter.mpDownloaderProxy = std::make_unique<QNetworkProxy>(QNetworkProxy::Socks5Proxy);
+        }
+        auto& proxy = host.mLuaInterpreter.mpDownloaderProxy;
+        proxy->setHostName(host.mProxyAddress);
+        proxy->setPort(host.mProxyPort);
+        if (!host.mProxyUsername.isEmpty()) {
+            proxy->setUser(host.mProxyUsername);
+        }
+        if (!host.mProxyPassword.isEmpty()) {
+            proxy->setPassword(host.mProxyPassword);
+        }
+
+        host.mLuaInterpreter.mpFileDownloader->setProxy(*proxy);
+    } else {
+        host.mLuaInterpreter.mpFileDownloader->setProxy(QNetworkProxy::DefaultProxy);
+    }
+
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->get(request);
     host.mLuaInterpreter.downloadMap.insert(reply, localFile);
     lua_pushboolean(L, true);

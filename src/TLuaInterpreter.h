@@ -523,6 +523,7 @@ private:
 #endif
 
     QNetworkAccessManager* mpFileDownloader;
+    std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
 
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;
