@@ -5694,7 +5694,7 @@ int TLuaInterpreter::setItalics(lua_State* L)
     }
 }
 
-// Documentation: ? - public function missing documentation in wiki
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setOverline 
 int TLuaInterpreter::setOverline(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -5738,7 +5738,7 @@ int TLuaInterpreter::setOverline(lua_State* L)
     }
 }
 
-// Documentation: ? - public function missing documentation in wiki
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setReverse
 int TLuaInterpreter::setReverse(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -10383,7 +10383,7 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
     }
 }
 
-// Documentation: ? - public function missing documentation in wiki
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomChar
 int TLuaInterpreter::getRoomChar(lua_State* L)
 {
     int id;
@@ -11095,7 +11095,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
     return 0;
 }
 
-// Documentation: ? - public function missing documentation in wiki
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMergeTables
 int TLuaInterpreter::setMergeTables(lua_State* L)
 {
     Host& host = getHostFromLua(L);
