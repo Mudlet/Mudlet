@@ -3560,7 +3560,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="753"/>
       <source>Third Party</source>
-      <translation type="unfinished"/>
+      <translation>Tierce-partie</translation>
     </message>
   </context>
   <context>
@@ -5216,7 +5216,7 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="135"/>
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2}).</comment>
-      <translation type="unfinished"/>
+      <translation>fichier journal</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="181"/>
@@ -5336,28 +5336,28 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1832"/>
       <source>Save Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Enregistrer la carte Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1832"/>
       <source>Mudlet map (*.dat)</source>
       <comment>Do not change the extension text (in braces) - it is needed programmatically!</comment>
-      <translation type="unfinished"/>
+      <translation>Carte Mudlet (*.dat)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1842"/>
       <source>Saving map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Enregistrement de la carte - veuillez patienter...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1852"/>
       <source>Saved map to %1.</source>
-      <translation type="unfinished"/>
+      <translation>Carte enregistrée vers %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1854"/>
       <source>Could not save map to %1.</source>
-      <translation type="unfinished"/>
+      <translation>Impossible d'enregistrer la carte vers %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1890"/>
@@ -5790,7 +5790,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="216"/>
       <source>(room ID)</source>
       <comment>Placeholder, if no room ID is set for an exit, yet. This string is used in 2 places, ensure they match!</comment>
-      <translation type="unfinished"/>
+      <translation>(ID de salle)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="127"/>
@@ -5800,7 +5800,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="2324"/>
       <source>(command or Lua script)</source>
       <comment>Placeholder, if a special exit has no code given, yet. This string is also used programmatically - ensure all five instances are the same</comment>
-      <translation type="unfinished"/>
+      <translation>(commande ou script Lua)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="140"/>
@@ -6346,7 +6346,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="710"/>
       <source>start of line</source>
-      <translation type="unfinished"/>
+      <translation>début de ligne</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2691"/>
@@ -6438,7 +6438,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="3175"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4018"/>
       <source>New trigger</source>
-      <translation type="unfinished"/>
+      <translation>Nouveau déclencheur</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3274"/>
@@ -7347,27 +7347,27 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="109"/>
       <source>Options</source>
-      <translation type="unfinished"/>
+      <translation>Options</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="116"/>
       <source>Help</source>
-      <translation type="unfinished"/>
+      <translation>Aide</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="126"/>
       <source>About</source>
-      <translation type="unfinished"/>
+      <translation>À propos</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="133"/>
       <source>Games</source>
-      <translation type="unfinished"/>
+      <translation>Jeux</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="148"/>
       <source>Play</source>
-      <translation type="unfinished"/>
+      <translation>Jouer</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="151"/>
@@ -7397,7 +7397,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="212"/>
       <source>IRC</source>
-      <translation type="unfinished"/>
+      <translation>IRC</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="215"/>
@@ -7453,47 +7453,47 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="305"/>
       <source>Discord help channel</source>
-      <translation type="unfinished"/>
+      <translation>Canal d'aide Discord</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="156"/>
       <source>Disconnect</source>
-      <translation type="unfinished"/>
+      <translation>Déconnecter</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="164"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Reconnecter</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="172"/>
       <source>Preferences</source>
-      <translation type="unfinished"/>
+      <translation>Préférences</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="180"/>
       <source>Script editor</source>
-      <translation type="unfinished"/>
+      <translation>Éditeur de Script</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="188"/>
       <source>Notepad</source>
-      <translation type="unfinished"/>
+      <translation>Bloc-notes</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="196"/>
       <source>API Reference</source>
-      <translation type="unfinished"/>
+      <translation>Références de l'API</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="236"/>
       <source>Online forum</source>
-      <translation type="unfinished"/>
+      <translation>Forum en ligne</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="204"/>
       <source>About Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>A propos de Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="191"/>
@@ -7514,7 +7514,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="220"/>
       <source>Video tutorials</source>
-      <translation type="unfinished"/>
+      <translation>Tutoriels vidéos</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="228"/>
@@ -7534,7 +7534,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="257"/>
       <source>Show map</source>
-      <translation type="unfinished"/>
+      <translation>Afficher la carte</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="265"/>
@@ -7695,12 +7695,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/module_manager.ui" line="128"/>
       <source>Uninstall</source>
-      <translation type="unfinished"/>
+      <translation>Désinstaller</translation>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="141"/>
       <source>Install</source>
-      <translation type="unfinished"/>
+      <translation>Installer</translation>
     </message>
     <message>
       <location filename="../src/ui/module_manager.ui" line="148"/>
@@ -7884,7 +7884,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="197"/>
       <source>Breton (France)</source>
-      <translation type="unfinished"/>
+      <translation>Breton (France)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="198"/>
@@ -7949,67 +7949,67 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="210"/>
       <source>German</source>
-      <translation type="unfinished"/>
+      <translation>Allemand</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="211"/>
       <source>German (Austria)</source>
-      <translation type="unfinished"/>
+      <translation>Allemand (Autriche)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="212"/>
       <source>German (Austria, revised by F M Baumann)</source>
-      <translation type="unfinished"/>
+      <translation>Allemand (Autriche, révisé par F M Baumann)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="213"/>
       <source>German (Belgium)</source>
-      <translation type="unfinished"/>
+      <translation>Allemand (Belgique)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="214"/>
       <source>German (Switzerland)</source>
-      <translation type="unfinished"/>
+      <translation>Allemand (Suisse)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="215"/>
       <source>German (Switzerland, revised by F M Baumann)</source>
-      <translation type="unfinished"/>
+      <translation>Allemand (Suisse, révisé par F M Baumann)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="216"/>
       <source>German (Germany/Belgium/Luxemburg)</source>
-      <translation type="unfinished"/>
+      <translation>Allemand (Allemagne/Belgique/Luxembourg)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="217"/>
       <source>German (Germany/Belgium/Luxemburg, revised by F M Baumann)</source>
-      <translation type="unfinished"/>
+      <translation>Allemand (Allemagne/Belgique/Luxembourg, révisé par F M Baumann)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="218"/>
       <source>German (Liechtenstein)</source>
-      <translation type="unfinished"/>
+      <translation>Allemand (Liechtenstein)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="219"/>
       <source>German (Luxembourg)</source>
-      <translation type="unfinished"/>
+      <translation>Allemand (Luxembourg)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="220"/>
       <source>Greek</source>
-      <translation type="unfinished"/>
+      <translation>Grec</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="221"/>
       <source>Greek (Greece)</source>
-      <translation type="unfinished"/>
+      <translation>Grec (Grèce)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="222"/>
       <source>English</source>
-      <translation type="unfinished"/>
+      <translation>Anglais</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="223"/>
