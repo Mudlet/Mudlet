@@ -19,12 +19,12 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="282"/>
       <source>No data received from server</source>
-      <translation type="unfinished"/>
+      <translation>Aucune donnée reçue du serveur</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="293"/>
       <source>Could not verify download integrity.</source>
-      <translation type="unfinished"/>
+      <translation>Impossible de vérifier l'intégrité du téléchargement.</translation>
     </message>
   </context>
   <context>
@@ -348,7 +348,7 @@ veuillez patienter...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
       <source>line %1: %2</source>
-      <translation type="unfinished"/>
+      <translation>ligne %1: %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="149"/>
@@ -598,25 +598,25 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2375"/>
       <source>Text label or image label?</source>
       <comment>2D Mapper create label dialog text</comment>
-      <translation type="unfinished"/>
+      <translation>Étiquette de texte ou étiquette d'image ?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2376"/>
       <source>Text Label</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Étiquette de texte</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2377"/>
       <source>Image Label</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Étiquette d'image</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2381"/>
       <source>Enter label text.</source>
       <comment>2D Mapper create label dialog title/text</comment>
-      <translation type="unfinished"/>
+      <translation>Entrez le texte de l'étiquette.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2388"/>
@@ -640,7 +640,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2400"/>
       <source>Draw label as background or on top of everything?</source>
       <comment>2D Mapper create label dialog text</comment>
-      <translation type="unfinished"/>
+      <translation>Dessiner l'étiquette comme arrière-plan ou au-dessus de tout?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2401"/>
@@ -658,7 +658,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2646"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
-      <translation type="unfinished"/>
+      <translation>Faites glisser pour sélectionner plusieurs pièces ou étiquettes, relâchez pour finir...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2797"/>
@@ -706,7 +706,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2833"/>
       <source>Create new map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>Créer une nouvelle carte</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2836"/>
@@ -760,61 +760,61 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2867"/>
       <source>Spread</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Écarter</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2868"/>
       <source>Increase map X-Y spacing for the selected group of rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Augmenter l'espacement X-Y de la carte pour le groupe de pièces sélectionné</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2871"/>
       <source>Shrink</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Réduire</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2872"/>
       <source>Decrease map X-Y spacing for the selected group of rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Réduire l'espacement X-Y de la carte pour le groupe de pièces sélectionné</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2875"/>
       <source>Lock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Verrouiller</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2876"/>
       <source>Lock room for speed walks</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Verrouiller la salle pour les déplacements rapides</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2879"/>
       <source>Unlock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Déverrouiller</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2880"/>
       <source>Unlock room for speed walks</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Déverrouiller la salle pour les déplacements rapides</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2883"/>
       <source>Weight</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Poids</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2884"/>
       <source>Set room weight</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Définir le poids de la pièce</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2887"/>
@@ -826,13 +826,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2888"/>
       <source>Set room exits</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Définir les sorties de la salle</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2891"/>
       <source>Symbol</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Symbole</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2892"/>
