@@ -3795,7 +3795,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1351"/>
       <location filename="../src/ctelnet.cpp" line="1632"/>
       <source>downloading game GUI from server</source>
-      <translation type="unfinished"/>
+      <translation>téléchargement de l'interface graphique du jeu à partir du serveur</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1351"/>
@@ -3821,13 +3821,13 @@ Reason: </source>
       <location filename="../src/ctelnet.cpp" line="1766"/>
       <source>ERROR</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>ERREUR</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1778"/>
       <source>LUA</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>LUA</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1789"/>
@@ -3845,7 +3845,7 @@ Reason: </source>
       <location filename="../src/ctelnet.cpp" line="1811"/>
       <source>INFO</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>INFO</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1822"/>
@@ -3916,32 +3916,32 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="252"/>
       <source>Red (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Rouge (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="262"/>
       <source>Green (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Vert (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="272"/>
       <source>Blue (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Bleu (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="282"/>
       <source>16 + 36 x R + 6 x G + B =</source>
-      <translation type="unfinished"/>
+      <translation>16 + 36 x R + 6 x G + B =</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="343"/>
       <source>[16]</source>
-      <translation type="unfinished"/>
+      <translation>[16]</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="353"/>
       <source>Set to RGB value</source>
-      <translation type="unfinished"/>
+      <translation>Définir à la valeur RVB</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="363"/>
@@ -3989,7 +3989,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="139"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Enregistrer</translation>
     </message>
   </context>
   <context>
@@ -3997,22 +3997,22 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="20"/>
       <source>Select a profile to connect with</source>
-      <translation type="unfinished"/>
+      <translation>Sélectionnez un profil avec lequel vous connecter</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2081"/>
       <source>Remove</source>
-      <translation type="unfinished"/>
+      <translation>Supprimer</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2100"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Copier</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2125"/>
       <source>New</source>
-      <translation type="unfinished"/>
+      <translation>Nouveau</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2193"/>
@@ -4022,7 +4022,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2199"/>
       <source>Profile name:</source>
-      <translation type="unfinished"/>
+      <translation>Nom de profil :</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2219"/>
@@ -4107,12 +4107,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2475"/>
       <source>Website:</source>
-      <translation type="unfinished"/>
+      <translation>Site web :</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2519"/>
       <source>Game description</source>
-      <translation type="unfinished"/>
+      <translation>Description du jeu</translation>
     </message>
   </context>
   <context>
@@ -4135,7 +4135,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="58"/>
       <source>Style:</source>
-      <translation type="unfinished"/>
+      <translation>Style :</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="43"/>
@@ -4223,62 +4223,62 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="212"/>
       <source>NW</source>
-      <translation type="unfinished"/>
+      <translation>NO</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="235"/>
       <source>N</source>
-      <translation type="unfinished"/>
+      <translation>N</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="258"/>
       <source>NE</source>
-      <translation type="unfinished"/>
+      <translation>NE</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="297"/>
       <source>UP</source>
-      <translation type="unfinished"/>
+      <translation>HAUT</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="336"/>
       <source>W</source>
-      <translation type="unfinished"/>
+      <translation>O</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="346"/>
       <source>E</source>
-      <translation type="unfinished"/>
+      <translation>E</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="356"/>
       <source>IN</source>
-      <translation type="unfinished"/>
+      <translation>INTERIEUR</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="382"/>
       <source>OUT</source>
-      <translation type="unfinished"/>
+      <translation>EXTERIEUR</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="392"/>
       <source>SW</source>
-      <translation type="unfinished"/>
+      <translation>SO</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="402"/>
       <source>S</source>
-      <translation type="unfinished"/>
+      <translation>S</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="412"/>
       <source>SE</source>
-      <translation type="unfinished"/>
+      <translation>SE</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="422"/>
       <source>DOWN</source>
-      <translation type="unfinished"/>
+      <translation>BAS</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="444"/>
@@ -4319,7 +4319,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="511"/>
       <source> Destination </source>
-      <translation type="unfinished"/>
+      <translation> Destination </translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="522"/>
@@ -4390,7 +4390,7 @@ Count</source>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="67"/>
       <source>Rooms</source>
-      <translation type="unfinished"/>
+      <translation>Salles</translation>
     </message>
   </context>
   <context>
@@ -4399,7 +4399,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15082"/>
       <source>north</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>nord</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15084"/>
@@ -4728,82 +4728,82 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="77"/>
       <source>Black</source>
-      <translation type="unfinished"/>
+      <translation>Noir</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="78"/>
       <source>Red</source>
-      <translation type="unfinished"/>
+      <translation>Rouge</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="79"/>
       <source>Green</source>
-      <translation type="unfinished"/>
+      <translation>Vert</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="80"/>
       <source>Yellow</source>
-      <translation type="unfinished"/>
+      <translation>Jaune</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="81"/>
       <source>Blue</source>
-      <translation type="unfinished"/>
+      <translation>Bleu</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="82"/>
       <source>Magenta</source>
-      <translation type="unfinished"/>
+      <translation>Magenta</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="83"/>
       <source>Cyan</source>
-      <translation type="unfinished"/>
+      <translation>Cyan</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="84"/>
       <source>White (Light gray)</source>
-      <translation type="unfinished"/>
+      <translation>Blanc (Gris clair)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="86"/>
       <source>Light black (Dark gray)</source>
-      <translation type="unfinished"/>
+      <translation>Noir clair (Gris foncé)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="87"/>
       <source>Light red</source>
-      <translation type="unfinished"/>
+      <translation>Rouge clair</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="88"/>
       <source>Light green</source>
-      <translation type="unfinished"/>
+      <translation>Vert clair</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="89"/>
       <source>Light yellow</source>
-      <translation type="unfinished"/>
+      <translation>Jaune clair</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="90"/>
       <source>Light blue</source>
-      <translation type="unfinished"/>
+      <translation>Bleu clair</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="91"/>
       <source>Light magenta</source>
-      <translation type="unfinished"/>
+      <translation>Magenta clair</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="92"/>
       <source>Light cyan</source>
-      <translation type="unfinished"/>
+      <translation>Cyan clair</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="93"/>
       <source>Light white</source>
-      <translation type="unfinished"/>
+      <translation>Blanc clair</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="218"/>
@@ -4814,7 +4814,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="405"/>
       <source>All color options are showing.</source>
-      <translation type="unfinished"/>
+      <translation>Toutes les options de couleur s'affichent.</translation>
     </message>
   </context>
   <context>
@@ -4853,27 +4853,27 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="72"/>
       <source>Offline</source>
-      <translation type="unfinished"/>
+      <translation>Hors ligne</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="94"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Copier</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="96"/>
       <source>Copy settings only</source>
-      <translation type="unfinished"/>
+      <translation>Copier les paramètres uniquement</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="423"/>
       <source>Could not create the new profile folder on your computer.</source>
-      <translation type="unfinished"/>
+      <translation>Impossible de créer le nouveau dossier de profil sur votre ordinateur.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="518"/>
       <source>new profile name</source>
-      <translation type="unfinished"/>
+      <translation>nouveau nom de profil</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="616"/>
@@ -5002,7 +5002,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="203"/>
       <source>Restarting IRC Client</source>
-      <translation type="unfinished"/>
+      <translation>Redémarrage du client IRC</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="376"/>
@@ -5057,7 +5057,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="648"/>
       <source>Your nick has changed.</source>
-      <translation type="unfinished"/>
+      <translation>Votre pseudo a changé.</translation>
     </message>
   </context>
   <context>
@@ -5066,7 +5066,8 @@ Count</source>
       <location filename="../src/dlgMapper.cpp" line="227"/>
       <source>Cannot find a path to this room.
 </source>
-      <translation type="unfinished"/>
+      <translation>Impossible de trouver un chemin vers cette salle.
+</translation>
     </message>
   </context>
   <context>
@@ -5084,7 +5085,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="59"/>
       <source>Triggers</source>
-      <translation type="unfinished"/>
+      <translation>Déclencheurs</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="60"/>
@@ -5094,28 +5095,28 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="61"/>
       <source>Timers</source>
-      <translation type="unfinished"/>
+      <translation>Minuteurs</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="62"/>
       <source>Scripts</source>
-      <translation type="unfinished"/>
+      <translation>Scripts</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="63"/>
       <source>Keys</source>
-      <translation type="unfinished"/>
+      <translation>Touches</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="64"/>
       <source>Buttons</source>
-      <translation type="unfinished"/>
+      <translation>Boutons</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="80"/>
       <source>Export</source>
       <comment>Text for button to perform the package export on the items the user has selected.</comment>
-      <translation type="unfinished"/>
+      <translation>Exporter</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="90"/>
@@ -5186,12 +5187,12 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="45"/>
       <source>Add Files</source>
-      <translation type="unfinished"/>
+      <translation>Ajouter des fichiers</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="52"/>
       <source>Export location:</source>
-      <translation type="unfinished"/>
+      <translation>Emplacement d'exportation :</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="90"/>
