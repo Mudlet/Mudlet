@@ -6,7 +6,7 @@
     <message>
       <location filename="../src/discord.cpp" line="132"/>
       <source>via Mudlet</source>
-      <translation>通过Mudlet</translation>
+      <translation>通过 Mudlet</translation>
     </message>
   </context>
   <context>
@@ -5484,12 +5484,12 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1813"/>
       <source>Loaded map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>从 %1 加载地图。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1815"/>
       <source>Could not load map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>无法从 %1 加载地图。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1832"/>
@@ -5505,17 +5505,17 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1842"/>
       <source>Saving map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>正在保存地图 - 请稍候...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1852"/>
       <source>Saved map to %1.</source>
-      <translation type="unfinished"/>
+      <translation>保存地图到 %1。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1854"/>
       <source>Could not save map to %1.</source>
-      <translation type="unfinished"/>
+      <translation>无法将地图保存到 %1。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1890"/>
@@ -5528,17 +5528,17 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1897"/>
       <source>Creating a destination directory failed...</source>
-      <translation type="unfinished"/>
+      <translation>创建目标目录失败...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1984"/>
       <source>Backing up current map - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>正在备份当前地图 - 请稍候...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1994"/>
       <source>Could not backup the map - saving it failed.</source>
-      <translation type="unfinished"/>
+      <translation>无法备份地图 - 保存失败。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2019"/>
@@ -5583,7 +5583,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2676"/>
       <source>Could not update themes: %1</source>
-      <translation type="unfinished"/>
+      <translation>无法更新主题: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2679"/>
@@ -5680,7 +5680,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="472"/>
       <source>System dictionaries:</source>
       <comment>On *nix systems where we find the system ones we use them.</comment>
-      <translation type="unfinished"/>
+      <translation>系统字典：</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="503"/>
@@ -5757,7 +5757,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="3124"/>
       <source>Large icon</source>
       <comment>Discord Rich Presence large icon</comment>
-      <translation type="unfinished"/>
+      <translation>大图标</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3125"/>
@@ -6591,23 +6591,23 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="3173"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4018"/>
       <source>New trigger group</source>
-      <translation type="unfinished"/>
+      <translation>新建触发器组</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3175"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4018"/>
       <source>New trigger</source>
-      <translation type="unfinished"/>
+      <translation>新建触发器</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3274"/>
       <source>New timer group</source>
-      <translation type="unfinished"/>
+      <translation>新建计时器组</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3276"/>
       <source>New timer</source>
-      <translation type="unfinished"/>
+      <translation>新建计时器</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3364"/>
@@ -6632,41 +6632,41 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3512"/>
       <source>New alias group</source>
-      <translation type="unfinished"/>
+      <translation>新建别名组</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3514"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4126"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4196"/>
       <source>New alias</source>
-      <translation type="unfinished"/>
+      <translation>新建别名</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3603"/>
       <source>New menu</source>
-      <translation type="unfinished"/>
+      <translation>新建菜单</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3605"/>
       <source>New button</source>
-      <translation type="unfinished"/>
+      <translation>新建按钮</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3646"/>
       <source>New toolbar</source>
-      <translation type="unfinished"/>
+      <translation>新建工具栏</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3704"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4422"/>
       <source>New script group</source>
-      <translation type="unfinished"/>
+      <translation>新建脚本组</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3706"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4422"/>
       <source>New script</source>
-      <translation type="unfinished"/>
+      <translation>新建脚本</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4140"/>
@@ -6707,7 +6707,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8029"/>
       <source>Default foreground color</source>
       <comment>Color trigger default foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>设置前景色</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4874"/>
@@ -6715,7 +6715,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8032"/>
       <source>Foreground color [ANSI %1]</source>
       <comment>Color trigger ANSI foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>前景色 [ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4881"/>
@@ -6873,7 +6873,8 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7384"/>
       <source>Cannot write file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>无法写入文件 %1：
+%2。</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7619"/>
@@ -6920,7 +6921,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7888"/>
       <source>Seclect Icon</source>
-      <translation type="unfinished"/>
+      <translation>选择图标</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7888"/>
