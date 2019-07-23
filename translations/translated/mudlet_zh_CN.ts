@@ -5439,7 +5439,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="735"/>
       <source>2D Map Room Symbol scaling factor:</source>
-      <translation type="unfinished"/>
+      <translation>2D地图房间标记缩放系数：</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="755"/>
