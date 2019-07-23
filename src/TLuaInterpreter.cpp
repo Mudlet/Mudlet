@@ -10217,9 +10217,20 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     }
 #endif
 
+    upsetProxySettings(host);
+
+    QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->get(request);
+    host.mLuaInterpreter.downloadMap.insert(reply, localFile);
+    lua_pushboolean(L, true);
+    lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
+    return 2;
+}
+
+void TLuaInterpreter::upsetProxySettings(Host& host)
+{
     if (host.mUseProxy && !host.mProxyAddress.isEmpty() && host.mProxyPort != 0) {
         if (!host.mLuaInterpreter.mpDownloaderProxy) {
-            host.mLuaInterpreter.mpDownloaderProxy = std::make_unique<QNetworkProxy>(QNetworkProxy::Socks5Proxy);
+            host.mLuaInterpreter.mpDownloaderProxy = make_unique<QNetworkProxy>(QNetworkProxy::Socks5Proxy);
         }
         auto& proxy = host.mLuaInterpreter.mpDownloaderProxy;
         proxy->setHostName(host.mProxyAddress);
@@ -10235,12 +10246,6 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     } else {
         host.mLuaInterpreter.mpFileDownloader->setProxy(QNetworkProxy::DefaultProxy);
     }
-
-    QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->get(request);
-    host.mLuaInterpreter.downloadMap.insert(reply, localFile);
-    lua_pushboolean(L, true);
-    lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
-    return 2;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomArea

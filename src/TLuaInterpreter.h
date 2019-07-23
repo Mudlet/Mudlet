@@ -518,6 +518,7 @@ private:
     static std::pair<bool, QString> discordApiEnabled(lua_State* L, bool writeAccess = false);
     void setupLanguageData();
     QString readScriptFile(const QString& path) const;
+    static void upsetProxySettings(Host& host);
 #if defined(Q_OS_WIN32)
     void loadUtf8Filenames();
 #endif
