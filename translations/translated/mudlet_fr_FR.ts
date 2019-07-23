@@ -2250,7 +2250,7 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="253"/>
       <source>No area created!  Requested area ID=%1. Note: Area IDs must be &gt; 0</source>
-      <translation type="unfinished"/>
+      <translation>Aucune zone créée !  ID de zone demandée =%1. Remarque : les ID de zone doivent être > 0</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="275"/>
@@ -2260,22 +2260,22 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="981"/>
       <source>Northeast</source>
-      <translation type="unfinished"/>
+      <translation>Nord-Est</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="995"/>
       <source>Northwest</source>
-      <translation type="unfinished"/>
+      <translation>Nord-Ouest</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1023"/>
       <source>Southeast</source>
-      <translation type="unfinished"/>
+      <translation>Sud-Est</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1037"/>
       <source>Southwest</source>
-      <translation type="unfinished"/>
+      <translation>Sud-Ouest</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1142"/>
@@ -2346,17 +2346,17 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1332"/>
       <source>%1 (open)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (ouvert)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1335"/>
       <source>%1 (closed)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (fermé)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1338"/>
       <source>%1 (locked)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (verrouillé)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1341"/>
@@ -2789,7 +2789,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1190"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Copier</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1201"/>
@@ -2799,17 +2799,17 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1205"/>
       <source>Copy as image</source>
-      <translation type="unfinished"/>
+      <translation>Copier en tant qu'image</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1208"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>Selectionner tout</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1213"/>
       <source>Search on %1</source>
-      <translation type="unfinished"/>
+      <translation>Rechercher sur %1</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1231"/>
@@ -3355,14 +3355,14 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2232"/>
       <source>Index (UTF-8)</source>
       <comment>4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Index (UTF-8)</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2175"/>
       <location filename="../src/TTextEdit.cpp" line="2236"/>
       <source>Byte</source>
       <comment>5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Octet</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2179"/>
@@ -3451,12 +3451,12 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="193"/>
       <source>You are using %APPNAME% %CURRENT_VERSION%.</source>
-      <translation type="unfinished"/>
+      <translation>Vous utilisez %APPNAME% %CURRENT_VERSION%.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="303"/>
       <source>Automatically download future updates</source>
-      <translation type="unfinished"/>
+      <translation>Télécharger automatiquement les futures mises à jour</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="350"/>
@@ -3466,7 +3466,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="370"/>
       <source>Install update now</source>
-      <translation type="unfinished"/>
+      <translation>Installer la mise à jour</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="377"/>
@@ -3476,17 +3476,17 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="387"/>
       <source>Remind me later</source>
-      <translation type="unfinished"/>
+      <translation>Me le rappeler plus tard</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="392"/>
       <source>Skip this version</source>
-      <translation type="unfinished"/>
+      <translation>Ignorer cette version</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.cpp" line="542"/>
       <source>Could not open downloaded file %1</source>
-      <translation type="unfinished"/>
+      <translation>Impossible d'ouvrir le fichier téléchargé %1</translation>
     </message>
   </context>
   <context>
@@ -3496,12 +3496,12 @@ Would you like to update now?</source>
       <location filename="../src/updater.cpp" line="159"/>
       <location filename="../src/updater.cpp" line="227"/>
       <source>Update</source>
-      <translation type="unfinished"/>
+      <translation>Mise à jour</translation>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="319"/>
       <source>Restart to apply update</source>
-      <translation type="unfinished"/>
+      <translation>Redémarrer pour appliquer la mise à jour</translation>
     </message>
   </context>
   <context>
@@ -3545,17 +3545,17 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="105"/>
       <source>About Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>A propos de Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="601"/>
       <source>Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="718"/>
       <source>License</source>
-      <translation type="unfinished"/>
+      <translation>Licence</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="753"/>
