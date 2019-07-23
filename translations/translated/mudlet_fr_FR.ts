@@ -838,7 +838,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2892"/>
       <source>Set one or more symbols or letters to mark special rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Définir un ou plusieurs symboles ou lettres pour marquer des pièces spéciales</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2895"/>
@@ -1106,7 +1106,7 @@ factor of:</source>
       <location filename="../src/T2DMap.cpp" line="4078"/>
       <location filename="../src/T2DMap.cpp" line="4124"/>
       <source>Enter room weight</source>
-      <translation type="unfinished"/>
+      <translation>Entrez le poids de la pièce</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4065"/>
@@ -1153,7 +1153,7 @@ rooms:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4174"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Charger une carte Mudlet</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4176"/>
@@ -1197,14 +1197,14 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="76"/>
       <source>ISO 8859-2 (Central European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-2 (Europe centrale)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="95"/>
       <location filename="../src/TBuffer.cpp" line="380"/>
       <source>ISO 8859-3 (South European)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-3 (Europe du Sud)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="114"/>
@@ -1216,19 +1216,19 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="133"/>
       <source>ISO 8859-5 (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-5 (Cyrillique)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="152"/>
       <source>ISO 8859-6 (Arabic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-6 (Arabe)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="171"/>
       <source>ISO 8859-7 (Greek)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-7 (Grec)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="190"/>
