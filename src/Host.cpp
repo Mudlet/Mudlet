@@ -1766,3 +1766,24 @@ void Host::setName(const QString& newName)
     }
     mTimerUnit.changeHostName(newName);
 }
+
+void Host::updateProxySettings(QNetworkAccessManager* manager) {
+    if (mUseProxy && !mProxyAddress.isEmpty() && mProxyPort != 0) {
+        if (!mpDownloaderProxy) {
+            mpDownloaderProxy = make_unique<QNetworkProxy>(QNetworkProxy::Socks5Proxy);
+        }
+        auto& proxy = mpDownloaderProxy;
+        proxy->setHostName(mProxyAddress);
+        proxy->setPort(mProxyPort);
+        if (!mProxyUsername.isEmpty()) {
+            proxy->setUser(mProxyUsername);
+        }
+        if (!mProxyPassword.isEmpty()) {
+            proxy->setPassword(mProxyPassword);
+        }
+
+        manager->setProxy(*proxy);
+    } else {
+        manager->setProxy(QNetworkProxy::DefaultProxy);
+    }
+}
