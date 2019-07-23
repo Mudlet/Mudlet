@@ -358,12 +358,12 @@ veuillez patienter...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.cpp" line="145"/>
       <source>%1 @ line %2</source>
-      <translation type="unfinished"/>
+      <translation>%1 @ ligne %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="82"/>
       <source>No data found!</source>
-      <translation type="unfinished"/>
+      <translation>Aucune donnée trouvée !</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="89"/>
