@@ -4527,7 +4527,7 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="56"/>
       <source>Codepoints</source>
-      <translation type="unfinished"/>
+      <translation>编码</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="61"/>
@@ -4649,7 +4649,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15116"/>
       <source>i</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>i</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15118"/>
@@ -4661,7 +4661,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15120"/>
       <source>o</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>o</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15122"/>
@@ -4673,7 +4673,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15124"/>
       <source>u</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>u</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15126"/>
@@ -4685,7 +4685,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15128"/>
       <source>d</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>d</translation>
     </message>
   </context>
   <context>
@@ -5350,7 +5350,7 @@ Count</source>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="52"/>
       <source>Export location:</source>
-      <translation type="unfinished"/>
+      <translation>导出路径</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="90"/>
