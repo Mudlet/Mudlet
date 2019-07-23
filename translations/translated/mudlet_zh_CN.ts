@@ -5563,12 +5563,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2053"/>
       <source>Map copied, now signalling other profiles to reload it.</source>
-      <translation type="unfinished"/>
+      <translation>地图已复制, 现在显示其他配置文件以重新加载它。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2089"/>
       <source>Where should Mudlet save log files?</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet 日志文件应该保存到哪里？</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2437"/>
