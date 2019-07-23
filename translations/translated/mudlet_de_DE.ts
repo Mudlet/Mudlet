@@ -5075,7 +5075,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="96"/>
       <source>Copy settings only</source>
-      <translation type="unfinished"/>
+      <translation>Nur Einstellungen kopieren</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="423"/>
@@ -7717,7 +7717,7 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/ui/main_window.ui" line="305"/>
       <source>Discord help channel</source>
-      <translation type="unfinished"/>
+      <translation>Hilfskanal in Discord</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="156"/>
@@ -9192,17 +9192,17 @@ Starte... Viel Spaß!
       <location filename="../src/mudlet.cpp" line="601"/>
       <location filename="../src/mudlet.cpp" line="610"/>
       <source>Discord</source>
-      <translation type="unfinished"/>
+      <translation>Discord</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="608"/>
       <source>Open Discord</source>
-      <translation type="unfinished"/>
+      <translation>Discord öffnen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="613"/>
       <source>Open IRC</source>
-      <translation type="unfinished"/>
+      <translation>IRC öffnen</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="665"/>
