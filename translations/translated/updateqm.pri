@@ -35,7 +35,7 @@ write_file(lrelease_output.txt)
 message("Building translations")
 TS_FILES_NOEXT = $$replace(TS_FILES, ".ts", "")
 for(file, TS_FILES_NOEXT) {
-    system("$$QMAKE_LRELEASE $${file}.ts -compress -qm $${file}.qm >> lrelease_output.txt")
+    system("LANG=C $$QMAKE_LRELEASE $${file}.ts -compress -qm $${file}.qm >> lrelease_output.txt")
 }
 STATS_GENERATOR = $$shell_path("$${PWD}/generate-translation-stats.lua")
 
