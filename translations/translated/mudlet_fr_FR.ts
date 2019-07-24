@@ -338,7 +338,7 @@ veuillez patienter...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="445"/>
       <source>%1 secs</source>
-      <translation>%1 secondes</translation>
+      <translation>%1 seconde(s)</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="55"/>
@@ -456,7 +456,7 @@ veuillez patienter...</translation>
       <location filename="../src/T2DMap.cpp" line="3212"/>
       <location filename="../src/T2DMap.cpp" line="4877"/>
       <source>Solid line</source>
-      <translation>Ligne solide</translation>
+      <translation>Ligne continue</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3213"/>
