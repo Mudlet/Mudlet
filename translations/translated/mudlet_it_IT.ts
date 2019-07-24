@@ -2849,7 +2849,7 @@ sono state cancellate.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1156"/>
       <source>It has been detected that &quot;_###&quot; form suffixes have already been used, for simplicity in the renaming algorithm these will have been removed and possibly changed as Mudlet sorts this matter out, if a number assigned in this way &lt;b&gt;is&lt;/b&gt; important to you, you can change it back, provided you rename the area that has been allocated the suffix that was wanted first...!&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>Ho rilevato che il suffisso &quot;_###&quot; è già in uso. Per semplicità dell'algoritmo di rinomina, tutte le corrispondenze saranno rimosse e probabilmente modificate con un nuovo valore. Se un numero assegnato in questo modo &lt;b&gt;è importante&lt;/b&gt; per te, puoi ripristinarlo successivamente, a condizione che non sia occupato da un'altra area!&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1160"/>
@@ -5495,7 +5495,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="221"/>
       <source>&lt;p&gt;Some Desktop Environments tell Qt applications like Mudlet whether they should shown icons on menus, others, however do not. This control allows the user to override the setting, if needed, as follows:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Unchecked&lt;/b&gt; &apos;&lt;i&gt;off&lt;/i&gt;&apos; = Prevent menus from being drawn with icons.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Checked&lt;/b&gt; &apos;&lt;i&gt;on&lt;/i&gt;&apos; = Allow menus to be drawn with icons.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Partly checked&lt;/b&gt; &lt;i&gt;(Default) &apos;auto&apos;&lt;/i&gt; = Use the setting that the system provides.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;This setting is only processed when individual menus are created and changes may not propogate everywhere until Mudlet is restarted.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Alcuni sistemi operativi indicano ad applicazioni che usano Qt, come Mudlet, se mostrare le icone nei menù oppure nasconderle. Questa opzione permette, quando necessario, di forzare delle impostazioni specifiche:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Disattivo&lt;/b&gt; &apos;&lt;i&gt;off&lt;/i&gt;&apos; = Impedisci ai menù di visualizzare le icone.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Attivo&lt;/b&gt; &apos;&lt;i&gt;on&lt;/i&gt;&apos; = Forza i menù a mostrare le icone.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Parzialmente attivo&lt;/b&gt; &lt;i&gt;(Predefinito) &apos;auto&apos;&lt;/i&gt; = Usa le impostazioni fornite dal sistema operativo.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;Questa impostazione viene controllata solo durante la creazione dei menù, quindi i cambiamenti potrebbero non essere visibili fino al riavvio di Mudlet.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="637"/>
