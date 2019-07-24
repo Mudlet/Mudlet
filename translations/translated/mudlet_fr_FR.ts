@@ -11051,7 +11051,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="14"/>
       <source>Move rooms to another area</source>
-      <translation type="unfinished"/>
+      <translation>Déplacer des salles vers une autre zone</translation>
     </message>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="20"/>
