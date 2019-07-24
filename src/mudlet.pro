@@ -206,9 +206,9 @@ unix:!macx {
         LIBS += \
 # Some OS platforms have a hyphen (I think Cygwin does as well):
             -llua-5.1\
-# FreeFSB appends the version number to hunspell:
+# FreeBSD appends the version number to hunspell:
             -lhunspell-1.7
-# FreeFSB (at least) supports multiple Lua versions (and 5.1 is not the default anymore):
+# FreeBSD (at least) supports multiple Lua versions (and 5.1 is not the default anymore):
         INCLUDEPATH += \
             /usr/local/include/lua51
     } else {
