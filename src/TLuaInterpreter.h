@@ -48,6 +48,7 @@ extern "C" {
 
 #include <list>
 #include <string>
+#include <memory>
 
 
 class Host;
@@ -532,7 +533,14 @@ private:
     QMap<QNetworkReply*, QString> downloadMap;
 
     lua_State* pGlobalLua;
-    lua_State* pIndenterState;
+
+    struct lua_state_deleter {
+      void operator()(lua_State* ptr) const noexcept {
+        lua_close(ptr);
+      }
+    };
+
+    std::unique_ptr<lua_State, lua_state_deleter> state;
 
     QPointer<Host> mpHost;
     int mHostID;
