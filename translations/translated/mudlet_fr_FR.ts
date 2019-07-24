@@ -2499,27 +2499,27 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="37"/>
       <source>Unnamed Area</source>
-      <translation type="unfinished"/>
+      <translation>Zone sans nom</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="38"/>
       <source>Default Area</source>
-      <translation type="unfinished"/>
+      <translation>Zone par défaut</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="502"/>
       <source>Area with ID=%1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>La zone avec ID=%1 existe déjà !</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="521"/>
       <source>An Unnamed Area is (no longer) permitted!</source>
-      <translation type="unfinished"/>
+      <translation>Une zone sans nom n'est (plus) autorisée !</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="525"/>
       <source>An area called %1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>Une zone appelée %1 existe déjà !</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="610"/>
@@ -2598,7 +2598,7 @@ Old ==&gt; New</source>
       <location filename="../src/TRoomDB.cpp" line="822"/>
       <location filename="../src/TRoomDB.cpp" line="825"/>
       <source>[ INFO ]  - Area id numbering is satisfactory.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - La numérotation des ID de zone est satisfaisante.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="833"/>
@@ -3441,12 +3441,12 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="149"/>
       <source>You are using version %CURRENT_VERSION%.</source>
-      <translation type="unfinished"/>
+      <translation>Vous utilisez la version %CURRENT_VERSION%.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="177"/>
       <source>There are currently no updates available.</source>
-      <translation type="unfinished"/>
+      <translation>Il n'y a actuellement aucune mise à jour disponible.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="193"/>
@@ -3517,7 +3517,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/XMLimport.cpp" line="350"/>
       <source>Parsing area data...</source>
-      <translation type="unfinished"/>
+      <translation>Analyse des données de zone...</translation>
     </message>
     <message>
       <location filename="../src/XMLimport.cpp" line="354"/>
@@ -3628,12 +3628,12 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="236"/>
       <source>90° rotation to the left</source>
-      <translation type="unfinished"/>
+      <translation>Rotation de 90 ° vers la gauche</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="241"/>
       <source>90° rotation to the right</source>
-      <translation type="unfinished"/>
+      <translation>Rotation de 90° vers la droite</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="249"/>
