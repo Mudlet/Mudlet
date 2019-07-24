@@ -46,7 +46,6 @@
 #include <string>
 
 #if defined(Q_OS_WIN32)
-#include <Winsock2.h>
 #include <ws2tcpip.h>
 #include "mstcpip.h"
 #else
