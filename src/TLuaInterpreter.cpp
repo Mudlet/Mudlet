@@ -15153,8 +15153,6 @@ void TLuaInterpreter::setupLanguageData()
 // and we don't want to tie ourselves to it by exposing them for scripting.
 void TLuaInterpreter::initIndenterGlobals()
 {
-    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-
     Q_ASSERT_X(!pIndenterState, "TLuaInterpreter::initIndenterGlobals()", "Indenter state is already initialized - re-initializing it is very expensive!");
 
     pIndenterState.reset(newstate());
@@ -15213,16 +15211,12 @@ void TLuaInterpreter::initIndenterGlobals()
                           .arg(QByteArray(LUA_DEFAULT_PATH), QDir::toNativeSeparators(QCoreApplication::applicationDirPath()))
                           .toUtf8().constData());
 #endif
-    qDebug() << "up to dostring "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count() << "ms.\n";
 
     int error = luaL_dostring(pIndenterState.get(), R"(
       require('lcf.workshop.base')
       get_ast = request('!.lua.code.get_ast')
       get_formatted_code = request('!.lua.code.ast_as_code')
     )");
-    qDebug() << "right after dostring "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count() << "ms.\n";
     if (error) {
         QString e = tr("no error message available from Lua");
         if (lua_isstring(pIndenterState.get(), -1)) {
@@ -15231,9 +15225,6 @@ void TLuaInterpreter::initIndenterGlobals()
         }
         QString msg = tr("[ ERROR ] - Cannot load code formatter, indenting functionality won't be available.\n");
         msg.append(e);
-        mpHost->postMessage(msg);
-    } else {
-        QString msg = tr("[  OK  ]  - Lua code formatter loaded.");
         mpHost->postMessage(msg);
     }
 

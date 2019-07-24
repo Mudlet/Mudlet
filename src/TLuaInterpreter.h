@@ -540,7 +540,7 @@ private:
       }
     };
 
-    std::unique_ptr<lua_State, lua_state_deleter> state;
+    std::unique_ptr<lua_State, lua_state_deleter> pIndenterState;
 
     QPointer<Host> mpHost;
     int mHostID;

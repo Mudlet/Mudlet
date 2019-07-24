@@ -394,7 +394,6 @@ void Host::resetProfile_phase2()
     mEventMap.clear();
     mLuaInterpreter.initLuaGlobals();
     mLuaInterpreter.loadGlobal();
-    mLuaInterpreter.initIndenterGlobals();
     mBlockScriptCompile = false;
 
     getTriggerUnit()->compileAll();
