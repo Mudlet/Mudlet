@@ -14,7 +14,7 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="273"/>
       <source>Too many redirects.</source>
-      <translation type="unfinished"/>
+      <translation>Trop de redirections.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="282"/>
@@ -353,7 +353,7 @@ veuillez patienter...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="149"/>
       <source>Expected %1 while parsing</source>
-      <translation type="unfinished"/>
+      <translation>%1 attendu lors de l'analyse syntaxique</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.cpp" line="145"/>
@@ -380,12 +380,12 @@ veuillez patienter...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="369"/>
       <source>Error parsing %1: %2 </source>
-      <translation type="unfinished"/>
+      <translation>Erreur lors de l'analyse syntaxique %1 : %2 </translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/textgrammar.cpp" line="305"/>
       <source>Error reading file %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>Erreur lors de la lecture du fichier %1:%2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="435"/>
@@ -395,7 +395,7 @@ veuillez patienter...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="441"/>
       <source>Line %1, Column %2</source>
-      <translation type="unfinished"/>
+      <translation>Ligne %1, Colonne %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="444"/>
@@ -405,7 +405,7 @@ veuillez patienter...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="448"/>
       <source> | %1 chars selected</source>
-      <translation type="unfinished"/>
+      <translation> | %1 caractères sélectionnés</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="452"/>
