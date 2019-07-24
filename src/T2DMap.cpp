@@ -3086,7 +3086,7 @@ std::pair<int, int> T2DMap::getMousePosition()
     float mx = (mousePosition.x() / mRoomWidth) + mOx - (xspan / 2.0);
     float my = (yspan / 2.0) - (mousePosition.y() / mRoomHeight) - mOy;
 
-    return make_pair(std::round(mx), std::round(my));
+    return std::make_pair(std::round(mx), std::round(my));
 }
 
 void T2DMap::slot_createRoom()

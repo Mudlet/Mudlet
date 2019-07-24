@@ -27,9 +27,6 @@
 #include "TDebug.h"
 #include "mudlet.h"
 
-
-using namespace std;
-
 const char* TTimer::scmProperty_HostName = "HostName";
 const char* TTimer::scmProperty_TTimerId = "TTimerId";
 
