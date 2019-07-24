@@ -5701,7 +5701,7 @@ int TLuaInterpreter::setItalics(lua_State* L)
     }
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setOverline 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setOverline
 int TLuaInterpreter::setOverline(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -15148,6 +15148,8 @@ void TLuaInterpreter::setupLanguageData()
 // and we don't want to tie ourselves to it by exposing them for scripting.
 void TLuaInterpreter::initIndenterGlobals()
 {
+    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+
     pIndenterState = newstate();
     storeHostInLua(pIndenterState, mpHost);
 
@@ -15204,12 +15206,16 @@ void TLuaInterpreter::initIndenterGlobals()
                           .arg(QByteArray(LUA_DEFAULT_PATH), QDir::toNativeSeparators(QCoreApplication::applicationDirPath()))
                           .toUtf8().constData());
 #endif
+    qDebug() << "up to dostring "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count() << "ms.\n";
 
     int error = luaL_dostring(pIndenterState, R"(
       require('lcf.workshop.base')
       get_ast = request('!.lua.code.get_ast')
       get_formatted_code = request('!.lua.code.ast_as_code')
     )");
+    qDebug() << "right after dostring "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count() << "ms.\n";
     if (error) {
         QString e = tr("no error message available from Lua");
         if (lua_isstring(pIndenterState, -1)) {
