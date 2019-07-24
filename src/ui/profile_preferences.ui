@@ -1866,7 +1866,7 @@
              <bool>false</bool>
             </property>
             <property name="toolTip">
-             <string>&lt;p&gt;Copy map into the selected profiles on the right&lt;/p&gt;</string>
+             <string>&lt;p&gt;Copy map into the selected profiles on the left&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Copy to destination(s)</string>
