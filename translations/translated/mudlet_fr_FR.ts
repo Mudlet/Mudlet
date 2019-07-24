@@ -11359,12 +11359,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="95"/>
       <source>Foreground color ignored</source>
-      <translation type="unfinished"/>
+      <translation>Couleur de premier plan ignorée</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="119"/>
       <source>Background color ignored</source>
-      <translation type="unfinished"/>
+      <translation>Couleur d'arrière-plan ignorée</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="146"/>
