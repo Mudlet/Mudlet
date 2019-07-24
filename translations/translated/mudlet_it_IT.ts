@@ -803,7 +803,7 @@ con un nuovo simbolo per questa stanza:</translation>
       <location filename="../src/T2DMap.cpp" line="2876"/>
       <source>Lock room for speed walks</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation>Blocca camera per camminate veloci</translation>
+      <translation>Blocca camera per speedwalk</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2879"/>
@@ -815,7 +815,7 @@ con un nuovo simbolo per questa stanza:</translation>
       <location filename="../src/T2DMap.cpp" line="2880"/>
       <source>Unlock room for speed walks</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation>Sblocca camera per camminate veloci</translation>
+      <translation>Sblocca camera per speedwalk</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2883"/>
