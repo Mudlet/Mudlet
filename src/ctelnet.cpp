@@ -49,8 +49,6 @@
 // of the messages
 #define DEBUG_TELNET 1
 
-using namespace std;
-
 char loadBuffer[100001];
 int loadedBytes;
 QDataStream replayStream;
@@ -574,7 +572,7 @@ bool cTelnet::sendData(QString& data)
             "the encoding is changed.";
         if (!mEncoding.isEmpty()) {
             if ((! mEncodingWarningIssued) && (! outgoingDataCodec->canEncode(data))) {
-                QString errorMsg = tr(errorMsgTemplate, 
+                QString errorMsg = tr(errorMsgTemplate,
                                       "%1 is the name of the encoding currently set.").arg(mEncoding);
                 postMessage(errorMsg);
                 mEncodingWarningIssued = true;
@@ -585,7 +583,7 @@ bool cTelnet::sendData(QString& data)
             // Plain, raw ASCII, we hope!
             for (int i = 0, total = data.size(); i < total; ++i) {
                 if ((! mEncodingWarningIssued) && (data.at(i).row() || data.at(i).cell() > 127)){
-                QString errorMsg = tr(errorMsgTemplate, 
+                QString errorMsg = tr(errorMsgTemplate,
                                       "%1 is the name of the encoding currently set.").arg(QStringLiteral("ASCII"));
                     postMessage(errorMsg);
                     mEncodingWarningIssued = true;
