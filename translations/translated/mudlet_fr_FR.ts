@@ -540,7 +540,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="138"/>
       <source>ID</source>
       <comment>Room ID in the mapper widget</comment>
-      <translation type="unfinished"/>
+      <translation>ID</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="138"/>
@@ -886,7 +886,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2913"/>
       <source>Create Label</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Créer une étiquette</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2914"/>
@@ -898,7 +898,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2917"/>
       <source>Set location</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Définir l'emplacement</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2919"/>
@@ -922,7 +922,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2951"/>
       <source>Move label</source>
       <comment>2D Mapper context menu item (label) tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Déplacer l'étiquette</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2953"/>
@@ -934,13 +934,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2954"/>
       <source>Delete label</source>
       <comment>2D Mapper context menu (label) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Supprimer l'étiquette</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2970"/>
       <source>Add point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Ajouter un point</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2977"/>
@@ -958,7 +958,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2984"/>
       <source>Remove point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Supprimer le point</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2991"/>
@@ -970,7 +970,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2995"/>
       <source>Remove last segment by removing this point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state but is the last time this action can be done on this item)</comment>
-      <translation type="unfinished"/>
+      <translation>Supprimer le dernier segment en supprimant ce point</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3000"/>
@@ -982,7 +982,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3006"/>
       <source>Select a point first, then remove it</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state, user will need to do something before it can be used)</comment>
-      <translation type="unfinished"/>
+      <translation>Sélectionner d'abord un point, puis le supprimer</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3010"/>
@@ -1000,7 +1000,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3018"/>
       <source>Delete line</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Supprimer la ligne</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3019"/>
@@ -1705,7 +1705,7 @@ your only warning about this command...!</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14942"/>
       <source>Some functions may not be available.</source>
-      <translation type="unfinished"/>
+      <translation>Certaines fonctions peuvent ne pas être disponibles.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14946"/>
