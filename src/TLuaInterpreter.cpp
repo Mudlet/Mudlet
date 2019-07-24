@@ -101,7 +101,6 @@ QString speechCurrent;
 TLuaInterpreter::TLuaInterpreter(Host* pH, int id) : mpHost(pH), mHostID(id), purgeTimer(this)
 {
     pGlobalLua = nullptr;
-    pIndenterState.reset();
 
     connect(&purgeTimer, &QTimer::timeout, this, &TLuaInterpreter::slotPurge);
 
