@@ -48,6 +48,8 @@
 #include <QToolBar>
 #include "post_guard.h"
 
+using namespace std::chrono_literals;
+
 // Used as a QObject::property so that we can keep track of the color for the
 // trigger colorizer buttons loaded from a trigger even if the user disables
 // and then reenables the colorizer function (and we "grey out" the color whilst
