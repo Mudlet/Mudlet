@@ -1,5 +1,9 @@
 #!/bin/bash
 
+mkdir -p "${HOME}/latest-gcc-symlinks"
+ln -s /usr/bin/g++-9 "${HOME}/latest-gcc-symlinks/g++"
+ln -s /usr/bin/gcc-9 "${HOME}/latest-gcc-symlinks/gcc"
+
 # lua-utf8 is not in the repositories...
 luarocks install --local luautf8
 YAJL_PATH="$(pkg-config --variable=libdir yajl)"
