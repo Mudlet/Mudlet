@@ -6181,6 +6181,7 @@ int TLuaInterpreter::getMousePosition(lua_State* L)
 int TLuaInterpreter::tempTimer(lua_State* L)
 {
     double time;
+    bool repeating;
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "tempTimer: bad argument #1 type (time in seconds as {maybe decimal} number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
@@ -6192,7 +6193,11 @@ int TLuaInterpreter::tempTimer(lua_State* L)
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     if (lua_isfunction(L, 2)) {
-        QPair<int, QString> result = pLuaInterpreter->startTempTimer(time, QString());
+        if (lua_isboolean(L, 3)) {
+            repeating = lua_toboolean(L, 3);
+        }
+
+        QPair<int, QString> result = pLuaInterpreter->startTempTimer(time, QString(), repeating);
         if (result.first == -1) {
             lua_pushnumber(L, -1);
             lua_pushstring(L, result.second.toUtf8().constData());
@@ -6213,8 +6218,11 @@ int TLuaInterpreter::tempTimer(lua_State* L)
         return lua_error(L);
     }
     QString luaCode = QString::fromUtf8(lua_tostring(L, 2));
+    if (lua_isboolean(L, 3)) {
+        repeating = lua_toboolean(L, 3);
+    }
 
-    QPair<int, QString> result = pLuaInterpreter->startTempTimer(time, luaCode);
+    QPair<int, QString> result = pLuaInterpreter->startTempTimer(time, luaCode, repeating);
     lua_pushnumber(L, result.first);
     if (result.first == -1) {
         lua_pushstring(L, result.second.toUtf8().constData());
@@ -15355,10 +15363,10 @@ QPair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, const Q
 }
 
 // No documentation available in wiki - internal function
-QPair<int, QString> TLuaInterpreter::startTempTimer(double timeout, const QString& function)
+QPair<int, QString> TLuaInterpreter::startTempTimer(double timeout, const QString& function, const bool repeating)
 {
     QTime time = QTime(0,0,0,0).addMSecs(qRound(timeout * 1000));
-    TTimer* pT = new TTimer(QStringLiteral("newTempTimerWithoutAnId"), time, mpHost);
+    auto* pT = new TTimer(QStringLiteral("newTempTimerWithoutAnId"), time, mpHost, repeating);
     pT->setTime(time);
     pT->setIsFolder(false);
     pT->setTemporary(true);
