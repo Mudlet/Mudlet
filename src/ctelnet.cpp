@@ -375,7 +375,13 @@ void cTelnet::connectIt(const QString& address, int port)
 
 void cTelnet::reconnect()
 {
-    connectIt(hostName, hostPort);
+    // if we've connected offline and wish to reconnect, the last
+    // connection parameters aren't yet set
+    if (hostName.isEmpty() && hostPort == 0) {
+        connectIt(mpHost->getUrl(), mpHost->getPort());
+    } else {
+        connectIt(hostName, hostPort);
+    }
 }
 
 void cTelnet::disconnectIt()
