@@ -11,7 +11,8 @@ addons:
     sources: &add-sources
     - sourceline: 'ppa:beineri/opt-qt571-xenial'
     - sourceline: 'ppa:beineri/opt-qt-5.12.3-xenial'
-    - sourceline: 'ppa:ondrej/php' #needed for a more-or-less up to date libzip
+    - sourceline: 'ppa:ondrej/php' # more-or-less up to date libzip
+    - sourceline: 'ppa:ubuntu-toolchain-r/test' # gcc 9
     packages: &common-packages
     - libhunspell-dev
     - lua5.1
@@ -21,8 +22,8 @@ addons:
     - libzip-dev
     - libpulse-dev
     - libyajl-dev
-    - gcc-5
-    - g++-5
+    - gcc-9
+    - g++-9
     - luarocks
     - lua-rex-pcre
     - lua-filesystem
