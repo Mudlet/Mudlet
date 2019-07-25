@@ -42,8 +42,6 @@
 #include <sstream>
 #include "post_guard.h"
 
-using namespace std;
-
 XMLexport::XMLexport( Host * pH )
 : mpHost( pH )
 , mpTrigger( Q_NULLPTR )
@@ -334,7 +332,7 @@ bool XMLexport::saveXml(const QString& fileName)
 // TODO: Refactor dlgTriggerEditor::slot_export() {at least} to call this method instead of saveXml(const QString&)
 bool XMLexport::saveXmlFile(QFile& file)
 {
-    std::stringstream saveStringStream(ios::out);
+    std::stringstream saveStringStream(std::ios::out);
     // Remember, the mExportDoc is the data in the form of a pugi::xml_document
     // instance - the save method needs a stream that impliments the
     // std::ostream interface into which it can push the data:
@@ -355,7 +353,7 @@ bool XMLexport::saveXmlFile(QFile& file)
 
 QString XMLexport::saveXml()
 {
-    std::stringstream saveStringStream(ios::out);
+    std::stringstream saveStringStream(std::ios::out);
     std::string output;
 
     mExportDoc.save(saveStringStream);

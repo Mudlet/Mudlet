@@ -48,6 +48,7 @@ extern "C" {
 
 #include <list>
 #include <string>
+#include <memory>
 
 
 class Host;
@@ -108,7 +109,7 @@ public:
     static int dirToNumber(lua_State*, int);
 
 
-    QPair<int, QString> startTempTimer(double, const QString&);
+    QPair<int, QString> startTempTimer(double timeout, const QString& function, const bool repeating = false);
     int startTempAlias(const QString&, const QString&);
     int startTempKey(int&, int&, QString&);
     int startTempTrigger(const QString& regex, const QString& function, int expiryCount = -1);
@@ -532,7 +533,14 @@ private:
     QMap<QNetworkReply*, QString> downloadMap;
 
     lua_State* pGlobalLua;
-    lua_State* pIndenterState;
+
+    struct lua_state_deleter {
+      void operator()(lua_State* ptr) const noexcept {
+        lua_close(ptr);
+      }
+    };
+
+    std::unique_ptr<lua_State, lua_state_deleter> pIndenterState;
 
     QPointer<Host> mpHost;
     int mHostID;

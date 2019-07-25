@@ -2547,7 +2547,7 @@ void dlgProfilePreferences::populateScriptsList()
 // adds trigger name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addTriggersToPreview(TTrigger* pTriggerParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    list<TTrigger*>* childTriggers = pTriggerParent->getChildrenList();
+    std::list<TTrigger*>* childTriggers = pTriggerParent->getChildrenList();
     for (auto trigger : *childTriggers) {
         if (!trigger->getScript().isEmpty()) {
             items.push_back(std::make_tuple(trigger->getName(), QStringLiteral("trigger"), trigger->getID()));
@@ -2562,7 +2562,7 @@ void dlgProfilePreferences::addTriggersToPreview(TTrigger* pTriggerParent, std::
 // adds alias name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addAliasesToPreview(TAlias* pAliasParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    list<TAlias*>* childrenList = pAliasParent->getChildrenList();
+    std::list<TAlias*>* childrenList = pAliasParent->getChildrenList();
     for (auto alias : *childrenList) {
         if (!alias->getScript().isEmpty()) {
             items.push_back(std::make_tuple(alias->getName(), QStringLiteral("alias"), alias->getID()));
@@ -2577,7 +2577,7 @@ void dlgProfilePreferences::addAliasesToPreview(TAlias* pAliasParent, std::vecto
 // adds timer name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addTimersToPreview(TTimer* pTimerParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    list<TTimer*>* childrenList = pTimerParent->getChildrenList();
+    std::list<TTimer*>* childrenList = pTimerParent->getChildrenList();
     for (auto timer : *childrenList) {
         if (!timer->getScript().isEmpty()) {
             items.push_back(std::make_tuple(timer->getName(), QStringLiteral("timer"), timer->getID()));
@@ -2592,7 +2592,7 @@ void dlgProfilePreferences::addTimersToPreview(TTimer* pTimerParent, std::vector
 // adds key name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    list<TKey*>* childrenList = pKeyParent->getChildrenList();
+    std::list<TKey*>* childrenList = pKeyParent->getChildrenList();
     for (auto key : *childrenList) {
         if (!key->getScript().isEmpty()) {
             items.push_back(std::make_tuple(key->getName(), QStringLiteral("key"), key->getID()));
@@ -2607,7 +2607,7 @@ void dlgProfilePreferences::addKeysToPreview(TKey* pKeyParent, std::vector<std::
 // adds script name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addScriptsToPreview(TScript* pScriptParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    list<TScript*>* childrenList = pScriptParent->getChildrenList();
+    std::list<TScript*>* childrenList = pScriptParent->getChildrenList();
     for (auto script : *childrenList) {
         if (!script->getScript().isEmpty()) {
             items.push_back(std::make_tuple(script->getName(), QStringLiteral("script"), script->getID()));
@@ -2622,7 +2622,7 @@ void dlgProfilePreferences::addScriptsToPreview(TScript* pScriptParent, std::vec
 // adds action name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addActionsToPreview(TAction* pActionParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    list<TAction*>* childrenList = pActionParent->getChildrenList();
+    std::list<TAction*>* childrenList = pActionParent->getChildrenList();
     for (auto action : *childrenList) {
         if (!action->getScript().isEmpty()) {
             items.push_back(std::make_tuple(action->getName(), QStringLiteral("button"), action->getID()));
@@ -2751,11 +2751,11 @@ void dlgProfilePreferences::populateThemesList()
             QString themeFileName = theme.toObject()["FileName"].toString();
 
             if (!themeText.isEmpty() && !themeFileName.isEmpty()) {
-                sortedThemes << make_pair(themeText, themeFileName);
+                sortedThemes << std::make_pair(themeText, themeFileName);
             }
         }
     }
-    sortedThemes << make_pair(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
+    sortedThemes << std::make_pair(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
 
     std::sort(sortedThemes.begin(), sortedThemes.end(), [](const auto& a, const auto& b) { return QString::localeAwareCompare(a.first, b.first) < 0; });
 

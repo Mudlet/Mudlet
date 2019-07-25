@@ -227,11 +227,11 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
 }
 
 // returns the type of item and ID of the first (root) element
-pair<dlgTriggerEditor::EditorViewType, int> XMLimport::importFromClipboard()
+std::pair<dlgTriggerEditor::EditorViewType, int> XMLimport::importFromClipboard()
 {
     QString xml;
     QClipboard* clipboard = QApplication::clipboard();
-    pair<dlgTriggerEditor::EditorViewType, int> result;
+    std::pair<dlgTriggerEditor::EditorViewType, int> result;
 
     xml = clipboard->text(QClipboard::Clipboard);
 
@@ -539,7 +539,7 @@ void XMLimport::readUnknownMapElement()
 }
 
 // returns the type of item and ID of the first (root) element
-pair<dlgTriggerEditor::EditorViewType, int> XMLimport::readPackage()
+std::pair<dlgTriggerEditor::EditorViewType, int> XMLimport::readPackage()
 {
     dlgTriggerEditor::EditorViewType objectType = dlgTriggerEditor::EditorViewType::cmUnknownView;
     int rootItemID = -1;
@@ -579,7 +579,7 @@ pair<dlgTriggerEditor::EditorViewType, int> XMLimport::readPackage()
             }
         }
     }
-    return make_pair(objectType, rootItemID);
+    return std::make_pair(objectType, rootItemID);
 }
 
 void XMLimport::readHelpPackage()

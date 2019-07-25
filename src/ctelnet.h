@@ -46,7 +46,6 @@
 #include <string>
 
 #if defined(Q_OS_WIN32)
-#include <Winsock2.h>
 #include <ws2tcpip.h>
 #include "mstcpip.h"
 #else
@@ -130,6 +129,7 @@ public:
     cTelnet(Host* pH, const QString&);
     ~cTelnet();
     void connectIt(const QString& address, int port);
+    void reconnect();
     void disconnectIt();
     void abortConnection();
     bool sendData(QString& data);
@@ -149,7 +149,7 @@ public:
     void setChannel102Variables(const QString&);
     bool socketOutRaw(std::string& data);
     const QString & getEncoding() const { return mEncoding; }
-    QPair<bool, QString> setEncoding(const QString &, bool isToStore = true);
+    QPair<bool, QString> setEncoding(const QString &, bool saveValue = true);
     void postMessage(QString);
     const QStringList & getEncodingsList() const { return mAcceptableEncodings; }
     const QStringList & getFriendlyEncodingsList() const { return mFriendlyEncodings; }

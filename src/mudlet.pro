@@ -71,8 +71,12 @@ macx {
     QMAKE_CFLAGS_DEBUG += -O0
 }
 
-# enable C++14 for builds.
-CONFIG += c++14
+# enable C++17 for builds.
+lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 12)) {
+    QMAKE_CXXFLAGS += -std=c++17
+} else {
+    CONFIG += c++17
+}
 
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP
@@ -89,58 +93,6 @@ qtHaveModule(texttospeech) {
     QT += texttospeech
     message("Using TextToSpeech module")
 }
-
-############################# TEMPORARY TESTING PART ###########################
-# Tempory tests to determine what scope variables are correct, it seems that
-# they are related to the complete mkspecs base directory names
-# (e.g. linux-g++-64) the first part at least seems to match up with what we
-#  have been using so far {"macx", "win32"} "unix" seems to be an oddity.
-clear(scopes)
-cygwin {
-  scopes += "cygwin"
-}
-linux-clang-libc++ {
-  scopes += "linux-clang-libc++"
-}
-linux-g++-32 {
-  scopes += "linux-g++-32"
-}
-linux-g++-64 {
-# not seen when expected:
-  scopes += "linux-g++-64"
-}
-linux-llvm {
-  scopes += "linux-llvm"
-}
-linux-lsb-g++ {
-  scopes += "linux-lsb-g++"
-}
-macx-g++ {
-  scopes += "macx-g++"
-}
-macx-xcode {
-  scopes += "macx-xcode"
-}
-win32-clang-msvc {
-  scopes += "win32-clang-msvc"
-}
-win32-msvc {
-  scopes += "win32-msvc"
-}
-win64 {
-  scopes += "win64"
-}
-
-!isEmpty( scopes ) : message("Previously unreported scope variables tested and found: $${scopes} - slysven would like to know about them.")
-# Confirmed (where):
-# darwin(Travis CI), linux(local), linux-clang(local), linux-g++(local),
-# macx(Travis CI), macx-clang(Travis CI), win32(AppVeyor CI),
-# win32-g++(AppVeyor CI), unix(local)
-# freebsd(local) freebsd-clang(local) freebsd-g++(local)
-
-# Suspected not to work:
-# linux-g++-32, linux-g++-64
-
 
 TEMPLATE = app
 
@@ -258,9 +210,9 @@ unix:!macx {
         LIBS += \
 # Some OS platforms have a hyphen (I think Cygwin does as well):
             -llua-5.1\
-# FreeFSB appends the version number to hunspell:
+# FreeBSD appends the version number to hunspell:
             -lhunspell-1.7
-# FreeFSB (at least) supports multiple Lua versions (and 5.1 is not the default anymore):
+# FreeBSD (at least) supports multiple Lua versions (and 5.1 is not the default anymore):
         INCLUDEPATH += \
             /usr/local/include/lua51
     } else {

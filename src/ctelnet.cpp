@@ -49,8 +49,6 @@
 // of the messages
 #define DEBUG_TELNET 1
 
-using namespace std;
-
 char loadBuffer[100001];
 int loadedBytes;
 QDataStream replayStream;
@@ -129,7 +127,6 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 
     // initialize the socket after the Host initialisation is complete so we can access mSslTsl
     QTimer::singleShot(0, this, [this]() {
-        qDebug() << mProfileName;
         if (mpHost->mSslTsl) {
             connect(&socket, &QSslSocket::encrypted, this, &cTelnet::handle_socket_signal_connected);
         } else {
@@ -289,24 +286,23 @@ const QString& cTelnet::getFriendlyEncoding()
     return mFriendlyEncodings.at(index);
 }
 
-// Need to set the encoding at the start but it does not need to be written out
-// then. Return values are for Lua subsystem...!
 // newEncoding must be EITHER: one of the FIXED non-translatable values in
 // cTelnet::csmAcceptableEncodings
 // OR "ASCII"
 // OR an empty string (which means the same as the ASCII).
-QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool isToStore)
+// saveValue: if true, record this setting, otherwise it is ephemereal for this session
+QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool saveValue)
 {
     QString reportedEncoding = newEncoding;
     if (newEncoding.isEmpty() || newEncoding == QLatin1String("ASCII")) {
         reportedEncoding = QStringLiteral("ASCII");
         if (!mEncoding.isEmpty()) {
-            // This will disable trancoding on:
+            // This will disable transcoding on:
             // input in TBuffer::translateToPlainText(...)
             // incoming OOB in TLuaInterpreter::encodeBytes(...)
             // output in cTelnet::sendData(...)
             mEncoding.clear();
-            if (isToStore) {
+            if (saveValue) {
                 mpHost->writeProfileData(QStringLiteral("encoding"), reportedEncoding);
             }
         }
@@ -318,7 +314,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
                                  % QLatin1String(R"(".)"));
     } else if (mEncoding != newEncoding) {
         encodingChanged(newEncoding);
-        if (isToStore) {
+        if (saveValue) {
             mpHost->writeProfileData(QStringLiteral("encoding"), mEncoding);
         }
     }
@@ -330,11 +326,11 @@ void cTelnet::requestDiscordInfo()
 {
     mudlet* pMudlet = mudlet::self();
     if (pMudlet->mDiscord.libraryLoaded()) {
-        string data;
+        std::string data;
         data = TN_IAC;
         data += TN_SB;
         data += OPT_GMCP;
-        data += string("External.Discord.Get");
+        data += std::string("External.Discord.Get");
         data += TN_IAC;
         data += TN_SE;
 
@@ -377,6 +373,10 @@ void cTelnet::connectIt(const QString& address, int port)
     QHostInfo::lookupHost(address, this, SLOT(handle_socket_signal_hostFound(QHostInfo)));
 }
 
+void cTelnet::reconnect()
+{
+    connectIt(hostName, hostPort);
+}
 
 void cTelnet::disconnectIt()
 {
@@ -579,7 +579,7 @@ bool cTelnet::sendData(QString& data)
     mpHost->raiseEvent(event);
 
     if (mpHost->mAllowToSendCommand) {
-        string outData;
+        std::string outData;
         auto errorMsgTemplate = "[ WARN ]  - Invalid characters in outgoing data, one or more characters cannot\n"
             "be encoded into the range that is acceptable for the character\n"
             "encoding that is currently set {\"%1\"} for the game server.\n"
@@ -630,7 +630,7 @@ bool cTelnet::sendData(QString& data)
 // Data is *expected* to be in the required MUD Server encoding on entry,
 // of course plain ASCII *is* valid for all encodings including Big-5 and GBK,
 // as we do NOT handle the weirdly different EBDIC!!!
-bool cTelnet::socketOutRaw(string& data)
+bool cTelnet::socketOutRaw(std::string& data)
 {
     // We were using socket.iswritable() but it was not clear that that was a
     // suitable way to check for an open, usable connection - whereas isvalid()
@@ -674,7 +674,7 @@ void cTelnet::setDisplayDimensions()
     int x = mpHost->mWrapAt;
     int y = mpHost->mScreenHeight;
     if (myOptionState[static_cast<size_t>(OPT_NAWS)]) {
-        string s;
+        std::string s;
         s = TN_IAC;
         s += TN_SB;
         s += OPT_NAWS;
@@ -730,7 +730,7 @@ void cTelnet::sendTelnetOption(char type, char option)
 
     qDebug().noquote().nospace() << "WE send telnet IAC " << _type << " " << decodeOption(option);
 #endif
-    string output;
+    std::string output;
     output += TN_IAC;
     output += type;
     output += option;
@@ -855,7 +855,7 @@ QString cTelnet::decodeOption(const unsigned char ch) const
     }
 }
 
-void cTelnet::processTelnetCommand(const string& command)
+void cTelnet::processTelnetCommand(const std::string& command)
 {
     char ch = command[1];
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET > 1)
@@ -919,7 +919,7 @@ void cTelnet::processTelnetCommand(const string& command)
 
         if (option == OPT_MSDP) {
             //MSDP support
-            string output;
+            std::string output;
             if (!mpHost->mEnableMSDP) {
                 output += TN_IAC;
                 output += TN_DONT;
@@ -964,7 +964,7 @@ void cTelnet::processTelnetCommand(const string& command)
             enableATCP = true;
             sendTelnetOption(TN_DO, OPT_ATCP);
 
-            string output;
+            std::string output;
             output += TN_IAC;
             output += TN_SB;
             output += OPT_ATCP;
@@ -987,7 +987,7 @@ void cTelnet::processTelnetCommand(const string& command)
             sendTelnetOption(TN_DO, OPT_GMCP);
             qDebug() << "GMCP enabled";
 
-            string output;
+            std::string output;
             output = TN_IAC;
             output += TN_SB;
             output += OPT_GMCP;
@@ -1306,7 +1306,7 @@ void cTelnet::processTelnetCommand(const string& command)
             setATCPVariables(payload);
 
             if (payload.startsWith(QByteArray("Auth.Request"))) {
-                string output;
+                std::string output;
                 output += TN_IAC;
                 output += TN_SB;
                 output += OPT_ATCP;
@@ -1409,7 +1409,7 @@ void cTelnet::processTelnetCommand(const string& command)
                 //send anything, as we do not request anything, but there are
                 //so many servers out there, that you can never be sure...)
                 // FIXME: This is damaged at the moment as we do not properly take care of the bits for the protocols that we manage ourselves e.g. ATCP/GMCP/MSDP/MXP etc...
-                string cmd;
+                std::string cmd;
                 cmd += TN_IAC;
                 cmd += TN_SB;
                 cmd += OPT_STATUS;
@@ -1449,7 +1449,7 @@ void cTelnet::processTelnetCommand(const string& command)
                 if (myOptionState[static_cast<size_t>(OPT_TERMINAL_TYPE)]) {
                     //server wants us to send terminal type; he can send his own type
                     //too, but we just ignore it, as we have no use for it...
-                    string cmd;
+                    std::string cmd;
                     cmd += TN_IAC;
                     cmd += TN_SB;
                     cmd += OPT_TERMINAL_TYPE;
@@ -1691,7 +1691,7 @@ void cTelnet::atcpComposerCancel()
     mpComposer->close();
     mpComposer = nullptr;
     // This will be unaffected by Mud Server encoding:
-    string output = "*q\nno\n";
+    std::string output = "*q\nno\n";
     socketOutRaw(output);
 }
 
@@ -1700,7 +1700,7 @@ void cTelnet::atcpComposerSave(QString txt)
     if (!mpHost->mEnableGMCP) {
         if (enableATCP) {
             //olesetbuf \n <text>
-            string output;
+            std::string output;
             output += TN_IAC;
             output += TN_SB;
             output += OPT_ATCP;
@@ -1716,7 +1716,7 @@ void cTelnet::atcpComposerSave(QString txt)
         }
 
     } else if (enableGMCP) {
-        string output;
+        std::string output;
         output += TN_IAC;
         output += TN_SB;
         output += OPT_GMCP;
@@ -1866,7 +1866,7 @@ void cTelnet::postMessage(QString msg)
 //forward data for further processing
 
 
-void cTelnet::gotPrompt(string& mud_data)
+void cTelnet::gotPrompt(std::string& mud_data)
 {
     mpPostingTimer->stop();
     mMudData += mud_data;
@@ -1908,14 +1908,14 @@ void cTelnet::gotPrompt(string& mud_data)
     mIsTimerPosting = false;
 }
 
-void cTelnet::gotRest(string& mud_data)
+void cTelnet::gotRest(std::string& mud_data)
 {
     if (mud_data.empty()) {
         return;
     }
     if (!mGA_Driver) {
         size_t i = mud_data.rfind('\n');
-        if (i != string::npos) {
+        if (i != std::string::npos) {
             mMudData += mud_data.substr(0, i + 1);
             postData();
             mpPostingTimer->start();
@@ -2089,7 +2089,7 @@ void cTelnet::loadReplayChunk()
 void cTelnet::slot_processReplayChunk()
 {
     int datalen = loadedBytes;
-    string cleandata = "";
+    std::string cleandata = "";
     recvdGA = false;
     for (int i = 0; i < datalen; i++) {
         char ch = loadBuffer[i];
@@ -2208,7 +2208,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
         return;
     }
 
-    string cleandata = "";
+    std::string cleandata = "";
     int datalen;
     do {
         datalen = amount;
