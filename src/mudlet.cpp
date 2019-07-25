@@ -3532,7 +3532,7 @@ void mudlet::slot_reconnect()
     if (!pHost) {
         return;
     }
-    pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
+    pHost->mTelnet.reconnect();
 }
 
 void mudlet::slot_disconnect()

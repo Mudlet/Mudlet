@@ -298,7 +298,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
     if (newEncoding.isEmpty() || newEncoding == QLatin1String("ASCII")) {
         reportedEncoding = QStringLiteral("ASCII");
         if (!mEncoding.isEmpty()) {
-            // This will disable trancoding on:
+            // This will disable transcoding on:
             // input in TBuffer::translateToPlainText(...)
             // incoming OOB in TLuaInterpreter::encodeBytes(...)
             // output in cTelnet::sendData(...)
@@ -367,6 +367,10 @@ void cTelnet::connectIt(const QString& address, int port)
     QHostInfo::lookupHost(address, this, SLOT(handle_socket_signal_hostFound(QHostInfo)));
 }
 
+void cTelnet::reconnect()
+{
+    connectIt(hostName, hostPort);
+}
 
 void cTelnet::disconnectIt()
 {
