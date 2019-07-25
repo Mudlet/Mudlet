@@ -42,9 +42,6 @@
 #include <pcre.h>
 #endif // _MSC_VER && _DEBUG
 
-
-using namespace std;
-
 TConsole* spDebugConsole = nullptr;
 
 #if defined(Q_OS_WIN32)

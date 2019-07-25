@@ -48,8 +48,7 @@
 #include <QToolBar>
 #include "post_guard.h"
 
-
-using namespace std;
+using namespace std::chrono_literals;
 
 // Used as a QObject::property so that we can keep track of the color for the
 // trigger colorizer buttons loaded from a trigger even if the user disables
@@ -753,6 +752,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 #else
         startTimer(mAutosaveInterval * 1min);
 #endif
+
     }
 }
 
@@ -1371,7 +1371,7 @@ void dlgTriggerEditor::searchVariables(const QString& s)
 
 void dlgTriggerEditor::searchKeys(const QString& s)
 {
-    list<TKey*> nodes = mpHost->getKeyUnit()->getKeyRootNodeList();
+    std::list<TKey*> nodes = mpHost->getKeyUnit()->getKeyRootNodeList();
     for (auto key : nodes) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
@@ -1443,7 +1443,7 @@ void dlgTriggerEditor::searchKeys(const QString& s)
 
 void dlgTriggerEditor::searchTimers(const QString& s)
 {
-    list<TTimer*> nodes = mpHost->getTimerUnit()->getTimerRootNodeList();
+    std::list<TTimer*> nodes = mpHost->getTimerUnit()->getTimerRootNodeList();
     for (auto timer : nodes) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
@@ -1515,7 +1515,7 @@ void dlgTriggerEditor::searchTimers(const QString& s)
 
 void dlgTriggerEditor::searchActions(const QString& s)
 {
-    list<TAction*> nodes = mpHost->getActionUnit()->getActionRootNodeList();
+    std::list<TAction*> nodes = mpHost->getActionUnit()->getActionRootNodeList();
     for (auto action : nodes) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
@@ -1637,7 +1637,7 @@ void dlgTriggerEditor::searchActions(const QString& s)
 
 void dlgTriggerEditor::searchScripts(const QString& s)
 {
-    list<TScript*> nodes = mpHost->getScriptUnit()->getScriptRootNodeList();
+    std::list<TScript*> nodes = mpHost->getScriptUnit()->getScriptRootNodeList();
     for (auto script : nodes) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
@@ -1721,7 +1721,7 @@ void dlgTriggerEditor::searchScripts(const QString& s)
 
 void dlgTriggerEditor::searchAliases(const QString& s)
 {
-    list<TAlias*> nodes = mpHost->getAliasUnit()->getAliasRootNodeList();
+    std::list<TAlias*> nodes = mpHost->getAliasUnit()->getAliasRootNodeList();
     for (auto alias : nodes) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
@@ -1808,7 +1808,7 @@ void dlgTriggerEditor::searchAliases(const QString& s)
 
 void dlgTriggerEditor::searchTriggers(const QString& s)
 {
-    list<TTrigger*> nodes = mpHost->getTriggerUnit()->getTriggerRootNodeList();
+    std::list<TTrigger*> nodes = mpHost->getTriggerUnit()->getTriggerRootNodeList();
     for (auto trigger : nodes) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
@@ -5773,7 +5773,7 @@ void dlgTriggerEditor::fillout_form()
 
 void dlgTriggerEditor::populateKeys()
 {
-    list<TKey*> baseNodeList_key = mpHost->getKeyUnit()->getKeyRootNodeList();
+    std::list<TKey*> baseNodeList_key = mpHost->getKeyUnit()->getKeyRootNodeList();
     for (auto key : baseNodeList_key) {
         if (key->isTemporary()) {
             continue;
@@ -5838,7 +5838,7 @@ void dlgTriggerEditor::populateKeys()
 }
 void dlgTriggerEditor::populateActions()
 {
-    list<TAction*> baseNodeList_action = mpHost->getActionUnit()->getActionRootNodeList();
+    std::list<TAction*> baseNodeList_action = mpHost->getActionUnit()->getActionRootNodeList();
     for (auto action : baseNodeList_action) {
         if (action->isTemporary()) {
             continue;
@@ -5895,7 +5895,7 @@ void dlgTriggerEditor::populateActions()
 }
 void dlgTriggerEditor::populateAliases()
 {
-    list<TAlias*> baseNodeList_alias = mpHost->getAliasUnit()->getAliasRootNodeList();
+    std::list<TAlias*> baseNodeList_alias = mpHost->getAliasUnit()->getAliasRootNodeList();
     for (auto alias : baseNodeList_alias) {
         if (alias->isTemporary()) {
             continue;
@@ -5960,7 +5960,7 @@ void dlgTriggerEditor::populateAliases()
 }
 void dlgTriggerEditor::populateScripts()
 {
-    list<TScript*> baseNodeList_scripts = mpHost->getScriptUnit()->getScriptRootNodeList();
+    std::list<TScript*> baseNodeList_scripts = mpHost->getScriptUnit()->getScriptRootNodeList();
     for (auto script : baseNodeList_scripts) {
         QString s = script->getName();
 
@@ -6008,7 +6008,7 @@ void dlgTriggerEditor::populateScripts()
 }
 void dlgTriggerEditor::populateTimers()
 {
-    list<TTimer *> baseNodeList_timers = mpHost->getTimerUnit()->getTimerRootNodeList();
+    std::list<TTimer *> baseNodeList_timers = mpHost->getTimerUnit()->getTimerRootNodeList();
     for (auto timer : baseNodeList_timers) {
         if( timer->isTemporary() ) {
             continue;
@@ -6066,7 +6066,7 @@ void dlgTriggerEditor::populateTimers()
 }
 void dlgTriggerEditor::populateTriggers()
 {
-    list<TTrigger *> baseNodeList = mpHost->getTriggerUnit()->getTriggerRootNodeList();
+    std::list<TTrigger *> baseNodeList = mpHost->getTriggerUnit()->getTriggerRootNodeList();
     for (auto trigger : baseNodeList) {
         if (trigger->isTemporary()) {
             continue;

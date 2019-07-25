@@ -71,8 +71,12 @@ macx {
     QMAKE_CFLAGS_DEBUG += -O0
 }
 
-# enable C++14 for builds.
-CONFIG += c++14
+# enable C++17 for builds.
+lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 12)) {
+    QMAKE_CXXFLAGS += -std=c++17
+} else {
+    CONFIG += c++17
+}
 
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP

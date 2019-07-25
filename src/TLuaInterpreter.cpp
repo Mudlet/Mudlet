@@ -87,8 +87,6 @@ extern "C" {
 int luaopen_yajl(lua_State*);
 }
 
-using namespace std;
-
 #ifdef QT_TEXTTOSPEECH_LIB
 QPointer<QTextToSpeech> speechUnit;
 QVector<QString> speechQueue;
@@ -598,7 +596,7 @@ int TLuaInterpreter::selectString(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectCurrentLine
 int TLuaInterpreter::selectCurrentLine(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (lua_gettop(L) == 0) {
         luaSendText = "main";
     } else {
@@ -821,7 +819,7 @@ int TLuaInterpreter::isAnsiBgColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getFgColor
 int TLuaInterpreter::getFgColor(lua_State* L)
 {
-    string windowName = "main";
+    std::string windowName = "main";
     if (lua_gettop(L) > 0) {
         if (lua_isstring(L, 1)) {
             lua_pushfstring(L, "getFgColor: bad argument #1 type (window name as string is optional, got %s!)", luaL_typename(L, 1));
@@ -842,7 +840,7 @@ int TLuaInterpreter::getFgColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getBgColor
 int TLuaInterpreter::getBgColor(lua_State* L)
 {
-    string windowName = "main";
+    std::string windowName = "main";
     if (lua_gettop(L) > 0) {
         if (lua_isstring(L, 1)) {
             lua_pushfstring(L, "getBgColor: bad argument #1 type (window name as string is optional, got %s!)", luaL_typename(L, 1));
@@ -968,7 +966,7 @@ int TLuaInterpreter::getWindowsCodepage(lua_State* L)
 int TLuaInterpreter::wrapLine(lua_State* L)
 {
     int s = 1;
-    string windowName = "main";
+    std::string windowName = "main";
     if (lua_gettop(L)) {
         if (!lua_isstring(L, s)) {
             lua_pushfstring(L, "wrapLine: bad argument #%d type (window name as string expected, got %s!)", s, luaL_typename(L, 1));
@@ -1134,7 +1132,7 @@ int TLuaInterpreter::loadRawFile(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCurrentLine
 int TLuaInterpreter::getCurrentLine(lua_State* L)
 {
-    string windowName = "";
+    std::string windowName = "";
     if (lua_gettop(L) == 0) {
         windowName = "main";
     } else {
@@ -1521,7 +1519,7 @@ int TLuaInterpreter::getPlayerRoom(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#copy
 int TLuaInterpreter::copy(lua_State* L)
 {
-    string luaWindowName = "";
+    std::string luaWindowName = "";
     if (lua_isstring(L, 1)) {
         luaWindowName = lua_tostring(L, 1);
     } else {
@@ -1549,7 +1547,7 @@ int TLuaInterpreter::cut(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#paste
 int TLuaInterpreter::paste(lua_State* L)
 {
-    string luaWindowName = "";
+    std::string luaWindowName = "";
     if (lua_isstring(L, 1)) {
         luaWindowName = lua_tostring(L, 1);
     } else {
@@ -1614,7 +1612,7 @@ int TLuaInterpreter::isPrompt(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindowWrap
 int TLuaInterpreter::setWindowWrap(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "setWindowWrap: wrong argument type");
         lua_error(L);
@@ -1644,7 +1642,7 @@ int TLuaInterpreter::setWindowWrap(lua_State* L)
 // Documentation: ? - public function missing documentation in wiki
 int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "setWindowWrapIndent: wrong argument type");
         lua_error(L);
@@ -1672,7 +1670,7 @@ int TLuaInterpreter::getLineCount(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (lua_isstring(L, 1)) {
-        string window = lua_tostring(L, 1);
+        std::string window = lua_tostring(L, 1);
         QString _window = window.c_str();
         lua_pushnumber(L, mudlet::self()->getLastLineNumber(&host, _window) + 1);
         return 1;
@@ -1879,7 +1877,7 @@ int TLuaInterpreter::moveCursor(lua_State* L)
 {
     int s = 1;
     int n = lua_gettop(L);
-    string a1;
+    std::string a1;
     if (n > 2) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "moveCursor: wrong argument type");
@@ -1925,7 +1923,7 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
 {
     int s = 1;
     int n = lua_gettop(L);
-    string a1;
+    std::string a1;
     if (n > 2) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "setConsoleBufferSize: wrong argument type");
@@ -2011,8 +2009,8 @@ int TLuaInterpreter::disableScrollBar(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#replace
 int TLuaInterpreter::replace(lua_State* L)
 {
-    string a1 = "";
-    string a2 = "";
+    std::string a1 = "";
+    std::string a2 = "";
     int n = lua_gettop(L);
     int s = 1;
     if (!lua_isstring(L, s)) {
@@ -2025,7 +2023,7 @@ int TLuaInterpreter::replace(lua_State* L)
     }
 
     QString _name(a1.c_str());
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (n > 1) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "replace: wrong argument type");
@@ -2048,7 +2046,7 @@ int TLuaInterpreter::replace(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteLine
 int TLuaInterpreter::deleteLine(lua_State* L)
 {
-    string name = "";
+    std::string name = "";
     if (lua_gettop(L) == 1) {
         if (!lua_isstring(L, 1)) {
             lua_pushstring(L, "deleteLine: wrong argument type");
@@ -2429,7 +2427,7 @@ int TLuaInterpreter::loadMap(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableTimer
 int TLuaInterpreter::enableTimer(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "enableTimer: wrong argument type");
         lua_error(L);
@@ -2447,7 +2445,7 @@ int TLuaInterpreter::enableTimer(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableTimer
 int TLuaInterpreter::disableTimer(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "disableTimer: wrong argument type");
         lua_error(L);
@@ -2513,7 +2511,7 @@ int TLuaInterpreter::killKey(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableAlias
 int TLuaInterpreter::enableAlias(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "enableAlias: wrong argument type");
         lua_error(L);
@@ -2531,7 +2529,7 @@ int TLuaInterpreter::enableAlias(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableAlias
 int TLuaInterpreter::disableAlias(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "disableAlias: wrong argument type");
         lua_error(L);
@@ -2549,7 +2547,7 @@ int TLuaInterpreter::disableAlias(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#killAlias
 int TLuaInterpreter::killAlias(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "killAlias: wrong argument type");
         lua_error(L);
@@ -2566,7 +2564,7 @@ int TLuaInterpreter::killAlias(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableTrigger
 int TLuaInterpreter::enableTrigger(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "enableTrigger: wrong argument type");
         lua_error(L);
@@ -2584,7 +2582,7 @@ int TLuaInterpreter::enableTrigger(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableTrigger
 int TLuaInterpreter::disableTrigger(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "disableTrigger: wrong argument type");
         lua_error(L);
@@ -2602,7 +2600,7 @@ int TLuaInterpreter::disableTrigger(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#killTimer
 int TLuaInterpreter::killTimer(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "killTimer: killTimer requires a string ID");
         lua_error(L);
@@ -2619,7 +2617,7 @@ int TLuaInterpreter::killTimer(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#killTrigger
 int TLuaInterpreter::killTrigger(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "killTrigger: wrong argument type");
         lua_error(L);
@@ -2910,7 +2908,7 @@ int TLuaInterpreter::getFontSize(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#openUserWindow
 int TLuaInterpreter::openUserWindow(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "openUserWindow: wrong argument type");
         lua_error(L);
@@ -2933,7 +2931,7 @@ int TLuaInterpreter::openUserWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMiniConsole
 int TLuaInterpreter::createMiniConsole(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "createMiniConsole: wrong argument type");
         lua_error(L);
@@ -2979,7 +2977,7 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createLabel
 int TLuaInterpreter::createLabel(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "createLabel: wrong argument type");
         lua_error(L);
@@ -3079,7 +3077,7 @@ int TLuaInterpreter::createMapper(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createButton
 int TLuaInterpreter::createButton(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "createButton: wrong argument type");
         lua_error(L);
@@ -3134,7 +3132,7 @@ int TLuaInterpreter::createButton(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createBuffer
 int TLuaInterpreter::createBuffer(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "createBuffer: wrong argument type");
         lua_error(L);
@@ -3151,7 +3149,7 @@ int TLuaInterpreter::createBuffer(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearUserWindow
 int TLuaInterpreter::clearUserWindow(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         Host& host = getHostFromLua(L);
         host.mpConsole->buffer.clear();
@@ -3170,7 +3168,7 @@ int TLuaInterpreter::clearUserWindow(lua_State* L)
 // Documentation: ? - public function but should stay undocumented -- compare https://github.com/Mudlet/Mudlet/issues/1149
 int TLuaInterpreter::closeUserWindow(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "closeUserWindow: wrong argument type");
         lua_error(L);
@@ -3188,7 +3186,7 @@ int TLuaInterpreter::closeUserWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hideWindow -- not hideUserWindow - compare initLuaGlobals()
 int TLuaInterpreter::hideUserWindow(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "hideWindow: wrong argument type");
         lua_error(L);
@@ -3294,7 +3292,7 @@ int TLuaInterpreter::setBorderRight(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resizeWindow -- not resizeUserWindow - compare initLuaGlobals()
 int TLuaInterpreter::resizeWindow(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "resizeWindow: wrong argument type");
         lua_error(L);
@@ -3329,7 +3327,7 @@ int TLuaInterpreter::resizeWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#moveWindow
 int TLuaInterpreter::moveWindow(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "moveWindow: wrong argument type");
         lua_error(L);
@@ -3578,7 +3576,7 @@ int TLuaInterpreter::startLogging(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBackgroundImage
 int TLuaInterpreter::setBackgroundImage(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "setBackgroundImage: wrong argument type");
         lua_error(L);
@@ -3586,7 +3584,7 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
     } else {
         luaSendText = lua_tostring(L, 1);
     }
-    string luaName = "";
+    std::string luaName = "";
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "setBackgroundImage: wrong argument type");
         lua_error(L);
@@ -3966,7 +3964,7 @@ int TLuaInterpreter::lowerWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showWindow -- not showUserWindow - compare initLuaGlobals()
 int TLuaInterpreter::showUserWindow(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "showWindow: wrong argument type");
         lua_error(L);
@@ -4155,7 +4153,7 @@ int TLuaInterpreter::connectToServer(lua_State* L)
     // Windows Platform that is bigger than the int32_t type (a.k.a. "int" AND
     // "long" types on that platform)! 8-O
     lua_Integer port = 23;
-    string url;
+    std::string url;
     bool isToSaveToProfile = false;
 
     Host& host = getHostFromLua(L);
@@ -5253,7 +5251,7 @@ int TLuaInterpreter::hasFocus(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#echoUserWindow
 int TLuaInterpreter::echoUserWindow(lua_State* L)
 {
-    string luaWindowName = "";
+    std::string luaWindowName = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "echoUserWindow: wrong argument type");
         lua_error(L);
@@ -5262,7 +5260,7 @@ int TLuaInterpreter::echoUserWindow(lua_State* L)
         luaWindowName = lua_tostring(L, 1);
     }
 
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "echoUserWindow: wrong argument type");
         lua_error(L);
@@ -5327,7 +5325,7 @@ int TLuaInterpreter::showUnzipProgress(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#playSoundFile
 int TLuaInterpreter::playSoundFile(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "playSoundFile: wrong argument type");
         lua_error(L);
@@ -5358,7 +5356,7 @@ int TLuaInterpreter::stopSounds(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#moveCursorEnd
 int TLuaInterpreter::moveCursorEnd(lua_State* L)
 {
-    string luaWindowName = "";
+    std::string luaWindowName = "";
     if (lua_isstring(L, 1)) {
         luaWindowName = lua_tostring(L, 1);
     } else {
@@ -5378,7 +5376,7 @@ int TLuaInterpreter::moveCursorEnd(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLastLineNumber
 int TLuaInterpreter::getLastLineNumber(lua_State* L)
 {
-    string luaWindowName;
+    std::string luaWindowName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "getLastLineNumber: wrong argument type");
         lua_error(L);
@@ -5454,7 +5452,7 @@ int TLuaInterpreter::reconnect(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setTriggerStayOpen
 int TLuaInterpreter::setTriggerStayOpen(lua_State* L)
 {
-    string luaWindowName;
+    std::string luaWindowName;
     double b;
     int s = 1;
     if (lua_gettop(L) > 1) {
@@ -5484,9 +5482,9 @@ int TLuaInterpreter::setTriggerStayOpen(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLink
 int TLuaInterpreter::setLink(lua_State* L)
 {
-    string luaWindowName;
-    string linkFunction;
-    string linkHint;
+    std::string luaWindowName;
+    std::string linkFunction;
+    std::string linkHint;
     int s = 1;
     if (lua_gettop(L) > 2) {
         if (!lua_isstring(L, s)) {
@@ -5534,8 +5532,8 @@ int TLuaInterpreter::setLink(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setPopup
 int TLuaInterpreter::setPopup(lua_State* L)
 {
-    string a1 = "";
-    string a2;
+    std::string a1 = "";
+    std::string a2;
     QStringList _hintList;
     QStringList _commandList;
     int s = 1;
@@ -5908,7 +5906,7 @@ int TLuaInterpreter::debug(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hideToolBar
 int TLuaInterpreter::hideToolBar(lua_State* L)
 {
-    string luaWindowName;
+    std::string luaWindowName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "hideToolBar: wrong argument type");
         lua_error(L);
@@ -5926,7 +5924,7 @@ int TLuaInterpreter::hideToolBar(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showToolBar
 int TLuaInterpreter::showToolBar(lua_State* L)
 {
-    string luaWindowName;
+    std::string luaWindowName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "showToolBar: wrong argument type");
         lua_error(L);
@@ -5945,7 +5943,7 @@ int TLuaInterpreter::showToolBar(lua_State* L)
 int TLuaInterpreter::sendATCP(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    string msg;
+    std::string msg;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "sendATCP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L,1));
         return lua_error(L);
@@ -5953,7 +5951,7 @@ int TLuaInterpreter::sendATCP(lua_State* L)
         msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
     }
 
-    string what;
+    std::string what;
     if (lua_gettop(L) > 1) {
         if (!lua_isstring(L, 2)) {
             lua_pushfstring(L, "sendATCP: bad argument #2 type (what as string is optional, got %1!)", luaL_typename(L,2));
@@ -5963,7 +5961,7 @@ int TLuaInterpreter::sendATCP(lua_State* L)
         }
     }
 
-    string output;
+    std::string output;
     output += TN_IAC;
     output += TN_SB;
     output += OPT_ATCP;
@@ -5996,7 +5994,7 @@ int TLuaInterpreter::sendATCP(lua_State* L)
 int TLuaInterpreter::sendGMCP(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    string msg;
+    std::string msg;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "sendGMCP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L,1));
         return lua_error(L);
@@ -6004,7 +6002,7 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
         msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
     }
 
-    string what;
+    std::string what;
     if (lua_gettop(L) > 1) {
         if (!lua_isstring(L, 2)) {
             lua_pushfstring(L, "sendGMCP: bad argument #2 type (what as string is optional, got %1!)", luaL_typename(L,2));
@@ -6014,7 +6012,7 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
         }
     }
 
-    string output;
+    std::string output;
     output += TN_IAC;
     output += TN_SB;
     output += OPT_GMCP;
@@ -6047,7 +6045,7 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
 int TLuaInterpreter::sendMSDP(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    string variable;
+    std::string variable;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "sendMSDP: bad argument #1 type (variable name as string expected, got %1!)", luaL_typename(L,1));
         return lua_error(L);
@@ -6055,7 +6053,7 @@ int TLuaInterpreter::sendMSDP(lua_State* L)
         variable = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
     }
 
-    string output;
+    std::string output;
     output += TN_IAC;
     output += TN_SB;
     output += OPT_MSDP;
@@ -6079,7 +6077,7 @@ int TLuaInterpreter::sendMSDP(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendTelnetChannel102
 int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
 {
-    string msg;
+    std::string msg;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "sendTelnetChannel102: bad argument #1 type (message bytes {2 characters} as string expected, got %s!)",
                         luaL_typename(L, 1));
@@ -6094,7 +6092,7 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
         }
     }
 
-    string output;
+    std::string output;
     output += TN_IAC;
     output += TN_SB;
     output += OPT_102;
@@ -7032,7 +7030,7 @@ int TLuaInterpreter::tempAlias(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#exists
 int TLuaInterpreter::exists(lua_State* L)
 {
-    string _name;
+    std::string _name;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "exists: wrong argument type");
         lua_error(L);
@@ -7040,7 +7038,7 @@ int TLuaInterpreter::exists(lua_State* L)
     } else {
         _name = lua_tostring(L, 1);
     }
-    string _type;
+    std::string _type;
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "exists: wrong argument type");
         lua_error(L);
@@ -7488,7 +7486,7 @@ int TLuaInterpreter::invokeFileDialog(lua_State* L)
     } else {
         luaDir = lua_toboolean(L, 1);
     }
-    string luaTitle;
+    std::string luaTitle;
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "invokeFileDialog: wrong argument type");
         lua_error(L);
@@ -8312,7 +8310,7 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     float posx, posy, posz;
     int fontSize = 50;
     float zoom = 30.0;
-    string text;
+    std::string text;
     bool showOnTop = true;
     bool noScaling = true;
 
@@ -8476,7 +8474,7 @@ int TLuaInterpreter::createMapImageLabel(lua_State* L)
 {
     int area;
     float posx, posy, posz, width, height, zoom;
-    string text;
+    std::string text;
     bool showOnTop = true;
 
     // N/U:     int args = lua_gettop(L);
@@ -9311,7 +9309,7 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
 int TLuaInterpreter::addSpecialExit(lua_State* L)
 {
     int id_from, id_to;
-    string dir;
+    std::string dir;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "addSpecialExit: wrong argument type");
         lua_error(L);
@@ -9348,7 +9346,7 @@ int TLuaInterpreter::addSpecialExit(lua_State* L)
 int TLuaInterpreter::removeSpecialExit(lua_State* L)
 {
     int id;
-    string dir;
+    std::string dir;
     if (!lua_isnumber(L, 1)) {
         lua_pushstring(L, "removeSpecialExit: wrong argument type");
         lua_error(L);
@@ -10680,7 +10678,7 @@ int TLuaInterpreter::insertLink(lua_State* L)
     // N/U:     bool gotBool = false;
     for (; s <= n; s++) {
         if (lua_isstring(L, s)) {
-            string _str = lua_tostring(L, s);
+            std::string _str = lua_tostring(L, s);
             QString qs = _str.c_str();
             sL << qs;
         } else if (lua_isboolean(L, s)) {
@@ -10718,8 +10716,8 @@ int TLuaInterpreter::insertLink(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertPopup
 int TLuaInterpreter::insertPopup(lua_State* L)
 {
-    string a1 = "";
-    string a2;
+    std::string a1 = "";
+    std::string a2;
     QStringList _hintList;
     QStringList _commandList;
     bool customFormat = false;
@@ -10844,7 +10842,7 @@ int TLuaInterpreter::insertText(lua_State* L)
 // Documentation: ? - public function missing documentation in wiki
 int TLuaInterpreter::insertHTML(lua_State* L)
 {
-    string luaSendText;
+    std::string luaSendText;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "insertHTML: wrong argument type");
         lua_error(L);
@@ -11163,7 +11161,7 @@ int TLuaInterpreter::exportAreaImage(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#openUrl
 int TLuaInterpreter::openUrl(lua_State* L)
 {
-    string luaName;
+    std::string luaName;
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "openUrl: wrong argument type");
         lua_error(L);
@@ -11179,7 +11177,7 @@ int TLuaInterpreter::openUrl(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelStyleSheet
 int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
 {
-    string luaSendText = "";
+    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "setLabelStyleSheet: wrong argument type");
         lua_error(L);
@@ -11187,7 +11185,7 @@ int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
     } else {
         luaSendText = lua_tostring(L, 1);
     }
-    string a2;
+    std::string a2;
     if (!lua_isstring(L, 2)) {
         lua_pushstring(L, "setLabelStyleSheet: wrong argument type");
         lua_error(L);
@@ -11280,7 +11278,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
             lua_pushstring(L, "getMudletVersion: wrong argument type.");
             lua_error(L);
         } else {
-            string what = lua_tostring(L, 1);
+            std::string what = lua_tostring(L, 1);
             QString tidiedWhat = QString(what.c_str()).toLower().trimmed();
             if (tidiedWhat.contains("major")) {
                 lua_pushinteger(L, major);
@@ -11968,8 +11966,8 @@ int TLuaInterpreter::getEpoch(lua_State *L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#appendBuffer
 int TLuaInterpreter::appendBuffer(lua_State* L)
 {
-    string a1;
-    string a2;
+    std::string a1;
+    std::string a2;
     int s = 1;
     int n = lua_gettop(L);
     if (n > 0) {
@@ -11997,7 +11995,7 @@ int TLuaInterpreter::appendBuffer(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#appendCmdLine
 int TLuaInterpreter::appendCmdLine(lua_State* L)
 {
-    string luaSendText;
+    std::string luaSendText;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "appendCmdLine: bad argument #1 (text to append as string expected, got %s)", luaL_typename(L, 1));
         return lua_error(L);
@@ -12056,7 +12054,7 @@ int TLuaInterpreter::uninstallPackage(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#installModule
 int TLuaInterpreter::installModule(lua_State* L)
 {
-    string modName;
+    std::string modName;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "installModule: bad argument #1 (module location as string expected, got %s)", luaL_typename(L, 1));
         return lua_error(L);
@@ -12074,7 +12072,7 @@ int TLuaInterpreter::installModule(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#uninstallModule
 int TLuaInterpreter::uninstallModule(lua_State* L)
 {
-    string modName;
+    std::string modName;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "uninstallModule: bad argument #1 (module name as string expected, got %s)", luaL_typename(L, 1));
         return lua_error(L);
@@ -12092,7 +12090,7 @@ int TLuaInterpreter::uninstallModule(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#reloadModule
 int TLuaInterpreter::reloadModule(lua_State* L)
 {
-    string modName;
+    std::string modName;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "reloadModule: bad argument #1 (module name as string expected, got %s)", luaL_typename(L, 1));
         return lua_error(L);
@@ -12165,14 +12163,14 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
 // this function to get called events.
 int TLuaInterpreter::registerAnonymousEventHandler(lua_State* L)
 {
-    string event;
+    std::string event;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "registerAnonymousEventHandler: bad argument #1 (event name as string expected, got %s)", luaL_typename(L, 1));
         return lua_error(L);
     } else {
         event = lua_tostring(L, 1);
     }
-    string func;
+    std::string func;
     if (!lua_isstring(L, 2)) {
         lua_pushfstring(L, "registerAnonymousEventHandler: bad argument #2 (function name as string expected, got %s)", luaL_typename(L, 1));
         return lua_error(L);
@@ -12221,7 +12219,7 @@ int TLuaInterpreter::expandAlias(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#printCmdLine
 int TLuaInterpreter::printCmdLine(lua_State* L)
 {
-    string luaSendText;
+    std::string luaSendText;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "printCmdLine: bad argument #1 (text to set on command line as string expected, got %s)", luaL_typename(L, 1));
         return lua_error(L);
@@ -12280,7 +12278,7 @@ int TLuaInterpreter::sendRaw(lua_State* L)
 // The data can, theoretically, contain embedded ASCII NUL characters:
 int TLuaInterpreter::sendSocket(lua_State* L)
 {
-    string data;
+    std::string data;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "sendSocket: bad argument #1 type (data as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
@@ -12298,7 +12296,7 @@ int TLuaInterpreter::sendSocket(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendIrc
 int TLuaInterpreter::sendIrc(lua_State* L)
 {
-    string who, text;
+    std::string who, text;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "sendIrc: bad argument #1 type (target as string expected, got %s!)", lua_typename(L, lua_type(L, 1)));
         return lua_error(L);
@@ -12421,7 +12419,7 @@ int TLuaInterpreter::getIrcConnectedHost(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setIrcNick
 int TLuaInterpreter::setIrcNick(lua_State* L)
 {
-    string nick;
+    std::string nick;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "setIrcNick: bad argument #1 type (nick as string expected, got %s!)", lua_typename(L, lua_type(L, 1)));
         return lua_error(L);
@@ -12449,7 +12447,7 @@ int TLuaInterpreter::setIrcNick(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setIrcServer
 int TLuaInterpreter::setIrcServer(lua_State* L)
 {
-    string addr;
+    std::string addr;
     int port = 6667;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "setIrcServer: bad argument #1 type (hostname as string expected, got %s!)", lua_typename(L, lua_type(L, 1)));
@@ -13170,7 +13168,7 @@ bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
 
     int error = luaL_dostring(L, code.toUtf8().constData());
     if (error != 0) {
-        string e = "no error message available from Lua";
+        std::string e = "no error message available from Lua";
         if (lua_isstring(L, 1)) {
             e = "Lua error:";
             e += lua_tostring(L, 1);
@@ -13227,7 +13225,7 @@ QString TLuaInterpreter::formatLuaCode(const QString &code)
     int error = luaL_dostring(L, thing.toUtf8().constData());
     QString n;
     if (error != 0) {
-        string e = "no error message available from Lua";
+        std::string e = "no error message available from Lua";
         if (lua_isstring(L, 1)) {
             e = "Lua error:";
             e += lua_tostring(L, 1);
@@ -13258,7 +13256,7 @@ bool TLuaInterpreter::compileScript(const QString& code)
 
     int error = luaL_dostring(L, code.toUtf8().constData());
     if (error != 0) {
-        string e = "no error message available from Lua";
+        std::string e = "no error message available from Lua";
         if (lua_isstring(L, 1)) {
             e = "Lua error:";
             e += lua_tostring(L, 1);
@@ -13295,7 +13293,7 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
 
     QString n;
     if (error != 0) {
-        string e = "Lua syntax error:";
+        std::string e = "Lua syntax error:";
         if (lua_isstring(L, 1)) {
             e.append(lua_tostring(L, 1));
         }
@@ -13341,19 +13339,19 @@ std::pair<bool, QString> TLuaInterpreter::discordApiEnabled(lua_State* L, bool w
     mudlet* pMudlet = mudlet::self();
 
     if (!pMudlet->mDiscord.libraryLoaded()) {
-        return make_pair(false, QStringLiteral("Discord API is not available"));
+        return std::make_pair(false, QStringLiteral("Discord API is not available"));
     }
 
     auto& host = getHostFromLua(L);
     if (!(host.mDiscordAccessFlags & Host::DiscordLuaAccessEnabled)) {
-        return make_pair(false, QStringLiteral("Discord API is disabled in settings for privacy"));
+        return std::make_pair(false, QStringLiteral("Discord API is disabled in settings for privacy"));
     }
 
     if (writeAccess && !pMudlet->mDiscord.discordUserIdMatch(&host)) {
-        return make_pair(false, QStringLiteral("Discord API is read-only as you're logged in with a different account in Discord compared to the one you entered for this profile"));
+        return std::make_pair(false, QStringLiteral("Discord API is read-only as you're logged in with a different account in Discord compared to the one you entered for this profile"));
     }
 
-    return make_pair(true, QString());
+    return std::make_pair(true, QString());
 }
 
 // No documentation available in wiki - internal function
@@ -13547,7 +13545,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         }
     } else {
         {
-            string e;
+            std::string e;
             if (lua_isstring(L, -1)) {
                 e = "Lua error:";
                 e += lua_tostring(L, -1);
@@ -13779,7 +13777,7 @@ bool TLuaInterpreter::call_luafunction(void* pT)
         if (error != 0) {
             int nbpossible_errors = lua_gettop(L);
             for (int i = 1; i <= nbpossible_errors; i++) {
-                string e = "";
+                std::string e = "";
                 if (lua_isstring(L, i)) {
                     e = "Lua error:";
                     e += lua_tostring(L, i);
@@ -13806,7 +13804,7 @@ bool TLuaInterpreter::call_luafunction(void* pT)
     } else {
         QString _n = "error in anonymous Lua function";
         QString _n2 = "func reference not found by Lua, func cannot be called";
-        string e = "Lua error:";
+        std::string e = "Lua error:";
         logError(e, _n, _n2);
     }
 
@@ -13821,7 +13819,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
     lua_State* L = pGlobalLua;
     if (!L) {
         qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return make_pair(false, false);
+        return std::make_pair(false, false);
     }
 
     lua_pushlightuserdata(L, pT);
@@ -13834,7 +13832,7 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
         if (error != 0) {
             int nbpossible_errors = lua_gettop(L);
             for (int i = 1; i <= nbpossible_errors; i++) {
-                string e = "";
+                std::string e = "";
                 if (lua_isstring(L, i)) {
                     e = "Lua error:";
                     e += lua_tostring(L, i);
@@ -13859,18 +13857,18 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT)
         lua_pop(L, lua_gettop(L));
         //lua_settop(L, 0);
         if (error == 0) {
-            return make_pair(true, returnValue);
+            return std::make_pair(true, returnValue);
         } else {
-            return make_pair(false, returnValue);
+            return std::make_pair(false, returnValue);
         }
     } else {
         QString _n = "error in anonymous Lua function";
         QString _n2 = "func reference not found by Lua, func cannot be called";
-        string e = "Lua error:";
+        std::string e = "Lua error:";
         logError(e, _n, _n2);
     }
 
-    return make_pair(false, false);
+    return std::make_pair(false, false);
 }
 
 // No documentation available in wiki - internal function
@@ -13891,7 +13889,7 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
     if (error != 0) {
         int nbpossible_errors = lua_gettop(L);
         for (int i = 1; i <= nbpossible_errors; i++) {
-            string e = "";
+            std::string e = "";
             if (lua_isstring(L, i)) {
                 e += lua_tostring(L, i);
                 logError(e, mName, function);
@@ -13916,7 +13914,7 @@ std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, c
     lua_State* L = pGlobalLua;
     if (!L) {
         qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return make_pair(false, false);
+        return std::make_pair(false, false);
     }
 
     bool returnValue = false;
@@ -13928,7 +13926,7 @@ std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, c
     if (error != 0) {
         int nbpossible_errors = lua_gettop(L);
         for (int i = 1; i <= nbpossible_errors; i++) {
-            string e = "";
+            std::string e = "";
             if (lua_isstring(L, i)) {
                 e += lua_tostring(L, i);
                 logError(e, mName, function);
@@ -13949,9 +13947,9 @@ std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, c
     }
     lua_pop(L, lua_gettop(L));
     if (error == 0) {
-        return make_pair(true, returnValue);
+        return std::make_pair(true, returnValue);
     } else {
-        return make_pair(false, returnValue);
+        return std::make_pair(false, returnValue);
     }
 }
 
@@ -13991,7 +13989,7 @@ bool TLuaInterpreter::callConditionFunction(std::string& function, const QString
     if (error != 0) {
         int nbpossible_errors = lua_gettop(L);
         for (int i = 1; i <= nbpossible_errors; i++) {
-            string e = "";
+            std::string e = "";
             if (lua_isstring(L, i)) {
                 e += lua_tostring(L, i);
                 QString _f = function.c_str();
@@ -14054,7 +14052,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
     if (error != 0) {
         int nbpossible_errors = lua_gettop(L);
         for (int i = 1; i <= nbpossible_errors; i++) {
-            string e = "";
+            std::string e = "";
             if (lua_isstring(L, i)) {
                 e += lua_tostring(L, i);
                 logError(e, mName, function);
@@ -14082,7 +14080,7 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
     lua_State* L = pGlobalLua;
     if (!L) {
         qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
-        return make_pair(false, false);
+        return std::make_pair(false, false);
     }
 
     bool returnValue = false;
@@ -14110,7 +14108,7 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
     if (error != 0) {
         int nbpossible_errors = lua_gettop(L);
         for (int i = 1; i <= nbpossible_errors; i++) {
-            string e = "";
+            std::string e = "";
             if (lua_isstring(L, i)) {
                 e += lua_tostring(L, i);
                 logError(e, mName, function);
@@ -14131,9 +14129,9 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
     }
     lua_pop(L, lua_gettop(L));
     if (error == 0) {
-        return make_pair(true, returnValue);
+        return std::make_pair(true, returnValue);
     } else {
-        return make_pair(false, returnValue);
+        return std::make_pair(false, returnValue);
     }
 }
 
@@ -14148,7 +14146,7 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
 
     int error = luaL_dostring(L, QStringLiteral("return %1").arg(function).toUtf8().constData());
     if (error) {
-        string err;
+        std::string err;
         if (lua_isstring(L, 1)) {
             err = "Lua error:";
             err += lua_tostring(L, 1);
@@ -14317,7 +14315,7 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
         error = lua_pcall(L, pE.mArgumentList.size(), LUA_MULTRET, 0);
 
     if (error) {
-        string err = "";
+        std::string err = "";
         if (lua_isstring(L, -1)) {
             err += lua_tostring(L, -1);
         }
@@ -14349,7 +14347,7 @@ double TLuaInterpreter::condenseMapLoad()
     if (error != 0) {
         int nbpossible_errors = lua_gettop(L);
         for (int i = 1; i <= nbpossible_errors; i++) {
-            string e = "";
+            std::string e = "";
             if (lua_isstring(L, i)) {
                 e += lua_tostring(L, i);
                 QString _f = luaFunction.toUtf8().constData();
