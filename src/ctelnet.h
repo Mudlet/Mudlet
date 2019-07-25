@@ -297,6 +297,9 @@ private:
     // the current Server Encoding) - gets reset when the encoding is changed:
     bool mEncodingWarningIssued;
 
+    // Set if the current connection is via a proxy
+    bool mConnectViaProxy;
+
 private slots:
 #if !defined(QT_NO_SSL)
     void handle_socket_signal_sslError(const QList<QSslError> &errors);

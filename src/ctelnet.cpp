@@ -86,10 +86,11 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , loadingReplay(false)
 , mIsReplayRunFromLua(false)
 , mEncodingWarningIssued(false)
+, mConnectViaProxy(false)
 {
     mIsTimerPosting = false;
     mNeedDecompression = false;
-    mDontReconnect  = false;
+    mDontReconnect = false;
 
     // initialize encoding to a sensible default - needs to be a different value
     // than that in the initialisation list so that it is processed as a change
@@ -342,11 +343,19 @@ void cTelnet::requestDiscordInfo()
 
 void cTelnet::connectIt(const QString& address, int port)
 {
-    // wird an dieser Stelle gesetzt
     if (mpHost) {
         mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
         mLF_ON_GA = mpHost->mLF_ON_GA;
         mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
+
+        if (mpHost->mUseProxy && !mpHost->mProxyAddress.isEmpty() && mpHost->mProxyPort != 0) {
+            auto& proxy = mpHost->getConnectionProxy();
+            socket.setProxy(*proxy);
+            mConnectViaProxy = true;
+        } else {
+            socket.setProxy(QNetworkProxy::DefaultProxy);
+            mConnectViaProxy = false;
+        }
     }
 
     if (socket.state() != QAbstractSocket::UnconnectedState) {
@@ -359,8 +368,7 @@ void cTelnet::connectIt(const QString& address, int port)
 
     hostName = address;
     hostPort = port;
-    QString server = tr("[ INFO ]  - Looking up the IP address of server:") + address + ":" + QString::number(port) + " ...";
-    postMessage(server);
+    postMessage(tr("[ INFO ]  - Looking up the IP address of server: %1:%2 ...").arg(address, QString::number(port)));
     // don't use a compile-time slot for this: https://bugreports.qt.io/browse/QTBUG-67646
     QHostInfo::lookupHost(address, this, SLOT(handle_socket_signal_hostFound(QHostInfo)));
 }
@@ -540,7 +548,11 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
     if (!hostInfo.addresses().isEmpty()) {
         mHostAddress = hostInfo.addresses().constFirst();
         postMessage(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2\n").arg(hostName, mHostAddress.toString()));
-        postMessage(tr("[ INFO ]  - Trying to connect to %1: %2 ...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
+        if (!mConnectViaProxy) {
+            postMessage(tr("[ INFO ]  - Trying to connect to %1:%2 ...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
+        } else {
+            postMessage(tr("[ INFO ]  - Trying to connect to %1:%2 via proxy...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
+        }
         socket.connectToHost(mHostAddress, hostPort);
     } else {
         socket.connectToHost(hostInfo.hostName(), hostPort);
@@ -1348,7 +1360,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 }
 
                 mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
-
+                mpHost->updateProxySettings(mpDownloader);
                 QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
                 mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
                 connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
@@ -1629,7 +1641,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         }
 
         mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
-
+        mpHost->updateProxySettings(mpDownloader);
         QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
         mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
         connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
