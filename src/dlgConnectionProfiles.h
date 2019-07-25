@@ -82,8 +82,9 @@ private:
     bool copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const;
     bool hasCustomIcon(const QString& profileName) const;
     void setProfileIcon(const QFont& font) const;
-    void loadProfileIcon(const QFont& font, const QString& profileName) const;
-    void generateProfileIcon(const QFont& font, int i, const QString& profileName) const;
+    void loadCustomProfile(const QFont& font, const QString& profileName) const;
+    void generateCustomProfile(const QFont& font, int i, const QString& profileName) const;
+    void setCustomIcon(const QString& profileName, QListWidgetItem* profile) const;
 
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has

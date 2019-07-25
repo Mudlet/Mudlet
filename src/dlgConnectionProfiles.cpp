@@ -1180,14 +1180,14 @@ void dlgConnectionProfiles::updateDiscordStatus()
 }
 
 // (re-)creates the dialogs profile list
-void dlgConnectionProfiles::fillout_form()
-{
+void dlgConnectionProfiles::fillout_form() {
     profiles_tree_widget->clear();
     profile_name_entry->clear();
     host_name_entry->clear();
     port_entry->clear();
 
-    mProfileList = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    mProfileList = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot,
+                                                                               QDir::Name);
 
     // if only the default_host is present it means no profiles have yet been created
     if (mProfileList.isEmpty() || (mProfileList.size() == 1 && mProfileList.at(0) == QStringLiteral("default_host"))) {
@@ -1200,7 +1200,7 @@ void dlgConnectionProfiles::fillout_form()
 // to fit all of the 'Welcome' message
 #if defined(Q_OS_MACOS)
         // macOS requires 15px more width to get 3 columns of MUD listings in
-        resize(minimumSize().width() + 15, 300);
+    resize(minimumSize().width() + 15, 300);
 #else
         resize(minimumSize().width(), 300);
 #endif
@@ -1224,7 +1224,7 @@ void dlgConnectionProfiles::fillout_form()
     QListWidgetItem* pM;
     QIcon mi;
 
-    auto &settings = *mudlet::self()->mpSettings;
+    auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(QStringLiteral("deletedDefaultMuds"), QStringList()).toStringList();
 
     mudServer = QStringLiteral("Avalon.de");
@@ -1236,11 +1236,10 @@ void dlgConnectionProfiles::fillout_form()
         if (!hasCustomIcon(mudServer)) {
             QPixmap p(QStringLiteral(":/icons/avalon.png"));
             mi = QIcon(p.scaled(QSize(120, 30)));
+            pM->setIcon(mi);
         } else {
-            auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mudServer, QStringLiteral("profileicon"));
-            mi = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            setCustomIcon(mudServer, pM);
         }
-        pM->setIcon(mi);
         description = getDescription(QStringLiteral("avalon.mud.de"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1255,11 +1254,10 @@ void dlgConnectionProfiles::fillout_form()
         profiles_tree_widget->addItem(pM);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/achaea_120_30.png"));
+            pM->setIcon(mi);
         } else {
-            auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mudServer, QStringLiteral("profileicon"));
-            mi = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            setCustomIcon(mudServer, pM);
         }
-        pM->setIcon(mi);
         description = getDescription(QStringLiteral("achaea.com"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1275,11 +1273,11 @@ void dlgConnectionProfiles::fillout_form()
         if (!hasCustomIcon(mudServer)) {
             QPixmap pc(QStringLiteral(":/icons/3klogo.png"));
             QPixmap pc1 = pc.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
-            mi = QIcon(pc1);        } else {
-            auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mudServer, QStringLiteral("profileicon"));
-            mi = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            mi = QIcon(pc1);
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
         }
-        pM->setIcon(mi);
         description = getDescription(QStringLiteral("3k.org"), 3000, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1296,11 +1294,10 @@ void dlgConnectionProfiles::fillout_form()
             QPixmap pc(QStringLiteral(":/icons/3slogo.png"));
             QPixmap pc1 = pc.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
             mi = QIcon(pc1);
+            pM->setIcon(mi);
         } else {
-            auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mudServer, QStringLiteral("profileicon"));
-            mi = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            setCustomIcon(mudServer, pM);
         }
-        pM->setIcon(mi);
         description = getDescription(QStringLiteral("3k.org"), 3200, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1315,11 +1312,10 @@ void dlgConnectionProfiles::fillout_form()
         profiles_tree_widget->addItem(pM);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/lusternia_120_30.png"));
+            pM->setIcon(mi);
         } else {
-            auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mudServer, QStringLiteral("profileicon"));
-            mi = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            setCustomIcon(mudServer, pM);
         }
-        pM->setIcon(mi);
         description = getDescription(QStringLiteral("lusternia.com"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1333,11 +1329,10 @@ void dlgConnectionProfiles::fillout_form()
         pM->setForeground(QColor(Qt::white));
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/batmud_mud.png"));
+            pM->setIcon(mi);
         } else {
-            auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mudServer, QStringLiteral("profileicon"));
-            mi = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            setCustomIcon(mudServer, pM);
         }
-        pM->setIcon(mi);
         profiles_tree_widget->addItem(pM);
         description = getDescription(QStringLiteral("batmud.bat.org"), 0, mudServer);
         if (!description.isEmpty()) {
@@ -1353,11 +1348,10 @@ void dlgConnectionProfiles::fillout_form()
         profiles_tree_widget->addItem(pM);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/gw2.png"));
+            pM->setIcon(mi);
         } else {
-            auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mudServer, QStringLiteral("profileicon"));
-            mi = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            setCustomIcon(mudServer, pM);
         }
-        pM->setIcon(mi);
         description = getDescription(QStringLiteral("godwars2.org"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1372,11 +1366,10 @@ void dlgConnectionProfiles::fillout_form()
         profiles_tree_widget->addItem(pM);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/Slothmud.png"));
+            pM->setIcon(mi);
         } else {
-            auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mudServer, QStringLiteral("profileicon"));
-            mi = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            setCustomIcon(mudServer, pM);
         }
-        pM->setIcon(mi);
         description = getDescription(QStringLiteral("slothmud.org"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1391,11 +1384,10 @@ void dlgConnectionProfiles::fillout_form()
         profiles_tree_widget->addItem(pM);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/aardwolf_mud.png"));
+            pM->setIcon(mi);
         } else {
-            auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mudServer, QStringLiteral("profileicon"));
-            mi = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            setCustomIcon(mudServer, pM);
         }
-        pM->setIcon(mi);
         description = getDescription(QStringLiteral("aardmud.org"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1410,11 +1402,10 @@ void dlgConnectionProfiles::fillout_form()
         profiles_tree_widget->addItem(pM);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/materiaMagicaIcon"));
+            pM->setIcon(mi);
         } else {
-            auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mudServer, QStringLiteral("profileicon"));
-            mi = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            setCustomIcon(mudServer, pM);
         }
-        pM->setIcon(mi);
         description = getDescription(QStringLiteral("materiamagica.com"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1429,11 +1420,10 @@ void dlgConnectionProfiles::fillout_form()
         profiles_tree_widget->addItem(pM);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/120x30RoDLogo.png"));
+            pM->setIcon(mi);
         } else {
-            auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mudServer, QStringLiteral("profileicon"));
-            mi = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            setCustomIcon(mudServer, pM);
         }
-        pM->setIcon(mi);
         description = getDescription(QStringLiteral("realmsofdespair.com"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1448,11 +1438,10 @@ void dlgConnectionProfiles::fillout_form()
         profiles_tree_widget->addItem(pM);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/zombiemud.png"));
+            pM->setIcon(mi);
         } else {
-            auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mudServer, QStringLiteral("profileicon"));
-            mi = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            setCustomIcon(mudServer, pM);
         }
-        pM->setIcon(mi);
         description = getDescription(QStringLiteral("zombiemud.org"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1467,11 +1456,10 @@ void dlgConnectionProfiles::fillout_form()
         profiles_tree_widget->addItem(pM);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/aetolia_120_30.png"));
+            pM->setIcon(mi);
         } else {
-            auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mudServer, QStringLiteral("profileicon"));
-            mi = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            setCustomIcon(mudServer, pM);
         }
-        pM->setIcon(mi);
         description = getDescription(QStringLiteral("aetolia.com"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1486,11 +1474,10 @@ void dlgConnectionProfiles::fillout_form()
         profiles_tree_widget->addItem(pM);
         if (!hasCustomIcon(mudServer)) {
             mi = QIcon(QStringLiteral(":/icons/imperian_120_30.png"));
+            pM->setIcon(mi);
         } else {
-            auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mudServer, QStringLiteral("profileicon"));
-            mi = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            setCustomIcon(mudServer, pM);
         }
-        pM->setIcon(mi);
         description = getDescription(QStringLiteral("imperian.com"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1504,12 +1491,12 @@ void dlgConnectionProfiles::fillout_form()
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
         if (!hasCustomIcon(mudServer)) {
-            mi = QIcon(QPixmap(QStringLiteral(":/icons/wotmudicon.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            mi = QIcon(QPixmap(QStringLiteral(":/icons/wotmudicon.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
+                                                                                Qt::SmoothTransformation).copy());
+            pM->setIcon(mi);
         } else {
-            auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mudServer, QStringLiteral("profileicon"));
-            mi = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            setCustomIcon(mudServer, pM);
         }
-        pM->setIcon(mi);
         description = getDescription(QStringLiteral("game.wotmud.org"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1523,12 +1510,12 @@ void dlgConnectionProfiles::fillout_form()
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
         if (!hasCustomIcon(mudServer)) {
-            mi = QIcon(QPixmap(QStringLiteral(":/icons/midnightsun2.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            mi = QIcon(QPixmap(QStringLiteral(":/icons/midnightsun2.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
+                                                                                  Qt::SmoothTransformation).copy());
+            pM->setIcon(mi);
         } else {
-            auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mudServer, QStringLiteral("profileicon"));
-            mi = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            setCustomIcon(mudServer, pM);
         }
-        pM->setIcon(mi);
         description = getDescription(QStringLiteral("midnightsun2.org"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1542,12 +1529,13 @@ void dlgConnectionProfiles::fillout_form()
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
         if (!hasCustomIcon(mudServer)) {
-            mi = QIcon(QPixmap(QStringLiteral(":/icons/luminari_icon.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            mi = QIcon(
+                    QPixmap(QStringLiteral(":/icons/luminari_icon.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
+                                                                                Qt::SmoothTransformation).copy());
+            pM->setIcon(mi);
         } else {
-            auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mudServer, QStringLiteral("profileicon"));
-            mi = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            setCustomIcon(mudServer, pM);
         }
-        pM->setIcon(mi);
         description = getDescription(QStringLiteral("luminarimud.com"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1561,12 +1549,13 @@ void dlgConnectionProfiles::fillout_form()
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
         if (!hasCustomIcon(mudServer)) {
-            mi = QIcon(QPixmap(QStringLiteral(":/icons/stickmud_icon.jpg")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            mi = QIcon(
+                    QPixmap(QStringLiteral(":/icons/stickmud_icon.jpg")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
+                                                                                Qt::SmoothTransformation).copy());
+            pM->setIcon(mi);
         } else {
-            auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mudServer, QStringLiteral("profileicon"));
-            mi = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            setCustomIcon(mudServer, pM);
         }
-        pM->setIcon(mi);
         description = getDescription(QStringLiteral("stickmud.com"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1580,12 +1569,12 @@ void dlgConnectionProfiles::fillout_form()
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
         if (!hasCustomIcon(mudServer)) {
-            mi = QIcon(QPixmap(QStringLiteral(":/icons/clessidra.jpg")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            mi = QIcon(QPixmap(QStringLiteral(":/icons/clessidra.jpg")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
+                                                                               Qt::SmoothTransformation).copy());
+            pM->setIcon(mi);
         } else {
-            auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mudServer, QStringLiteral("profileicon"));
-            mi = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            setCustomIcon(mudServer, pM);
         }
-        pM->setIcon(mi);
         description = getDescription(QStringLiteral("clessidra.it"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1599,12 +1588,13 @@ void dlgConnectionProfiles::fillout_form()
         pM->setForeground(QColor(Qt::white));
         if (!hasCustomIcon(mudServer)) {
             profiles_tree_widget->addItem(pM);
-            mi = QIcon(QPixmap(QStringLiteral(":/icons/reinosdeleyenda_mud.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            mi = QIcon(QPixmap(QStringLiteral(":/icons/reinosdeleyenda_mud.png")).scaled(QSize(120, 30),
+                                                                                         Qt::IgnoreAspectRatio,
+                                                                                         Qt::SmoothTransformation).copy());
+            pM->setIcon(mi);
         } else {
-            auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mudServer, QStringLiteral("profileicon"));
-            mi = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+            setCustomIcon(mudServer, pM);
         }
-        pM->setIcon(mi);
         description = getDescription(QStringLiteral("reinosdeleyenda.es"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1646,7 +1636,8 @@ void dlgConnectionProfiles::fillout_form()
             test_profile_row = i;
         }
 
-        QDateTime profile_lastRead = QFileInfo(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profileName)).lastModified();
+        QDateTime profile_lastRead = QFileInfo(
+                mudlet::getMudletPath(mudlet::profileXmlFilesPath, profileName)).lastModified();
         // Since Qt 5.x null QTimes and QDateTimes are invalid - and might not
         // work as expected - so test for validity of the test_date value as well
         if ((!test_date.isValid()) || profile_lastRead > test_date) {
@@ -1656,7 +1647,8 @@ void dlgConnectionProfiles::fillout_form()
         }
     }
 
-    if (toselectRow != -1 && toselectProfileName == QStringLiteral("default_host") && profiles_tree_widget->count() > 1) {
+    if (toselectRow != -1 && toselectProfileName == QStringLiteral("default_host") &&
+        profiles_tree_widget->count() > 1) {
         // if the last profile read is default_host, it means the user hasn't created
         // any profiles yet since default_host profile cannot actually be used. In this case,
         // select a random pre-defined profile to give all MUDs a fair go
@@ -1685,7 +1677,7 @@ void dlgConnectionProfiles::setProfileIcon(const QFont& font) const
         }
 
         if (hasCustomIcon(profileName)) {
-            loadProfileIcon(font, profileName);
+            loadCustomProfile(font, profileName);
         } else {
             // mProfileList is derived from a filesystem directory, but MacOS is not
             // necessarily case preserving for file names so any tests on them
@@ -1695,7 +1687,7 @@ void dlgConnectionProfiles::setProfileIcon(const QFont& font) const
                 continue;
             }
 
-            generateProfileIcon(font, i, profileName);
+            generateCustomProfile(font, i, profileName);
         }
     }
 }
@@ -1705,14 +1697,12 @@ bool dlgConnectionProfiles::hasCustomIcon(const QString& profileName) const
     return QFileInfo::exists(mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, QStringLiteral("profileicon")));
 }
 
-void dlgConnectionProfiles::loadProfileIcon(const QFont& font, const QString& profileName) const
+void dlgConnectionProfiles::loadCustomProfile(const QFont& font, const QString& profileName) const
 {
     auto pItem = new QListWidgetItem(profileName);
     pItem->setFont(font);
     pItem->setForeground(QColor(Qt::white));
-    auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, QStringLiteral("profileicon"));
-    auto icon = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
-    pItem->setIcon(icon);
+    setCustomIcon(profileName, pItem);
     auto description = getDescription(profileName, 0, profileName);
     if (!description.isEmpty()) {
         pItem->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1720,7 +1710,13 @@ void dlgConnectionProfiles::loadProfileIcon(const QFont& font, const QString& pr
     profiles_tree_widget->addItem(pItem);
 }
 
-void dlgConnectionProfiles::generateProfileIcon(const QFont& font, int i, const QString& profileName) const
+void dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidgetItem* profile) const {
+    auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, QStringLiteral("profileicon"));
+    auto icon = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+    profile->setIcon(icon);
+}
+
+void dlgConnectionProfiles::generateCustomProfile(const QFont& font, int i, const QString& profileName) const
 {
     auto pItem = new QListWidgetItem(profileName);
 
@@ -1749,8 +1745,7 @@ void dlgConnectionProfiles::generateProfileIcon(const QFont& font, int i, const 
     QImage _pm(90, 30, QImage::Format_ARGB32_Premultiplied);
     QPainter _pt(&_pm);
     _pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
-    int fs = 30;
-    for (; fs > 1; fs--) {
+    for (int fs = 30; fs > 1; fs--) {
         _pt.eraseRect(QRect(0, 0, 90, 30));
         _pt.fillRect(QRect(0, 0, 90, 30), QColor(255, 0, 0, 10));
         _font = QFont(QStringLiteral("DejaVu Sans"), fs, QFont::Normal);
