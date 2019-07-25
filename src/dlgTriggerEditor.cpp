@@ -5041,7 +5041,9 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
         mpTriggersMainArea->spinBox_lineMargin->setValue(pT->getConditionLineDelta());
         mpTriggersMainArea->spinBox_stayOpen->setValue(pT->mStayOpen);
         mpTriggersMainArea->groupBox_soundTrigger->setChecked(pT->mSoundTrigger);
-        mpTriggersMainArea->lineEdit_soundFile->setToolTip(pT->mSoundFile);
+        if (!pT->mSoundFile.isEmpty()) {
+            mpTriggersMainArea->lineEdit_soundFile->setToolTip(pT->mSoundFile);
+        }
         mpTriggersMainArea->lineEdit_soundFile->setText(pT->mSoundFile);
         mpTriggersMainArea->lineEdit_soundFile->setCursorPosition(mpTriggersMainArea->lineEdit_soundFile->text().length());
         mpTriggersMainArea->toolButton_clearSoundFile->setEnabled(!mpTriggersMainArea->lineEdit_soundFile->text().isEmpty());
@@ -8413,6 +8415,7 @@ void dlgTriggerEditor::slot_clearSoundFile()
 {
     mpTriggersMainArea->lineEdit_soundFile->clear();
     mpTriggersMainArea->toolButton_clearSoundFile->setEnabled(false);
+    mpTriggersMainArea->lineEdit_soundFile->setToolTip(tr("<p>Sound file to play when the trigger fires.</p>"));
 }
 
 void dlgTriggerEditor::slot_showAllTriggerControls(const bool isShown)
