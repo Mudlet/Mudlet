@@ -5762,7 +5762,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="175"/>
       <source>&lt;p&gt;A timer with a short interval will quickly fill up the &lt;i&gt;Central Debug Console&lt;/i&gt; windows with messages that it ran correctly on &lt;i&gt;each&lt;/i&gt; occasion it is called.  This (per profile) control adjusts a threshold that will hide those messages in just that window for those timers which run &lt;b&gt;correctly&lt;/b&gt; when the timer&apos;s interval is less than this setting.&lt;/p&gt;&lt;p&gt;&lt;u&gt;Any timer script that has errors will still have its error messages reported whatever the setting.&lt;/u&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Un timer configurato con un intervallo molto breve, potrebbe riempire velocemente la &lt;i&gt;Console di Debug Principale&lt;/i&gt; con messaggi che segnalano l'esecuzione corretta di &lt;i&gt;ogni&lt;/i&gt; ricorrenza.  Questa opzione (valida solo per questo profilo) permette di definire un limite entro il quale i messaggi sono nascosti in caso lo script del timer sia eseguito &lt;b&gt;correttamente&lt;/b&gt; con un intervallo di tempo inferiore a quello impostato.&lt;/p&gt;&lt;p&gt;&lt;u&gt;Eventuali errori nello script del timer saranno comunque visualizzati.&lt;/u&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="194"/>
@@ -6571,7 +6571,7 @@ Non saranno salvate modifiche sul disco fisso, quindi andranno perse in caso di 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="505"/>
       <source>Shows/Hides the separate Central Debug Console - when being displayed the system will be slower.</source>
-      <translation>Mostra/Nasconde la console di debug - quando viene visualizzata il sistema sarà più lento.</translation>
+      <translation>Mostra/Nasconde la Console di Debug Principale - quando è attiva il sistema potrebbe essere più lento.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="611"/>
@@ -9416,7 +9416,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="712"/>
       <source>Central Debug Console</source>
-      <translation>Console Debug centrale</translation>
+      <translation>Console di Debug Principale</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="725"/>
@@ -10184,7 +10184,7 @@ tenta di nuovo quando sarà terminato.</translation>
       <location filename="../src/ui/profile_preferences.ui" line="1120"/>
       <source>Show &apos;LUA OK&apos; messages for Timers with minimum interval of (h:mm:ss.zzz):</source>
       <comment>The terms in italics refer to Mudlet specific things and ought to match translations in the glossary - assuming they have been put in there!</comment>
-      <translation>Mostra i messaggi &apos;LUA OK&apos; per i Timer con un intervallo minimo di (h:mm:ss.zzz):</translation>
+      <translation>Mostra messaggi &apos;LUA OK&apos; per Timer con intervallo di almeno (h:mm:ss.zzz):</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1154"/>
