@@ -9141,7 +9141,7 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
                 lua_pushstring(L, "dash dot dot line");
                 break;
             case Qt::SolidLine:
-                [[clang::fallthrough]];
+                [[fallthrough]];
             default:
                 lua_pushstring(L, "solid line");
             }

@@ -5392,7 +5392,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem* pItem)
 
     switch (varType) {
     case LUA_TNONE:
-        [[clang::fallthrough]];
+        [[fallthrough]];
     case LUA_TNIL:
         mpSourceEditorArea->hide();
         break;
@@ -5437,9 +5437,9 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem* pItem)
         icon.addPixmap(QPixmap(QStringLiteral(":/icons/function.png")), QIcon::Normal, QIcon::Off);
         break;
     case LUA_TLIGHTUSERDATA:
-        [[clang::fallthrough]];
+        [[fallthrough]];
     case LUA_TUSERDATA:
-        [[clang::fallthrough]];
+        [[fallthrough]];
     case LUA_TTHREAD:
         ; // No-op
     }
@@ -8329,11 +8329,11 @@ QColor dlgTriggerEditor::parseButtonStyleSheetColors(const QString& styleSheetTe
         if (match.hasMatch()) {
             switch (match.capturedLength(1)) {
             case 3: // RGB
-                [[clang::fallthrough]];
+                [[fallthrough]];
             case 6: // RRGGBB
-                [[clang::fallthrough]];
+                [[fallthrough]];
             case 9: // RRRGGGBBB
-                [[clang::fallthrough]];
+                [[fallthrough]];
             case 12: // RRRRGGGGBBBB
                 return QColor(match.captured(1).prepend(QLatin1Char('#')));
 
@@ -8363,11 +8363,11 @@ QColor dlgTriggerEditor::parseButtonStyleSheetColors(const QString& styleSheetTe
         if (match.hasMatch()) {
             switch (match.capturedLength(1)) {
             case 3: // RGB
-                [[clang::fallthrough]];
+                [[fallthrough]];
             case 6: // RRGGBB
-                [[clang::fallthrough]];
+                [[fallthrough]];
             case 9: // RRRGGGBBB
-                [[clang::fallthrough]];
+                [[fallthrough]];
             case 12: // RRRRGGGGBBBB
                 return QColor(match.captured(1).prepend(QLatin1Char('#')));
 
