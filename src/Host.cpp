@@ -1776,10 +1776,10 @@ void Host::updateProxySettings(QNetworkAccessManager* manager) {
     }
 }
 
-unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
+std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
 {
     if (!mpDownloaderProxy) {
-        mpDownloaderProxy = make_unique<QNetworkProxy>(QNetworkProxy::Socks5Proxy);
+        mpDownloaderProxy = std::make_unique<QNetworkProxy>(QNetworkProxy::Socks5Proxy);
     }
     auto& proxy = mpDownloaderProxy;
     proxy->setHostName(mProxyAddress);
