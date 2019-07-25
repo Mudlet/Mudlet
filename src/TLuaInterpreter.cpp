@@ -1097,8 +1097,7 @@ int TLuaInterpreter::getLines(lua_State* L)
 // Documentation: ? - public function missing documentation in wiki
 // Should have been called loadReplay(...) but this name is already in the
 // published Lua API
-int TLuaInterpreter::loadRawFile(lua_State* L)
-{
+int TLuaInterpreter::loadRawFile(lua_State* L) {
     QString replayFileName;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "loadRawFile: bad argument #1 type (replay file name, {may include a relative to \n"
@@ -1106,13 +1105,10 @@ int TLuaInterpreter::loadRawFile(lua_State* L)
                            "got %s!)",
                         luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        replayFileName = QString::fromUtf8(lua_tostring(L, 1));
-        if (replayFileName.isEmpty()) {
-            lua_pushnil(L);
-            lua_pushstring(L, "a blank string is not a valid replay file name");
-            return 2;
-        }
+    } else if (replayFileName = QString::fromUtf8(lua_tostring(L, 1); replayFileName.isEmpty())) {
+        lua_pushnil(L);
+        lua_pushstring(L, "a blank string is not a valid replay file name");
+        return 2;
     }
 
     Host& host = getHostFromLua(L);
