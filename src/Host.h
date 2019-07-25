@@ -41,7 +41,6 @@
 #include <QFont>
 #include <QPointer>
 #include <QTextStream>
-#include <memory>
 #include "post_guard.h"
 
 class QDialog;

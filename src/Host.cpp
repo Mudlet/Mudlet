@@ -40,6 +40,7 @@
 #include "pre_guard.h"
 #include <QtUiTools>
 #include <zip.h>
+#include <memory>
 #include "post_guard.h"
 
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
