@@ -58,6 +58,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
+#include <QNetworkDiskCache>
 #include <QMessageBox>
 #include <QScrollBar>
 #include <QTableWidget>
