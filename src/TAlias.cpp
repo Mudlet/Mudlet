@@ -27,9 +27,6 @@
 #include "TDebug.h"
 #include "mudlet.h"
 
-
-using namespace std;
-
 TAlias::TAlias(TAlias* parent, Host* pHost)
 : Tree<TAlias>( parent )
 , mpHost( pHost )

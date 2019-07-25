@@ -228,6 +228,8 @@ public:
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
+    void updateProxySettings(QNetworkAccessManager* manager);
+    std::unique_ptr<QNetworkProxy>& getConnectionProxy();
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
@@ -261,6 +263,12 @@ public:
     bool mSslIgnoreExpired;
     bool mSslIgnoreSelfSigned;
     bool mSslIgnoreAll;
+
+    bool mUseProxy;
+    QString mProxyAddress;
+    quint16 mProxyPort;
+    QString mProxyUsername;
+    QString mProxyPassword;
 
     bool mIsGoingDown;
     bool mIsProfileLoadingSequence;
@@ -425,6 +433,7 @@ public:
     // suppressed.
     // An invalid/null value is treated as the "show all"/inactive case:
     QTime mTimerDebugOutputSuppressionInterval;
+    std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous

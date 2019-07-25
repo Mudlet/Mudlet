@@ -68,8 +68,6 @@
 #include <zip.h>
 #include "post_guard.h"
 
-using namespace std;
-
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::Close) {
@@ -133,19 +131,19 @@ mudlet* mudlet::self()
 void mudlet::loadLanguagesMap()
 {
     mLanguageCodeMap = {
-            {"en_US", make_pair(QStringLiteral("English (American)"), 0)},
-            {"en_GB", make_pair(QStringLiteral("English (British)"), 0)},
-            {"zh_CN", make_pair(QStringLiteral(u"简化字"), 0)},
-            {"zh_TW", make_pair(QStringLiteral(u"繁體字"), 0)},
-            {"nl_NL", make_pair(QStringLiteral("Nederlands"), 0)},
-            {"fr_FR", make_pair(QStringLiteral(u"Français"), 0)},
-            {"de_DE", make_pair(QStringLiteral("Deutsch"), 0)},
-            {"el_GR", make_pair(QStringLiteral(u"ελληνικά"), 0)},
-            {"it_IT", make_pair(QStringLiteral("Italiano"), 0)},
-            {"pl_PL", make_pair(QStringLiteral("Polszczyzna"), 0)},
-            {"ru_RU", make_pair(QStringLiteral(u"Pусский"), 0)},
-            {"es_ES", make_pair(QStringLiteral(u"Español"), 0)},
-            {"pt_PT", make_pair(QStringLiteral(u"Português"), 0)},
+            {"en_US", std::make_pair(QStringLiteral("English (American)"), 0)},
+            {"en_GB", std::make_pair(QStringLiteral("English (British)"), 0)},
+            {"zh_CN", std::make_pair(QStringLiteral(u"简化字"), 0)},
+            {"zh_TW", std::make_pair(QStringLiteral(u"繁體字"), 0)},
+            {"nl_NL", std::make_pair(QStringLiteral("Nederlands"), 0)},
+            {"fr_FR", std::make_pair(QStringLiteral(u"Français"), 0)},
+            {"de_DE", std::make_pair(QStringLiteral("Deutsch"), 0)},
+            {"el_GR", std::make_pair(QStringLiteral(u"ελληνικά"), 0)},
+            {"it_IT", std::make_pair(QStringLiteral("Italiano"), 0)},
+            {"pl_PL", std::make_pair(QStringLiteral("Polszczyzna"), 0)},
+            {"ru_RU", std::make_pair(QStringLiteral(u"Pусский"), 0)},
+            {"es_ES", std::make_pair(QStringLiteral(u"Español"), 0)},
+            {"pt_PT", std::make_pair(QStringLiteral(u"Português"), 0)},
     };
 
     // Primarily use to identify Hunspell dictionaries (some of which are not
@@ -420,10 +418,10 @@ void mudlet::loadLanguagesMap()
         if (translatedpc < mTranslationStar) {
             mLanguageCodeMap.insert(
                     languageKey,
-                    make_pair(tr("%1 (%2% done)", "%1 is the language name, %2 is the amount of texts in percent that is translated in Mudlet").arg(languageData.first).arg(translatedpc),
+                    std::make_pair(tr("%1 (%2% done)", "%1 is the language name, %2 is the amount of texts in percent that is translated in Mudlet").arg(languageData.first).arg(translatedpc),
                               translatedpc));
         } else {
-            mLanguageCodeMap.insert(languageKey, make_pair(languageData.first, translatedpc));
+            mLanguageCodeMap.insert(languageKey, std::make_pair(languageData.first, translatedpc));
         }
     }
  }
@@ -1316,7 +1314,7 @@ void mudlet::slot_close_profile_requested(int tab)
         return;
     }
 
-    list<QPointer<TToolBar>> hostToolBarMap = pH->getActionUnit()->getToolBarList();
+    std::list<QPointer<TToolBar>> hostToolBarMap = pH->getActionUnit()->getToolBarList();
     QMap<QString, TDockWidget*>& dockWindowMap = pH->mpConsole->mDockWidgetMap;
     QMap<QString, TConsole*>& hostConsoleMap = pH->mpConsole->mSubConsoleMap;
 
@@ -1410,7 +1408,7 @@ void mudlet::slot_close_profile()
         if (mConsoleMap.contains(mpCurrentActiveHost)) {
             Host* pH = mpCurrentActiveHost;
             if (pH) {
-                list<QPointer<TToolBar>> hostTToolBarMap = pH->getActionUnit()->getToolBarList();
+                std::list<QPointer<TToolBar>> hostTToolBarMap = pH->getActionUnit()->getToolBarList();
                 QMap<QString, TDockWidget*>& dockWindowMap = pH->mpConsole->mDockWidgetMap;
                 QMap<QString, TConsole*>& hostConsoleMap = pH->mpConsole->mSubConsoleMap;
                 QString name = pH->getName();
@@ -2452,15 +2450,15 @@ bool mudlet::setLabelOnLeave(Host* pHost, const QString& name, const QString& fu
 std::pair<bool, int> mudlet::getLineNumber(Host* pHost, QString& windowName)
 {
     if (!pHost || !pHost->mpConsole) {
-        return make_pair(false, -1);
+        return std::make_pair(false, -1);
     }
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(windowName);
     if (pC) {
-        return make_pair(true, pC->getLineNumber());
+        return std::make_pair(true, pC->getLineNumber());
     } else {
         TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
-        return make_pair(false, -1);
+        return std::make_pair(false, -1);
     }
 }
 
@@ -2637,14 +2635,14 @@ int mudlet::selectSection(Host* pHost, const QString& name, int f, int t)
 std::tuple<bool, QString, int, int> mudlet::getSelection(Host* pHost, const QString& windowName)
 {
     if (!pHost || !pHost->mpConsole) {
-        return make_tuple(false, QStringLiteral(R"(internal error, Host pointer had nullptr value)"), 0, 0);
+        return std::make_tuple(false, QStringLiteral(R"(internal error, Host pointer had nullptr value)"), 0, 0);
     }
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(windowName);
     if (pC) {
         return pC->getSelection();
     } else {
-        return make_tuple(false, QStringLiteral(R"(window "%s" not found)").arg(windowName.toUtf8().constData()), 0, 0);
+        return std::make_tuple(false, QStringLiteral(R"(window "%s" not found)").arg(windowName.toUtf8().constData()), 0, 0);
     }
 }
 
@@ -3532,7 +3530,7 @@ void mudlet::slot_reconnect()
     if (!pHost) {
         return;
     }
-    pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
+    pHost->mTelnet.reconnect();
 }
 
 void mudlet::slot_disconnect()
@@ -5186,6 +5184,35 @@ QSet<QString> mudlet::getWordSet()
     } while (!gotWordSet);
 
     return wordSet;
+}
+
+std::pair<bool, QString> mudlet::setProfileIcon(const QString& profile, const QString& newIconPath)
+{
+    QDir dir;
+    auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, QStringLiteral("profileicon"));
+    if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
+        qWarning() << "mudlet::setProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
+        return std::make_pair(false, QStringLiteral("couldn't remove existing icon file"));
+    }
+
+    if (!QFile::copy(newIconPath, profileIconPath)) {
+        qWarning() << "mudlet::setProfileIcon() ERROR: couldn't copy new icon" << newIconPath<< " to" << profileIconPath;
+        return std::make_pair(false, QStringLiteral("couldn't copy icon file into new location"));
+    }
+
+    return std::make_pair(true, QString());
+}
+
+std::pair<bool, QString> mudlet::resetProfileIcon(const QString& profile)
+{
+    QDir dir;
+    auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, QStringLiteral("profileicon"));
+    if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
+        qWarning() << "mudlet::resetProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
+        return std::make_pair(false, QStringLiteral("couldn't remove existing icon file"));
+    }
+
+    return std::make_pair(true, QString());
 }
 
 #if defined(Q_OS_WIN32)

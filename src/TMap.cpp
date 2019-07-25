@@ -2255,6 +2255,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     qApp->processEvents();
     // Attempts to ensure INFO message gets shown before download is initiated!
 
+    pHost->updateProxySettings(mpNetworkAccessManager);
     mpNetworkReply = mpNetworkAccessManager->get(QNetworkRequest(QUrl(url)));
     // Using zero for both min and max values should cause the bar to oscillate
     // until the first update

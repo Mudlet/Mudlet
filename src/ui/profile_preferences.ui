@@ -1853,7 +1853,7 @@
              <bool>false</bool>
             </property>
             <property name="toolTip">
-             <string>&lt;p&gt;Use this button to bring up a menu which lists the other profiles in your system. Click on each one that you want to copy the current map &lt;i&gt;as it &lt;b&gt;now is&lt;/b&gt; in &lt;b&gt;this profile&lt;/b&gt;&lt;/i&gt; to those profiles. You can return here and change the selection whilst this dialog is still open but no changes or copies will be made &lt;b&gt;until you press the &amp;quot;&lt;/b&gt;&lt;i&gt;Copy to Destination(s)&amp;quot; button&lt;/i&gt;&lt;/b&gt;. When that button is pressed each of the selected profiles will be examined to determine the room where the player is located in each of those profiles: for profiles that are not loaded, the most recently saved map file is used; for profiles that &lt;b&gt;are&lt;/b&gt; currently loaded at this time, the room where the player is currently is is noted. All of the room numbers for those locations are then written out in the save of the map for &lt;b&gt;this&lt;/b&gt; profile with the normal &lt;i&gt;date-time-stamped&lt;/i&gt; name which is then copied to where the maps are stored for the other profiles. For the other profiles that are active they will then reload the new map and then should replace the player in the location noted - if it still exists; this may be not exactly the right place if there has been movement in the other profile in the meantime so this is best done when all active profiles to be so updated are quiesent!&lt;/p&gt;&lt;p&gt;To enable all the individual instances of a map that is shared between profiles to be kept in step it is best if all the profiles are updated in this manner at the same time rather than separately as previous versions of Mudlet did. If the map iteself is being edited it is essential for that to be done in one active profile at a time otherwise unsaved changes in one profile will get lost when a new map from a different profile is copied over and loaded!&lt;/p&gt;&lt;p&gt;&lt;i&gt;The previous control at this point in the &amp;quot;Profile Preferences&amp;quot; has been changed because it did not lend itself to modifications to enabling multiple profiles to be selected at once.&lt;/i&gt;&lt;/p&gt;</string>
+             <string>&lt;p&gt;Select profiles that you want to copy map to, then press the Copy button to the right&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Press to pick destination(s)</string>
@@ -1866,7 +1866,7 @@
              <bool>false</bool>
             </property>
             <property name="toolTip">
-             <string>&lt;p&gt;Use this button to make the copy of the current map in &lt;b&gt;this profile&lt;/b&gt; to each of the &lt;i&gt;profiles&lt;/i&gt; selected via the control to the left. Those profiles will be examined to determine the room where the player is located in each of those profiles: for profiles that are not loaded, the most recently saved map file is used; for profiles that &lt;b&gt;are&lt;/b&gt; currently loaded at this time, the room where the player is currently located is noted. All of the room numbers for those locations are then included in the saved data of the map for &lt;b&gt;this&lt;/b&gt; profile with the normal &lt;i&gt;date-time-stamped&lt;/i&gt; name which is then copied to where the maps are stored for the other profiles. For the other profiles that are active they will then reload the new map and then they should replace the player in the location noted automatically - if it still exists; (this may be not exactly the right place if there has been movement in the other profile in the meantime so this is best done when all active profiles to be so updated are quiesent!)&lt;/p&gt;&lt;p&gt;To enable all the individual instances of a map that is shared between profiles to be kept in step it is best if all the profiles are updated this manner at the same time rather than separately as previous versions of Mudlet did. If the map iteself is being edited it is essential for that to be done in one active profile at a time otherwise unsaved changes in one profile will get lost when a new map from a different profile is copied over and loaded!&lt;/p&gt;</string>
+             <string>&lt;p&gt;Copy map into the selected profiles on the left&lt;/p&gt;</string>
             </property>
             <property name="text">
              <string>Copy to destination(s)</string>
@@ -2789,15 +2789,15 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tab_security">
+     <widget class="QWidget" name="tab_connection">
       <attribute name="title">
-       <string>Security</string>
+       <string>Connection</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_tab_security">
-       <item row="0" column="0">
+      <layout class="QVBoxLayout" name="verticalLayout_tab_connection">
+       <item>
         <widget class="QGroupBox" name="groupBox_ssl">
          <property name="title">
-          <string>SSL</string>
+          <string>SSL/TLS</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_ssl">
           <item row="0" column="0">
@@ -4856,8 +4856,82 @@
          </layout>
         </widget>
        </item>
-       <item row="1" column="0">
-        <spacer name="verticalSpacer_security">
+       <item>
+        <widget class="QGroupBox" name="groupBox_proxy">
+         <property name="title">
+          <string>Connect to the game via proxy</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_groupBox_proxy">
+          <item row="0" column="0">
+           <widget class="QLineEdit" name="lineEdit_proxyAddress">
+            <property name="text">
+             <string/>
+            </property>
+            <property name="placeholderText">
+             <string>Address</string>
+            </property>
+            <property name="clearButtonEnabled">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLabel" name="label_5">
+            <property name="text">
+             <string>:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLineEdit" name="lineEdit_proxyPort">
+            <property name="inputMask">
+             <string>00009</string>
+            </property>
+            <property name="placeholderText">
+             <string>port</string>
+            </property>
+            <property name="clearButtonEnabled">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QLineEdit" name="lineEdit_proxyUsername">
+            <property name="toolTip">
+             <string>Username for logging into the proxy if requred</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="placeholderText">
+             <string>username (optional)</string>
+            </property>
+            <property name="clearButtonEnabled">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="4">
+           <widget class="QLineEdit" name="lineEdit_proxyPassword">
+            <property name="toolTip">
+             <string>Password for logging into the proxy if requred</string>
+            </property>
+            <property name="echoMode">
+             <enum>QLineEdit::Password</enum>
+            </property>
+            <property name="placeholderText">
+             <string>password (optional)</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_connection">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>

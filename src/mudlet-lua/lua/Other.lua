@@ -140,7 +140,7 @@ local group_creation_functions = {
     return not (permTimer(name, parent, 0, "") == -1)
   end,
   trigger = function(name, parent)
-    return not (permSubstringTrigger(name, parent, { "" }, "") == -1)
+    return not (permSubstringTrigger(name, parent, {}, "") == -1)
   end,
   alias = function(name, parent)
     return not (permAlias(name, parent, "", "") == -1)

@@ -227,11 +227,11 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
 }
 
 // returns the type of item and ID of the first (root) element
-pair<dlgTriggerEditor::EditorViewType, int> XMLimport::importFromClipboard()
+std::pair<dlgTriggerEditor::EditorViewType, int> XMLimport::importFromClipboard()
 {
     QString xml;
     QClipboard* clipboard = QApplication::clipboard();
-    pair<dlgTriggerEditor::EditorViewType, int> result;
+    std::pair<dlgTriggerEditor::EditorViewType, int> result;
 
     xml = clipboard->text(QClipboard::Clipboard);
 
@@ -539,7 +539,7 @@ void XMLimport::readUnknownMapElement()
 }
 
 // returns the type of item and ID of the first (root) element
-pair<dlgTriggerEditor::EditorViewType, int> XMLimport::readPackage()
+std::pair<dlgTriggerEditor::EditorViewType, int> XMLimport::readPackage()
 {
     dlgTriggerEditor::EditorViewType objectType = dlgTriggerEditor::EditorViewType::cmUnknownView;
     int rootItemID = -1;
@@ -579,7 +579,7 @@ pair<dlgTriggerEditor::EditorViewType, int> XMLimport::readPackage()
             }
         }
     }
-    return make_pair(objectType, rootItemID);
+    return std::make_pair(objectType, rootItemID);
 }
 
 void XMLimport::readHelpPackage()
@@ -834,7 +834,7 @@ void XMLimport::readHostPackage(Host* pHost)
     } else {
         pHost->mTimerDebugOutputSuppressionInterval = QTime();
     }
-  
+
     if (attributes().hasAttribute(QLatin1String("mDiscordAccessFlags"))) {
         pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(attributes().value("mDiscordAccessFlags").toString().toInt());
     }
@@ -883,6 +883,16 @@ void XMLimport::readHostPackage(Host* pHost)
     for (auto character : ignore) {
         pHost->mDoubleClickIgnore.insert(character);
     }
+    pHost->mUseProxy = (attributes().value("mUseProxy") == "yes");
+    pHost->mProxyAddress = attributes().value("mProxyAddress").toString();
+    if (attributes().hasAttribute(QLatin1String("mProxyPort"))) {
+        pHost->mProxyPort = attributes().value("mProxyPort").toInt();
+    } else {
+        pHost->mProxyPort = 0;
+    }
+    pHost->mProxyUsername = attributes().value("mProxyUsername").toString();
+    pHost->mProxyPassword = attributes().value("mProxyPassword").toString();
+
     pHost->mSslTsl = (attributes().value("mSslTsl") == "yes");
     pHost->mAutoReconnect = (attributes().value("mAutoReconnect") == "yes");
     pHost->mSslIgnoreExpired = (attributes().value("mSslIgnoreExpired") == "yes");
