@@ -108,7 +108,6 @@ TLuaInterpreter::TLuaInterpreter(Host* pH, int id) : mpHost(pH), mHostID(id), pu
     connect(mpFileDownloader, &QNetworkAccessManager::finished, this, &TLuaInterpreter::slot_replyFinished);
 
     initLuaGlobals();
-    initIndenterGlobals();
 
     purgeTimer.start(2000);
 }
@@ -5701,7 +5700,7 @@ int TLuaInterpreter::setItalics(lua_State* L)
     }
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setOverline 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setOverline
 int TLuaInterpreter::setOverline(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -13193,7 +13192,12 @@ QString TLuaInterpreter::formatLuaCode(const QString &code)
     if (code.isEmpty()) {
         return code;
     }
-    lua_State* L = pIndenterState;
+
+    if (!pIndenterState) {
+        initIndenterGlobals();
+    }
+
+    lua_State* L = pIndenterState.get();
     if (!L) {
         qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
         return code;
@@ -15148,83 +15152,82 @@ void TLuaInterpreter::setupLanguageData()
 // and we don't want to tie ourselves to it by exposing them for scripting.
 void TLuaInterpreter::initIndenterGlobals()
 {
-    pIndenterState = newstate();
-    storeHostInLua(pIndenterState, mpHost);
+    Q_ASSERT_X(!pIndenterState, "TLuaInterpreter::initIndenterGlobals()", "Indenter state is already initialized - re-initializing it is very expensive!");
 
-    luaL_openlibs(pIndenterState);
+    pIndenterState.reset(newstate());
+    storeHostInLua(pIndenterState.get(), mpHost);
 
-    lua_pushstring(pIndenterState, "SESSION");
-    lua_pushnumber(pIndenterState, mHostID);
-    lua_settable(pIndenterState, LUA_GLOBALSINDEX);
+    luaL_openlibs(pIndenterState.get());
 
-    lua_pushstring(pIndenterState, "SCRIPT_NAME");
-    lua_pushstring(pIndenterState, "Lua Indenter Interpreter");
-    lua_settable(pIndenterState, LUA_GLOBALSINDEX);
+    lua_pushstring(pIndenterState.get(), "SESSION");
+    lua_pushnumber(pIndenterState.get(), mHostID);
+    lua_settable(pIndenterState.get(), LUA_GLOBALSINDEX);
 
-    lua_pushstring(pIndenterState, "SCRIPT_ID");
-    lua_pushnumber(pIndenterState, -2); // ID 2 is used to indicate that this is the indenter Lua interpreter
-    lua_settable(pIndenterState, LUA_GLOBALSINDEX);
-    lua_register(pIndenterState, "echo", TLuaInterpreter::Echo);
-    lua_register(pIndenterState, "tempTimer", TLuaInterpreter::tempTimer);
-    lua_register(pIndenterState, "send", TLuaInterpreter::sendRaw);
-    lua_register(pIndenterState, "debugc", TLuaInterpreter::debug);
+    lua_pushstring(pIndenterState.get(), "SCRIPT_NAME");
+    lua_pushstring(pIndenterState.get(), "Lua Indenter Interpreter");
+    lua_settable(pIndenterState.get(), LUA_GLOBALSINDEX);
+
+    lua_pushstring(pIndenterState.get(), "SCRIPT_ID");
+    lua_pushnumber(pIndenterState.get(), -2); // ID 2 is used to indicate that this is the indenter Lua interpreter
+    lua_settable(pIndenterState.get(), LUA_GLOBALSINDEX);
+    lua_register(pIndenterState.get(), "echo", TLuaInterpreter::Echo);
+    lua_register(pIndenterState.get(), "tempTimer", TLuaInterpreter::tempTimer);
+    lua_register(pIndenterState.get(), "send", TLuaInterpreter::sendRaw);
+    lua_register(pIndenterState.get(), "debugc", TLuaInterpreter::debug);
     // PLACEMARKER: End of indenter Lua interpreter functions registration
 
 
 
 #if defined(Q_OS_MACOS)
         //macOS app bundle would like the search path to also be set to the current binary directory
-        luaL_dostring(pIndenterState, QStringLiteral("package.cpath = package.cpath .. ';%1/?.so'")
+        luaL_dostring(pIndenterState.get(), QStringLiteral("package.cpath = package.cpath .. ';%1/?.so'")
                       .arg(QCoreApplication::applicationDirPath())
                       .toUtf8().constData());
-        luaL_dostring(pIndenterState, QStringLiteral("package.path = package.path .. ';%1/?.lua'")
+        luaL_dostring(pIndenterState.get(), QStringLiteral("package.path = package.path .. ';%1/?.lua'")
                       .arg(QCoreApplication::applicationDirPath())
                       .toUtf8().constData());
 
 #elif defined(Q_OS_UNIX)
     // Need to tweak the lua path for the installed *nix case and AppImage builds as well as
     // to allow running from a shadow build directory (both qmake and cmake).
-    luaL_dostring(pIndenterState, QStringLiteral("package.path = '" LUA_DEFAULT_PATH "/?.lua;%1/?.lua;%1/../3rdparty/?.lua;%1/../../3rdparty/?.lua;' .. package.path")
+    luaL_dostring(pIndenterState.get(), QStringLiteral("package.path = '" LUA_DEFAULT_PATH "/?.lua;%1/?.lua;%1/../3rdparty/?.lua;%1/../../3rdparty/?.lua;' .. package.path")
                   .arg(QCoreApplication::applicationDirPath())
                   .toUtf8().constData());
 
-    luaL_dostring(pIndenterState, "package.path = package.path");
+    luaL_dostring(pIndenterState.get(), "package.path = package.path");
 
     // if using LuaJIT, adjust the cpath to look in /usr/lib as well - it doesn't by default
-    luaL_dostring(pIndenterState, "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so' end");
+    luaL_dostring(pIndenterState.get(), "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so' end");
 
     //AppInstaller on Linux would like the search path to also be set to the current binary directory
-    luaL_dostring(pIndenterState, QStringLiteral("package.cpath = package.cpath .. ';%1/lib/?.so'")
+    luaL_dostring(pIndenterState.get(), QStringLiteral("package.cpath = package.cpath .. ';%1/lib/?.so'")
                   .arg(QCoreApplication::applicationDirPath())
                   .toUtf8().constData());
 #elif defined(Q_OS_WIN32)
     // For Qt Creator builds, add search paths one and two levels up from here, then a 3rdparty directory:
-    luaL_dostring(pIndenterState,
+    luaL_dostring(pIndenterState.get(),
                   QStringLiteral("package.path = [[%1\\?.lua;%2\\..\\3rdparty\\?.lua;%2\\..\\..\\3rdparty\\?.lua;]] .. package.path")
                           .arg(QByteArray(LUA_DEFAULT_PATH), QDir::toNativeSeparators(QCoreApplication::applicationDirPath()))
                           .toUtf8().constData());
 #endif
 
-    int error = luaL_dostring(pIndenterState, R"(
+    int error = luaL_dostring(pIndenterState.get(), R"(
       require('lcf.workshop.base')
       get_ast = request('!.lua.code.get_ast')
       get_formatted_code = request('!.lua.code.ast_as_code')
     )");
     if (error) {
         QString e = tr("no error message available from Lua");
-        if (lua_isstring(pIndenterState, -1)) {
+        if (lua_isstring(pIndenterState.get(), -1)) {
             e = tr("Lua error:");
-            e += lua_tostring(pIndenterState, -1);
+            e += lua_tostring(pIndenterState.get(), -1);
         }
         QString msg = tr("[ ERROR ] - Cannot load code formatter, indenting functionality won't be available.\n");
         msg.append(e);
         mpHost->postMessage(msg);
-    } else {
-        QString msg = tr("[  OK  ]  - Lua code formatter loaded.");
-        mpHost->postMessage(msg);
     }
 
-    lua_pop(pIndenterState, lua_gettop(pIndenterState));
+    lua_pop(pIndenterState.get(), lua_gettop(pIndenterState.get()));
 }
 
 // No documentation available in wiki - internal function
