@@ -989,7 +989,7 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber) co
     if (lineNumber < mpBuffer->lineBuffer.size()) {
         int characterWidth = 1;
         int currentX = 0;
-        for (const auto character : mpBuffer->lineBuffer.at(lineNumber)) {
+        for (const auto& character : mpBuffer->lineBuffer.at(lineNumber)) {
             const uint unicode = getGraphemeBaseCharacter(character);
             if (unicode == '\t') {
                 characterWidth = 8;
@@ -1435,13 +1435,23 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     auto lineOffset = mPA.y();
 
     // find the biggest width of text we need to work with
-    int characterWidth = 0;
+    int largestLine{};
     for (int y = mPA.y(), total = mPB.y() + 1; y < total; ++y) {
-        const auto lineWidth = static_cast<int>(mpBuffer->buffer.at(y).size());
-        characterWidth = qMax(lineWidth, characterWidth);
+        int lineWidth{};
+        for (const auto& character : mpBuffer->lineBuffer.at(y)) {
+             const uint unicode = getGraphemeBaseCharacter(character);
+             int characterWidth{};
+             if (unicode == '\t') {
+                 characterWidth = 8;
+             } else {
+                 characterWidth = getGraphemeWidth(unicode);
+             }
+             lineWidth += characterWidth;
+        }
+        largestLine = std::max(lineWidth, largestLine);
     }
 
-    auto widthpx = qMin(65500, characterWidth * mFontWidth);
+    auto widthpx = qMin(65500, largestLine * mFontWidth);
 
     auto rect = QRect(mPA.x(), mPA.y(), widthpx, heightpx);
 
