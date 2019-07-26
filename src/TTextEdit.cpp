@@ -1860,9 +1860,9 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
          *              correctly prior to this stage in processing - leave as is!
          */
         case 0xFFFE:
-            [[clang::fallthrough]];
+            [[fallthrough]];
         case 0xFFFF:
-            [[clang::fallthrough]];
+            [[fallthrough]];
         default:
             if (value >= 0xFDD0 && value <= 0xFDEF) {
                 return htmlCenter(tr("{noncharacter}", "Unicode codepoint in range U+FFD0 to U+FDEF - not a character.")); break;

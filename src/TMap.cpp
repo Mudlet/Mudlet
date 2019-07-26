@@ -1364,7 +1364,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                     oldLineStyleData.insert(direction, QLatin1String("dash dot dot line"));
                     break;
                 case Qt::SolidLine:
-                    [[clang::fallthrough]];
+                    [[fallthrough]];
                 default:
                     oldLineStyleData.insert(direction, QLatin1String("solid line"));
                 }
