@@ -43,7 +43,6 @@
 class TRoom;
 
 using namespace boost;
-using namespace std;
 
 
 // auxiliary types

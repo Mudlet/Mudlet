@@ -560,7 +560,7 @@
             </size>
            </property>
            <property name="toolTip">
-            <string>&lt;p&gt;Click to remove a sound file set for this trigger.&lt;/p&gt;</string>
+            <string>&lt;p&gt;Click to remove the sound file set for this trigger.&lt;/p&gt;</string>
            </property>
            <property name="icon">
             <iconset resource="../mudlet.qrc">

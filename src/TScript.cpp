@@ -26,9 +26,6 @@
 #include "TDebug.h"
 #include "mudlet.h"
 
-
-using namespace std;
-
 TScript::TScript( TScript * parent, Host * pHost )
 : Tree<TScript>( parent )
 , exportItem(true)

@@ -47,9 +47,6 @@
 #include <QTextCodec>
 #include "post_guard.h"
 
-
-using namespace std;
-
 const QString TConsole::cmLuaLineVariable("line");
 
 TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
@@ -2042,18 +2039,18 @@ bool TConsole::selectSection(int from, int to)
 std::tuple<bool, QString, int, int> TConsole::getSelection()
 {
     if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
-        return make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
+        return std::make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
     }
 
     const auto start = P_begin.x();
     const auto length = P_end.x() - P_begin.x();
     const auto line = buffer.line(mUserCursor.y());
     if (line.size() < start) {
-        return make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
+        return std::make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
     }
 
     const auto text = line.mid(start, length);
-    return make_tuple(true, text, start, length);
+    return std::make_tuple(true, text, start, length);
 }
 
 void TConsole::setLink(const QStringList& linkFunction, const QStringList& linkHint)

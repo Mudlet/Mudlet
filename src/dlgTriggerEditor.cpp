@@ -48,8 +48,7 @@
 #include <QToolBar>
 #include "post_guard.h"
 
-
-using namespace std;
+using namespace std::chrono_literals;
 
 // Used as a QObject::property so that we can keep track of the color for the
 // trigger colorizer buttons loaded from a trigger even if the user disables
@@ -92,28 +91,30 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     msgInfoAddAlias = tr("<p>Alias react on user input. To add a new alias:"
                          "<ol><li>Click on the 'Add Item' icon above.</li>"
-                         "<li>Define an input pattern either literally or with a Perl regular expression.</li>"
-                         "<li>Define a 'substitution' command to send to the game in clear text <strong>instead of the alias pattern</strong>, or write a script for more complicated needs.</li>"
+                         "<li>Define an input <strong>pattern</strong> either literally or with a Perl regular expression.</li>"
+                         "<li>Define a 'substitution' <strong>command</strong> to send to the game in clear text <strong>instead of the alias pattern</strong>, or write a script for more complicated needs.</li>"
                          "<li><strong>Activate</strong> the alias.</li></ol></p>"
                          "<p><strong>Note:</strong> Aliases can also be defined from the command line in the main profile window like this:</p>"
-                         "<p><code>lua permAlias(&quot;my greets&quot;, &quot;&quot;, &quot;^hi$&quot;, [[send (&quot;say Greetings, traveller!&quot;) echo (&quot;We said hi!&quot;)]])</code> - You can now greet by typing 'hi'</p>"
+                         "<p><code>lua permAlias(&quot;my greets&quot;, &quot;&quot;, &quot;^hi$&quot;, [[send (&quot;say Greetings, traveller!&quot;) echo (&quot;We said hi!&quot;)]])</code></p>"
+                         "<p>You can now greet by typing 'hi'</p>"
                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
     msgInfoAddTrigger = tr("<p>Triggers react on game output. To add a new trigger:"
                            "<ol><li>Click on the 'Add Item' icon above.</li>"
                            "<li>Define a <strong>pattern</strong> that you want to trigger on.</li>"
                            "<li>Select the appropriate pattern <strong>type</strong>.</li>"
-                           "<li>Define a clear text command that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..</li>"
+                           "<li>Define a clear text <strong>command</strong> that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..</li>"
                            "<li><strong>Activate</strong> the trigger.</li></ol></p>"
                            "<p><strong>Note:</strong> Triggers can also be defined from the command line in the main profile window like this:</p>"
-                           "<p><code>lua permSubstringTrigger(&quot;My drink trigger&quot;, &quot;&quot;, &quot;You are thirsty.&quot;, function() send(&quot;drink water&quot;) end)</code> - This will keep you refreshed.</p>"
+                           "<p><code>lua permSubstringTrigger(&quot;My drink trigger&quot;, &quot;&quot;, &quot;You are thirsty.&quot;, function() send(&quot;drink water&quot;) end)</code></p>"
+                           "<p>This will keep you refreshed.</p>"
                            "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
     msgInfoAddScript = tr("<p>Scripts organize code and can react to events. To add a new script:"
                           "<ol><li>Click on the 'Add Item' icon above.</li>"
-                          "<li>Enter a script in the box below. You can for example define functions to be called by other triggers, aliases, etc.</li>"
-                          "<li>If you write lua commands without defining a function, they will be run on Mudlet startup and each time you open the script for editing.</li>"
-                          "<li>If needed, you can register a list of events with the + and - symbols. If one of these events take place, the function with the same name as the script item itself will be called.</li>"
+                          "<li>Enter a script in the box below. You can for example define <strong>functions</strong> to be called by other triggers, aliases, etc.</li>"
+                          "<li>If you write lua <strong>commands</strong> without defining a function, they will be run on Mudlet startup and each time you open the script for editing.</li>"
+                          "<li>If needed, you can register a list of <strong>events</strong> with the + and - symbols. If one of these events take place, the function with the same name as the script item itself will be called.</li>"
                           "<li><strong>Activate</strong> the script.</li></ol></p>"
                           "<p><strong>Note:</strong> Scripts are run automatically when viewed, even if they are deactivated.</p>"
                           "<p><strong>Note:</strong> Events can also be added to a script from the command line in the main profile window like this:</p>"
@@ -122,30 +123,33 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     msgInfoAddTimer = tr("<p>Timers react after a timespan once or regularly. To add a new timer:"
                          "<ol><li>Click on the 'Add Item' icon above.</li>"
-                         "<li>Define the timespan after which the timer should react in a this format: hours : minutes : seconds.</li>"
-                         "<li>Define a clear text command that you want to send to the game when the time has passed, or write a script for more complicated needs.</li>"
+                         "<li>Define the <strong>timespan</strong> after which the timer should react in a this format: hours : minutes : seconds.</li>"
+                         "<li>Define a clear text <strong>command</strong> that you want to send to the game when the time has passed, or write a script for more complicated needs.</li>"
                          "<li><strong>Activate</strong> the timer.</li></ol></p>"
                          "<p><strong>Note:</strong> If you want the trigger to react only once and not regularly, use the Lua tempTimer() function instead.</p>"
                          "<p><strong>Note:</strong> Timers can also be defined from the command line in the main profile window like this:</p>"
-                         "<p><code>lua tempTimer(3, function() echo(&quot;hello!\n&quot;) end)</code> - This will greet you exactly 3 seconds after it was made.</p>"
+                         "<p><code>lua tempTimer(3, function() echo(&quot;hello!\n&quot;) end)</code></p>"
+                         "<p>This will greet you exactly 3 seconds after it was made.</p>"
                          "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
     msgInfoAddButton = tr("<p>Buttons react on mouse clicks. To add a new button:"
-                          "<ol><li>Add a new group to define a new button bar in case you don't have any.</li>"
-                          "<li>Add new groups as menus to a button bar or sub-menus to menus.<li>"
-                          "<li>Add new items as buttons to a button bar or menu or sub-menu.</li>"
-                          "<li>Define a clear text command that you want to send to the game if the button is pressed, or write a script for more complicated needs.</li>"
-                          "<li><strong>Activate</strong> the toolbar, menu or button. <strong>Note:</strong> Deactivated items will be hidden and if they are toolbars or menus then all the items they contain will be also be hidden.</li></ol></p>"
+                          "<ol><li>Add a new group to define a new <strong>button bar</strong> in case you don't have any.</li>"
+                          "<li>Add new groups as <strong>menus</strong> to a button bar or sub-menus to menus.<li>"
+                          "<li>Add new items as <strong>buttons</strong> to a button bar or menu or sub-menu.</li>"
+                          "<li>Define a clear text <strong>command</strong> that you want to send to the game if the button is pressed, or write a script for more complicated needs.</li>"
+                          "<li><strong>Activate</strong> the toolbar, menu or button. </li></ol>"
+                          "<p><strong>Note:</strong> Deactivated items will be hidden and if they are toolbars or menus then all the items they contain will be also be hidden.</p>"
                           "<p><strong>Note:</strong> If a button is made a <strong>click-down</strong> button then you may also define a clear text command that you want to send to the game when the button is pressed a second time to uncheck it or to write a script to run when it happens - within such a script the Lua 'getButtonState()' function reports whether the button is up or down.</p>"
                           "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
     msgInfoAddKey = tr("<p>Keys react on keyboard presses. To add a new key binding:"
                        "<ol><li>Click on the 'Add Item' icon above.</li>"
                        "<li>Click on <strong>'grab key'</strong> and then press your key combination, e.g. including modifier keys like Control, Shift, etc.</li>"
-                       "<li>Define a clear text command that you want to send to the game if the button is pressed, or write a script for more complicated needs.</li>"
+                       "<li>Define a clear text <strong>command</strong> that you want to send to the game if the button is pressed, or write a script for more complicated needs.</li>"
                        "<li><strong>Activate</strong> the new key binding.</li></ol></p>"
                        "<p><strong>Note:</strong> Keys can also be defined from the command line in the main profile window like this:</p>"
-                       "<p><code>lua permKey(&quot;my jump key&quot;, &quot;&quot;, mudlet.key.F8, [[send(&quot;jump&quot;]]) end)</code> - Pressing F8 will make you jump.</p>"
+                       "<p><code>lua permKey(&quot;my jump key&quot;, &quot;&quot;, mudlet.key.F8, [[send(&quot;jump&quot;]]) end)</code></p>"
+                       "<p>Pressing F8 will make you jump.</p>"
                        "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
     msgInfoAddVar = tr("<p>Variables store information. To make a new variable:"
@@ -156,7 +160,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                        "<li>To remove a variable manually, set it to 'nil' or click on the 'Delete' icon above.</li></ol></p>"
                        "<p><strong>Note:</strong> Variables created here won't be saved when Mudlet shuts down unless you check their checkbox in the list of variables to the left. You could also create scripts with the variables instead.</p>"
                        "<p><strong>Note:</strong> Variables and tables can also be defined from the command line in the main profile window like this:</p>"
-                       "<p><code>lua foo = &quot;bar&quot;</code> - This will create a string called 'foo' with 'bar' as its value.</p>"
+                       "<p><code>lua foo = &quot;bar&quot;</code></p>"
+                       "<p>This will create a string called 'foo' with 'bar' as its value.</p>"
                        "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
     setUnifiedTitleAndToolBarOnMac(true); //MAC OSX: make window moveable
@@ -747,6 +752,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 #else
         startTimer(mAutosaveInterval * 1min);
 #endif
+
     }
 }
 
@@ -1365,7 +1371,7 @@ void dlgTriggerEditor::searchVariables(const QString& s)
 
 void dlgTriggerEditor::searchKeys(const QString& s)
 {
-    list<TKey*> nodes = mpHost->getKeyUnit()->getKeyRootNodeList();
+    std::list<TKey*> nodes = mpHost->getKeyUnit()->getKeyRootNodeList();
     for (auto key : nodes) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
@@ -1437,7 +1443,7 @@ void dlgTriggerEditor::searchKeys(const QString& s)
 
 void dlgTriggerEditor::searchTimers(const QString& s)
 {
-    list<TTimer*> nodes = mpHost->getTimerUnit()->getTimerRootNodeList();
+    std::list<TTimer*> nodes = mpHost->getTimerUnit()->getTimerRootNodeList();
     for (auto timer : nodes) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
@@ -1509,7 +1515,7 @@ void dlgTriggerEditor::searchTimers(const QString& s)
 
 void dlgTriggerEditor::searchActions(const QString& s)
 {
-    list<TAction*> nodes = mpHost->getActionUnit()->getActionRootNodeList();
+    std::list<TAction*> nodes = mpHost->getActionUnit()->getActionRootNodeList();
     for (auto action : nodes) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
@@ -1631,7 +1637,7 @@ void dlgTriggerEditor::searchActions(const QString& s)
 
 void dlgTriggerEditor::searchScripts(const QString& s)
 {
-    list<TScript*> nodes = mpHost->getScriptUnit()->getScriptRootNodeList();
+    std::list<TScript*> nodes = mpHost->getScriptUnit()->getScriptRootNodeList();
     for (auto script : nodes) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
@@ -1715,7 +1721,7 @@ void dlgTriggerEditor::searchScripts(const QString& s)
 
 void dlgTriggerEditor::searchAliases(const QString& s)
 {
-    list<TAlias*> nodes = mpHost->getAliasUnit()->getAliasRootNodeList();
+    std::list<TAlias*> nodes = mpHost->getAliasUnit()->getAliasRootNodeList();
     for (auto alias : nodes) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
@@ -1802,7 +1808,7 @@ void dlgTriggerEditor::searchAliases(const QString& s)
 
 void dlgTriggerEditor::searchTriggers(const QString& s)
 {
-    list<TTrigger*> nodes = mpHost->getTriggerUnit()->getTriggerRootNodeList();
+    std::list<TTrigger*> nodes = mpHost->getTriggerUnit()->getTriggerRootNodeList();
     for (auto trigger : nodes) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
@@ -5035,7 +5041,9 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
         mpTriggersMainArea->spinBox_lineMargin->setValue(pT->getConditionLineDelta());
         mpTriggersMainArea->spinBox_stayOpen->setValue(pT->mStayOpen);
         mpTriggersMainArea->groupBox_soundTrigger->setChecked(pT->mSoundTrigger);
-        mpTriggersMainArea->lineEdit_soundFile->setToolTip(pT->mSoundFile);
+        if (!pT->mSoundFile.isEmpty()) {
+            mpTriggersMainArea->lineEdit_soundFile->setToolTip(pT->mSoundFile);
+        }
         mpTriggersMainArea->lineEdit_soundFile->setText(pT->mSoundFile);
         mpTriggersMainArea->lineEdit_soundFile->setCursorPosition(mpTriggersMainArea->lineEdit_soundFile->text().length());
         mpTriggersMainArea->toolButton_clearSoundFile->setEnabled(!mpTriggersMainArea->lineEdit_soundFile->text().isEmpty());
@@ -5384,7 +5392,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem* pItem)
 
     switch (varType) {
     case LUA_TNONE:
-        [[clang::fallthrough]];
+        [[fallthrough]];
     case LUA_TNIL:
         mpSourceEditorArea->hide();
         break;
@@ -5429,9 +5437,9 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem* pItem)
         icon.addPixmap(QPixmap(QStringLiteral(":/icons/function.png")), QIcon::Normal, QIcon::Off);
         break;
     case LUA_TLIGHTUSERDATA:
-        [[clang::fallthrough]];
+        [[fallthrough]];
     case LUA_TUSERDATA:
-        [[clang::fallthrough]];
+        [[fallthrough]];
     case LUA_TTHREAD:
         ; // No-op
     }
@@ -5765,7 +5773,7 @@ void dlgTriggerEditor::fillout_form()
 
 void dlgTriggerEditor::populateKeys()
 {
-    list<TKey*> baseNodeList_key = mpHost->getKeyUnit()->getKeyRootNodeList();
+    std::list<TKey*> baseNodeList_key = mpHost->getKeyUnit()->getKeyRootNodeList();
     for (auto key : baseNodeList_key) {
         if (key->isTemporary()) {
             continue;
@@ -5830,7 +5838,7 @@ void dlgTriggerEditor::populateKeys()
 }
 void dlgTriggerEditor::populateActions()
 {
-    list<TAction*> baseNodeList_action = mpHost->getActionUnit()->getActionRootNodeList();
+    std::list<TAction*> baseNodeList_action = mpHost->getActionUnit()->getActionRootNodeList();
     for (auto action : baseNodeList_action) {
         if (action->isTemporary()) {
             continue;
@@ -5887,7 +5895,7 @@ void dlgTriggerEditor::populateActions()
 }
 void dlgTriggerEditor::populateAliases()
 {
-    list<TAlias*> baseNodeList_alias = mpHost->getAliasUnit()->getAliasRootNodeList();
+    std::list<TAlias*> baseNodeList_alias = mpHost->getAliasUnit()->getAliasRootNodeList();
     for (auto alias : baseNodeList_alias) {
         if (alias->isTemporary()) {
             continue;
@@ -5952,7 +5960,7 @@ void dlgTriggerEditor::populateAliases()
 }
 void dlgTriggerEditor::populateScripts()
 {
-    list<TScript*> baseNodeList_scripts = mpHost->getScriptUnit()->getScriptRootNodeList();
+    std::list<TScript*> baseNodeList_scripts = mpHost->getScriptUnit()->getScriptRootNodeList();
     for (auto script : baseNodeList_scripts) {
         QString s = script->getName();
 
@@ -6000,7 +6008,7 @@ void dlgTriggerEditor::populateScripts()
 }
 void dlgTriggerEditor::populateTimers()
 {
-    list<TTimer *> baseNodeList_timers = mpHost->getTimerUnit()->getTimerRootNodeList();
+    std::list<TTimer *> baseNodeList_timers = mpHost->getTimerUnit()->getTimerRootNodeList();
     for (auto timer : baseNodeList_timers) {
         if( timer->isTemporary() ) {
             continue;
@@ -6058,7 +6066,7 @@ void dlgTriggerEditor::populateTimers()
 }
 void dlgTriggerEditor::populateTriggers()
 {
-    list<TTrigger *> baseNodeList = mpHost->getTriggerUnit()->getTriggerRootNodeList();
+    std::list<TTrigger *> baseNodeList = mpHost->getTriggerUnit()->getTriggerRootNodeList();
     for (auto trigger : baseNodeList) {
         if (trigger->isTemporary()) {
             continue;
@@ -8321,11 +8329,11 @@ QColor dlgTriggerEditor::parseButtonStyleSheetColors(const QString& styleSheetTe
         if (match.hasMatch()) {
             switch (match.capturedLength(1)) {
             case 3: // RGB
-                [[clang::fallthrough]];
+                [[fallthrough]];
             case 6: // RRGGBB
-                [[clang::fallthrough]];
+                [[fallthrough]];
             case 9: // RRRGGGBBB
-                [[clang::fallthrough]];
+                [[fallthrough]];
             case 12: // RRRRGGGGBBBB
                 return QColor(match.captured(1).prepend(QLatin1Char('#')));
 
@@ -8355,11 +8363,11 @@ QColor dlgTriggerEditor::parseButtonStyleSheetColors(const QString& styleSheetTe
         if (match.hasMatch()) {
             switch (match.capturedLength(1)) {
             case 3: // RGB
-                [[clang::fallthrough]];
+                [[fallthrough]];
             case 6: // RRGGBB
-                [[clang::fallthrough]];
+                [[fallthrough]];
             case 9: // RRRGGGBBB
-                [[clang::fallthrough]];
+                [[fallthrough]];
             case 12: // RRRRGGGGBBBB
                 return QColor(match.captured(1).prepend(QLatin1Char('#')));
 
@@ -8407,6 +8415,7 @@ void dlgTriggerEditor::slot_clearSoundFile()
 {
     mpTriggersMainArea->lineEdit_soundFile->clear();
     mpTriggersMainArea->toolButton_clearSoundFile->setEnabled(false);
+    mpTriggersMainArea->lineEdit_soundFile->setToolTip(tr("<p>Sound file to play when the trigger fires.</p>"));
 }
 
 void dlgTriggerEditor::slot_showAllTriggerControls(const bool isShown)
