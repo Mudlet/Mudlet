@@ -26,9 +26,6 @@
 #include "TConsole.h"
 #include "TTrigger.h"
 
-
-using namespace std;
-
 void TriggerUnit::initStats()
 {
     statsTriggerTotal = 0;
@@ -47,7 +44,7 @@ void TriggerUnit::initStats()
 
 void TriggerUnit::_uninstall(TTrigger* pChild, const QString& packageName)
 {
-    list<TTrigger*>* childrenList = pChild->mpMyChildrenList;
+    std::list<TTrigger*>* childrenList = pChild->mpMyChildrenList;
     for (auto trigger : *childrenList) {
         _uninstall(trigger, packageName);
         uninstallList.append(trigger);
@@ -350,7 +347,7 @@ bool TriggerUnit::killTrigger(const QString& name)
 
 void TriggerUnit::_assembleReport(TTrigger* pChild)
 {
-    list<TTrigger*>* childrenList = pChild->mpMyChildrenList;
+    std::list<TTrigger*>* childrenList = pChild->mpMyChildrenList;
     for (auto trigger : *childrenList) {
         _assembleReport(trigger);
         if (trigger->isActive()) {
@@ -379,7 +376,7 @@ QString TriggerUnit::assembleReport()
         }
         statsPatterns += rootTrigger->mRegexCodeList.size();
         statsTriggerTotal++;
-        list<TTrigger*>* childrenList = rootTrigger->mpMyChildrenList;
+        std::list<TTrigger*>* childrenList = rootTrigger->mpMyChildrenList;
         for (auto childTrigger : *childrenList) {
             _assembleReport(childTrigger);
             if (childTrigger->isActive()) {

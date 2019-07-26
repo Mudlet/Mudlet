@@ -27,10 +27,6 @@ on_failure:
 - cd C:\src
 - bash -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
 
-artifacts:
-- path: src\release
-  name: mudlet
-
 cache:
   - '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1'
 

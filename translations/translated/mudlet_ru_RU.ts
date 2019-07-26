@@ -10,6 +10,24 @@
     </message>
   </context>
   <context>
+    <name>Feed</name>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="273"/>
+      <source>Too many redirects.</source>
+      <translation>Слишком много перенаправлений.</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="282"/>
+      <source>No data received from server</source>
+      <translation>Данные не получены с сервера</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="293"/>
+      <source>Could not verify download integrity.</source>
+      <translation>Не удалось проверить целостность загруженных данных.</translation>
+    </message>
+  </context>
+  <context>
     <name>Host</name>
     <message>
       <location filename="../src/Host.cpp" line="890"/>
@@ -321,6 +339,95 @@ please wait...</source>
       <location filename="../src/ircmessageformatter.cpp" line="445"/>
       <source>%1 secs</source>
       <translation>%1 секунд</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="55"/>
+      <source>Start element not found!</source>
+      <translation>Начальный элемент не найден!</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
+      <source>line %1: %2</source>
+      <translation>линия %1: %2</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="149"/>
+      <source>Expected %1 while parsing</source>
+      <translation>Ожидается %1 при разборе</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.cpp" line="145"/>
+      <source>%1 @ line %2</source>
+      <translation>%1 @ линия %2</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="82"/>
+      <source>No data found!</source>
+      <translation>Нет данных!</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="89"/>
+      <source>Expected object in keymap
+</source>
+      <translation>Ожидается объект в 'keymap'
+</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="129"/>
+      <source>Invalid keysequence used %1
+</source>
+      <translation>Недопустимое сочитание клавиш %1
+</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="369"/>
+      <source>Error parsing %1: %2 </source>
+      <translation>Ошибка при анализе %1: %2 </translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/textgrammar.cpp" line="305"/>
+      <source>Error reading file %1:%2</source>
+      <translation>Ошибка при чтении файла %1:%2</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="435"/>
+      <source>%1 ranges</source>
+      <translation>%1 диапазон</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="441"/>
+      <source>Line %1, Column %2</source>
+      <translation>Строка %1, столбец %2</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="444"/>
+      <source>, Offset %1</source>
+      <translation>, смещение %1</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="448"/>
+      <source> | %1 chars selected</source>
+      <translation> | %1 символов выбранного</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="452"/>
+      <source> | scope: </source>
+      <translation> | область действия: </translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="462"/>
+      <source> (%1)</source>
+      <translation> (%1)</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="399"/>
+      <source>Error parsing theme %1:%2</source>
+      <translation>Ошибка при анализе темы %1:%2</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="404"/>
+      <source>Error theme not found %1.</source>
+      <translation>Ошибка, тема не найденa %1.</translation>
     </message>
   </context>
   <context>
@@ -1743,7 +1850,8 @@ your only warning about this command...!</source>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15260"/>
-      <source>[ ERROR ] - Couldn&apos;t to load LuaGlobal; your Mudlet is broken! Tried these locations:
+      <source>[ ERROR ] - Couldn&apos;t find and load LuaGlobal.lua - your Mudlet is broken!
+Tried these locations:
 %1</source>
       <translation>[ ОШИБКА ] - Не удалось загрузить LuaGlobal; ваш Мудлет сломан! Попробовали эти места:
 %1</translation>
@@ -2179,7 +2287,7 @@ in main console!</source>
     <name>TRoom</name>
     <message>
       <location filename="../src/TRoom.cpp" line="107"/>
-      <location filename="../src/TRoom.cpp" line="941"/>
+      <location filename="../src/TRoom.cpp" line="967"/>
       <source>North</source>
       <translation>Север</translation>
     </message>
@@ -2195,7 +2303,7 @@ in main console!</source>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="110"/>
-      <location filename="../src/TRoom.cpp" line="983"/>
+      <location filename="../src/TRoom.cpp" line="1009"/>
       <source>South</source>
       <translation>Юг</translation>
     </message>
@@ -2211,37 +2319,37 @@ in main console!</source>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="113"/>
-      <location filename="../src/TRoom.cpp" line="1025"/>
+      <location filename="../src/TRoom.cpp" line="1051"/>
       <source>East</source>
       <translation>Восток</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="114"/>
-      <location filename="../src/TRoom.cpp" line="1039"/>
+      <location filename="../src/TRoom.cpp" line="1065"/>
       <source>West</source>
       <translation>Запад</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="115"/>
-      <location filename="../src/TRoom.cpp" line="1053"/>
+      <location filename="../src/TRoom.cpp" line="1079"/>
       <source>Up</source>
       <translation>Вверх</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="116"/>
-      <location filename="../src/TRoom.cpp" line="1067"/>
+      <location filename="../src/TRoom.cpp" line="1093"/>
       <source>Down</source>
       <translation>Вниз</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="117"/>
-      <location filename="../src/TRoom.cpp" line="1081"/>
+      <location filename="../src/TRoom.cpp" line="1107"/>
       <source>In</source>
       <translation>В</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="118"/>
-      <location filename="../src/TRoom.cpp" line="1095"/>
+      <location filename="../src/TRoom.cpp" line="1121"/>
       <source>Out</source>
       <translation>Из</translation>
     </message>
@@ -2266,49 +2374,49 @@ in main console!</source>
       <translation>Предупреждение: При установке Зоны для комнаты (Id: %1) у нее нет текущей зоны!</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="955"/>
+      <location filename="../src/TRoom.cpp" line="981"/>
       <source>Northeast</source>
       <translation>Северо-восток</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="969"/>
+      <location filename="../src/TRoom.cpp" line="995"/>
       <source>Northwest</source>
       <translation>Северо-запад</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="997"/>
+      <location filename="../src/TRoom.cpp" line="1023"/>
       <source>Southeast</source>
       <translation>Юго-восток</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1011"/>
+      <location filename="../src/TRoom.cpp" line="1037"/>
       <source>Southwest</source>
       <translation>Юго-запад</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1116"/>
+      <location filename="../src/TRoom.cpp" line="1142"/>
       <source>[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}</source>
       <translation>[ ВНИМ ] - В комнате ID:%1 удаление недопустимого (особого) выхода в %2 {без имени!}</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1120"/>
+      <location filename="../src/TRoom.cpp" line="1146"/>
       <source>[ WARN ]  - Room had an invalid (special) exit to %1 {with no name!} it was removed.</source>
       <translation>[ ВНИМ ] - В комнате был недопустимый (специальный) выход %1 {без имени!} он был удален.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1130"/>
+      <location filename="../src/TRoom.cpp" line="1156"/>
       <source>[ INFO ]  - In room id:%1 patching {internal fixup} of (special) exit to
 %2, was: &quot;%3&quot; now: &quot;%4&quot;.</source>
       <translation>[ ИНФО ]  - В комнате ID:%1 , исправлен {internal fixup} (специальный) выход на
 %2, было: &quot;%3&quot; сейчас: &quot;%4&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1138"/>
+      <location filename="../src/TRoom.cpp" line="1164"/>
       <source>[ INFO ]  - Room needed patching {internal fixup} of (special) exit to %1, was: &quot;%2&quot; now: &quot;%3&quot;.</source>
       <translation>[ ИНФОРМАЦИЯ ]  - Комната нуждается в исправлении {internal fixup} из (специального) выхода в %1, была: &quot;%2&quot; сейчас: &quot;%3&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1164"/>
+      <location filename="../src/TRoom.cpp" line="1190"/>
       <source>[ INFO ]  - In room with id: %1 correcting special exit &quot;%2&quot; that
 was to room with an exit to invalid room: %3 to now go
 to: %4.</source>
@@ -2317,12 +2425,12 @@ to: %4.</source>
 до %4.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1174"/>
+      <location filename="../src/TRoom.cpp" line="1200"/>
       <source>[ INFO ]  - Room needed correcting of special exit &quot;%1&quot; that was to room with an exit to invalid room: %2 to now go to: %3.</source>
       <translation>[ИНФОРМАЦИЯ] - Комната нуждалась в корректировке специального выхода &quot;%1&quot; , который находился в комнате с выходом в некорректную комнату: %2 теперь перейти по адресу: %3.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1205"/>
+      <location filename="../src/TRoom.cpp" line="1231"/>
       <source>[ WARN ]  - Room with id: %1 has a special exit &quot;%2&quot; with an
 exit to: %3 but that room does not exist.  The exit will
 be removed (but the destination room id will be stored in
@@ -2334,12 +2442,12 @@ the room user data under a key:
 &quot;%4&quot;).</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1218"/>
+      <location filename="../src/TRoom.cpp" line="1244"/>
       <source>[ WARN ]  - Room has a special exit &quot;%1&quot; with an exit to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
       <translation>[ WARN]-В комнате есть специальный выход &quot;%1&quot; с выходом: %2 , но эта комната не существует.  Выход будет удален (но ID места назначения будет храниться в пользовательских данных комнаты под ключом:&quot;%3&quot;).</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1257"/>
+      <location filename="../src/TRoom.cpp" line="1283"/>
       <source>[ INFO ]  - In room with id: %1 special exit &quot;%2&quot;
 that was to room with an invalid room: %3 that does not exist.
 The exit will be removed (the bad destination room id will be stored in the
@@ -2351,7 +2459,7 @@ room user data under a key:
 &quot;%4&quot;).</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1270"/>
+      <location filename="../src/TRoom.cpp" line="1296"/>
       <source>[ INFO ]  - Room had special exit &quot;%1&quot; that was to room with an invalid room: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
       <translation>[ ИНФО ]  - Комната имела специальный выход &quot;%1&quot; идущий в: %2 но этой комнаты не существует.  Выход будет удалён
 (но помер назначенной комнаты будет храниться в
@@ -2359,93 +2467,93 @@ room user data under a key:
 &quot;%3&quot;).</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1303"/>
+      <location filename="../src/TRoom.cpp" line="1329"/>
       <source>%1 {none}</source>
       <translation>%1 {none}</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1306"/>
+      <location filename="../src/TRoom.cpp" line="1332"/>
       <source>%1 (open)</source>
       <translation>%1 (открыта)</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1309"/>
+      <location filename="../src/TRoom.cpp" line="1335"/>
       <source>%1 (closed)</source>
       <translation>%1 (закрыта)</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1312"/>
+      <location filename="../src/TRoom.cpp" line="1338"/>
       <source>%1 (locked)</source>
       <translation>%1 (заблокирована)</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1315"/>
+      <location filename="../src/TRoom.cpp" line="1341"/>
       <source>%1 {invalid}</source>
       <translation>%1 {invalid}</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1319"/>
+      <location filename="../src/TRoom.cpp" line="1345"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus door items that were removed:
 %2.</source>
       <translation>[ ИНФО ]  - В комнате с id: %1 обнаружена одна или несколько избыточных  дверей, которые были удалены:
 %2.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1326"/>
+      <location filename="../src/TRoom.cpp" line="1352"/>
       <source>[ INFO ]  - Room had one or more surplus door items that were removed:%1.</source>
       <translation>[ ИНФО ] - В помещении было удалено одно или несколько помеченных на удаленных элементов дверей:%1.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1342"/>
+      <location filename="../src/TRoom.cpp" line="1368"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus weight items that were removed:
 %2.</source>
       <translation>[ ИНФО ]  - В комнате с id: %1 обнаружена одна или несколько избыточных  дверей, которые были удалены:
 %2.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1349"/>
+      <location filename="../src/TRoom.cpp" line="1375"/>
       <source>[ INFO ]  - Room had one or more surplus weight items that were removed: %1.</source>
       <translation>[ ИНФО ] - В помещении было удалено одно или несколько помеченных на удаленных элементов дверей:%1.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1365"/>
+      <location filename="../src/TRoom.cpp" line="1391"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus exit lock items that were removed:
 %2.</source>
       <translation>[ ИНФО ]  - В комнате с id: %1 обнаружена одна или несколько избыточных  запертых дверей, которые были удалены:
 %2.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1372"/>
+      <location filename="../src/TRoom.cpp" line="1398"/>
       <source>[ INFO ]  - Room had one or more surplus exit lock items that were removed: %1.</source>
       <translation>[ ИНФО ] - В помещении было удалено одно или несколько помеченных на удаленных элементов запертых дверей:%1.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1451"/>
+      <location filename="../src/TRoom.cpp" line="1477"/>
       <source>[ INFO ]  - In room with id: %1 found one or more surplus custom line elements that
 were removed: %2.</source>
       <translation>[ ИНФО ]  - В комнате с ID: %1 найдена одина или более избыточных пользовательских элементов линии, которые
 были удалены: %2.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1457"/>
+      <location filename="../src/TRoom.cpp" line="1483"/>
       <source>[ INFO ]  - Room had one or more surplus custom line elements that were removed: %1.</source>
       <translation>[ ИНФО ]  - В комнате найдена одна или более избыточных пользовательских элементов строки, которые
 были удалены: %1.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1480"/>
+      <location filename="../src/TRoom.cpp" line="1506"/>
       <source>[ INFO ]  - In room with id: %1 correcting exit &quot;%2&quot; that was to room with
 an exit to invalid room: %3 to now go to: %4.</source>
       <translation>[ ИНФО ]  - В комнате с ID: %1 исправленный выход &quot;%2&quot; что был направлен
 в неправильную комнату: %3 теперь направлен в: %4.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1489"/>
+      <location filename="../src/TRoom.cpp" line="1515"/>
       <source>[ INFO ]  - Correcting exit &quot;%1&quot; that was to invalid room id: %2 to now go to: %3.</source>
       <translation>[ПРЕДУПРЕЖДЕНИЕ] - Исправление выхода &quot;%1&quot; , который вел в комнату с недействительным идентификатором : %2 , теперь ведет в: %3.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1500"/>
+      <location filename="../src/TRoom.cpp" line="1526"/>
       <source>[ WARN ]  - Room with id: %1 has an exit &quot;%2&quot; to: %3 but that room
 does not exist.  The exit will be removed (but the destination room
 Id will be stored in the room user data under a key:
@@ -2458,12 +2566,14 @@ and the exit will be turned into a stub.</source>
 Выход будет преобразован в любой другой возможный.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1513"/>
+      <location filename="../src/TRoom.cpp" line="1539"/>
       <source>[ WARN ]  - Room has an exit &quot;%1&quot; to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key: &quot;%4&quot;) and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ]  - Комната имеет выход &quot;%1&quot; в: %2 но эта комната не существует. Выход будет удалён
+(но номер назначенной комнаты будет храниться в пользовательских данных комнаты под ключом: &quot;%4&quot;)
+и выход будет преобразован в незавершенный.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1557"/>
+      <location filename="../src/TRoom.cpp" line="1583"/>
       <source>[ ALERT ] - Room with id: %1 has an exit &quot;%2&quot; to: %3 but also
 has a stub exit!  As a real exit precludes a stub, the latter will
 be removed.</source>
@@ -2471,12 +2581,12 @@ be removed.</source>
 имеет какой-то выход! Реальный выход исключает его, и позже он будет удален.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1567"/>
+      <location filename="../src/TRoom.cpp" line="1593"/>
       <source>[ ALERT ] - Room has an exit &quot;%1&quot; to: %2 but also has a stub exit in the same direction!  As a real exit precludes a stub, the latter will be removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ВНИМ ] - Комната имеет выход &quot;%1&quot; в: %2, но также имеет незавершенный в тоже самом направлении! Реальный выход исключает его, последний будет удален.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1623"/>
+      <location filename="../src/TRoom.cpp" line="1649"/>
       <source>[ INFO ]  - In room with id: %1 exit &quot;%2&quot; that was to room with an invalid
 room: %3 that does not exist.  The exit will be removed (the bad destination
 room id will be stored in the room user data under a key:
@@ -2489,12 +2599,12 @@ and the exit will be turned into a stub.</source>
 Выход будет сгенерирован в любой другой возможный.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1634"/>
+      <location filename="../src/TRoom.cpp" line="1660"/>
       <source>[ INFO ]  - Room exit &quot;%1&quot; that was to a room with an invalid id: %2 that does not exist.  The exit will be removed (the bad destination room id will be stored in the room user data under a key:&quot;%4&quot;) and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Выход комнаты &quot;%1&quot; был в комнату с неверным номером: %2 которая не существует.  Выход будет удален (плохой номер комнаты будет сохранен в данных пользователя комнаты под ключом:&quot;%4&quot;) и выход будет преобразован в незавершенный.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1650"/>
+      <location filename="../src/TRoom.cpp" line="1676"/>
       <source>
 It was locked, this is recorded as user data with key:
 &quot;%1&quot;.</source>
@@ -2503,14 +2613,14 @@ It was locked, this is recorded as user data with key:
 &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1654"/>
+      <location filename="../src/TRoom.cpp" line="1680"/>
       <source>  It was locked, this is recorded as user data with key: &quot;%1&quot;.</source>
       <translation>  
 Комната была заперта, это зафиксировано как пользовательское данное с ключом:
 &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1662"/>
+      <location filename="../src/TRoom.cpp" line="1688"/>
       <source>
 It had a weight, this is recorded as user data with key:
 &quot;%1&quot;.</source>
@@ -2519,21 +2629,21 @@ It had a weight, this is recorded as user data with key:
 &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1666"/>
+      <location filename="../src/TRoom.cpp" line="1692"/>
       <source>  It had a weight, this is recorded as user data with key: &quot;%1&quot;.</source>
       <translation>  
 Комната имела вес, это зафиксировано как пользовательское данное с ключом:
 &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1677"/>
+      <location filename="../src/TRoom.cpp" line="1703"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but
 it has not been possible to salvage this, it has been lost!</source>
       <translation>[ ВНИМ ] - Была пользовательская линия выхода, связанная с недопустимым выходом, но
 это не удалось спасти, она была потеряна!</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1682"/>
+      <location filename="../src/TRoom.cpp" line="1708"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but it has not been possible to salvage this, it has been lost!</source>
       <translation>[ ВНИМ ] - Была пользовательская линия выхода, связанная с недопустимым выходом, но это не удалось спасти, она была потеряна!</translation>
     </message>
@@ -2809,7 +2919,7 @@ they have been removed.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1170"/>
       <source>[ INFO ]  - Area name changed to prevent duplicates or unnamed ones; old name: &quot;%1&quot;, new name: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Имя области изменено для предотвращения дублирования или неназванных; старое имя: &quot;%1&quot;, новое имя: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1179"/>
@@ -3532,6 +3642,81 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
         <numerusform>Триггер=%1 сработает ещё %n раз.
 </numerusform>
       </translation>
+    </message>
+  </context>
+  <context>
+    <name>UpdateDialog</name>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="47"/>
+      <source>Loading update information …</source>
+      <translation>Загрузка информации о обновлении …</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="84"/>
+      <source>A new version of %APPNAME% is available!</source>
+      <translation>Доступна новая версия %APPNAME%!</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="107"/>
+      <source>%APPNAME% %UPDATE_VERSION% is available (you have %CURRENT_VERSION%).
+Would you like to update now?</source>
+      <translation>%APPNAME% %UPDATE_VERSION% доступен (у вас %CURRENT_VERSION%).
+Обновить сейчас?</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="142"/>
+      <source>Changelog for %APPNAME%</source>
+      <translation>Список изменений для %APPNAME%</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="149"/>
+      <source>You are using version %CURRENT_VERSION%.</source>
+      <translation>Вы используете версию %CURRENT_VERSION%.</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="177"/>
+      <source>There are currently no updates available.</source>
+      <translation>В настоящее время нет новых обновлений.</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="193"/>
+      <source>You are using %APPNAME% %CURRENT_VERSION%.</source>
+      <translation>Вы используете %APPNAME% %CURRENT_VERSION%.</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="303"/>
+      <source>Automatically download future updates</source>
+      <translation>Автоматически загружать будущие обновления</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="350"/>
+      <source>Cancel</source>
+      <translation>Отменить</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="370"/>
+      <source>Install update now</source>
+      <translation>Установить обновление</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="377"/>
+      <source>OK</source>
+      <translation>ОК</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="387"/>
+      <source>Remind me later</source>
+      <translation>Напомнить позже</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="392"/>
+      <source>Skip this version</source>
+      <translation>Пропустить эту версию</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.cpp" line="542"/>
+      <source>Could not open downloaded file %1</source>
+      <translation>Не удалось открыть загруженный файл %1</translation>
     </message>
   </context>
   <context>
@@ -4349,7 +4534,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="503"/>
       <source>&lt;p&gt;Indicates if there is already a custom line for this special exit, will be replaced if the exit is selected.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Указывает, что если выход выбран, какие-то пользовательские линии для этого специальньного выхода будут заменены.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="514"/>
@@ -4364,7 +4549,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="561"/>
       <source>&lt;p&gt;To remove a custom line: cancel this dialog, select the line and right-click to obtain a &amp;quot;delete&amp;quot; option.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Чтобы удалить пользовательскую строку: отмените это диалоговое окно, выберите строку и щелкните правой кнопкой мыши, чтобы получить опцию&amp;quot;удалить&amp;quot;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="447"/>
@@ -4624,8 +4809,9 @@ Count</source>
 &lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Stephen Lyons&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;SlySven&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;slysven@virginmedia.com&lt;/span&gt;) after joining in 2013, has been poking various bits of the C++ code and GUI with a pointy stick; subsequently trying to patch over some of the holes made/found.  Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language other than American English you will be seeing the results of him getting fed up with the spelling differences between what was being used and the British English his brain wanted to see.&lt;/p&gt;
 &lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Damian Monogue&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;demonnic&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;demonnic@gmail.com&lt;/span&gt;) former maintainer of the early Windows and Apple OSX packages. He also administers our server and helps the project in many ways.&lt;/p&gt;
 &lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Florian Scheel&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;keneanung&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;keneanung@googlemail.com&lt;/span&gt;) contributed many improvements to Mudlet&apos;s db: interface, event system, and has been around the project for a very long while assisting users.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Ahmed Charles&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;ahmedcharles&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;acharles@outlook.com&lt;/span&gt;) contributions to the Travis integration, CMake and Visual C++ build, a lot of code quality and memory management improvements.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Chris Mitchell&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;Chris7&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;chrismudlet@gmail.com&lt;/span&gt;) has developed a shared module system that allows script packages to be shared among profiles, a UI for viewing Lua variables, improvements in the mapper and all around.&lt;/p&gt;
+&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Leris&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;Leris/Kebap&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;kebap_spam@gmx.net&lt;/span&gt;) does a ton of work in making Mudlet, the website and the wiki accessible to you regardless of the language you speak - and promoting our genre!&lt;/p&gt;
+&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ahmed Charles&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;ahmedcharles&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;acharles@outlook.com&lt;/span&gt;) contributions to the Travis integration, CMake and Visual C++ build, a lot of code quality and memory management improvements.&lt;/p&gt;
+&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Chris Mitchell&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;Chris7&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;chrismudlet@gmail.com&lt;/span&gt;) has developed a shared module system that allows script packages to be shared among profiles, a UI for viewing Lua variables, improvements in the mapper and all around.&lt;/p&gt;
 &lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ben Carlsen&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;arkholt@gmail.com&lt;/span&gt;) has developed the first version of our Mac OSX installer. He is the former maintainer of the Mac version of Mudlet.&lt;/p&gt;
 &lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ben Smith&lt;/b&gt;&lt;/span&gt; () joined in December 2009 though he&apos;s been around much longer. Contributed to the Lua API and is the former maintainer of the Lua API.&lt;/p&gt;
 &lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Blaine von Roeder&lt;/b&gt;&lt;/span&gt; () joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches and has helped with release management of 1.0.5.&lt;/p&gt;
@@ -4647,37 +4833,10 @@ Count</source>
 &lt;p&gt;Special thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Brett Duzevich&lt;/b&gt;&lt;/span&gt; and &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ronny Ho&lt;/b&gt;&lt;/span&gt;. They have contributed many good ideas and thus helped improve the scripting framework substantially.&lt;/p&gt;
 &lt;p&gt;Thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Tomas Mecir&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;kmuddy@kmuddy.com&lt;/span&gt;) who brought us all together and inspired us with his KMuddy project. Mudlet is using some of the telnet code he wrote for his KMuddy project (&lt;a href=&quot;https://cgit.kde.org/kmuddy.git/&quot;&gt;cgit.kde.org/kmuddy.git/&lt;/a&gt;).&lt;/p&gt;
 &lt;p&gt;Special thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Nick Gammon&lt;/b&gt;&lt;/span&gt; (&lt;a href=&quot;http://www.gammon.com.au/mushclient/mushclient.htm&quot;&gt;www.gammon.com.au/mushclient/mushclient.htm&lt;/a&gt;) for giving us some valued pieces of advice.&lt;/p&gt;</source>
-      <translation>&lt;p align=&quot;center&quot;&gt;&lt;big&gt;&lt;b&gt;Original author: &lt;span style=&quot;color:#bc8942;&quot;&gt;Heiko Köhn&lt;/span&gt;&lt;/b&gt; (&lt;b&gt;&lt;span style=&quot;color:#0000ff;&quot;&gt;KoehnHeiko@googlemail.com&lt;/span&gt;&lt;/b&gt;)&lt;/big&gt;&lt;/p&gt;
-&lt;p align=&quot;center&quot;&gt;&lt;big&gt;&lt;b&gt;Credits:&lt;/b&gt;&lt;/big&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Vadim Peretokin&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;vadi2&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;vadim.peretokin@mudlet.org&lt;/span&gt;) GUI design and initial feature planning. He is responsible for the project homepage and the user manual. Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp; user help. With the project from the very beginning and is an official spokesman of the project. Since the retirement of Heiko, he has become the head of the Mudlet project.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Stephen Lyons&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;SlySven&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;slysven@virginmedia.com&lt;/span&gt;) after joining in 2013, has been poking various bits of the C++ code and GUI with a pointy stick; subsequently trying to patch over some of the holes made/found.  Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language other than American English you will be seeing the results of him getting fed up with the spelling differences between what was being used and the British English his brain wanted to see.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Damian Monogue&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;demonnic&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;demonnic@gmail.com&lt;/span&gt;) former maintainer of the early Windows and Apple OSX packages. He also administers our server and helps the project in many ways.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Florian Scheel&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;keneanung&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;keneanung@googlemail.com&lt;/span&gt;) contributed many improvements to Mudlet&apos;s db: interface, event system, and has been around the project for a very long while assisting users.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Ahmed Charles&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;ahmedcharles&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;acharles@outlook.com&lt;/span&gt;) contributions to the Travis integration, CMake and Visual C++ build, a lot of code quality and memory management improvements.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;big&gt;&lt;b&gt;Chris Mitchell&lt;/b&gt;&lt;/big&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;Chris7&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;chrismudlet@gmail.com&lt;/span&gt;) has developed a shared module system that allows script packages to be shared among profiles, a UI for viewing Lua variables, improvements in the mapper and all around.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ben Carlsen&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;arkholt@gmail.com&lt;/span&gt;) has developed the first version of our Mac OSX installer. He is the former maintainer of the Mac version of Mudlet.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ben Smith&lt;/b&gt;&lt;/span&gt; () joined in December 2009 though he&apos;s been around much longer. Contributed to the Lua API and is the former maintainer of the Lua API.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Blaine von Roeder&lt;/b&gt;&lt;/span&gt; () joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches and has helped with release management of 1.0.5.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Bruno Bigras&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;bruno@burnbox.net&lt;/span&gt;) developed the original cmake build script and he has committed a number of patches.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Carter Dewey&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;eldarerathis@gmail.com&lt;/span&gt;) contributions to the Lua API.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Erik Pettis&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;Oneymus&lt;/span&gt;) developed the Vyzor GUI Manager for Mudlet.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;&quot;ItsTheFae&quot;&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;Kae&lt;/span&gt;) someone who has worked wonders in rejuventating our Website in 2017 but who prefers a little anonymity - if you are a &lt;i&gt;SpamBot&lt;/i&gt; you will not get onto our Fora now. They have also made some useful C++ core code contributions and we look forward to future reviews on and work in that area.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ian Adkins&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;dicene&lt;/span&gt; &lt;span style=&quot;color:#0000ff;&quot;&gt;ieadkins@gmail.com&lt;/span&gt;) joining us 2017 they have given us some useful C++ and Lua contributions.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;James Younquist&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;daemacles@yahoo.com&lt;/span&gt;) contributed the Geyser layout manager for Mudlet in March 2010. It is written in Lua and aims at simplifying user GUI scripting.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;John Dahlström&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;email@johndahlstrom.se&lt;/span&gt;) helped develop and debug the Lua API. &lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Karsten Bock&lt;/span&gt; (&lt;span style=&quot;color:#40b040;&quot;&gt;Beliaar&lt;/span&gt;) contributed several improvements and new features for Geyser.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Leigh Stillard&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;leigh.stillard@gmail.com&lt;/span&gt;) is the original author of our windows installer.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Maksym Grinenko&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;maksym.grinenko@gmail.com&lt;/span&gt;) worked on the manual, forum help and helps with GUI design and documentation.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Stephen Hansen&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#5500ff;&quot;&gt;me+mudlet@ixokai.io&lt;/span&gt;) has developed a database Lua API that allows for far easier use of databases and one of the original OSX installers.&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Thorsten Wilms&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;t_w_@freenet.de&lt;/span&gt;) has designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. Visit his homepage at &lt;a href=&quot;http://thorwil.wordpress.com/&quot;&gt;thorwil.wordpress.com&lt;/a&gt;.&lt;/p&gt;
-&lt;p&gt;Others too, have make their mark on different aspects of the Mudlet project and if they have not been mentioned here it is by no means intentional! For past contributors you may see them mentioned in the &lt;b&gt;&lt;a href=&quot;https://launchpad.net/~mudlet-makers/+members#active&quot;&gt;Mudlet Makers&lt;/a&gt;&lt;/b&gt; list (on our former bug-tracking site), or for on-going contributors they may well be included in the &lt;b&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/graphs/contributors&quot;&gt;Contributors&lt;/a&gt;&lt;/b&gt; list on GitHub.&lt;/p&gt;
-&lt;br&gt;
-&lt;p&gt;Many icons are taken from the &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;&lt;u&gt;KDE4 oxygen icon theme&lt;/u&gt;&lt;/b&gt;&lt;/span&gt; at &lt;a href=&quot;https://web.archive.org/web/20130921230632/http://www.oxygen-icons.org/&quot;&gt;www.oxygen-icons.org &lt;sup&gt;{wayback machine archive}&lt;/sup&gt;&lt;/a&gt; or &lt;a href=&quot;http://www.kde.org&quot;&gt;www.kde.org&lt;/a&gt;.  Most of the rest are from Thorsten Wilms, or from Stephen Lyons combining bits of Thorsten&apos;s work with the other sources.&lt;/p&gt;
-&lt;p&gt;Special thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Brett Duzevich&lt;/b&gt;&lt;/span&gt; and &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ronny Ho&lt;/b&gt;&lt;/span&gt;. They have contributed many good ideas and thus helped improve the scripting framework substantially.&lt;/p&gt;
-&lt;p&gt;Thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Tomas Mecir&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;kmuddy@kmuddy.com&lt;/span&gt;) who brought us all together and inspired us with his KMuddy project. Mudlet is using some of the telnet code he wrote for his KMuddy project (&lt;a href=&quot;https://cgit.kde.org/kmuddy.git/&quot;&gt;cgit.kde.org/kmuddy.git/&lt;/a&gt;).&lt;/p&gt;
-&lt;p&gt;Special thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Nick Gammon&lt;/b&gt;&lt;/span&gt; (&lt;a href=&quot;http://www.gammon.com.au/mushclient/mushclient.htm&quot;&gt;www.gammon.com.au/mushclient/mushclient.htm&lt;/a&gt;) for giving us some valued pieces of advice.&lt;/p&gt;</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="180"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="181"/>
       <source>&lt;p&gt;Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.&lt;/p&gt;
 &lt;p&gt;Mudlet is released under the GPL license version 2, which is reproduced below:&lt;/p&gt;</source>
       <comment>For non-english language versions please append a translation of the following to explain why the GPL is NOT reproduced in the relevent language: &apos;but only the English form is considered the official version of the license, so the following is reproduced in that language:&apos; to replace &apos;which is reproduced below:&apos;...</comment>
@@ -4685,87 +4844,87 @@ Count</source>
 &lt;p&gt;Mudlet выпущен под лицензией GPL версии 2, которая воспроизводится ниже:&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="472"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="473"/>
       <source>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; is built upon the shoulders of other projects in the FOSS world; as well as using many GPL components we also make use of some third-party software with other licenses:&lt;/p&gt;</source>
       <translation>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; построен на плечах других проектов в мире FOSS, а также с использованием многих GPL компонентов мы также используем некоторые сторонние программы с другими лицензиями:&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="643"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="644"/>
       <source>&lt;h2&gt;&lt;u&gt;Communi IRC Library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008-2016 The Communi Project&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Библиотека IRC Коммуни&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Авторское право © 2008-2016 Проект Коммуни&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="646"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="647"/>
       <source>&lt;p&gt;Parts of &lt;tt&gt;irctextformat.cpp&lt;/t&gt; code come from Konversation and are copyrighted to:&lt;br&gt;Copyright © 2002 Dario Abatianni &amp;lt;eisfuchs@tigress.com&amp;gt;&lt;br&gt;Copyright © 2004 Peter Simonsson &amp;lt;psn@linux.se&amp;gt;&lt;br&gt;Copyright © 2006-2008 Eike Hein &amp;lt;hein@kde.org&amp;gt;&lt;br&gt;Copyright © 2004-2009 Eli Mackenzie &amp;lt;argonel@gmail.com&amp;gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Части &lt;tt&gt;irctextformat.cpp&lt;/t&gt; кода исходят от Konversation и защищены авторским правом на:&lt;br&gt;Авторское право © 2002 Дарио Абатьянни &amp;lt;eisfuchs@tigress.com&amp;gt;&lt;br&gt;Авторское право © 2004 Питер Симонссон &amp;lt;psn@linux.se&amp;gt;&lt;br&gt;Авторское право © 2006-2008 Эйке Хайн &amp;lt;hein@kde.org&amp;gt;&lt;br&gt;Авторское право © 2004-2009 Эли Маккензи &amp;lt;argonel@gmail.com&amp;gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="652"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="653"/>
       <source>&lt;h2&gt;&lt;u&gt;lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;lua - Луа 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Авторское право © 1994 — 2017 Lua.org, PUC-Rio.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="655"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="656"/>
       <source>&lt;h2&gt;&lt;u&gt;lua_yajl - Lua 5.1 interface to yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Brian Maher &amp;lt;maherb at brimworks dot com&amp;gt;&lt;br&gt;Copyright © 2009 Brian Maher&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;lua_yajl - Lua 5.1 интерфейс для yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Автор: Брайан Маер &amp;lt;maherb at brimworks dot com&amp;gt;&lt;br&gt;Авторское право © 2009 Брайан Маер&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="660"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="661"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaZip - Reading files inside zip files&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Danilo Tuler&lt;br&gt;Copyright © 2003-2007 Kepler Project&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;LuaZip - чтение файлов внутри zip-файлов&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;автор: Данило Tuler&lt;br&gt;Авторское право © 2003-2007 Кеплер проекта&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="665"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="666"/>
       <source>&lt;h2&gt;&lt;u&gt;edbee - multi-feature editor widget&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2012-2014 by Reliable Bits Software by Blommers IT&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;edbee многофункциональный редактор&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;авторские права © 2012-2014 от Reliable Bits Software от Blommers IT&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="668"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="669"/>
       <source>The &lt;b&gt;edbee-lib&lt;/b&gt; widget itself incorporates other components with licences that must be noted as well, they are:</source>
       <translation>&lt;b&gt;edbe-lib&lt;/b&gt; сам по себе включает в себя другие компоненты с лицензиями, которые также должны быть отмечены:</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="670"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="671"/>
       <source>&lt;h2&gt;&lt;u&gt;Onigmo (Oniguruma-mod) LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;Copyright © 2011-2014 K.Takata &amp;lt;kentkt AT csc DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Onigmo (Oniguruma-мод) лицензия&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;Copyright © 2011-2014 K.Takata &amp;lt;kentkt AT csc DOT jp&amp;gt;&lt;br&gt;Все права защищены.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="675"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="676"/>
       <source>&lt;h2&gt;&lt;u&gt;Oniguruma LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Онигурума ЛИЦЕНЗИЯ&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Авторское право © 2002-2009 К.Косако sndgk393 AT Ybb DOT ne DOT JP&lt;br&gt;Все права защищены.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="679"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="680"/>
       <source>&lt;h2&gt;&lt;u&gt;Ruby BSDL&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1993-2013 Yukihiro Matsumoto.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Ruby BSDL&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Авторское право © 1993-2013 Юкихиро Мацумото.&lt;br&gt;Все права защищены.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="683"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="684"/>
       <source>&lt;h2&gt;&lt;u&gt;Qt-Components, QsLog&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;(&lt;span style=&quot;color:red&quot;&gt;&lt;u&gt;https://bitbucket.org/razvapetru/qt-components [broken link]&lt;/u&gt;&lt;/span&gt;&lt;/h3&gt;&lt;small&gt;&lt;a href=&quot;https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components&quot;&gt; {&amp;quot;Wayback Machine&amp;quot; archived version}&lt;/a&gt;&lt;/small&gt;)&lt;br&gt;Copyright © 2013, Razvan Petru&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Qt-компоненты, QsLog&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;(&lt;span style=&quot;color:red&quot;&gt;&lt;u&gt;https://bitbucket.org/razvapetru/qt-components [сломанная ссылка]&lt;/u&gt;&lt;/span&gt;&lt;/h3&gt;&lt;small&gt;&lt;a href=&quot;https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components&quot;&gt; {&amp;quot;архивная версия Wayback Wayback&amp;quot;}&lt;/a&gt;&lt;/small&gt;)&lt;br&gt;Авторское право © 2013, Разван Петру&lt;br&gt;Все права защищены.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="690"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="691"/>
       <source>&lt;h2&gt;&lt;u&gt;dblsqd&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Philipp Medien&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;dblsqd&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Авторское право © 2017 Филипп Медиен&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="693"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="694"/>
       <source>&lt;h2&gt;&lt;u&gt;Sparkle - macOS updater&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2006-2013 Andy Matuschak.&lt;br&gt;Copyright © 2009-2013 Elgato Systems GmbH.&lt;br&gt;Copyright © 2011-2014 Kornel Lesiński.&lt;br&gt;Copyright © 2015-2017 Mayur Pawashe.&lt;br&gt;Copyright © 2014 C.W. Betts.&lt;br&gt;Copyright © 2014 Petroules Corporation.&lt;br&gt;Copyright © 2014 Big Nerd Ranch.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="703"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="704"/>
       <source>&lt;h4&gt;bspatch.c and bsdiff.c, from bsdiff 4.3 &lt;a href=&quot;http://www.daemonology.net/bsdiff/&quot;&gt;http://www.daemonology.net/bsdiff&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2003-2005 Colin Percival.&lt;/h3&gt;&lt;h4&gt;sais.c and sais.c, from sais-lite (2010/08/07) &lt;a href=&quot;https://sites.google.com/site/yuta256/sais&quot;&gt;https://sites.google.com/site/yuta256/sais&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2008-2010 Yuta Mori.&lt;/h3&gt;&lt;h4&gt;SUDSAVerifier.m:&lt;/h4&gt;&lt;h3&gt;Copyright © 2011 Mark Hamlin.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation>&lt;h4&gt;bspatch.c and bsdiff.c, from bsdiff 4.3 &lt;a href=&quot;http://www.daemonology.net/bsdiff/&quot;&gt;http://www.daemonology.net/bsdiff&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2003-2005 Colin Percival.&lt;/h3&gt;&lt;h4&gt;sais.c and sais.c, from sais-lite (2010/08/07) &lt;a href=&quot;https://sites.google.com/site/yuta256/sais&quot;&gt;https://sites.google.com/site/yuta256/sais&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2008-2010 Yuta Mori.&lt;/h3&gt;&lt;h4&gt;SUDSAVerifier.m:&lt;/h4&gt;&lt;h3&gt;Copyright © 2011 Mark Hamlin.&lt;br&gt;Все права защищены.&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="711"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="712"/>
       <source>&lt;h2&gt;&lt;u&gt;sparkle-glue&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008 Remko Troncon&lt;br&gt;Copyright © 2017 Vadim Peretokin&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;sparkle-glue&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Авторское право © 2008 Ремко Тронкон&lt;br&gt;Авторское право © 2017 Вадим Перетокин&lt;/h3&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="717"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="718"/>
       <source>&lt;h2&gt;&lt;u&gt;Discord - Rich Presence - RPC library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Discord, Inc.&lt;/h3&gt;</source>
       <translation>&lt;h2&gt;&lt;u&gt;Discord - Rich Presence - RPC library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Discord, Inc.&lt;/h3&gt;</translation>
     </message>
@@ -4800,22 +4959,22 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="66"/>
       <source>&lt;p&gt;Click to make the color trigger when the text&apos;s background color has not been modified from its normal value.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Нажмите, чтобы сделать триггер цвета, если цвет фона текста не был изменен по сравнению с нормальным значением.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="67"/>
       <source>&lt;p&gt;Click to make the color trigger when the text&apos;s foreground color has not been modified from its normal value.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Нажмите, чтобы сделать триггер цвета, если цвет переднего плана текста не был изменен по сравнению с нормальным значением.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="71"/>
       <source>&lt;p&gt;Click a color to make the trigger fire only when the text&apos;s background color matches the color number indicated.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Выберите цвет, чтобы активировать триггер, только когда цвет фона совпадает с указанным цветом.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="72"/>
       <source>&lt;p&gt;Click a color to make the trigger fire only when the text&apos;s foreground color matches the color number indicated.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Выберите цвет, чтобы активировать триггер, только когда цвет текста совпадает с указанным цветом.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="77"/>
@@ -4940,7 +5099,7 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="80"/>
       <source>&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;Welcome to Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;b&gt;Click on one of the games on the list to play.&lt;/b&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;To play a game not in the list, click on %1 &lt;span style=&quot; color:#555753;&quot;&gt;New&lt;/span&gt;, fill in the &lt;i&gt;Profile Name&lt;/i&gt;, &lt;i&gt;Server address&lt;/i&gt;, and &lt;i&gt;Port&lt;/i&gt; fields in the &lt;i&gt;Required &lt;/i&gt; area.&lt;/p&gt;&lt;p&gt;After that, click %2 &lt;span style=&quot; color:#555753;&quot;&gt;Connect&lt;/span&gt; to play.&lt;/p&gt;&lt;p&gt;Have fun!&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;The Mudlet Team &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</source>
       <comment>Welcome message. Both %1 and %2 may be replaced by icons when this text is used.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;Добро пожаловать в Мудлет!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;b&gt;Нажмите на одну из игр в списке, чтобы играть.&lt;/b&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;Чтобы играть в игру которая не в списке, нажмите на %1 &lt;span style=&quot; color:#555753;&quot;&gt;Новый&lt;/span&gt;, заполните &lt;i&gt;Имя профиля&lt;/i&gt;, &lt;i&gt;Адрес сервера&lt;/i&gt;и &lt;i&gt;Порт&lt;/i&gt; поля в &lt;i&gt;Обязательной &lt;/i&gt; области.&lt;/p&gt;&lt;p&gt;После этого нажмите кнопку %2 &lt;span style=&quot; color:#555753;&quot;&gt;Подключится&lt;/span&gt; чтобы играть.&lt;/p&gt;&lt;p&gt;Удачи!&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;Команда Мадлет &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="71"/>
@@ -4987,6 +5146,13 @@ Count</source>
 </translation>
     </message>
     <message>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="1889"/>
+      <source>Port number must be above zero and below 65535.<byte value="xd"/>
+</source>
+      <translation>Номер порта должен быть выше нуля и ниже 65535.
+</translation>
+    </message>
+    <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1953"/>
       <source>&lt;p&gt;Load profile without connecting.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Загрузить профиль без подключения.&lt;/p&gt;</translation>
@@ -5005,13 +5171,6 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1897"/>
       <source>Mudlet is not configured for secure connections.</source>
       <translation>Mudlet не настроен на защищенные соединения.</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="1889"/>
-      <source>Port number must be above zero and below 65535.
-</source>
-      <translation>Номер порта должен быть выше нуля и ниже 65535.
-</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1900"/>
@@ -5090,7 +5249,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="144"/>
       <source>$ Type &lt;b&gt;/help&lt;/b&gt; for commands or &lt;b&gt;/help [command]&lt;/b&gt; for command syntax.</source>
-      <translation type="unfinished"/>
+      <translation>$ Введите &lt;b&gt;/help&lt;/b&gt; для команд или &lt;b&gt;/help [command]&lt;/b&gt; для синтаксиса команд.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="203"/>
@@ -5253,7 +5412,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="497"/>
       <source>Required file &quot;%1&quot; was not found in the staging area. This area contains the Mudlet items chosen for the package, which you selected to be included in the package file. This suggests there may be a problem with that directory: &quot;%2&quot; - Do you have the necessary permissions and free disk-space?</source>
-      <translation type="unfinished"/>
+      <translation>Необходимый файл &quot;%1&quot; не найден в области стажировки. В этой области есть элементы Mudlet, выбранные для пакета, которые вы выбрали для включения в пакет. Это предполагает, что с этой директорией может возникнуть проблема: &quot;%2&quot; - Есть ли у вас необходимые разрешения и свободное место на диске?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="519"/>
@@ -5314,7 +5473,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="181"/>
       <source>&lt;p&gt;This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specifed font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.&lt;p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Это покажет дисплей показывающий все символы, используемые на текущей карте, и могут ли они быть нарисованы только с помощью определенного шрифта, любого другого шрифта, или нет вообще.  Он также показывает последовательность Unicode &lt;i&gt;кодов&lt;/i&gt; которые составляют этот символ, так что они могут быть идентифицированы, даже если они не могут быть отображены. Кроме того, первые тридцать две комнат использующих этот символ перечислены, что может помочь определить любые неожиданные или странные случаи.&lt;p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="187"/>
@@ -5369,7 +5528,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="726"/>
       <source>%1 {Downgraded, for sharing with older version users, NOT recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {Старее, для предоставления доступа пользователям более старых версий, НЕ рекомендуется}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="735"/>
@@ -5576,7 +5735,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="130"/>
       <source>&lt;p&gt;This option sets the format of the log name.&lt;/p&gt;&lt;p&gt;If &lt;i&gt;Named file&lt;/i&gt; is selected, you can set a custom file name. (Logs are appended if a log file of the same name already exists.)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Этот параметр задает формат имени журнала.&lt;/p&gt;&lt;p&gt;Если выбран &lt;i&gt;Именованный файл&lt;/i&gt;, вы можете установить произвольное имя файла. (Логи прилагаются, если файл журнала с таким же именем уже существует.)&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="133"/>
@@ -5843,7 +6002,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="220"/>
       <source>Set the number of the room that this special exit leads to, will turn blue for a valid number; if left like this, this exit will be deleted when &amp;lt;i&amp;gt;save&amp;lt;/i&amp;gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Установите номер комнаты, к которой ведет этот специальный выход, станет синим для действительного номера; если он останется таким образом, этот выход будет удален, когда &amp;lt; i&amp;gt;сохранить&amp;lt; / i&amp;gt; будет нажат.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="223"/>
@@ -5879,7 +6038,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="240"/>
       <location filename="../src/dlgRoomExits.cpp" line="1969"/>
       <source>Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).</source>
-      <translation>Красный (заблокированный) символ двери будет нарисирован на пользовательской линии выхода для данного выхода на двухмерной карте (но не в данный момент).</translation>
+      <translation>Красный (заблокированный) символ двери будет нарисован на пользовательской линии выхода для данного выхода на двухмерной карте (но не в данный момент).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="87"/>
@@ -6047,7 +6206,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1340"/>
       <location filename="../src/dlgRoomExits.cpp" line="1716"/>
       <source>Set the number of the room out from this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Установите номер комнаты снаружи от этой комнаты, будет синим для действительного номера или красным для недействительного.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1364"/>
@@ -6129,7 +6288,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1832"/>
       <source>Set the number of the room %1 of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Установите номер комнаты к %1 от этой комнаты, будет синим для допустимого числа или красным для недопустимого.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1855"/>
@@ -6163,7 +6322,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="106"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="108"/>
       <source>&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Проверьте руководство для &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;дополнительной информации&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="110"/>
@@ -6386,12 +6545,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="451"/>
       <source>Saves your profile. (Ctrl+Shift+S)&lt;p&gt;Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.&lt;/p&gt;&lt;p&gt;It also makes a backup of your profile, you can load an older version of it when connecting.&lt;/p&gt;&lt;p&gt;Should there be any modules that are marked to be &quot;&lt;i&gt;synced&lt;/i&gt;&quot; this will also cause them to be saved and reloaded into other profiles if they too are active.</source>
-      <translation type="unfinished"/>
+      <translation>Сохраняет профиль. (Ctrl + Shift + S)&lt;p&gt;Сохраняет весь профиль (триггеры, алиасы, скрипты, таймеры, кнопки и ключи, но не карту) на вашем компьютере, поэтому в случае сбоя компьютера или программы будут сохранены все сделанные вами изменения.&lt;/p&gt;&lt;p&gt;Также создает резервную копию вашего профиля; вы можете загрузить более старую версию при соединении.&lt;/p&gt;&lt;p&gt;Если есть модули, помеченные как &quot;&lt;i&gt;,синхронизированы&lt;/i&gt;&quot;, это также приведет к их сохранению и перезагрузке в другие профилях где они установлены.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="453"/>
       <source>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also &quot;synchronizes&quot; modules that are so marked.</source>
-      <translation type="unfinished"/>
+      <translation>Сохраняет весь профиль (триггеры, алиасы, скрипты, таймеры, кнопки и ключи, но не карту) на вашем компьютере; ещё синхронизирует помеченные модули.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="456"/>
@@ -6481,82 +6640,87 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2669"/>
       <source>Trying to activate a trigger group, filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Попытка активировать группу триггера, фильтр, триггер или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, содержащую их &lt;em&gt;, удалось&lt;/em&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2671"/>
       <source>Trying to deactivate a trigger group, filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Попытка деактивировать группу триггера, фильтр, триггер или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, содержащую их &lt;em&gt;, удалось&lt;/em&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2675"/>
       <source>&lt;b&gt;Unable to activate a filter or trigger or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;Не удается активировать группу триггеров, триггер или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, содержащий их; причина: %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;После исправления этой проблемы триггер необходимо будет активировать повторно.&lt;/i&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2812"/>
       <source>Trying to activate a timer group, offset timer, timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Попытка активировать группу таймера, таймер смещения, таймер или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, содержащую их &lt;em&gt;, удалось&lt;/em&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2814"/>
       <source>Trying to deactivate a timer group, offset timer, timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Попытка деактивировать группу таймера, таймер смещения, таймер или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, содержащую их &lt;em&gt;, удалось&lt;/em&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2818"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate an offset timer or timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;не удается активировать смещение таймер или таймер или части модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, что их содержит; причина: %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;вы должны активировать это после того, как проблема была устранена.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2856"/>
       <source>Trying to activate an alias group, alias or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Попытка активировать группу алиасов, алиас или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, содержащую их &lt;em&gt;, успешно&lt;/em&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2858"/>
       <source>Trying to deactivate an alias group, alias or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Попытка деактивировать группу алиасов, алиас или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, которая содержит их &lt;em&gt;, успешна&lt;/em&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2862"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate an alias or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;не удается активировать алиас или части модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, которая содержит их; причина: %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;Вы должны активировать это после того, как проблема была устранена.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2960"/>
       <source>Trying to activate a script group, script or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Попытка активировать группу скриптов, скрипт или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, содержащую их &lt;em&gt;, удалась&lt;/em&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2962"/>
       <source>Trying to deactivate a script group, script or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Попытка деактивировать группу скриптов, скрипт или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, содержащей их &lt;em&gt;, удалась&lt;/em&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2966"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate a script group or script or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;Не удается активировать группу скриптов, скрипт или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, содержащий их; причина: %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;123_321 123_321_321_12_321 После исправления этой проблемы ее необходимо будет активировать повторно активировать повторно.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3031"/>
       <source>Trying to activate a button/menu/toolbar or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Попытка активировать кнопку/меню/панель инструментов или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, содержащую их &lt;em&gt;, удалась&lt;/em&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3033"/>
       <source>Trying to deactivate a button/menu/toolbar or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them &lt;em&gt;succeeded&lt;/em&gt;.</source>
-      <translation type="unfinished"/>
+      <translation>Попытка деактивировать кнопку/меню/панель инструментов или часть модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; &quot;, содержащую их &lt;em&gt;, удалась&lt;/em&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3037"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate a button/menu/toolbar or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;не удается активировать кнопку или части модуля &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot;, которая содержит их; причина: %2.&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;Вы должны активировать это после того, как проблема была устранена.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3151"/>
@@ -6929,12 +7093,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7983"/>
       <source>Select foreground trigger color for item %1</source>
-      <translation type="unfinished"/>
+      <translation>Выберите цвет переднего плана для шаблона %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8047"/>
       <source>Select background trigger color for item %1</source>
-      <translation type="unfinished"/>
+      <translation>Выберите цвет заднего плана для шаблона %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8096"/>
@@ -7247,6 +7411,29 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgVarsMainArea.cpp" line="83"/>
       <source>function</source>
       <translation>function</translation>
+    </message>
+  </context>
+  <context>
+    <name>edbee::TextEditorComponent</name>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="504"/>
+      <source>Cut</source>
+      <translation>Вырезать</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="505"/>
+      <source>Copy</source>
+      <translation>Скопировать</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="506"/>
+      <source>Paste</source>
+      <translation>Вставить</translation>
+    </message>
+    <message>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="508"/>
+      <source>Select All</source>
+      <translation>Выбрать все</translation>
     </message>
   </context>
   <context>
@@ -7566,7 +7753,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="222"/>
       <source>&lt;p&gt;Opens an (on-line) collection of &quot;Educational Mudlet screencasts&quot; in your system web-browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Открывает (он-лайн) коллекцию &quot;образовательных Mudlet скринкастов&quot; в вашем веб-браузере.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="230"/>
@@ -7596,7 +7783,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="283"/>
       <source>&lt;p&gt;Gather and bundle up collections of Mudlet Lua items and other reasources into a module.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Собрать и объединить в модуль скрипты Lua Lua и другие материалы.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="291"/>
@@ -7606,7 +7793,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="299"/>
       <source>&lt;p&gt;Hide or show the search area and the bottom buttons to the right of the input area on the input line.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Скрыть или показать область поиска и нижнее поле справа от входной области в строке ввода.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="155"/>
@@ -9394,7 +9581,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="3759"/>
       <source>&lt;p&gt;Cannot load a replay as one is already in progress in this or another profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Не удается загрузить повтор, поскольку оно уже выполняется в этом или ином профиле.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3776"/>
@@ -9404,7 +9591,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="3779"/>
       <source>&lt;p&gt;Replay each step with a shorter time interval between steps.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Воспроизвести каждый шаг с менее длинным интервалом между шагами.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3783"/>
@@ -9414,7 +9601,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="3786"/>
       <source>&lt;p&gt;Replay each step with a longer time interval between steps.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Воспроизвести каждый шаг с более длинным интервалом между шагами.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3796"/>
@@ -9645,12 +9832,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="449"/>
       <source>use strict UNIX line endings on commands for old UNIX servers that can&apos;t handle windows line endings correctly</source>
-      <translation type="unfinished"/>
+      <translation>использовать только окончания строк в стиле UNIX для команд к старыи серверам, которые не могут правильно обрабатывать окончания строк в стиле Windows</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="452"/>
       <source>Strict UNIX line endings</source>
-      <translation type="unfinished"/>
+      <translation>Оканчивать строки с стиле UNIX</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="469"/>
@@ -9916,7 +10103,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="466"/>
       <source>&lt;p&gt;Echo the text you send in the display box.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This can be disabled by the game server if it negotiates to use the telnet ECHO option&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt; Показывать текст который вы отправляете в окне дисплея.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Это может быть отключено игровым сервером, если он согласовывает использование опции telnet ECHO&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="476"/>
@@ -9951,7 +10138,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="582"/>
       <source>&lt;p&gt;A user dictionary specific to this profile will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Будет доступен пользовательский словарь, специфичный для этого профиля. Это будет на командной строке (слова, которые в нем, будут появляться с пунктирным голубым подчеркиванием) и в lua подсистеме.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="585"/>
@@ -9961,7 +10148,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="592"/>
       <source>&lt;p&gt;A user dictionary that is shared between all profiles (which have this option selected) will be available. This will be on the command line (words which are in it will appear with a dashed cyan underline) and in the lua sub-system.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Будет доступен пользовательский словарь, совместно используемый всеми профилями у которых эта опция включена. Это будет на командной строке (слова, которые в нем, будут появляться с пунктирным голубым подчеркиванием) и в lua подсистеме.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="595"/>
@@ -10015,7 +10202,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1052"/>
       <source>&lt;p&gt;Select this option for better compatability if you are using a netbook, or some other computer model that has a small screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Выберите этот параметр для лучшей совместимости, если используется нетбук или другая модель компьютера с небольшим экраном.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1062"/>
@@ -10047,17 +10234,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1300"/>
       <source>&lt;p&gt;The foreground color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Цвет переднего плана, используемый по умолчанию для главного экрана (если не изменен командой lua или игровым сервером).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1323"/>
       <source>&lt;p&gt;The background color used by default for the main console (unless changed by a lua command or the game server).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Цвет заднего плана, используемый по умолчанию для главного экрана (если не изменен командой lua или игровым сервером).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1343"/>
       <source>&lt;p&gt;The foreground color used for the main input area.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Цвет переднего плана для главной строки ввода.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1360"/>
@@ -10339,7 +10526,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2423"/>
       <source>Special options needed for some older game drivers (needs client restart to take effect)</source>
-      <translation type="unfinished"/>
+      <translation>Особые опции, необходимые для некоторых старых драйверов игр (требует перезапуск клиента)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2767"/>
@@ -10486,7 +10673,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1937"/>
       <location filename="../src/ui/profile_preferences.ui" line="1950"/>
       <source>&lt;p&gt;On games that provide maps for download, you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you&apos;ve done to your map, and will use the new map only&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;В играх, которые предоставляют карты для загрузки, вы можете нажать эту кнопку, чтобы получить последнюю карту. Обратите внимание, что это &lt;span style=&quot; font-weight:600;&quot;&gt;перезапишет&lt;/span&gt; любые изменения, которые вы сделали на вашей карте&apos;, и будет использовать только новую карту&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2021"/>
@@ -10542,7 +10729,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="2443"/>
       <source>This option adds a line line break &lt;LF&gt; or &quot;
 &quot; to your command input on empty commands. This option will rarely be necessary.</source>
-      <translation type="unfinished"/>
+      <translation>Этот параметр добавляет разрыв строки &lt;LF&gt; или &quot;\n&quot; когда вы отправляете пустые команды. Этот вариант редко будет необходим.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2447"/>
@@ -10739,7 +10926,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1591"/>
       <location filename="../src/ui/room_exits.ui" line="1731"/>
       <source>&lt;p&gt;Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Задайте положительное значение, чтобы переопределить значение по умолчанию (Room) для использования этого маршрута выхода, нулевое значение назначает значение по умолчанию.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="236"/>
@@ -10885,7 +11072,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1343"/>
       <location filename="../src/ui/room_exits.ui" line="1483"/>
       <source>&lt;p&gt;Green (Open) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt; Зелёный (открытый) символ дверцы нарисирован на двухмерной карте, может быть поставлен не незавершённый или готовый выход&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="154"/>
@@ -10897,7 +11084,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1359"/>
       <location filename="../src/ui/room_exits.ui" line="1499"/>
       <source>&lt;p&gt;Orange (Closed) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Оранжевая (закрытая) дверца нарисована на двухмерной карте.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="170"/>
@@ -10909,7 +11096,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1375"/>
       <location filename="../src/ui/room_exits.ui" line="1515"/>
       <source>&lt;p&gt;Red (Locked) door symbol is drawn on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;Красный (заблокированный) символ дверцы нарисирован на двухмерной карте.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="233"/>
@@ -10932,7 +11119,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1623"/>
       <location filename="../src/ui/room_exits.ui" line="1763"/>
       <source>&lt;p&gt;A symbol is drawn with a green (Open) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Символ нарисован зеленым (открытый) цветом на 2D карте, может быть установлен либо на незавершенном, либо на реальном выходе.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="574"/>
@@ -10940,7 +11127,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1639"/>
       <location filename="../src/ui/room_exits.ui" line="1779"/>
       <source>&lt;p&gt;A symbol is drawn with an orange (Closed) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Символ нарисован оранжевым (закрытый) цветом на 2D карте, может быть установлен либо на незавершенном, либо на реальном выходе.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="590"/>
@@ -10948,17 +11135,17 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="1655"/>
       <location filename="../src/ui/room_exits.ui" line="1795"/>
       <source>&lt;p&gt;A symbol is drawn with a red (Locked) fill color on 2D Map, can be set on either a stub or a real exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Символ нарисован красным (заблокирован) цветом на 2D карте, может быть установлен либо на незавершенном, либо на реальном выходе.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="653"/>
       <source>&lt;p&gt;Set the number of the room west of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Установите номер комнаты к западу от этого, будет синий для действительного числа или красный для недействительных.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="780"/>
       <source>&lt;p&gt;This is the Room ID Number for this room - it cannot be changed here!</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Это номер ID комнаты для этой комнаты - его нельзя изменить здесь!</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="803"/>
@@ -10968,17 +11155,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="863"/>
       <source>&lt;p&gt;Set the number of the room east of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Установите номер комнаты к востоку от этой, будет синий для действительного числа или красный для недействительных.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1000"/>
       <source>&lt;p&gt;Set the number of the room down from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;Установите номер комнаты снизу от этой комнаты, будет синим для допустимого числа или красным для недопустимого.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1152"/>
       <source>&lt;p&gt;Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;Установите номер комнаты к юго-западу от этой комнаты, будет синим для допустимого числа или красным для недопустимого.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1298"/>
@@ -10993,22 +11180,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1578"/>
       <source>&lt;p&gt;Set the number of the room in from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;Установите номер комнаты внутри от этой комнаты, будет синим для допустимого числа или красным для недопустимого.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1718"/>
       <source>&lt;p&gt;Set the number of the room out from this one, will be blue for a valid number or red for invalid.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;Установите номер комнаты снаружи от этой комнаты, будет синим для допустимого числа или красным для недопустимого.&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1871"/>
       <source>&lt;p&gt;Set the number of the room that&apos;s to the southwest here.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;установите номер комнаты к юго-западу отсюда.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1874"/>
       <source>Exit RoomID number</source>
-      <translation type="unfinished"/>
+      <translation>Выход К</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1901"/>
@@ -11033,12 +11220,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1975"/>
       <source>&lt;p&gt;Use this button to save any changes, will also remove any invalid Special exits.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Эта кнопка позволяет сохранить все изменения, а также удалит любые недопустимые специальные выходы.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1991"/>
       <source>&lt;p&gt;Use this button to close the dialogue without changing anything.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Используйте эту кнопку, чтобы закрыть диалог, ничего не меняя.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2010"/>
@@ -11048,12 +11235,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2048"/>
       <source>&lt;p&gt;Set the number of the room that this exit leads to, if set to zero the exit will be removed on saving the exits.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Установите номер комнаты куда этот выход идёт. Чтобы убрать выход, поставте ноль.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2075"/>
       <source>&lt;p&gt;No door symbol is drawn on 2D Map for this exit (only functional choice currently).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;В двухмерной карте для данного выхода не отображается символ двери (в настоящее время единственный выбор).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2084"/>
@@ -11063,7 +11250,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2093"/>
       <source>&lt;p&gt;Orange (Closed) door symbol would be drawn on 2D Map (but not currently).&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Оранжевая (закрытая) дверца будет нарисана на двухмерной карте (но не в данный момент).&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Оранжевая (закрытая) дверца будет нарисована на двухмерной карте (но не в данный момент).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2102"/>
@@ -11078,12 +11265,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2128"/>
       <source>&lt;p&gt;Add an empty item to Special exits to be edited as required.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Добавить пустой элемент в специальные выходы для редактирования по мере необходимости.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2147"/>
       <source>&lt;p&gt;Press this button to deactivate the selection of a Special exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Нажмите эту кнопку, чтобы отменить выбор специального выхода.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1978"/>
@@ -11289,7 +11476,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="186"/>
       <source>&lt;p&gt;The &lt;b&gt;hour&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;Часовой&lt;/b&gt; интервал на котором таймер срабатывает.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="217"/>
@@ -11305,27 +11492,28 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="262"/>
       <source>&lt;p&gt;The &lt;b&gt;minute&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;Минутный&lt;/b&gt; интервал на котором таймер срабатывает.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="328"/>
       <source>&lt;p&gt;The &lt;b&gt;second&lt;/b&gt; part of the interval that the timer will go off at.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;Вторая&lt;/b&gt; часть интервала, на которой таймер будет срабатывать.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="331"/>
       <source>&lt;p&gt;The &lt;b&gt;second&lt;/b&gt; interval that the timer will go off at&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt;Секундный&lt;/b&gt; интервал на котором таймер срабатывает.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="397"/>
       <source>&lt;p&gt;The &lt;b&gt;milisecond&lt;/b&gt; part of the interval that the timer will go off at (1000 miliseconds = 1 second).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt; 
+Миллисекундная&lt;/b&gt; часть интервала на котором таймер срабатывает (1000мс = 1 секунда).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="400"/>
       <source>&lt;p&gt;The &lt;b&gt;milisecond&lt;/b&gt; interval that the timer will go off at (1000 miliseconds = 1 second)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;b&gt; Миллисекундный&lt;/b&gt; интервал на котором таймер срабатывает (1000мс = 1 секунда).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="283"/>
@@ -11388,7 +11576,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="79"/>
       <source>&lt;p&gt;Use this control to show or hide the extra controls for the trigger; this can be used to allow more space to show the trigger &lt;i&gt;items&lt;/i&gt; on smaller screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Используйте этот контроль для отображения или скрытия дополнительных элементов управления для триггера; это может использоваться для отображения большего количества места для отображения триггера &lt;i&gt;элементов&lt;/i&gt; на меньшем экране.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="105"/>
@@ -11409,12 +11597,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="238"/>
       <source>&lt;p&gt;Within how many lines must all condition be true to fire the trigger?&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;В сколько линий должны все шаблоны совпасть, чтобы триггер совпал?&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="254"/>
       <source>&lt;p&gt;When checked, only the filtered content (=capture groups) will be passed on to child triggers, not the initial line (see manual on filters).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Если этот флажок установлен, дочерним триггерам будет передаваться только отфильтрованное содержимое (что в группах захвата), а не начальная строка (см. руководство по фильтрам).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="257"/>
@@ -11429,7 +11617,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="318"/>
       <source>&lt;p&gt;Choose this option if you want to include all possible matches of the pattern in the line.&lt;/p&gt;&lt;p&gt;Without this option, the pattern matching will stop after the first successful match.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Выберите эту опцию, если вы хотите включить все возможные совпадения шаблона в строке.&lt;/p&gt;&lt;p&gt; Без этой опции, поиск остановится после первого успешного совпадания.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="351"/>
@@ -11439,12 +11627,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="406"/>
       <source>&lt;p&gt;Keep firing the script for this many more lines, after the trigger or chain has matched.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Исполнять скрипт еще столько строк, после того как триггер или цепочка совпали.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="412"/>
       <source>fire length (extra lines)</source>
-      <translation type="unfinished"/>
+      <translation>быть открытым # строк</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="470"/>
@@ -11479,12 +11667,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="563"/>
       <source>&lt;p&gt;Click to remove a sound file set for this trigger.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Нажмите, чтобы удалить звуковой файл, установленный для данного триггера.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="614"/>
       <source>&lt;p&gt;Enable this to highlight the matching text by changing the fore and background colors to the ones selected here.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Включите эту опцию, чтобы выделить соответствующий текст, изменив цвета переднего и заднего фона на выбранные здесь.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="666"/>
@@ -11519,7 +11707,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="454"/>
       <source>&lt;p&gt;How many more lines, after the one that fired the trigger, should be passed to the trigger&apos;s children?&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Сколько еще строк, после той, которая совпала на триггер, должны быть переданы потомкам триггера?&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="617"/>
@@ -11560,7 +11748,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="125"/>
       <source>&lt;p&gt;Set the &lt;i&gt;global variable&lt;/i&gt; or the &lt;i&gt;table entry&lt;/i&gt; name here. The name has to start with a letter, but can contain a mix of letters and numbers.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Задайте здесь имя глобальной переменной или ключа таблицы. Имя должно начинаться с буквы, но может содержать сочетание букв и цифр.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="138"/>
@@ -11606,7 +11794,7 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="185"/>
       <source>&lt;p&gt;If checked this item (and its children, if applicable) does not show in area to the left unless &lt;b&gt;Show normally hidden variables&lt;/b&gt; is checked.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Если флажок установлен, это переменное (и его дети, если есть) не отображается в области слева, кроме когда не установлен флажок &lt;b&gt;Показать обычно скрытые переменные&lt;/b&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="188"/>

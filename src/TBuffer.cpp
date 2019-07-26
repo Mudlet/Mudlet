@@ -2290,7 +2290,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                         break;
                     case 1: // This uses no extra arguments and, as it means
                             // transparent, is no use to us
-                        [[clang::fallthrough]];
+                        [[fallthrough]];
                     default:
                         break;
                     }
@@ -2387,7 +2387,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                         break;
                     case 1: // This uses no extra arguments and, as it means
                             // transparent, is no use to us
-                        [[clang::fallthrough]];
+                        [[fallthrough]];
                     default:
                         break;
                     }
@@ -2410,7 +2410,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                     mUnderline = true;
                     break;
                 case 2: // Double underline - not supported, treat as single
-                    [[clang::fallthrough]];
+                    [[fallthrough]];
                 case 3: // Wavey underline - not supported, treat as single
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unsupported underline parameter element (the second part) in a SGR...;4:" << parameterElements.at(1) << ";../m sequence treating it as a one!";
                     mUnderline = true;
@@ -2659,7 +2659,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                         break;
                     case 1: // This uses no extra arguments and, as it means
                             // transparent, is no use to us
-                        [[clang::fallthrough]];
+                        [[fallthrough]];
                     default:
                         break;
                     }
@@ -2776,7 +2776,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                         break;
                     case 1: // This uses no extra arguments and, as it means
                             // transparent, is no use to us
-                        [[clang::fallthrough]];
+                        [[fallthrough]];
                     default:
                         break;
                     }
@@ -4306,7 +4306,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             }
 
         // Fall-through
-            [[clang::fallthrough]];
+            [[fallthrough]];
         case 3:
             if ((bufferData.at(pos + 2) & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
@@ -4361,7 +4361,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             }
 
         // Fall-through
-            [[clang::fallthrough]];
+            [[fallthrough]];
         case 2:
             if ((static_cast<quint8>(bufferData.at(pos + 1)) & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
@@ -4411,7 +4411,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             case 2:
                 isNonBMPCharacter = true;
                 // Fall-through
-                [[clang::fallthrough]];
+                [[fallthrough]];
             case 1:
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, it was " << codePoint.size() << " QChar(s) long [" << codePoint
@@ -4849,7 +4849,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
             case 2:
                 isNonBmpCharacter = true;
             // Fall-through
-                [[clang::fallthrough]];
+                [[fallthrough]];
             case 1:
 #if defined(DEBUG_GB_PROCESSING)
                 qDebug().nospace() << "TBuffer::processGBSequence(...) " << gbSequenceLength << "-byte " << (isGB18030 ? "GB18030" : "GB2312/GBK") << " sequence accepted, it is " << codePoint.size()
@@ -4965,7 +4965,7 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
                     break;
                 case 2:
                     // Fall-through
-                    [[clang::fallthrough]];
+                    [[fallthrough]];
                 case 1:
                     // If Qt's decoder found bad characters, update status flags to reflect that.
                     if (codePoint.contains(QChar::ReplacementCharacter)) {
