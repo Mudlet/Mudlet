@@ -466,6 +466,7 @@ bool TCommandLine::event(QEvent* event)
         }
     }
 
+    qDebug() << "falling back to QPlainTextEdit::event() for" << event;
     return QPlainTextEdit::event(event);
 }
 
