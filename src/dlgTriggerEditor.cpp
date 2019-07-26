@@ -3225,7 +3225,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
 
     pT->setName(name);
     pT->setIsFolder(isFolder);
-    pT->setRegexCodeList(regexList, regexPropertyList);
+    pT->setRegexCodeList(regexList, regexPropertyList, true);
     pT->setScript(script);
     pT->setIsActive(false);
     pT->setIsMultiline(false);
