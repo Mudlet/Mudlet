@@ -34,6 +34,9 @@ class dlgAboutDialog : public QDialog, public Ui::about_dialog
 public:
     Q_DISABLE_COPY(dlgAboutDialog)
     dlgAboutDialog(QWidget* parent = nullptr);
+    void setAboutTab(const QString& htmlHead) const;
+    void setLicenseTab(const QString& htmlHead) const;
+    void setThirdPartyTab(const QString& htmlHead) const;
 };
 
 #endif // MUDLET_DLGABOUTDIALOG_H
