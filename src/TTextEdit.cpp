@@ -75,7 +75,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
             mScreenWidth = 100; //width()/mFontWidth;
         }
 
-        mpHost->getDisplayFont().setFixedPitch(true);
+        mpHost->setDisplayFontFixedPitch(true);
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth * 2, mFontHeight * 2);
         QPainter p(&pixmap);
@@ -85,7 +85,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
         const QString t = "1234";
         p.drawText(r, 1, t, &r2);
         mLetterSpacing = (qreal)((qreal)mFontWidth - (qreal)(r2.width() / t.size()));
-        mpHost->getDisplayFont().setLetterSpacing(QFont::AbsoluteSpacing, mLetterSpacing);
+        mpHost->setDisplayFontSpacing(mLetterSpacing);
 #endif
         setFont(mpHost->getDisplayFont());
     } else {
@@ -258,7 +258,7 @@ void TTextEdit::updateScreenView()
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth * 2, mFontHeight * 2);
         QPainter p(&pixmap);
-        mpHost->getDisplayFont().setLetterSpacing(QFont::AbsoluteSpacing, 0);
+        mpHost->setDisplayFontSpacing(0);
         if (p.isActive()) {
             p.setFont(mpHost->getDisplayFont());
             const QRectF r = QRectF(0, 0, mScreenWidth * mFontWidth * 2, mFontHeight * 2);
@@ -266,7 +266,7 @@ void TTextEdit::updateScreenView()
             const QString t = "1234";
             p.drawText(r, 1, t, &r2);
             mLetterSpacing = (qreal)((qreal)mFontWidth - (qreal)(r2.width() / t.size()));
-            mpHost->getDisplayFont().setLetterSpacing(QFont::AbsoluteSpacing, mLetterSpacing);
+            mpHost->setDisplayFontSpacing(mLetterSpacing);
         }
 #endif
     } else {

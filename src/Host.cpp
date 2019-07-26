@@ -1821,3 +1821,18 @@ std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
 
     return mpDownloaderProxy;
 }
+
+void Host::setDisplayFontSpacing(const qreal spacing)
+{
+    mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, spacing);
+}
+
+void Host::setDisplayFontStyle(QFont::StyleStrategy s)
+{
+    mDisplayFont.setStyleStrategy(s);
+}
+
+void Host::setDisplayFontFixedPitch(bool enable)
+{
+    mDisplayFont.setFixedPitch(enable);
+}

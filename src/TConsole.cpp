@@ -1124,7 +1124,7 @@ void TConsole::changeColors()
         auto letterSpacing = static_cast<qreal>(mFontWidth - static_cast<qreal>(r2.width() / t.size()));
         mUpperPane->mLetterSpacing = letterSpacing;
         mLowerPane->mLetterSpacing = letterSpacing;
-        mpHost->getDisplayFont().setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
+        mpHost->setDisplayFontSpacing(letterSpacing);
         mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, mUpperPane->mLetterSpacing);
 #endif
         mDisplayFont.setFixedPitch(true);
@@ -1149,11 +1149,11 @@ void TConsole::changeColors()
             mpCommandLine->mRegularPalette = pal;
         }
         if (mpHost->mNoAntiAlias) {
-            mpHost->getDisplayFont().setStyleStrategy(QFont::NoAntialias);
+            mpHost->setDisplayFontStyle(QFont::NoAntialias);
         } else {
-            mpHost->getDisplayFont().setStyleStrategy(QFont::StyleStrategy(QFont::PreferAntialias | QFont::PreferQuality));
+            mpHost->setDisplayFontStyle(QFont::StyleStrategy(QFont::PreferAntialias | QFont::PreferQuality));
         }
-        mpHost->getDisplayFont().setFixedPitch(true);
+        mpHost->setDisplayFontFixedPitch(true);
         mDisplayFont.setFixedPitch(true);
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap(2000, 600);
@@ -1170,7 +1170,7 @@ void TConsole::changeColors()
         auto letterSpacing = static_cast<qreal>(mFontWidth - static_cast<qreal>(r2.width() / t.size()));
         mUpperPane->mLetterSpacing = letterSpacing;
         mLowerPane->mLetterSpacing = letterSpacing;
-        mpHost->getDisplayFont().setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
+        mpHost->setDisplayFontSpacing(letterSpacing);
         mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, mUpperPane->mLetterSpacing);
 #endif
         mUpperPane->setFont(mpHost->getDisplayFont());

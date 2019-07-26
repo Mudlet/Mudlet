@@ -232,6 +232,9 @@ public:
     bool setDisplayFont(const QFont& font);
     bool setDisplayFont(const QString& fontName);
     void setDisplayFontSize(int size);
+    void setDisplayFontSpacing(const qreal spacing);
+    void setDisplayFontStyle(QFont::StyleStrategy s);
+    void setDisplayFontFixedPitch(bool enable);
     void updateProxySettings(QNetworkAccessManager* manager);
     std::unique_ptr<QNetworkProxy>& getConnectionProxy();
 
