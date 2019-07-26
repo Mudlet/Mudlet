@@ -1105,7 +1105,7 @@ int TLuaInterpreter::loadRawFile(lua_State* L) {
                            "got %s!)",
                         luaL_typename(L, 1));
         return lua_error(L);
-    } else if (replayFileName = QString::fromUtf8(lua_tostring(L, 1); replayFileName.isEmpty())) {
+    } else if (replayFileName = QString::fromUtf8(lua_tostring(L, 1)); replayFileName.isEmpty()) {
         lua_pushnil(L);
         lua_pushstring(L, "a blank string is not a valid replay file name");
         return 2;
@@ -1126,20 +1126,17 @@ int TLuaInterpreter::loadRawFile(lua_State* L) {
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setProfileIcon
-int TLuaInterpreter::setProfileIcon(lua_State* L)
-{
+int TLuaInterpreter::setProfileIcon(lua_State* L) {
     QString iconPath;
+
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "setProfileIcon: bad argument #1 type (icon file path expected, got %s!)",
                         luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        iconPath = QString::fromUtf8(lua_tostring(L, 1));
-        if (iconPath.isEmpty()) {
-            lua_pushnil(L);
-            lua_pushstring(L, "a blank string is not a valid icon file location");
-            return 2;
-        }
+    } else if (iconPath = QString::fromUtf8(lua_tostring(L, 1)); iconPath.isEmpty()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "a blank string is not a valid icon file location");
+        return 2;
     }
 
     if (!QFileInfo::exists(iconPath)) {
