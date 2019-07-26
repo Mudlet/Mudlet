@@ -110,7 +110,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
      * and for boiler-plate licences to be reused mulitple times if necessary.
      */
 
-    // Define a uniform header for all tabs:
+    // A uniform header for all tabs:
     QString htmlHead(QStringLiteral("<head><style type=\"text/css\">"
                                     "h1 { font-family: \"DejaVu Serif\"; text-align: center; }"
                                     "h2 { font-family: \"DejaVu Serif\"; text-align: center; }"
