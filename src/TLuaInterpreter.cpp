@@ -1097,7 +1097,8 @@ int TLuaInterpreter::getLines(lua_State* L)
 // Documentation: ? - public function missing documentation in wiki
 // Should have been called loadReplay(...) but this name is already in the
 // published Lua API
-int TLuaInterpreter::loadRawFile(lua_State* L) {
+int TLuaInterpreter::loadRawFile(lua_State* L)
+{
     QString replayFileName;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "loadRawFile: bad argument #1 type (replay file name, {may include a relative to \n"
@@ -1126,7 +1127,8 @@ int TLuaInterpreter::loadRawFile(lua_State* L) {
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setProfileIcon
-int TLuaInterpreter::setProfileIcon(lua_State* L) {
+int TLuaInterpreter::setProfileIcon(lua_State* L)
+{
     QString iconPath;
 
     if (!lua_isstring(L, 1)) {
