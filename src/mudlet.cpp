@@ -68,8 +68,6 @@
 #include <zip.h>
 #include "post_guard.h"
 
-using namespace std;
-
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::Close) {
@@ -129,6 +127,304 @@ mudlet* mudlet::self()
 {
     return _self;
 }
+
+void mudlet::loadLanguagesMap()
+{
+    mLanguageCodeMap = {
+            {"en_US", std::make_pair(QStringLiteral("English (American)"), 0)},
+            {"en_GB", std::make_pair(QStringLiteral("English (British)"), 0)},
+            {"zh_CN", std::make_pair(QStringLiteral(u"简化字"), 0)},
+            {"zh_TW", std::make_pair(QStringLiteral(u"繁體字"), 0)},
+            {"nl_NL", std::make_pair(QStringLiteral("Nederlands"), 0)},
+            {"fr_FR", std::make_pair(QStringLiteral(u"Français"), 0)},
+            {"de_DE", std::make_pair(QStringLiteral("Deutsch"), 0)},
+            {"el_GR", std::make_pair(QStringLiteral(u"ελληνικά"), 0)},
+            {"it_IT", std::make_pair(QStringLiteral("Italiano"), 0)},
+            {"pl_PL", std::make_pair(QStringLiteral("Polszczyzna"), 0)},
+            {"ru_RU", std::make_pair(QStringLiteral(u"Pусский"), 0)},
+            {"es_ES", std::make_pair(QStringLiteral(u"Español"), 0)},
+            {"pt_PT", std::make_pair(QStringLiteral(u"Português"), 0)},
+    };
+
+    // Primarily use to identify Hunspell dictionaries (some of which are not
+    // useful - the "_med" ones are suppliments and no good for Mudlet) - all
+    // keys are to be lower cased so that the values can be looked up with a
+    // QMap<T1, T2>::value(const T1&) where the parameter has been previously
+    // been converted to all-lower case:
+    // From https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes:
+    // More useful is the cross-referenced (Country <-> Languges):
+    // https://www.unicode.org/cldr/charts/latest/supplemental/language_territory_information.html
+    // Initially populated from the dictionaries provided within the Debian
+    // GNU/Linux distribution:
+    //: In the translation source texts the language is the leading term, with, generally, the (primary) country(ies) in the brackets, with a trailing language disabiguation after a '-' Chinese is an exception!
+    mDictionaryLanguageCodeMap = {{QStringLiteral("af"), tr("Afrikaans")},
+                                  {QStringLiteral("af_za"), tr("Afrikaans (South Africa)")},
+                                  {QStringLiteral("an"), tr("Aragonese")},
+                                  {QStringLiteral("an_es"), tr("Aragonese (Spain)")},
+                                  {QStringLiteral("ar"), tr("Arabic")},
+                                  {QStringLiteral("ar_ae"), tr("Arabic (United Arab Emirates)")},
+                                  {QStringLiteral("ar_bh"), tr("Arabic (Bahrain)")},
+                                  {QStringLiteral("ar_dz"), tr("Arabic (Algeria)")},
+                                  {QStringLiteral("ar_eg"), tr("Arabic (Egypt)")},
+                                  {QStringLiteral("ar_in"), tr("Arabic (India)")},
+                                  {QStringLiteral("ar_iq"), tr("Arabic (Iraq)")},
+                                  {QStringLiteral("ar_jo"), tr("Arabic (Jordan)")},
+                                  {QStringLiteral("ar_kw"), tr("Arabic (Kuwait)")},
+                                  {QStringLiteral("ar_lb"), tr("Arabic (Lebanon)")},
+                                  {QStringLiteral("ar_ly"), tr("Arabic (Libya)")},
+                                  {QStringLiteral("ar_ma"), tr("Arabic (Morocco)")},
+                                  {QStringLiteral("ar_om"), tr("Arabic (Oman)")},
+                                  {QStringLiteral("ar_qa"), tr("Arabic (Qatar)")},
+                                  {QStringLiteral("ar_sa"), tr("Arabic (Saudi Arabia)")},
+                                  {QStringLiteral("ar_sd"), tr("Arabic (Sudan)")},
+                                  {QStringLiteral("ar_sy"), tr("Arabic (Syria)")},
+                                  {QStringLiteral("ar_tn"), tr("Arabic (Tunisia)")},
+                                  {QStringLiteral("ar_ye"), tr("Arabic (Yemen)")},
+                                  {QStringLiteral("be"), tr("Belarusian")},
+                                  {QStringLiteral("be_by"), tr("Belarusian (Belarus)")},
+                                  {QStringLiteral("be_ru"), tr("Belarusian (Russia)")},
+                                  {QStringLiteral("bg"), tr("Bulgarian")},
+                                  {QStringLiteral("bg_bg"), tr("Bulgarian (Bulgaria)")},
+                                  {QStringLiteral("bn"), tr("Bangla")},
+                                  {QStringLiteral("bn_bd"), tr("Bangla (Bangladesh)")},
+                                  {QStringLiteral("bn_in"), tr("Bangla (India)")},
+                                  {QStringLiteral("bo"), tr("Tibetan")},
+                                  {QStringLiteral("bo_cn"), tr("Tibetan (China)")},
+                                  {QStringLiteral("bo_in"), tr("Tibetan (India)")},
+                                  {QStringLiteral("br"), tr("Breton")},
+                                  {QStringLiteral("br_fr"), tr("Breton (France)")},
+                                  {QStringLiteral("bs"), tr("Bosnian")},
+                                  {QStringLiteral("bs_ba"), tr("Bosnian (Bosnia/Herzegovina)")},
+                                  {QStringLiteral("bs_ba_cyrl"), tr("Bosnian (Bosnia/Herzegovina - Cyrillic alphabet)")},
+                                  {QStringLiteral("ca"), tr("Catalan")},
+                                  {QStringLiteral("ca_es"), tr("Catalan (Spain)")},
+                                  {QStringLiteral("ca_es_valencia"), tr("Catalan (Spain - Valencian)")},
+                                  {QStringLiteral("ckb"), tr("Central Kurdish")},
+                                  {QStringLiteral("ckb_iq"), tr("Central Kurdish (Iraq)")},
+                                  {QStringLiteral("cs"), tr("Czech")},
+                                  {QStringLiteral("cs_cz"), tr("Czech (Czechia)")},
+                                  {QStringLiteral("da"), tr("Danish")},
+                                  {QStringLiteral("da_dk"), tr("Danish (Denmark)")},
+                                  {QStringLiteral("de"), tr("German")},
+                                  {QStringLiteral("de_at"), tr("German (Austria)")},
+                                  {QStringLiteral("de_at_frami"), tr("German (Austria, revised by F M Baumann)")},
+                                  {QStringLiteral("de_be"), tr("German (Belgium)")},
+                                  {QStringLiteral("de_ch"), tr("German (Switzerland)")},
+                                  {QStringLiteral("de_ch_frami"), tr("German (Switzerland, revised by F M Baumann)")},
+                                  {QStringLiteral("de_de"), tr("German (Germany/Belgium/Luxemburg)")},
+                                  {QStringLiteral("de_de_frami"), tr("German (Germany/Belgium/Luxemburg, revised by F M Baumann)")},
+                                  {QStringLiteral("de_li"), tr("German (Liechtenstein)")},
+                                  {QStringLiteral("de_lu"), tr("German (Luxembourg)")},
+                                  {QStringLiteral("el"), tr("Greek")},
+                                  {QStringLiteral("el_gr"), tr("Greek (Greece)")},
+                                  {QStringLiteral("en"), tr("English")},
+                                  {QStringLiteral("en_ag"), tr("English (Antigua/Barbuda)")},
+                                  {QStringLiteral("en_au"), tr("English (Australia)")},
+                                  {QStringLiteral("en_bs"), tr("English (Bahamas)")},
+                                  {QStringLiteral("en_bw"), tr("English (Botswana)")},
+                                  {QStringLiteral("en_bz"), tr("English (Belize)")},
+                                  {QStringLiteral("en_ca"), tr("English (Canada)")},
+                                  {QStringLiteral("en_dk"), tr("English (Denmark)")},
+                                  {QStringLiteral("en_gb"), tr("English (United Kingdom)")},
+                                  {QStringLiteral("en_gb_ise"), tr("English (United Kingdom - 'ise' not 'ize')", "This dictionary prefers the British 'ise' form over the American 'ize' one.")},
+                                  {QStringLiteral("en_gh"), tr("English (Ghana)")},
+                                  {QStringLiteral("en_hk"), tr("English (Hong Kong SAR China)")},
+                                  {QStringLiteral("en_ie"), tr("English (Ireland)")},
+                                  {QStringLiteral("en_in"), tr("English (India)")},
+                                  {QStringLiteral("en_jm"), tr("English (Jamaica)")},
+                                  {QStringLiteral("en_na"), tr("English (Namibia)")},
+                                  {QStringLiteral("en_ng"), tr("English (Nigeria)")},
+                                  {QStringLiteral("en_nz"), tr("English (New Zealand)")},
+                                  {QStringLiteral("en_ph"), tr("English (Philippines)")},
+                                  {QStringLiteral("en_sg"), tr("English (Singapore)")},
+                                  {QStringLiteral("en_tt"), tr("English (Trinidad/Tobago)")},
+                                  {QStringLiteral("en_us"), tr("English (United States)")},
+                                  {QStringLiteral("en_za"), tr("English (South Africa)")},
+                                  {QStringLiteral("en_zw"), tr("English (Zimbabwe)")},
+                                  {QStringLiteral("es"), tr("Spanish")},
+                                  {QStringLiteral("es_ar"), tr("Spanish (Argentina)")},
+                                  {QStringLiteral("es_bo"), tr("Spanish (Bolivia)")},
+                                  {QStringLiteral("es_cl"), tr("Spanish (Chile)")},
+                                  {QStringLiteral("es_co"), tr("Spanish (Colombia)")},
+                                  {QStringLiteral("es_cr"), tr("Spanish (Costa Rica)")},
+                                  {QStringLiteral("es_cu"), tr("Spanish (Cuba)")},
+                                  {QStringLiteral("es_do"), tr("Spanish (Dominican Republic)")},
+                                  {QStringLiteral("es_ec"), tr("Spanish (Ecuador)")},
+                                  {QStringLiteral("es_es"), tr("Spanish (Spain)")},
+                                  {QStringLiteral("es_gt"), tr("Spanish (Guatemala)")},
+                                  {QStringLiteral("es_hn"), tr("Spanish (Honduras)")},
+                                  {QStringLiteral("es_mx"), tr("Spanish (Mexico)")},
+                                  {QStringLiteral("es_ni"), tr("Spanish (Nicaragua)")},
+                                  {QStringLiteral("es_pa"), tr("Spanish (Panama)")},
+                                  {QStringLiteral("es_pe"), tr("Spanish (Peru)")},
+                                  {QStringLiteral("es_pr"), tr("Spanish (Puerto Rico)")},
+                                  {QStringLiteral("es_py"), tr("Spanish (Paraguay)")},
+                                  {QStringLiteral("es_sv"), tr("Spanish (El Savador)")},
+                                  {QStringLiteral("es_us"), tr("Spanish (United States)")},
+                                  {QStringLiteral("es_uy"), tr("Spanish (Uruguay)")},
+                                  {QStringLiteral("es_ve"), tr("Spanish (Venezuela)")},
+                                  {QStringLiteral("et"), tr("Estonian")},
+                                  {QStringLiteral("et_ee"), tr("Estonian (Estonia)")},
+                                  {QStringLiteral("eu"), tr("Basque")},
+                                  {QStringLiteral("eu_es"), tr("Basque (Spain)")},
+                                  {QStringLiteral("eu_fr"), tr("Basque (France)")},
+                                  {QStringLiteral("fr"), tr("French")},
+                                  {QStringLiteral("fr_be"), tr("French (Belgium)")},
+                                  {QStringLiteral("fr_ca"), tr("French (Catalan)")},
+                                  {QStringLiteral("fr_ch"), tr("French (Switzerland)")},
+                                  {QStringLiteral("fr_fr"), tr("French (France)")},
+                                  {QStringLiteral("fr_lu"), tr("French (Luxemburg)")},
+                                  {QStringLiteral("fr_mc"), tr("French (Monaco)")},
+                                  {QStringLiteral("gd"), tr("Gaelic")},
+                                  {QStringLiteral("gd_gb"), tr("Gaelic (United Kingdom {Scots})")},
+                                  {QStringLiteral("gl"), tr("Galician")},
+                                  {QStringLiteral("gl_es"), tr("Galician (Spain)")},
+                                  {QStringLiteral("gu"), tr("Gujarati")},
+                                  {QStringLiteral("gu_in"), tr("Gujarati (India)")},
+                                  {QStringLiteral("he"), tr("Hebrew")},
+                                  {QStringLiteral("he_il"), tr("Hebrew (Israel)")},
+                                  {QStringLiteral("hi"), tr("Hindi")},
+                                  {QStringLiteral("hi_in"), tr("Hindi (India)")},
+                                  {QStringLiteral("hr"), tr("Croatian")},
+                                  {QStringLiteral("hr_hr"), tr("Croatian (Croatia)")},
+                                  {QStringLiteral("hu"), tr("Hungarian")},
+                                  {QStringLiteral("hu_hu"), tr("Hungarian (Hungary)")},
+                                  {QStringLiteral("hy"), tr("Armenian")},
+                                  {QStringLiteral("hy_am"), tr("Armenian (Armenia)")},
+                                  {QStringLiteral("ie"), tr("Interlingue", "formerly known as Occidental, and not to be mistaken for Interlingua")},
+                                  {QStringLiteral("is"), tr("Icelandic")},
+                                  {QStringLiteral("is_is"), tr("Icelandic (Iceland)")},
+                                  {QStringLiteral("it"), tr("Italian")},
+                                  {QStringLiteral("it_ch"), tr("Italian (Switzerland)")},
+                                  {QStringLiteral("it_it"), tr("Italian (Italy)")},
+                                  {QStringLiteral("kk"), tr("Kazakh")},
+                                  {QStringLiteral("kk_kz"), tr("Kazakh (Kazakhstan)")},
+                                  {QStringLiteral("kmr"), tr("Kurmanji")},
+                                  {QStringLiteral("kmr_latn"), tr("Kurmanji {Latin-alphabet Kurdish}")},
+                                  {QStringLiteral("ko"), tr("Korean")},
+                                  {QStringLiteral("ko_kr"), tr("Korean (South Korea)")},
+                                  {QStringLiteral("ku"), tr("Kurdish")},
+                                  {QStringLiteral("ku_sy"), tr("Kurdish (Syria)")},
+                                  {QStringLiteral("ku_tr"), tr("Kurdish (Turkey)")},
+                                  {QStringLiteral("lo"), tr("Lao")},
+                                  {QStringLiteral("lo_la"), tr("Lao (Laos)")},
+                                  {QStringLiteral("lt"), tr("Lithuanian")},
+                                  {QStringLiteral("lt_lt"), tr("Lithuanian (Lithuania)")},
+                                  {QStringLiteral("ml"), tr("Malayalam")},
+                                  {QStringLiteral("ml_in"), tr("Malayalam (India)")},
+                                  {QStringLiteral("nb"), tr("Norwegian Bokmål")},
+                                  {QStringLiteral("nb_no"), tr("Norwegian Bokmål (Norway)")},
+                                  {QStringLiteral("ne"), tr("Nepali")},
+                                  {QStringLiteral("ne_np"), tr("Nepali (Nepal)")},
+                                  {QStringLiteral("nl"), tr("Dutch")},
+                                  {QStringLiteral("nl_aw"), tr("Dutch (Aruba)")},
+                                  {QStringLiteral("nl_be"), tr("Dutch (Belgium)")},
+                                  {QStringLiteral("nl_nl"), tr("Dutch (Netherlands)")},
+                                  {QStringLiteral("nn"), tr("Norwegian Nynorsk")},
+                                  {QStringLiteral("nn_no"), tr("Norwegian Nynorsk (Norway)")},
+                                  {QStringLiteral("oc"), tr("Occitan")},
+                                  {QStringLiteral("oc_fr"), tr("Occitan (France)")},
+                                  {QStringLiteral("pl"), tr("Polish")},
+                                  {QStringLiteral("pl_pl"), tr("Polish (Poland)")},
+                                  {QStringLiteral("pt"), tr("Portuguese")},
+                                  {QStringLiteral("pt_br"), tr("Portuguese (Brazil)")},
+                                  {QStringLiteral("pt_pt"), tr("Portuguese (Portugal)")},
+                                  {QStringLiteral("ro"), tr("Romanian")},
+                                  {QStringLiteral("ro_ro"), tr("Romanian (Romania)")},
+                                  {QStringLiteral("ru"), tr("Russian")},
+                                  {QStringLiteral("ru_ru"), tr("Russian (Russia)")},
+                                  {QStringLiteral("se"), tr("Northern Sami")},
+                                  {QStringLiteral("se_fi"), tr("Northern Sami (Finland)")},
+                                  {QStringLiteral("se_no"), tr("Northern Sami (Norway)")},
+                                  {QStringLiteral("se_se"), tr("Northern Sami (Sweden)")},
+                                  {QStringLiteral("sh"), tr("Shtokavian", "This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state without a state indication")},
+                                  {QStringLiteral("sh_yu"), tr("Shtokavian (former state of Yugoslavia)", "This code seems to be the identifier for the prestige dialect for several languages used in the region of the former Yugoslavia state with a (withdrawn from ISO 3166) state indication")},
+                                  {QStringLiteral("si"), tr("Sinhala")},
+                                  {QStringLiteral("si_lk"), tr("Sinhala (Sri Lanka)")},
+                                  {QStringLiteral("sk"), tr("Slovak")},
+                                  {QStringLiteral("sk_sk"), tr("Slovak (Slovakia)")},
+                                  {QStringLiteral("sl"), tr("Slovenian")},
+                                  {QStringLiteral("sl_si"), tr("Slovenian (Slovenia)")},
+                                  {QStringLiteral("so"), tr("Somali")},
+                                  {QStringLiteral("so_so"), tr("Somali (Somalia)")},
+                                  {QStringLiteral("sq"), tr("Albanian")},
+                                  {QStringLiteral("sq_al"), tr("Albanian (Albania)")},
+                                  {QStringLiteral("sr"), tr("Serbian")},
+                                  {QStringLiteral("sr_me"), tr("Serbian (Montenegro)")},
+                                  {QStringLiteral("sr_rs"), tr("Serbian (Serbia)")},
+                                  {QStringLiteral("sr_latn_rs"), tr("Serbian (Serbia - Latin-alphabet)")},
+                                  {QStringLiteral("sr_yu"), tr("Serbian (former state of Yugoslavia)")},
+                                  {QStringLiteral("ss"), tr("Swati")},
+                                  {QStringLiteral("ss_sz"), tr("Swati (Swaziland)")},
+                                  {QStringLiteral("ss_za"), tr("Swati (South Africa)")},
+                                  {QStringLiteral("sv"), tr("Swedish")},
+                                  {QStringLiteral("sv_se"), tr("Swedish (Sweden)")},
+                                  {QStringLiteral("sv_fi"), tr("Swedish (Finland)")},
+                                  {QStringLiteral("sw"), tr("Swahili")},
+                                  {QStringLiteral("sw_ke"), tr("Swahili (Kenya)")},
+                                  {QStringLiteral("sw_tz"), tr("Swahili (Tanzania)")},
+                                  {QStringLiteral("te"), tr("Telugu")},
+                                  {QStringLiteral("te_in"), tr("Telugu (India)")},
+                                  {QStringLiteral("th"), tr("Thai")},
+                                  {QStringLiteral("th_th"), tr("Thai (Thailand)")},
+                                  {QStringLiteral("ti"), tr("Tigrinya")},
+                                  {QStringLiteral("ti_er"), tr("Tigrinya (Eritrea)")},
+                                  {QStringLiteral("ti_et"), tr("Tigrinya (Ethiopia)")},
+                                  {QStringLiteral("tk"), tr("Turkmen")},
+                                  {QStringLiteral("tk_tm"), tr("Turkmen (Turkmenistan)")},
+                                  {QStringLiteral("tn"), tr("Tswana")},
+                                  {QStringLiteral("tn_bw"), tr("Tswana (Botswana)")},
+                                  {QStringLiteral("tn_za"), tr("Tswana (South Africa)")},
+                                  {QStringLiteral("ts"), tr("Tsonga")},
+                                  {QStringLiteral("ts_za"), tr("Tsonga (South Africa)")},
+                                  {QStringLiteral("uk"), tr("Ukrainian")},
+                                  {QStringLiteral("uk_ua"), tr("Ukrainian (Ukraine)")},
+                                  {QStringLiteral("uz"), tr("Uzbek")},
+                                  {QStringLiteral("uz_uz"), tr("Uzbek (Uzbekistan)")},
+                                  {QStringLiteral("ve"), tr("Venda")},
+                                  {QStringLiteral("vi"), tr("Vietnamese")},
+                                  {QStringLiteral("vi_vn"), tr("Vietnamese (Vietnam)")},
+                                  {QStringLiteral("vi_daucu"), tr("Vietnamese (DauCu varient - old-style diacritics)")},
+                                  {QStringLiteral("vi_daumoi"), tr("Vietnamese (DauMoi varient - new-style diacritics)")},
+                                  {QStringLiteral("wa"), tr("Walloon")},
+                                  {QStringLiteral("xh"), tr("Xhosa")},
+                                  {QStringLiteral("yi"), tr("Yiddish")},
+                                  {QStringLiteral("zh"), tr("Chinese")},
+                                  {QStringLiteral("zh_cn"), tr("Chinese (China - simplified)")},
+                                  {QStringLiteral("zh_tw"), tr("Chinese (Taiwan - traditional)")},
+                                  {QStringLiteral("zu"), tr("Zulu")}};
+
+    QFile file(QStringLiteral(":/translation-stats.json"));
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qWarning() << "translation statistics file isn't available, won't show stats in preferences";
+        return;
+    }
+
+    QByteArray saveData = file.readAll();
+    QJsonDocument loadDoc(QJsonDocument::fromJson(saveData));
+    QJsonObject translationStats = loadDoc.object();
+
+    for (auto& languageKey : translationStats.keys()) {
+        auto languageData = mLanguageCodeMap.value(languageKey);
+
+        auto value = translationStats.value(languageKey).toObject().value(QStringLiteral("translatedpc"));
+        if (value == QJsonValue::Undefined) {
+            continue;
+        }
+        auto translatedpc = value.toInt();
+
+        // show translation % for languages with less than 95%
+        // for languages above 95%, show a gold star
+        if (translatedpc < mTranslationStar) {
+            mLanguageCodeMap.insert(
+                    languageKey,
+                    std::make_pair(tr("%1 (%2% done)", "%1 is the language name, %2 is the amount of texts in percent that is translated in Mudlet").arg(languageData.first).arg(translatedpc),
+                              translatedpc));
+        } else {
+            mLanguageCodeMap.insert(languageKey, std::make_pair(languageData.first, translatedpc));
+        }
+    }
+ }
 
 mudlet::mudlet()
 : QMainWindow()
@@ -1385,7 +1681,7 @@ void mudlet::slot_close_profile_requested(int tab)
         return;
     }
 
-    list<QPointer<TToolBar>> hostToolBarMap = pH->getActionUnit()->getToolBarList();
+    std::list<QPointer<TToolBar>> hostToolBarMap = pH->getActionUnit()->getToolBarList();
     QMap<QString, TDockWidget*>& dockWindowMap = pH->mpConsole->mDockWidgetMap;
     QMap<QString, TConsole*>& hostConsoleMap = pH->mpConsole->mSubConsoleMap;
 
@@ -1479,7 +1775,7 @@ void mudlet::slot_close_profile()
         if (mConsoleMap.contains(mpCurrentActiveHost)) {
             Host* pH = mpCurrentActiveHost;
             if (pH) {
-                list<QPointer<TToolBar>> hostTToolBarMap = pH->getActionUnit()->getToolBarList();
+                std::list<QPointer<TToolBar>> hostTToolBarMap = pH->getActionUnit()->getToolBarList();
                 QMap<QString, TDockWidget*>& dockWindowMap = pH->mpConsole->mDockWidgetMap;
                 QMap<QString, TConsole*>& hostConsoleMap = pH->mpConsole->mSubConsoleMap;
                 QString name = pH->getName();
@@ -2521,15 +2817,15 @@ bool mudlet::setLabelOnLeave(Host* pHost, const QString& name, const QString& fu
 std::pair<bool, int> mudlet::getLineNumber(Host* pHost, QString& windowName)
 {
     if (!pHost || !pHost->mpConsole) {
-        return make_pair(false, -1);
+        return std::make_pair(false, -1);
     }
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(windowName);
     if (pC) {
-        return make_pair(true, pC->getLineNumber());
+        return std::make_pair(true, pC->getLineNumber());
     } else {
         TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
-        return make_pair(false, -1);
+        return std::make_pair(false, -1);
     }
 }
 
@@ -2706,14 +3002,14 @@ int mudlet::selectSection(Host* pHost, const QString& name, int f, int t)
 std::tuple<bool, QString, int, int> mudlet::getSelection(Host* pHost, const QString& windowName)
 {
     if (!pHost || !pHost->mpConsole) {
-        return make_tuple(false, QStringLiteral(R"(internal error, Host pointer had nullptr value)"), 0, 0);
+        return std::make_tuple(false, QStringLiteral(R"(internal error, Host pointer had nullptr value)"), 0, 0);
     }
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(windowName);
     if (pC) {
         return pC->getSelection();
     } else {
-        return make_tuple(false, QStringLiteral(R"(window "%s" not found)").arg(windowName.toUtf8().constData()), 0, 0);
+        return std::make_tuple(false, QStringLiteral(R"(window "%s" not found)").arg(windowName.toUtf8().constData()), 0, 0);
     }
 }
 
@@ -3601,7 +3897,7 @@ void mudlet::slot_reconnect()
     if (!pHost) {
         return;
     }
-    pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
+    pHost->mTelnet.reconnect();
 }
 
 void mudlet::slot_disconnect()
@@ -5277,6 +5573,35 @@ QSet<QString> mudlet::getWordSet()
     } while (!gotWordSet);
 
     return wordSet;
+}
+
+std::pair<bool, QString> mudlet::setProfileIcon(const QString& profile, const QString& newIconPath)
+{
+    QDir dir;
+    auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, QStringLiteral("profileicon"));
+    if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
+        qWarning() << "mudlet::setProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
+        return std::make_pair(false, QStringLiteral("couldn't remove existing icon file"));
+    }
+
+    if (!QFile::copy(newIconPath, profileIconPath)) {
+        qWarning() << "mudlet::setProfileIcon() ERROR: couldn't copy new icon" << newIconPath<< " to" << profileIconPath;
+        return std::make_pair(false, QStringLiteral("couldn't copy icon file into new location"));
+    }
+
+    return std::make_pair(true, QString());
+}
+
+std::pair<bool, QString> mudlet::resetProfileIcon(const QString& profile)
+{
+    QDir dir;
+    auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, QStringLiteral("profileicon"));
+    if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
+        qWarning() << "mudlet::resetProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
+        return std::make_pair(false, QStringLiteral("couldn't remove existing icon file"));
+    }
+
+    return std::make_pair(true, QString());
 }
 
 #if defined(Q_OS_WIN32)

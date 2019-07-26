@@ -40,6 +40,7 @@
 #include "pre_guard.h"
 #include <QtUiTools>
 #include <zip.h>
+#include <memory>
 #include "post_guard.h"
 
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
@@ -394,7 +395,6 @@ void Host::resetProfile_phase2()
     mEventMap.clear();
     mLuaInterpreter.initLuaGlobals();
     mLuaInterpreter.loadGlobal();
-    mLuaInterpreter.initIndenterGlobals();
     mBlockScriptCompile = false;
 
     getTriggerUnit()->compileAll();
@@ -1765,4 +1765,31 @@ void Host::setName(const QString& newName)
         mpConsole->setProfileName(newName);
     }
     mTimerUnit.changeHostName(newName);
+}
+
+void Host::updateProxySettings(QNetworkAccessManager* manager) {
+    if (mUseProxy && !mProxyAddress.isEmpty() && mProxyPort != 0) {
+        auto& proxy = getConnectionProxy();
+        manager->setProxy(*proxy);
+    } else {
+        manager->setProxy(QNetworkProxy::DefaultProxy);
+    }
+}
+
+std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
+{
+    if (!mpDownloaderProxy) {
+        mpDownloaderProxy = std::make_unique<QNetworkProxy>(QNetworkProxy::Socks5Proxy);
+    }
+    auto& proxy = mpDownloaderProxy;
+    proxy->setHostName(mProxyAddress);
+    proxy->setPort(mProxyPort);
+    if (!mProxyUsername.isEmpty()) {
+        proxy->setUser(mProxyUsername);
+    }
+    if (!mProxyPassword.isEmpty()) {
+        proxy->setPassword(mProxyPassword);
+    }
+
+    return mpDownloaderProxy;
 }

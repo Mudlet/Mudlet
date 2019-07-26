@@ -37,7 +37,7 @@ public:
     dlgConnectionProfiles(QWidget* parent = nullptr);
     void fillout_form();
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
-    QString readProfileData(const QString& profile, const QString& item);
+    QString readProfileData(const QString& profile, const QString& item) const;
     void accept() override;
 
 signals:
@@ -71,7 +71,7 @@ public slots:
 
 private:
     void copyFolder(const QString& sourceFolder, const QString& destFolder);
-    QString getDescription(const QString& hostUrl, quint16 port, const QString& profile_name);
+    QString getDescription(const QString& hostUrl, quint16 port, const QString& profile_name) const;
     bool validateConnect();
     void updateDiscordStatus();
     bool validateProfile();
@@ -80,6 +80,11 @@ private:
     bool extractSettingsFromProfile(pugi::xml_document& newProfile, const QString& copySettingsFrom);
     void saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const;
     bool copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const;
+    bool hasCustomIcon(const QString& profileName) const;
+    void setProfileIcon(const QFont& font) const;
+    void loadCustomProfile(const QFont& font, const QString& profileName) const;
+    void generateCustomProfile(const QFont& font, int i, const QString& profileName) const;
+    void setCustomIcon(const QString& profileName, QListWidgetItem* profile) const;
 
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
@@ -98,6 +103,13 @@ private:
     QLineEdit* delete_profile_lineedit;
     QPushButton* delete_button;
     QString mDiscordApplicationId;
+    const QStringList mDefaultGames;
+
+private slots:
+    void slot_profile_menu(QPoint pos);
+    void slot_set_custom_icon();
+    void slot_reset_custom_icon();
 };
+
 
 #endif // MUDLET_DLGCONNECTIONPROFILES_H

@@ -42,8 +42,6 @@
 #include <sstream>
 #include "post_guard.h"
 
-using namespace std;
-
 XMLexport::XMLexport( Host * pH )
 : mpHost( pH )
 , mpTrigger( Q_NULLPTR )
@@ -334,7 +332,7 @@ bool XMLexport::saveXml(const QString& fileName)
 // TODO: Refactor dlgTriggerEditor::slot_export() {at least} to call this method instead of saveXml(const QString&)
 bool XMLexport::saveXmlFile(QFile& file)
 {
-    std::stringstream saveStringStream(ios::out);
+    std::stringstream saveStringStream(std::ios::out);
     // Remember, the mExportDoc is the data in the form of a pugi::xml_document
     // instance - the save method needs a stream that impliments the
     // std::ostream interface into which it can push the data:
@@ -355,7 +353,7 @@ bool XMLexport::saveXmlFile(QFile& file)
 
 QString XMLexport::saveXml()
 {
-    std::stringstream saveStringStream(ios::out);
+    std::stringstream saveStringStream(std::ios::out);
     std::string output;
 
     mExportDoc.save(saveStringStream);
@@ -419,8 +417,13 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mThemePreviewType") = pHost->mThemePreviewType.toUtf8().constData();
     host.append_attribute("mSearchEngineName") = pHost->mSearchEngineName.toUtf8().constData();
     host.append_attribute("mTimerSupressionInterval") = pHost->mTimerDebugOutputSuppressionInterval.toString(QLatin1String("HH:mm:ss.zzz")).toUtf8().constData();
-    host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";
+    host.append_attribute("mUseProxy") = pHost->mUseProxy ? "yes" : "no";
+    host.append_attribute("mProxyAddress") = pHost->mProxyAddress.toUtf8().constData();
+    host.append_attribute("mProxyPort") = QString::number(pHost->mProxyPort).toUtf8().constData();
+    host.append_attribute("mProxyUsername") = pHost->mProxyUsername.toUtf8().constData();
+    host.append_attribute("mProxyPassword") = pHost->mProxyPassword.toUtf8().constData();
     host.append_attribute("mAutoReconnect") = pHost->mAutoReconnect ? "yes" : "no";
+    host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";
     host.append_attribute("mSslIgnoreExpired") = pHost->mSslIgnoreExpired ? "yes" : "no";
     host.append_attribute("mSslIgnoreSelfSigned") = pHost->mSslIgnoreSelfSigned ? "yes" : "no";
     host.append_attribute("mSslIgnoreAll") = pHost->mSslIgnoreAll ? "yes" : "no";

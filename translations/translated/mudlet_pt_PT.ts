@@ -427,7 +427,7 @@ Por favor aguarde...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="404"/>
       <source>Error theme not found %1.</source>
-      <translation type="unfinished"/>
+      <translation>Erro tema não encontrado %1.</translation>
     </message>
   </context>
   <context>
@@ -464,25 +464,25 @@ Por favor aguarde...</translation>
       <location filename="../src/T2DMap.cpp" line="3213"/>
       <location filename="../src/T2DMap.cpp" line="4878"/>
       <source>Dot line</source>
-      <translation type="unfinished"/>
+      <translation>Linha pontilhada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3214"/>
       <location filename="../src/T2DMap.cpp" line="4879"/>
       <source>Dash line</source>
-      <translation type="unfinished"/>
+      <translation>Linha tracejada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3215"/>
       <location filename="../src/T2DMap.cpp" line="4880"/>
       <source>Dash-dot line</source>
-      <translation type="unfinished"/>
+      <translation>Linha traço-ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3216"/>
       <location filename="../src/T2DMap.cpp" line="4881"/>
       <source>Dash-dot-dot line</source>
-      <translation type="unfinished"/>
+      <translation>Linha traço-ponto-ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3490"/>
@@ -517,7 +517,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3783"/>
       <source>Delete color</source>
       <comment>Deletes an environment colour</comment>
-      <translation type="unfinished"/>
+      <translation>Excluir cor</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3801"/>
@@ -568,21 +568,24 @@ it with a new symbol for this room:</source>
       <source>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and non-breaking hyphens which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. %2 is the (text) name of the area, %3 is the number for it, %4 to %9 are pairs (min &lt;-&gt; max) of extremes for each of x,y and z coordinates</comment>
-      <translation type="unfinished"/>
+      <translation>Área:%1%2 Id:%1%3 X:%1%4%1&lt;‑&gt;%1%5 Y:%1%6%1&lt;‑&gt;%1%7 Z:%1%8%1&lt;‑&gt;%1%9
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2205"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when NO rooms are selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the current player&apos;s room.</comment>
-      <translation type="unfinished"/>
+      <translation>Quarto%1ID:%1%2 Posição%1oN%1Mapa: (%3,%4,%5) ‑%1cLocalização do jogador atual
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2222"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when ONE room is selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the selected Room.</comment>
-      <translation type="unfinished"/>
+      <translation>Sala%1ID:%1%2 Posição%1oN%1Mapa: (%3,%4,%5) ‑%1sala selecionada
+</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="2240"/>
@@ -763,7 +766,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2867"/>
       <source>Spread</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Espalhar</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2868"/>
@@ -775,7 +778,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2871"/>
       <source>Shrink</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Diminuir</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2872"/>
@@ -787,7 +790,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2875"/>
       <source>Lock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Bloquear</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2876"/>
@@ -799,7 +802,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2879"/>
       <source>Unlock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Desbloquear</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2880"/>
@@ -811,7 +814,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2883"/>
       <source>Weight</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Peso</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2884"/>
@@ -823,7 +826,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2887"/>
       <source>Exits</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Saídas</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2888"/>
@@ -835,7 +838,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2891"/>
       <source>Symbol</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Símbolo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2892"/>
@@ -847,7 +850,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2895"/>
       <source>Move to</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Mover para</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2896"/>
@@ -859,19 +862,19 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2899"/>
       <source>Area</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Área</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2900"/>
       <source>Set room&apos;s area number</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Definir número de área da sala</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2903"/>
       <source>Custom exit line</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Linha de saída personalizada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2905"/>
@@ -889,7 +892,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2913"/>
       <source>Create Label</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Criar Rótulo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2914"/>
@@ -901,7 +904,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2917"/>
       <source>Set location</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Definir localização</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2919"/>
@@ -913,13 +916,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2923"/>
       <source>Can only set location when exactly one room is selected</source>
       <comment>2D Mapper context menu (room) item tooltip (disabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Só é possível configurar o local apenas quando exatamente uma sala estiver selecionada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2950"/>
       <source>Move</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>Mover</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2951"/>
@@ -931,7 +934,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2953"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>Excluir</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2954"/>
@@ -943,7 +946,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2970"/>
       <source>Add point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Adicionar ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2977"/>
@@ -961,7 +964,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2984"/>
       <source>Remove point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Remover Ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2991"/>

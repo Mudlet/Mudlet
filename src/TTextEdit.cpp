@@ -64,6 +64,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mpScrollBar(nullptr)
 , mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
 , mUseOldUnicode8(false)
+, mTabStopwidth(8)
 {
     mLastClickTimer.start();
     if (pC->getType() != TConsole::CentralDebugConsole) {
@@ -500,7 +501,7 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
     uint unicode = getGraphemeBaseCharacter(grapheme);
     int charWidth;
     if (unicode == '\t') {
-        charWidth = column / 8 * 8 + 8;
+        charWidth = mTabStopwidth - (column % mTabStopwidth);
     } else {
         charWidth = getGraphemeWidth(unicode);
     }
@@ -549,34 +550,32 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
     painter.drawText(textRect.x(), textRect.bottom() - mFontDescent, grapheme);
     return charWidth;
 }
+
 int TTextEdit::getGraphemeWidth(uint unicode) const
 {
-    // mk_wcwidth returns -1 (on error), 0 on a control or combining
-    // diacritical codepoint or 1 for a normal character or 2 on a wide
-    // character.
-    // mk_wcwidth_cjk does the same except it returns 2 instead of 1 for
-    // characters that have an "ambiguous" East Asian width:
-    // replaced by wide_wcwidth which returns 1 or 2 or a number of
-    // (negative) special values:
-    // mWideAmbigousWidthGlyphs
+    // Markus Kuhn's mk_wcwidth()/mk_wcwidth_cjk():
+    // https://www.cl.cam.ac.uk/~mgk25/ucs/wcwidth.c have not been updated since
+    // Unicode 5 and we have replaced them by wide_wcwidth:
+    // https://github.com/ridiculousfish/widecharwidth
+    // which returns 1 or 2 or a number of (negative) special values:
     switch (widechar_wcwidth(unicode)) {
     case 1: // Draw as normal/narrow
         return 1;
     case 2: // Draw as wide
         return 2;
     case widechar_nonprint:     // -1 = The character is not printable.
-        qDebug().nospace().noquote() << "TTextEdit::drawGrapheme(...) WARN - trying to draw a Unicode character which is unprintable, codepoint number: U+" << QString::number(unicode, 16) << ".";
+        qDebug().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is unprintable, codepoint number: U+" << QString::number(unicode, 16) << ".";
         return 1;
     case widechar_combining:    // -2 = The character is a zero-width combiner.
-        qWarning().nospace().noquote() << "TTextEdit::drawGrapheme(...) WARN - trying to draw a Unicode character which is a zero width combiner, codepoint number: U+" << QString::number(unicode, 16) << ".";
+        qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is a zero width combiner, codepoint number: U+" << QString::number(unicode, 16) << ".";
         return 1; // Previous code treated this as a normal width character
     case widechar_ambiguous:    // -3 = The character is East-Asian ambiguous width.
         return mWideAmbigousWidthGlyphs ? 2 : 1;
     case widechar_private_use:  // -4 = The character is for private use - we cannot know for certain what width to used
-        qDebug().nospace().noquote() << "TTextEdit::drawGrapheme(...) WARN - trying to draw a Private User Character, we cannot know how wide it is, codepoint number: U+" << QString::number(unicode, 16) << ".";
+        qDebug().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Private User Character, we cannot know how wide it is, codepoint number: U+" << QString::number(unicode, 16) << ".";
         return 1;
     case widechar_unassigned:   // -5 = The character is unassigned.
-        qWarning().nospace().noquote() << "TTextEdit::drawGrapheme(...) WARN - trying to draw a Unicode character which was not previously assigned and we do not know how wide it is, codepoint number: U+" << QString::number(unicode, 16) << ".";
+        qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which was not previously assigned and we do not know how wide it is, codepoint number: U+" << QString::number(unicode, 16) << ".";
         return 1;
     case widechar_widened_in_9: // -6 = Width is 1 in Unicode 8, 2 in Unicode 9+.
         if (mUseOldUnicode8) {
@@ -1861,9 +1860,9 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
          *              correctly prior to this stage in processing - leave as is!
          */
         case 0xFFFE:
-            [[clang::fallthrough]];
+            [[fallthrough]];
         case 0xFFFF:
-            [[clang::fallthrough]];
+            [[fallthrough]];
         default:
             if (value >= 0xFDD0 && value <= 0xFDEF) {
                 return htmlCenter(tr("{noncharacter}", "Unicode codepoint in range U+FFD0 to U+FDEF - not a character.")); break;

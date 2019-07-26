@@ -31,11 +31,9 @@
 #include "mudlet.h"
 
 
-using namespace std;
-
 void ActionUnit::_uninstall(TAction* pChild, const QString& packageName)
 {
-    list<TAction*>* childrenList = pChild->mpMyChildrenList;
+    std::list<TAction*>* childrenList = pChild->mpMyChildrenList;
     for (auto action : *childrenList) {
         _uninstall(action, packageName);
         uninstallList.append(action);
