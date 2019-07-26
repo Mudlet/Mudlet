@@ -130,9 +130,8 @@ TTrigger::~TTrigger()
 
 void TTrigger::setName(const QString& name)
 {
-    if( ! isTemporary() )
-    {
-        mpHost->getTriggerUnit()->mLookupTable.remove( mName, this );
+    if (!isTemporary()) {
+        mpHost->getTriggerUnit()->mLookupTable.remove(mName, this);
     }
     mName = name;
     mpHost->getTriggerUnit()->mLookupTable.insertMulti(name, this);
