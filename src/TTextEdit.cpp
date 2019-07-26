@@ -1439,14 +1439,14 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     for (int y = mPA.y(), total = mPB.y() + 1; y < total; ++y) {
         int lineWidth{};
         for (const auto& character : mpBuffer->lineBuffer.at(y)) {
-             const uint unicode = getGraphemeBaseCharacter(character);
-             int characterWidth{};
-             if (unicode == '\t') {
-                 characterWidth = 8;
-             } else {
-                 characterWidth = getGraphemeWidth(unicode);
-             }
-             lineWidth += characterWidth;
+            const uint unicode = getGraphemeBaseCharacter(character);
+            int characterWidth{};
+            if (unicode == '\t') {
+                characterWidth = 8;
+            } else {
+                characterWidth = getGraphemeWidth(unicode);
+            }
+            lineWidth += characterWidth;
         }
         largestLine = std::max(lineWidth, largestLine);
     }
