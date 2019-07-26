@@ -1253,9 +1253,7 @@ int TLuaInterpreter::getLineNumber(lua_State* L)
         lua_pushnumber(L, host.mpConsole->getLineNumber());
         return 1;
     } else {
-        bool success;
-        int lineNumber;
-        std::tie(success, lineNumber) = mudlet::self()->getLineNumber(&host, windowName);
+        auto[success, lineNumber] = mudlet::self()->getLineNumber(&host, windowName);
 
         if (success) {
             lua_pushnumber(L, lineNumber);
