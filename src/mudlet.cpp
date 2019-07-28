@@ -880,7 +880,6 @@ void mudlet::scanForMudletTranslations(const QString& path)
         auto* pTranslator = new QTranslator();
         std::unique_ptr<QTranslator> pMudletTranslator(pTranslator);
         auto translationPathFileName(path % QLatin1Char('/') % translationFileName);
-qDebug().nospace().noquote() << "TRANSLATOR (MUDLET, SCAN) DEBUG: load(...) called with arguments, 1: \"" << translationFileName << "\", 2: \"" << path << "\"";
         if (Q_LIKELY(pMudletTranslator->load(translationFileName, path))) {
             qDebug().noquote().nospace() << "    found a Mudlet translation for locale code: \"" << languageCode << "\".";
             if (!translationStats.isEmpty()) {
@@ -954,7 +953,6 @@ void mudlet::scanForQtTranslations(const QString& path)
         auto* pTranslator = new QTranslator();
         std::unique_ptr<QTranslator> pQtTranslator(pTranslator);
         QString translationFileName(QStringLiteral("qt_%1.qm").arg(languageCode));
-qDebug().nospace().noquote() << "TRANSLATOR (QT, SCAN) DEBUG: load(...) called with arguments, 1: \"" << translationFileName << "\", 2: \"" << path << "\"";
         if (pQtTranslator->load(translationFileName, path)) {
             qDebug().noquote().nospace() << "    found a Qt translation for locale code: \"" << languageCode << "\"";
             /*
@@ -997,7 +995,6 @@ void mudlet::loadTranslators(const QString& languageCode)
     QPointer<QTranslator> pQtTranslator = new QTranslator;
     QString qtTranslatorFileName = currentTranslation.getQtTranslationFileName();
     if (!qtTranslatorFileName.isEmpty()) {
-qDebug().nospace().noquote() << "TRANSLATOR (QT, LOAD) DEBUG: load(...) called with arguments, 1: \"" << qtTranslatorFileName << "\", 2: \"" << mQtTranslationsPathName << "\"";
         // Need to use load(fileName (e.g. {qt_xx_YY.qm"}, pathName) form - Qt
         // mangles the former to find the actual best one to use, but we
         // shouldn't include the path in the first element as it seems to mess
@@ -1013,7 +1010,6 @@ qDebug().nospace().noquote() << "TRANSLATOR (QT, LOAD) DEBUG: load(...) called w
     QPointer<QTranslator> pMudletTranslator = new QTranslator;
     QString mudletTranslatorFileName = currentTranslation.getMudletTranslationFileName();
     if (!mudletTranslatorFileName.isEmpty()) {
-qDebug().nospace().noquote() << "TRANSLATOR (MUDLET, LOAD) DEBUG: load(...) called with arguments, 1: \"" << mudletTranslatorFileName << "\", 2: \"" << mMudletTranslationsPathName << "\"";
         pMudletTranslator->load(mudletTranslatorFileName, mMudletTranslationsPathName);
         if (!pMudletTranslator->isEmpty()) {
             qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Mudlet translation from: \"" << mMudletTranslationsPathName << "/" << mudletTranslatorFileName << "\"...";
