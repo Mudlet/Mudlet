@@ -14,7 +14,7 @@ if [ "${TRAVIS_EVENT_TYPE}" = "cron" ]; then
   # download coverity tool only for cron jobs
   mkdir coverity
   cd coverity
-  wget --no-verbose http://build.rsyslog.com/CI/cov-analysis.tar.gz
+  wget --no-verbose https://scan.coverity.com/download/cxx/Linux
   if [ $? -ne 0 ]; then
 	  echo Download Coverity analysis tool failed!
 	  exit 1
