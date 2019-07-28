@@ -39,6 +39,7 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QNetworkProxy>
 #include <QProgressDialog>
 #include <QTextCodec>
 #include <QSslError>

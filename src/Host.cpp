@@ -39,6 +39,7 @@
 
 #include "pre_guard.h"
 #include <QtUiTools>
+#include <QNetworkProxy>
 #include <zip.h>
 #include <memory>
 #include "post_guard.h"
