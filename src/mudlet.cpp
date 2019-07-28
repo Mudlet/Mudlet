@@ -456,12 +456,15 @@ mudlet::mudlet()
     connect(mpActionAbout.data(), &QAction::triggered, this, &mudlet::slot_show_about_dialog);
     connect(mpActionMultiView.data(), &QAction::triggered, this, &mudlet::slot_multi_view);
     connect(mpActionReconnect.data(), &QAction::triggered, this, &mudlet::slot_reconnect);
+    connect(mpActionDisconnect.data(), &QAction::triggered, this, &mudlet::slot_disconnect);
     connect(mpActionReplay.data(), &QAction::triggered, this, &mudlet::slot_replay);
     connect(mpActionNotes.data(), &QAction::triggered, this, &mudlet::slot_notes);
     connect(mpActionMapper.data(), &QAction::triggered, this, &mudlet::slot_mapper);
     connect(mpActionIRC.data(), &QAction::triggered, this, &mudlet::slot_irc);
+    connect(mpActionDiscord.data(), &QAction::triggered, this, &mudlet::slot_discord);
     connect(mpActionPackageManager.data(), &QAction::triggered, this, &mudlet::slot_package_manager);
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_module_manager);
+    connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_package_exporter);
 
     // PLACEMARKER: Save for later restoration (1 of 2) (by adding a "Close" (profile) option to first menu on menu bar:
     // QAction* mactionCloseProfile = new QAction(tr("Close"), this);
@@ -476,6 +479,7 @@ mudlet::mudlet()
     connect(dactionVideo, &QAction::triggered, this, &mudlet::slot_show_help_dialog_video);
     connect(dactionForum, &QAction::triggered, this, &mudlet::slot_show_help_dialog_forum);
     connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
+    connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_discord);
     connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_irc);
 #if !defined(INCLUDE_UPDATER)
     // Hide the update menu item if the code is not included
