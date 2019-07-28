@@ -1768,7 +1768,8 @@ void Host::setName(const QString& newName)
     mTimerUnit.changeHostName(newName);
 }
 
-void Host::updateProxySettings(QNetworkAccessManager* manager) {
+void Host::updateProxySettings(QNetworkAccessManager* manager)
+{
     if (mUseProxy && !mProxyAddress.isEmpty() && mProxyPort != 0) {
         auto& proxy = getConnectionProxy();
         manager->setProxy(*proxy);
