@@ -3,7 +3,7 @@ if ("$Env:APPVEYOR_REPO_NAME" -ne "Mudlet/Mudlet") {
 }
 
 cd "$Env:APPVEYOR_BUILD_FOLDER\src\release"
-windeployqt.exe --verbose 2 --release mudlet.exe
+windeployqt.exe --release mudlet.exe
 . "$Env:APPVEYOR_BUILD_FOLDER\CI\copy-non-qt-win-dependencies.ps1"
 
 Remove-Item * -include *.cpp, *.o
