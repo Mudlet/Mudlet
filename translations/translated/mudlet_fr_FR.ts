@@ -856,7 +856,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2899"/>
       <source>Area</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Zone</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2900"/>
@@ -1391,7 +1391,7 @@ rooms:</source>
       <location filename="../src/TCommandLine.cpp" line="669"/>
       <source>no suggestions (system)</source>
       <comment>used when the command spelling checker using the selected system dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>aucune suggestion (système)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="695"/>
@@ -1471,7 +1471,8 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="2611"/>
       <source>No search results, sorry!
 </source>
-      <translation type="unfinished"/>
+      <translation>Aucun résultat de recherche, désolé !
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="369"/>
@@ -1506,12 +1507,12 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="465"/>
       <source>Earlier search result.</source>
-      <translation type="unfinished"/>
+      <translation>Résultat de recherche antérieur.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="476"/>
       <source>Later search result.</source>
-      <translation type="unfinished"/>
+      <translation>Résultat de recherche ultérieur.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1010"/>
@@ -1899,12 +1900,12 @@ map with others relying on the original format.</source>
       <location filename="../src/TMap.cpp" line="185"/>
       <source>[MAP ERROR:]%1
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ERREUR DE CARTE ] - %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="437"/>
       <source>[ INFO ]  - Map audit starting...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Démarrage de la vérification de carte...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1031"/>
@@ -2090,18 +2091,18 @@ the file:
       <location filename="../src/TMap.cpp" line="2264"/>
       <source>Map download</source>
       <comment>This is a title of a progress window.</comment>
-      <translation type="unfinished"/>
+      <translation>Téléchargement de carte</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2324"/>
       <source>Map import</source>
       <comment>This is a title of a progress dialog.</comment>
-      <translation type="unfinished"/>
+      <translation>Importation de carte</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2263"/>
       <source>Abort</source>
-      <translation type="unfinished"/>
+      <translation>Annuler</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2291"/>
