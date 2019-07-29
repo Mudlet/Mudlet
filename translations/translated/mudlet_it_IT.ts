@@ -10069,7 +10069,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="476"/>
       <source>&lt;p&gt;Check all Key-bindings against key-presses.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Versions of Mudlet prior to &lt;b&gt;3.9.0&lt;/b&gt; would stop checking after the first matching combination of&lt;/i&gt; KeyCode &lt;i&gt;and&lt;/i&gt; KeyModifier &lt;i&gt;was found and then send the command and/or run the script of that Key-binding only.  This&lt;/i&gt; per-profile &lt;i&gt;option tells Mudlet to check and run the remaining matches; but, to retain compatibility with previous versions, defaults to the &lt;b&gt;un&lt;/b&gt;-checked state.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Controlla tutte le combinazioni di tasti configurate quando si preme un tasto.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Le versioni di Mudlet precedenti alla &lt;b&gt;3.9.0&lt;/b&gt; smettevano di effettuare controlli una volta trovata la prima corrispondenza della&lt;/i&gt; combinazione tasti &lt;i&gt; e eseguivano solo lo script di questo abbinamento.  L'opzione, valida solo per il&lt;/i&gt; profilo corrente &lt;i&gt;, attiva il controllo di tutte le ulteriori combinazioni di tasti, ma per mantenere la compatibilità con le versioni precedenti il valore predefinito è &lt;b&gt;disattivo&lt;/b&gt;.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="532"/>
