@@ -469,11 +469,9 @@ bool TCommandLine::event(QEvent* event)
                 // Process as a possible key binding if there are ANY modifiers,
                 return true;
             } else {
-                break;
+                processNormalKey(event);
+                return false;
             }
-
-            processNormalKey(event);
-            return false;
 
         default:
             // Process as a possible key binding if there are ANY modifiers,
