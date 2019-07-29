@@ -14,7 +14,7 @@ if [ "${TRAVIS_EVENT_TYPE}" = "cron" ]; then
   # download coverity tool only for cron jobs
   mkdir coverity
   cd coverity
-  wget --no-verbose https://scan.coverity.com/download/cxx/Linux
+  wget https://scan.coverity.com/download/linux --post-data "token=${COVERITY_SCAN_TOKEN}&project=Mudlet%2FMudlet" -O coverity_tool.tgz
   if [ $? -ne 0 ]; then
 	  echo Download Coverity analysis tool failed!
 	  exit 1
