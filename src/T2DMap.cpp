@@ -542,7 +542,7 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const bool gridMode)
         symbolRectangle = QRectF(0.0, 0.0, mRoomWidth * rSize, mRoomHeight * rSize);
     }
 
-    QPixmap* pixmap = new QPixmap(symbolRectangle.toRect().size());
+    auto pixmap = new QPixmap(symbolRectangle.toRect().size());
     pixmap->fill(Qt::transparent);
 
     if (symbolRectangle.width() < symbolLowerSizeLimit || symbolRectangle.height() < symbolLowerSizeLimit) {
@@ -672,7 +672,6 @@ bool T2DMap::sizeFontToFitTextInRect( QFont & font, const QRectF & boundaryRect,
     return true;
 }
 
-// Revised to use a QCache to hold QPixmap * to generated images for room symbols
 void T2DMap::paintEvent(QPaintEvent* e)
 {
     if (!mpMap) {
@@ -1279,11 +1278,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                     continue;
                 }
 
-                if (pE->getArea() != mAreaID) {
-                    areaExit = true;
-                } else {
-                    areaExit = false;
-                }
+                areaExit = pE->getArea() != mAreaID ? true : false;
                 float ex = pE->x * mRoomWidth + mRX;
                 float ey = pE->y * mRoomHeight * -1 + mRY;
                 int ez = pE->z;
@@ -1496,7 +1491,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         int currentAreaRoom = itRoom.next();
         TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
         if (!room) {
-            continue; // Was missing this safety step to skip missing rooms
+            continue;
         }
         float rx = room->x * mRoomWidth + mRX;
         float ry = room->y * -1 * mRoomHeight + mRY;
@@ -1536,18 +1531,15 @@ void T2DMap::paintEvent(QPaintEvent* e)
         case 1:
             roomColor = mpHost->mRed_2;
             break;
-
         case 2:
             roomColor = mpHost->mGreen_2;
             break;
         case 3:
             roomColor = mpHost->mYellow_2;
             break;
-
         case 4:
             roomColor = mpHost->mBlue_2;
             break;
-
         case 5:
             roomColor = mpHost->mMagenta_2;
             break;
@@ -1560,22 +1552,18 @@ void T2DMap::paintEvent(QPaintEvent* e)
         case 8:
             roomColor = mpHost->mBlack_2;
             break;
-
         case 9:
             roomColor = mpHost->mLightRed_2;
             break;
-
         case 10:
             roomColor = mpHost->mLightGreen_2;
             break;
         case 11:
             roomColor = mpHost->mLightYellow_2;
             break;
-
         case 12:
             roomColor = mpHost->mLightBlue_2;
             break;
-
         case 13:
             roomColor = mpHost->mLightMagenta_2;
             break;
@@ -2146,165 +2134,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
         painter.restore();
     }
 
-
-    // Work out text for information box, need to offset if room selection widget is present
     if (mShowInfo) {
-        QString infoText;
-        int roomID = mRoomID;
-        if (!isCenterViewCall && !mMultiSelectionSet.empty()) {
-            if (mpMap->mpRoomDB->getRoom(*(mMultiSelectionSet.constBegin()))) {
-                roomID = mMultiSelectionHighlightRoomId;
-            }
-        }
-
-        painter.save(); // Save painter state
-        QFont f = painter.font();
-        TRoom* _prid = mpMap->mpRoomDB->getRoom(roomID);
-        if (_prid) {
-            int _iaid = _prid->getArea();
-            TArea* _paid = mpMap->mpRoomDB->getArea(_iaid);
-            QString _paid_name = mpMap->mpRoomDB->getAreaNamesMap().value(_iaid);
-            if (_paid) {
-                infoText = tr("Area:%1%2 ID:%1%3 x:%1%4%1<‑>%1%5 y:%1%6%1<‑>%1%7 z:%1%8%1<‑>%1%9\n",
-                              // Intentional separator
-                              "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle"
-                              "them literally in raw strings) and non-breaking hyphens which are used to "
-                              "prevent the line being split at some places it might otherwise be; when "
-                              "translating please consider at which points the text may be divided to fit onto "
-                              "more than one line. "
-                              "%2 is the (text) name of the area, %3 is the number for it, "
-                              "%4 to %9 are pairs (min <-> max) of extremes for each of x,y and z coordinates")
-                                   .arg(QChar(160),
-                                        _paid_name,
-                                        QString::number(_iaid),
-                                        QString::number(_paid->min_x),
-                                        QString::number(_paid->max_x),
-                                        QString::number(_paid->min_y),
-                                        QString::number(_paid->max_y),
-                                        QString::number(_paid->min_z),
-                                        QString::number(_paid->max_z));
-            } else {
-                infoText = QChar::LineFeed;
-            }
-
-            if (!_prid->name.isEmpty()) {
-                infoText.append(tr("Room Name: %1\n").arg(_prid->name));
-            }
-
-            uint selectionSize = mMultiSelectionSet.size();
-            // Italicise the text if the current display area {mAreaID} is not the
-            // same as the displayed text information - which happens when NO
-            // room is selected AND the current area is NOT the one the player
-            // is in (to emphasis that the displayed data is {mostly} not about
-            // the CURRENTLY VISIBLE area)... make it bold if the player room IS
-            // in the displayed map
-
-            // If one or more rooms are selected - make the text slightly orange.
-            switch (selectionSize) {
-            case 0:
-                infoText.append(tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location\n",
-                                   // Intentional comment to separate arguments
-                                   "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle"
-                                   "them literally in raw strings) and a non-breaking hyphen which are used to "
-                                   "prevent the line being split at some places it might otherwise be; when "
-                                   "translating please consider at which points the text may be divided to fit onto "
-                                   "more than one line. "
-                                   "This text is for when NO rooms are selected, %3 is the room number "
-                                   "of, and %4-%6 are the x,y and z coordinates for, the current player's room.")
-                                        .arg(QChar(160), QString::number(roomID), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z)));
-                if (playerAreaID != mAreaID) {
-                    f.setItalic(true);
-                } else {
-                    f.setBold(true);
-                }
-                break;
-            case 1:
-                infoText.append(tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room\n",
-                                   // Intentional comment to separate arguments
-                                   "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle"
-                                   "them literally in raw strings) and a non-breaking hyphen which are used to "
-                                   "prevent the line being split at some places it might otherwise be; when "
-                                   "translating please consider at which points the text may be divided to fit onto "
-                                   "more than one line. "
-                                   "This text is for when ONE room is selected, %3 is the room number "
-                                   "of, and %4-%6 are the x,y and z coordinates for, the selected Room.")
-                                        .arg(QChar(160), QString::number(roomID), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z)));
-                f.setBold(true);
-                if (infoColor.lightness() > 127) {
-                    infoColor = QColor(255, 223, 191); // Slightly orange white
-                } else {
-                    infoColor = QColor(96, 48, 0); // Dark, slightly orange grey
-                }
-                break;
-            default:
-                infoText.append(tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms\n",
-                                   // Intentional comment to separate arguments
-                                   "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle"
-                                   "them literally in raw strings) and a non-breaking hyphen which are used to "
-                                   "prevent the line being split at some places it might otherwise be; when "
-                                   "translating please consider at which points the text may be divided to fit onto "
-                                   "more than one line. "
-                                   "This text is for when TWO or MORE rooms are selected; %1 is the room "
-                                   "number for which %2-%4 are the x,y and z coordinates of the room nearest the "
-                                   "middle of the selection. This room has the yellow cross-hairs. %n is the count "
-                                   "of rooms selected and will ALWAYS be greater than 1 in this situation. It is "
-                                   "provided so that non-English translations can select required plural forms as "
-                                   "needed.",
-                                   selectionSize)
-                                        .arg(QChar(160), QString::number(roomID), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z)));
-                f.setBold(true);
-                if (infoColor.lightness() > 127) {
-                    infoColor = QColor(255, 223, 191); // Slightly orange white
-                } else {
-                    infoColor = QColor(96, 48, 0); // Dark, slightly orange grey
-                }
-                break;
-            }
-        }
-
-#ifdef QT_DEBUG
-        infoText.append(tr("render time: %1S mO: (%2,%3,%4)",
-                           // Intentional comment to separate arguments
-                           "This is debug information that is not expected to be seen in release versions, "
-                           "%1 is a decimal time period and %2-%4 are the x,y and z coordinates at the "
-                           "center of the view (but y will be negative compared to previous room related "
-                           "ones as it represents the real coordinate system for this widget which has "
-                           "y increasing in a downward direction!)")
-                                .arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3)
-                                .arg(QString::number(mOx), QString::number(mOy), QString::number(mOz)));
-#endif
-
-        // Left margin for info widget:
-        uint infoLeftSideAvoid = 10;
-        if (mMultiSelectionListWidget.isVisible()) {
-            // Room Selection Widget showing, so increase margin to avoid:
-            infoLeftSideAvoid += mMultiSelectionListWidget.x() + mMultiSelectionListWidget.rect().width();
-        }
-
-        uint infoHeight = 5 + mFontHeight; // Account for first iteration
-        QRect testRect;
-        // infoRect has a 10 margin on either side and on top to widget frame.
-        mMapInfoRect = QRect(infoLeftSideAvoid, 10, width() - 10 - infoLeftSideAvoid, infoHeight);
-        do {
-            infoHeight += mFontHeight;
-            mMapInfoRect.setHeight(infoHeight);
-            // Test in a rectangle that is 10 less on all sides:
-            testRect = painter.boundingRect(
-                    mMapInfoRect.left() + 10, mMapInfoRect.top() + 10, mMapInfoRect.width() - 20, mMapInfoRect.height() - 20, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, infoText);
-
-        } while ((testRect.height() > mMapInfoRect.height() - 20 || testRect.width() > mMapInfoRect.width() - 20) && infoHeight < height());
-        // Last term above is needed to prevent runaway under "odd" conditions
-
-        // Restore Grey translucent background, was useful for debugging!
-        painter.fillRect(mMapInfoRect, QColor(150, 150, 150, 80));
-        painter.setPen(infoColor);
-        painter.setFont(f);
-        painter.drawText(mMapInfoRect.left() + 10, mMapInfoRect.top() + 10,
-                         mMapInfoRect.width() - 20, mMapInfoRect.height() - 20,
-                         Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop,
-                         infoText);
-        //forget about font size changing and bolding/italicisation:
-        painter.restore();
+        paintMapInfo(renderTimer, painter, playerAreaID == mAreaID, infoColor);
     }
 
     static bool isAreaWidgetValid = true; // Remember between uses
@@ -2348,6 +2179,163 @@ void T2DMap::paintEvent(QPaintEvent* e)
     }
 }
 
+// Work out text for information box, need to offset if room selection widget is present
+void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const bool showingCurrentArea, QColor& infoColor)
+{
+    QString infoText;
+    int roomID = mRoomID;
+    if (!isCenterViewCall && !mMultiSelectionSet.empty()) {
+        if (mpMap->mpRoomDB->getRoom(*(mMultiSelectionSet.constBegin()))) {
+            roomID = mMultiSelectionHighlightRoomId;
+        }
+    }
+
+    painter.save(); // Save painter state
+    QFont f = painter.font();
+    TRoom* _prid = mpMap->mpRoomDB->getRoom(roomID);
+    if (_prid) {
+        int areaId = _prid->getArea();
+        TArea* area = mpMap->mpRoomDB->getArea(areaId);
+        QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
+        if (area) {
+            infoText = tr("Area:%1%2 ID:%1%3 x:%1%4%1<‑>%1%5 y:%1%6%1<‑>%1%7 z:%1%8%1<‑>%1%9\n",
+                          // Intentional separator
+                          "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle"
+                          "them literally in raw strings) and non-breaking hyphens which are used to "
+                          "prevent the line being split at some places it might otherwise be; when "
+                          "translating please consider at which points the text may be divided to fit onto "
+                          "more than one line. "
+                          "%2 is the (text) name of the area, %3 is the number for it, "
+                          "%4 to %9 are pairs (min <-> max) of extremes for each of x,y and z coordinates")
+                               .arg(QChar(160),
+                                    areaName,
+                                    QString::number(areaId),
+                                    QString::number(area->min_x),
+                                    QString::number(area->max_x),
+                                    QString::number(area->min_y),
+                                    QString::number(area->max_y),
+                                    QString::number(area->min_z),
+                                    QString::number(area->max_z));
+        } else {
+            infoText = QChar::LineFeed;
+        }
+
+        if (!_prid->name.isEmpty()) {
+            infoText.append(tr("Room Name: %1\n").arg(_prid->name));
+        }
+
+        uint selectionSize = mMultiSelectionSet.size();
+        // Italicise the text if the current display area {mAreaID} is not the
+        // same as the displayed text information - which happens when NO
+        // room is selected AND the current area is NOT the one the player
+        // is in (to emphasis that the displayed data is {mostly} not about
+        // the CURRENTLY VISIBLE area)... make it bold if the player room IS
+        // in the displayed map
+
+        // If one or more rooms are selected - make the text slightly orange.
+        switch (selectionSize) {
+        case 0:
+            infoText.append(tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location\n",
+                               // Intentional comment to separate arguments
+                               "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle"
+                               "them literally in raw strings) and a non-breaking hyphen which are used to "
+                               "prevent the line being split at some places it might otherwise be; when "
+                               "translating please consider at which points the text may be divided to fit onto "
+                               "more than one line. "
+                               "This text is for when NO rooms are selected, %3 is the room number "
+                               "of, and %4-%6 are the x,y and z coordinates for, the current player's room.")
+                                    .arg(QChar(160), QString::number(roomID), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z)));
+            if (!showingCurrentArea) {
+                f.setItalic(true);
+            } else {
+                f.setBold(true);
+            }
+            break;
+        case 1:
+            infoText.append(tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room\n",
+                               // Intentional comment to separate arguments
+                               "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle"
+                               "them literally in raw strings) and a non-breaking hyphen which are used to "
+                               "prevent the line being split at some places it might otherwise be; when "
+                               "translating please consider at which points the text may be divided to fit onto "
+                               "more than one line. "
+                               "This text is for when ONE room is selected, %3 is the room number "
+                               "of, and %4-%6 are the x,y and z coordinates for, the selected Room.")
+                                    .arg(QChar(160), QString::number(roomID), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z)));
+            f.setBold(true);
+            if (infoColor.lightness() > 127) {
+                infoColor = QColor(255, 223, 191); // Slightly orange white
+            } else {
+                infoColor = QColor(96, 48, 0); // Dark, slightly orange grey
+            }
+            break;
+        default:
+            infoText.append(tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms\n",
+                               // Intentional comment to separate arguments
+                               "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle"
+                               "them literally in raw strings) and a non-breaking hyphen which are used to "
+                               "prevent the line being split at some places it might otherwise be; when "
+                               "translating please consider at which points the text may be divided to fit onto "
+                               "more than one line. "
+                               "This text is for when TWO or MORE rooms are selected; %1 is the room "
+                               "number for which %2-%4 are the x,y and z coordinates of the room nearest the "
+                               "middle of the selection. This room has the yellow cross-hairs. %n is the count "
+                               "of rooms selected and will ALWAYS be greater than 1 in this situation. It is "
+                               "provided so that non-English translations can select required plural forms as "
+                               "needed.",
+                               selectionSize)
+                                    .arg(QChar(160), QString::number(roomID), QString::number(_prid->x), QString::number(_prid->y), QString::number(_prid->z)));
+            f.setBold(true);
+            if (infoColor.lightness() > 127) {
+                infoColor = QColor(255, 223, 191); // Slightly orange white
+            } else {
+                infoColor = QColor(96, 48, 0); // Dark, slightly orange grey
+            }
+            break;
+        }
+    }
+
+#ifdef QT_DEBUG
+    infoText.append(tr("render time: %1S mO: (%2,%3,%4)",
+                       // Intentional comment to separate arguments
+                       "This is debug information that is not expected to be seen in release versions, "
+                       "%1 is a decimal time period and %2-%4 are the x,y and z coordinates at the "
+                       "center of the view (but y will be negative compared to previous room related "
+                       "ones as it represents the real coordinate system for this widget which has "
+                       "y increasing in a downward direction!)")
+                            .arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3)
+                            .arg(QString::number(mOx), QString::number(mOy), QString::number(mOz)));
+#endif
+
+    // Left margin for info widget:
+    uint infoLeftSideAvoid = 10;
+    if (mMultiSelectionListWidget.isVisible()) {
+        // Room Selection Widget showing, so increase margin to avoid:
+        infoLeftSideAvoid += mMultiSelectionListWidget.x() + mMultiSelectionListWidget.rect().width();
+    }
+
+    uint infoHeight = 5 + mFontHeight; // Account for first iteration
+    QRect testRect;
+    // infoRect has a 10 margin on either side and on top to widget frame.
+    mMapInfoRect = QRect(infoLeftSideAvoid, 10, width() - 10 - infoLeftSideAvoid, infoHeight);
+    do {
+        infoHeight += mFontHeight;
+        mMapInfoRect.setHeight(infoHeight);
+        // Test in a rectangle that is 10 less on all sides:
+        testRect = painter.boundingRect(
+                mMapInfoRect.left() + 10, mMapInfoRect.top() + 10, mMapInfoRect.width() - 20, mMapInfoRect.height() - 20, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, infoText);
+
+    } while ((testRect.height() > mMapInfoRect.height() - 20 || testRect.width() > mMapInfoRect.width() - 20) && infoHeight < height());
+    // Last term above is needed to prevent runaway under "odd" conditions
+
+    // Restore Grey translucent background, was useful for debugging!
+    painter.fillRect(mMapInfoRect, QColor(150, 150, 150, 80));
+    painter.setPen(infoColor);
+    painter.setFont(f);
+    painter.drawText(mMapInfoRect.left() + 10, mMapInfoRect.top() + 10, mMapInfoRect.width() - 20, mMapInfoRect.height() - 20, Qt::TextWordWrap | Qt::AlignLeft | Qt::AlignTop, infoText);
+    //forget about font size changing and bolding/italicisation:
+    painter.restore();
+}
 
 void T2DMap::mouseDoubleClickEvent(QMouseEvent* event)
 {
@@ -3069,7 +3057,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             mapper->setMapping(action, it2.key());
             // TODO: QSignalMapper is not compatible with the functor (Qt5)
             // style of QObject::connect(...) - it has been declared obsolete
-            // and should be replaced with lamba functions to perform what the
+            // and should be replaced with lambda functions to perform what the
             // slot method did...
             connect(action, SIGNAL(triggered()), mapper, SLOT(map()));
         }
@@ -3086,7 +3074,7 @@ std::pair<int, int> T2DMap::getMousePosition()
     float mx = (mousePosition.x() / mRoomWidth) + mOx - (xspan / 2.0);
     float my = (yspan / 2.0) - (mousePosition.y() / mRoomHeight) - mOy;
 
-    return make_pair(std::round(mx), std::round(my));
+    return std::make_pair(std::round(mx), std::round(my));
 }
 
 void T2DMap::slot_createRoom()

@@ -31,8 +31,9 @@
 #include <QPixmap>
 #include <QPointer>
 #include <QString>
-#include <QTreeWidget>
 #include <QWidget>
+#include <QElapsedTimer>
+#include <QTreeWidget>
 #include "post_guard.h"
 
 class Host;
@@ -211,6 +212,7 @@ private:
     std::pair<int, int> getMousePosition();
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10);
+    void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const bool showingCurrentArea, QColor& infoColor);
 
     bool mDialogLock;
 

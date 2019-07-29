@@ -32,9 +32,6 @@
 #include "TToolBar.h"
 #include "mudlet.h"
 
-
-using namespace std;
-
 TAction::TAction(TAction* parent, Host* pHost)
 : Tree<TAction>(parent)
 , mpToolBar(nullptr)

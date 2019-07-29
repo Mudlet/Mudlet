@@ -85,7 +85,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     groupBox_discordPrivacy->hide();
 
     checkBox_USE_SMALL_SCREEN->setChecked(pMudlet->mEnableFullScreenMode);
-    
+
     // As we demonstrate the options that these next two checkboxes control in
     // the editor "preview" widget (on another tab) we will need to track
     // changes and update the edbee widget straight away. As we can have
@@ -853,6 +853,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_self_signed->setChecked(pHost->mSslIgnoreSelfSigned);
     checkBox_expired->setChecked(pHost->mSslIgnoreExpired);
     checkBox_ignore_all->setChecked(pHost->mSslIgnoreAll);
+
+    groupBox_proxy->setChecked(pHost->mUseProxy);
+    lineEdit_proxyAddress->setText(pHost->mProxyAddress);
+    if (pHost->mProxyPort != 0) {
+        lineEdit_proxyPort->setText(QString::number(pHost->mProxyPort));
+    }
+    lineEdit_proxyUsername->setText(pHost->mProxyUsername);
+    lineEdit_proxyPassword->setText(pHost->mProxyPassword);
 
     checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
@@ -2217,6 +2225,12 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
         pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
 
+        pHost->mUseProxy = groupBox_proxy->isChecked();
+        pHost->mProxyAddress = lineEdit_proxyAddress->text();
+        pHost->mProxyPort = lineEdit_proxyPort->text().toUInt();
+        pHost->mProxyUsername = lineEdit_proxyUsername->text();
+        pHost->mProxyPassword = lineEdit_proxyPassword->text();
+
         //tab security
         pHost->mSslTsl = checkBox_ssl->isChecked();
         pHost->mSslIgnoreExpired = checkBox_expired->isChecked();
@@ -2533,7 +2547,7 @@ void dlgProfilePreferences::populateScriptsList()
 // adds trigger name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addTriggersToPreview(TTrigger* pTriggerParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    list<TTrigger*>* childTriggers = pTriggerParent->getChildrenList();
+    std::list<TTrigger*>* childTriggers = pTriggerParent->getChildrenList();
     for (auto trigger : *childTriggers) {
         if (!trigger->getScript().isEmpty()) {
             items.push_back(std::make_tuple(trigger->getName(), QStringLiteral("trigger"), trigger->getID()));
@@ -2548,7 +2562,7 @@ void dlgProfilePreferences::addTriggersToPreview(TTrigger* pTriggerParent, std::
 // adds alias name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addAliasesToPreview(TAlias* pAliasParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    list<TAlias*>* childrenList = pAliasParent->getChildrenList();
+    std::list<TAlias*>* childrenList = pAliasParent->getChildrenList();
     for (auto alias : *childrenList) {
         if (!alias->getScript().isEmpty()) {
             items.push_back(std::make_tuple(alias->getName(), QStringLiteral("alias"), alias->getID()));
@@ -2563,7 +2577,7 @@ void dlgProfilePreferences::addAliasesToPreview(TAlias* pAliasParent, std::vecto
 // adds timer name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addTimersToPreview(TTimer* pTimerParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    list<TTimer*>* childrenList = pTimerParent->getChildrenList();
+    std::list<TTimer*>* childrenList = pTimerParent->getChildrenList();
     for (auto timer : *childrenList) {
         if (!timer->getScript().isEmpty()) {
             items.push_back(std::make_tuple(timer->getName(), QStringLiteral("timer"), timer->getID()));
@@ -2578,7 +2592,7 @@ void dlgProfilePreferences::addTimersToPreview(TTimer* pTimerParent, std::vector
 // adds key name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    list<TKey*>* childrenList = pKeyParent->getChildrenList();
+    std::list<TKey*>* childrenList = pKeyParent->getChildrenList();
     for (auto key : *childrenList) {
         if (!key->getScript().isEmpty()) {
             items.push_back(std::make_tuple(key->getName(), QStringLiteral("key"), key->getID()));
@@ -2593,7 +2607,7 @@ void dlgProfilePreferences::addKeysToPreview(TKey* pKeyParent, std::vector<std::
 // adds script name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addScriptsToPreview(TScript* pScriptParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    list<TScript*>* childrenList = pScriptParent->getChildrenList();
+    std::list<TScript*>* childrenList = pScriptParent->getChildrenList();
     for (auto script : *childrenList) {
         if (!script->getScript().isEmpty()) {
             items.push_back(std::make_tuple(script->getName(), QStringLiteral("script"), script->getID()));
@@ -2608,7 +2622,7 @@ void dlgProfilePreferences::addScriptsToPreview(TScript* pScriptParent, std::vec
 // adds action name ID to the list of them for the theme preview combobox, recursing down all of them
 void dlgProfilePreferences::addActionsToPreview(TAction* pActionParent, std::vector<std::tuple<QString, QString, int>>& items)
 {
-    list<TAction*>* childrenList = pActionParent->getChildrenList();
+    std::list<TAction*>* childrenList = pActionParent->getChildrenList();
     for (auto action : *childrenList) {
         if (!action->getScript().isEmpty()) {
             items.push_back(std::make_tuple(action->getName(), QStringLiteral("button"), action->getID()));
@@ -2669,7 +2683,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
     request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
     // load from cache if possible
     request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
-
+    mpHost->updateProxySettings(manager);
     QNetworkReply* getReply = manager->get(request);
 
     connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
@@ -2737,11 +2751,11 @@ void dlgProfilePreferences::populateThemesList()
             QString themeFileName = theme.toObject()["FileName"].toString();
 
             if (!themeText.isEmpty() && !themeFileName.isEmpty()) {
-                sortedThemes << make_pair(themeText, themeFileName);
+                sortedThemes << std::make_pair(themeText, themeFileName);
             }
         }
     }
-    sortedThemes << make_pair(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
+    sortedThemes << std::make_pair(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
 
     std::sort(sortedThemes.begin(), sortedThemes.end(), [](const auto& a, const auto& b) { return QString::localeAwareCompare(a.first, b.first) < 0; });
 
