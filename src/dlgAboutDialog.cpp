@@ -121,6 +121,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
                                     "</style></head>"));
 
     setAboutTab(htmlHead);
+    setSupportersTab(htmlHead);
     setLicenseTab(htmlHead);
     setThirdPartyTab(htmlHead);
 }
@@ -812,4 +813,24 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 
     textBrowser_license_3rdparty->setHtml(license_3rdParty_texts.join(QString()));
     // clang-format on
+}
+
+void dlgAboutDialog::setSupportersTab(const QString& htmlHead) const
+{
+    QString supporters_text(
+            tr("<h4>Mightier than swords</h4>"
+                           "<p>awesome ppl"
+                           "<ul><li>winner 1</li>"
+                           "<li>winner 2</li></ul>"
+               "<h4>On a plaque</h4>"
+               "<p>these people are very cool too"
+               "<ul><li>name 1</li>"
+               "<li>name 2</li></ul>"
+               "</p>"));
+
+    supporters_text.append(QStringLiteral("</body></html>"));
+
+    textBrowser_supporters->setHtml(
+                QStringLiteral("<html>%1<body>%2</body></html>")
+                .arg(htmlHead, supporters_text));
 }

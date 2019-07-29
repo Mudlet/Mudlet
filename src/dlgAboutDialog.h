@@ -37,6 +37,7 @@ public:
     void setAboutTab(const QString& htmlHead) const;
     void setLicenseTab(const QString& htmlHead) const;
     void setThirdPartyTab(const QString& htmlHead) const;
+    void setSupportersTab(const QString &htmlHead) const;
 };
 
 #endif // MUDLET_DLGABOUTDIALOG_H
