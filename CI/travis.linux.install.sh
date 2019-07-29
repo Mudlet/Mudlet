@@ -1,8 +1,8 @@
 #!/bin/bash
 
 mkdir -p "${HOME}/latest-gcc-symlinks"
-ln -s /usr/bin/g++-9 "${HOME}/latest-gcc-symlinks/g++"
-ln -s /usr/bin/gcc-9 "${HOME}/latest-gcc-symlinks/gcc"
+ln -s /usr/bin/g++-7 "${HOME}/latest-gcc-symlinks/g++"
+ln -s /usr/bin/gcc-7 "${HOME}/latest-gcc-symlinks/gcc"
 
 # lua-utf8 is not in the repositories...
 luarocks install --local luautf8
