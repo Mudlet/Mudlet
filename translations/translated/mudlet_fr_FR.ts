@@ -2616,12 +2616,13 @@ out what new id numbers to use.</source>
       <location filename="../src/TRoomDB.cpp" line="845"/>
       <source>[ INFO ]  - The renumbered rooms will be:
 </source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Les salles renumérotées seront :
+</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="861"/>
       <source>[ INFO ]  - This room with the bad id was renumbered to: %1.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Cette salle avec le mauvais ID a été renumérotée en : %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="862"/>
