@@ -3331,7 +3331,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2221"/>
       <source>Index (UTF-16)</source>
       <comment>1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}</comment>
-      <translation type="unfinished"/>
+      <translation>Index (UTF-16)</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2162"/>
@@ -4414,7 +4414,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15277"/>
       <source>east</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>est</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15279"/>
@@ -4426,7 +4426,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15281"/>
       <source>south</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>sud</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15283"/>
@@ -4438,7 +4438,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15285"/>
       <source>west</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>ouest</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15287"/>
@@ -4450,7 +4450,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15289"/>
       <source>northeast</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>nord-Est</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15291"/>
@@ -4462,7 +4462,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15293"/>
       <source>southeast</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>sud-Est</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15295"/>
@@ -4474,7 +4474,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15297"/>
       <source>southwest</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>sud-Ouest</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15299"/>
@@ -4486,7 +4486,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="15301"/>
       <source>northwest</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>nord-Ouest</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15303"/>
@@ -6565,7 +6565,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8028"/>
       <source>Foreground color ignored</source>
       <comment>Color trigger ignored foreground color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Couleur de premier plan ignorée</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4870"/>
@@ -6589,7 +6589,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8091"/>
       <source>Background color ignored</source>
       <comment>Color trigger ignored background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>Couleur d'arrière-plan ignorée</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4885"/>
@@ -6766,12 +6766,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7767"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>Impossible d'enregistrer le profil</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7767"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>Désolé, impossible d'enregistrer votre profil - erreur reçue : %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7774"/>
@@ -6849,7 +6849,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8267"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8273"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>Selectionner tout</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8418"/>
@@ -7193,7 +7193,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="507"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Copier</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="508"/>
@@ -7203,7 +7203,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="510"/>
       <source>Select All</source>
-      <translation type="unfinished"/>
+      <translation>Selectionner tout</translation>
     </message>
   </context>
   <context>
@@ -8952,13 +8952,13 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="548"/>
       <source>Disconnect</source>
-      <translation type="unfinished"/>
+      <translation>Déconnecter</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="600"/>
       <location filename="../src/mudlet.cpp" line="609"/>
       <source>Discord</source>
-      <translation type="unfinished"/>
+      <translation>Discord</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="607"/>
