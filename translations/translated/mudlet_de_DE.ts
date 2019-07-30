@@ -4013,7 +4013,7 @@ Grund: </translation>
       <location filename="../src/ctelnet.cpp" line="561"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 via proxy...
 </source>
-      <translation>[ INFO ]  - Versuche, eine Verbindung aufzubauen zu %1:%2 via Proxy ...
+      <translation>[ INFO ]  - Versuche, eine Verbindung über Proxy aufzubauen zu %1:%2 ...
 </translation>
     </message>
     <message>
@@ -10849,12 +10849,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4862"/>
       <source>Connect to the game via proxy</source>
-      <translation type="unfinished"/>
+      <translation>Mit dem Spiel über Proxy verbinden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4874"/>
       <source>Address</source>
-      <translation type="unfinished"/>
+      <translation>Adresse</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4884"/>
@@ -10874,22 +10874,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4904"/>
       <source>Username for logging into the proxy if requred</source>
-      <translation type="unfinished"/>
+      <translation>Benutzername für die Anmeldung am Proxy, falls nötig</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4910"/>
       <source>username (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Benutzername (optional)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4920"/>
       <source>Password for logging into the proxy if requred</source>
-      <translation type="unfinished"/>
+      <translation>Passwort für die Anmeldung am Proxy, falls nötig</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4926"/>
       <source>password (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Passwort (optional)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4984"/>
@@ -11685,7 +11685,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="238"/>
       <source>&lt;p&gt;Within how many lines must all conditions be true to fire the trigger?&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Innerhalb von wie vielen Zeilen müssen alle Bedingungen wahr sein, um den Trigger auszulösen?&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="321"/>
@@ -11706,7 +11706,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="563"/>
       <source>&lt;p&gt;Click to remove the sound file set for this trigger.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Hier klicken, um die Audiodatei für diesen Trigger zu entfernen.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="617"/>
