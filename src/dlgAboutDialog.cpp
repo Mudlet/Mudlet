@@ -921,7 +921,7 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead) const
                  <img src=":/icons/frame_plaque.png">
                  <div class="centered"><h2>Vadim Peretokin</h2></div>
                </div>
-               )").arg(tr(R"(These formidable folks will be fondly remembered forever<br>for their generous sponsoring on <a href="https://www.patreon.com/mudlet">Mudlet's patreon page:)")));
+               )").arg(tr(R"(These formidable folks will be fondly remembered forever<br>for their generous sponsoring on <a href="https://www.patreon.com/mudlet">Mudlet's patreon page</a>:)")));
 
 
     textBrowser_supporters->setHtml(
