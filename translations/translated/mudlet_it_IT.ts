@@ -4017,13 +4017,15 @@ Motivo: </translation>
       <location filename="../src/ctelnet.cpp" line="559"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 ...
 </source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Tentativo di connessione a %1:%2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="561"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 via proxy...
 </source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Tentativo di connessione a %1:%2 tramite proxy...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1787"/>
@@ -5152,23 +5154,23 @@ Utilizzi</translation>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1782"/>
       <source>Reset icon</source>
       <comment>Reset the custom picture for this profile in the connection dialog and show the default one instead</comment>
-      <translation type="unfinished"/>
+      <translation>Reimposta icona</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1784"/>
       <source>Set custom icon</source>
       <comment>Set a custom picture to show for the profile in the connection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>Imposta icona personalizzata</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1794"/>
       <source>Select custom image for profile (should be 120x30)</source>
-      <translation type="unfinished"/>
+      <translation>Seleziona immagine personalizzata per il profilo (dimensioni 120x30 pixel)</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1796"/>
       <source>Images (%1)</source>
-      <translation type="unfinished"/>
+      <translation>Immagini (%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2149"/>
@@ -7129,7 +7131,7 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8418"/>
       <source>&lt;p&gt;Sound file to play when the trigger fires.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;File audio da riprodurre quando si attiva il trigger.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="707"/>
@@ -10640,12 +10642,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1856"/>
       <source>&lt;p&gt;Select profiles that you want to copy map to, then press the Copy button to the right&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Seleziona i profili in cui si desidera copiare il file di mappa, poi premi il bottone Copia a destra&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1869"/>
       <source>&lt;p&gt;Copy map into the selected profiles on the left&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Copia il file di mappa nei profili selezionati a sinistra&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1937"/>
@@ -10876,57 +10878,57 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2794"/>
       <source>Connection</source>
-      <translation type="unfinished"/>
+      <translation>Connessione</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2800"/>
       <source>SSL/TLS</source>
-      <translation type="unfinished"/>
+      <translation>SSL/TLS</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4862"/>
       <source>Connect to the game via proxy</source>
-      <translation type="unfinished"/>
+      <translation>Connettiti al gioco tramite proxy</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4874"/>
       <source>Address</source>
-      <translation type="unfinished"/>
+      <translation>Indirizzo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4884"/>
       <source>:</source>
-      <translation type="unfinished"/>
+      <translation>:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4891"/>
       <source>00009</source>
-      <translation type="unfinished"/>
+      <translation>00009</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4894"/>
       <source>port</source>
-      <translation type="unfinished"/>
+      <translation>porta</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4904"/>
       <source>Username for logging into the proxy if requred</source>
-      <translation type="unfinished"/>
+      <translation>Nome utente per accedere al proxy se richiesto</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4910"/>
       <source>username (optional)</source>
-      <translation type="unfinished"/>
+      <translation>nome utente (opzionale)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4920"/>
       <source>Password for logging into the proxy if requred</source>
-      <translation type="unfinished"/>
+      <translation>Password per accedere al proxy se richiesto</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4926"/>
       <source>password (optional)</source>
-      <translation type="unfinished"/>
+      <translation>password (opzionale)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4984"/>
@@ -11722,7 +11724,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="238"/>
       <source>&lt;p&gt;Within how many lines must all conditions be true to fire the trigger?&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;Entro quante righe devono verificarsi tutte le condizioni per attivare il trigger?&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="321"/>
@@ -11743,7 +11745,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="563"/>
       <source>&lt;p&gt;Click to remove the sound file set for this trigger.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Premi per eliminare il file audio impostato per questo trigger.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="617"/>
