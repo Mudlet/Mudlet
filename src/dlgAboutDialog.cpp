@@ -111,26 +111,29 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
      */
 
     // A uniform header for all tabs:
-    QString htmlHead(QStringLiteral("<head><style type=\"text/css\">"
-                                    "h1 { font-family: \"DejaVu Serif\"; text-align: center; }"
-                                    "h2 { font-family: \"DejaVu Serif\"; text-align: center; }"
-                                    "h3 { font-family: \"DejaVu Serif\"; text-align: center; white-space: pre-wrap; }"
-                                    "h4 { font-family: \"DejaVu Serif\"; white-space: pre-wrap; }"
-                                    "p { font-family: \"DejaVu Serif\" }"
-                                    "tt { font-family: \"Monospace\"; white-space: pre-wrap; }"
-                                    ".container {"
-                                    "  position: relative;"
-                                    "  text-align: center;"
-                                    "  color: black;"
-                                    "  font-weight: bold;"
-                                    "}"
-                                    ".centered {"
-                                    "  position: absolute;"
-                                    "  top: 50%;"
-                                    "  left: 50%;"
-                                    "  transform: translate(-50%, -50%);"
-                                    "}"
-                                    "</style></head>"));
+    QString htmlHead(QStringLiteral(
+                         R"(
+                                    <head><style type="text/css">
+                                    h1 { font-family: "DejaVu Serif"; text-align: center; }
+                                    h2 { font-family: "DejaVu Serif"; text-align: center; }
+                                    h3 { font-family: "DejaVu Serif"; text-align: center; white-space: pre-wrap; }
+                                    h4 { font-family: "DejaVu Serif"; white-space: pre-wrap; }
+                                    p { font-family: "DejaVu Serif" }
+                                    tt { font-family: "Monospace"; white-space: pre-wrap; }
+                                    .container {
+                                      position: relative;
+                                      text-align: center;
+                                      color: black;
+                                      font-weight: bold;
+                                    }
+                                    .centered {
+                                      position: absolute;
+                                      top: 50%;
+                                      left: 50%;
+                                      transform: translate(-50%, -50%);
+                                    }
+                                    </style></head>
+                        )"));
 
     setAboutTab(htmlHead);
     setSupportersTab(htmlHead);
@@ -903,24 +906,22 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 
 void dlgAboutDialog::setSupportersTab(const QString& htmlHead) const
 {
-    QString supporters_text(
-            tr(R"(
-               <p><div style="text-align: center">These formidable folks will be fondly remembered forever
-                 <br>for their generous sponsoring on <a href="https://www.patreon.com/mudlet">Mudlet's patreon page:</a>
+    QString supporters_text(QStringLiteral(R"(
+               <p><div style="text-align: center">%1</a>
                </div></p>
                <div class="container">
-                 <img src="frame_swords.png">
+                 <img src=":/icons/frame_swords.png">
                  <div class="centered"><h2>Maiyannah</h2></div>
                </div>
                <div class="container">
-                 <img src="frame_swords.png">
+                 <img src=":/icons/frame_swords.png">
                  <div class="centered"><h2>Qwindor Rousseau</h2></div>
                </div>
                <div class="container">
-                 <img src="frame_plaque.png">
+                 <img src=":/icons/frame_plaque.png">
                  <div class="centered"><h2>Vadim Peretokin</h2></div>
                </div>
-               )"));
+               )").arg(tr(R"(These formidable folks will be fondly remembered forever<br>for their generous sponsoring on <a href="https://www.patreon.com/mudlet">Mudlet's patreon page:)")));
 
 
     textBrowser_supporters->setHtml(

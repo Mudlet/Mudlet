@@ -181,5 +181,7 @@
         <file>icons/clessidra.jpg</file>
         <file>mudlet-lua/lua/utf8_filenames.lua</file>
         <file>icons/Patreon_Mark_Primary.png</file>
+        <file>icons/frame_plaque.png</file>
+        <file>icons/frame_swords.png</file>
     </qresource>
 </RCC>
