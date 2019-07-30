@@ -2799,12 +2799,16 @@ int TLuaInterpreter::setFont(lua_State* L)
         font = QString::fromUtf8(lua_tostring(L, s));
     }
 
+    // ensure that emojis are displayed in colour even if this font doesn't support it
+    QFont::insertSubstitution(font, QStringLiteral("Noto Color Emoji"));
+
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
             // get host profile display font and alter it, since that is how it's done in Settings.
             QFont displayFont = pHost->mDisplayFont;
             displayFont.setFamily(font);
             pHost->mDisplayFont = displayFont;
+            QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
             // apply changes to main console and its while-scrolling component too.
             mudlet::self()->mConsoleMap[pHost]->mUpperPane->setFont(displayFont);
             mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
@@ -2903,6 +2907,7 @@ int TLuaInterpreter::setFontSize(lua_State* L)
             QFont font = pHost->mDisplayFont;
             font.setPointSize(size);
             pHost->mDisplayFont = font;
+            QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
             // apply changes to main console and its while-scrolling component too.
             mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
             mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();

@@ -1459,6 +1459,7 @@ void dlgProfilePreferences::setDisplayFont()
     font.setPointSize(mFontSize);
     if (pHost->mDisplayFont != font) {
         pHost->mDisplayFont = font;
+        QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
             mudlet::self()->mConsoleMap[pHost]->changeColors();
 
