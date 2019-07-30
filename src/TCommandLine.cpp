@@ -486,9 +486,6 @@ bool TCommandLine::event(QEvent* event)
         }
     }
 
-    if (event->type() == QEvent::KeyPress) {
-        qDebug() << "falling back to QPlainTextEdit::event() for" << event;
-    }
     return QPlainTextEdit::event(event);
 }
 
