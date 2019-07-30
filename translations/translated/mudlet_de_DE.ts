@@ -5134,7 +5134,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1796"/>
       <source>Images (%1)</source>
-      <translation type="unfinished"/>
+      <translation>Bilder (%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2149"/>
@@ -10603,12 +10603,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1856"/>
       <source>&lt;p&gt;Select profiles that you want to copy map to, then press the Copy button to the right&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wähle die Profile aus, in die die Karte kopiert werden soll, und drücke dann rechts auf Kopieren&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1869"/>
       <source>&lt;p&gt;Copy map into the selected profiles on the left&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Karte in die links ausgewählten Profile kopieren&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1937"/>
@@ -10839,12 +10839,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2794"/>
       <source>Connection</source>
-      <translation type="unfinished"/>
+      <translation>Verbindung</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2800"/>
       <source>SSL/TLS</source>
-      <translation type="unfinished"/>
+      <translation>SSL/TLS</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4862"/>
