@@ -3294,7 +3294,7 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
             if (!lua_isnumber(L, 1)) {
                 lua_pushfstring(L, "setBorderSizes: bad argument #1 value (new size as number expected, got %s!)", luaL_typename(L, 1));
                 return lua_error(L);
-            } 
+            }
             sizeTop = lua_tonumber(L, 1);
             sizeRight = lua_tonumber(L, 1);
             sizeBottom = lua_tonumber(L, 1);
@@ -3305,11 +3305,11 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
             if (!lua_isnumber(L, 1)) {
                 lua_pushfstring(L, "setBorderSizes: bad argument #1 value (new height as number expected, got %s!)", luaL_typename(L, 1));
                 return lua_error(L);
-            } 
+            }
             if (!lua_isnumber(L, 2)) {
                 lua_pushfstring(L, "setBorderSizes: bad argument #2 value (new width as number expected, got %s!)", luaL_typename(L, 2));
                 return lua_error(L);
-            } 
+            }
             sizeTop = lua_tonumber(L, 1);
             sizeRight = lua_tonumber(L, 2);
             sizeBottom = lua_tonumber(L, 1);
@@ -3320,15 +3320,15 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
             if (!lua_isnumber(L, 1)) {
                 lua_pushfstring(L, "setBorderSizes: bad argument #1 value (new top size as number expected, got %s!)", luaL_typename(L, 1));
                 return lua_error(L);
-            } 
+            }
             if (!lua_isnumber(L, 2)) {
                 lua_pushfstring(L, "setBorderSizes: bad argument #2 value (new width as number expected, got %s!)", luaL_typename(L, 2));
                 return lua_error(L);
-            } 
+            }
             if (!lua_isnumber(L, 3)) {
                 lua_pushfstring(L, "setBorderSizes: bad argument #3 value (new bottom size as number expected, got %s!)", luaL_typename(L, 3));
                 return lua_error(L);
-            } 
+            }
             sizeTop = lua_tonumber(L, 1);
             sizeRight = lua_tonumber(L, 2);
             sizeBottom = lua_tonumber(L, 3);
@@ -3339,19 +3339,19 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
             if (!lua_isnumber(L, 1)) {
                 lua_pushfstring(L, "setBorderSizes: bad argument #1 value (new top size as number expected, got %s!)", luaL_typename(L, 1));
                 return lua_error(L);
-            } 
+            }
             if (!lua_isnumber(L, 2)) {
                 lua_pushfstring(L, "setBorderSizes: bad argument #2 value (new right size as number expected, got %s!)", luaL_typename(L, 2));
                 return lua_error(L);
-            } 
+            }
             if (!lua_isnumber(L, 3)) {
                 lua_pushfstring(L, "setBorderSizes: bad argument #3 value (new bottom size as number expected, got %s!)", luaL_typename(L, 3));
                 return lua_error(L);
-            } 
+            }
             if (!lua_isnumber(L, 4)) {
                 lua_pushfstring(L, "setBorderSizes: bad argument #4 value (new left size as number expected, got %s!)", luaL_typename(L, 4));
                 return lua_error(L);
-            } 
+            }
             sizeTop = lua_tonumber(L, 1);
             sizeRight = lua_tonumber(L, 2);
             sizeBottom = lua_tonumber(L, 3);
@@ -3372,7 +3372,7 @@ int TLuaInterpreter::setBorderTop(lua_State* L)
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setBorderTop: bad argument #1 value (new size as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
-    } 
+    }
     int size = lua_tonumber(L, 1);
     setBorderSize(L, size, Qt::TopSection);
     return 0;
@@ -3384,7 +3384,7 @@ int TLuaInterpreter::setBorderRight(lua_State* L)
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setBorderRight: bad argument #1 value (new size as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
-    } 
+    }
     int size = lua_tonumber(L, 1);
     setBorderSize(L, size, Qt::RightSection);
     return 0;
@@ -3396,7 +3396,7 @@ int TLuaInterpreter::setBorderBottom(lua_State* L)
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setBorderBottom: bad argument #1 value (new size as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
-    } 
+    }
     int size = lua_tonumber(L, 1);
     setBorderSize(L, size, Qt::BottomSection);
     return 0;
@@ -3408,7 +3408,7 @@ int TLuaInterpreter::setBorderLeft(lua_State* L)
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "setBorderLeft: bad argument #1 value (new size as number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
-    } 
+    }
     int size = lua_tonumber(L, 1);
     setBorderSize(L, size, Qt::LeftSection);
     return 0;
@@ -7378,10 +7378,10 @@ int TLuaInterpreter::permTimer(lua_State* L)
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
-    QPair<int, QString> result = pLuaInterpreter->startPermTimer(name, parent, time, luaCode);
-    lua_pushnumber(L, result.first);
-    if (result.first == -1) {
-        lua_pushstring(L, result.second.toUtf8().constData());
+    auto [id, message] = pLuaInterpreter->startPermTimer(name, parent, time, luaCode);
+    lua_pushnumber(L, id);
+    if (id == -1) {
+        lua_pushstring(L, message.toUtf8().constData());
         return 2;
     }
 
@@ -15517,7 +15517,7 @@ QPair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, const Q
         pT = new TTimer(pParentTimer, mpHost);
     }
     pT->setTime(time);
-    pT->setIsFolder(false);
+    pT->setIsFolder((timeout == 0 && function.isEmpty()));
     pT->setTemporary(false);
     // The name should be set after isTempTimer, as that is faster.
     // Also for perminent timers it is easier to debug if it is set before
@@ -15577,7 +15577,7 @@ int TLuaInterpreter::startPermAlias(const QString& name, const QString& parent, 
         pT = new TAlias(pP, mpHost);
     }
     pT->setRegexCode(regex);
-    pT->setIsFolder(false);
+    pT->setIsFolder((regex.isEmpty() && function.isEmpty()));
     pT->setIsActive(true);
     pT->setTemporary(false);
     pT->registerAlias();
