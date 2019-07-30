@@ -4560,9 +4560,9 @@ linee personalizzate?</translation>
       <source>Are you sure that you&apos;d like to delete this profile? Everything (aliases, triggers, backups, etc) will be gone.
 
 If you are, please type in the profile name as a confirmation:</source>
-      <translation>Sei sicuro di voler cancellare questo profilo? Ogni elemento (alias, trigger, backup, ecc) sarà eliminato per sempre
+      <translation>Sei sicuro di voler cancellare questo profilo? Ogni elemento (alias, trigger, backup, ecc) sarà eliminato per sempre.
 
-Per conferma per favore digita il nome del profilo:</translation>
+Per confermare digita il nome del profilo:</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="54"/>
