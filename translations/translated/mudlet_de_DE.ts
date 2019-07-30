@@ -7088,7 +7088,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8418"/>
       <source>&lt;p&gt;Sound file to play when the trigger fires.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Audiodatei, die wiedergegeben werden soll, wenn der Trigger ausgelöst wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="707"/>
@@ -10862,7 +10862,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4894"/>
       <source>port</source>
-      <translation type="unfinished"/>
+      <translation>port</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4904"/>
