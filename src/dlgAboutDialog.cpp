@@ -118,6 +118,18 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
                                     "h4 { font-family: \"DejaVu Serif\"; white-space: pre-wrap; }"
                                     "p { font-family: \"DejaVu Serif\" }"
                                     "tt { font-family: \"Monospace\"; white-space: pre-wrap; }"
+                                    ".container {"
+                                    "  position: relative;"
+                                    "  text-align: center;"
+                                    "  color: black;"
+                                    "  font-weight: bold;"
+                                    "}"
+                                    ".centered {"
+                                    "  position: absolute;"
+                                    "  top: 50%;"
+                                    "  left: 50%;"
+                                    "  transform: translate(-50%, -50%);"
+                                    "}"
                                     "</style></head>"));
 
     setAboutTab(htmlHead);
@@ -818,17 +830,24 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 void dlgAboutDialog::setSupportersTab(const QString& htmlHead) const
 {
     QString supporters_text(
-            tr("<h4>Mightier than swords</h4>"
-                           "<p>awesome ppl"
-                           "<ul><li>winner 1</li>"
-                           "<li>winner 2</li></ul>"
-               "<h4>On a plaque</h4>"
-               "<p>these people are very cool too"
-               "<ul><li>name 1</li>"
-               "<li>name 2</li></ul>"
-               "</p>"));
+            tr(R"(
+               <p><div style="text-align: center">These formidable folks will be fondly remembered forever
+                 <br>for their generous sponsoring on <a href="https://www.patreon.com/mudlet">Mudlet's patreon page:</a>
+               </div></p>
+               <div class="container">
+                 <img src="frame_swords.png">
+                 <div class="centered"><h2>Maiyannah</h2></div>
+               </div>
+               <div class="container">
+                 <img src="frame_swords.png">
+                 <div class="centered"><h2>Qwindor Rousseau</h2></div>
+               </div>
+               <div class="container">
+                 <img src="frame_plaque.png">
+                 <div class="centered"><h2>Vadim Peretokin</h2></div>
+               </div>
+               )"));
 
-    supporters_text.append(QStringLiteral("</body></html>"));
 
     textBrowser_supporters->setHtml(
                 QStringLiteral("<html>%1<body>%2</body></html>")
