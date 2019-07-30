@@ -3935,7 +3935,7 @@ Uninstalling old version &apos;%2&apos;.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="372"/>
       <source>[ INFO ]  - Looking up the IP address of server: %1:%2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ 信息 ] - 正在查找服务器的 IP 地址: %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="494"/>
@@ -3949,13 +3949,15 @@ Reason: </source>
       <location filename="../src/ctelnet.cpp" line="559"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 ...
 </source>
-      <translation type="unfinished"/>
+      <translation>[ 信息 ]  - 正在尝试连接到 %1: %2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="561"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 via proxy...
 </source>
-      <translation type="unfinished"/>
+      <translation>[ 信息 ] -正在尝试通过via代理连接到 %1:%2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1787"/>
@@ -5048,30 +5050,32 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1782"/>
       <source>Reset icon</source>
       <comment>Reset the custom picture for this profile in the connection dialog and show the default one instead</comment>
-      <translation type="unfinished"/>
+      <translation>重置图标</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1784"/>
       <source>Set custom icon</source>
       <comment>Set a custom picture to show for the profile in the connection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>设置自定义图标</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1794"/>
       <source>Select custom image for profile (should be 120x30)</source>
-      <translation type="unfinished"/>
+      <translation>为配置文件选择自定义图像（应为 120x30）</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1796"/>
       <source>Images (%1)</source>
-      <translation type="unfinished"/>
+      <translation>图像 (%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2149"/>
       <source>The %1 character is not permitted. Use one of the following:
 &quot;%2&quot;.
 </source>
-      <translation type="unfinished"/>
+      <translation>该 %1 字符是不被允许的。 使用下列其中之一：
+&quot;%2&quot;.
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2182"/>
@@ -5324,18 +5328,18 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="261"/>
       <source>Failed to export. Could not write Mudlet items to the file &quot;%1&quot;.</source>
       <comment>This error message is shown when all the Mudlet items cannot be written to the &apos;packageName&apos;.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened.</comment>
-      <translation type="unfinished"/>
+      <translation>导出失败。无法写入 Mudlet 项目到文件 &quot;%1&quot;。</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="344"/>
       <source>Failed to open package file. Error is: &quot;%1&quot;.</source>
       <comment>This error message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing file anywhere in the computer&apos;s file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.</comment>
-      <translation type="unfinished"/>
+      <translation>打开包文件失败。错误是: &quot;%1&quot;。</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="438"/>
       <source>Failed to add directory &quot;%1&quot; to package. Error is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>未能将目录 &quot;%1&quot; 添加到包文件中。 错误为: &quot;%2&quot;。</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="494"/>
@@ -5346,18 +5350,18 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="516"/>
       <source>Failed to write files into and then close the package. Error is: &quot;%1&quot;.</source>
       <comment>This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be the point at which something breaks because a problem was not spotted/detected in the process earlier...</comment>
-      <translation type="unfinished"/>
+      <translation>无法写入文件并打包。 错误是： &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="536"/>
       <source>Package &quot;%1&quot; exported to: %2</source>
-      <translation type="unfinished"/>
+      <translation>包 &quot;%1&quot; 导出到: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="832"/>
       <source>Why not &lt;a href=&quot;https://forums.mudlet.org/viewforum.php?f=6&quot;&gt;upload&lt;/a&gt; your package for other Mudlet users?</source>
       <comment>Only the text outside of the &apos;a&apos; (HTML anchor) tags PLUS the verb &apos;upload&apos; in between them in the source text, (associated with uploading the resulting package to the Mudlet forums) should be translated.</comment>
-      <translation type="unfinished"/>
+      <translation>为什么不 &lt;a href=&quot;https://forums.mudlet.org/viewforum.php?f=6&quot;&gt;上传&lt;/a&gt; 你的软件包给其他 Mudlet 用户？</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="32"/>
@@ -5421,7 +5425,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="639"/>
       <source>yyyy-MM-ddTHH-mm-ss (e.g., 1970-01-01T00-00-00%1)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-ddTHH-mm-ss (例如， 1970-01-01T00-00-00%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="640"/>
@@ -5491,12 +5495,12 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1812"/>
       <source>Imported map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>从 %1 加载地图。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1814"/>
       <source>Could not import map from %1.</source>
-      <translation type="unfinished"/>
+      <translation>无法从 %1 加载地图。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1817"/>
@@ -5545,7 +5549,10 @@ Count</source>
 Please check that you have permissions/access to:
 &quot;%2&quot;
 and there is enough space. The copying operation has failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ 错误 ] - 无法使用或创建目录来为其他配置文件 &quot;%1&quot; 存储地图.
+请检查您的访问权限：
+&quot;%2&quot;
+，并确认空间足够。复制操作失败。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1906"/>
@@ -5565,17 +5572,17 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2028"/>
       <source>Could not copy the map - failed to work out which map file we just saved the map as!</source>
-      <translation type="unfinished"/>
+      <translation>无法复制地图 - 无法确认刚刚保存的地图！</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2040"/>
       <source>Copying over map to %1 - please wait...</source>
-      <translation type="unfinished"/>
+      <translation>正在复制地图到 %1 - 请稍候...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2046"/>
       <source>Could not copy the map to %1 - unable to copy the new map file over.</source>
-      <translation type="unfinished"/>
+      <translation>无法复制地图到 %1 - 无法复制新的地图文件。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2050"/>
@@ -5595,7 +5602,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2452"/>
       <source>%1 selected - press to change</source>
-      <translation type="unfinished"/>
+      <translation>%1 已选择 - 按下以更改</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2455"/>
