@@ -7130,7 +7130,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8418"/>
       <source>&lt;p&gt;Sound file to play when the trigger fires.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Звуковой файл, который будет играть при срабатывании.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="707"/>
@@ -10909,7 +10909,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4894"/>
       <source>port</source>
-      <translation type="unfinished"/>
+      <translation>порт</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4904"/>
