@@ -907,8 +907,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 void dlgAboutDialog::setSupportersTab(const QString& htmlHead) const
 {
     QString supporters_text(QStringLiteral(R"(
-               <p><div style="text-align: center">%1</a>
-               </div></p>
+               <p><div style="text-align: center">%1</div></p>
                <div class="container">
                  <img src=":/icons/frame_swords.png">
                  <div class="centered"><h2>Maiyannah</h2></div>
