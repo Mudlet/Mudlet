@@ -4037,7 +4037,7 @@ Uninstalling old version &apos;%2&apos;.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="372"/>
       <source>[ INFO ]  - Looking up the IP address of server: %1:%2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Поиск IP-адреса сервера: %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="494"/>
@@ -4051,13 +4051,15 @@ Reason: </source>
       <location filename="../src/ctelnet.cpp" line="559"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 ...
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Идёт подключение к %1: %2 ...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="561"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 via proxy...
 </source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Идёт подключение к %1: %2 через прокси...
+</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1787"/>
@@ -5154,23 +5156,23 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1782"/>
       <source>Reset icon</source>
       <comment>Reset the custom picture for this profile in the connection dialog and show the default one instead</comment>
-      <translation type="unfinished"/>
+      <translation>Сбросить значок</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1784"/>
       <source>Set custom icon</source>
       <comment>Set a custom picture to show for the profile in the connection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>Установить значок</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1794"/>
       <source>Select custom image for profile (should be 120x30)</source>
-      <translation type="unfinished"/>
+      <translation>Выберите пользовательское изображение для профиля (должно быть 120x30)</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1796"/>
       <source>Images (%1)</source>
-      <translation type="unfinished"/>
+      <translation>Изображения (%1)</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2149"/>
@@ -10644,12 +10646,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1856"/>
       <source>&lt;p&gt;Select profiles that you want to copy map to, then press the Copy button to the right&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Выберите профили, в которые вы хотите скопировать карту, а затем нажмите кнопку Скопировать справа&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1869"/>
       <source>&lt;p&gt;Copy map into the selected profiles on the left&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Копировать карту в выбранные профили слева&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1937"/>
@@ -10879,22 +10881,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2794"/>
       <source>Connection</source>
-      <translation type="unfinished"/>
+      <translation>Подключение</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2800"/>
       <source>SSL/TLS</source>
-      <translation type="unfinished"/>
+      <translation>SSL/TLS</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4862"/>
       <source>Connect to the game via proxy</source>
-      <translation type="unfinished"/>
+      <translation>Подключаться к игре через прокси</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4874"/>
       <source>Address</source>
-      <translation type="unfinished"/>
+      <translation>Адрес</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4884"/>
@@ -10914,22 +10916,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4904"/>
       <source>Username for logging into the proxy if requred</source>
-      <translation type="unfinished"/>
+      <translation>Имя пользователя для входа в прокси, если требуется</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4910"/>
       <source>username (optional)</source>
-      <translation type="unfinished"/>
+      <translation>имя пользователя (необязательно)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4920"/>
       <source>Password for logging into the proxy if requred</source>
-      <translation type="unfinished"/>
+      <translation>Пароль для входа в прокси, если требуется</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4926"/>
       <source>password (optional)</source>
-      <translation type="unfinished"/>
+      <translation>пароль (необязательно)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4984"/>
@@ -11722,7 +11724,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="238"/>
       <source>&lt;p&gt;Within how many lines must all conditions be true to fire the trigger?&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;В сколько линий должны все шаблоны совпасть, чтобы триггер совпал?&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="321"/>
@@ -11743,7 +11745,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="563"/>
       <source>&lt;p&gt;Click to remove the sound file set for this trigger.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Нажмите, чтобы удалить звуковой файл, установленный для этого триггера.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="617"/>
