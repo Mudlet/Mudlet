@@ -5118,18 +5118,18 @@ Nutzungen</translation>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1782"/>
       <source>Reset icon</source>
       <comment>Reset the custom picture for this profile in the connection dialog and show the default one instead</comment>
-      <translation type="unfinished"/>
+      <translation>Bild zurücksetzen</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1784"/>
       <source>Set custom icon</source>
       <comment>Set a custom picture to show for the profile in the connection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>Neues Bild wählen</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1794"/>
       <source>Select custom image for profile (should be 120x30)</source>
-      <translation type="unfinished"/>
+      <translation>Wählen ein neues Bild für das Profil (sollte 120x30 sein)</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1796"/>
