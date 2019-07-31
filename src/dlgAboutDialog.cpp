@@ -30,6 +30,7 @@
 #include "pre_guard.h"
 #include <QPainter>
 #include <QTextLayout>
+#include <QDebug>
 #include "post_guard.h"
 
 dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
@@ -111,29 +112,21 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
      */
 
     // A uniform header for all tabs:
-    QString htmlHead(QStringLiteral(
-                         R"(
-                                    <head><style type="text/css">
-                                    h1 { font-family: "DejaVu Serif"; text-align: center; }
-                                    h2 { font-family: "DejaVu Serif"; text-align: center; }
-                                    h3 { font-family: "DejaVu Serif"; text-align: center; white-space: pre-wrap; }
-                                    h4 { font-family: "DejaVu Serif"; white-space: pre-wrap; }
-                                    p { font-family: "DejaVu Serif" }
-                                    tt { font-family: "Monospace"; white-space: pre-wrap; }
-                                    .container {
-                                      position: relative;
-                                      text-align: center;
-                                      color: black;
-                                      font-weight: bold;
-                                    }
-                                    .centered {
-                                      position: absolute;
-                                      top: 50%;
-                                      left: 50%;
-                                      transform: translate(-50%, -50%);
-                                    }
-                                    </style></head>
-                        )"));
+    // clang-format off
+    QString htmlHead(QStringLiteral(R"(
+        <head><style type="text/css">
+        h1 { font-family: "DejaVu Serif"; text-align: center; }
+        h2 { font-family: "DejaVu Serif"; text-align: center; }
+        h3 { font-family: "DejaVu Serif"; text-align: center; white-space: pre-wrap; }
+        h4 { font-family: "DejaVu Serif"; white-space: pre-wrap; }
+        p { font-family: "DejaVu Serif" }
+        tt { font-family: "Monospace"; white-space: pre-wrap; }
+        .container {
+          text-align: center;
+        }
+        </style></head>
+    )"));
+    // clang-format on
 
     setAboutTab(htmlHead);
     setSupportersTab(htmlHead);
@@ -904,26 +897,57 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     // clang-format on
 }
 
-void dlgAboutDialog::setSupportersTab(const QString& htmlHead) const
+void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
 {
+    // see https://www.patreon.com/mudlet if you'd like to be added!
+    QStringList mightier_than_swords = {"Maiyannah", "Qwindor Rousseau"};
+    QStringList on_a_plaque = {"Vadim Peretokin"};
+    int image_counter{1};
+    supportersDocument = std::make_unique<QTextDocument>();
+
+    QFont nameFont;
+    nameFont.setPixelSize(32);
+    nameFont.setFamily(QStringLiteral("Bitstream Vera Sans"));
+
+    for (const auto& name: qAsConst(mightier_than_swords)) {
+        QImage background(QStringLiteral(":/icons/frame_swords.png"));
+        QPainter painter(&background);
+        painter.setFont(nameFont);
+        painter.drawText(0, 0, background.width(), background.height(), Qt::AlignCenter, name);
+        supportersDocument->addResource(QTextDocument::ImageResource, QUrl(QStringLiteral("data://image%1").arg(image_counter)), background);
+        image_counter++;
+    }
+
+    for (const auto& name: qAsConst(on_a_plaque)) {
+        QImage background(QStringLiteral(":/icons/frame_plaque.png"));
+        QPainter painter(&background);
+        painter.setFont(nameFont);
+        painter.drawText(0, 0, background.width(), background.height(), Qt::AlignCenter, name);
+        supportersDocument->addResource(QTextDocument::ImageResource, QUrl(QStringLiteral("data://image%1").arg(image_counter)), background);
+        image_counter++;
+    }
+
+    QString supporters_image_html;
+    auto supporters_amount = mightier_than_swords.size() + on_a_plaque.size();
+    for (auto counter = 1; counter <= supporters_amount; counter++) {
+        // clang-format off
+        supporters_image_html.append(QStringLiteral(R"(
+            <div class="container">
+                <img src="data://image%1"/>
+            </div>
+        )").arg(counter));
+        // clang-format on
+    }
+
     QString supporters_text(QStringLiteral(R"(
                <p><div style="text-align: center">%1</div></p>
-               <div class="container">
-                 <img src=":/icons/frame_swords.png">
-                 <div class="centered"><h2>Maiyannah</h2></div>
-               </div>
-               <div class="container">
-                 <img src=":/icons/frame_swords.png">
-                 <div class="centered"><h2>Qwindor Rousseau</h2></div>
-               </div>
-               <div class="container">
-                 <img src=":/icons/frame_plaque.png">
-                 <div class="centered"><h2>Vadim Peretokin</h2></div>
-               </div>
-               )").arg(tr(R"(These formidable folks will be fondly remembered forever<br>for their generous sponsoring on <a href="https://www.patreon.com/mudlet">Mudlet's patreon page</a>:)")));
+               %2
+               )")
+                  .arg(tr(R"(
+                          These formidable folks will be fondly remembered forever<br>for their generous sponsorship on <a href="https://www.patreon.com/mudlet">Mudlet's patreon</a>:
+                          )"), supporters_image_html));
 
+    supportersDocument->setHtml(QStringLiteral("<html>%1<body>%2</body></html>").arg(htmlHead, supporters_text));
+    textBrowser_supporters->setDocument(supportersDocument.get());
 
-    textBrowser_supporters->setHtml(
-                QStringLiteral("<html>%1<body>%2</body></html>")
-                .arg(htmlHead, supporters_text));
 }
