@@ -173,16 +173,14 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList, 
         qDebug() << "[CRITICAL ERROR (plz report):] Trigger name=" << mName << " aborting reason: propertyList.size() != regexList.size()";
     }
 
-    if ((propertyList.empty()) && (!isFolder()) && (!mColorTrigger)) {
-        if (!addingTrigger) {
-            setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
-                     .arg(tr("Error: This trigger has no patterns defined, yet. Add some to activate it.")));
-            mOK_init = false;
-            return false;
-        } else {
-            mOK_init = true;
-            return true;
-        }
+    if (!addingTrigger && ((propertyList.empty()) && (!isFolder()) && (!mColorTrigger))) {
+        setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
+                .arg(tr("Error: This trigger has no patterns defined, yet. Add some to activate it.")));
+        mOK_init = false;
+        return false;
+    } else if (addingTrigger) {
+        mOK_init = true;
+        return true;
     }
 
     bool state = true;
