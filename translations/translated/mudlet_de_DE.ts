@@ -9697,7 +9697,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="244"/>
       <source>Force auto save on exit</source>
-      <translation>Zwingend automatisch speichern beim Beenden</translation>
+      <translation>Profil automatisch beim Beenden speichern</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="251"/>
