@@ -69,7 +69,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     mLastClickTimer.start();
     if (pC->getType() != TConsole::CentralDebugConsole) {
         mFontHeight = QFontMetrics(mpHost->mDisplayFont).height();
-        mFontWidth = QFontMetrics(mpHost->mDisplayFont).width(QChar('W'));
+        mFontWidth = QFontMetrics(mpHost->mDisplayFont).averageCharWidth();
         mScreenWidth = 100;
         if ((width() / mFontWidth) < mScreenWidth) {
             mScreenWidth = 100; //width()/mFontWidth;
@@ -92,7 +92,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
         // This is part of the Central Debug Console
         mShowTimeStamps = true;
         mFontHeight = QFontMetrics(mDisplayFont).height();
-        mFontWidth = QFontMetrics(mDisplayFont).width(QChar('W'));
+        mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
         mScreenWidth = 100;
         mDisplayFont.setFixedPitch(true);
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
@@ -225,7 +225,7 @@ void TTextEdit::initDefaultSettings()
 void TTextEdit::updateScreenView()
 {
     if (isHidden()) {
-        mFontWidth = QFontMetrics(mDisplayFont).width(QChar(' '));
+        mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
         mFontDescent = QFontMetrics(mDisplayFont).descent();
         mFontAscent = QFontMetrics(mDisplayFont).ascent();
         mFontHeight = mFontAscent + mFontDescent;
@@ -249,7 +249,7 @@ void TTextEdit::updateScreenView()
     // This was "if (pC->mType == TConsole::MainConsole) {"
     // and mIsMiniConsole is true for user created Mini Consoles and User Windows
     if (mpConsole->getType() == TConsole::MainConsole) {
-        mFontWidth = QFontMetrics(mpHost->mDisplayFont).width(QChar('W'));
+        mFontWidth = QFontMetrics(mpHost->mDisplayFont).averageCharWidth();
         mFontDescent = QFontMetrics(mpHost->mDisplayFont).descent();
         mFontAscent = QFontMetrics(mpHost->mDisplayFont).ascent();
         mFontHeight = mFontAscent + mFontDescent;
@@ -270,7 +270,7 @@ void TTextEdit::updateScreenView()
         }
 #endif
     } else {
-        mFontWidth = QFontMetrics(mDisplayFont).width(QChar('W'));
+        mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
         mFontDescent = QFontMetrics(mDisplayFont).descent();
         mFontAscent = QFontMetrics(mDisplayFont).ascent();
         mFontHeight = mFontAscent + mFontDescent;
@@ -445,20 +445,25 @@ inline uint TTextEdit::getGraphemeBaseCharacter(const QString& str) const
     if (str.isEmpty()) {
         return 0;
     }
+
     QChar first = str.at(0);
     if (first.isSurrogate() && str.size() >= 2) {
         QChar second = str.at(1);
         if (first.isHighSurrogate() && second.isLowSurrogate()) {
             return QChar::surrogateToUcs4(first, second);
-        } else if (first.isLowSurrogate() && second.isHighSurrogate()) {
-            return QChar::surrogateToUcs4(second, first);
-        } else {
-            // str format error
-            return first.unicode();
         }
-    } else {
+
+        if (Q_UNLIKELY(first.isLowSurrogate() && second.isHighSurrogate())) {
+            qDebug().noquote().nospace() << "TTextEdit::getGraphemeBaseCharacter(\"str\") INFO - passed a QString comprising a Low followed by a High surrogate QChar, this is not expected, they will be swapped around to try and recover but if this causes mojibake (text corrupted into meaningless symbols) please report this to the developers!";
+            return QChar::surrogateToUcs4(second, first);
+        }
+
+        // str format error ?
         return first.unicode();
+
     }
+
+    return first.unicode();
 }
 
 void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) const
@@ -983,37 +988,55 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     highlight();
 }
 
+// Returns the index into the relevant TBuffer::lineBuffer of the FIRST QChar
+// of the grapheme under the mouse - it ALSO returns zero (which will probably
+// NOT be a valid index) if there is no valid index to return; it might be
+// worth changing that to -1 but that will probably require revision to the
+// caller(s):
 int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber) const
 {
-    int characterIndex = -1;
-    if (lineNumber < mpBuffer->lineBuffer.size()) {
-        int characterWidth = 1;
+    if (lineNumber >= 0 && lineNumber < mpBuffer->lineBuffer.size()) {
+        // Line number is (should be) within range of lines in the
+        // TBuffer::lineBuffer - might need to check that this still works after
+        // that buffer has reached the limit when it starts to have the
+        // beginning lines deleted!
+
+        // Count of "normal" width equivalent characters - we will multiply that
+        // by the average character width to determine whether the mouse is over
+        // a particular grapheme:
+        int column = 0;
+        // This is the calculated (estimated) cumulative width of all of the
+        // graphemes considered in the line so far:
         int currentX = 0;
-        for (const auto& character : mpBuffer->lineBuffer.at(lineNumber)) {
-            const uint unicode = getGraphemeBaseCharacter(character);
+        QString lineText = mpBuffer->lineBuffer.at(lineNumber);
+        QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
+        for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total;) {
+            int nextBoundary = boundaryFinder.toNextBoundary();
+            // Width in "normal" width equivalent of this grapheme:
+            int charWidth = 0;
+            const QString grapheme = lineText.mid(indexOfChar, nextBoundary - indexOfChar);
+            const uint unicode = getGraphemeBaseCharacter(grapheme);
             if (unicode == '\t') {
-                characterWidth = 8;
+                charWidth = mTabStopwidth - (column % mTabStopwidth);
             } else {
-                characterWidth = getGraphemeWidth(unicode);
+                charWidth = getGraphemeWidth(unicode);
             }
-            currentX += characterWidth * mFontWidth;
-            characterIndex++;
+            column +=charWidth;
+            currentX = column * mFontWidth;
             if (currentX >= mouseX) {
                 if (mShowTimeStamps) {
-                    characterIndex -= 13;
+                    // The timestamp is (currently) 13 "normal width" characters
+                    // but that might not always be the case in some future I18n
+                    // situations:
+                    return std::max(0, indexOfChar - 13);
                 }
-                characterIndex = std::max(characterIndex, 0);
-                return characterIndex;
+                return std::max(0, indexOfChar);
             }
+            indexOfChar = nextBoundary;
         }
     }
 
-    characterIndex = mouseX / mFontWidth;
-    if (mShowTimeStamps) {
-        characterIndex -= 13;
-    }
-    characterIndex = std::max(characterIndex, 0);
-    return characterIndex;
+    return 0;
 }
 
 void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
@@ -1397,6 +1420,9 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     forceUpdate();
 }
 
+// Technically this copies whole lines into the image even if the selection does
+// not start at the beginning of the first line or end at the last grapheme on
+// the last line.
 void TTextEdit::slot_copySelectionToClipboardImage()
 {
     mCopyImageStartTime = std::chrono::high_resolution_clock::now();
@@ -1431,30 +1457,41 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     }
 
     // Qt says: "Maximum supported image dimension is 65500 pixels" in stdout
-    auto heightpx = qMin(65500, (mPB.y() - mPA.y() + 1) * mFontHeight);
+    auto heightpx = std::min(65500, (mPB.y() - mPA.y() + 1) * mFontHeight);
     auto lineOffset = mPA.y();
 
     // find the biggest width of text we need to work with
     int largestLine{};
     for (int y = mPA.y(), total = mPB.y() + 1; y < total; ++y) {
-        int lineWidth{};
-        for (const auto& character : mpBuffer->lineBuffer.at(y)) {
-            const uint unicode = getGraphemeBaseCharacter(character);
-            int characterWidth{};
+        const QString lineText{mpBuffer->lineBuffer.at(y)};
+        // Will accumulate the width in pixels of the current line:
+        int lineWidth{(mShowTimeStamps ? 13 : 0) * mFontWidth};
+        // Accumulated width in "normal" width characters:
+        int column{};
+        QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
+        for (int indexOfChar{}, total{lineText.size()}; indexOfChar < total;) {
+            int nextBoundary{boundaryFinder.toNextBoundary()};
+            // Width in "normal" width equivalent of this grapheme:
+            int charWidth{};
+            const QString grapheme = lineText.mid(indexOfChar, nextBoundary - indexOfChar);
+            const uint unicode = getGraphemeBaseCharacter(grapheme);
             if (unicode == '\t') {
-                characterWidth = 8;
+                charWidth = mTabStopwidth - (column % mTabStopwidth);
             } else {
-                characterWidth = getGraphemeWidth(unicode);
+                charWidth = getGraphemeWidth(unicode);
             }
-            lineWidth += characterWidth;
+            column +=charWidth;
+            // The timestamp is (currently) 13 "normal width" characters
+            // but that might not always be the case in some future I18n
+            // situations:
+            lineWidth = (mShowTimeStamps ? 13 + column : column) * mFontWidth;
+            indexOfChar = nextBoundary;
         }
         largestLine = std::max(lineWidth, largestLine);
     }
 
-    auto widthpx = qMin(65500, largestLine * mFontWidth);
-
+    auto widthpx = std::min(65500, largestLine);
     auto rect = QRect(mPA.x(), mPA.y(), widthpx, heightpx);
-
     auto pixmap = QPixmap(widthpx, heightpx);
     pixmap.fill(palette().base().color());
 
