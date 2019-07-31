@@ -1170,7 +1170,7 @@ int XMLimport::readTriggerGroup(TTrigger* pParent)
         }
     }
 
-    if (!pT->setRegexCodeList(pT->mRegexCodeList, pT->mRegexCodePropertyList, true)) {
+    if (!pT->setRegexCodeList(pT->mRegexCodeList, pT->mRegexCodePropertyList)) {
         qDebug().nospace() << "XMLimport::readTriggerGroup(...): ERROR: can not "
                               "initialize pattern list for trigger: "
                            << pT->getName();
