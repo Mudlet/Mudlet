@@ -5724,12 +5724,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="506"/>
       <source>&lt;p&gt;Mudlet does not recognise the code &quot;%1&quot;, please report it to the Mudlet developers so we can describe it properly in future Mudlet versions!&lt;/p&gt;&lt;p&gt;The file &lt;tt&gt;%2.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file) is still usable.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mudelet无法识别的代码 &quot;%1&quot;，请向Mudelet开发者报告，以便我们可以在今后的 Mudelet 版本中正确识别它！&lt;/p&gt;&lt;p&gt;文件 &lt;tt&gt;%2.dic&lt;/tt&gt; (及其伴侣 &lt;tt&gt;.faf&lt;/tt&gt; 文件) 仍然可用。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="531"/>
       <source>No Hunspell dictionary files found, spell-checking will not be available.</source>
-      <translation type="unfinished"/>
+      <translation>未找到拼写检查器的字典文件，拼写检查将不可用。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1795"/>
@@ -5740,12 +5740,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2954"/>
       <source>&lt;p&gt;The room symbol will appear like this if only symbols (glyphs) from the specfic font are used.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;如果仅使用特定字体的符号(字形)，房间符号将会像这样显示。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2960"/>
       <source>&lt;p&gt;The room symbol will appear like this if symbols (glyphs) from any font can be used.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;如果仅使用特定字体的符号(字形)，房间符号将会像这样显示。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2989"/>
@@ -5755,22 +5755,22 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3002"/>
       <source>&lt;p&gt;How many rooms in the whole map have this symbol.</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;整个地图中有多少房间具有此符号。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3014"/>
       <source>more - not shown...</source>
-      <translation type="unfinished"/>
+      <translation>更多 - 未显示...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3021"/>
       <source>&lt;p&gt;The rooms with this symbol, up to a maximum of thirty-two, if there are more than this, it is indicated but they are not shown.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;具有此符号的房间，最多可达三十二个，如果有超过三十二个，它们依然会被提示，但不会显示出来。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3030"/>
       <source>&lt;p&gt;The symbol can be made entirely from glyphs in the specified font.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;符号可以完全从指定字体中的 glyphs 中生成。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3040"/>
@@ -5792,25 +5792,25 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="3140"/>
       <source>Detail</source>
       <comment>Discord Rich Presence detail</comment>
-      <translation type="unfinished"/>
+      <translation>详细信息</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3142"/>
       <source>Small icon</source>
       <comment>Discord Rich Presence small icon</comment>
-      <translation type="unfinished"/>
+      <translation>小图标</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3143"/>
       <source>State</source>
       <comment>Discord Rich Presence state</comment>
-      <translation type="unfinished"/>
+      <translation>状态</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3145"/>
       <source>Party size</source>
       <comment>Discord Rich Presence party size</comment>
-      <translation type="unfinished"/>
+      <translation>队伍人数</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3146"/>
@@ -5827,12 +5827,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3182"/>
       <source>Map symbol usage - %1</source>
-      <translation type="unfinished"/>
+      <translation>地图符号使用情况的 %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3259"/>
       <source>yyyy-MM-dd#HH-mm-ss (e.g., 1970-01-01#00-00-00.html)</source>
-      <translation type="unfinished"/>
+      <translation>yyyy-MM-dd#HH-mm-ss (例如, 1970-01-01#00-00-00.html)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3260"/>
@@ -5977,7 +5977,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="216"/>
       <source>(room ID)</source>
       <comment>Placeholder, if no room ID is set for an exit, yet. This string is used in 2 places, ensure they match!</comment>
-      <translation type="unfinished"/>
+      <translation>(房间ID)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="127"/>
@@ -5987,7 +5987,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="2324"/>
       <source>(command or Lua script)</source>
       <comment>Placeholder, if a special exit has no code given, yet. This string is also used programmatically - ensure all five instances are the same</comment>
-      <translation type="unfinished"/>
+      <translation>(命令或Lua脚本)</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="140"/>
@@ -6006,23 +6006,23 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1793"/>
       <location filename="../src/dlgRoomExits.cpp" line="1911"/>
       <source>Exit to &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>退出到 &quot;%1&quot;。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="756"/>
       <source>Entered number is invalid, set the number of the room northwest of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>输入的数字无效的，设定 northwest 房间的ID，如果ID有效, 则会变成蓝色。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="767"/>
       <location filename="../src/dlgRoomExits.cpp" line="1372"/>
       <source>Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>设置此房间西北的编号, 蓝色表示有效数字, 红色表示无效。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="810"/>
       <source>Entered number is invalid, set the number of the room north of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>输入的数字无效的，设定 north 房间的ID，如果ID有效, 则会变成蓝色。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="820"/>
