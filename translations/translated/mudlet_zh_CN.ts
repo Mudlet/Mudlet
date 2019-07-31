@@ -6017,7 +6017,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="767"/>
       <location filename="../src/dlgRoomExits.cpp" line="1372"/>
       <source>Set the number of the room northwest of this one, will be blue for a valid number or red for invalid.</source>
-      <translation>设置此房间西北的编号, 蓝色表示有效数字, 红色表示无效。</translation>
+      <translation>设置房间 northwest 的编号, 蓝色表示有效数字, 红色表示无效。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="810"/>
@@ -6028,117 +6028,117 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="820"/>
       <location filename="../src/dlgRoomExits.cpp" line="1406"/>
       <source>Set the number of the room north of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>设置房间 north 的编号, 蓝色表示有效数字, 红色表示无效。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="862"/>
       <source>Entered number is invalid, set the number of the room northeast of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>输入的数字无效的，设定 northeast 房间的ID，如果ID有效, 则会变成蓝色。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="872"/>
       <location filename="../src/dlgRoomExits.cpp" line="1437"/>
       <source>Set the number of the room northeast of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>设置房间 northeast 的编号, 蓝色表示有效数字, 红色表示无效。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="914"/>
       <source>Entered number is invalid, set the number of the room up from this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>输入的数字无效的，设定 up 房间的ID，如果ID有效, 则会变成蓝色。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="924"/>
       <location filename="../src/dlgRoomExits.cpp" line="1468"/>
       <source>Set the number of the room up from this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>设置房间 up 的编号, 蓝色表示有效数字, 红色表示无效。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="966"/>
       <source>Entered number is invalid, set the number of the room west of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>输入的数字无效的，设定 west 房间的ID，如果ID有效, 则会变成蓝色。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="976"/>
       <location filename="../src/dlgRoomExits.cpp" line="1499"/>
       <source>Set the number of the room west of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>设置房间 west 的编号, 蓝色表示有效数字, 红色表示无效。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1018"/>
       <source>Entered number is invalid, set the number of the room east of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>输入的数字无效的，设定 east 房间的ID，如果ID有效, 则会变成蓝色。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1028"/>
       <location filename="../src/dlgRoomExits.cpp" line="1530"/>
       <source>Set the number of the room east of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>设置房间 east 的编号, 蓝色表示有效数字, 红色表示无效。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1070"/>
       <source>Entered number is invalid, set the number of the room down from this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>输入的数字无效的，设定 down 房间的ID，如果ID有效, 则会变成蓝色。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1080"/>
       <location filename="../src/dlgRoomExits.cpp" line="1561"/>
       <source>Set the number of the room down from this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>设置房间 down 的编号, 蓝色表示有效数字, 红色表示无效。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1122"/>
       <source>Entered number is invalid, set the number of the room southwest of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>输入的数字无效的，设定 southwest 房间的ID，如果ID有效, 则会变成蓝色。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1132"/>
       <location filename="../src/dlgRoomExits.cpp" line="1592"/>
       <source>Set the number of the room southwest of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>设置房间 southwest 的编号, 蓝色表示有效数字, 红色表示无效。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1174"/>
       <source>Entered number is invalid, set the number of the room south of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>输入的数字无效的，设定 south 房间的ID，如果ID有效, 则会变成蓝色。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1184"/>
       <location filename="../src/dlgRoomExits.cpp" line="1623"/>
       <source>Set the number of the room south of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>设置房间 south 的编号, 蓝色表示有效数字, 红色表示无效。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1226"/>
       <source>Entered number is invalid, set the number of the room southeast of this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>输入的数字无效的，设定 southeast 房间的ID，如果ID有效, 则会变成蓝色。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1236"/>
       <location filename="../src/dlgRoomExits.cpp" line="1654"/>
       <source>Set the number of the room southeast of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>设置房间 southeast 的编号, 蓝色表示有效数字, 红色表示无效。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1278"/>
       <source>Entered number is invalid, set the number of the room in from this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>输入的数字无效的，设定 in 房间的ID，如果ID有效, 则会变成蓝色。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1288"/>
       <location filename="../src/dlgRoomExits.cpp" line="1685"/>
       <source>Set the number of the room in from this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>设置房间 in 的编号, 蓝色表示有效数字, 红色表示无效。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1330"/>
       <source>Entered number is invalid, set the number of the room out from this one, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>输入的数字无效的，设定 out 房间的ID，如果ID有效, 则会变成蓝色。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1340"/>
       <location filename="../src/dlgRoomExits.cpp" line="1716"/>
       <source>Set the number of the room out from this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>设置房间 out 的编号, 蓝色表示有效数字, 红色表示无效。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1364"/>
@@ -6220,22 +6220,22 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1832"/>
       <source>Set the number of the room %1 of this one, will be blue for a valid number or red for invalid.</source>
-      <translation type="unfinished"/>
+      <translation>设置房间 %1 的编号, 蓝色表示有效数字, 红色表示无效。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1855"/>
       <source>Exits for room: &quot;%1&quot; [*]</source>
-      <translation type="unfinished"/>
+      <translation>房间出口: &quot;%1&quot; [*]</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1857"/>
       <source>Exits for room Id: %1 [*]</source>
-      <translation type="unfinished"/>
+      <translation>房间 Id 的出口: %1 [*]</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1927"/>
       <source>Room Id is invalid, set the number of the room that this special exit leads to, will turn blue for a valid number.</source>
-      <translation type="unfinished"/>
+      <translation>房间ID无效，设置此特殊出口将要去往的房间ID，如果有效, 则会变为蓝色。</translation>
     </message>
   </context>
   <context>
@@ -6244,13 +6244,15 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="231"/>
       <source>-- Enter your lua code here
 </source>
-      <translation type="unfinished"/>
+      <translation>-- 在此输入您的lua代码
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="272"/>
       <source>*** starting new session ***
 </source>
-      <translation type="unfinished"/>
+      <translation>*** 开始新的会话 ***
+</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="374"/>
@@ -6378,7 +6380,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="7820"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7839"/>
       <source>Ctrl+S</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+S</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="434"/>
@@ -6403,7 +6405,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="443"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="444"/>
       <source>Copy the trigger/script/alias/etc</source>
-      <translation type="unfinished"/>
+      <translation>复制触发器/脚本/别名/等等</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="453"/>
@@ -6439,17 +6441,17 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7822"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7841"/>
       <source>Ctrl+Shift+S</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+Shift+S</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="485"/>
       <source>Saves your profile. (Ctrl+Shift+S)&lt;p&gt;Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.&lt;/p&gt;&lt;p&gt;It also makes a backup of your profile, you can load an older version of it when connecting.&lt;/p&gt;&lt;p&gt;Should there be any modules that are marked to be &quot;&lt;i&gt;synced&lt;/i&gt;&quot; this will also cause them to be saved and reloaded into other profiles if they too are active.</source>
-      <translation type="unfinished"/>
+      <translation>保存您的个人资料。(Ctrl_Shift_S)&lt;p&gt;将整个配置文件(触发器、别名、脚本、计时器、按钮和键,而不是地图或特定于脚本的设置)保存到计算机磁盘,因此,如果计算机或程序崩溃,您所做的所有更改都将保留。&lt;/p&gt;&lt;p&gt;它还会备份您的配置文件,您可以在连接时加载其旧版本。&lt;/p&gt;&lt;p&gt;是否有任何模块标记为 &quot;&lt;i&gt;同步&lt;/i&gt;&quot; 这还会导致它们被保存并重新加载到其他配置文件,如果他们也是活动。</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="487"/>
       <source>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also &quot;synchronizes&quot; modules that are so marked.</source>
-      <translation type="unfinished"/>
+      <translation>保存您的整个配置文件（触发器、别名、脚本、定时器、按钮和键，但不能保存地图或脚本特定设置）；同时也将 同步 被标记的模块。</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="490"/>
@@ -6505,7 +6507,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="620"/>
       <source>If checked then what is searched for must match the case precisely, otherwise the case is ignored.</source>
-      <translation type="unfinished"/>
+      <translation>如果选中，则搜索的内容必须与大小写精确匹配，否则将忽略大小写。</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="659"/>
@@ -6523,18 +6525,18 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="661"/>
       <source>Where</source>
       <comment>Heading for the third column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>地点</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="662"/>
       <source>What</source>
       <comment>Heading for the fourth column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>什么</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="709"/>
       <source>start of line</source>
-      <translation type="unfinished"/>
+      <translation>行首</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2691"/>
