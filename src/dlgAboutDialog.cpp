@@ -121,9 +121,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
         h4 { font-family: "DejaVu Serif"; white-space: pre-wrap; }
         p { font-family: "DejaVu Serif" }
         tt { font-family: "Monospace"; white-space: pre-wrap; }
-        .container {
-          text-align: center;
-        }
+        .container { text-align: center; }
         </style></head>
     )"));
     // clang-format on
@@ -900,7 +898,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
 {
     // see https://www.patreon.com/mudlet if you'd like to be added!
-    QStringList mightier_than_swords = {"Maiyannah", "Qwindor Rousseau"};
+    QStringList mightier_than_swords = {"Maiyannah Bishop", "Qwindor Rousseau"};
     QStringList on_a_plaque = {"Vadim Peretokin"};
     int image_counter{1};
     supportersDocument = std::make_unique<QTextDocument>();
@@ -940,12 +938,13 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
     }
 
     QString supporters_text(QStringLiteral(R"(
-               <p><div style="text-align: center">%1</div></p>
+               <p><br><div style="text-align: center">%1<br></div></p>
                %2
+               <p><br><div style="text-align: center">%3<br></div></p>
                )")
                   .arg(tr(R"(
-                          These formidable folks will be fondly remembered forever<br>for their generous sponsorship on <a href="https://www.patreon.com/mudlet">Mudlet's patreon</a>:
-                          )"), supporters_image_html));
+                          These formidable folks will be fondly remembered forever<br>for their generous financial support on <a href="https://www.patreon.com/mudlet">Mudlet's patreon</a>:
+                          )"), supporters_image_html, tr("Go to <a href=\"https://www.patreon.com/mudlet\">patreon.com/mudlet</a> if you'd like to be mentioned here.")));
 
     supportersDocument->setHtml(QStringLiteral("<html>%1<body>%2</body></html>").arg(htmlHead, supporters_text));
     textBrowser_supporters->setDocument(supportersDocument.get());
