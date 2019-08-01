@@ -941,7 +941,7 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
     }
 
     QString supporters_text(QStringLiteral(R"(
-               <p align="center"><big><br>%1<br></big></p>
+               <p align="center"><br>%1<br></p>
                %2
                )")
                   .arg(tr(R"(
