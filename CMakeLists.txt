@@ -266,11 +266,11 @@ if(USE_UPDATER)
     endif()
 
     if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
-      message(STATUS "Sparkle CocoaPod is missing, running 'pod install' to get it...")
+      message(STATUS "Sparkle CocoaPod is missing, running updating pod repo && installing it...")
       execute_process(TIMEOUT 30
         WORKING_DIRECTORY "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods"
         COMMAND pod repo update)
-        execute_process(TIMEOUT 30
+      execute_process(TIMEOUT 30
         WORKING_DIRECTORY "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods"
         COMMAND pod install)
     endif()
