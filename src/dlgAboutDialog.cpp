@@ -943,11 +943,10 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
     QString supporters_text(QStringLiteral(R"(
                <p align="center"><big><br>%1<br></big></p>
                %2
-               <p align="center"><big><br>%3<br></big></p>
                )")
                   .arg(tr(R"(
                           These formidable folks will be fondly remembered forever<br>for their generous financial support on <a href="https://www.patreon.com/mudlet">Mudlet's patreon</a>:
-                          )"), supporters_image_html, tr("Go to <a href=\"https://www.patreon.com/mudlet\">patreon.com/mudlet</a> if you'd like to be mentioned here.")));
+                          )"), supporters_image_html));
 
     supportersDocument->setHtml(QStringLiteral("<html>%1<body>%2</body></html>").arg(htmlHead, supporters_text));
     textBrowser_supporters->setDocument(supportersDocument.get());
