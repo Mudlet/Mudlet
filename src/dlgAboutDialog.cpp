@@ -938,9 +938,9 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
     }
 
     QString supporters_text(QStringLiteral(R"(
-               <p><br><div style="text-align: center">%1<br></div></p>
+               <p align=\"center\"><big><br>%1<br></big></p>
                %2
-               <p><br><div style="text-align: center">%3<br></div></p>
+               <p align=\"center\"><big><br>%3<br></big></p>
                )")
                   .arg(tr(R"(
                           These formidable folks will be fondly remembered forever<br>for their generous financial support on <a href="https://www.patreon.com/mudlet">Mudlet's patreon</a>:
