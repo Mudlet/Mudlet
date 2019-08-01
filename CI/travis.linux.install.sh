@@ -14,13 +14,13 @@ if [ "${TRAVIS_EVENT_TYPE}" = "cron" ]; then
   # download coverity tool only for cron jobs
   mkdir coverity
   cd coverity
-  wget --no-verbose https://scan.coverity.com/download/cxx/Linux
+  wget https://scan.coverity.com/download/linux --post-data "token=${COVERITY_SCAN_TOKEN}&project=Mudlet%2FMudlet" -O coverity_tool.tgz
   if [ $? -ne 0 ]; then
 	  echo Download Coverity analysis tool failed!
 	  exit 1
   fi
-  tar xzf cov*.tar.gz
-  rm -f cov*.tar.gz
+  tar xzf coverity_tool.tgz
+  rm -f coverity_tool.tgz
   export PATH="$(pwd)/$(ls -d cov*)/bin:$PATH"
   echo The new PATH is now "${PATH}"
   cd ..
