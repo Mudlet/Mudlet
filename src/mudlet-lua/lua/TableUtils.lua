@@ -422,8 +422,8 @@ end
 ---     malfunction = "major"
 ---   }
 ---   local keys = table.keys(testTable)
----   -- key is now a table { "name", "type", "malfunction" } but the order cannot be guarunteed
----   -- as pairs() does not iterate in a guarunteed order. If you want the keys in alphabetical
+---   -- key is now a table { "name", "type", "malfunction" } but the order cannot be guaranteed
+---   -- as pairs() does not iterate in a guaranteed order. If you want the keys in alphabetical
 ---   -- run table.sort(keys) and keys == { "malfunction", "name", "type" }
 ---   </pre>
 function table.keys(t)
