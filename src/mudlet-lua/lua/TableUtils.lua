@@ -321,7 +321,6 @@ end
 ---
 --- @return Returns a table that is the relative complement of the first table with respect to
 ---   the second table. Returns a complement of key/value pairs.
-
 function table.complement(set1, set2)
   if not set1 and set2 then
     return false
