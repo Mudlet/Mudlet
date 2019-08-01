@@ -624,6 +624,12 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+         <property name="minimumSize">
+          <size>
+           <width>450</width>
+           <height>0</height>
+          </size>
+         </property>
          <property name="palette">
           <palette>
            <active>
@@ -708,6 +714,39 @@
          </property>
          <property name="openExternalLinks">
           <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_supporters">
+      <attribute name="icon">
+       <iconset resource="../mudlet.qrc">
+        <normaloff>:/icons/Patreon_Mark_Primary.png</normaloff>:/icons/Patreon_Mark_Primary.png</iconset>
+      </attribute>
+      <attribute name="title">
+       <string>Supporters</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_4">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QTextBrowser" name="textBrowser_supporters">
+         <property name="frameShape">
+          <enum>QFrame::NoFrame</enum>
          </property>
         </widget>
        </item>
