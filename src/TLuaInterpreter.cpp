@@ -15807,7 +15807,7 @@ int TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& p
             return -1; //parent not found
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setRegexCodeList(regexList, propertyList, true);
+        pT->setRegexCodeList(regexList, propertyList);
     }
     pT->setIsFolder(regexList.empty());
     pT->setIsActive(true);
@@ -15838,7 +15838,7 @@ int TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, cons
             return -1; //parent not found
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setRegexCodeList(regexList, propertyList, true);
+        pT->setRegexCodeList(regexList, propertyList);
     }
     pT->setIsFolder(regexList.empty());
     pT->setIsActive(true);
@@ -15868,7 +15868,7 @@ int TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QStrin
             return -1; //parent not found
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setRegexCodeList(regexList, propertyList, true);
+        pT->setRegexCodeList(regexList, propertyList);
     }
     pT->setIsFolder(regexList.empty());
     pT->setIsActive(true);
@@ -15897,7 +15897,7 @@ int TLuaInterpreter::startPermPromptTrigger(const QString& name, const QString& 
             return -1; //parent not found
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setRegexCodeList(regexList, propertyList, true);
+        pT->setRegexCodeList(regexList, propertyList);
     }
     pT->setIsFolder(false);
     pT->setIsActive(true);
