@@ -1635,8 +1635,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
     if (lua_gettop(L) > 1) {
         if (!lua_isboolean(L, 2)) {
             lua_pushfstring(L,
-                            "feedTriggers: bad argument #2 type (dataIsUtf8Encoded as boolean {defaults to\n"
-                            "false if omitted} is optional, got %s!)",
+                            "feedTriggers: bad argument #2 type (Utf8Encoded as boolean is optional, got %s!)",
                             luaL_typename(L, 2));
             return lua_error(L);
         }
@@ -1661,7 +1660,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
             // that the game encoding cannot convey:
         auto* pDataCodec = QTextCodec::codecForName(currentEncoding.toLatin1().constData());
         auto* pDataEncoder = pDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
-        if (!(currentEncoding.isEmpty() | currentEncoding == QStringLiteral("ASCII"))) {
+        if (!(currentEncoding.isEmpty() || currentEncoding == QStringLiteral("ASCII"))) {
             if (! pDataCodec->canEncode(dataQString)) {
                 lua_pushnil(L);
                 lua_pushfstring(L, "cannot send \"%s\" as it contains one or more characters that cannot be conveyed in the current game server encoding of \"%s\"", data.constData(), currentEncoding.toLatin1().constData());
