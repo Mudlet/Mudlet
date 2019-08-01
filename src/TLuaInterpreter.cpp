@@ -6352,15 +6352,13 @@ int TLuaInterpreter::getMousePosition(lua_State* L)
 int TLuaInterpreter::tempTimer(lua_State* L)
 {
     double time;
-    bool repeating;
+    bool repeating{};
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "tempTimer: bad argument #1 type (time in seconds as {maybe decimal} number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     time = lua_tonumber(L, 1);
 
-    // This is a static function so will not have a this pointer and we will have
-    // to get a reference to a class object and its members by looking them up:
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     if (lua_isfunction(L, 2)) {
