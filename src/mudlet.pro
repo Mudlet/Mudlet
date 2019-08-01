@@ -1189,7 +1189,7 @@ macx {
 
         !exists($$SPARKLE_PATH) {
             message("Sparkle CocoaPod is missing, running 'pod install' to get it...")
-            system("cd ../3rdparty/cocoapods && pod install");
+            system("cd ../3rdparty/cocoapods && pod repo update && pod install");
         }
 
         LIBS += -F$$SPARKLE_PATH
