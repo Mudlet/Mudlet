@@ -901,7 +901,10 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
     QStringList mightier_than_swords = {"Maiyannah Bishop", "Qwindor Rousseau"};
     QStringList on_a_plaque = {"Vadim Peretokin"};
     int image_counter{1};
-    supportersDocument = std::make_unique<QTextDocument>();
+
+    if (!supportersDocument) {
+        supportersDocument = std::make_unique<QTextDocument>();
+    }
 
     QFont nameFont;
     nameFont.setPixelSize(32);
