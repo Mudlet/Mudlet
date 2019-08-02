@@ -6922,7 +6922,8 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7628"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>无法读取文件 %1：
+%2。</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7642"/>
@@ -6977,7 +6978,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7952"/>
       <source>Choose sound file</source>
-      <translation type="unfinished"/>
+      <translation>选择声音文件</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7956"/>
@@ -9705,7 +9706,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="479"/>
       <source>React to all keybindings on the same key</source>
-      <translation type="unfinished"/>
+      <translation>响应同一键上的所有键绑定</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="489"/>
@@ -9866,7 +9867,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1281"/>
       <source>Color view</source>
-      <translation type="unfinished"/>
+      <translation>颜色视图</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1287"/>
@@ -11513,7 +11514,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="412"/>
       <source>fire length (extra lines)</source>
-      <translation type="unfinished"/>
+      <translation>触发长度(额外行数)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="470"/>
@@ -11531,12 +11532,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="519"/>
       <source>Choose file...</source>
-      <translation type="unfinished"/>
+      <translation>选择文件...</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="550"/>
       <source>no file</source>
-      <translation type="unfinished"/>
+      <translation>暂无文件</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="611"/>
