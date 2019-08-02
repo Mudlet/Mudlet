@@ -43,16 +43,16 @@ QDataStream &operator>>(QDataStream& ds, Qt::PenStyle& value)
     ds >> temporary;
     switch(temporary) {
     case Qt::DotLine:
-        [[clang::fallthrough]];
+        [[fallthrough]];
     case Qt::DashLine:
-        [[clang::fallthrough]];
+        [[fallthrough]];
     case Qt::DashDotLine:
-        [[clang::fallthrough]];
+        [[fallthrough]];
     case Qt::DashDotDotLine:
         value = static_cast<Qt::PenStyle>(temporary);
         break;
     case Qt::SolidLine:
-        [[clang::fallthrough]];
+        [[fallthrough]];
     default:
     // Force anything else to be a solidline
         value = Qt::SolidLine;

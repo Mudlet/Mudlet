@@ -71,8 +71,12 @@ macx {
     QMAKE_CFLAGS_DEBUG += -O0
 }
 
-# enable C++14 for builds.
-CONFIG += c++14
+# enable C++17 for builds.
+lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 12)) {
+    QMAKE_CXXFLAGS += -std=c++17
+} else {
+    CONFIG += c++17
+}
 
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP
@@ -206,9 +210,9 @@ unix:!macx {
         LIBS += \
 # Some OS platforms have a hyphen (I think Cygwin does as well):
             -llua-5.1\
-# FreeFSB appends the version number to hunspell:
+# FreeBSD appends the version number to hunspell:
             -lhunspell-1.7
-# FreeFSB (at least) supports multiple Lua versions (and 5.1 is not the default anymore):
+# FreeBSD (at least) supports multiple Lua versions (and 5.1 is not the default anymore):
         INCLUDEPATH += \
             /usr/local/include/lua51
     } else {

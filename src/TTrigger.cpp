@@ -34,9 +34,6 @@
 #include <cassert>
 #include <sstream>
 
-
-using namespace std;
-
 // Some extraordinary numbers outside of the range (0-255) used for ANSI colors:
 // Changing them WILL modify the Lua API of TLuaInterpreter::tempColorTrigger
 // and the replacement TLuaInterpreter::tempAnsiColorTrigger
@@ -106,7 +103,7 @@ TTrigger::TTrigger(const QString& name, const QStringList& regexList, const QLis
 , mRegisteredAnonymousLuaFunction(false)
 , mExpiryCount(-1)
 {
-    setRegexCodeList(regexList, regexProperyList);
+    setRegexCodeList(regexList, regexProperyList, true);
 }
 
 TTrigger::~TTrigger()
@@ -133,9 +130,8 @@ TTrigger::~TTrigger()
 
 void TTrigger::setName(const QString& name)
 {
-    if( ! isTemporary() )
-    {
-        mpHost->getTriggerUnit()->mLookupTable.remove( mName, this );
+    if (!isTemporary()) {
+        mpHost->getTriggerUnit()->mLookupTable.remove(mName, this);
     }
     mName = name;
     mpHost->getTriggerUnit()->mLookupTable.insertMulti(name, this);
@@ -147,7 +143,7 @@ static void pcre_deleter(pcre* pointer)
 }
 
 //FIXME: sperren, wenn code nicht compiliert werden kann *ODER* regex falsch
-bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
+bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList, const bool addingTrigger)
 {
     regexList.replaceInStrings("\n", "");
     mRegexCodeList.clear();
@@ -177,11 +173,14 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
         qDebug() << "[CRITICAL ERROR (plz report):] Trigger name=" << mName << " aborting reason: propertyList.size() != regexList.size()";
     }
 
-    if ((propertyList.empty()) && (!isFolder()) && (!mColorTrigger)) {
+    if (!addingTrigger && ((propertyList.empty()) && (!isFolder()) && (!mColorTrigger))) {
         setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
                 .arg(tr("Error: This trigger has no patterns defined, yet. Add some to activate it.")));
         mOK_init = false;
         return false;
+    } else if (addingTrigger) {
+        mOK_init = true;
+        return true;
     }
 
     bool state = true;
@@ -768,7 +767,7 @@ bool TTrigger::match_line_spacer(int regexNumber)
                                 >> 0;
                     }
                     matchStatePair.second->conditionMatched();
-                    std::list<string> captureList;
+                    std::list<std::string> captureList;
                     std::list<int> posList;
                     matchStatePair.second->multiCaptureList.push_back(captureList);
                     matchStatePair.second->multiCapturePosList.push_back(posList);
@@ -967,7 +966,7 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
         if (mIsMultiline) {
             int k = 0;
             conditionMet = false; //invalidate conditionMet as it has no meaning for multiline triggers
-            list<TMatchState*> removeList;
+            std::list<TMatchState*> removeList;
 
             for (auto& matchStatePair : mConditionMap) {
                 k++;
