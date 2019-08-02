@@ -881,9 +881,7 @@ void mudlet::scanForMudletTranslations(const QString& path)
         languageCode.remove(QStringLiteral(".qm"), Qt::CaseInsensitive);
         int percentageTranslated = -1;
 
-        auto* pTranslator = new QTranslator();
-        std::unique_ptr<QTranslator> pMudletTranslator(pTranslator);
-        auto translationPathFileName(path % QLatin1Char('/') % translationFileName);
+        std::unique_ptr<QTranslator> pMudletTranslator = std::make_unique<QTranslator>();
         if (Q_LIKELY(pMudletTranslator->load(translationFileName, path))) {
             qDebug().noquote().nospace() << "    found a Mudlet translation for locale code: \"" << languageCode << "\".";
             if (!translationStats.isEmpty()) {
@@ -937,8 +935,6 @@ void mudlet::scanForMudletTranslations(const QString& path)
             // one...
             qDebug().noquote().nospace() << "    no Mudlet translation found for locale code: \"" << languageCode << "\".";
         }
-        // As pQtTranslator goes out of scope at the end of each loop it will
-        // dispose of the temporarily created QTranslator for us...
     }
 }
 
@@ -954,8 +950,7 @@ void mudlet::scanForQtTranslations(const QString& path)
     while (itTranslation.hasNext()) {
         itTranslation.next();
         const QString languageCode = itTranslation.key();
-        auto* pTranslator = new QTranslator();
-        std::unique_ptr<QTranslator> pQtTranslator(pTranslator);
+        std::unique_ptr<QTranslator> pQtTranslator = std::make_unique<QTranslator>();
         QString translationFileName(QStringLiteral("qt_%1.qm").arg(languageCode));
         if (pQtTranslator->load(translationFileName, path)) {
             qDebug().noquote().nospace() << "    found a Qt translation for locale code: \"" << languageCode << "\"";

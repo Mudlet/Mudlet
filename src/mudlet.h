@@ -415,7 +415,6 @@ public:
     // translations done high enough will get a gold star to hide the last few percent
     // as well as encourage translators to maintain it;
     const int mTranslationGoldStar = 95;
-    const int mTranslationSilverStar = 75;
 
     // A list of potential dictionary languages - probably will cover a much
     // wider range of languages compared to the translations - and is intended
@@ -492,14 +491,6 @@ signals:
     void signal_menuBarVisibilityChanged(const controlsVisibility);
     void signal_toolBarVisibilityChanged(const controlsVisibility);
     void signal_showIconsOnMenusChanged(const Qt::CheckState);
-    // Not currently used but could be by recipient classes for them to execute
-    // retranslateUi(...) and then regenerate all their persistent texts that
-    // are user facing in the new language immediately on locale/language
-    // change instead of waiting until the Mudlet application is restarted with
-    // the new setting.  This would be more efficient than responding to
-    // QEvent::LanguageChange as that event is fired for EVERY invocation of
-    // QCoreApplication::installTranslator and QCoreApplication::removeTranslator
-    // and there can be now FOUR of those every time the GUI language is changed:
     void signal_guiLanguageChanged(const QString&);
 
 
@@ -693,7 +684,7 @@ public:
     const QString& getMudletTranslationFileName() const { return mMudletTranslationFileName; }
     const QString& getQtTranslationFileName() const { return mQtTranslationFileName; }
     const int& getTranslatedPercentage() const { return mTranslatedPercentage; }
-    bool getIsFromResourceFile() const { return mTranslatedPercentage >= 0; }
+    bool fromResourceFile() const { return mTranslatedPercentage >= 0; }
 
 private:
     // Used for display in the profile preferences and is never translated:

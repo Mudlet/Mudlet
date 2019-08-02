@@ -261,7 +261,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     for (auto& code : pMudlet->getAvailableTranslationCodes()) {
         auto& translation = pMudlet->mTranslationsMap.value(code);
         auto& nativeName = translation.getNativeName();
-        if (translation.getIsFromResourceFile()) {
+        if (translation.fromResourceFile()) {
             auto& translatedPc = translation.getTranslatedPercentage();
             if (translatedPc >= pMudlet->mTranslationGoldStar) {
                 comboBox_guiLanguage->addItem(QIcon(":/icons/rating.png"),
@@ -281,11 +281,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
             }
         } else {
             // For translations that come from somewhere else we are not likely
-            // to have the translations statistics - instead show a floppy disk
-            // icon to show that it is coming from a file from the file-system
-            comboBox_guiLanguage->addItem(QIcon(":/icons/document-save.png"),
-                                          nativeName,
-                                          code);
+            // to have the translations statistics so no icon and no extra text:
+            comboBox_guiLanguage->addItem(QIcon(), nativeName, code);
         }
     }
     comboBox_guiLanguage->model()->sort(0);
@@ -3443,7 +3440,7 @@ void dlgProfilePreferences::slot_changeGuiLanguage(const QString& language)
 
 // This slot is called when the mudlet singleton tells everything that the
 // locale/language selection has been changed (new translators installed)
-// It probably came about because the control for it on this dialog was changed
+// It probably came about because the control for it on THIS dialog was changed
 // but it need not - the most obvious example would be if multi-playing and
 // the preferences were open for more than one profile and the control was
 // changed in another profile's preferences.
@@ -3464,14 +3461,6 @@ void dlgProfilePreferences::slot_guiLanguageChanged(const QString& language)
     // it is the one the user understands rather than the currently used one.
     retranslateUi(this);
 
-    // If we wanted to support changing the locale/language without
-    // having to restart then the above retranslateUi(...) call would have to
-    // be done in a similiar manner for all classes that, at least, contain
-    // persistent text. In addition further code here and in other classes
-    // would have to be provided to regenerate any texts that are assembled
-    // after the class instance was created {i.e. outside of the setupUi(...)
-    // call in the constructor}
-
     // Re identify which Profile we are showing the settings for (otherwise if
     // multiple profiles have this dialog open they revert to a plain
     // "Profile preferences" dialog title except that duplicates get a " <#>"
@@ -3481,4 +3470,10 @@ void dlgProfilePreferences::slot_guiLanguageChanged(const QString& language)
     if (mpHost) {
         setWindowTitle(tr("Profile preferences - %1").arg(mpHost->getName()));
     }
+
+    // If we wanted to support changing the locale/language without having to
+    // restart then the above: retranslateUi(...) + regenerate texts that are
+    // assembled after the class instance was created {i.e. outside of the
+    // setupUi(...) call in the constructor} would be needed in every class with
+    // persistent UI texts - this is not trivial and has been deemed NWIH...!
 }
