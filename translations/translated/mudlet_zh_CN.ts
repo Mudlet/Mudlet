@@ -11479,7 +11479,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="199"/>
       <source>AND / Multi-line (delta)</source>
-      <translation type="unfinished"/>
+      <translation>多行匹配(delta)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="251"/>
@@ -11489,7 +11489,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="257"/>
       <source>only pass matches</source>
-      <translation type="unfinished"/>
+      <translation>仅通过匹配项</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="293"/>
