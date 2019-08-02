@@ -103,7 +103,7 @@ TTrigger::TTrigger(const QString& name, const QStringList& regexList, const QLis
 , mRegisteredAnonymousLuaFunction(false)
 , mExpiryCount(-1)
 {
-    setRegexCodeList(regexList, regexProperyList, true);
+    setRegexCodeList(regexList, regexProperyList);
 }
 
 TTrigger::~TTrigger()
@@ -130,8 +130,9 @@ TTrigger::~TTrigger()
 
 void TTrigger::setName(const QString& name)
 {
-    if (!isTemporary()) {
-        mpHost->getTriggerUnit()->mLookupTable.remove(mName, this);
+    if( ! isTemporary() )
+    {
+        mpHost->getTriggerUnit()->mLookupTable.remove( mName, this );
     }
     mName = name;
     mpHost->getTriggerUnit()->mLookupTable.insertMulti(name, this);
@@ -143,7 +144,7 @@ static void pcre_deleter(pcre* pointer)
 }
 
 //FIXME: sperren, wenn code nicht compiliert werden kann *ODER* regex falsch
-bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList, const bool addingTrigger)
+bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
 {
     regexList.replaceInStrings("\n", "");
     mRegexCodeList.clear();
@@ -174,15 +175,10 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList, 
     }
 
     if ((propertyList.empty()) && (!isFolder()) && (!mColorTrigger)) {
-        if (!addingTrigger) {
-            setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
-                     .arg(tr("Error: This trigger has no patterns defined, yet. Add some to activate it.")));
-            mOK_init = false;
-            return false;
-        } else {
-            mOK_init = true;
-            return true;
-        }
+        setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
+                .arg(tr("Error: This trigger has no patterns defined, yet. Add some to activate it.")));
+        mOK_init = false;
+        return false;
     }
 
     bool state = true;
