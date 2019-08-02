@@ -235,7 +235,7 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>&lt;p&gt;Within how many lines must all condition be true to fire the trigger?&lt;/p&gt;</string>
+               <string>&lt;p&gt;Within how many lines must all conditions be true to fire the trigger?&lt;/p&gt;</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignCenter</set>
