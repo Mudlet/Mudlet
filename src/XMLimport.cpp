@@ -994,6 +994,7 @@ void XMLimport::readHostPackage(Host* pHost)
                 pHost->mLightWhite.setNamedColor(readElementText());
             } else if (name() == "mDisplayFont") {
                 pHost->mDisplayFont.fromString(readElementText());
+                QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
                 pHost->mDisplayFont.setFixedPitch(true);
             } else if (name() == "mCommandLineFont") {
                 pHost->mCommandLineFont.fromString(readElementText());
@@ -1169,7 +1170,7 @@ int XMLimport::readTriggerGroup(TTrigger* pParent)
         }
     }
 
-    if (!pT->setRegexCodeList(pT->mRegexCodeList, pT->mRegexCodePropertyList)) {
+    if (!pT->setRegexCodeList(pT->mRegexCodeList, pT->mRegexCodePropertyList, true)) {
         qDebug().nospace() << "XMLimport::readTriggerGroup(...): ERROR: can not "
                               "initialize pattern list for trigger: "
                            << pT->getName();
