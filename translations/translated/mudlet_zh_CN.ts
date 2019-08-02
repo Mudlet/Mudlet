@@ -9946,7 +9946,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="221"/>
       <source>Please restart Mudlet to apply the new language</source>
-      <translation type="unfinished"/>
+      <translation>请重新启动 Mudlet 以应用新语言</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="466"/>
