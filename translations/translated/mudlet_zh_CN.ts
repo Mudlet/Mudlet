@@ -11489,12 +11489,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="257"/>
       <source>only pass matches</source>
-      <translation>仅通过匹配项</translation>
+      <translation>仅传递匹配项</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="293"/>
       <source>Do not pass whole line to children.</source>
-      <translation type="unfinished"/>
+      <translation>不将整行传递给子触发器。</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="315"/>
