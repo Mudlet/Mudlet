@@ -183,7 +183,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
                            QStringLiteral("keneanung@googlemail.com"),
                            tr("Contributed many improvements to Mudlet's db: interface, event system, "
                               "and has been around the project for a very long while assisting users.",
-                              "about:keneanung")
+                              "about:keneanung")});
     aboutBigMakers.append({QStringLiteral("Leris"),
                            QStringLiteral("Leris#5152"),
                            QStringLiteral("Kebap"),
