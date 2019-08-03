@@ -324,7 +324,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
     textBrowser_mudlet->setHtml(
             QStringLiteral("<html>%1<body><table border=\"0\" style=\"margin-top:36px; margin-bottom:36px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
                            "%2</table>\n"
-                           "%3%4</body></html>")
+                           "%3</body></html>")
                     .arg(htmlHead, aboutMudletHeader, aboutMudletBody));
     // clang-format on
 }
