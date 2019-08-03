@@ -2398,7 +2398,9 @@ void dlgProfilePreferences::slot_save_and_exit()
     }
 
 #if defined(INCLUDE_UPDATER)
-    pMudlet->updater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
+    if (!mudlet::scmIsDevelopmentVersion) {
+        pMudlet->updater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
+    }
 #endif
 
     pMudlet->setToolBarIconSize(MainIconSize->value());
