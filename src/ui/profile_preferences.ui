@@ -167,9 +167,6 @@
        </item>
        <item row="1" column="0">
         <widget class="QGroupBox" name="groupBox_encoding">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
          <property name="title">
           <string>Language &amp;&amp; data encoding</string>
          </property>
@@ -184,13 +181,8 @@
           <item row="0" column="1">
            <widget class="QComboBox" name="comboBox_guiLanguage">
             <property name="toolTip">
-             <string>&lt;p&gt;Can you help translate Mudlet? &lt;span style=&quot;font-weight:600;&quot;&gt;https://www.mudlet.org/translate&lt;/span&gt;&lt;/p&gt;</string>
+             <string>&lt;p&gt;Can you help translate Mudlet?&lt;/p&gt;&lt;p&gt;If so, please visit: &lt;b&gt;https://www.mudlet.org/translate&lt;/b&gt;.&lt;/p&gt;</string>
             </property>
-            <item>
-             <property name="text">
-              <string>English</string>
-             </property>
-            </item>
            </widget>
           </item>
           <item row="0" column="2">
@@ -228,9 +220,9 @@
        <item row="2" column="0">
         <widget class="QGroupBox" name="groupBox_miscellaneous">
          <property name="title">
-          <string>Misc</string>
+          <string>Miscellaneous</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout">
+         <layout class="QVBoxLayout" name="verticalLayout_groupBox_miscellaneous">
           <item>
            <widget class="QCheckBox" name="mAlertOnNewData">
             <property name="text">
@@ -531,7 +523,7 @@
          <property name="title">
           <string>Spell checking</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_2">
+         <layout class="QVBoxLayout" name="verticalLayout_groupBox_spellCheck">
           <item>
            <widget class="QCheckBox" name="checkBox_spellCheck">
             <property name="toolTip">
@@ -697,7 +689,7 @@
          <property name="title">
           <string>Display Border</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout">
+         <layout class="QGridLayout" name="gridLayout_groupBox_borders">
           <item row="0" column="0">
            <widget class="QLabel" name="label_26">
             <property name="sizePolicy">
@@ -4958,7 +4950,7 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout">
+     <layout class="QHBoxLayout" name="horizontalLayout_widget_bottom">
       <item>
        <spacer name="horizontalSpacer_bottom">
         <property name="orientation">
