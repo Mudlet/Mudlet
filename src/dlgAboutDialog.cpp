@@ -329,7 +329,8 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
     // clang-format on
 }
 
-QString createMakerHTML (QStringList aboutMaker, bool big) {
+QString createMakerHTML (QStringList &aboutMaker, bool big) const
+{
     QString makerHTML;
     auto realname = aboutMaker.at(0);
     auto discord = aboutMaker.at(1);
@@ -1085,7 +1086,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     // clang-format on
 }
 
-void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
+void dlgAboutDialog::setSupportersTab(const QString& htmlHead) const
 {
     // see https://www.patreon.com/mudlet if you'd like to be added!
     QStringList mightier_than_swords = {"Maiyannah Bishop", "Qwindor Rousseau"};
