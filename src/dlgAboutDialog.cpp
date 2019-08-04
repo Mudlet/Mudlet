@@ -200,13 +200,6 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
                             tr("Contributions to the Travis integration, CMake and Visual C++ build, "
                                "a lot of code quality and memory management improvements.",
                                "about:ahmedcharles")});
-    aboutMoreMakers.append({QStringLiteral("Ahmed Charles"),
-                            QString(),
-                            QStringLiteral("ahmedcharles"),
-                            QStringLiteral("acharles@outlook.com"),
-                            tr("Contributed to the Travis integration, CMake and Visual C++ build, "
-                               "a lot of code quality and memory management improvements.",
-                               "about:ahmedcharles")});
     aboutMoreMakers.append({QStringLiteral("Chris Mitchell"),
                             QString(),
                             QStringLiteral("Chris7"),
