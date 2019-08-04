@@ -329,7 +329,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
     // clang-format on
 }
 
-QString dlgAboutDialog::createMakerHTML(QStringList &aboutMaker, bool big) const
+QString dlgAboutDialog::createMakerHTML(const QStringList aboutMaker, const bool big) const
 {
     QString makerHTML;
     auto realname = aboutMaker.at(0);

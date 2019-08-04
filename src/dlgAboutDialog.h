@@ -42,7 +42,7 @@ private:
     void setLicenseTab(const QString& htmlHead) const;
     void setThirdPartyTab(const QString& htmlHead) const;
     void setSupportersTab(const QString &htmlHead);
-    QString createMakerHTML(const QStringList&, const bool) const;
+    QString createMakerHTML(const QStringList, const bool) const;
 };
 
 #endif // MUDLET_DLGABOUTDIALOG_H
