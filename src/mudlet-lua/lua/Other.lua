@@ -647,10 +647,10 @@ function mudletOlderThan(inputmajor, inputminor, inputpatch)
   if mudletmajor < inputmajor then
     return true
   end
-  if inputminor and (mudletminor < inputminor) then
+  if inputminor and (mudletminor < inputminor) and (mudletmajor == inputmajor) then
     return true
   end
-  if inputpatch and (mudletpatch < inputpatch) then
+  if inputpatch and (mudletpatch < inputpatch) and inputminor and (mudletminor == inputminor) and (mudletmajor == inputmajor) then
     return true
   end
 
