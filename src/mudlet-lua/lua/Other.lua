@@ -652,15 +652,11 @@ function mudletOlderThan(inputmajor, inputminor, inputpatch)
       return true
     elseif mudletminor > inputminor then
       return false
-    elseif inputpatch and mudletpatch and (mudletpatch < inputpatch) then
-      return true
-    else
-      return false
+    elseif inputpatch and (mudletpatch < inputpatch) then
+        return true
     end
-  else
-    return false --major and minor match, no input, so we're not less than
   end
-	
+  return false
 end
 
 -- condendenses the output from map loading if no map load errors
