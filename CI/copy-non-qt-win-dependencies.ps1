@@ -1,7 +1,7 @@
 COPY $Env:MINGW_BASE_DIR\bin\libyajl.dll .
 COPY $Env:MINGW_BASE_DIR\bin\lua51.dll .
-COPY $Env:MINGW_BASE_DIR\bin\libeay32.dll .
-COPY $Env:MINGW_BASE_DIR\bin\ssleay32.dll .
+COPY $Env:MINGW_BASE_DIR\bin\libcrypto-1_1.dll .
+COPY $Env:MINGW_BASE_DIR\bin\libssl-1_1.dll .
 COPY $Env:MINGW_BASE_DIR\bin\libzip.dll .
 COPY $Env:MINGW_BASE_DIR\bin\libhunspell-1.6-0.dll .
 COPY $Env:MINGW_BASE_DIR\bin\libpcre-1.dll .
