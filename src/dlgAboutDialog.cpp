@@ -143,7 +143,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
            "<tr><td><span style=\"color:#40b040;\"><b>Source code</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet\">github.com/Mudlet/Mudlet</a></td></tr>\n"
            "<tr><td><span style=\"color:#40b040;\"><b>Features/bugs</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet/issues\">github.com/Mudlet/Mudlet/issues</a></td></tr>"));
     
-    QVector<aboutMaker> aboutMakers; 
+    QVector<aboutMaker> aboutMakers; // [big?, name, discord, github, email, description]
     aboutMakers.append({true, QStringLiteral("Heiko Köhn"), QString(), QString(), QStringLiteral("KoehnHeiko@googlemail.com"),
                         tr("Original author, original project lead, Mudlet core coding, retired.",
                            "about:Heiko")});
@@ -254,26 +254,20 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
     // clang-format on
 }
 
-QString dlgAboutDialog::createMakerHTML(const QStringList aboutMaker, const bool big) const
+QString dlgAboutDialog::createMakerHTML(const aboutMaker maker) const
 {
-    auto realname = aboutMaker.at(0);
-    auto discord = aboutMaker.at(1);
-    auto github = aboutMaker.at(2);
-    auto email = aboutMaker.at(3);
-    auto description = aboutMaker.at(4);
-
     QString coloredText("<span style=\"color:#%1;\">%2</span>");
     QStringList contactDetails;
-    if (!discord.isEmpty()) {contactDetails.append(coloredText.arg("7289DA", discord));}
-    if (!github.isEmpty()) {contactDetails.append(coloredText.arg("40b040", github));}
-    if (!email.isEmpty()) {contactDetails.append(coloredText.arg("0000ff", email));}
+    if (!maker.discord.isEmpty()) {contactDetails.append(coloredText.arg("7289DA", maker.discord));}
+    if (!maker.github.isEmpty()) {contactDetails.append(coloredText.arg("40b040", maker.github));}
+    if (!maker.email.isEmpty()) {contactDetails.append(coloredText.arg("0000ff", maker.email));}
 
     return QStringLiteral("<p>%1%2 %3</p>\n") // name (big?), contacts (if any?), description
         .arg(coloredText.arg("bc8942", QStringLiteral("<b>%1</b>")
-             .arg((big) ? QStringLiteral("<big>%1</big>").arg(realname) : realname)),
+             .arg((maker.big) ? QStringLiteral("<big>%1</big>").arg(maker.name) : maker.name)),
              (contactDetails.isEmpty()) ? QString() :
                  QStringLiteral(" (%1)").arg(contactDetails.join(QChar::Space)),
-             description);
+             maker.description);
 }
 
 void dlgAboutDialog::setLicenseTab(const QString& htmlHead) const
