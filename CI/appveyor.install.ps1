@@ -204,7 +204,7 @@ function InstallPython() {
 }
 
 function InstallOpenssl() {
-  DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.1.1c-win32.zip" "openssl-win32.zip"
+  DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.0.2s-win32.zip" "openssl-win32.zip"
   ExtractZip "openssl-win32.zip" "openssl"
   Step "installing"
   exec "XCOPY" @("/S", "/I", "/Q", "openssl", "$Env:MINGW_BASE_DIR\bin")
@@ -413,7 +413,7 @@ $Env:PATH = $ShPath
 # But on the other hand we keep sh.exe in the PATH to easily run "configure" scripts. So we create 2 variables and assign PATH accordingly.
 $NoShPath = filterPathForSh
 
-CheckAndInstall "openssl" "$Env:MINGW_BASE_DIR\bin\libssl-1_1.dll" { InstallOpenssl }
+CheckAndInstall "openssl" "$Env:MINGW_BASE_DIR\bin\ssleay32.dll" { InstallOpenssl }
 CheckAndInstall "hunspell" "$Env:MINGW_BASE_DIR\bin\libhunspell-1.6-0.dll" { InstallHunspell }
 CheckAndInstall "yajl" "$Env:MINGW_BASE_DIR\bin\libyajl.dll" { InstallYajl }
 CheckAndInstall "lua" "$Env:MINGW_BASE_DIR\bin\lua51.dll" { InstallLua }
