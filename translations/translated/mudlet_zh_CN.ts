@@ -1832,7 +1832,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMap.cpp" line="503"/>
       <source>[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...</source>
-      <translation>[ 完成 ] - 审核地图完成(%1s). 祝游戏愉快...</translation>
+      <translation>[ 完成 ]  - 审核地图完成(%1s). 祝游戏愉快...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="510"/>
@@ -3956,7 +3956,7 @@ Reason: </source>
       <location filename="../src/ctelnet.cpp" line="561"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 via proxy...
 </source>
-      <translation>[ 信息 ] -正在尝试通过via代理连接到 %1:%2 ...
+      <translation>[ 信息 ]  - 正在尝试通过via代理连接到 %1:%2 ...
 </translation>
     </message>
     <message>
