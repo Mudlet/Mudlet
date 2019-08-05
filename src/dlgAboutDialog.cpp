@@ -143,12 +143,12 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
            "<tr><td><span style=\"color:#40b040;\"><b>Source code</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet\">github.com/Mudlet/Mudlet</a></td></tr>\n"
            "<tr><td><span style=\"color:#40b040;\"><b>Features/bugs</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet/issues\">github.com/Mudlet/Mudlet/issues</a></td></tr>"));
 
-    QVector<QStringList> aboutBigMakers; // [name, discord, github, email, description (HTML escaped)]
+    QVector<QStringList> aboutBigMakers; // [name, discord, github, email, description] (HTML escaped)
     aboutBigMakers.append({QStringLiteral("Heiko Köhn"), 
                            QString(),
                            QString(),
                            QStringLiteral("KoehnHeiko@googlemail.com"),
-                           tr("Original author.",
+                           tr("Original author, original project lead, Mudlet core coding, retired.",
                               "about:Heiko")});
     aboutBigMakers.append({QStringLiteral("Vadim Peretokin"),
                            QStringLiteral("Vadi#3695"),
@@ -204,25 +204,29 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
                             QString(),
                             QStringLiteral("Chris7"),
                             QStringLiteral("chrismudlet@gmail.com"),
-                            tr("Developed a shared module system that allows script packages to be shared among profiles, a UI for viewing Lua variables, improvements in the mapper and all around.",
+                            tr("Developed a shared module system that allows script packages to be shared among profiles, "
+                               "a UI for viewing Lua variables, improvements in the mapper and all around.",
                                "about:Chris7")});
     aboutMoreMakers.append({QStringLiteral("Ben Carlsen"),
                             QString(),
                             QString(),      
                             QStringLiteral("arkholt@gmail.com"),
-                            tr("Developed the first version of our Mac OSX installer. He is the former maintainer of the Mac version of Mudlet.",
+                            tr("Developed the first version of our Mac OSX installer. "
+                               "He is the former maintainer of the Mac version of Mudlet.",
                                "about:Ben Carlsen")});
     aboutMoreMakers.append({QStringLiteral("Ben Smith"),
                             QString(),
                             QString(),
                             QString(),
-                            tr("Joined in December 2009 though he's been around much longer. Contributed to the Lua API and is the former maintainer of the Lua API.",
+                            tr("Joined in December 2009 though he's been around much longer. "
+                               "Contributed to the Lua API and is the former maintainer of the Lua API.",
                                "about:Ben Smith")});
     aboutMoreMakers.append({QStringLiteral("Blaine von Roeder"),
                             QString(),
                             QString(),
                             QString(),
-                            tr("Joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches and has helped with release management of 1.0.5.",
+                            tr("Joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches "
+                               "and has helped with release management of 1.0.5.",
                                "about:Blaine von Roeder")});
     aboutMoreMakers.append({QStringLiteral("Bruno Bigras"),
                             QString(),
@@ -237,19 +241,19 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
                             tr("Contributed to the Lua API.",
                                "about:Carter Dewey")});
     aboutMoreMakers.append({QStringLiteral("Erik Pettis"),
-                            QStringLiteral("Oneymus' Etomyutikos#9266"),
+                            QStringLiteral("Etomyutikos#9266"),
                             QStringLiteral("Oneymus"),
                             QString(),
                             tr("Developed the Vyzor GUI Manager for Mudlet.",
                                "about:Oneymus")});
     aboutMoreMakers.append({QStringLiteral("\"ItsTheFae\""),
-                            QString(),
+                            QStringLiteral("TheFae#9971"),
                             QStringLiteral("Kae"),
                             QString(),
                             tr("Worked wonders in rejuventating our Website in 2017 but who prefers a little anonymity - "
                                "if you are a <i>SpamBot</i> you will not get onto our Fora now. They have also made some useful "
                                "C++ core code contributions and we look forward to future reviews on and work in that area.",
-                               "about:ItsTheFae")});
+                               "about:TheFae")});
     aboutMoreMakers.append({QStringLiteral("Ian Adkins"),
                             QStringLiteral("Dicene#1533"),
                             QStringLiteral("dicene"),
@@ -260,7 +264,8 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
                             QString(),
                             QString(),
                             QStringLiteral("daemacles@yahoo.com"),
-                            tr("Contributed the Geyser layout manager for Mudlet in March 2010. It is written in Lua and aims at simplifying user GUI scripting.",
+                            tr("Contributed the Geyser layout manager for Mudlet in March 2010. "
+                               "It is written in Lua and aims at simplifying user GUI scripting.",
                                "about:James Younquist")});
     aboutMoreMakers.append({QStringLiteral("John Dahlström"),
                             QString(),
@@ -324,47 +329,24 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
 
 QString dlgAboutDialog::createMakerHTML(const QStringList aboutMaker, const bool big) const
 {
-    QString makerHTML;
     auto realname = aboutMaker.at(0);
     auto discord = aboutMaker.at(1);
     auto github = aboutMaker.at(2);
     auto email = aboutMaker.at(3);
     auto description = aboutMaker.at(4);
-    // "<p><span style=\"color:#bc8942;\"><big><b>Vadim Peretokin</b></big></span>"
-    // (
-    // <span style=\"color:#7289DA;\">Vadi#3695</span>
-    // <span style=\"color:#40b040;\">vadi2</span>
-    // <span style=\"color:#0000ff;\">vadim.peretokin@mudlet.org</span>
-    // )
-    // GUI design and initial feature planning. He is responsible for the project homepage and the user manual. Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp; user help. With the project from the very beginning and is an official spokesman of the project. Since the retirement of Heiko, he has become the head of the Mudlet project.
-    // </p>\n"
 
-    makerHTML.append(QStringLiteral("<p><span style=\"color:#bc8942;\">"));
-    if (big) {makerHTML.append(QStringLiteral("<big>"));}
-    makerHTML.append(QStringLiteral("<b>"));
-    makerHTML.append(realname);
-    makerHTML.append(QStringLiteral("</b>"));
-    if (big) {makerHTML.append(QStringLiteral("</big>"));}
-    makerHTML.append(QStringLiteral("</span> ("));
-    if (!discord.isEmpty()) {
-        makerHTML.append(QStringLiteral("<span style=\"color:#7289DA;\">"));
-        makerHTML.append(discord);
-        makerHTML.append(QStringLiteral("</span> "));
-    }
-    if (!github.isEmpty()) {
-        makerHTML.append(QStringLiteral("<span style=\"color:#40b040;\">"));
-        makerHTML.append(github);
-        makerHTML.append(QStringLiteral("</span> "));
-    }
-    if (!email.isEmpty()) {
-        makerHTML.append(QStringLiteral("<span style=\"color:#0000ff;\">"));
-        makerHTML.append(email);
-        makerHTML.append(QStringLiteral("</span> "));
-    }
-    makerHTML.append(QStringLiteral(") "));
-    makerHTML.append(description);
-    makerHTML.append(QStringLiteral("</p>\n"));
-    return makerHTML;
+    QString coloredText("<span style=\"color:#%1;\">%2</span>");
+    QStringList contactDetails;
+    if (!discord.isEmpty()) {contactDetails.append(coloredText.arg("7289DA", discord));}
+    if (!github.isEmpty()) {contactDetails.append(coloredText.arg("40b040", github));}
+    if (!email.isEmpty()) {contactDetails.append(coloredText.arg("0000ff", email));}
+
+    return QStringLiteral("<p>%1%2 %3</p>\n") // name (big?), contacts (if any?), description
+        .arg(coloredText.arg("bc8942", QStringLiteral("<b>%1</b>")
+             .arg((big) ? QStringLiteral("<big>%1</big>").arg(realname) : realname)),
+             (contactDetails.isEmpty()) ? QString() :
+                 QStringLiteral(" (%1)").arg(contactDetails.join(QChar::Space)),
+             description);
 }
 
 void dlgAboutDialog::setLicenseTab(const QString& htmlHead) const
