@@ -235,7 +235,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
                            "about:Thorsten Wilms")});
 
     QString aboutMudletBody("<p align=\"center\"><big><b>Credits:</b></big></p>");
-    QVectorIterator<QStringList> iterateMakers(aboutMakers);
+    QVectorIterator<aboutMaker> iterateMakers(aboutMakers);
     while (iterateMakers.hasNext()) { aboutMudletBody.append(createMakerHTML(iterateMakers.next())); }
 
     aboutMudletBody.append(
