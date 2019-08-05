@@ -950,4 +950,5 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
 
     supportersDocument->setHtml(QStringLiteral("<html>%1<body>%2</body></html>").arg(htmlHead, supporters_text));
     textBrowser_supporters->setDocument(supportersDocument.get());
+    textBrowser_supporters->setOpenExternalLinks(true);
 }
