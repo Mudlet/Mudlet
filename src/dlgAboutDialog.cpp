@@ -142,174 +142,101 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
            "<tr><td><span style=\"color:#7289DA;\"><b>Discord</b></span></td><td><a href=\"https://discord.gg/kuYvMQ9\">discord.gg</a></td></tr>\n"
            "<tr><td><span style=\"color:#40b040;\"><b>Source code</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet\">github.com/Mudlet/Mudlet</a></td></tr>\n"
            "<tr><td><span style=\"color:#40b040;\"><b>Features/bugs</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet/issues\">github.com/Mudlet/Mudlet/issues</a></td></tr>"));
-
-    QVector<QStringList> aboutBigMakers; // [name, discord, github, email, description] (HTML escaped)
-    aboutBigMakers.append({QStringLiteral("Heiko Köhn"), 
-                           QString(),
-                           QString(),
-                           QStringLiteral("KoehnHeiko@googlemail.com"),
-                           tr("Original author, original project lead, Mudlet core coding, retired.",
-                              "about:Heiko")});
-    aboutBigMakers.append({QStringLiteral("Vadim Peretokin"),
-                           QStringLiteral("Vadi#3695"),
-                           QStringLiteral("vadi2"),
-                           QStringLiteral("vadim.peretokin@mudlet.org"),
-                           tr("GUI design and initial feature planning. He is responsible for the project homepage and the user manual. "
-                              "Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. "
-                              "Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp; user help. "
-                              "With the project from the very beginning and is an official spokesman of the project. "
-                              "Since the retirement of Heiko, he has become the head of the Mudlet project.",
-                              "about:Vadi")});
-    aboutBigMakers.append({QStringLiteral("Stephen Lyons"),
-                           QStringLiteral("SlySven#2703"),
-                           QStringLiteral("SlySven"),
-                           QStringLiteral("slysven@virginmedia.com"),
-                           tr("After joining in 2013, he has been poking various bits of the C++ code and GUI with a pointy stick; "
-                              "subsequently trying to patch over some of the holes made/found. "
-                              "Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language "
-                              "other than American English you will be seeing the results of him getting fed up with the spelling differences "
-                              "between what was being used and the British English his brain wanted to see.",
-                              "about:SlySven")});
-    aboutBigMakers.append({QStringLiteral("Damian Monogue"),
-                           QStringLiteral("demonnic#4307"),
-                           QStringLiteral("demonnic"),
-                           QStringLiteral("demonnic@gmail.com"),
-                           tr("Former maintainer of the early Windows and Apple OSX packages. "
-                              "He also administers our server and helps the project in many ways.", 
-                              "about:demonnic")});
-    aboutBigMakers.append({QStringLiteral("Florian Scheel"),
-                           QStringLiteral("keneanung#2803"),
-                           QStringLiteral("keneanung"),
-                           QStringLiteral("keneanung@googlemail.com"),
-                           tr("Contributed many improvements to Mudlet's db: interface, event system, "
-                              "and has been around the project for a very long while assisting users.",
-                              "about:keneanung")});
-    aboutBigMakers.append({QStringLiteral("Leris"),
-                           QStringLiteral("Leris#5152"),
-                           QStringLiteral("Kebap"),
-                           QStringLiteral("kebap_spam@gmx.net"),
-                           tr("Does a ton of work in making Mudlet, the website and the wiki accessible to you "
-                              "regardless of the language you speak - and promoting our genre!",
-                              "about:Leris")});
-
-    QVector<QStringList> aboutMoreMakers;
-    aboutMoreMakers.append({QStringLiteral("Ahmed Charles"),
-                            QString(),
-                            QStringLiteral("ahmedcharles"),
-                            QStringLiteral("acharles@outlook.com"),
-                            tr("Contributions to the Travis integration, CMake and Visual C++ build, "
-                               "a lot of code quality and memory management improvements.",
-                               "about:ahmedcharles")});
-    aboutMoreMakers.append({QStringLiteral("Chris Mitchell"),
-                            QString(),
-                            QStringLiteral("Chris7"),
-                            QStringLiteral("chrismudlet@gmail.com"),
-                            tr("Developed a shared module system that allows script packages to be shared among profiles, "
-                               "a UI for viewing Lua variables, improvements in the mapper and all around.",
-                               "about:Chris7")});
-    aboutMoreMakers.append({QStringLiteral("Ben Carlsen"),
-                            QString(),
-                            QString(),      
-                            QStringLiteral("arkholt@gmail.com"),
-                            tr("Developed the first version of our Mac OSX installer. "
-                               "He is the former maintainer of the Mac version of Mudlet.",
-                               "about:Ben Carlsen")});
-    aboutMoreMakers.append({QStringLiteral("Ben Smith"),
-                            QString(),
-                            QString(),
-                            QString(),
-                            tr("Joined in December 2009 though he's been around much longer. "
-                               "Contributed to the Lua API and is the former maintainer of the Lua API.",
-                               "about:Ben Smith")});
-    aboutMoreMakers.append({QStringLiteral("Blaine von Roeder"),
-                            QString(),
-                            QString(),
-                            QString(),
-                            tr("Joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches "
-                               "and has helped with release management of 1.0.5.",
-                               "about:Blaine von Roeder")});
-    aboutMoreMakers.append({QStringLiteral("Bruno Bigras"),
-                            QString(),
-                            QString(),
-                            QStringLiteral("bruno@burnbox.net"),
-                            tr("Developed the original cmake build script and he has committed a number of patches.",
-                               "about:Bruno Bigras")});
-    aboutMoreMakers.append({QStringLiteral("Carter Dewey"),
-                            QString(),
-                            QString(),
-                            QStringLiteral("eldarerathis@gmail.com"),
-                            tr("Contributed to the Lua API.",
-                               "about:Carter Dewey")});
-    aboutMoreMakers.append({QStringLiteral("Erik Pettis"),
-                            QStringLiteral("Etomyutikos#9266"),
-                            QStringLiteral("Oneymus"),
-                            QString(),
-                            tr("Developed the Vyzor GUI Manager for Mudlet.",
-                               "about:Oneymus")});
-    aboutMoreMakers.append({QStringLiteral("\"ItsTheFae\""),
-                            QStringLiteral("TheFae#9971"),
-                            QStringLiteral("Kae"),
-                            QString(),
-                            tr("Worked wonders in rejuventating our Website in 2017 but who prefers a little anonymity - "
-                               "if you are a <i>SpamBot</i> you will not get onto our Fora now. They have also made some useful "
-                               "C++ core code contributions and we look forward to future reviews on and work in that area.",
-                               "about:TheFae")});
-    aboutMoreMakers.append({QStringLiteral("Ian Adkins"),
-                            QStringLiteral("Dicene#1533"),
-                            QStringLiteral("dicene"),
-                            QStringLiteral("ieadkins@gmail.com"),
-                            tr("Joining us 2017 they have given us some useful C++ and Lua contributions.",
-                               "about:Dicene")});
-    aboutMoreMakers.append({QStringLiteral("James Younquist"),
-                            QString(),
-                            QString(),
-                            QStringLiteral("daemacles@yahoo.com"),
-                            tr("Contributed the Geyser layout manager for Mudlet in March 2010. "
-                               "It is written in Lua and aims at simplifying user GUI scripting.",
-                               "about:James Younquist")});
-    aboutMoreMakers.append({QStringLiteral("John Dahlström"),
-                            QString(),
-                            QString(),
-                            QStringLiteral("email@johndahlstrom.se"),
-                            tr("Helped develop and debug the Lua API.",
-                               "about:John Dahlström")});
-    aboutMoreMakers.append({QStringLiteral("Karsten Bock"),
-                            QString(),
-                            QStringLiteral("Beliaar"),
-                            QString(),
-                            tr("Contributed several improvements and new features for Geyser.",
-                               "about:Beliaar")});
-    aboutMoreMakers.append({QStringLiteral("Leigh Stillard"),
-                            QString(),
-                            QString(),
-                            QStringLiteral("leigh.stillard@gmail.com"),
-                            tr("The original author of our Windows installer.",
-                               "about:Leigh Stillard")});
-    aboutMoreMakers.append({QStringLiteral("Maksym Grinenko"),
-                            QString(),
-                            QString(),
-                            QStringLiteral("maksym.grinenko@gmail.com"),
-                            tr("Worked on the manual, forum help and helps with GUI design and documentation.",
-                               "about:Maksym Grinenko")});
-    aboutMoreMakers.append({QStringLiteral("Stephen Hansen"),
-                            QString(),
-                            QString(),
-                            QStringLiteral("me+mudlet@ixokai.io"),
-                            tr("Developed a database Lua API that allows for far easier use of databases and one of the original OSX installers.",
-                               "about:Stephen Hansen")});
-    aboutMoreMakers.append({QStringLiteral("Thorsten Wilms"),
-                            QString(),
-                            QString(),
-                            QStringLiteral("t_w_@freenet.de"),
-                            tr("Designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. "
-                               "Visit his homepage at <a href=\"http://thorwil.wordpress.com/\">thorwil.wordpress.com</a>.",
-                               "about:Thorsten Wilms")});
+    
+    QVector<aboutMaker> aboutMakers; 
+    aboutMakers.append({true, QStringLiteral("Heiko Köhn"), QString(), QString(), QStringLiteral("KoehnHeiko@googlemail.com"),
+                        tr("Original author, original project lead, Mudlet core coding, retired.",
+                           "about:Heiko")});
+    aboutMakers.append({true, QStringLiteral("Vadim Peretokin"), QStringLiteral("Vadi#3695"), QStringLiteral("vadi2"), QStringLiteral("vadim.peretokin@mudlet.org"),
+                        tr("GUI design and initial feature planning. He is responsible for the project homepage and the user manual. "
+                           "Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. "
+                           "Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp; user help. "
+                           "With the project from the very beginning and is an official spokesman of the project. "
+                           "Since the retirement of Heiko, he has become the head of the Mudlet project.",
+                           "about:Vadi")});
+    aboutMakers.append({true, QStringLiteral("Stephen Lyons"), QStringLiteral("SlySven#2703"), QStringLiteral("SlySven"), QStringLiteral("slysven@virginmedia.com"),
+                        tr("After joining in 2013, he has been poking various bits of the C++ code and GUI with a pointy stick; "
+                           "subsequently trying to patch over some of the holes made/found. "
+                           "Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language "
+                           "other than American English you will be seeing the results of him getting fed up with the spelling differences "
+                           "between what was being used and the British English his brain wanted to see.",
+                           "about:SlySven")});
+    aboutMakers.append({true, QStringLiteral("Damian Monogue"), QStringLiteral("demonnic#4307"), QStringLiteral("demonnic"), QStringLiteral("demonnic@gmail.com"),
+                        tr("Former maintainer of the early Windows and Apple OSX packages. "
+                           "He also administers our server and helps the project in many ways.", 
+                           "about:demonnic")});
+    aboutMakers.append({true, QStringLiteral("Florian Scheel"), QStringLiteral("keneanung#2803"), QStringLiteral("keneanung"), QStringLiteral("keneanung@googlemail.com"),
+                        tr("Contributed many improvements to Mudlet's db: interface, event system, "
+                           "and has been around the project for a very long while assisting users.",
+                           "about:keneanung")});
+    aboutMakers.append({true, QStringLiteral("Leris"), QStringLiteral("Leris#5152"), QStringLiteral("Kebap"), QStringLiteral("kebap_spam@gmx.net"),
+                        tr("Does a ton of work in making Mudlet, the website and the wiki accessible to you "
+                           "regardless of the language you speak - and promoting our genre!",
+                           "about:Leris")});
+    aboutMakers.append({false, QStringLiteral("Ahmed Charles"), QString(), QStringLiteral("ahmedcharles"), QStringLiteral("acharles@outlook.com"),
+                        tr("Contributions to the Travis integration, CMake and Visual C++ build, "
+                           "a lot of code quality and memory management improvements.",
+                           "about:ahmedcharles")});
+    aboutMakers.append({false, QStringLiteral("Chris Mitchell"), QString(), QStringLiteral("Chris7"), QStringLiteral("chrismudlet@gmail.com"),
+                        tr("Developed a shared module system that allows script packages to be shared among profiles, "
+                           "a UI for viewing Lua variables, improvements in the mapper and all around.",
+                           "about:Chris7")});
+    aboutMakers.append({false, QStringLiteral("Ben Carlsen"), QString(), QString(), QStringLiteral("arkholt@gmail.com"),
+                        tr("Developed the first version of our Mac OSX installer. "
+                           "He is the former maintainer of the Mac version of Mudlet.",
+                           "about:Ben Carlsen")});
+    aboutMakers.append({false, QStringLiteral("Ben Smith"), QString(), QString(), QString(),
+                        tr("Joined in December 2009 though he's been around much longer. "
+                           "Contributed to the Lua API and is the former maintainer of the Lua API.",
+                           "about:Ben Smith")});
+    aboutMakers.append({false, QStringLiteral("Blaine von Roeder"), QString(), QString(), QString(), 
+                        tr("Joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches "
+                           "and has helped with release management of 1.0.5.",
+                           "about:Blaine von Roeder")});
+    aboutMakers.append({false, QStringLiteral("Bruno Bigras"), QString(), QString(), QStringLiteral("bruno@burnbox.net"),
+                        tr("Developed the original cmake build script and he has committed a number of patches.",
+                           "about:Bruno Bigras")});
+    aboutMakers.append({false, QStringLiteral("Carter Dewey"), QString(), QString(), QStringLiteral("eldarerathis@gmail.com"),
+                        tr("Contributed to the Lua API.",
+                           "about:Carter Dewey")});
+    aboutMakers.append({false, QStringLiteral("Erik Pettis"), QStringLiteral("Etomyutikos#9266"), QStringLiteral("Oneymus"), QString(), 
+                        tr("Developed the Vyzor GUI Manager for Mudlet.",
+                           "about:Oneymus")});
+    aboutMakers.append({false, QStringLiteral("ItsTheFae"), QStringLiteral("TheFae#9971"), QStringLiteral("Kae"), QString(), 
+                        tr("Worked wonders in rejuventating our Website in 2017 but who prefers a little anonymity - "
+                           "if you are a <i>SpamBot</i> you will not get onto our Fora now. They have also made some useful "
+                           "C++ core code contributions and we look forward to future reviews on and work in that area.",
+                           "about:TheFae")});
+    aboutMakers.append({false, QStringLiteral("Ian Adkins"), QStringLiteral("Dicene#1533"), QStringLiteral("dicene"), QStringLiteral("ieadkins@gmail.com"),
+                        tr("Joining us 2017 they have given us some useful C++ and Lua contributions.",
+                           "about:Dicene")});
+    aboutMakers.append({false, QStringLiteral("James Younquist"), QString(), QString(), QStringLiteral("daemacles@yahoo.com"),
+                        tr("Contributed the Geyser layout manager for Mudlet in March 2010. "
+                           "It is written in Lua and aims at simplifying user GUI scripting.",
+                           "about:James Younquist")});
+    aboutMakers.append({false, QStringLiteral("John Dahlström"), QString(), QString(), QStringLiteral("email@johndahlstrom.se"),
+                        tr("Helped develop and debug the Lua API.",
+                           "about:John Dahlström")});
+    aboutMakers.append({false, QStringLiteral("Karsten Bock"), QString(), QStringLiteral("Beliaar"), QString(), 
+                        tr("Contributed several improvements and new features for Geyser.",
+                           "about:Beliaar")});
+    aboutMakers.append({false, QStringLiteral("Leigh Stillard"), QString(), QString(), QStringLiteral("leigh.stillard@gmail.com"),
+                        tr("The original author of our Windows installer.",
+                           "about:Leigh Stillard")});
+    aboutMakers.append({false, QStringLiteral("Maksym Grinenko"), QString(), QString(), QStringLiteral("maksym.grinenko@gmail.com"),
+                        tr("Worked on the manual, forum help and helps with GUI design and documentation.",
+                           "about:Maksym Grinenko")});
+    aboutMakers.append({false, QStringLiteral("Stephen Hansen"), QString(), QString(), QStringLiteral("me+mudlet@ixokai.io"),
+                        tr("Developed a database Lua API that allows for far easier use of databases and one of the original OSX installers.",
+                           "about:Stephen Hansen")});
+    aboutMakers.append({false, QStringLiteral("Thorsten Wilms"), QString(), QString(), QStringLiteral("t_w_@freenet.de"),
+                        tr("Designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. "
+                           "Visit his homepage at <a href=\"http://thorwil.wordpress.com/\">thorwil.wordpress.com</a>.",
+                           "about:Thorsten Wilms")});
 
     QString aboutMudletBody("<p align=\"center\"><big><b>Credits:</b></big></p>");
-    QVectorIterator<QStringList> iterateBig(aboutBigMakers);
-    while (iterateBig.hasNext()) { aboutMudletBody.append(createMakerHTML(iterateBig.next(), true)); }
-    QVectorIterator<QStringList> iterateMore(aboutMoreMakers);
-    while (iterateMore.hasNext()) { aboutMudletBody.append(createMakerHTML(iterateMore.next(), false)); }
+    QVectorIterator<QStringList> iterateMakers(aboutMakers);
+    while (iterateMakers.hasNext()) { aboutMudletBody.append(createMakerHTML(iterateMakers.next())); }
 
     aboutMudletBody.append(
         tr("<p>Others too, have make their mark on different aspects of the Mudlet project and if they have not been mentioned here it is by no means intentional! For past contributors you may see them mentioned in the <b><a href=\"https://launchpad.net/~mudlet-makers/+members#active\">Mudlet Makers</a></b> list (on our former bug-tracking site), or for on-going contributors they may well be included in the <b><a href=\"https://github.com/Mudlet/Mudlet/graphs/contributors\">Contributors</a></b> list on GitHub.</p>\n"
