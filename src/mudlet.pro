@@ -319,10 +319,10 @@ DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 # tweaking in that situation
 
 # Edbee widget needed in all cases.
-# Mudlet customised (Lua 5.1 specific?) lua-code-format source code needed in
+# Mudlet customised (Lua 5.1 specific) lua-code-format source code needed in
 # all cases. (The code is built into a lcf module within
 # TLuaInterpreter::initIndenterGlobals() on demand) - and we need to get the
-# git submodule from Mudlet's own GitHub server...
+# git submodule from Mudlet's own GitHub repository
 
 # NOTE: It does SEEM possible to prebuild and install this into a system wide
 # luarocks installation by changing to the "./3rdparty/lcf" directory with the
