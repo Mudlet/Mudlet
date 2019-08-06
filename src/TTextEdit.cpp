@@ -985,16 +985,9 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber) co
 {
     int characterIndex = -1;
     if (lineNumber < mpBuffer->lineBuffer.size()) {
-        int characterWidth = 1;
         int currentX = 0;
         for (const auto character : mpBuffer->lineBuffer.at(lineNumber)) {
-            const uint unicode = getGraphemeBaseCharacter(character);
-            if (unicode == '\t') {
-                characterWidth = 8;
-            } else {
-                characterWidth = getGraphemeWidth(unicode);
-            }
-            currentX += characterWidth * mFontWidth;
+            currentX += mFontMetrics.horizontalAdvance(character);
             characterIndex++;
             if (currentX >= mouseX) {
                 if (mShowTimeStamps) {
