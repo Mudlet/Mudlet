@@ -30,8 +30,8 @@ enum {
 
 /* An inclusive range of characters. */
 struct widechar_range {
-  int32_t lo;
-  int32_t hi;
+  unsigned int lo;
+  unsigned int hi;
 };
 
 /* Simple ASCII characters - used a lot, so we check them first. */
@@ -506,14 +506,14 @@ static const struct widechar_range widechar_widened_table[] = {
 };
 
 template<typename Collection>
-bool widechar_in_table(const Collection &arr, int32_t c) {
+bool widechar_in_table(const Collection &arr, unsigned int c) {
     auto where = std::lower_bound(std::begin(arr), std::end(arr), c,
-        [](widechar_range p, wchar_t c) { return p.hi < c; });
+        [](widechar_range p, unsigned int c) {return p.hi < c; });
     return where != std::end(arr) && where->lo <= c;
 }
 
 /* Return the width of character c, or a special negative value. */
-int widechar_wcwidth(wchar_t c) {
+int widechar_wcwidth(unsigned int c) {
     if (widechar_in_table(widechar_ascii_table, c))
         return 1;
     if (widechar_in_table(widechar_private_table, c))
