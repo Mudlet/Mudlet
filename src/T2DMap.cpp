@@ -688,8 +688,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     mAreaExitsList.clear();
 
-    float widgetWidth = width();
-    float widgetHeight = height();
+    const float widgetWidth = width();
+    const float widgetHeight = height();
 
     if (widgetWidth < 10 || widgetHeight < 10) {
         return;
@@ -1591,8 +1591,11 @@ void T2DMap::paintEvent(QPaintEvent* e)
     }
 }
 
-void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, float widgetWidth, float widgetHeight, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth)
+void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth)
 {
+    const float widgetWidth = width();
+    const float widgetHeight = height();
+
     int customLineDestinationTarget = 0;
     if (mCustomLinesRoomTo > 0) {
         customLineDestinationTarget = mCustomLinesRoomTo;
@@ -1648,9 +1651,9 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, float widgetWidth, flo
             if (!room) {
                 continue;
             }
-            float rx = room->x * mRoomWidth + mRX;
-            float ry = room->y * -1 * mRoomHeight + mRY;
-            int rz = room->z;
+            const float rx = room->x * mRoomWidth + mRX;
+            const float ry = room->y * -1 * mRoomHeight + mRY;
+            const int rz = room->z;
 
             if (rz != zLevel) {
                 continue;
@@ -1661,10 +1664,10 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, float widgetWidth, flo
                     continue;
                 }
             } else {
-                float miny = room->min_y * -1 * mRoomHeight + static_cast<float>(mRY);
-                float maxy = room->max_y * -1 * mRoomHeight + static_cast<float>(mRY);
-                float minx = room->min_x * mRoomWidth + static_cast<float>(mRX);
-                float maxx = room->max_x * mRoomWidth + static_cast<float>(mRX);
+                const float miny = room->min_y * -1 * mRoomHeight + static_cast<float>(mRY);
+                const float maxy = room->max_y * -1 * mRoomHeight + static_cast<float>(mRY);
+                const float minx = room->min_x * mRoomWidth + static_cast<float>(mRX);
+                const float maxx = room->max_x * mRoomWidth + static_cast<float>(mRX);
 
                 if (!((minx > 0.0 || maxx > 0.0) && (static_cast<float>(widgetWidth) > minx || static_cast<float>(widgetWidth) > maxx))) {
                     continue;
@@ -1857,8 +1860,8 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, float widgetWidth, flo
                         customLineColor = room->customLinesColor.value(itk.key(), Qt::red);
                     }
 
-                    float ex = room->x * mRoomWidth + mRX;
-                    float ey = room->y * mRoomHeight * -1 + mRY;
+                    const float ex = room->x * mRoomWidth + mRX;
+                    const float ey = room->y * mRoomHeight * -1 + mRY;
                     QPointF origin = QPointF(ex, ey);
                     // The following sets a point offset from the room center
                     // that depends on the exit direction that the custom line
@@ -2182,7 +2185,6 @@ void T2DMap::paintAreaExits(QPainter& painter, QPen& pen, float widgetWidth, flo
                 painter.setBrush(saveBrush);
             }
         } // End of for( area Rooms )
-        return pen;
 }
 
 // Work out text for information box, need to offset if room selection widget is present
