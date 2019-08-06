@@ -481,7 +481,6 @@ std::tuple<bool, QString, QString> Host::saveProfileAs(const QString& file)
 
 void Host::xmlSaved(const QString& xmlName)
 {
-    qDebug() << "saved" << xmlName;
     if (writers.contains(xmlName)) {
         auto writer = writers.take(xmlName);
         delete writer;
