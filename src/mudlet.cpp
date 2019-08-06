@@ -2851,31 +2851,30 @@ void mudlet::closeEvent(QCloseEvent* event)
         mpDebugArea->setAttribute(Qt::WA_DeleteOnClose);
         mpDebugArea->close();
     }
+
     foreach (TConsole* pC, mConsoleMap) {
-        if (pC->mpHost->getName() != QStringLiteral("default_host")) {
-            // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-            pC->mpHost->mTelnet.disconnectIt();
+        // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
+        pC->mpHost->mTelnet.disconnectIt();
 
-            // close script-editor
-            if (pC->mpHost->mpEditorDialog) {
-                pC->mpHost->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
-                pC->mpHost->mpEditorDialog->close();
-            }
-            if (pC->mpHost->mpNotePad) {
-                pC->mpHost->mpNotePad->save();
-                pC->mpHost->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-                pC->mpHost->mpNotePad->close();
-                pC->mpHost->mpNotePad = nullptr;
-            }
-
-            // Wait for disconnection to complete
-            while (pC->mpHost->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
-                QApplication::processEvents();
-            }
-
-            // close console
-            pC->close();
+        // close script-editor
+        if (pC->mpHost->mpEditorDialog) {
+            pC->mpHost->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
+            pC->mpHost->mpEditorDialog->close();
         }
+        if (pC->mpHost->mpNotePad) {
+            pC->mpHost->mpNotePad->save();
+            pC->mpHost->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
+            pC->mpHost->mpNotePad->close();
+            pC->mpHost->mpNotePad = nullptr;
+        }
+
+        // Wait for disconnection to complete
+        while (pC->mpHost->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
+            QApplication::processEvents();
+        }
+
+        // close console
+        pC->close();
     }
 
     // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
@@ -2900,29 +2899,27 @@ void mudlet::forceClose()
         host->saveProfile();
         console->mUserAgreedToCloseConsole = true;
 
-        if (host->getName() != QStringLiteral("default_host")) {
-            host->mTelnet.disconnectIt();
-            // close script-editor
-            if (host->mpEditorDialog) {
-                host->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
-                host->mpEditorDialog->close();
-            }
+        host->mTelnet.disconnectIt();
+        // close script-editor
+        if (host->mpEditorDialog) {
+            host->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
+            host->mpEditorDialog->close();
+        }
 
-            if (host->mpNotePad) {
-                host->mpNotePad->save();
-                host->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-                host->mpNotePad->close();
-                host->mpNotePad = nullptr;
-            }
+        if (host->mpNotePad) {
+            host->mpNotePad->save();
+            host->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
+            host->mpNotePad->close();
+            host->mpNotePad = nullptr;
+        }
 
-            if (mpIrcClientMap.contains(host)) {
-                mpIrcClientMap.value(host)->close();
-            }
+        if (mpIrcClientMap.contains(host)) {
+            mpIrcClientMap.value(host)->close();
+        }
 
-            // Wait for disconnection to complete
-            while (host->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
-                QApplication::processEvents();
-            }
+        // Wait for disconnection to complete
+        while (host->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
+            QApplication::processEvents();
         }
 
         console->close();
@@ -3051,11 +3048,9 @@ void mudlet::setMenuBarVisibility(const controlsVisibility state)
 // This only adjusts the visibility as appropriate
 void mudlet::adjustMenuBarVisibility()
 {
-    // Are there any profiles loaded - note that the dummy "default_host" counts
-    // as the first one
-    if ((mHostManager.getHostCount() < 2 && mMenuBarVisibility & visibleAlways)
-      ||(mMenuBarVisibility & visibleMaskNormally)) {
-
+    // Are there any profiles loaded?
+    if ((mHostManager.getHostCount() < 1 && mMenuBarVisibility & visibleAlways)
+            || (mMenuBarVisibility & visibleMaskNormally)) {
         menuBar()->show();
     } else {
         menuBar()->hide();
@@ -3087,9 +3082,9 @@ void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 
 void mudlet::adjustToolBarVisibility()
 {
-    // Are there any profiles loaded - note that the dummy "default_host" counts
-    // as the first one
-    if ((mHostManager.getHostCount() < 2 && mToolbarVisibility & visibleAlways) || (mToolbarVisibility & visibleMaskNormally)) {
+    // Are there any profiles loaded?
+    if ((mHostManager.getHostCount() < 1 && mToolbarVisibility & visibleAlways)
+            || (mToolbarVisibility & visibleMaskNormally)) {
         mpMainToolBar->show();
     } else {
         mpMainToolBar->hide();
@@ -3727,8 +3722,6 @@ void mudlet::doAutoLogin(const QString& profile_name)
     // save the setting is on profile loading:
     pHost->mTelnet.setEncoding(readProfileData(profile_name, QLatin1String("encoding")), false);
 
-    // For the first real host created the getHostCount() will return 2 because
-    // there is already a "default_host"
     signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, true);
     enableToolbarButtons();
