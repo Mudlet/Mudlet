@@ -1639,7 +1639,7 @@ void dlgConnectionProfiles::fillout_form() {
             toselectRow = i;
         }
     }
-
+qDebug() << profiles_tree_widget->count();
     if (toselectRow != -1 && toselectProfileName == QStringLiteral("default_host") &&
         profiles_tree_widget->count() > 1) {
         // if the last profile read is default_host, it means the user hasn't created
@@ -1647,10 +1647,10 @@ void dlgConnectionProfiles::fillout_form() {
         // select a random pre-defined profile to give all MUDs a fair go
 
         // make sure not to select the test_profile though
-        auto default_host_row = toselectRow;
         // dont infinite loop.
-        if (test_profile_row == -1 || profiles_tree_widget->count() != 2) {
-            while (toselectRow == default_host_row || toselectRow == test_profile_row) {
+        qDebug() << profiles_tree_widget->count();
+        if (test_profile_row == -1 || profiles_tree_widget->count() != 1) {
+            while (toselectRow == test_profile_row) {
                 toselectRow = qrand() % profiles_tree_widget->count();
             }
         }
