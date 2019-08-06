@@ -24,16 +24,17 @@
  ***************************************************************************/
 
 
+#include "TArea.h"
 #include "pre_guard.h"
+#include <QTreeWidget>
 #include <QCache>
 #include <QColor>
+#include <QElapsedTimer>
 #include <QFont>
 #include <QPixmap>
 #include <QPointer>
 #include <QString>
 #include <QWidget>
-#include <QElapsedTimer>
-#include <QTreeWidget>
 #include "post_guard.h"
 
 class Host;
@@ -253,6 +254,7 @@ private:
 
 private slots:
     void slot_createRoom();
+    void paintAreaExits(QPainter& painter, QPen& pen, float widgetWidth, float widgetHeight, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth);
 };
 
 #endif // MUDLET_T2DMAP_H
