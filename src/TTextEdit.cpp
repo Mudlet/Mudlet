@@ -68,8 +68,9 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 {
     mLastClickTimer.start();
     if (pC->getType() != TConsole::CentralDebugConsole) {
-        mFontHeight = QFontMetrics(mpHost->getDisplayFont()).height();
-        mFontWidth = QFontMetrics(mpHost->getDisplayFont()).width(QChar('W'));
+        const auto hostFont = mpHost->getDisplayFont();
+        mFontHeight = QFontMetrics(hostFont).height();
+        mFontWidth = QFontMetrics(hostFont).width(QChar('W'));
         mScreenWidth = 100;
         if ((width() / mFontWidth) < mScreenWidth) {
             mScreenWidth = 100; //width()/mFontWidth;
@@ -79,7 +80,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap(mScreenWidth * mFontWidth * 2, mFontHeight * 2);
         QPainter p(&pixmap);
-        p.setFont(mpHost->getDisplayFont());
+        p.setFont(hostFont);
         const QRectF r = QRectF(0, 0, mScreenWidth * mFontWidth * 2, mFontHeight * 2);
         QRectF r2;
         const QString t = "1234";
@@ -87,7 +88,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
         mLetterSpacing = (qreal)((qreal)mFontWidth - (qreal)(r2.width() / t.size()));
         mpHost->setDisplayFontSpacing(mLetterSpacing);
 #endif
-        setFont(mpHost->getDisplayFont());
+        setFont(hostFont);
     } else {
         // This is part of the Central Debug Console
         mShowTimeStamps = true;

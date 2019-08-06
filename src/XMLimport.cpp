@@ -993,7 +993,10 @@ void XMLimport::readHostPackage(Host* pHost)
             } else if (name() == "mLightWhite") {
                 pHost->mLightWhite.setNamedColor(readElementText());
             } else if (name() == "mDisplayFont") {
-                pHost->setDisplayFont(readElementText());
+                const auto oldDisplayFont = pHost->getDisplayFont();
+                if (!pHost->setDisplayFont(readElementText())) {
+                    pHost->setDisplayFont(oldDisplayFont);
+                }
                 QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
                 pHost->setDisplayFontFixedPitch(true);
             } else if (name() == "mCommandLineFont") {

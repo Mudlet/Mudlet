@@ -541,14 +541,7 @@ bool Host::setDisplayFont(const QFont& font)
 
 bool Host::setDisplayFont(const QString& fontName)
 {
-    const QFont font(fontName);
-    const QFontMetrics metrics(font);
-    if (metrics.averageCharWidth() == 0) {
-        return false;
-    }
-
-    mDisplayFont = font;
-    return true;
+    return setDisplayFont(QFont(fontName));
 }
 
 void Host::setDisplayFontSize(int size)
