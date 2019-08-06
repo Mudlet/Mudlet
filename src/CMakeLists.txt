@@ -334,25 +334,12 @@ if((APPLE) AND (PKG_CONFIG_FOUND))
   endif()
 endif()
 
-find_package(Qt5 5.7 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools Widgets Concurrent)
-
-# This is not present before Qt 5.7:
+find_package(Qt5 5.11 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools Widgets Concurrent)
 find_package(Qt5 COMPONENTS Gamepad QUIET)
-
-# This is not present before Qt 5.9:
 find_package(Qt5 COMPONENTS TextToSpeech QUIET)
 
-if (Qt5Core_VERSION VERSION_LESS 5.7)
-  message(FATAL_ERROR "Mudlet requires Qt 5.7 or later, yours is ${Qt5Core_VERSION}")
-elif(Qt5Core_VERSION VERSION_LESS 5.9)
-  # Qt Gamepad was a Technology Preview in 5.7
-  # Qt Gamepad was a Technology Preview 2 in 5.8
-  # Qt Speech (or at least the TTS part) was a Technology Preview in 5.8
-  message(WARNING "Qt version: ${Qt5Core_VERSION} - Gamepad and TextToSpeech may not be supported, as officially they requires 5.9 and 5.10 respectively")
-elif(Qt5Core_VERSION VERSION_LESS 5.10)
-  # Qt Speech (or at least the TTS part) was a Technology Preview 2 in 5.9, now supported on Mingw
-  # Qt Gamepad was officially released in 5.9
-  message(WARNING "Qt version: ${Qt5Core_VERSION} - TextToSpeech may not be supported, officially it requires 5.10")
+if (Qt5Core_VERSION VERSION_LESS 5.11)
+  message(FATAL_ERROR "Mudlet requires Qt 5.11 or later, yours is ${Qt5Core_VERSION}")
 else()
   # Qt Speech (or at least the TTS part) was officially release in 5.10
   message(STATUS "Qt version: ${Qt5Core_VERSION}")
