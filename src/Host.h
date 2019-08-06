@@ -229,8 +229,8 @@ public:
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
     const QFont& getDisplayFont() const { return mDisplayFont; }
-    bool setDisplayFont(const QFont& font);
-    bool setDisplayFont(const QString& fontName);
+    std::pair<bool, QString> setDisplayFont(const QFont& font);
+    std::pair<bool, QString> setDisplayFont(const QString& fontName);
     void setDisplayFontSize(int size);
     void setDisplayFontSpacing(const qreal spacing);
     void setDisplayFontStyle(QFont::StyleStrategy s);

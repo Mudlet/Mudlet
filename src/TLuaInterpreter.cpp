@@ -2804,9 +2804,9 @@ int TLuaInterpreter::setFont(lua_State* L)
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
-            if (!pHost->setDisplayFont(font)) {
+            if (auto [setNewFont, errorMessage] = pHost->setDisplayFont(font); !setNewFont) {
                 lua_pushnil(L);
-                lua_pushstring(L, "specified font is invalid (average character width is 0)");
+                lua_pushstring(L, errorMessage.toUtf8().constData());
                 return 2;
             }
 

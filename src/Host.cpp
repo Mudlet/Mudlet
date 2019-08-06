@@ -528,18 +528,18 @@ QString Host::getMmpMapLocation() const
     return mpMap->getMmpMapLocation();
 }
 
-bool Host::setDisplayFont(const QFont& font)
+std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
 {
     const QFontMetrics metrics(font);
     if (metrics.averageCharWidth() == 0) {
-        return false;
+        return std::make_pair(false, QStringLiteral("specified font is invalid (its letters have 0 width)"));
     }
 
     mDisplayFont = font;
-    return true;
+    return std::make_pair(true, QString());
 }
 
-bool Host::setDisplayFont(const QString& fontName)
+std::pair<bool, QString> Host::setDisplayFont(const QString& fontName)
 {
     return setDisplayFont(QFont(fontName));
 }
