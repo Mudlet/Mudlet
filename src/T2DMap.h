@@ -244,11 +244,7 @@ private:
     QFont mMapSymbolFont;
 
     QPointer<QAction> mpCreateRoomAction;
-    // Calculated near the top of the paintEvent() and is used in a couple of
-    // places where we need to pad roomIds to the same widths, it also affects
-    // the font size used to show roomId numbers (longer numbers need a smaller
-    // font to fit - as the numbers are NOW scaled to fit inside the room symbol
-    // - and they are suppressed if they would be too small.);
+    // in the players current area, how many digits the biggest room number?
     quint8 mMaxRoomIdDigits;
 
 private slots:
