@@ -48,12 +48,13 @@
 #include <chrono>
 
 
-TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLowerPane)
+TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLowerPane, QFontMetrics fontMetrics)
 : QWidget(pW)
 , mCursorY(0)
 , mIsCommandPopup(false)
 , mIsTailMode(true)
 , mShowTimeStamps(false)
+, mFontMetrics(fontMetrics)
 , mForceUpdate(false)
 , mIsLowerPane(isLowerPane)
 , mLastRenderBottom(0)
@@ -225,6 +226,7 @@ void TTextEdit::initDefaultSettings()
 void TTextEdit::updateScreenView()
 {
     if (isHidden()) {
+        mFontMetrics = QFontMetrics(mpHost->mDisplayFont);
         mFontWidth = QFontMetrics(mDisplayFont).width(QChar(' '));
         mFontDescent = QFontMetrics(mDisplayFont).descent();
         mFontAscent = QFontMetrics(mDisplayFont).ascent();
@@ -249,6 +251,7 @@ void TTextEdit::updateScreenView()
     // This was "if (pC->mType == TConsole::MainConsole) {"
     // and mIsMiniConsole is true for user created Mini Consoles and User Windows
     if (mpConsole->getType() == TConsole::MainConsole) {
+        mFontMetrics = QFontMetrics(mpHost->mDisplayFont);
         mFontWidth = QFontMetrics(mpHost->mDisplayFont).width(QChar('W'));
         mFontDescent = QFontMetrics(mpHost->mDisplayFont).descent();
         mFontAscent = QFontMetrics(mpHost->mDisplayFont).ascent();
@@ -270,6 +273,7 @@ void TTextEdit::updateScreenView()
         }
 #endif
     } else {
+        mFontMetrics = QFontMetrics(mpHost->mDisplayFont);
         mFontWidth = QFontMetrics(mDisplayFont).width(QChar('W'));
         mFontDescent = QFontMetrics(mDisplayFont).descent();
         mFontAscent = QFontMetrics(mDisplayFont).ascent();
@@ -498,14 +502,6 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) co
  */
 int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QString& grapheme, int column, TChar& charStyle) const
 {
-    uint unicode = getGraphemeBaseCharacter(grapheme);
-    int charWidth;
-    if (unicode == '\t') {
-        charWidth = mTabStopwidth - (column % mTabStopwidth);
-    } else {
-        charWidth = getGraphemeWidth(unicode);
-    }
-
     TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     const bool isBold = attributes & TChar::Bold;
     const bool isItalics = attributes & TChar::Italic;
@@ -540,7 +536,9 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
         bgColor = charStyle.background();
     }
 
-    auto textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * charWidth, mFontHeight);
+    //auto metrics = QFontMetrics(painter.font());
+    auto advance = mFontMetrics.horizontalAdvance(grapheme);
+    auto textRect = QRect(cursor.x(), mFontHeight * cursor.y(), advance, mFontHeight);
     drawBackground(painter, textRect, bgColor);
 
     if (painter.pen().color() != fgColor) {
@@ -548,7 +546,7 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
     }
 
     painter.drawText(textRect.x(), textRect.bottom() - mFontDescent, grapheme);
-    return charWidth;
+    return advance;
 }
 
 int TTextEdit::getGraphemeWidth(uint unicode) const

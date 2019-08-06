@@ -289,12 +289,12 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     splitter->setPalette(splitterPalette);
     splitter->setParent(layer);
 
-    mUpperPane = new TTextEdit(this, splitter, &buffer, mpHost, false);
+    mUpperPane = new TTextEdit(this, splitter, &buffer, mpHost, false, QFontMetrics(mpHost->mDisplayFont));
     mUpperPane->setContentsMargins(0, 0, 0, 0);
     mUpperPane->setSizePolicy(sizePolicy3);
     mUpperPane->setFocusPolicy(Qt::NoFocus);
 
-    mLowerPane = new TTextEdit(this, splitter, &buffer, mpHost, true);
+    mLowerPane = new TTextEdit(this, splitter, &buffer, mpHost, true, QFontMetrics(mpHost->mDisplayFont));
     mLowerPane->setContentsMargins(0, 0, 0, 0);
     mLowerPane->setSizePolicy(sizePolicy3);
     mLowerPane->setFocusPolicy(Qt::NoFocus);

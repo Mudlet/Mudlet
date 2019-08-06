@@ -52,7 +52,7 @@ class TTextEdit : public QWidget
 
 public:
     Q_DISABLE_COPY(TTextEdit)
-    TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isLowerPane);
+    TTextEdit(TConsole*, QWidget*, TBuffer* pB, Host* pH, bool isLowerPane, QFontMetrics fontMetrics);
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
     void drawForeground(QPainter&, const QRect&);
@@ -133,6 +133,7 @@ private:
     int convertMouseXToBufferX(const int mouseX, const int lineNumber) const;
     int getGraphemeWidth(uint unicode) const;
 
+    QFontMetrics mFontMetrics;
     int mFontHeight;
     int mFontWidth;
     bool mForceUpdate;
