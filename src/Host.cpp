@@ -39,6 +39,7 @@
 
 #include "pre_guard.h"
 #include <QtUiTools>
+#include <QNetworkProxy>
 #include <zip.h>
 #include <memory>
 #include "post_guard.h"
@@ -1795,7 +1796,8 @@ void Host::setName(const QString& newName)
     mTimerUnit.changeHostName(newName);
 }
 
-void Host::updateProxySettings(QNetworkAccessManager* manager) {
+void Host::updateProxySettings(QNetworkAccessManager* manager)
+{
     if (mUseProxy && !mProxyAddress.isEmpty() && mProxyPort != 0) {
         auto& proxy = getConnectionProxy();
         manager->setProxy(*proxy);

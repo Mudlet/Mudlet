@@ -9,7 +9,7 @@ windeployqt.exe --release mudlet.exe
 Remove-Item * -include *.cpp, *.o
 
 if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
-  cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip "%APPVEYOR_BUILD_FOLDER%\src\release"
+  cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip "%APPVEYOR_BUILD_FOLDER%\src\release\*"
 
   Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
   Set-Variable -Name "inFile" -Value "Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
@@ -73,7 +73,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
   $session.PutFiles("${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe", "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe")
   $session.Close()
   $session.Dispose()
-  $DEPLOY_URL="http://www.mudlet.org/wp-content/files/Mudlet-${Env:VERSION}-windows-installer.exe"
+  $DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${Env:VERSION}-windows-installer.exe"
   npm install -g dblsqd-cli
   dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${Env:DBLSQD_USER}" -p "${Env:DBLSQD_PASS}"
   dblsqd push -a mudlet -c release -r "${Env:VERSION}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"

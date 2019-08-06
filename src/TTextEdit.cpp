@@ -568,7 +568,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
         return 1;
     case widechar_combining:    // -2 = The character is a zero-width combiner.
         qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is a zero width combiner, codepoint number: U+" << QString::number(unicode, 16) << ".";
-        return 1; // Previous code treated this as a normal width character
+        return 1;
     case widechar_ambiguous:    // -3 = The character is East-Asian ambiguous width.
         return mWideAmbigousWidthGlyphs ? 2 : 1;
     case widechar_private_use:  // -4 = The character is for private use - we cannot know for certain what width to used

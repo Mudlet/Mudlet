@@ -30,6 +30,7 @@
 #include "pre_guard.h"
 #include <QPainter>
 #include <QTextLayout>
+#include <QDebug>
 #include "post_guard.h"
 
 dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
@@ -97,7 +98,6 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
     }
 
     mudletTitleLabel->setPixmap(QPixmap::fromImage(splashImage));
-    // clang-format off
 
     /*
      * Have moved the texts in from the dialog definitions - as it makes it
@@ -111,68 +111,81 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
      * and for boiler-plate licences to be reused mulitple times if necessary.
      */
 
-    // Define a uniform header for all tabs:
-    QString htmlHead(
-                QStringLiteral("<head><style type=\"text/css\">"
-                               "h1 { font-family: \"DejaVu Serif\"; text-align: center; }"
-                               "h2 { font-family: \"DejaVu Serif\"; text-align: center; }"
-                               "h3 { font-family: \"DejaVu Serif\"; text-align: center; white-space: pre-wrap; }"
-                               "h4 { font-family: \"DejaVu Serif\"; white-space: pre-wrap; }"
-                               "p { font-family: \"DejaVu Serif\" }"
-                               "tt { font-family: \"Monospace\"; white-space: pre-wrap; }"
-                               "</style></head>"));
+    // A uniform header for all tabs:
+    // clang-format off
+    QString htmlHead(QStringLiteral(R"(
+        <head><style type="text/css">
+        h1 { font-family: "DejaVu Serif"; text-align: center; }
+        h2 { font-family: "DejaVu Serif"; text-align: center; }
+        h3 { font-family: "DejaVu Serif"; text-align: center; white-space: pre-wrap; }
+        h4 { font-family: "DejaVu Serif"; white-space: pre-wrap; }
+        p { font-family: "DejaVu Serif" }
+        tt { font-family: "Monospace"; white-space: pre-wrap; }
+        .container { text-align: center; }
+        </style></head>
+    )"));
+    // clang-format on
 
-    // TAB 1 - "About Mudlet"
-    // I have found the hard way that the lupdate utility to extract translatable
-    // strings from the code does not like C++11 syle raw string literals, see:
-    // https://bugreports.qt.io/browse/QTBUG-42736
+    setAboutTab(htmlHead);
+    setSupportersTab(htmlHead);
+    setLicenseTab(htmlHead);
+    setThirdPartyTab(htmlHead);
+}
+
+void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
+{   // TAB 1 - "About Mudlet"
+    // clang-format off
     QString aboutMudletHeader(
-                tr("<tr><td><span style=\"color:#bc8942;\"><b>Homepage</b></span></td><td><a href=\"http://www.mudlet.org/\">www.mudlet.org</a></td></tr>\n"
-                   "<tr><td><span style=\"color:#bc8942;\"><b>Forums</b></span></td><td><a href=\"http://forums.mudlet.org/\">forums.mudlet.org</a></td></tr>\n"
-                   "<tr><td><span style=\"color:#bc8942;\"><b>Documentation</b></span></td><td><a href=\"http://wiki.mudlet.org/w/Main_Page\">wiki.mudlet.org/w/Main_Page</a></td></tr>\n"
-                   "<tr><td><span style=\"color:#40b040;\"><b>Discord</b></span></td><td><a href=\"https://discord.gg/kuYvMQ9\">discord.gg</a></td></tr>\n"
-                   "<tr><td><span style=\"color:#40b040;\"><b>Source code</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet\">github.com/Mudlet/Mudlet</a></td></tr>\n"
-                   "<tr><td><span style=\"color:#40b040;\"><b>Features/bugs</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet/issues\">github.com/Mudlet/Mudlet/issues</a></td></tr>"));
+            tr("<tr><td><span style=\"color:#bc8942;\"><b>Homepage</b></span></td><td><a href=\"http://www.mudlet.org/\">www.mudlet.org</a></td></tr>\n"
+               "<tr><td><span style=\"color:#bc8942;\"><b>Forums</b></span></td><td><a href=\"http://forums.mudlet.org/\">forums.mudlet.org</a></td></tr>\n"
+               "<tr><td><span style=\"color:#bc8942;\"><b>Documentation</b></span></td><td><a href=\"http://wiki.mudlet.org/w/Main_Page\">wiki.mudlet.org/w/Main_Page</a></td></tr>\n"
+               "<tr><td><span style=\"color:#40b040;\"><b>Discord</b></span></td><td><a href=\"https://discord.gg/kuYvMQ9\">discord.gg</a></td></tr>\n"
+               "<tr><td><span style=\"color:#40b040;\"><b>Source code</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet\">github.com/Mudlet/Mudlet</a></td></tr>\n"
+               "<tr><td><span style=\"color:#40b040;\"><b>Features/bugs</b></span></td><td><a href=\"https://github.com/Mudlet/Mudlet/issues\">github.com/Mudlet/Mudlet/issues</a></td></tr>"));
 
     QString aboutMudletBody(
-                tr("<p align=\"center\"><big><b>Original author: <span style=\"color:#bc8942;\">Heiko Köhn</span></b> (<b><span style=\"color:#0000ff;\">KoehnHeiko@googlemail.com</span></b>)</big></p>\n"
-                   "<p align=\"center\"><big><b>Credits:</b></big></p>"
-                   "<p><span style=\"color:#bc8942;\"><big><b>Vadim Peretokin</b></big></span> (<span style=\"color:#40b040;\">vadi2</span> <span style=\"color:#0000ff;\">vadim.peretokin@mudlet.org</span>) GUI design and initial feature planning. He is responsible for the project homepage and the user manual. Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp; user help. With the project from the very beginning and is an official spokesman of the project. Since the retirement of Heiko, he has become the head of the Mudlet project.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><big><b>Stephen Lyons</b></big></span> (<span style=\"color:#40b040;\">SlySven</span> <span style=\"color:#0000ff;\">slysven@virginmedia.com</span>) after joining in 2013, has been poking various bits of the C++ code and GUI with a pointy stick; subsequently trying to patch over some of the holes made/found.  Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language other than American English you will be seeing the results of him getting fed up with the spelling differences between what was being used and the British English his brain wanted to see.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><big><b>Damian Monogue</b></big></span> (<span style=\"color:#40b040;\">demonnic</span> <span style=\"color:#0000ff;\">demonnic@gmail.com</span>) former maintainer of the early Windows and Apple OSX packages. He also administers our server and helps the project in many ways.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><big><b>Florian Scheel</b></big></span> (<span style=\"color:#40b040;\">keneanung</span> <span style=\"color:#0000ff;\">keneanung@googlemail.com</span>) contributed many improvements to Mudlet's db: interface, event system, and has been around the project for a very long while assisting users.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><big><b>Leris</b></big></span> (<span style=\"color:#40b040;\">Leris/Kebap</span> <span style=\"color:#0000ff;\">kebap_spam@gmx.net</span>) does a ton of work in making Mudlet, the website and the wiki accessible to you regardless of the language you speak - and promoting our genre!</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><b>Ahmed Charles</b></span> (<span style=\"color:#40b040;\">ahmedcharles</span> <span style=\"color:#0000ff;\">acharles@outlook.com</span>) contributions to the Travis integration, CMake and Visual C++ build, a lot of code quality and memory management improvements.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><b>Chris Mitchell</b></span> (<span style=\"color:#40b040;\">Chris7</span> <span style=\"color:#0000ff;\">chrismudlet@gmail.com</span>) has developed a shared module system that allows script packages to be shared among profiles, a UI for viewing Lua variables, improvements in the mapper and all around.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><b>Ben Carlsen</b></span> (<span style=\"color:#0000ff;\">arkholt@gmail.com</span>) has developed the first version of our Mac OSX installer. He is the former maintainer of the Mac version of Mudlet.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><b>Ben Smith</b></span> () joined in December 2009 though he's been around much longer. Contributed to the Lua API and is the former maintainer of the Lua API.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><b>Blaine von Roeder</b></span> () joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches and has helped with release management of 1.0.5.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><b>Bruno Bigras</b></span> (<span style=\"color:#0000ff;\">bruno@burnbox.net</span>) developed the original cmake build script and he has committed a number of patches.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><b>Carter Dewey</b></span> (<span style=\"color:#0000ff;\">eldarerathis@gmail.com</span>) contributions to the Lua API.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><b>Erik Pettis</b></span> (<span style=\"color:#40b040;\">Oneymus</span>) developed the Vyzor GUI Manager for Mudlet.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><b>\"ItsTheFae\"</b></span> (<span style=\"color:#40b040;\">Kae</span>) someone who has worked wonders in rejuventating our Website in 2017 but who prefers a little anonymity - if you are a <i>SpamBot</i> you will not get onto our Fora now. They have also made some useful C++ core code contributions and we look forward to future reviews on and work in that area.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><b>Ian Adkins</b></span> (<span style=\"color:#40b040;\">dicene</span> <span style=\"color:#0000ff;\">ieadkins@gmail.com</span>) joining us 2017 they have given us some useful C++ and Lua contributions.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><b>James Younquist</b></span> (<span style=\"color:#0000ff;\">daemacles@yahoo.com</span>) contributed the Geyser layout manager for Mudlet in March 2010. It is written in Lua and aims at simplifying user GUI scripting.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><b>John Dahlström</b></span> (<span style=\"color:#0000ff;\">email@johndahlstrom.se</span>) helped develop and debug the Lua API. </p>\n"
-                   "<p><span style=\"color:#bc8942;\"><b>Karsten Bock</span> (<span style=\"color:#40b040;\">Beliaar</span>) contributed several improvements and new features for Geyser.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><b>Leigh Stillard</b></span> (<span style=\"color:#0000ff;\">leigh.stillard@gmail.com</span>) is the original author of our windows installer.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><b>Maksym Grinenko</b></span> (<span style=\"color:#0000ff;\">maksym.grinenko@gmail.com</span>) worked on the manual, forum help and helps with GUI design and documentation.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><b>Stephen Hansen</b></span> (<span style=\"color:#5500ff;\">me+mudlet@ixokai.io</span>) has developed a database Lua API that allows for far easier use of databases and one of the original OSX installers.</p>\n"
-                   "<p><span style=\"color:#bc8942;\"><b>Thorsten Wilms</b></span> (<span style=\"color:#0000ff;\">t_w_@freenet.de</span>) has designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. Visit his homepage at <a href=\"http://thorwil.wordpress.com/\">thorwil.wordpress.com</a>.</p>\n"
-                   "<p>Others too, have make their mark on different aspects of the Mudlet project and if they have not been mentioned here it is by no means intentional! For past contributors you may see them mentioned in the <b><a href=\"https://launchpad.net/~mudlet-makers/+members#active\">Mudlet Makers</a></b> list (on our former bug-tracking site), or for on-going contributors they may well be included in the <b><a href=\"https://github.com/Mudlet/Mudlet/graphs/contributors\">Contributors</a></b> list on GitHub.</p>\n"
-                   "<br>\n"
-                   "<p>Many icons are taken from the <span style=\"color:#bc8942;\"><b><u>KDE4 oxygen icon theme</u></b></span> at <a href=\"https://web.archive.org/web/20130921230632/http://www.oxygen-icons.org/\">www.oxygen-icons.org <sup>{wayback machine archive}</sup></a> or <a href=\"http://www.kde.org\">www.kde.org</a>.  Most of the rest are from Thorsten Wilms, or from Stephen Lyons combining bits of Thorsten's work with the other sources.</p>\n"
-                   "<p>Special thanks to <span style=\"color:#bc8942;\"><b>Brett Duzevich</b></span> and <span style=\"color:#bc8942;\"><b>Ronny Ho</b></span>. They have contributed many good ideas and thus helped improve the scripting framework substantially.</p>\n"
-                   "<p>Thanks to <span style=\"color:#bc8942;\"><b>Tomas Mecir</b></span> (<span style=\"color:#0000ff;\">kmuddy@kmuddy.com</span>) who brought us all together and inspired us with his KMuddy project. Mudlet is using some of the telnet code he wrote for his KMuddy project (<a href=\"https://cgit.kde.org/kmuddy.git/\">cgit.kde.org/kmuddy.git/</a>).</p>\n"
-                   "<p>Special thanks to <span style=\"color:#bc8942;\"><b>Nick Gammon</b></span> (<a href=\"http://www.gammon.com.au/mushclient/mushclient.htm\">www.gammon.com.au/mushclient/mushclient.htm</a>) for giving us some valued pieces of advice.</p>"));
+            tr("<p align=\"center\"><big><b>Original author: <span style=\"color:#bc8942;\">Heiko Köhn</span></b> (<b><span style=\"color:#0000ff;\">KoehnHeiko@googlemail.com</span></b>)</big></p>\n"
+               "<p align=\"center\"><big><b>Credits:</b></big></p>"
+               "<p><span style=\"color:#bc8942;\"><big><b>Vadim Peretokin</b></big></span> (<span style=\"color:#40b040;\">vadi2</span> <span style=\"color:#0000ff;\">vadim.peretokin@mudlet.org</span>) GUI design and initial feature planning. He is responsible for the project homepage and the user manual. Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp; user help. With the project from the very beginning and is an official spokesman of the project. Since the retirement of Heiko, he has become the head of the Mudlet project.</p>\n"
+               "<p><span style=\"color:#bc8942;\"><big><b>Stephen Lyons</b></big></span> (<span style=\"color:#40b040;\">SlySven</span> <span style=\"color:#0000ff;\">slysven@virginmedia.com</span>) after joining in 2013, has been poking various bits of the C++ code and GUI with a pointy stick; subsequently trying to patch over some of the holes made/found.  Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language other than American English you will be seeing the results of him getting fed up with the spelling differences between what was being used and the British English his brain wanted to see.</p>\n"
+               "<p><span style=\"color:#bc8942;\"><big><b>Damian Monogue</b></big></span> (<span style=\"color:#40b040;\">demonnic</span> <span style=\"color:#0000ff;\">demonnic@gmail.com</span>) former maintainer of the early Windows and Apple OSX packages. He also administers our server and helps the project in many ways.</p>\n"
+               "<p><span style=\"color:#bc8942;\"><big><b>Florian Scheel</b></big></span> (<span style=\"color:#40b040;\">keneanung</span> <span style=\"color:#0000ff;\">keneanung@googlemail.com</span>) contributed many improvements to Mudlet's db: interface, event system, and has been around the project for a very long while assisting users.</p>\n"
+               "<p><span style=\"color:#bc8942;\"><big><b>Leris</b></big></span> (<span style=\"color:#40b040;\">Leris/Kebap</span> <span style=\"color:#0000ff;\">kebap_spam@gmx.net</span>) does a ton of work in making Mudlet, the website and the wiki accessible to you regardless of the language you speak - and promoting our genre!</p>\n"
+               "<p><span style=\"color:#bc8942;\"><b>Ahmed Charles</b></span> (<span style=\"color:#40b040;\">ahmedcharles</span> <span style=\"color:#0000ff;\">acharles@outlook.com</span>) contributions to the Travis integration, CMake and Visual C++ build, a lot of code quality and memory management improvements.</p>\n"
+               "<p><span style=\"color:#bc8942;\"><b>Chris Mitchell</b></span> (<span style=\"color:#40b040;\">Chris7</span> <span style=\"color:#0000ff;\">chrismudlet@gmail.com</span>) has developed a shared module system that allows script packages to be shared among profiles, a UI for viewing Lua variables, improvements in the mapper and all around.</p>\n"
+               "<p><span style=\"color:#bc8942;\"><b>Ben Carlsen</b></span> (<span style=\"color:#0000ff;\">arkholt@gmail.com</span>) has developed the first version of our Mac OSX installer. He is the former maintainer of the Mac version of Mudlet.</p>\n"
+               "<p><span style=\"color:#bc8942;\"><b>Ben Smith</b></span> () joined in December 2009 though he's been around much longer. Contributed to the Lua API and is the former maintainer of the Lua API.</p>\n"
+               "<p><span style=\"color:#bc8942;\"><b>Blaine von Roeder</b></span> () joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches and has helped with release management of 1.0.5.</p>\n"
+               "<p><span style=\"color:#bc8942;\"><b>Bruno Bigras</b></span> (<span style=\"color:#0000ff;\">bruno@burnbox.net</span>) developed the original cmake build script and he has committed a number of patches.</p>\n"
+               "<p><span style=\"color:#bc8942;\"><b>Carter Dewey</b></span> (<span style=\"color:#0000ff;\">eldarerathis@gmail.com</span>) contributions to the Lua API.</p>\n"
+               "<p><span style=\"color:#bc8942;\"><b>Erik Pettis</b></span> (<span style=\"color:#40b040;\">Oneymus</span>) developed the Vyzor GUI Manager for Mudlet.</p>\n"
+               "<p><span style=\"color:#bc8942;\"><b>\"ItsTheFae\"</b></span> (<span style=\"color:#40b040;\">Kae</span>) someone who has worked wonders in rejuventating our Website in 2017 but who prefers a little anonymity - if you are a <i>SpamBot</i> you will not get onto our Fora now. They have also made some useful C++ core code contributions and we look forward to future reviews on and work in that area.</p>\n"
+               "<p><span style=\"color:#bc8942;\"><b>Ian Adkins</b></span> (<span style=\"color:#40b040;\">dicene</span> <span style=\"color:#0000ff;\">ieadkins@gmail.com</span>) joining us 2017 they have given us some useful C++ and Lua contributions.</p>\n"
+               "<p><span style=\"color:#bc8942;\"><b>James Younquist</b></span> (<span style=\"color:#0000ff;\">daemacles@yahoo.com</span>) contributed the Geyser layout manager for Mudlet in March 2010. It is written in Lua and aims at simplifying user GUI scripting.</p>\n"
+               "<p><span style=\"color:#bc8942;\"><b>John Dahlström</b></span> (<span style=\"color:#0000ff;\">email@johndahlstrom.se</span>) helped develop and debug the Lua API. </p>\n"
+               "<p><span style=\"color:#bc8942;\"><b>Karsten Bock</span> (<span style=\"color:#40b040;\">Beliaar</span>) contributed several improvements and new features for Geyser.</p>\n"
+               "<p><span style=\"color:#bc8942;\"><b>Leigh Stillard</b></span> (<span style=\"color:#0000ff;\">leigh.stillard@gmail.com</span>) is the original author of our windows installer.</p>\n"
+               "<p><span style=\"color:#bc8942;\"><b>Maksym Grinenko</b></span> (<span style=\"color:#0000ff;\">maksym.grinenko@gmail.com</span>) worked on the manual, forum help and helps with GUI design and documentation.</p>\n"
+               "<p><span style=\"color:#bc8942;\"><b>Stephen Hansen</b></span> (<span style=\"color:#5500ff;\">me+mudlet@ixokai.io</span>) has developed a database Lua API that allows for far easier use of databases and one of the original OSX installers.</p>\n"
+               "<p><span style=\"color:#bc8942;\"><b>Thorsten Wilms</b></span> (<span style=\"color:#0000ff;\">t_w_@freenet.de</span>) has designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. Visit his homepage at <a href=\"http://thorwil.wordpress.com/\">thorwil.wordpress.com</a>.</p>\n"
+               "<p>Others too, have make their mark on different aspects of the Mudlet project and if they have not been mentioned here it is by no means intentional! For past contributors you may see them mentioned in the <b><a href=\"https://launchpad.net/~mudlet-makers/+members#active\">Mudlet Makers</a></b> list (on our former bug-tracking site), or for on-going contributors they may well be included in the <b><a href=\"https://github.com/Mudlet/Mudlet/graphs/contributors\">Contributors</a></b> list on GitHub.</p>\n"
+               "<br>\n"
+               "<p>Many icons are taken from the <span style=\"color:#bc8942;\"><b><u>KDE4 oxygen icon theme</u></b></span> at <a href=\"https://web.archive.org/web/20130921230632/http://www.oxygen-icons.org/\">www.oxygen-icons.org <sup>{wayback machine archive}</sup></a> or <a href=\"http://www.kde.org\">www.kde.org</a>.  Most of the rest are from Thorsten Wilms, or from Stephen Lyons combining bits of Thorsten's work with the other sources.</p>\n"
+               "<p>Special thanks to <span style=\"color:#bc8942;\"><b>Brett Duzevich</b></span> and <span style=\"color:#bc8942;\"><b>Ronny Ho</b></span>. They have contributed many good ideas and thus helped improve the scripting framework substantially.</p>\n"
+               "<p>Thanks to <span style=\"color:#bc8942;\"><b>Tomas Mecir</b></span> (<span style=\"color:#0000ff;\">kmuddy@kmuddy.com</span>) who brought us all together and inspired us with his KMuddy project. Mudlet is using some of the telnet code he wrote for his KMuddy project (<a href=\"https://cgit.kde.org/kmuddy.git/\">cgit.kde.org/kmuddy.git/</a>).</p>\n"
+               "<p>Special thanks to <span style=\"color:#bc8942;\"><b>Nick Gammon</b></span> (<a href=\"http://www.gammon.com.au/mushclient/mushclient.htm\">www.gammon.com.au/mushclient/mushclient.htm</a>) for giving us some valued pieces of advice.</p>"));
 
     textBrowser_mudlet->setHtml(
-                QStringLiteral("<html>%1<body><table border=\"0\" style=\"margin-top:36px; margin-bottom:36px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
-                               "%2</table>\n"
-                               "%3</body></html>")
-                .arg(htmlHead, aboutMudletHeader, aboutMudletBody));
+            QStringLiteral("<html>%1<body><table border=\"0\" style=\"margin-top:36px; margin-bottom:36px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
+                           "%2</table>\n"
+                           "%3</body></html>")
+                    .arg(htmlHead, aboutMudletHeader, aboutMudletBody));
+    // clang-format on
+}
 
-    // TAB 2 - "License"
+void dlgAboutDialog::setLicenseTab(const QString& htmlHead) const
+{   // TAB 2 - "License"
+    // clang-format off
     // Only the introductory text at the top is to be translated - the Licence
     // itself MUST NOT be translated as only the English Language version is
     // legally definitive - any translations are NOT so:
@@ -464,14 +477,18 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
     textBrowser_license->setHtml(
                 QStringLiteral("<html>%1<body>%2<hr>%3</body></html>")
                 .arg(htmlHead, headerText, gplText));
+    // clang-format on
+}
 
-    // TAB 3 - Third party items
+void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
+{   // TAB 3 - Third party items
+    // clang-format off
     // Only the introductory text at the top and interspersed between items are
     // to be translated - the Licences themselves MUST NOT be translated:
     QString thirdPartiesHeader(
-                tr("<p align=\"center\"><b>Mudlet</b> is built upon the shoulders of other projects in the FOSS world; "
-                   "as well as using many GPL components we also make use of some third-party software "
-                   "with other licenses:</p>"));
+            tr("<p align=\"center\"><b>Mudlet</b> is built upon the shoulders of other projects in the FOSS world; "
+               "as well as using many GPL components we also make use of some third-party software "
+               "with other licenses:</p>"));
 
     // This one needs something about the name of the original copyright holder
     // and possible contributors as it includes a %1 placeholder in the text
@@ -481,84 +498,84 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
     // %3 either "COPYRIGHT HOLDERS OR CONTRIBUTORS" or "AUTHOR"
     // depending on the particular situation:
     QString BSD3Clause_Body(
-                QStringLiteral("<h4>The [3-Clause] BSD Licence</h4>"
-                               "<p>Redistribution and use in source and binary forms, with or without "
-                               "modification, are permitted provided that the following conditions are met:"
-                               "<ul><li>Redistributions of source code must retain the above copyright notice, "
-                               "this list of conditions and the following disclaimer.</li>"
-                               "<li>Redistributions in binary form must reproduce the above copyright notice, "
-                               "this list of conditions and the following disclaimer in the documentation "
-                               "and/or other materials provided with the distribution.</li>"
-                               "<li>%1 be used to "
-                               "endorse or promote products derived from this software without specific prior "
-                               "written permission.</li></ul></p>"
-                               "<p>THIS SOFTWARE IS PROVIDED BY THE %2 &quot;AS "
-                               "IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, "
-                               "THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE "
-                               "ARE DISCLAIMED. IN NO EVENT SHALL THE %3 BE "
-                               "LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR "
-                               "CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF "
-                               "SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS "
-                               "INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN "
-                               "CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING "
-                               "IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE "
-                               "POSSIBILITY OF SUCH DAMAGE.</p>"));
+            QStringLiteral("<h4>The [3-Clause] BSD Licence</h4>"
+                           "<p>Redistribution and use in source and binary forms, with or without "
+                           "modification, are permitted provided that the following conditions are met:"
+                           "<ul><li>Redistributions of source code must retain the above copyright notice, "
+                           "this list of conditions and the following disclaimer.</li>"
+                           "<li>Redistributions in binary form must reproduce the above copyright notice, "
+                           "this list of conditions and the following disclaimer in the documentation "
+                           "and/or other materials provided with the distribution.</li>"
+                           "<li>%1 be used to "
+                           "endorse or promote products derived from this software without specific prior "
+                           "written permission.</li></ul></p>"
+                           "<p>THIS SOFTWARE IS PROVIDED BY THE %2 &quot;AS "
+                           "IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, "
+                           "THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE "
+                           "ARE DISCLAIMED. IN NO EVENT SHALL THE %3 BE "
+                           "LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR "
+                           "CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF "
+                           "SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS "
+                           "INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN "
+                           "CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING "
+                           "IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE "
+                           "POSSIBILITY OF SUCH DAMAGE.</p>"));
 
     // There are a first & second %1/%2 placeholder that contains:
     // %1 either "COPYRIGHT HOLDERS AND CONTRIBUTORS" or "AUTHOR"
     // %2 either "COPYRIGHT HOLDERS OR CONTRIBUTORS" or "AUTHOR"
     // depending on the particular situation:
     QString BSD2Clause_Body(
-                QStringLiteral("<h4>The [2-Clause] BSD Licence</h4>"
-                               "<p>Redistribution and use in source and binary forms, with or without "
-                               "modification, are permitted provided that the following conditions are met:</p>"
-                               "<ol><li>Redistributions of source code must retain the above copyright notice, "
-                               "this list of conditions and the following disclaimer.</li>"
-                               "<li>Redistributions in binary form must reproduce the above copyright notice, "
-                               "this list of conditions and the following disclaimer in the documentation "
-                               "and/or other materials provided with the distribution.</li></ol></p>"
-                               "<p>THIS SOFTWARE IS PROVIDED BY THE %1 &quot;AS "
-                               "IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, "
-                               "THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE "
-                               "ARE DISCLAIMED. IN NO EVENT SHALL THE %2 BE LIABLE "
-                               "FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL "
-                               "DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR "
-                               "SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER "
-                               "CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, "
-                               "OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE "
-                               "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</p>"));
+            QStringLiteral("<h4>The [2-Clause] BSD Licence</h4>"
+                           "<p>Redistribution and use in source and binary forms, with or without "
+                           "modification, are permitted provided that the following conditions are met:</p>"
+                           "<ol><li>Redistributions of source code must retain the above copyright notice, "
+                           "this list of conditions and the following disclaimer.</li>"
+                           "<li>Redistributions in binary form must reproduce the above copyright notice, "
+                           "this list of conditions and the following disclaimer in the documentation "
+                           "and/or other materials provided with the distribution.</li></ol></p>"
+                           "<p>THIS SOFTWARE IS PROVIDED BY THE %1 &quot;AS "
+                           "IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, "
+                           "THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE "
+                           "ARE DISCLAIMED. IN NO EVENT SHALL THE %2 BE LIABLE "
+                           "FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL "
+                           "DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR "
+                           "SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER "
+                           "CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, "
+                           "OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE "
+                           "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</p>"));
 
 #if defined(INCLUDE_UPDATER) || defined(DEBUG_SHOWALL)
     QString APACHE2_Body(
-                QStringLiteral("<h4>Apache Licence</h4>"
-                               "<p>Licensed under the Apache License, Version 2.0 (the &quot;License&quot;); "
-                               "you may not use this file except in compliance with the License. You may obtain "
-                               "a copy of the License at:</p>"
-                               "<p><a href=\"http://www.apache.org/licenses/LICENSE-2.0\">http://www.apache.org/licenses/LICENSE-2.0</a></p>"
-                               "<p>Unless required by applicable law or agreed to in writing, software "
-                               "distributed under the License is distributed on an &quot;AS IS&quot; BASIS, "
-                               "WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the "
-                               "License for the specific language governing permissions and limitations under "
-                               "the License.</p>"));
+            QStringLiteral("<h4>Apache Licence</h4>"
+                           "<p>Licensed under the Apache License, Version 2.0 (the &quot;License&quot;); "
+                           "you may not use this file except in compliance with the License. You may obtain "
+                           "a copy of the License at:</p>"
+                           "<p><a href=\"http://www.apache.org/licenses/LICENSE-2.0\">http://www.apache.org/licenses/LICENSE-2.0</a></p>"
+                           "<p>Unless required by applicable law or agreed to in writing, software "
+                           "distributed under the License is distributed on an &quot;AS IS&quot; BASIS, "
+                           "WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the "
+                           "License for the specific language governing permissions and limitations under "
+                           "the License.</p>"));
 #endif
 
     QString MIT_Body(
-                QStringLiteral("<h4>The MIT License</h4>"
-                               "<p>Permission is hereby granted, free of charge, to any person obtaining a copy "
-                               "of this software and associated documentation files (the &quot;Software&quot;), "
-                               "to deal in the Software without restriction, including without limitation the "
-                               "rights to use, copy, modify, merge, publish, distribute, sublicense, and/or "
-                               "sell copies of the Software, and to permit persons to whom the Software is "
-                               "furnished to do so, subject to the following conditions:</p>"
-                               "<p>The above copyright notice and this permission notice shall be included in "
-                               "all copies or substantial portions of the Software.</p>"
-                               "<p>THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, "
-                               "EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF "
-                               "MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO "
-                               "EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES "
-                               "OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, "
-                               "ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER "
-                               "DEALINGS IN THE SOFTWARE.</p>"));
+            QStringLiteral("<h4>The MIT License</h4>"
+                           "<p>Permission is hereby granted, free of charge, to any person obtaining a copy "
+                           "of this software and associated documentation files (the &quot;Software&quot;), "
+                           "to deal in the Software without restriction, including without limitation the "
+                           "rights to use, copy, modify, merge, publish, distribute, sublicense, and/or "
+                           "sell copies of the Software, and to permit persons to whom the Software is "
+                           "furnished to do so, subject to the following conditions:</p>"
+                           "<p>The above copyright notice and this permission notice shall be included in "
+                           "all copies or substantial portions of the Software.</p>"
+                           "<p>THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, "
+                           "EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF "
+                           "MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO "
+                           "EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES "
+                           "OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, "
+                           "ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER "
+                           "DEALINGS IN THE SOFTWARE.</p>"));
 
 #if defined(INCLUDE_FONTS) || defined(DEBUG_SHOWALL)
     QString UbuntuFontText(
@@ -638,16 +655,87 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
                                "ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF THE USE OR "
                                "INABILITY TO USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT "
                                "SOFTWARE.</p>"));
+
+    QString SILOpenFontText(
+                QStringLiteral("<h3>SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007</h3>"
+                               "<p>PREAMBLE</p>"
+                               "<p>The goals of the Open Font License (OFL) are to stimulate worldwide "
+                               "development of collaborative font projects, to support the font "
+                               "creation efforts of academic and linguistic communities, and to "
+                               "provide a free and open framework in which fonts may be shared and "
+                               "improved in partnership with others.</p>"
+                               "<p>The OFL allows the licensed fonts to be used, studied, modified and "
+                               "redistributed freely as long as they are not sold by themselves. The "
+                               "fonts, including any derivative works, can be bundled, embedded, "
+                               "redistributed and/or sold with any software provided that any reserved "
+                               "names are not used by derivative works. The fonts and derivatives, "
+                               "however, cannot be released under any other type of license. The "
+                               "requirement for fonts to remain under this license does not apply to "
+                               "any document created using the fonts or their derivatives.</p>"
+                               "<p>DEFINITIONS</p>"
+                               "<p>&quot;Font Software&quot; refers to the set of files released by the "
+                               "Copyright Holder(s) under this licence and clearly marked as such. This may "
+                               "include source files, build scripts and documentation.</p>"
+                               "<p>&quot;Reserved Font Name&quot; refers to any names specified as such "
+                               "after the copyright statement(s).</p>"
+                               "<p>&quot;Original Version&quot; refers to the collection of Font Software "
+                               "components as distributed by the Copyright Holder(s).</p>"
+                               "<p>&quot;Modified Version&quot; refers to any derivative made by adding to, "
+                               "deleting, or substituting -- in part or in whole -- any of the components of "
+                               "the Original Version, by changing formats or by porting the Font Software to a "
+                               "new environment.</p>"
+                               "<p>&quot;Author(s)&quot; refers to any designer, engineer, programmer, technical "
+                               "writer or other person who contributed to the Font Software.</p>"
+                               "<p>PERMISSION &amp; CONDITIONS</p>"
+                               "<p>Permission is hereby granted, free of charge, to any person obtaining "
+                               "a copy of the Font Software, to use, study, copy, merge, embed, "
+                               "modify, redistribute, and sell modified and unmodified copies of the "
+                               "Font Software, subject to the following conditions:"
+                               "<ol style=\"1\"><li> Neither the Font Software nor any of its individual components, "
+                               "in Original or Modified Versions, may be sold by itself.</li>"
+                               "<li>Original or Modified Versions of the Font Software may be bundled, "
+                               "redistributed and/or sold with any software, provided that each copy "
+                               "contains the above copyright notice and this license. These can be "
+                               "included either as stand-alone text files, human-readable headers or "
+                               "in the appropriate machine-readable metadata fields within text or "
+                               "binary files as long as those fields can be easily viewed by the user.</li>"
+                               "<li>No Modified Version of the Font Software may use the Reserved Font "
+                               "Name(s) unless explicit written permission is granted by the "
+                               "corresponding Copyright Holder. This restriction only applies to the "
+                               "primary font name as presented to the users.</li>"
+                               "<li>The name(s) of the Copyright Holder(s) or the Author(s) of the Font "
+                               "Software shall not be used to promote, endorse or advertise any "
+                               "Modified Version, except to acknowledge the contribution(s) of the "
+                               "Copyright Holder(s) and the Author(s) or with their explicit written "
+                               "permission.</li>"
+                               "<li>The Font Software, modified or unmodified, in part or in whole, "
+                               "must be distributed entirely under this license, and must not be "
+                               "distributed under any other license. The requirement for fonts to "
+                               "remain under this license does not apply to any document created using "
+                               "the Font Software</p>"
+                               "<p>TERMINATION</li></ol>"
+                               "<p>This licence becomes null and void if any of the above conditions are not "
+                               "met.</p>"
+                               "<p>DISCLAIMER</p>"
+                               "<p>THE FONT SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY "
+                               "KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF "
+                               "MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF "
+                               "COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE COPYRIGHT "
+                               "HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, INCLUDING ANY "
+                               "GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, WHETHER IN AN "
+                               "ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF THE USE OR "
+                               "INABILITY TO USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT "
+                               "SOFTWARE.</p>"));
 #endif
 
     QString communiHeader(tr("<h2><u>Communi IRC Library</u></h2>"
                              "<h3>Copyright © 2008-2016 The Communi Project</h3>"));
 
     QString communiKonverstionSuppliment(tr("<p>Parts of <tt>irctextformat.cpp</t> code come from Konversation and are copyrighted to:<br>"
-             "Copyright © 2002 Dario Abatianni &lt;eisfuchs@tigress.com&gt;<br>"
-             "Copyright © 2004 Peter Simonsson &lt;psn@linux.se&gt;<br>"
-             "Copyright © 2006-2008 Eike Hein &lt;hein@kde.org&gt;<br>"
-             "Copyright © 2004-2009 Eli Mackenzie &lt;argonel@gmail.com&gt;</p>"));
+                                            "Copyright © 2002 Dario Abatianni &lt;eisfuchs@tigress.com&gt;<br>"
+                                            "Copyright © 2004 Peter Simonsson &lt;psn@linux.se&gt;<br>"
+                                            "Copyright © 2006-2008 Eike Hein &lt;hein@kde.org&gt;<br>"
+                                            "Copyright © 2004-2009 Eli Mackenzie &lt;argonel@gmail.com&gt;</p>"));
 
     QString luaHeader(tr("<h2><u>lua - Lua 5.1</u></h2>"
                          "<h3>Copyright © 1994–2017 Lua.org, PUC-Rio.</h3>"));
@@ -720,89 +808,147 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
     // Now start to assemble the fragments above:
     QStringList license_3rdParty_texts;
     license_3rdParty_texts.append(QStringLiteral("<html>%1<body>%2<hr>")
-                                  .arg(htmlHead,                       //  1 - Html Header
-                                       thirdPartiesHeader));           //  2 - Introductory header - translatable
+                                          .arg(htmlHead,                       //  1 - Html Header
+                                               thirdPartiesHeader)); //  2 - Introductory header - translatable
 
     license_3rdParty_texts.append(QStringLiteral("%3%4%5<hr>")
-                                  .arg(communiHeader,                  //  3 - Communi (IRC) header - translatable
-                                       BSD3Clause_Body                 //  4 - Communi (IRC) body BSD3 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
-                                       .arg(QStringLiteral("Neither the name of the Communi Project nor the names of its contributors may"),
-                                            QStringLiteral("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
-                                            QStringLiteral("COPYRIGHT HOLDERS OR CONTRIBUTORS")),
-                                       communiKonverstionSuppliment)); //  5 - Communi supplimentary about Konversation - translatable
+                                          .arg(communiHeader,                  //  3 - Communi (IRC) header - translatable
+                                               BSD3Clause_Body                 //  4 - Communi (IRC) body BSD3 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
+                                                       .arg(QStringLiteral("Neither the name of the Communi Project nor the names of its contributors may"),
+                                                            QStringLiteral("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
+                                                            QStringLiteral("COPYRIGHT HOLDERS OR CONTRIBUTORS")),
+                                               communiKonverstionSuppliment)); //  5 - Communi supplimentary about Konversation - translatable
 
     license_3rdParty_texts.append(QStringLiteral("%6%7<hr>%8%9<hr>")
-                                  .arg(luaHeader,                      //  6 - lua header - translatable
-                                       MIT_Body,                       //  7 - lua body MIT - not translatable
-                                       luaYajlHeader,                  //  8 - lua_yajl header - translatable
-                                       MIT_Body));                     //  9 - lua_yajl body MIT - not translatable
+                                          .arg(luaHeader,                      //  6 - lua header - translatable
+                                               MIT_Body,                       //  7 - lua body MIT - not translatable
+                                               luaYajlHeader,                  //  8 - lua_yajl header - translatable
+                                               MIT_Body));    //  9 - lua_yajl body MIT - not translatable
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
     license_3rdParty_texts.append(QStringLiteral("%10%11<hr>")
-                                  .arg(luaZipHeader,                   // 10 - macOS luazip header - translatable
-                                       MIT_Body));                     // 11 - macOS luazip body MIT - not translatable
+                                          .arg(luaZipHeader, // 10 - macOS luazip header - translatable
+                                               MIT_Body));   // 11 - macOS luazip body MIT - not translatable
 #endif
 
     license_3rdParty_texts.append(QStringLiteral("%12%13")
-                                  .arg(edbeeHeader,                    // 12 - edbee header - translatable
-                                       MIT_Body));                     // 13 - edbee body MIT - not translatable
+                                          .arg(edbeeHeader,                    // 12 - edbee header - translatable
+                                               MIT_Body));  // 13 - edbee body MIT - not translatable
 
     license_3rdParty_texts.append(QStringLiteral("<hr width=\"50%\">%14"
                                                  "%15%16<hr width=\"33%\">"
                                                  "%17%18<hr width=\"33%\">"
                                                  "%19%20<hr width=\"33%\">"
                                                  "%21%22")
-                                  .arg(edbeeSuppliment,                // 14 - edbee other components:
-                                       OnigmoHeader,                   // 15 - Onigmo (Oniguruma-mod) header - translatable
-                                       BSD2Clause_Body                 // 16 - Onigmo (Oniguruma-mod) body BSD2 ("AUTHOR AND/OR CONTRIBUTORS") - not translatable
-                                       .arg(QStringLiteral("AUTHOR AND CONTRIBUTORS"),
-                                            QStringLiteral("AUTHOR OR CONTRIBUTORS")),
-                                       OnigurumaHeader,                // 17 - Oniguruma header - translatable
-                                       BSD2Clause_Body                 // 18 - Oniguruma body BSD2 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
-                                       .arg(QStringLiteral("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
-                                            QStringLiteral("COPYRIGHT HOLDERS OR CONTRIBUTORS")),
-                                       RubyHeader,                     // 19 - Ruby Header - translatable
-                                       BSD2Clause_Body                 // 20 - Ruby body BSD2 ("AUTHOR AND/OR CONTRIBUTORS") - not translatable
-                                       .arg(QStringLiteral("AUTHOR AND CONTRIBUTORS"),
-                                            QStringLiteral("AUTHOR OR CONTRIBUTORS")),
-                                       QsLogHeader,                    // 21 - QsLog header - translatable
-                                       BSD3Clause_Body                 // 22 - QsLog body BSD3 ("The name of the contributors may not" / "COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
-                                       .arg(QStringLiteral("The name of the contributors may not"),
-                                            QStringLiteral("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
-                                            QStringLiteral("COPYRIGHT HOLDERS OR CONTRIBUTORS"))));
+                                          .arg(edbeeSuppliment,                // 14 - edbee other components:
+                                               OnigmoHeader,                   // 15 - Onigmo (Oniguruma-mod) header - translatable
+                                               BSD2Clause_Body                 // 16 - Onigmo (Oniguruma-mod) body BSD2 ("AUTHOR AND/OR CONTRIBUTORS") - not translatable
+                                                       .arg(QStringLiteral("AUTHOR AND CONTRIBUTORS"),
+                                                            QStringLiteral("AUTHOR OR CONTRIBUTORS")),
+                                               OnigurumaHeader,                // 17 - Oniguruma header - translatable
+                                               BSD2Clause_Body                 // 18 - Oniguruma body BSD2 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
+                                                       .arg(QStringLiteral("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
+                                                            QStringLiteral("COPYRIGHT HOLDERS OR CONTRIBUTORS")),
+                                               RubyHeader,                     // 19 - Ruby Header - translatable
+                                               BSD2Clause_Body                 // 20 - Ruby body BSD2 ("AUTHOR AND/OR CONTRIBUTORS") - not translatable
+                                                       .arg(QStringLiteral("AUTHOR AND CONTRIBUTORS"),
+                                                            QStringLiteral("AUTHOR OR CONTRIBUTORS")),
+                                               QsLogHeader,                    // 21 - QsLog header - translatable
+                                               BSD3Clause_Body                 // 22 - QsLog body BSD3 ("The name of the contributors may not" / "COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
+                                                       .arg(QStringLiteral("The name of the contributors may not"),
+                                                            QStringLiteral("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
+                                                            QStringLiteral("COPYRIGHT HOLDERS OR CONTRIBUTORS"))));
 
 #if defined(INCLUDE_UPDATER) || defined(DEBUG_SHOWALL)
     license_3rdParty_texts.append(QStringLiteral("<hr>%23%24")
-                                  .arg(DblsqdHeader,                   // 23 - dblsqd Header - translatable
-                                       APACHE2_Body));                 // 24 - dblsqd body APACHE2 - not translatable
+                                          .arg(DblsqdHeader,                   // 23 - dblsqd Header - translatable
+                                               APACHE2_Body)); // 24 - dblsqd body APACHE2 - not translatable
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
     license_3rdParty_texts.append(QStringLiteral("<hr width=\"50%\">%25%26<hr width=\"33%\">%27%28<hr width=\"33%\">%29%30")
-                                  .arg(SparkleHeader,                  // 25 - Sparkle header - translatable
-                                       MIT_Body,                       // 26 - Sparkle body MIT - not translatable
-                                       Sparkle3rdPartyHeader,          // 27 - Sparkle 3rd Party headers - translatable
-                                       BSD2Clause_Body                 // 28 - Sparkle 3rd Party body BSD2 ("AUTHOR") - not translatable
-                                       .arg(QLatin1String("AUTHOR"),
-                                            QLatin1String("AUTHOR")),
-                                       SparkleGlueHeader,              // 29 - Sparkle glue header - translatable
-                                       BSD2Clause_Body                 // 30 - Sparkle glue body BSD2 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
-                                       .arg(QLatin1String("AUTHOR AND CONTRIBUTORS"),
-                                            QLatin1String("AUTHOR OR CONTRIBUTORS"))));
+                                          .arg(SparkleHeader,         // 25 - Sparkle header - translatable
+                                               MIT_Body,              // 26 - Sparkle body MIT - not translatable
+                                               Sparkle3rdPartyHeader, // 27 - Sparkle 3rd Party headers - translatable
+                                               BSD2Clause_Body        // 28 - Sparkle 3rd Party body BSD2 ("AUTHOR") - not translatable
+                                                       .arg(QLatin1String("AUTHOR"), QLatin1String("AUTHOR")),
+                                               SparkleGlueHeader, // 29 - Sparkle glue header - translatable
+                                               BSD2Clause_Body    // 30 - Sparkle glue body BSD2 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
+                                                       .arg(QLatin1String("AUTHOR AND CONTRIBUTORS"), QLatin1String("AUTHOR OR CONTRIBUTORS"))));
 #endif // defined(Q_OS_MACOS))
 #endif // defined(INCLUDE_UPDATER)
 
 #if defined(INCLUDE_FONTS) || defined(DEBUG_SHOWALL)
     license_3rdParty_texts.append(QStringLiteral("<hr>%31")
                                   .arg(UbuntuFontText));               // 31 - Ubuntu Font Text - not translatable
+    license_3rdParty_texts.append(QStringLiteral("<hr>%32")
+                                  .arg(SILOpenFontText));              // 32 - SIL Open Font Text - not translatable
+
 #endif
 
     license_3rdParty_texts.append(QStringLiteral("<hr><br>"
                                                  "<center><img src=\":/icons/Discord-Logo+Wordmark-Color_400x136px.png\"/></center><br>"
-                                                 "%32%33")
-                                  .arg(DiscordHeader,                  // 32 - Discord header - translatable
-                                       MIT_Body));                     // 33 - Discord body MIT - not translatable
+                                                 "%33%34")
+                                  .arg(DiscordHeader,                  // 33 - Discord header - translatable
+                                       MIT_Body));                     // 34 - Discord body MIT - not translatable
 
     license_3rdParty_texts.append(QStringLiteral("</body></html>"));
 
     textBrowser_license_3rdparty->setHtml(license_3rdParty_texts.join(QString()));
-
     // clang-format on
+}
+
+void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
+{
+    // see https://www.patreon.com/mudlet if you'd like to be added!
+    QStringList mightier_than_swords = {"Maiyannah Bishop", "Qwindor Rousseau"};
+    QStringList on_a_plaque = {"Vadim Peretokin"};
+    int image_counter{1};
+
+    if (!supportersDocument) {
+        supportersDocument = std::make_unique<QTextDocument>();
+    }
+
+    QFont nameFont;
+    nameFont.setPixelSize(32);
+    nameFont.setFamily(QStringLiteral("Bitstream Vera Sans"));
+
+    for (const auto& name: qAsConst(mightier_than_swords)) {
+        QImage background(QStringLiteral(":/icons/frame_swords.png"));
+        QPainter painter(&background);
+        painter.setFont(nameFont);
+        painter.drawText(0, 0, background.width(), background.height(), Qt::AlignCenter, name);
+        supportersDocument->addResource(QTextDocument::ImageResource, QUrl(QStringLiteral("data://image%1").arg(image_counter)), background);
+        image_counter++;
+    }
+
+    for (const auto& name: qAsConst(on_a_plaque)) {
+        QImage background(QStringLiteral(":/icons/frame_plaque.png"));
+        QPainter painter(&background);
+        painter.setFont(nameFont);
+        painter.drawText(0, 0, background.width(), background.height(), Qt::AlignCenter, name);
+        supportersDocument->addResource(QTextDocument::ImageResource, QUrl(QStringLiteral("data://image%1").arg(image_counter)), background);
+        image_counter++;
+    }
+
+    QString supporters_image_html;
+    auto supporters_amount = mightier_than_swords.size() + on_a_plaque.size();
+    for (auto counter = 1; counter <= supporters_amount; counter++) {
+        // clang-format off
+        supporters_image_html.append(QStringLiteral(R"(
+            <div class="container">
+                <img src="data://image%1"/>
+            </div>
+        )").arg(counter));
+        // clang-format on
+    }
+
+    QString supporters_text(QStringLiteral(R"(
+               <p align="center"><br>%1<br></p>
+               %2
+               )")
+                  .arg(tr(R"(
+                          These formidable folks will be fondly remembered forever<br>for their generous financial support on <a href="https://www.patreon.com/mudlet">Mudlet's patreon</a>:
+                          )"), supporters_image_html));
+
+    supportersDocument->setHtml(QStringLiteral("<html>%1<body>%2</body></html>").arg(htmlHead, supporters_text));
+    textBrowser_supporters->setDocument(supportersDocument.get());
+    textBrowser_supporters->setOpenExternalLinks(true);
 }

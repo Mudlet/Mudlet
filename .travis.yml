@@ -22,8 +22,8 @@ addons:
     - libzip-dev
     - libpulse-dev
     - libyajl-dev
-    - gcc-9
-    - g++-9
+    - gcc-7
+    - g++-7
     - luarocks
     - lua-rex-pcre
     - lua-filesystem
@@ -76,6 +76,7 @@ matrix:
         - qt512tools
         - qt512gamepad
         - qt512speech
+        - qt512translations
 
   - os: linux
     compiler: gcc

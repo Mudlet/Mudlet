@@ -64,7 +64,7 @@ private:
     void enterCommand(QKeyEvent*);
     void adjustHeight();
     void processNormalKey(QEvent*);
-    bool processPotentialKeyBinding(QKeyEvent*);
+    bool keybindingMatched(QKeyEvent*);
 
 
     QPointer<Host> mpHost;
