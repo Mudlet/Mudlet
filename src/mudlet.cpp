@@ -402,26 +402,6 @@ mudlet::mudlet()
 
     disableToolbarButtons();
 
-    mpDebugArea = new QMainWindow(nullptr);
-    // PLACEMARKER: Host creation (1) - "default_host" case
-    QString defaultHost(QStringLiteral("default_host"));
-    // We DO NOT emit a signal_hostCreated for THIS case:
-    mHostManager.addHost(defaultHost, QString(), QString(), QString());
-    mpDefaultHost = mHostManager.getHost(defaultHost);
-    mpDebugConsole = new TConsole(mpDefaultHost, TConsole::CentralDebugConsole);
-    mpDebugConsole->setSizePolicy(sizePolicy);
-    mpDebugConsole->setWrapAt(100);
-    mpDebugArea->setCentralWidget(mpDebugConsole);
-    mpDebugArea->setWindowTitle(tr("Central Debug Console"));
-    mpDebugArea->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_debug.png")));
-
-    auto consoleCloser = new TConsoleMonitor(mpDebugArea);
-    mpDebugArea->installEventFilter(consoleCloser);
-
-    QSize generalRule(qApp->desktop()->size());
-    generalRule -= QSize(30, 30);
-    mpDebugArea->resize(QSize(800, 600).boundedTo(generalRule));
-    mpDebugArea->hide();
     QFont mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
     if (mEnableFullScreenMode) {
         showFullScreen();
@@ -1739,6 +1719,7 @@ void mudlet::disableToolbarButtons()
     mpMainToolBar->actions()[14]->setEnabled(false);
 
     mpActionReplay->setEnabled(false);
+    mpActionIRC->setEnabled(false);
     mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                                .arg(tr("<p>Load a Mudlet replay.</p>"
                                        "<p><i>Disabled until a profile is loaded.</i></p>")));
@@ -1767,6 +1748,7 @@ void mudlet::enableToolbarButtons()
     mpMainToolBar->actions()[12]->setEnabled(true);
     mpMainToolBar->actions()[13]->setEnabled(true);
     mpMainToolBar->actions()[14]->setEnabled(true);
+    mpActionIRC->setEnabled(true);
 
     if (!mpToolBarReplay) {
         // Only enable the replay button if it is not disabled because there is
@@ -3519,15 +3501,13 @@ void mudlet::slot_notes()
 void mudlet::slot_irc()
 {
     Host* pHost = getActiveHost();
-    bool isDefaultHost = false;
     if (!pHost) {
-        pHost = mpDefaultHost;
-        isDefaultHost = true;
+        return;
     }
 
     if (!mpIrcClientMap.contains(pHost)) {
         QPointer<dlgIRC> dlg = new dlgIRC(pHost);
-        dlg->setDefaultHostClient(isDefaultHost);
+        dlg->setDefaultHostClient(false);
         mpIrcClientMap[pHost] = dlg;
     }
     mpIrcClientMap.value(pHost)->raise();
@@ -3671,6 +3651,36 @@ void mudlet::startAutoLogin()
     }
 }
 
+bool mudlet::addHost(const QString& hostname, const QString& port, const QString& login, const QString& pass)
+{
+    auto success = mHostManager.addHost(hostname, port, login, pass);
+    if (mpDebugArea) {
+        return success;
+    }
+
+    if (success && !mpDebugArea) {
+        mpDebugArea = new QMainWindow(nullptr);
+        mpDefaultHost = mHostManager.getHost(hostname);
+        mpDebugConsole = new TConsole(mpDefaultHost, TConsole::CentralDebugConsole);
+        mpDebugConsole->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        mpDebugConsole->setWrapAt(100);
+        mpDebugArea->setCentralWidget(mpDebugConsole);
+        mpDebugArea->setWindowTitle(tr("Central Debug Console"));
+        mpDebugArea->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_debug.png")));
+
+        auto consoleCloser = new TConsoleMonitor(mpDebugArea);
+        mpDebugArea->installEventFilter(consoleCloser);
+
+        QSize generalRule(qApp->desktop()->size());
+        generalRule -= QSize(30, 30);
+        mpDebugArea->resize(QSize(800, 600).boundedTo(generalRule));
+        mpDebugArea->hide();
+    }
+
+    return success;
+}
+
+
 void mudlet::doAutoLogin(const QString& profile_name)
 {
     if (profile_name.size() < 1) {
@@ -3685,7 +3695,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
 
     // load an old profile if there is any
     // PLACEMARKER: Host creation (2) - autoload case
-    if (mHostManager.addHost(profile_name, QString(), QString(), QString())) {
+    if (mudlet::self()->addHost(profile_name, QString(), QString(), QString())) {
         pHost = mHostManager.getHost(profile_name);
         if (!pHost) {
             return;

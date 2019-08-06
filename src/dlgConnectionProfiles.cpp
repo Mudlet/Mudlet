@@ -1189,8 +1189,7 @@ void dlgConnectionProfiles::fillout_form() {
     mProfileList = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot,
                                                                                QDir::Name);
 
-    // if only the default_host is present it means no profiles have yet been created
-    if (mProfileList.isEmpty() || (mProfileList.size() == 1 && mProfileList.at(0) == QStringLiteral("default_host"))) {
+    if (mProfileList.isEmpty()) {
         welcome_message->show();
         requiredArea->hide();
         informationalArea->hide();
@@ -1604,13 +1603,7 @@ void dlgConnectionProfiles::fillout_form() {
 #if defined(QT_DEBUG)
     mudServer = QStringLiteral("Mudlet self-test");
     if (!deletedDefaultMuds.contains(mudServer) && !mProfileList.contains(mudServer)) {
-        for (int i = mProfileList.size() - 1; i >= 0; --i) {
-            if (mProfileList.at(i) == QLatin1String("default_host")) {
-                mProfileList.insert(i, mudServer);
-                break;
-            }
-        }
-
+        mProfileList.append(mudServer);
         pM = new QListWidgetItem(mudServer);
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
@@ -1653,7 +1646,7 @@ void dlgConnectionProfiles::fillout_form() {
         // any profiles yet since default_host profile cannot actually be used. In this case,
         // select a random pre-defined profile to give all MUDs a fair go
 
-        // make sure not to select the default_host or test_profile though
+        // make sure not to select the test_profile though
         auto default_host_row = toselectRow;
         // dont infinite loop.
         if (test_profile_row == -1 || profiles_tree_widget->count() != 2) {
@@ -2028,7 +2021,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     }
     // load an old profile if there is any
     // PLACEMARKER: Host creation (3) - normal case
-    if (hostManager.addHost(profile_name, port_entry->text().trimmed(), QString(), QString())) {
+    if (mudlet::self()->addHost(profile_name, port_entry->text().trimmed(), QString(), QString())) {
         pHost = hostManager.getHost(profile_name);
         if (!pHost) {
             return;
