@@ -250,16 +250,15 @@ QColor T2DMap::getColor(int id)
         break;
     default: //user defined room color
         if (!mpMap->customEnvColors.contains(env)) {
-            if (16 < env && env < 232)
-            {
+            if (16 < env && env < 232) {
                 quint8 base = env - 16;
                 quint8 r = base / 36;
                 quint8 g = (base - (r * 36)) / 6;
                 quint8 b = (base - (r * 36)) - (g * 6);
 
-		r = r * 51;
-		g = g * 51;
-		b = b * 51;
+                r = r * 51;
+                g = g * 51;
+                b = b * 51;
                 color = QColor(r, g, b, 255);
             } else if (231 < env && env < 256) {
                 quint8 k = ((env - 232) * 10) + 8;
@@ -2739,8 +2738,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             while (itRoom.hasNext()) {
                 auto _item = new QTreeWidgetItem;
                 int multiSelectionRoomId = itRoom.next();
-                // Using QStringLiteral so we can pad text form with spaces so sorting works:
-                _item->setText(0, key_plain.arg(multiSelectionRoomId, 7));
+                _item->setText(0, key_plain.arg(multiSelectionRoomId, mMaxRoomIdDigits));
                 _item->setTextAlignment(0, Qt::AlignRight);
                 TRoom* pR_multiSelection = mpMap->mpRoomDB->getRoom(multiSelectionRoomId);
                 if (pR_multiSelection) {
@@ -4424,7 +4422,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                 while (itRoom.hasNext()) {
                     auto item = new QTreeWidgetItem;
                     int multiSelectionRoomId = itRoom.next();
-                    item->setText(0, QStringLiteral("%1").arg(multiSelectionRoomId, 7));
+                    item->setText(0, QStringLiteral("%1").arg(multiSelectionRoomId, mMaxRoomIdDigits));
                     item->setTextAlignment(0, Qt::AlignRight);
                     TRoom* pR_multiSelection = mpMap->mpRoomDB->getRoom(multiSelectionRoomId);
                     if (pR_multiSelection) {
