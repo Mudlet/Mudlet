@@ -39,7 +39,9 @@
 
 #include "pre_guard.h"
 #include <QtUiTools>
+#include <QNetworkProxy>
 #include <zip.h>
+#include <memory>
 #include "post_guard.h"
 
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
@@ -394,7 +396,6 @@ void Host::resetProfile_phase2()
     mEventMap.clear();
     mLuaInterpreter.initLuaGlobals();
     mLuaInterpreter.loadGlobal();
-    mLuaInterpreter.initIndenterGlobals();
     mBlockScriptCompile = false;
 
     getTriggerUnit()->compileAll();
@@ -474,7 +475,6 @@ std::tuple<bool, QString, QString> Host::saveProfileAs(const QString& file)
 
 void Host::xmlSaved(const QString& xmlName)
 {
-    qDebug() << "saved" << xmlName;
     if (writers.contains(xmlName)) {
         auto writer = writers.take(xmlName);
         delete writer;
@@ -933,7 +933,7 @@ bool Host::installPackage(const QString& fileName, int module)
                 }
             }
             // continuing, so update the folder name on disk
-            QString newpath(QStringLiteral("%1/%2/").arg(_home, packageName));
+            QString newpath(QStringLiteral("%1/%2").arg(_home, packageName));
             _dir.rename(_dir.absolutePath(), newpath);
             _dir = QDir(newpath);
         }
@@ -1199,8 +1199,11 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
         return;
     } else {
         // error
-        std::string e = "no error message available from Lua";
-        e = lua_tostring(L, -1);
+        std::string e = lua_tostring(L, -1);
+        if (e.empty()) {
+            e = "no error message available from Lua";
+        }
+
         std::string reason;
         switch (error) {
         case 4:
@@ -1221,10 +1224,10 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
         }
 
         if (mudlet::debugMode) {
-            qDebug() << reason.c_str() << " in config.lua:" << e.c_str();
+            qDebug() << reason.c_str() << " in config.lua: " << e.c_str();
         }
         // should print error to main display
-        QString msg = QString("%1 in config.lua: %2\n").arg(reason.c_str(), e.c_str());
+        QString msg = QStringLiteral("%1 in config.lua: %2\n").arg(reason.c_str(), e.c_str());
         mpConsole->printSystemMessage(msg);
 
 
@@ -1762,4 +1765,32 @@ void Host::setName(const QString& newName)
         mpConsole->setProfileName(newName);
     }
     mTimerUnit.changeHostName(newName);
+}
+
+void Host::updateProxySettings(QNetworkAccessManager* manager)
+{
+    if (mUseProxy && !mProxyAddress.isEmpty() && mProxyPort != 0) {
+        auto& proxy = getConnectionProxy();
+        manager->setProxy(*proxy);
+    } else {
+        manager->setProxy(QNetworkProxy::DefaultProxy);
+    }
+}
+
+std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
+{
+    if (!mpDownloaderProxy) {
+        mpDownloaderProxy = std::make_unique<QNetworkProxy>(QNetworkProxy::Socks5Proxy);
+    }
+    auto& proxy = mpDownloaderProxy;
+    proxy->setHostName(mProxyAddress);
+    proxy->setPort(mProxyPort);
+    if (!mProxyUsername.isEmpty()) {
+        proxy->setUser(mProxyUsername);
+    }
+    if (!mProxyPassword.isEmpty()) {
+        proxy->setPassword(mProxyPassword);
+    }
+
+    return mpDownloaderProxy;
 }

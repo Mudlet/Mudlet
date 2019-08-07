@@ -128,6 +128,8 @@ public slots:
     void slot_handleHostAddition(Host*, quint8);
     void slot_handleHostDeletion(Host*);
 
+    void slot_guiLanguageChanged(const QString&);
+
 private slots:
     void slot_changeShowSpacesAndTabs(bool);
     void slot_changeShowLineFeedsAndParagraphs(bool);

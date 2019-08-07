@@ -130,6 +130,8 @@ private:
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
     static QString byteToLuaCodeOrChar(const char*);
     std::pair<bool, int> drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;
+    int convertMouseXToBufferX(const int mouseX, const int lineNumber) const;
+    int getGraphemeWidth(uint unicode) const;
 
     int mFontHeight;
     int mFontWidth;
@@ -164,6 +166,11 @@ private:
     // Set in constructor for run-time Qt versions less than 5.11 which only
     // supports up to Unicode 8.0:
     bool mUseOldUnicode8;
+    // How many "normal" width "characters" are each tab stop apart, whilst
+    // there is no current mechanism to adjust this, sensible values will
+    // probably be 1 (so that a tab is just treated as a space), 2, 4 and 8,
+    // in the past it was typically 8 and this is what we'll use at present:
+    int mTabStopwidth;
 };
 
 #endif // MUDLET_TTEXTEDIT_H

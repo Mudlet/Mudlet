@@ -46,7 +46,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       echo "Signed final .dmg"
     fi
 
-    DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/${appBaseName}.dmg"  "https://transfer.sh/${appBaseName}.dmg" -O - -q)
+    DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/${appBaseName}.dmg"  "https://make.mudlet.org/snapshots/${appBaseName}.dmg" -O - -q)
 
   else # release build
 
@@ -68,7 +68,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
     mv "${HOME}/Desktop/Mudlet.dmg" "${HOME}/Desktop/Mudlet-${VERSION}.dmg"
 
     scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}.dmg" "keneanung@mudlet.org:${DEPLOY_PATH}"
-    DEPLOY_URL="http://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.dmg"
+    DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.dmg"
 
     # install dblsqd. NPM must be available here because we use it to install the tool that creates the dmg
     npm install -g dblsqd-cli

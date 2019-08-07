@@ -29,8 +29,6 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/astar_search.hpp>
 #include <boost/graph/graphviz.hpp>
-#include <boost/graph/random.hpp>
-#include <boost/random.hpp>
 #include "post_guard.h"
 #endif
 
@@ -44,7 +42,6 @@
 class TRoom;
 
 using namespace boost;
-using namespace std;
 
 
 // auxiliary types
