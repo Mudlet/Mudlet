@@ -1621,36 +1621,36 @@ void dlgConnectionProfiles::fillout_form() {
     QString toselectProfileName;
     int toselectRow = -1;
     int test_profile_row = -1;
+    bool firstMudletLaunch = true;
 
     for (int i = 0; i < profiles_tree_widget->count(); i++) {
-        auto profile = profiles_tree_widget->item(i);
-        auto profileName = profile->text();
+        const auto profile = profiles_tree_widget->item(i);
+        const auto profileName = profile->text();
         if (profileName == QStringLiteral("Mudlet self-test")) {
             test_profile_row = i;
         }
 
-        QDateTime profile_lastRead = QFileInfo(
-                mudlet::getMudletPath(mudlet::profileXmlFilesPath, profileName)).lastModified();
-        // Since Qt 5.x null QTimes and QDateTimes are invalid - and might not
-        // work as expected - so test for validity of the test_date value as well
-        if ((!test_date.isValid()) || profile_lastRead > test_date) {
-            test_date = profile_lastRead;
-            toselectProfileName = profileName;
-            toselectRow = i;
+        const auto fileinfo = QFileInfo(
+                    mudlet::getMudletPath(mudlet::profileXmlFilesPath, profileName));
+
+        if (fileinfo.exists()) {
+            firstMudletLaunch = false;
+            QDateTime profile_lastRead = fileinfo.lastModified();
+            // Since Qt 5.x null QTimes and QDateTimes are invalid - and might not
+            // work as expected - so test for validity of the test_date value as well
+            if ((!test_date.isValid()) || profile_lastRead > test_date) {
+                test_date = profile_lastRead;
+                toselectProfileName = profileName;
+                toselectRow = i;
+            }
         }
     }
-qDebug() << profiles_tree_widget->count();
-    if (toselectRow != -1 && toselectProfileName == QStringLiteral("default_host") &&
-        profiles_tree_widget->count() > 1) {
-        // if the last profile read is default_host, it means the user hasn't created
-        // any profiles yet since default_host profile cannot actually be used. In this case,
-        // select a random pre-defined profile to give all MUDs a fair go
 
+    if (firstMudletLaunch) {
+        // Select a random pre-defined profile to give all MUDs a fair go first time
         // make sure not to select the test_profile though
-        // dont infinite loop.
-        qDebug() << profiles_tree_widget->count();
-        if (test_profile_row == -1 || profiles_tree_widget->count() != 1) {
-            while (toselectRow == test_profile_row) {
+        if (profiles_tree_widget->count() != 1) {
+            while (toselectRow == -1 || toselectRow == test_profile_row) {
                 toselectRow = qrand() % profiles_tree_widget->count();
             }
         }
