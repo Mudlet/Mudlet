@@ -19,8 +19,8 @@ if [ "${TRAVIS_EVENT_TYPE}" = "cron" ]; then
 	  echo Download Coverity analysis tool failed!
 	  exit 1
   fi
-  tar xzf cov*.tar.gz
-  rm -f cov*.tar.gz
+  tar xzf coverity_tool.tgz
+  rm -f coverity_tool.tgz
   export PATH="$(pwd)/$(ls -d cov*)/bin:$PATH"
   echo The new PATH is now "${PATH}"
   cd ..
