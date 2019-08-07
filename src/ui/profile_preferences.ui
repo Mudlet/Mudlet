@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>747</width>
+    <width>884</width>
     <height>808</height>
    </rect>
   </property>
@@ -42,7 +42,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>8</number>
      </property>
      <widget class="QWidget" name="tab_general">
       <property name="sizePolicy">
@@ -2789,20 +2789,16 @@
        <item>
         <widget class="QGroupBox" name="groupBox_ssl">
          <property name="title">
-          <string>SSL/TLS</string>
+          <string>TLS/SSL secure connection</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_ssl">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="checkBox_ssl">
-            <property name="toolTip">
-             <string extracomment="Enable SSL / TLS for this game"/>
-            </property>
-            <property name="text">
-             <string>Secure connection</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0" colspan="2">
+          <item row="0" column="0" colspan="2">
            <widget class="QGroupBox" name="groupBox_ssl_certificate">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -2888,37 +2884,7 @@
             </layout>
            </widget>
           </item>
-          <item row="2" column="0">
-           <widget class="QCheckBox" name="checkBox_self_signed">
-            <property name="toolTip">
-             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
-            </property>
-            <property name="text">
-             <string>Accept self-signed certificates</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QCheckBox" name="checkBox_expired">
-            <property name="toolTip">
-             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
-            </property>
-            <property name="text">
-             <string>Accept expired certificates</string>
-            </property>
-           </widget>
-          </item>
           <item row="3" column="0" colspan="2">
-           <widget class="QCheckBox" name="checkBox_ignore_all">
-            <property name="toolTip">
-             <string extracomment="Ignore all SSL/TLS errors - this negates the point of a secure connection, use carefully"/>
-            </property>
-            <property name="text">
-             <string>Accept all certificate errors       (unsecure)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0" colspan="2">
            <widget class="QFrame" name="notificationArea">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -3189,6 +3155,15 @@
                     </color>
                    </brush>
                   </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
                  </active>
                  <inactive>
                   <colorrole role="WindowText">
@@ -3326,6 +3301,15 @@
                     </color>
                    </brush>
                   </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
                  </inactive>
                  <disabled>
                   <colorrole role="WindowText">
@@ -3457,6 +3441,15 @@
                   <colorrole role="ToolTipText">
                    <brush brushstyle="SolidPattern">
                     <color alpha="255">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
                      <red>0</red>
                      <green>0</green>
                      <blue>0</blue>
@@ -3638,6 +3631,15 @@
                     </color>
                    </brush>
                   </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
                  </active>
                  <inactive>
                   <colorrole role="WindowText">
@@ -3775,6 +3777,15 @@
                     </color>
                    </brush>
                   </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
                  </inactive>
                  <disabled>
                   <colorrole role="WindowText">
@@ -3906,6 +3917,15 @@
                   <colorrole role="ToolTipText">
                    <brush brushstyle="SolidPattern">
                     <color alpha="255">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
                      <red>0</red>
                      <green>0</green>
                      <blue>0</blue>
@@ -4087,6 +4107,15 @@
                     </color>
                    </brush>
                   </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
                  </active>
                  <inactive>
                   <colorrole role="WindowText">
@@ -4224,6 +4253,15 @@
                     </color>
                    </brush>
                   </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
                  </inactive>
                  <disabled>
                   <colorrole role="WindowText">
@@ -4355,6 +4393,15 @@
                   <colorrole role="ToolTipText">
                    <brush brushstyle="SolidPattern">
                     <color alpha="255">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
                      <red>0</red>
                      <green>0</green>
                      <blue>0</blue>
@@ -4536,6 +4583,15 @@
                     </color>
                    </brush>
                   </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
                  </active>
                  <inactive>
                   <colorrole role="WindowText">
@@ -4667,6 +4723,15 @@
                   <colorrole role="ToolTipText">
                    <brush brushstyle="SolidPattern">
                     <color alpha="255">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
                      <red>0</red>
                      <green>0</green>
                      <blue>0</blue>
@@ -4810,6 +4875,15 @@
                     </color>
                    </brush>
                   </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
                  </disabled>
                 </palette>
                </property>
@@ -4843,6 +4917,36 @@
               </widget>
              </item>
             </layout>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="checkBox_self_signed">
+            <property name="toolTip">
+             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
+            </property>
+            <property name="text">
+             <string>Accept self-signed certificates</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QCheckBox" name="checkBox_expired">
+            <property name="toolTip">
+             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
+            </property>
+            <property name="text">
+             <string>Accept expired certificates</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_ignore_all">
+            <property name="toolTip">
+             <string extracomment="Ignore all SSL/TLS errors - this negates the point of a secure connection, use carefully"/>
+            </property>
+            <property name="text">
+             <string>Accept all certificate errors       (unsecure)</string>
+            </property>
            </widget>
           </item>
          </layout>
