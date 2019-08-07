@@ -48,13 +48,12 @@
 #include <chrono>
 
 
-TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLowerPane, QFontMetrics fontMetrics)
+TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLowerPane)
 : QWidget(pW)
 , mCursorY(0)
 , mIsCommandPopup(false)
 , mIsTailMode(true)
 , mShowTimeStamps(false)
-, mFontMetrics(fontMetrics)
 , mForceUpdate(false)
 , mIsLowerPane(isLowerPane)
 , mLastRenderBottom(0)
@@ -69,8 +68,9 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 {
     mLastClickTimer.start();
     if (pC->getType() != TConsole::CentralDebugConsole) {
-        mFontHeight = QFontMetrics(mpHost->mDisplayFont).height();
-        mFontWidth = QFontMetrics(mpHost->mDisplayFont).width(QChar('W'));
+        mFontMetrics = new QFontMetrics(mpHost->mDisplayFont);
+        mFontHeight = mFontMetrics->height();
+        mFontWidth = mFontMetrics->width(QChar('W'));
         mScreenWidth = 100;
         if ((width() / mFontWidth) < mScreenWidth) {
             mScreenWidth = 100; //width()/mFontWidth;
@@ -92,8 +92,9 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     } else {
         // This is part of the Central Debug Console
         mShowTimeStamps = true;
-        mFontHeight = QFontMetrics(mDisplayFont).height();
-        mFontWidth = QFontMetrics(mDisplayFont).width(QChar('W'));
+        mFontMetrics = new QFontMetrics(mDisplayFont);
+        mFontHeight = mFontMetrics->height();
+        mFontWidth = mFontMetrics->width(QChar('W'));
         mScreenWidth = 100;
         mDisplayFont.setFixedPitch(true);
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
@@ -226,10 +227,10 @@ void TTextEdit::initDefaultSettings()
 void TTextEdit::updateScreenView()
 {
     if (isHidden()) {
-        mFontMetrics = QFontMetrics(mpHost->mDisplayFont);
-        mFontWidth = QFontMetrics(mDisplayFont).width(QChar(' '));
-        mFontDescent = QFontMetrics(mDisplayFont).descent();
-        mFontAscent = QFontMetrics(mDisplayFont).ascent();
+        mFontMetrics = new QFontMetrics(mDisplayFont);
+        mFontWidth = mFontMetrics->width(QChar(' '));
+        mFontDescent = mFontMetrics->descent();
+        mFontAscent = mFontMetrics->ascent();
         mFontHeight = mFontAscent + mFontDescent;
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap(2000, 600);
@@ -251,10 +252,10 @@ void TTextEdit::updateScreenView()
     // This was "if (pC->mType == TConsole::MainConsole) {"
     // and mIsMiniConsole is true for user created Mini Consoles and User Windows
     if (mpConsole->getType() == TConsole::MainConsole) {
-        mFontMetrics = QFontMetrics(mpHost->mDisplayFont);
-        mFontWidth = QFontMetrics(mpHost->mDisplayFont).width(QChar('W'));
-        mFontDescent = QFontMetrics(mpHost->mDisplayFont).descent();
-        mFontAscent = QFontMetrics(mpHost->mDisplayFont).ascent();
+        mFontMetrics = new QFontMetrics(mpHost->mDisplayFont);
+        mFontWidth = mFontMetrics->width(QChar('W'));
+        mFontDescent = mFontMetrics->descent();
+        mFontAscent = mFontMetrics->ascent();
         mFontHeight = mFontAscent + mFontDescent;
         mBgColor = mpHost->mBgColor;
         mFgColor = mpHost->mFgColor;
@@ -273,10 +274,10 @@ void TTextEdit::updateScreenView()
         }
 #endif
     } else {
-        mFontMetrics = QFontMetrics(mpHost->mDisplayFont);
-        mFontWidth = QFontMetrics(mDisplayFont).width(QChar('W'));
-        mFontDescent = QFontMetrics(mDisplayFont).descent();
-        mFontAscent = QFontMetrics(mDisplayFont).ascent();
+        mFontMetrics = new QFontMetrics(mDisplayFont);
+        mFontWidth = mFontMetrics->width(QChar('W'));
+        mFontDescent = mFontMetrics->descent();
+        mFontAscent = mFontMetrics->ascent();
         mFontHeight = mFontAscent + mFontDescent;
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         int width = mScreenWidth * mFontWidth * 2;
@@ -536,8 +537,15 @@ int TTextEdit::drawGrapheme(QPainter& painter, const QPoint& cursor, const QStri
         bgColor = charStyle.background();
     }
 
-    //auto metrics = QFontMetrics(painter.font());
-    auto advance = mFontMetrics.horizontalAdvance(grapheme);
+    const uint unicode = getGraphemeBaseCharacter(grapheme);
+    int advance;
+    if (unicode == '\t') {
+        advance = mTabStopwidth*mFontMetrics->horizontalAdvance(' ') - (column % (mTabStopwidth*mFontMetrics->horizontalAdvance(' ')));
+    }
+    else {
+        advance = mFontMetrics->horizontalAdvance(grapheme);
+    }
+
     auto textRect = QRect(cursor.x(), mFontHeight * cursor.y(), advance, mFontHeight);
     drawBackground(painter, textRect, bgColor);
 
@@ -986,8 +994,16 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber) co
     int characterIndex = -1;
     if (lineNumber < mpBuffer->lineBuffer.size()) {
         int currentX = 0;
-        for (const auto character : mpBuffer->lineBuffer.at(lineNumber)) {
-            currentX += mFontMetrics.horizontalAdvance(character);
+        for (const QChar& character : mpBuffer->lineBuffer.at(lineNumber)) {
+            const uint unicode = getGraphemeBaseCharacter(character);
+            int characterWidth;
+            if (unicode == '\t') {
+                characterWidth = mTabStopwidth*mFontMetrics->horizontalAdvance(' ');
+            }
+            else {
+                characterWidth = mFontMetrics->horizontalAdvance(character);
+            }
+            currentX += characterWidth;
             characterIndex++;
             if (currentX >= mouseX) {
                 if (mShowTimeStamps) {
