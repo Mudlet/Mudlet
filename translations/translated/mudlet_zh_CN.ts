@@ -3935,7 +3935,7 @@ Uninstalling old version &apos;%2&apos;.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="372"/>
       <source>[ INFO ]  - Looking up the IP address of server: %1:%2 ...</source>
-      <translation>[ 信息 ] - 正在查找服务器的 IP 地址: %1:%2 ...</translation>
+      <translation>[ 信息 ]  - 正在查找服务器的 IP 地址: %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="494"/>
