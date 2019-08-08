@@ -244,7 +244,7 @@ private:
     QFont mMapSymbolFont;
 
     QPointer<QAction> mpCreateRoomAction;
-    // in the players current area, how many digits the biggest room number?
+    // in the players current area, how many digits does the biggest room number have?
     quint8 mMaxRoomIdDigits;
 
 private slots:
