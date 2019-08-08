@@ -2911,13 +2911,13 @@ void dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs(const bool sta
  * This is to deal particularly with the case where the preferences dialog is
  * opened without a host instance being around - and then the user starts up
  * a profile and one gets created.
- * In that situation we detect the signal that the mudlet class sends out (now)
+ * In that situation we detect the signal that the mudlet class sends out
  * when a host is created and wire it up into the controls that until then
  * have been disabled/greyed-out.
  */
 void dlgProfilePreferences::slot_handleHostAddition(Host* pHost, const quint8 count)
 {
-    if (!mpHost && pHost && count < 1) {
+    if (!mpHost && pHost && count < 2) {
         // We have not been constructed with a valid Host pointer,
         // AND a real Host instance has just been created
         // AND there is only one Host instance around.
