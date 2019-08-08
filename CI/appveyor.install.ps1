@@ -6,6 +6,7 @@ $global:ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [System.Security.Authentication.SslProtocols] "tls, tls11, tls12"
 
 . .\appveyor.functions.ps1
+
 SetQtBaseDir "$logFile"
 
 $Env:PATH = "$CMakePath;C:\MinGW\bin;C:\MinGW\msys\1.0\bin;C:\Program Files\7-Zip;$Env:PATH"
