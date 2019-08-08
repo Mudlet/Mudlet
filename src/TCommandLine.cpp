@@ -106,7 +106,7 @@ bool TCommandLine::event(QEvent* event)
 {
     const Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
     if (event->type() == QEvent::KeyPress) {
-        auto * ke = dynamic_cast<QKeyEvent*>(event);
+        auto* ke = dynamic_cast<QKeyEvent*>(event);
 
         // Shortcut for keypad keys
         if ((ke->modifiers() & Qt::KeypadModifier) && mpKeyUnit->processDataStream(ke->key(), (int)ke->modifiers())) {
@@ -466,15 +466,68 @@ bool TCommandLine::event(QEvent* event)
                 return true;
 
             } else if (keybindingMatched(ke)) {
-                // Process as a possible key binding if there are ANY modifiers,
+                // Process as a possible key binding if there are ANY modifiers
                 return true;
             } else {
                 processNormalKey(event);
                 return false;
             }
+        case Qt::Key_1:
+            if (handleCtrlTabChange(ke, 1)) {
+                return true;
+            }
+            break;
+
+        case Qt::Key_2:
+            if (handleCtrlTabChange(ke, 2)) {
+                return true;
+            }
+            break;
+
+        case Qt::Key_3:
+            if (handleCtrlTabChange(ke, 3)) {
+                return true;
+            }
+            break;
+
+        case Qt::Key_4:
+            if (handleCtrlTabChange(ke, 4)) {
+                return true;
+            }
+            break;
+
+        case Qt::Key_5:
+            if (handleCtrlTabChange(ke, 5)) {
+                return true;
+            }
+            break;
+
+        case Qt::Key_6:
+            if (handleCtrlTabChange(ke, 6)) {
+                return true;
+            }
+            break;
+
+        case Qt::Key_7:
+            if (handleCtrlTabChange(ke, 7)) {
+                return true;
+            }
+            break;
+
+        case Qt::Key_8:
+            if (handleCtrlTabChange(ke, 8)) {
+                return true;
+            }
+            break;
+
+        case Qt::Key_9:
+            if (handleCtrlTabChange(ke, 9)) {
+                return true;
+            }
+            break;
 
         default:
-            // Process as a possible key binding if there are ANY modifiers,
+            // Process as a possible key binding if there are ANY modifiers
             if (keybindingMatched(ke)) {
                 return true;
 
@@ -482,13 +535,9 @@ bool TCommandLine::event(QEvent* event)
 
             processNormalKey(event);
             return false;
-
         }
     }
 
-    if (event->type() == QEvent::KeyPress) {
-        qDebug() << "falling back to QPlainTextEdit::event() for" << event;
-    }
     return QPlainTextEdit::event(event);
 }
 
@@ -1036,6 +1085,23 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
     }
     c.setCharFormat(f);
     setTextCursor(c);
+}
+
+bool TCommandLine::handleCtrlTabChange(QKeyEvent* key, int tabNumber)
+{
+    const Qt::KeyboardModifiers allModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier | Qt::GroupSwitchModifier;
+
+    if ((key->modifiers() & allModifiers) == Qt::ControlModifier) {
+        // let user-defined Ctrl+# keys match first - and only if the user hasn't created
+        // then we fallback to tab switching
+        if (!keybindingMatched(key) && mudlet::self()->mpTabBar->count() >= (tabNumber)) {
+            mudlet::self()->mpTabBar->setCurrentIndex(tabNumber - 1);
+            key->accept();
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void TCommandLine::recheckWholeLine()

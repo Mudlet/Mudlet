@@ -99,7 +99,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.22.1
+VERSION = 4.0.3
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -319,10 +319,10 @@ DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 # tweaking in that situation
 
 # Edbee widget needed in all cases.
-# Mudlet customised (Lua 5.1 specific?) lua-code-format source code needed in
+# Mudlet customised (Lua 5.1 specific) lua-code-format source code needed in
 # all cases. (The code is built into a lcf module within
 # TLuaInterpreter::initIndenterGlobals() on demand) - and we need to get the
-# git submodule from Mudlet's own GitHub server...
+# git submodule from Mudlet's own GitHub repository
 
 # NOTE: It does SEEM possible to prebuild and install this into a system wide
 # luarocks installation by changing to the "./3rdparty/lcf" directory with the
