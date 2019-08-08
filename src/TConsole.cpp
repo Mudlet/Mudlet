@@ -2250,7 +2250,7 @@ void TConsole::createMapper(int x, int y, int width, int height)
     mpMapper->resize(width, height);
     mpMapper->move(x, y);
 
-    // Qt bug workaround: on Windows and during profile only, if the mapper widget is created
+    // Qt bug workaround: on Windows and during profile load only, if the mapper widget is created
     // it gives a height and width to mpLeftToolBar, mpRightToolBar, and mpTopToolBar for
     // some reason. Those widgets size back down immediately after on their own (?!), however if
     // getMainWindowSize() is called right after map create, the sizes reported will be wrong
