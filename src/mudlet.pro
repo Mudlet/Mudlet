@@ -78,6 +78,9 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
     CONFIG += c++17
 }
 
+# Link Time Optimisation (https://blog.qt.io/blog/2019/01/02/qt-applications-lto)
+CONFIG += ltcg
+
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP
 
