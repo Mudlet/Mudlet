@@ -4873,14 +4873,14 @@
           <item row="0" column="1">
            <widget class="QLabel" name="label_5">
             <property name="text">
-             <string>:</string>
+             <string notr="true">:</string>
             </property>
            </widget>
           </item>
           <item row="0" column="2">
            <widget class="QLineEdit" name="lineEdit_proxyPort">
             <property name="inputMask">
-             <string>00009</string>
+             <string notr="true">00009</string>
             </property>
             <property name="placeholderText">
              <string>port</string>
