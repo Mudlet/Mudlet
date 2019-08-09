@@ -96,6 +96,7 @@ private:
     char** mpSystemSuggestionsList;
     char** mpUserSuggestionsList;
     void spellCheckWord(QTextCursor& c);
+    bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
 };
 
 #endif // MUDLET_TCOMMANDLINE_H

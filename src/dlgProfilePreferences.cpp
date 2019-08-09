@@ -841,11 +841,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         ssl_issued_label->setText(cert.subjectInfo(QSslCertificate::CommonName).join(","));
         ssl_expires_label->setText(cert.expiryDate().toString(Qt::LocalDate));
         ssl_serial_label->setText(QString::fromStdString(cert.serialNumber().toStdString()));
-        checkBox_self_signed->setStyleSheet("");
-        checkBox_expired->setStyleSheet("");
-        ssl_issuer_label->setStyleSheet("");
-        ssl_expires_label->setStyleSheet("");
-        checkBox_ssl->setStyleSheet("");
+        checkBox_self_signed->setStyleSheet(QString());
+        checkBox_expired->setStyleSheet(QString());
+        ssl_issuer_label->setStyleSheet(QString());
+        ssl_expires_label->setStyleSheet(QString());
+        checkBox_ssl->setStyleSheet(QString());
 
         if (!pHost->mTelnet.getSslErrors().empty()) {
             // handle ssl errors
@@ -900,6 +900,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_expired->setChecked(pHost->mSslIgnoreExpired);
     checkBox_ignore_all->setChecked(pHost->mSslIgnoreAll);
 
+    groupBox_proxy->setEnabled(true);
     groupBox_proxy->setChecked(pHost->mUseProxy);
     lineEdit_proxyAddress->setText(pHost->mProxyAddress);
     if (pHost->mProxyPort != 0) {
@@ -1165,6 +1166,8 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_discordServerAccessToTimerInfo->setChecked(false);
     lineEdit_discordUserName->clear();
     lineEdit_discordUserDiscriminator->clear();
+
+    groupBox_proxy->setDisabled(true);
 
     // Remove the reference to the Host/profile in the title:
     setWindowTitle(tr("Profile preferences"));
@@ -2442,7 +2445,9 @@ void dlgProfilePreferences::slot_save_and_exit()
     }
 
 #if defined(INCLUDE_UPDATER)
-    pMudlet->updater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
+    if (!mudlet::scmIsDevelopmentVersion) {
+        pMudlet->updater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
+    }
 #endif
 
     pMudlet->setToolBarIconSize(MainIconSize->value());
