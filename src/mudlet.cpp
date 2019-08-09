@@ -3049,7 +3049,7 @@ void mudlet::setMenuBarVisibility(const controlsVisibility state)
 void mudlet::adjustMenuBarVisibility()
 {
     // Are there any profiles loaded?
-    if ((mHostManager.getHostCount() < 1 && mMenuBarVisibility & visibleAlways)
+    if ((mHostManager.getHostCount() && mMenuBarVisibility & visibleAlways)
             || (mMenuBarVisibility & visibleMaskNormally)) {
         menuBar()->show();
     } else {
@@ -3083,7 +3083,7 @@ void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 void mudlet::adjustToolBarVisibility()
 {
     // Are there any profiles loaded?
-    if ((mHostManager.getHostCount() < 1 && mToolbarVisibility & visibleAlways)
+    if ((mHostManager.getHostCount() && mToolbarVisibility & visibleAlways)
             || (mToolbarVisibility & visibleMaskNormally)) {
         mpMainToolBar->show();
     } else {
