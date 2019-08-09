@@ -2020,11 +2020,11 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         return;
     }
     // load an old profile if there is any
-    // PLACEMARKER: Host creation (3) - normal case
-    if (mudlet::self()->addHost(profile_name, port_entry->text().trimmed(), QString(), QString())) {
+    // PLACEMARKER: Host creation (1) - normal case
+    if (hostManager.addHost(profile_name, port_entry->text().trimmed(), QString(), QString())) {
         pHost = hostManager.getHost(profile_name);
         if (!pHost) {
-            return;
+            return ;
         }
     } else {
         return;

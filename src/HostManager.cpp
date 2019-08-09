@@ -84,6 +84,8 @@ bool HostManager::addHost(const QString& hostname, const QString& port, const QS
 
     mHostPool.insert(hostname, pNewHost);
     mPoolReadWriteLock.unlock();
+
+    mudlet::self()->attachDebugArea(hostname);
     return true;
 }
 

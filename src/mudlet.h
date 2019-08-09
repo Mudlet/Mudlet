@@ -102,7 +102,7 @@ public:
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
     HostManager& getHostManager() { return mHostManager; }
-    bool addHost(const QString& hostname, const QString& port, const QString& login, const QString& pass);
+    void attachDebugArea(const QString& hostname);
     FontManager mFontManager;
     Discord mDiscord;
     QPointer<QSettings> mpSettings;

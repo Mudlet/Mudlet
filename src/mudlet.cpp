@@ -1416,6 +1416,30 @@ void mudlet::slot_close_profile_requested(int tab)
         mpIrcClientMap[pH]->deleteLater();
     }
 
+//    auto success = mHostManager.addHost(hostname, port, login, pass);
+//    if (mpDebugArea) {
+//        return success;
+//    }
+
+//    if (success && !mpDebugArea) {
+//        mpDebugArea = new QMainWindow(nullptr);
+//        mpDefaultHost = mHostManager.getHost(hostname);
+//        mpDebugConsole = new TConsole(mpDefaultHost, TConsole::CentralDebugConsole);
+//        mpDebugConsole->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+//        mpDebugConsole->setWrapAt(100);
+//        mpDebugArea->setCentralWidget(mpDebugConsole);
+//        mpDebugArea->setWindowTitle(tr("Central Debug Console"));
+//        mpDebugArea->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_debug.png")));
+
+//        auto consoleCloser = new TConsoleMonitor(mpDebugArea);
+//        mpDebugArea->installEventFilter(consoleCloser);
+
+//        QSize generalRule(qApp->desktop()->size());
+//        generalRule -= QSize(30, 30);
+//        mpDebugArea->resize(QSize(800, 600).boundedTo(generalRule));
+//        mpDebugArea->hide();
+//    }
+
     // Wait for disconnection to complete
     while (pH->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
         QApplication::processEvents();
@@ -3636,35 +3660,29 @@ void mudlet::startAutoLogin()
     }
 }
 
-bool mudlet::addHost(const QString& hostname, const QString& port, const QString& login, const QString& pass)
+void mudlet::attachDebugArea(const QString& hostname)
 {
-    auto success = mHostManager.addHost(hostname, port, login, pass);
     if (mpDebugArea) {
-        return success;
+        return;
     }
 
-    if (success && !mpDebugArea) {
-        mpDebugArea = new QMainWindow(nullptr);
-        mpDefaultHost = mHostManager.getHost(hostname);
-        mpDebugConsole = new TConsole(mpDefaultHost, TConsole::CentralDebugConsole);
-        mpDebugConsole->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-        mpDebugConsole->setWrapAt(100);
-        mpDebugArea->setCentralWidget(mpDebugConsole);
-        mpDebugArea->setWindowTitle(tr("Central Debug Console"));
-        mpDebugArea->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_debug.png")));
+    mpDebugArea = new QMainWindow(nullptr);
+    mpDefaultHost = mHostManager.getHost(hostname);
+    mpDebugConsole = new TConsole(mpDefaultHost, TConsole::CentralDebugConsole);
+    mpDebugConsole->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    mpDebugConsole->setWrapAt(100);
+    mpDebugArea->setCentralWidget(mpDebugConsole);
+    mpDebugArea->setWindowTitle(tr("Central Debug Console"));
+    mpDebugArea->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_debug.png")));
 
-        auto consoleCloser = new TConsoleMonitor(mpDebugArea);
-        mpDebugArea->installEventFilter(consoleCloser);
+    auto consoleCloser = new TConsoleMonitor(mpDebugArea);
+    mpDebugArea->installEventFilter(consoleCloser);
 
-        QSize generalRule(qApp->desktop()->size());
-        generalRule -= QSize(30, 30);
-        mpDebugArea->resize(QSize(800, 600).boundedTo(generalRule));
-        mpDebugArea->hide();
-    }
-
-    return success;
+    QSize generalRule(qApp->desktop()->size());
+    generalRule -= QSize(30, 30);
+    mpDebugArea->resize(QSize(800, 600).boundedTo(generalRule));
+    mpDebugArea->hide();
 }
-
 
 void mudlet::doAutoLogin(const QString& profile_name)
 {
@@ -3680,7 +3698,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
 
     // load an old profile if there is any
     // PLACEMARKER: Host creation (2) - autoload case
-    if (mudlet::self()->addHost(profile_name, QString(), QString(), QString())) {
+    if (mHostManager.addHost(profile_name, QString(), QString(), QString())) {
         pHost = mHostManager.getHost(profile_name);
         if (!pHost) {
             return;
