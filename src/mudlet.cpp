@@ -210,6 +210,7 @@ mudlet::mudlet()
     mpTabBar->setMaximumHeight(30);
     mpTabBar->setFocusPolicy(Qt::NoFocus);
     mpTabBar->setTabsClosable(true);
+    mpTabBar->setAutoHide(true);
     connect(mpTabBar, &QTabBar::tabCloseRequested, this, &mudlet::slot_close_profile_requested);
     mpTabBar->setMovable(true);
     connect(mpTabBar, &QTabBar::currentChanged, this, &mudlet::slot_tab_changed);
@@ -1457,13 +1458,6 @@ void mudlet::slot_close_profile_requested(int tab)
         emit signal_hostDestroyed(pH, --hostCount);
         mHostManager.deleteHost(pH->getName());
     }
-
-    // hide the tab bar if we only have 1 or no tabs available. saves screen space.
-    if (mConsoleMap.size() > 1) {
-        mpTabBar->show();
-    } else {
-        mpTabBar->hide();
-    }
 }
 
 // Not currently used - may not be properly functional anymore!
@@ -1631,11 +1625,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
      */
     mpTabBar->setTabData(newTabID, tabName);
     mTabMap[pH->getName()] = pConsole;
-    if (mConsoleMap.size() > 1) {
-        mpTabBar->show();
-    } else {
-        mpTabBar->hide();
-    }
+
     //update the main window title when we spawn a new tab
     setWindowTitle(pH->getName() + " - " + version);
 
