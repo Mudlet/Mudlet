@@ -504,17 +504,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     showDebugAreaAction->setStatusTip(tr("Shows/Hides the separate Central Debug Console - when being displayed the system will be slower."));
     connect(showDebugAreaAction, &QAction::triggered, this, &dlgTriggerEditor::slot_debug_mode);
 
-    QAction* nextSectionAction = new QAction(tr("Scripts"), this);
-    nextSectionAction->setShortcutContext(Qt::WindowShortcut);
-    //nextSectionAction->setShortcut("Ctrl+T");
-    //nextSectionAction->setShortcut(QKeySequence::NextChild);
-    nextSectionAction->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_Tab));
-    //nextSectionAction->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_Tab));
-    nextSectionAction->setToolTip("ToolTip");
-    nextSectionAction->setStatusTip("Next Section");
-    nextSectionAction->setEnabled(true);
-
-    connect(nextSectionAction, &QAction::triggered, this, &dlgTriggerEditor::slot_next_section);
+    QShortcut *nextSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_Tab), this);
+    QObject::connect(nextSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_next_section);
 
     toolBar = new QToolBar();
     toolBar2 = new QToolBar();
@@ -523,8 +514,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mudlet::self(), &mudlet::signal_setTreeIconSize, this, &dlgTriggerEditor::slot_setTreeWidgetIconSize);
     slot_setToolBarIconSize(mudlet::self()->mToolbarIconSize);
     slot_setTreeWidgetIconSize(mudlet::self()->mEditorTreeWidgetIconSize);
-
-    toolBar->addAction(nextSectionAction);
 
     toolBar->setMovable(true);
     toolBar->addAction(toggleActiveAction);
