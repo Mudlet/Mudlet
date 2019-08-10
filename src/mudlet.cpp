@@ -828,9 +828,7 @@ void mudlet::loadDictionaryLanguageMap()
                                   {QStringLiteral("zu"), tr("Zulu")}};
 }
 
-// Central Debug Console is always attached to a particular host - so when the
-// host we're using is getting shut down, and we still have other hosts available,
-// re-create it on that host
+// migrates the Central Debug Console to the next available host, if any
 void mudlet::migrateDebugConsole(Host* currentHost)
 {
     if (!mpDebugArea) {
