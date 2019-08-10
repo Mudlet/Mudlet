@@ -536,6 +536,7 @@ private:
     QSettings* getQSettings();
     void loadTranslators(const QString &languageCode);
     void loadDictionaryLanguageMap();
+    void migrateDebugConsole(Host* currentHost);
 
 
     QMap<QString, TConsole*> mTabMap;

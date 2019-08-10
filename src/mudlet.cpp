@@ -828,6 +828,37 @@ void mudlet::loadDictionaryLanguageMap()
                                   {QStringLiteral("zu"), tr("Zulu")}};
 }
 
+// Central Debug Console is always attached to a particular host - so when the
+// host we're using is getting shut down, and we still have other hosts available,
+// re-create it on that host
+void mudlet::migrateDebugConsole(Host* currentHost)
+{
+    if (!mpDebugArea) {
+        return;
+    }
+
+    const auto debugConsoleHost = mpDebugConsole->getHost();
+    if (debugConsoleHost != currentHost) {
+        return;
+    }
+
+    // mudlet::debugMode gets auto-disabled when the debug area is closed - remember its status
+    const auto debugMode = mudlet::debugMode;
+
+    mpDebugArea->setAttribute(Qt::WA_DeleteOnClose);
+    mpDebugArea->close();
+
+    if (mHostManager.getHostCount() <= 1) {
+        return;
+    }
+
+    const auto nextHostName = mHostManager.getHostList().first();
+    QTimer::singleShot(0, this, [nextHostName, debugMode]() {
+        mudlet::self()->attachDebugArea(nextHostName);
+        mpDebugArea->setVisible(debugMode);
+    });
+}
+
 // As we are currently only using files from a resource file we only need to
 // analyse them once per application run - if we were loading from a user
 // selectable location, or even from a read-only part of their computer's
@@ -1416,52 +1447,32 @@ void mudlet::slot_close_profile_requested(int tab)
         mpIrcClientMap[pH]->deleteLater();
     }
 
-//    auto success = mHostManager.addHost(hostname, port, login, pass);
-//    if (mpDebugArea) {
-//        return success;
-//    }
-
-//    if (success && !mpDebugArea) {
-//        mpDebugArea = new QMainWindow(nullptr);
-//        mpDefaultHost = mHostManager.getHost(hostname);
-//        mpDebugConsole = new TConsole(mpDefaultHost, TConsole::CentralDebugConsole);
-//        mpDebugConsole->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-//        mpDebugConsole->setWrapAt(100);
-//        mpDebugArea->setCentralWidget(mpDebugConsole);
-//        mpDebugArea->setWindowTitle(tr("Central Debug Console"));
-//        mpDebugArea->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_debug.png")));
-
-//        auto consoleCloser = new TConsoleMonitor(mpDebugArea);
-//        mpDebugArea->installEventFilter(consoleCloser);
-
-//        QSize generalRule(qApp->desktop()->size());
-//        generalRule -= QSize(30, 30);
-//        mpDebugArea->resize(QSize(800, 600).boundedTo(generalRule));
-//        mpDebugArea->hide();
-//    }
+    migrateDebugConsole(pH);
 
     // Wait for disconnection to complete
     while (pH->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
         QApplication::processEvents();
     }
 
-    mConsoleMap[pH]->close();
-    if (mTabMap.contains(pH->getName())) {
-        mpTabBar->removeTab(tab);
-        mConsoleMap.remove(pH);
-        mTabMap.remove(pH->getName());
-        // PLACEMARKER: Host destruction (1) - from close button on tab bar
-        // Unfortunately the spaghetti nature of the code means that the profile
-        // is also (maybe) saved (or not) in the TConsole::close() call prior to
-        // here but because that is optional we cannot only force a "save"
-        // operation in the profile preferences dialog for the Host specific
-        // details BEFORE the save (so any changes make it into the save) -
-        // instead we just have to accept that any profile changes will not be
-        // saved if the preferences dialog is not closed before the profile is...
-        int hostCount = mHostManager.getHostCount();
-        emit signal_hostDestroyed(pH, --hostCount);
-        mHostManager.deleteHost(pH->getName());
+    mConsoleMap.value(pH)->close();
+    if (!mTabMap.contains(pH->getName())) {
+        return;
     }
+
+    mpTabBar->removeTab(tab);
+    mConsoleMap.remove(pH);
+    mTabMap.remove(pH->getName());
+    // PLACEMARKER: Host destruction (1) - from close button on tab bar
+    // Unfortunately the spaghetti nature of the code means that the profile
+    // is also (maybe) saved (or not) in the TConsole::close() call prior to
+    // here but because that is optional we cannot only force a "save"
+    // operation in the profile preferences dialog for the Host specific
+    // details BEFORE the save (so any changes make it into the save) -
+    // instead we just have to accept that any profile changes will not be
+    // saved if the preferences dialog is not closed before the profile is...
+    int hostCount = mHostManager.getHostCount();
+    emit signal_hostDestroyed(pH, --hostCount);
+    mHostManager.deleteHost(pH->getName());
 }
 
 // Not currently used - may not be properly functional anymore!
