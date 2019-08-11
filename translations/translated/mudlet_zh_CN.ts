@@ -8432,12 +8432,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="261"/>
       <source>Spanish (Puerto Rico)</source>
-      <translation type="unfinished"/>
+      <translation>西班牙语(波多黎各)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="262"/>
       <source>Spanish (Paraguay)</source>
-      <translation type="unfinished"/>
+      <translation>西班牙语(巴拉圭)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="263"/>
@@ -8703,27 +8703,27 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="315"/>
       <source>Malayalam (India)</source>
-      <translation type="unfinished"/>
+      <translation>马拉雅拉姆语(印度)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="316"/>
       <source>Norwegian Bokmål</source>
-      <translation type="unfinished"/>
+      <translation>挪威语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="317"/>
       <source>Norwegian Bokmål (Norway)</source>
-      <translation type="unfinished"/>
+      <translation>书面挪威语(挪威)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="318"/>
       <source>Nepali</source>
-      <translation type="unfinished"/>
+      <translation>尼泊尔语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="319"/>
       <source>Nepali (Nepal)</source>
-      <translation type="unfinished"/>
+      <translation>尼泊尔语(尼泊尔)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="320"/>
@@ -8733,37 +8733,37 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="321"/>
       <source>Dutch (Aruba)</source>
-      <translation type="unfinished"/>
+      <translation>荷兰语(阿鲁巴)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="322"/>
       <source>Dutch (Belgium)</source>
-      <translation type="unfinished"/>
+      <translation>荷兰语(比利时)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="323"/>
       <source>Dutch (Netherlands)</source>
-      <translation type="unfinished"/>
+      <translation>荷兰语(荷兰)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="324"/>
       <source>Norwegian Nynorsk</source>
-      <translation type="unfinished"/>
+      <translation>挪威尼诺斯克语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="325"/>
       <source>Norwegian Nynorsk (Norway)</source>
-      <translation type="unfinished"/>
+      <translation>新挪威语(挪威)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="326"/>
       <source>Occitan</source>
-      <translation type="unfinished"/>
+      <translation>奥克西坦语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="327"/>
       <source>Occitan (France)</source>
-      <translation type="unfinished"/>
+      <translation>奥克西坦语(法国)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="328"/>
@@ -8773,7 +8773,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="329"/>
       <source>Polish (Poland)</source>
-      <translation type="unfinished"/>
+      <translation>波兰语(波兰)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="330"/>
@@ -8783,22 +8783,22 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="331"/>
       <source>Portuguese (Brazil)</source>
-      <translation type="unfinished"/>
+      <translation>Português (Brazil)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="332"/>
       <source>Portuguese (Portugal)</source>
-      <translation type="unfinished"/>
+      <translation>葡萄牙语(葡萄牙)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="333"/>
       <source>Romanian</source>
-      <translation type="unfinished"/>
+      <translation>罗马尼亚文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="334"/>
       <source>Romanian (Romania)</source>
-      <translation type="unfinished"/>
+      <translation>罗马尼亚语(罗马尼亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="335"/>
@@ -8808,27 +8808,27 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="336"/>
       <source>Russian (Russia)</source>
-      <translation type="unfinished"/>
+      <translation>俄语(俄罗斯)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="337"/>
       <source>Northern Sami</source>
-      <translation type="unfinished"/>
+      <translation>北萨摩斯语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="338"/>
       <source>Northern Sami (Finland)</source>
-      <translation type="unfinished"/>
+      <translation>北萨米语(芬兰)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="339"/>
       <source>Northern Sami (Norway)</source>
-      <translation type="unfinished"/>
+      <translation>北萨米语(挪威)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="340"/>
       <source>Northern Sami (Sweden)</source>
-      <translation type="unfinished"/>
+      <translation>北萨米语(芬兰)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="341"/>
@@ -8845,7 +8845,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="343"/>
       <source>Sinhala</source>
-      <translation type="unfinished"/>
+      <translation>僧伽罗文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="344"/>
@@ -10136,7 +10136,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1433"/>
       <source>ANSI Color Number 0</source>
-      <translation type="unfinished"/>
+      <translation>ANSI颜色编号0</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1446"/>
@@ -10147,7 +10147,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1453"/>
       <source>ANSI Color Number 8</source>
-      <translation type="unfinished"/>
+      <translation>ANSI颜色编号8</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1466"/>
@@ -10158,7 +10158,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1473"/>
       <source>ANSI Color Number 1</source>
-      <translation type="unfinished"/>
+      <translation>ANSI颜色编号1</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1486"/>
@@ -10169,7 +10169,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1493"/>
       <source>ANSI Color Number 9</source>
-      <translation type="unfinished"/>
+      <translation>ANSI颜色编号9</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1506"/>
@@ -10180,7 +10180,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1513"/>
       <source>ANSI Color Number 2</source>
-      <translation type="unfinished"/>
+      <translation>ANSI颜色编号2</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1526"/>
@@ -10191,7 +10191,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1533"/>
       <source>ANSI Color Number 10</source>
-      <translation type="unfinished"/>
+      <translation>ANSI颜色编号10</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1546"/>
@@ -10202,7 +10202,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1553"/>
       <source>ANSI Color Number 3</source>
-      <translation type="unfinished"/>
+      <translation>ANSI颜色编号3</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1566"/>
@@ -10213,7 +10213,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1573"/>
       <source>ANSI Color Number 11</source>
-      <translation type="unfinished"/>
+      <translation>ANSI颜色编号11</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1586"/>
@@ -10224,7 +10224,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1593"/>
       <source>ANSI Color Number 4</source>
-      <translation type="unfinished"/>
+      <translation>ANSI颜色编号4</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1606"/>
@@ -10235,7 +10235,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1613"/>
       <source>ANSI Color Number 12</source>
-      <translation type="unfinished"/>
+      <translation>ANSI颜色编号12</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1626"/>
@@ -10246,7 +10246,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1633"/>
       <source>ANSI Color Number 5</source>
-      <translation type="unfinished"/>
+      <translation>ANSI颜色编号5</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1646"/>
@@ -10257,7 +10257,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1653"/>
       <source>ANSI Color Number 13</source>
-      <translation type="unfinished"/>
+      <translation>ANSI颜色编号13</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1666"/>
@@ -10268,7 +10268,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1673"/>
       <source>ANSI Color Number 6</source>
-      <translation type="unfinished"/>
+      <translation>ANSI颜色编号6</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1686"/>
@@ -10279,7 +10279,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1693"/>
       <source>ANSI Color Number 14</source>
-      <translation type="unfinished"/>
+      <translation>ANSI颜色编号14</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1706"/>
@@ -10290,7 +10290,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1713"/>
       <source>ANSI Color Number 7</source>
-      <translation type="unfinished"/>
+      <translation>ANSI颜色编号7</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1726"/>
@@ -10301,7 +10301,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1733"/>
       <source>ANSI Color Number 15</source>
-      <translation type="unfinished"/>
+      <translation>ANSI颜色编号15</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1746"/>
@@ -10362,7 +10362,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1940"/>
       <source>Download latest map provided by your game:</source>
-      <translation type="unfinished"/>
+      <translation>下载由您的游戏提供的最新地图:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2008"/>
@@ -10442,7 +10442,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1843"/>
       <source>Copy map to other profile(s):</source>
-      <translation type="unfinished"/>
+      <translation>将地图复制到其他配置文件：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1859"/>
@@ -10595,7 +10595,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2488"/>
       <source>Discord privacy</source>
-      <translation type="unfinished"/>
+      <translation>Discord隐私</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2521"/>
@@ -10643,7 +10643,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2505"/>
       <source>Hide large icon and tooltip</source>
-      <translation type="unfinished"/>
+      <translation>隐藏大图标和工具提示</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2560"/>
@@ -11249,7 +11249,7 @@ Locked</source>
       <location filename="../src/ui/room_exits.ui" line="2107"/>
       <source>Command
 or LUA script</source>
-      <translation type="unfinished"/>
+      <translation>命令或Lua脚本</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2131"/>
