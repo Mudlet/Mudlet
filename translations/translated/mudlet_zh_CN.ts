@@ -7483,24 +7483,33 @@ There is NO WARRANTY, to the extent permitted by law.</source>
 There are other inherited options that arise from the Qt Libraries which are
 less likely to be useful for normal use of this application:
 </source>
-      <translation type="unfinished"/>
+      <translation>用法: %1 [OPTION...]
+       -h， --help 显示此消息。
+       -v， --version 显示版本信息。
+       -q， --quiet 启动时不显示启动屏幕。
+
+来自Qt库的其他继承的选项，有可能不能
+在此应用程序正常使用:
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="266"/>
       <source>Report bugs to: https://github.com/Mudlet/Mudlet/issues
 </source>
-      <translation type="unfinished"/>
+      <translation>报告bugs：https://github.com/Mudelet/Mudelet/issues
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="267"/>
       <source>Project home page: http://www.mudlet.org/
 </source>
-      <translation type="unfinished"/>
+      <translation>项目主页：http://www.mudelet.org/
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="296"/>
       <source>Version: %1</source>
-      <translation type="unfinished"/>
+      <translation>版本: %1</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="357"/>
@@ -7515,14 +7524,15 @@ certain conditions; select the
     <message>
       <location filename="../src/main.cpp" line="365"/>
       <source>Locating profiles...</source>
-      <translation type="unfinished"/>
+      <translation>正在定位配置文件...</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="390"/>
       <source>Done.
 
 Loading font files...</source>
-      <translation type="unfinished"/>
+      <translation>完成.
+正载入字体文件……</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="464"/>
@@ -7656,7 +7666,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="305"/>
       <source>Discord help channel</source>
-      <translation type="unfinished"/>
+      <translation>Discord帮助频道</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="156"/>
@@ -7757,7 +7767,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="289"/>
       <source>MultiView</source>
-      <translation type="unfinished"/>
+      <translation>多视图</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="297"/>
@@ -7770,42 +7780,42 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/mapper.ui" line="143"/>
       <source>^</source>
-      <translation type="unfinished"/>
+      <translation>^</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="258"/>
       <source>◀</source>
-      <translation type="unfinished"/>
+      <translation>◀</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="298"/>
       <source>▼</source>
-      <translation type="unfinished"/>
+      <translation>▼</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="338"/>
       <source>▲</source>
-      <translation type="unfinished"/>
+      <translation>▲</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="378"/>
       <source>►</source>
-      <translation type="unfinished"/>
+      <translation>►</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="424"/>
       <source>+</source>
-      <translation type="unfinished"/>
+      <translation>+</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="461"/>
       <source>-</source>
-      <translation type="unfinished"/>
+      <translation>-</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="483"/>
       <source>2D/3D</source>
-      <translation type="unfinished"/>
+      <translation>2D/3D</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="502"/>
@@ -8292,12 +8302,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="235"/>
       <source>English (Jamaica)</source>
-      <translation type="unfinished"/>
+      <translation>英语(牙买加)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="236"/>
       <source>English (Namibia)</source>
-      <translation type="unfinished"/>
+      <translation>英语(纳米比亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="237"/>
