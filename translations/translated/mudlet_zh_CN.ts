@@ -11369,13 +11369,13 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="217"/>
       <source>hh</source>
-      <translation type="unfinished"/>
+      <translation>hh</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="250"/>
       <location filename="../src/ui/timers_main_area.ui" line="316"/>
       <source>:</source>
-      <translation type="unfinished"/>
+      <translation>:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="262"/>
@@ -11405,22 +11405,22 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="283"/>
       <source>mm</source>
-      <translation type="unfinished"/>
+      <translation>mm</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="352"/>
       <source>ss</source>
-      <translation type="unfinished"/>
+      <translation>ss</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="385"/>
       <source>.</source>
-      <translation type="unfinished"/>
+      <translation>.</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="421"/>
       <source>zzz</source>
-      <translation type="unfinished"/>
+      <translation>zzz</translation>
     </message>
   </context>
   <context>
@@ -11645,22 +11645,22 @@ or LUA script</source>
       <location filename="../src/ui/vars_main_area.ui" line="51"/>
       <location filename="../src/ui/vars_main_area.ui" line="145"/>
       <source>Auto-Type</source>
-      <translation type="unfinished"/>
+      <translation>自动类型</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="128"/>
       <source>Variable name ...</source>
-      <translation type="unfinished"/>
+      <translation>变量名...</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="150"/>
       <source>key (string)</source>
-      <translation type="unfinished"/>
+      <translation>按键(string)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="155"/>
       <source>index (integer)</source>
-      <translation type="unfinished"/>
+      <translation>索引(整数)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="71"/>
@@ -11673,7 +11673,8 @@ or LUA script</source>
       <source>function
 (cannot create
 from GUI)</source>
-      <translation type="unfinished"/>
+      <translation>函数
+(无法从GUI创建)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="185"/>
@@ -11688,7 +11689,7 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="84"/>
       <source>⏷ Value type:</source>
-      <translation type="unfinished"/>
+      <translation>⏷值类型：</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="56"/>
