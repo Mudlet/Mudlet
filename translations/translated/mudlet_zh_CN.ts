@@ -5622,17 +5622,17 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2811"/>
       <source>{missing, possibly recently deleted trigger item}</source>
-      <translation type="unfinished"/>
+      <translation>{缺少, 可能是最近删除的触发器}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2814"/>
       <source>{missing, possibly recently deleted alias item}</source>
-      <translation type="unfinished"/>
+      <translation>{缺少, 可能是最近删除的别名}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2817"/>
       <source>{missing, possibly recently deleted script item}</source>
-      <translation type="unfinished"/>
+      <translation>{缺少, 可能是最近删除的脚本}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2820"/>
