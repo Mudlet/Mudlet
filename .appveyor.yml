@@ -28,7 +28,7 @@ on_failure:
 - bash -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
 
 cache:
-  - '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1'
+  - '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
 
 notifications:
 - provider: Webhook
