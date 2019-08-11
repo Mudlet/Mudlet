@@ -6963,7 +6963,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7899"/>
       <source>Command (down):</source>
-      <translation type="unfinished"/>
+      <translation>命令 (Down):</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7920"/>
@@ -7082,7 +7082,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="712"/>
       <source>line spacer</source>
-      <translation type="unfinished"/>
+      <translation>行间距</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="713"/>
@@ -7092,7 +7092,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="714"/>
       <source>prompt</source>
-      <translation type="unfinished"/>
+      <translation>提示</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1820"/>
@@ -7153,7 +7153,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1961"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="1966"/>
       <source>Pattern {%1}</source>
-      <translation type="unfinished"/>
+      <translation>模式 {%1}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1425"/>
@@ -7219,7 +7219,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2139"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2144"/>
       <source>Event Handler</source>
-      <translation type="unfinished"/>
+      <translation>事件处理程序</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1527"/>
@@ -7239,7 +7239,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2215"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2220"/>
       <source>Command {Down}</source>
-      <translation type="unfinished"/>
+      <translation>命令 {Down}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1558"/>
@@ -7247,7 +7247,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2234"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2239"/>
       <source>Command {Up}</source>
-      <translation type="unfinished"/>
+      <translation>命令 {Up}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1587"/>
@@ -7261,7 +7261,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2263"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2268"/>
       <source>Stylesheet {L: %1 C: %2}</source>
-      <translation type="unfinished"/>
+      <translation>样式表 {L: %1 C: %2}</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1455"/>
@@ -7281,7 +7281,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2413"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2443"/>
       <source>Key</source>
-      <translation type="unfinished"/>
+      <translation>按键</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1340"/>
@@ -7302,12 +7302,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgVarsMainArea.cpp" line="51"/>
       <location filename="../src/dlgVarsMainArea.cpp" line="78"/>
       <source>Auto-Type</source>
-      <translation type="unfinished"/>
+      <translation>自动类型</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="52"/>
       <source>key (string)</source>
-      <translation type="unfinished"/>
+      <translation>按键(字符串)</translation>
     </message>
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="53"/>
@@ -7873,12 +7873,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/mapper.ui" line="913"/>
       <source>side view</source>
-      <translation type="unfinished"/>
+      <translation>侧视图</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="926"/>
       <source>all levels</source>
-      <translation type="unfinished"/>
+      <translation>所有级别</translation>
     </message>
   </context>
   <context>
@@ -7924,212 +7924,212 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="162"/>
       <source>Afrikaans (South Africa)</source>
-      <translation type="unfinished"/>
+      <translation>南非荷兰语(南非)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="163"/>
       <source>Aragonese</source>
-      <translation type="unfinished"/>
+      <translation>阿拉贡语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="164"/>
       <source>Aragonese (Spain)</source>
-      <translation type="unfinished"/>
+      <translation>阿拉贡(西班牙)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="165"/>
       <source>Arabic</source>
-      <translation type="unfinished"/>
+      <translation>阿拉伯语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="166"/>
       <source>Arabic (United Arab Emirates)</source>
-      <translation type="unfinished"/>
+      <translation>阿拉伯语(阿拉伯联合酋长国)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="167"/>
       <source>Arabic (Bahrain)</source>
-      <translation type="unfinished"/>
+      <translation>阿拉伯语(巴林)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="168"/>
       <source>Arabic (Algeria)</source>
-      <translation type="unfinished"/>
+      <translation>阿拉伯语(阿尔及利亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="170"/>
       <source>Arabic (India)</source>
-      <translation type="unfinished"/>
+      <translation>阿拉伯语(印度)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="171"/>
       <source>Arabic (Iraq)</source>
-      <translation type="unfinished"/>
+      <translation>阿拉伯语(伊拉克)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="172"/>
       <source>Arabic (Jordan)</source>
-      <translation type="unfinished"/>
+      <translation>阿拉伯语(约旦)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="173"/>
       <source>Arabic (Kuwait)</source>
-      <translation type="unfinished"/>
+      <translation>阿拉伯语(科威特)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="174"/>
       <source>Arabic (Lebanon)</source>
-      <translation type="unfinished"/>
+      <translation>阿拉伯语(黎巴嫩)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="175"/>
       <source>Arabic (Libya)</source>
-      <translation type="unfinished"/>
+      <translation>阿拉伯语(利比亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="176"/>
       <source>Arabic (Morocco)</source>
-      <translation type="unfinished"/>
+      <translation>阿拉伯语(摩洛哥)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="177"/>
       <source>Arabic (Oman)</source>
-      <translation type="unfinished"/>
+      <translation>阿拉伯语(也门)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="178"/>
       <source>Arabic (Qatar)</source>
-      <translation type="unfinished"/>
+      <translation>阿拉伯语(卡塔尔)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="179"/>
       <source>Arabic (Saudi Arabia)</source>
-      <translation type="unfinished"/>
+      <translation>阿拉伯语(沙特阿拉伯)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="180"/>
       <source>Arabic (Sudan)</source>
-      <translation type="unfinished"/>
+      <translation>阿拉伯语(约旦)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="181"/>
       <source>Arabic (Syria)</source>
-      <translation type="unfinished"/>
+      <translation>阿拉伯语(叙利亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="182"/>
       <source>Arabic (Tunisia)</source>
-      <translation type="unfinished"/>
+      <translation>阿拉伯语(突尼斯)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="183"/>
       <source>Arabic (Yemen)</source>
-      <translation type="unfinished"/>
+      <translation>阿拉伯语(也门)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="184"/>
       <source>Belarusian</source>
-      <translation type="unfinished"/>
+      <translation>白俄罗斯语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="185"/>
       <source>Belarusian (Belarus)</source>
-      <translation type="unfinished"/>
+      <translation>白俄罗斯语(白俄罗斯)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="186"/>
       <source>Belarusian (Russia)</source>
-      <translation type="unfinished"/>
+      <translation>白俄罗斯语(俄罗斯)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="187"/>
       <source>Bulgarian</source>
-      <translation type="unfinished"/>
+      <translation>保加利亚语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="188"/>
       <source>Bulgarian (Bulgaria)</source>
-      <translation type="unfinished"/>
+      <translation>保加利亚语(保加利亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="189"/>
       <source>Bangla</source>
-      <translation type="unfinished"/>
+      <translation>孟加拉语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="190"/>
       <source>Bangla (Bangladesh)</source>
-      <translation type="unfinished"/>
+      <translation>孟加拉语(孟加拉国)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="191"/>
       <source>Bangla (India)</source>
-      <translation type="unfinished"/>
+      <translation>孟加拉语(印度)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="192"/>
       <source>Tibetan</source>
-      <translation type="unfinished"/>
+      <translation>藏语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="193"/>
       <source>Tibetan (China)</source>
-      <translation type="unfinished"/>
+      <translation>藏语(中国)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="194"/>
       <source>Tibetan (India)</source>
-      <translation type="unfinished"/>
+      <translation>藏语(印度)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="195"/>
       <source>Breton</source>
-      <translation type="unfinished"/>
+      <translation>布列塔尼语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="196"/>
       <source>Breton (France)</source>
-      <translation type="unfinished"/>
+      <translation>布列塔尼语(法国)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="197"/>
       <source>Bosnian</source>
-      <translation type="unfinished"/>
+      <translation>波斯尼亚语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="198"/>
       <source>Bosnian (Bosnia/Herzegovina)</source>
-      <translation type="unfinished"/>
+      <translation>波斯尼亚 (波斯尼亚/黑塞哥维那)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="199"/>
       <source>Bosnian (Bosnia/Herzegovina - Cyrillic alphabet)</source>
-      <translation type="unfinished"/>
+      <translation>波斯尼亚语(波斯尼亚/黑塞哥维那-西里尔字母)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="200"/>
       <source>Catalan</source>
-      <translation type="unfinished"/>
+      <translation>加泰罗尼亚语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="201"/>
       <source>Catalan (Spain)</source>
-      <translation type="unfinished"/>
+      <translation>加泰罗尼亚语(西班牙)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="202"/>
       <source>Catalan (Spain - Valencian)</source>
-      <translation type="unfinished"/>
+      <translation>加泰罗尼亚语(西班牙-巴伦西亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="203"/>
       <source>Central Kurdish</source>
-      <translation type="unfinished"/>
+      <translation>库尔德中部</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="204"/>
       <source>Central Kurdish (Iraq)</source>
-      <translation type="unfinished"/>
+      <translation>库尔德中部 (伊拉克)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="205"/>
