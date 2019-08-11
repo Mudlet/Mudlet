@@ -6958,7 +6958,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7890"/>
       <source>Images (*.png *.xpm *.jpg)</source>
-      <translation type="unfinished"/>
+      <translation>图像文件 (*.png *.xpm *.jpg)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7899"/>
@@ -6968,12 +6968,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7920"/>
       <source>Select foreground color to apply to matches</source>
-      <translation type="unfinished"/>
+      <translation>选择要应用到匹配项的前景色</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7940"/>
       <source>Select background color to apply to matches</source>
-      <translation type="unfinished"/>
+      <translation>选择要应用于匹配项的背景色</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7952"/>
@@ -6984,27 +6984,27 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7956"/>
       <source>Audio files(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;Advanced Audio Coding-stream(*.aac);;MPEG-2 Audio Layer 3(*.mp3);;MPEG-4 Audio(*.mp4a);;Ogg Vorbis(*.oga *.ogg);;PCM Audio(*.pcm);;Wave(*.wav);;Windows Media Audio(*.wma);;All files(*.*)</source>
       <comment>This the list of file extensions that are considered for sounds from triggers, the terms inside of the &apos;(&apos;...&apos;)&apos; and the &quot;;;&quot; are used programmatically and should not be changed.</comment>
-      <translation type="unfinished"/>
+      <translation>音频文件(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;Advanced Audio Coding-stream(*.aac);;MPEG-2 Audio Layer 3(*.mp3);;MPEG-4 Audio(*.mp4a);;Ogg Vorbis(*.oga *.ogg);;PCM Audio(*.pcm);;Wave(*.wav);;Windows Media Audio(*.wma);;所有文件(*.*)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8009"/>
       <source>Select foreground trigger color for item %1</source>
-      <translation type="unfinished"/>
+      <translation>为项目 %1 选择前景触发器颜色</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8073"/>
       <source>Select background trigger color for item %1</source>
-      <translation type="unfinished"/>
+      <translation>为项目 %1 选择背景触发器颜色</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8122"/>
       <source>Saving…</source>
-      <translation type="unfinished"/>
+      <translation>正在保存…</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8260"/>
       <source>Format All</source>
-      <translation type="unfinished"/>
+      <translation>全部格式化</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8263"/>
@@ -7021,7 +7021,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8418"/>
       <source>&lt;p&gt;Sound file to play when the trigger fires.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;触发触发器时要播放的声音文件. &lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="707"/>
