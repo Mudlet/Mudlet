@@ -499,8 +499,6 @@ mudlet::mudlet()
     connect(dactionShowMap, &QAction::triggered, this, &mudlet::slot_mapper);
     connect(dactionOptions, &QAction::triggered, this, &mudlet::slot_show_options_dialog);
     connect(dactionAbout, &QAction::triggered, this, &mudlet::slot_show_about_dialog);
-    // PLACEMARKER: Save for later restoration (2 of 2) (by adding a "Close" (profile) option to first menu on menu bar:
-    // connect(mactionCloseProfile, &QAction::triggered, this, &mudlet::slot_close_profile);
 
     // we historically use Alt on Windows and Linux, but that is uncomfortable on macOS
 #if defined(Q_OS_MACOS)
@@ -1404,16 +1402,17 @@ void mudlet::slot_close_profile_requested(int tab)
 
     pH->stopAllTriggers();
     pH->mpEditorDialog->close();
-    for (auto consoleName : hostConsoleMap.keys()) {
-        hostConsoleMap[consoleName]->close();
-        hostConsoleMap.remove(consoleName);
 
+    for (auto consoleName : hostConsoleMap.keys()) {
         if (dockWindowMap.contains(consoleName)) {
             dockWindowMap[consoleName]->setAttribute(Qt::WA_DeleteOnClose);
             dockWindowMap[consoleName]->close();
             removeDockWidget(dockWindowMap[consoleName]);
             dockWindowMap.remove(consoleName);
         }
+
+        hostConsoleMap[consoleName]->close();
+        hostConsoleMap.remove(consoleName);
     }
 
     if (pH->mpNotePad) {
@@ -1457,80 +1456,6 @@ void mudlet::slot_close_profile_requested(int tab)
         int hostCount = mHostManager.getHostCount();
         emit signal_hostDestroyed(pH, --hostCount);
         mHostManager.deleteHost(pH->getName());
-    }
-}
-
-// Not currently used - may not be properly functional anymore!
-void mudlet::slot_close_profile()
-{
-    if (mpCurrentActiveHost) {
-        if (mConsoleMap.contains(mpCurrentActiveHost)) {
-            Host* pH = mpCurrentActiveHost;
-            if (pH) {
-                std::list<QPointer<TToolBar>> hostTToolBarMap = pH->getActionUnit()->getToolBarList();
-                QMap<QString, TDockWidget*>& dockWindowMap = pH->mpConsole->mDockWidgetMap;
-                QMap<QString, TConsole*>& hostConsoleMap = pH->mpConsole->mSubConsoleMap;
-                QString name = pH->getName();
-
-                pH->closingDown();
-
-                // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-                pH->mTelnet.disconnectIt();
-
-                mpCurrentActiveHost->mpEditorDialog->close();
-                for (auto consoleName : hostConsoleMap.keys()) {
-                    hostConsoleMap[consoleName]->close();
-                    hostConsoleMap.remove(consoleName);
-
-                    if (dockWindowMap.contains(consoleName)) {
-                        dockWindowMap[consoleName]->setAttribute(Qt::WA_DeleteOnClose);
-                        dockWindowMap[consoleName]->close();
-                        removeDockWidget(dockWindowMap[consoleName]);
-                        dockWindowMap.remove(consoleName);
-                    }
-                }
-
-                if (pH->mpNotePad) {
-                    pH->mpNotePad->save();
-                    pH->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-                    pH->mpNotePad->close();
-                    pH->mpNotePad = nullptr;
-                }
-
-                for (TToolBar* pTB : hostTToolBarMap) {
-                    if (pTB) {
-                        pTB->setAttribute(Qt::WA_DeleteOnClose);
-                        pTB->deleteLater();
-                    }
-                }
-
-                // close IRC client window if it is open.
-                if (mpIrcClientMap.contains(pH)) {
-                    mpIrcClientMap[pH]->setAttribute(Qt::WA_DeleteOnClose);
-                    mpIrcClientMap[pH]->deleteLater();
-                }
-
-                // Wait for disconnection to complete
-                while (pH->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
-                    QApplication::processEvents();
-                }
-
-                mConsoleMap[pH]->close();
-                if (mTabMap.contains(name)) {
-                    mpTabBar->removeTab(mpTabBar->currentIndex());
-                    mConsoleMap.remove(pH);
-                    // PLACEMARKER: Host destruction (2) - normal case
-                    int hostCount = mHostManager.getHostCount();
-                    emit signal_hostDestroyed(pH, --hostCount);
-                    mHostManager.deleteHost(name);
-                    mTabMap.remove(name);
-                }
-                mpCurrentActiveHost = Q_NULLPTR;
-            }
-        }
-
-    } else {
-        disableToolbarButtons();
     }
 }
 
@@ -1985,56 +1910,56 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
     }
 
     auto hostName(pHost->getName());
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    auto pD = pHost->mpConsole->mDockWidgetMap.value(name);
+    auto console = pHost->mpConsole->mSubConsoleMap.value(name);
+    auto dockwidget = pHost->mpConsole->mDockWidgetMap.value(name);
 
-    if (!pC && !pD) {
+    if (!console && !dockwidget) {
         // The name is not used in either the QMaps of all user created TConsole
         // or TDockWidget instances - so we can make a NEW one:
-        pD = new TDockWidget(pHost, name);
-        pD->setObjectName(QStringLiteral("dockWindow_%1_%2").arg(hostName, name));
-        pD->setContentsMargins(0, 0, 0, 0);
-        pD->setFeatures(QDockWidget::AllDockWidgetFeatures);
-        pD->setWindowTitle(tr("User window - %1 - %2").arg(hostName, name));
-        pHost->mpConsole->mDockWidgetMap.insert(name, pD);
+        dockwidget = new TDockWidget(pHost, name);
+        dockwidget->setObjectName(QStringLiteral("dockWindow_%1_%2").arg(hostName, name));
+        dockwidget->setContentsMargins(0, 0, 0, 0);
+        dockwidget->setFeatures(QDockWidget::AllDockWidgetFeatures);
+        dockwidget->setWindowTitle(tr("User window - %1 - %2").arg(hostName, name));
+        pHost->mpConsole->mDockWidgetMap.insert(name, dockwidget);
         // It wasn't obvious but the parent passed to the TConsole constructor
         // is sliced down to a QWidget and is NOT a TDockWidget pointer:
-        pC = new TConsole(pHost, TConsole::UserWindow, pD->widget());
-        pC->setObjectName(QStringLiteral("dockWindowConsole_%1_%2").arg(hostName, name));
+        console = new TConsole(pHost, TConsole::UserWindow, dockwidget->widget());
+        console->setObjectName(QStringLiteral("dockWindowConsole_%1_%2").arg(hostName, name));
         // Without this the TConsole instance inside the TDockWidget will be
         // left being called the default value of "main":
-        pC->mConsoleName = name;
-        pC->setContentsMargins(0, 0, 0, 0);
-        pD->setTConsole(pC);
-        pC->show();
-        pC->layerCommandLine->hide();
-        pC->mpScrollBar->hide();
-        pHost->mpConsole->mSubConsoleMap.insert(name, pC);
+        console->mConsoleName = name;
+        console->setContentsMargins(0, 0, 0, 0);
+        dockwidget->setTConsole(console);
+        console->show();
+        console->layerCommandLine->hide();
+        console->mpScrollBar->hide();
+        pHost->mpConsole->mSubConsoleMap.insert(name, console);
         // TODO: Allow user to specify alternate dock locations - and for it to be floating and not docked initially!
-        addDockWidget(Qt::RightDockWidgetArea, pD);
+        addDockWidget(Qt::RightDockWidgetArea, dockwidget);
 
         setWindowFontSize(pHost, name, 10);
 
-        if (loadLayout && !pD->hasLayoutAlready) {
+        if (loadLayout && !dockwidget->hasLayoutAlready) {
             loadWindowLayout();
-            pD->hasLayoutAlready = true;
+            dockwidget->hasLayoutAlready = true;
         }
 
         return true;
-    } else if (pC && pD) {
+    } else if (console && dockwidget) {
         // The name is used in BOTH the QMaps of all user created TConsole
         // and TDockWidget instances - so we HAVE an existing user window,
         // Lets confirm this:
-        Q_ASSERT_X(pC->getType()==TConsole::UserWindow, "mudlet::openWindow(...)", "An existing TConsole was expected to be marked as a User Window type but it isn't");
-        pD->update();
+        Q_ASSERT_X(console->getType()==TConsole::UserWindow, "mudlet::openWindow(...)", "An existing TConsole was expected to be marked as a User Window type but it isn't");
+        dockwidget->update();
         //do not change the ->show() order! Otherwise, it will automatically minimize the floating/dock window(!!)
-        pC->show();
-        pD->show();
-        pC->showWindow(name);
+        console->show();
+        dockwidget->show();
+        console->showWindow(name);
 
-        if (loadLayout && !pD->hasLayoutAlready) {
+        if (loadLayout && !dockwidget->hasLayoutAlready) {
             loadWindowLayout();
-            pD->hasLayoutAlready = true;
+            dockwidget->hasLayoutAlready = true;
         }
 
         return true;
