@@ -5924,7 +5924,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1799"/>
       <location filename="../src/dlgRoomExits.cpp" line="1918"/>
       <source>Exit to unnamed room is valid</source>
-      <translation type="unfinished"/>
+      <translation>有效的出口通往未命名的房间</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="156"/>
@@ -6653,12 +6653,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3428"/>
       <source>New key group</source>
-      <translation type="unfinished"/>
+      <translation>新按键组</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3430"/>
       <source>New key</source>
-      <translation type="unfinished"/>
+      <translation>新按键</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3512"/>
@@ -6707,7 +6707,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4661"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
-      <translation type="unfinished"/>
+      <translation>选中的变量将被保存并会和您的配置文件一起加载。</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4813"/>
@@ -6762,7 +6762,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8094"/>
       <source>Default background color</source>
       <comment>Color trigger default background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>默认背景颜色</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4889"/>
@@ -6770,13 +6770,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8097"/>
       <source>Background color [ANSI %1]</source>
       <comment>Color trigger ANSI background color button, ensure all three instances have the same text</comment>
-      <translation type="unfinished"/>
+      <translation>背景色[ANSI %1]</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5010"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5012"/>
       <source>fault</source>
-      <translation type="unfinished"/>
+      <translation>故障</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5510"/>
@@ -6787,7 +6787,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5549"/>
       <source>Menu properties</source>
-      <translation type="unfinished"/>
+      <translation>菜单属性</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5559"/>
@@ -6802,7 +6802,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5755"/>
       <source>Aliases - Input Triggers</source>
-      <translation type="unfinished"/>
+      <translation>别名 - 输入触发器</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5767"/>
@@ -6835,7 +6835,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7356"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7361"/>
       <source>Export Package:</source>
-      <translation type="unfinished"/>
+      <translation>导出包:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7096"/>
@@ -6863,7 +6863,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7356"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7361"/>
       <source>You have to choose an item for export first. Please select a tree item and then click on export again.</source>
-      <translation type="unfinished"/>
+      <translation>您必须先选择要导出的项目。 请选择一个树项，然后再次点击导出。</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7105"/>
@@ -6873,7 +6873,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7201"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7226"/>
       <source>Package %1 saved</source>
-      <translation type="unfinished"/>
+      <translation>包 %1 已保存</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7250"/>
@@ -6883,7 +6883,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="7342"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7366"/>
       <source>Copied %1 to clipboard</source>
-      <translation type="unfinished"/>
+      <translation>复制的 %1至到剪贴板</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7372"/>
@@ -6893,12 +6893,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7372"/>
       <source>Mudlet packages (*.xml)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet包(*.xml)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7386"/>
       <source>export package:</source>
-      <translation type="unfinished"/>
+      <translation>导出包:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7386"/>
@@ -6910,13 +6910,13 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7621"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>导入Mudlet包</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7628"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="7642"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>导入Mudlet包:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7628"/>
@@ -6928,7 +6928,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7642"/>
       <source>Package %1 is already installed.</source>
-      <translation type="unfinished"/>
+      <translation>已安装软件包 %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7767"/>
@@ -6943,12 +6943,12 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7774"/>
       <source>Backup Profile</source>
-      <translation type="unfinished"/>
+      <translation>备份配置文件</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7774"/>
       <source>trigger files (*.trigger *.xml)</source>
-      <translation type="unfinished"/>
+      <translation>触发器文件（*.trigger *.xml）</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7890"/>
