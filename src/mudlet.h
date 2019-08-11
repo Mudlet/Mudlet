@@ -542,7 +542,6 @@ private:
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
 
-    QPointer<Host> mpDefaultHost;
     QQueue<QString> tempLoginQueue;
     QQueue<QString> tempPassQueue;
     QQueue<Host*> tempHostQueue;

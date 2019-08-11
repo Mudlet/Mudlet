@@ -840,21 +840,8 @@ void mudlet::migrateDebugConsole(Host* currentHost)
         return;
     }
 
-    // mudlet::debugMode gets auto-disabled when the debug area is closed - remember its status
-    const auto debugMode = mudlet::debugMode;
-
     mpDebugArea->setAttribute(Qt::WA_DeleteOnClose);
     mpDebugArea->close();
-
-    if (mHostManager.getHostCount() <= 1) {
-        return;
-    }
-
-    const auto nextHostName = mHostManager.getHostList().first();
-    QTimer::singleShot(0, this, [nextHostName, debugMode]() {
-        mudlet::self()->attachDebugArea(nextHostName);
-        mpDebugArea->setVisible(debugMode);
-    });
 }
 
 // As we are currently only using files from a resource file we only need to
@@ -1741,8 +1728,8 @@ void mudlet::disableToolbarButtons()
     mpMainToolBar->actions()[13]->setEnabled(false);
     mpMainToolBar->actions()[14]->setEnabled(false);
 
-    mpActionReplay->setEnabled(false);
     mpActionIRC->setEnabled(false);
+    mpActionReplay->setEnabled(false);
     mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                                .arg(tr("<p>Load a Mudlet replay.</p>"
                                        "<p><i>Disabled until a profile is loaded.</i></p>")));
@@ -3669,15 +3656,17 @@ void mudlet::startAutoLogin()
     }
 }
 
+// Ensure the debug area is attached to at least one Host
 void mudlet::attachDebugArea(const QString& hostname)
 {
+    qDebug() << "start of attachDebugArea";
     if (mpDebugArea) {
         return;
     }
 
     mpDebugArea = new QMainWindow(nullptr);
-    mpDefaultHost = mHostManager.getHost(hostname);
-    mpDebugConsole = new TConsole(mpDefaultHost, TConsole::CentralDebugConsole);
+    const auto host = mHostManager.getHost(hostname);
+    mpDebugConsole = new TConsole(host, TConsole::CentralDebugConsole);
     mpDebugConsole->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     mpDebugConsole->setWrapAt(100);
     mpDebugArea->setCentralWidget(mpDebugConsole);
