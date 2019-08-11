@@ -10598,12 +10598,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2531"/>
       <source>Hide small icon and tooltip</source>
-      <translation type="unfinished"/>
+      <translation>隐藏小图标和工具提示</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2553"/>
       <source>Hide timer</source>
-      <translation type="unfinished"/>
+      <translation>隐藏计时器</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2576"/>
@@ -10616,7 +10616,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2582"/>
       <source>Restrict to:</source>
-      <translation type="unfinished"/>
+      <translation>限制为:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2495"/>
@@ -10626,7 +10626,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2500"/>
       <source>Hide large icon tooltip</source>
-      <translation type="unfinished"/>
+      <translation>隐藏大图标提示</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2505"/>
@@ -10636,7 +10636,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2560"/>
       <source>&lt;p&gt;Allow Lua to set Discord status&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;允许Lua设置 Discord 状态&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2563"/>
@@ -10646,12 +10646,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2595"/>
       <source>specific Discord username</source>
-      <translation type="unfinished"/>
+      <translation>特定的 Discord 用户名</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2539"/>
       <source>Hide state</source>
-      <translation type="unfinished"/>
+      <translation>隐藏状态</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2546"/>
@@ -10661,7 +10661,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2513"/>
       <source>Hide detail</source>
-      <translation type="unfinished"/>
+      <translation>隐藏详情</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2646"/>
@@ -10671,7 +10671,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2662"/>
       <source>irc.example.net</source>
-      <translation type="unfinished"/>
+      <translation>irc.example.net</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2669"/>
@@ -10681,12 +10681,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2707"/>
       <source>#channel1 #channel2 #etc...</source>
-      <translation type="unfinished"/>
+      <translation>#channel1 #channel2 #etc</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2693"/>
       <source>MudletUser123</source>
-      <translation type="unfinished"/>
+      <translation>MudletUser123</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2652"/>
@@ -10706,7 +10706,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2679"/>
       <source>6667</source>
-      <translation type="unfinished"/>
+      <translation>6667</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2733"/>
@@ -10736,32 +10736,32 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2794"/>
       <source>Connection</source>
-      <translation type="unfinished"/>
+      <translation>连接​​​​​​​​</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2800"/>
       <source>SSL/TLS</source>
-      <translation type="unfinished"/>
+      <translation>SSL/TSL</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4862"/>
       <source>Connect to the game via proxy</source>
-      <translation type="unfinished"/>
+      <translation>通过代理连接到游戏</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4874"/>
       <source>Address</source>
-      <translation type="unfinished"/>
+      <translation>地址</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4884"/>
       <source>:</source>
-      <translation type="unfinished"/>
+      <translation>:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4891"/>
       <source>00009</source>
-      <translation type="unfinished"/>
+      <translation>00009</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4894"/>
@@ -10771,22 +10771,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4904"/>
       <source>Username for logging into the proxy if requred</source>
-      <translation type="unfinished"/>
+      <translation>用于登录代理的用户名（如果需要）</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4910"/>
       <source>username (optional)</source>
-      <translation type="unfinished"/>
+      <translation>帐号(选填)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4920"/>
       <source>Password for logging into the proxy if requred</source>
-      <translation type="unfinished"/>
+      <translation>用于登录代理的用户名（如果需要）</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4926"/>
       <source>password (optional)</source>
-      <translation type="unfinished"/>
+      <translation>密码（选填）</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4984"/>
@@ -10799,12 +10799,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="37"/>
       <source>General exits:</source>
-      <translation type="unfinished"/>
+      <translation>一般退出：</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="96"/>
       <source>NW exit...</source>
-      <translation type="unfinished"/>
+      <translation>NW 出口...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="106"/>
@@ -10825,22 +10825,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="236"/>
       <source>N exit...</source>
-      <translation type="unfinished"/>
+      <translation>N 出口...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="376"/>
       <source>NE exit...</source>
-      <translation type="unfinished"/>
+      <translation>NE 出口...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="516"/>
       <source>Up exit...</source>
-      <translation type="unfinished"/>
+      <translation>Up 出口...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="659"/>
       <source>W exit...</source>
-      <translation type="unfinished"/>
+      <translation>W 出口...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="767"/>
@@ -10855,47 +10855,47 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="866"/>
       <source>E exit...</source>
-      <translation type="unfinished"/>
+      <translation>E 出口...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1003"/>
       <source>Down exit...</source>
-      <translation type="unfinished"/>
+      <translation>Down 出口...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1155"/>
       <source>SW exit...</source>
-      <translation type="unfinished"/>
+      <translation>SW 出口...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1301"/>
       <source>S exit...</source>
-      <translation type="unfinished"/>
+      <translation>S 出口...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1441"/>
       <source>SE exit...</source>
-      <translation type="unfinished"/>
+      <translation>SE 出口...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1581"/>
       <source>In exit...</source>
-      <translation type="unfinished"/>
+      <translation>In 出口...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1721"/>
       <source>Out exit...</source>
-      <translation type="unfinished"/>
+      <translation>Out 出口...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1826"/>
       <source>Key:</source>
-      <translation type="unfinished"/>
+      <translation>Key:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1844"/>
       <source>No route</source>
-      <translation type="unfinished"/>
+      <translation>没有路线</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1859"/>
@@ -11242,12 +11242,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2131"/>
       <source>&amp;Add special exit</source>
-      <translation type="unfinished"/>
+      <translation>&amp;添加特殊出口</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2150"/>
       <source>&amp;End S. Exits editing</source>
-      <translation type="unfinished"/>
+      <translation>&amp;结束 S. 退出编辑</translation>
     </message>
   </context>
   <context>
@@ -11275,7 +11275,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="91"/>
       <source>-</source>
-      <translation type="unfinished"/>
+      <translation>-</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="98"/>
@@ -11290,7 +11290,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="136"/>
       <source>+</source>
-      <translation type="unfinished"/>
+      <translation>+</translation>
     </message>
   </context>
   <context>
@@ -11298,12 +11298,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="14"/>
       <source>Move rooms to another area</source>
-      <translation type="unfinished"/>
+      <translation>将房间移至另一个区域</translation>
     </message>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="20"/>
       <source>Which area would you like to move the room(s) to?</source>
-      <translation type="unfinished"/>
+      <translation>您要将房间移到哪个区域?</translation>
     </message>
   </context>
   <context>
@@ -11311,7 +11311,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/source_editor_area.ui" line="26"/>
       <source>Form</source>
-      <translation type="unfinished"/>
+      <translation>表单</translation>
     </message>
   </context>
   <context>
@@ -11344,7 +11344,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="91"/>
       <source>&lt;p&gt;hours&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;小时&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="106"/>
