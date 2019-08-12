@@ -24,16 +24,17 @@
  ***************************************************************************/
 
 
+#include "TArea.h"
 #include "pre_guard.h"
+#include <QTreeWidget>
 #include <QCache>
 #include <QColor>
+#include <QElapsedTimer>
 #include <QFont>
 #include <QPixmap>
 #include <QPointer>
 #include <QString>
 #include <QWidget>
-#include <QElapsedTimer>
-#include <QTreeWidget>
 #include "post_guard.h"
 
 class Host;
@@ -213,6 +214,7 @@ private:
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10);
     void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const bool showingCurrentArea, QColor& infoColor);
+    void paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth);
 
     bool mDialogLock;
 
@@ -230,27 +232,21 @@ private:
     // slot_movePosition(), etc.} - previously have
     // used -1 but is now reset to 0 if it is not valid.
     int mMultiSelectionHighlightRoomId;
-
     bool mIsSelectionSorting;
+
     bool mIsSelectionSortByNames;
 
     // Used to keep track of if sorting the multiple
     // room listing/selection widget, and by what,
     // as we now show room names (if present) as well.
     bool mIsSelectionUsingNames;
-
     QCache<QString, QPixmap> mSymbolPixmapCache;
     ushort mSymbolFontSize;
+
     QFont mMapSymbolFont;
-
     QPointer<QAction> mpCreateRoomAction;
-    // Calculated near the top of the paintEvent() and is used in a couple of
-    // places where we need to pad roomIds to the same widths, it also affects
-    // the font size used to show roomId numbers (longer numbers need a smaller
-    // font to fit - as the numbers are NOW scaled to fit inside the room symbol
-    // - and they are suppressed if they would be too small.);
+    // in the players current area, how many digits does the biggest room number have?
     quint8 mMaxRoomIdDigits;
-
 private slots:
     void slot_createRoom();
 };

@@ -495,7 +495,6 @@ signals:
 
 
 private slots:
-    void slot_close_profile();
     void slot_tab_changed(int);
     void show_help_dialog();
     void slot_show_connection_dialog();
