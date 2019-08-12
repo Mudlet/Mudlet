@@ -44,6 +44,7 @@
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
+#include "glwidget.h"
 
 #include "pre_guard.h"
 #include <QCollator>

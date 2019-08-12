@@ -32,6 +32,7 @@
 #include "dlgMapper.h"
 #include "dlgRoomExits.h"
 #include "mudlet.h"
+#include "glwidget.h"
 
 #include "pre_guard.h"
 #include <QtEvents>

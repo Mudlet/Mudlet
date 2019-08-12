@@ -28,6 +28,7 @@
 #include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
+#include "glwidget.h"
 
 #include "pre_guard.h"
 #include <QListWidget>
@@ -43,6 +44,12 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 , mShowDefaultArea( true )
 {
     setupUi(this);
+
+    glWidget = new GLWidget(widget);
+    glWidget->setObjectName(QString::fromUtf8("glWidget"));
+//    sizePolicy.setHeightForWidth(glWidget->sizePolicy().hasHeightForWidth());
+//    glWidget->setSizePolicy(sizePolicy);
+    verticalLayout_2->addWidget(glWidget);
 
     glWidget->mpMap = pM;
     mp2dMap->mpMap = pM;

@@ -25,6 +25,7 @@
 
 
 #include "TAstar.h"
+#include "glwidget.h"
 
 #include "pre_guard.h"
 #include <QApplication>

@@ -45,6 +45,7 @@
 #include <QShortcut>
 #include <QTextBoundaryFinder>
 #include <QTextCodec>
+#include <QPainter>
 #include "post_guard.h"
 
 const QString TConsole::cmLuaLineVariable("line");

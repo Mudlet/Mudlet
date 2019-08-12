@@ -37,6 +37,7 @@
 #include "dlgComposer.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
+#include "glwidget.h"
 
 #include "pre_guard.h"
 #include <QNetworkProxy>
