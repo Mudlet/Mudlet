@@ -198,7 +198,7 @@
              <bool>true</bool>
             </property>
             <property name="toolTip">
-             <string>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren't showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;Note: While this will allow Mudlet to show text in other languages, internalisation is still in development so triggers or Lua code won't work yet.&lt;/p&gt;</string>
+             <string>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren't showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;</string>
             </property>
            </widget>
           </item>
@@ -4852,6 +4852,9 @@
          <property name="checkable">
           <bool>true</bool>
          </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_proxy">
           <item row="0" column="0">
            <widget class="QLineEdit" name="lineEdit_proxyAddress">
@@ -4869,14 +4872,14 @@
           <item row="0" column="1">
            <widget class="QLabel" name="label_5">
             <property name="text">
-             <string>:</string>
+             <string notr="true">:</string>
             </property>
            </widget>
           </item>
           <item row="0" column="2">
            <widget class="QLineEdit" name="lineEdit_proxyPort">
             <property name="inputMask">
-             <string>00009</string>
+             <string notr="true">00009</string>
             </property>
             <property name="placeholderText">
              <string>port</string>

@@ -902,6 +902,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_expired->setChecked(pHost->mSslIgnoreExpired);
     checkBox_ignore_all->setChecked(pHost->mSslIgnoreAll);
 
+    groupBox_proxy->setEnabled(true);
     groupBox_proxy->setChecked(pHost->mUseProxy);
     lineEdit_proxyAddress->setText(pHost->mProxyAddress);
     if (pHost->mProxyPort != 0) {
@@ -1172,6 +1173,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     groupBox_ssl_certificate->hide();
     notificationArea->hide();
+    groupBox_proxy->setDisabled(true);
 
     // Remove the reference to the Host/profile in the title:
     setWindowTitle(tr("Profile preferences"));
@@ -2449,7 +2451,9 @@ void dlgProfilePreferences::slot_save_and_exit()
     }
 
 #if defined(INCLUDE_UPDATER)
-    pMudlet->updater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
+    if (!mudlet::scmIsDevelopmentVersion) {
+        pMudlet->updater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
+    }
 #endif
 
     pMudlet->setToolBarIconSize(MainIconSize->value());
