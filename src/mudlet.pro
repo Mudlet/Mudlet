@@ -175,6 +175,18 @@ linux|macx|win32 {
 # else we are on another platform which the updater code will not support so
 # don't include it either
 
+
+######################### 3D mapper toggle #########,#############
+# To remove the 3D mapper, set the environment WITH_3DMAPPER variable to "NO"
+# ie: export WITH_3DMAPPER="NO" qmake
+#
+linux|macx|win32 {
+    3DMAPPER_TEST = $$upper($$(WITH_3DMAPPER))
+    isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
+       DEFINES += INCLUDE_3DMAPPER
+    }
+}
+
 ###################### Platform Specific Paths and related #####################
 # Specify default location for Lua files, in OS specific LUA_DEFAULT_DIR value
 # below, if this is not done then a hardcoded default of a ./mudlet-lua/lua
@@ -441,7 +453,6 @@ SOURCES += \
     EAction.cpp \
     exitstreewidget.cpp \
     FontManager.cpp \
-    glwidget.cpp \
     Host.cpp \
     HostManager.cpp \
     ircmessageformatter.cpp \
@@ -512,7 +523,6 @@ HEADERS += \
     dlgVarsMainArea.h \
     EAction.h \
     exitstreewidget.h \
-    glwidget.h \
     Host.h \
     HostManager.h \
     ircmessageformatter.h \
@@ -623,6 +633,24 @@ linux|macx|win32 {
 } else {
     !build_pass{
         message("The Updater code is excluded as on-line updating is not available on this platform")
+    }
+}
+
+linux|macx|win32 {
+    contains( DEFINES, INCLUDE_3DMAPPER ) {
+        HEADERS += glwidget.h
+        SOURCES += glwidget.cpp
+        !build_pass{
+            message("The 3D mapper code is included in this configuration")
+        }
+    } else {
+        !build_pass{
+            message("The 3D mapper code is excluded from this configuration")
+        }
+    }
+} else {
+    !build_pass{
+        message("The 3D mapper code is excluded as OpenGL 1.5 might not be available on this platform")
     }
 }
 
