@@ -277,12 +277,13 @@ endif()
 
 if(UNIX)
   set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
+else()
+  set(LUA_DEFAULT_DIR ".")
 endif(UNIX)
 
 # Define a preprocessor symbol with the default fallback location from which
 # to load installed mudlet lua files. Set LUA_DEFAULT_DIR to a
-# platform-specific value. If LUA_DEFAULT_DIR is unset, the root directory
-# will be used.
+# platform-specific value.
 target_compile_definitions(mudlet
   PRIVATE
     APP_VERSION="${APP_VERSION}"

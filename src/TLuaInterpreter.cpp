@@ -6097,27 +6097,21 @@ int TLuaInterpreter::getMudletHomeDir(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMudletLuaDefaultPaths
 int TLuaInterpreter::getMudletLuaDefaultPaths(lua_State* L)
 {
-    int index = 1;
+    int index = 0;
+    // This is a static method so does not have a this pointer - so go and get it
+    auto& host = getHostFromLua(L);
+    auto* pLua = host.getLuaInterpreter();
+    Q_ASSERT_X(pLua, "TLuaInterpreter::getMudletLuaDefaultPaths", "nullptr received when looking for the instantiated instance of TLuaInterpreter for a Host.");
+
+    QStringListIterator itPath(pLua->mPossiblePaths);
     lua_newtable(L);
-#if defined(Q_OS_MACOS)
-    lua_createtable(L, 3, 0);
-#else
-    lua_createtable(L, 2, 0);
-#endif
-    // add filepath relative to the binary itself (one usecase is AppImage on Linux)
-    QString nativePath = QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/mudlet-lua/lua/");
-    lua_pushstring(L, nativePath.toUtf8().constData());
-    lua_rawseti(L, -2, index++);
-#if defined(Q_OS_MACOS)
-    // add macOS lua path relative to the binary itself, which is part of the Mudlet.app package
-    nativePath = QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/../Resources/mudlet-lua/lua/");
-    lua_pushstring(L, nativePath.toUtf8().constData());
-    lua_rawseti(L, -2, index++);
-#endif
-    // add the default search path as specified by build file
-    nativePath = QDir::toNativeSeparators(LUA_DEFAULT_PATH "/");
-    lua_pushstring(L, nativePath.toUtf8().constData());
-    lua_rawseti(L, -2, index++);
+    while (itPath.hasNext()) {
+        // We are hoping that backslashes are not going to be a problem in reporting the details:
+        QString nativePath = QDir::toNativeSeparators(itPath.next());
+        lua_pushnumber(L, ++index); // Lua indexes start at 1 not 0 so preincrement it:
+        lua_pushstring(L, nativePath.toUtf8().constData());
+        lua_settable(L, -3);
+    }
     return 1;
 }
 
@@ -15932,14 +15926,18 @@ void TLuaInterpreter::initLuaGlobals()
     luaL_dostring(pGlobalLua, "if jit then package.cpath = package.cpath .. ';/usr/lib/lua/5.1/?.so;/usr/lib/x86_64-linux-gnu/lua/5.1/?.so' end");
 
     //AppInstaller on Linux would like the search path to also be set to the current binary directory
-    luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/lib/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
+    luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = package.cpath .. ';%1/lib/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
 #elif defined(Q_OS_MAC)
     //macOS app bundle would like the search path to also be set to the current binary directory
-    luaL_dostring(pGlobalLua, QString("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
-    luaL_dostring(pGlobalLua, QString("package.path = package.path .. ';%1/?.lua'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
+    luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = package.cpath .. ';%1/?.so'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
+    luaL_dostring(pGlobalLua, QStringLiteral("package.path = package.path .. ';%1/?.lua'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
 #elif defined(Q_OS_WIN32)
-     luaL_dostring(pGlobalLua, R"(package.cpath = package.cpath .. [[;C:\Qt\Tools\mingw730_32\lib\lua\5.1\?.dll]])");
-#endif
+#if defined(MINGW_BASE_DIR)
+    if (! QStringLiteral(MINGW_BASE_DIR).isEmpty()) {
+        luaL_dostring(pGlobalLua, "package.cpath = package.cpath .. [[;" MINGW_BASE_DIR "\lib\lua\5.1\?.dll]]");
+    }
+#endif // defined(MINGW_BASE_DIR)
+#endif // defined(Q_OS_WIN32)
 
     error = luaL_dostring(pGlobalLua, "require \"rex_pcre\"");
     if (error != 0) {
@@ -16247,17 +16245,29 @@ void TLuaInterpreter::loadGlobal()
 
     QStringList pathsToTry = {
 #if defined(Q_OS_MACOS)
-        QCoreApplication::applicationDirPath() + "/../Resources/mudlet-lua/lua/LuaGlobal.lua",
+        // Load relatively to MacOS inside Resources when we're in a .app bundle,
+        // as mudlet-lua always gets copied in by the build script into the bundle
+        QStringLiteral("%1/../Resources/mudlet-lua/lua/LuaGlobal.lua").arg(QCoreApplication::applicationDirPath()),
 #endif
-        QCoreApplication::applicationDirPath() + "/mudlet-lua/lua/LuaGlobal.lua",
-        "../src/mudlet-lua/lua/LuaGlobal.lua",
-        "mudlet-lua/lua/LuaGlobal.lua",
-        LUA_DEFAULT_PATH "/LuaGlobal.lua"
+        // Additional "../src/" allows location of lua code when object code is in a
+        // directory alongside src directory as occurs using Qt Creator "Shadow Builds"
+        QDir::toNativeSeparators(QStringLiteral("%1/../src/mudlet-lua/lua/LuaGlobal.lua").arg(QCoreApplication::applicationDirPath())),
+        // Windows builds (or others where the qmake project file has CONFIG containing debug_and_release AND debug_and_release_target options) may be
+        // an additional sub-directory down:
+        QDir::toNativeSeparators(QStringLiteral("%1/../../src/mudlet-lua/lua/LuaGlobal.lua").arg(QCoreApplication::applicationDirPath())),
+
+        // For the installer we do not go down a level to search for this. So
+        // we check again for the user case of a windows install.
+        QDir::toNativeSeparators(QStringLiteral("%1/mudlet-lua/lua/LuaGlobal.lua").arg(QCoreApplication::applicationDirPath())),
+
+        // A last-ditch attempt - try a potentially supplied directory:
+#if defined(LUA_DEFAULT_PATH)
+        QDir::toNativeSeparators(QStringLiteral(LUA_DEFAULT_PATH "/LuaGlobal.lua"))
+#endif
     };
-    QStringList failedMessages{};
+    QStringList failedMessages;
+    int error = 0;
 
-
-    int error;
     for (const auto& path : qAsConst(pathsToTry)) {
         if (!QFileInfo::exists(path)) {
             failedMessages << tr("%1 (doesn't exist)", "This file doesn't exist").arg(path);
@@ -16272,16 +16282,18 @@ void TLuaInterpreter::loadGlobal()
         }
 
         error = luaL_dostring(pGlobalLua, luaGlobal.toUtf8().constData());
-        if (error == 0) {
+        if (!error) {
             mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
             return;
-        } else {
-            qWarning() << "TLuaInterpreter::loadGlobal() loading " << path << " failed: " << lua_tostring(pGlobalLua, -1);
-            failedMessages << QStringLiteral("%1 (%2)").arg(path, lua_tostring(pGlobalLua, -1));
         }
+
+        qWarning() << "TLuaInterpreter::loadGlobal() loading " << path << " failed: " << lua_tostring(pGlobalLua, -1);
+        failedMessages << QStringLiteral("%1 (%2)").arg(path, lua_tostring(pGlobalLua, -1));
     }
 
-    mpHost->postMessage(tr("[ ERROR ] - Couldn't find and load LuaGlobal.lua - your Mudlet is broken!\nTried these locations:\n%1").arg(failedMessages.join(QChar::LineFeed)));
+    mpHost->postMessage(tr("[ ERROR ] - Couldn't find and load LuaGlobal.lua - your Mudlet is broken!\n"
+                           "Tried these locations:\n"
+                           "%1").arg(failedMessages.join(QChar::LineFeed)));
 }
 
 // No documentation available in wiki - internal function
