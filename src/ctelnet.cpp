@@ -128,16 +128,18 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 
     // initialize the socket after the Host initialisation is complete so we can access mSslTsl
     QTimer::singleShot(0, this, [this]() {
+#if !defined(QT_NO_SSL)
         if (mpHost->mSslTsl) {
             connect(&socket, &QSslSocket::encrypted, this, &cTelnet::handle_socket_signal_connected);
         } else {
             connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
         }
+        connect(&socket, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::handle_socket_signal_sslError);
+#else
+        connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
+#endif
         connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::handle_socket_signal_disconnected);
         connect(&socket, &QIODevice::readyRead, this, &cTelnet::handle_socket_signal_readyRead);
-#if !defined(QT_NO_SSL)
-        connect(&socket, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::handle_socket_signal_sslError);
-#endif
     });
 
 
