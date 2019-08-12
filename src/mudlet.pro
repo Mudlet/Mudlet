@@ -87,11 +87,11 @@ macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
 QT += network uitools multimedia gui concurrent
 qtHaveModule(gamepad) {
     QT += gamepad
-    message("Using Gamepad module")
+    !build_pass:message("Using Gamepad module")
 }
 qtHaveModule(texttospeech) {
     QT += texttospeech
-    message("Using TextToSpeech module")
+    !build_pass:message("Using TextToSpeech module")
 }
 
 TEMPLATE = app
@@ -190,12 +190,7 @@ isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
 ###################### Platform Specific Paths and related #####################
 # Specify default location for Lua files, in OS specific LUA_DEFAULT_DIR value
 # below, if this is not done then a hardcoded default of a ./mudlet-lua/lua
-# from the executable's location will be used.  Mudlet will now moan and ask
-# the user to find them if the files (and specifically the <10KByte
-# "LuaGlobal.lua" one) is not accessable (read access only required) during
-# startup.  The precise directory is remembered once found (and stored in the
-# Mudlet configuration file as "systemLuaFilePath") but if the installer places
-# the files in the place documented here the user will not be bothered by this.
+# from the executable's location will be used.
 #
 # (Geyser files should be in a "geyser" subdirectory of this)
 
@@ -255,23 +250,26 @@ unix:!macx {
     isEmpty(MINGW_BASE_DIR) {
         MINGW_BASE_DIR = "C:\\Qt\\Tools\\mingw730_32"
     }
+    !isEmpty(MINGW_BASE_DIR) {
+        LIBS += -L$${MINGW_BASE_DIR}/bin
+    }
     LIBS +=  \
-        -llua51 \
+        -llua5.1 \
         -lpcre-1 \
-        -llibhunspell-1.6 \
+        -llibhunspell-1.7 \
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
         -lyajl \
         -lpugixml \
-        -lWs2_32 \
-        -L"$${MINGW_BASE_DIR}\\bin"
-    INCLUDEPATH += \
-                   "C:\\Libraries\\boost_1_67_0" \
-                   "$${MINGW_BASE_DIR}\\include" \
-                   "$${MINGW_BASE_DIR}\\lib\include"
-# Leave this undefined so mudlet::readSettings() preprocessing will fall back to
-# hard-coded executable's /mudlet-lua/lua/ subdirectory
-#    LUA_DEFAULT_DIR = $$clean_path($$system(echo %ProgramFiles%)/lua)
+        -lWs2_32
+    !isEmpty(MINGW_BASE_DIR) {
+        INCLUDEPATH += \
+            $$(MINGW_BASE_DIR)/include/lua5.1 \
+            $$(MINGW_BASE_DIR)/include/pugixml-1.9
+    }
+# Leave this set to just a single dot so TLuaInterpreter::loadGlobal() preprocessing will fall
+# back to a "./mudlet-lua/lua/" subdirectory of the current working directory:
+    LUA_DEFAULT_DIR = "."
 }
 
 unix:!macx {
@@ -323,9 +321,10 @@ INCLUDEPATH += ../3rdparty/discord/rpc/include
 
 # Define a preprocessor symbol with the default fallback location from which
 # to load installed mudlet lua files. Set LUA_DEFAULT_DIR to a
-# platform-specific value. If LUA_DEFAULT_DIR is unset, the root directory
-# will be used.
-DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
+# platform-specific value.
+!isEmpty(LUA_DEFAULT_DIR) {
+    DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
+}
 
 
 ####################### Git Submodules check and install #######################
@@ -624,8 +623,17 @@ FORMS += \
 RESOURCES = mudlet.qrc \
             ../translations/translated/qm.qrc
 
+# Windows cannot use the Noto Color Font and the 32-Bit builds on MSYS2
+# crash because it needs more than 4GB to compile the reasource file
+win32 {
+    RESOURCES += mudlet_fonts_windows.qrc
+} else {
+    RESOURCES += mudlet_fonts_linux.qrc
+}
+
+
 contains(DEFINES, INCLUDE_FONTS) {
-    RESOURCES += mudlet_fonts.qrc
+    RESOURCES +=
     !build_pass{
         # On windows or on platforms that support CONFIG having debug_and_release"
         # then there can be three passes through this file and we only want the
@@ -1364,6 +1372,10 @@ unix:!macx {
 
 
 DISTFILES += \
+    ../CI/appveyor.after_build.sh \
+    ../CI/appveyor.after_success.old.ps1 \
+    ../CI/appveyor.build.sh \
+    ../CI/appveyor.install.sh \
     CMakeLists.txt \
     .clang-format \
     ../CMakeLists.txt \
@@ -1384,11 +1396,6 @@ DISTFILES += \
     ../CI/travis.linux.after_success.sh \
     ../CI/travis.osx.after_success.sh \
     ../.appveyor.yml \
-    ../CI/appveyor.after_success.ps1 \
-    ../CI/appveyor.install.ps1 \
-    ../CI/appveyor.set-build-info.ps1 \
-    ../CI/appveyor.functions.ps1 \
-    ../CI/appveyor.build.ps1 \
     mudlet-lua/lua/ldoc.css \
     mudlet-lua/genDoc.sh \
     mudlet-lua/tests/README.md \
@@ -1407,7 +1414,5 @@ DISTFILES += \
     ../.gitmodules \
     ../translations/translated/updateqm.pri \
     ../CI/mudlet-deploy-key.enc \
-    ../CI/copy-non-qt-win-dependencies.ps1 \
     ../CI/mudlet-deploy-key-windows.ppk \
-    ../CI/qt-silent-install.qs \
     ../CI/travis.compile.sh

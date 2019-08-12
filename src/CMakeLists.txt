@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
-#    Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2015-2019 by Stephen Lyons - slysven@virginmedia.com    #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -22,7 +22,11 @@
 set(mudlet_RCCS mudlet.qrc)
 
 if(USE_FONTS)
-  list(APPEND mudlet_RCCS mudlet_fonts.qrc)
+  if(WIN32)
+    list(APPEND mudlet_RCCS mudlet_fonts_windows.qrc)
+  else()
+    list(APPEND mudlet_RCCS mudlet_fonts_linux.qrc)
+  endif()
 endif()
 
 if(WIN32)
@@ -277,12 +281,13 @@ endif()
 
 if(UNIX)
   set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
+else()
+  set(LUA_DEFAULT_DIR ".")
 endif(UNIX)
 
 # Define a preprocessor symbol with the default fallback location from which
 # to load installed mudlet lua files. Set LUA_DEFAULT_DIR to a
-# platform-specific value. If LUA_DEFAULT_DIR is unset, the root directory
-# will be used.
+# platform-specific value.
 target_compile_definitions(mudlet
   PRIVATE
     APP_VERSION="${APP_VERSION}"

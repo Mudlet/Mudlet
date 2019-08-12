@@ -41,7 +41,8 @@ for(file, TS_FILES_NOEXT) {
         system("LANG=C $$QMAKE_LRELEASE $${file}.ts -compress -qm $${file}.qm >> lrelease_output.txt")
     }
 }
-STATS_GENERATOR = $$shell_path("$${PWD}/generate-translation-stats.lua")
+STATS_GENERATOR = $$system_path("$${PWD}/generate-translation-stats.lua")
+message("Will use \"$${STATS_GENERATOR}\" to parse translation statistics...")
 
 win32 {
     CMD = "where"
@@ -58,13 +59,26 @@ isEmpty(LUA_SEARCH_OUT) {
         isEmpty(LUA_SEARCH_OUT) {
             error("no lua found in PATH")
         } else {
-            LUA_COMMAND = "lua"
+            win32 {
+                LUA_COMMAND = "lua.exe"
+            } else {
+                LUA_COMMAND = "lua"
+            }
         }
     } else {
-        LUA_COMMAND = "lua51"
+        win32 {
+            LUA_COMMAND = "lua51.exe"
+        } else {
+            LUA_COMMAND = "lua51"
+        }
     }
 } else {
-    LUA_COMMAND = "lua5.1"
+    win32 {
+        LUA_COMMAND = "lua5.1.exe"
+    } else {
+        LUA_COMMAND = "lua5.1"
+    }
 }
 
+message("Running: \"$$LUA_COMMAND $$STATS_GENERATOR\" ...")
 system("$$LUA_COMMAND $$STATS_GENERATOR")
