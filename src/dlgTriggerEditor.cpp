@@ -8189,6 +8189,7 @@ void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
                                            ? edbee::TextEditorConfig::ShowWhitespaces
                                            : edbee::TextEditorConfig::HideWhitespaces);
         localConfig->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+        localConfig->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
         localConfig->endChanges();
 }
 
