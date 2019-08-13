@@ -7090,22 +7090,6 @@ void dlgTriggerEditor::slot_debug_mode()
 
 void dlgTriggerEditor::slot_next_section()
 {
-    //mpScriptsMainArea->setFocus();
-    qDebug() << "slot_next_section";
-    QMessageBox msgBox;
-    //msgBox.setText(("slot_next_section()"));
-    QString msg = "";
-    msg = msg + ">>" + QApplication::focusWidget()->metaObject()->className() + "<<\n";
-    msg = msg + QApplication::focusWidget()->objectName();
-    auto widget = QApplication::focusWidget()->parentWidget();
-    while (widget != nullptr){
-        msg = msg + "->" + widget->objectName();
-        widget = widget->parentWidget();
-    }
-    msgBox.setText("Widget: " + msg);
-
-    //msgBox.exec();
-
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
@@ -7131,7 +7115,6 @@ void dlgTriggerEditor::slot_next_section()
                 }
             }
         }
-        // Add default to trigger name field
         break;
     case EditorViewType::cmTimerView:
         if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
@@ -7258,7 +7241,6 @@ void dlgTriggerEditor::slot_previous_section()
                 }
             }
         }
-        // Add default to trigger name field
         break;
     case EditorViewType::cmTimerView:
         if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
