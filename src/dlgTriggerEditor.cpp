@@ -567,6 +567,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                                   ? edbee::TextEditorConfig::ShowWhitespaces
                                   : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+    config->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
     config->endChanges();
 
     connect(comboBox_searchTerms, qOverload<const QString&>(&QComboBox::activated), this, &dlgTriggerEditor::slot_searchMudletItems);
@@ -8425,6 +8426,7 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
     config->setCaretBlinkRate(200);
     config->setIndentSize(2);
     config->setCaretWidth(1);
+    config->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
     config->endChanges();
 
     // If undo is not disabled when setting the initial text, the
@@ -8448,6 +8450,7 @@ void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
                                            ? edbee::TextEditorConfig::ShowWhitespaces
                                            : edbee::TextEditorConfig::HideWhitespaces);
         localConfig->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+        localConfig->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
         localConfig->endChanges();
 }
 

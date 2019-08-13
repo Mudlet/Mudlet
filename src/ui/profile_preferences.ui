@@ -42,7 +42,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>3</number>
      </property>
      <widget class="QWidget" name="tab_general">
       <property name="sizePolicy">
@@ -1172,8 +1172,8 @@
       <attribute name="title">
        <string>Editor</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_tab_codeEditor">
-       <item row="0" column="0">
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
         <widget class="QGroupBox" name="groupbox_codeEditorThemeSelection">
          <property name="title">
           <string>Theme</string>
@@ -1253,7 +1253,23 @@
          </layout>
         </widget>
        </item>
-       <item row="1" column="0">
+       <item>
+        <widget class="QGroupBox" name="groupBox">
+         <property name="title">
+          <string>Autocomplete</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_4">
+          <item>
+           <widget class="QCheckBox" name="checkBox_autocompleteLuaCode">
+            <property name="text">
+             <string>Autocomplete Lua functions in code editor</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <spacer name="verticalSpacer_codeEditor">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
