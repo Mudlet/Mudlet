@@ -1492,9 +1492,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
 
         mMapSymbolFont.setStyleStrategy(static_cast<QFont::StyleStrategy>(( mIsOnlyMapSymbolFontToBeUsed ? QFont::NoFontMerging : 0)
                                                                           | QFont::PreferOutline | QFont::PreferAntialias | QFont::PreferQuality
-#if QT_VERSION >= 0x050a00
                                                                           | QFont::PreferNoShaping
-#endif
                                                                           ));
 
         if (mVersion >= 14) {

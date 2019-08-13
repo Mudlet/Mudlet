@@ -753,12 +753,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     widget_searchTerm->updateGeometry();
 
     if (mAutosaveInterval > 0) {
-#if QT_VERSION < QT_VERSION_CHECK(5, 9, 0)
-        startTimer(mAutosaveInterval * 1000 * 60);
-#else
         startTimer(mAutosaveInterval * 1min);
-#endif
-
     }
 }
 
