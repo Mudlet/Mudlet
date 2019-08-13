@@ -507,6 +507,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QShortcut *nextSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_Tab), this);
     QObject::connect(nextSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_next_section);
 
+    QShortcut *previousSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_Tab), this);
+    QObject::connect(previousSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_previous_section);
+
     toolBar = new QToolBar();
     toolBar2 = new QToolBar();
 
@@ -7229,9 +7232,133 @@ void dlgTriggerEditor::slot_next_section()
     case EditorViewType::cmUnknownView:
         return;
     };
-    //mudlet::mpDebugArea->setVisible(!mudlet::debugMode);
-    //mudlet::debugMode = !mudlet::debugMode;
-    //mudlet::mpDebugArea->setWindowTitle("Central Debug Console");
+}
+
+void dlgTriggerEditor::slot_previous_section()
+{
+    switch (mCurrentView) {
+    case EditorViewType::cmTriggerView:
+        if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
+            mTriggerPatternEdit[0]->lineEdit_pattern->setFocus();
+            return;
+        } else if (treeWidget_triggers->hasFocus()) {
+            mpSourceEditorEdbee->setFocus();
+            return;
+        } else {
+            for (auto child : mpTriggersMainArea->scrollArea->findChildren<QWidget *>()) {
+                if (child->hasFocus()){
+                    mpTriggersMainArea->lineEdit_trigger_name->setFocus();
+                    return;
+                }
+            }
+            for (auto child : mpTriggersMainArea->findChildren<QWidget *>()) {
+                if (child->hasFocus()){
+                    treeWidget_triggers->setFocus();
+                    return;
+                }
+            }
+        }
+        // Add default to trigger name field
+        break;
+    case EditorViewType::cmTimerView:
+        if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
+            mpTimersMainArea->lineEdit_timer_name->setFocus();
+            return;
+        } else if (treeWidget_timers->hasFocus()) {
+            mpSourceEditorEdbee->setFocus();
+            return;
+        } else {
+            for (auto child : mpTimersMainArea->findChildren<QWidget *>()) {
+                if (child->hasFocus()){
+                    treeWidget_timers->setFocus();
+                    return;
+                }
+            }
+        }
+        break;
+    case EditorViewType::cmAliasView:
+        if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
+            mpAliasMainArea->lineEdit_alias_name->setFocus();
+            return;
+        } else if (treeWidget_aliases->hasFocus()) {
+            mpSourceEditorEdbee->setFocus();
+            return;
+        } else {
+            for (auto child : mpAliasMainArea->findChildren<QWidget *>()) {
+                if (child->hasFocus()){
+                    treeWidget_aliases->setFocus();
+                    return;
+                }
+            }
+        }
+        break;
+    case EditorViewType::cmScriptView:
+        if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
+            mpScriptsMainArea->lineEdit_script_name->setFocus();
+            return;
+        } else if (treeWidget_scripts->hasFocus()) {
+            mpSourceEditorEdbee->setFocus();
+            return;
+        } else {
+            for (auto child : mpScriptsMainArea->findChildren<QWidget *>()) {
+                if (child->hasFocus()){
+                    treeWidget_scripts->setFocus();
+                    return;
+                }
+            }
+        }
+        break;
+    case EditorViewType::cmActionView:
+        if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
+            mpActionsMainArea->lineEdit_action_name->setFocus();
+            return;
+        } else if (treeWidget_actions->hasFocus()) {
+            mpSourceEditorEdbee->setFocus();
+            return;
+        } else {
+            for (auto child : mpActionsMainArea->findChildren<QWidget *>()) {
+                if (child->hasFocus()){
+                    treeWidget_actions->setFocus();
+                    return;
+                }
+            }
+        }
+        break;
+    case EditorViewType::cmKeysView:
+        if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
+            mpKeysMainArea->lineEdit_key_name->setFocus();
+            return;
+        } else if (treeWidget_keys->hasFocus()) {
+            mpSourceEditorEdbee->setFocus();
+            return;
+        } else {
+            for (auto child : mpKeysMainArea->findChildren<QWidget *>()) {
+                if (child->hasFocus()){
+                    treeWidget_keys->setFocus();
+                    return;
+                }
+            }
+        }
+        break;
+    case EditorViewType::cmVarsView:
+        if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
+            mpVarsMainArea->lineEdit_var_name->setFocus();
+            return;
+        } else if (treeWidget_variables->hasFocus()) {
+            mpSourceEditorEdbee->setFocus();
+            return;
+        } else {
+            for (auto child : mpVarsMainArea->findChildren<QWidget *>()) {
+                if (child->hasFocus()){
+                    treeWidget_variables->setFocus();
+                    return;
+                }
+            }
+        }
+        break;
+    case EditorViewType::cmUnknownView:
+        return;
+    };
 }
 
 void dlgTriggerEditor::exportTrigger(const QString& fileName)
