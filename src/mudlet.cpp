@@ -3337,7 +3337,9 @@ void mudlet::createMapper(bool loadDefaultMap)
     pHost->mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(hostName));
     pHost->mpDockableMapWidget->setObjectName(QStringLiteral("dockMap_%1").arg(hostName));
     pHost->mpMap->mpMapper = new dlgMapper(pHost->mpDockableMapWidget, pHost, pHost->mpMap.data()); //FIXME: mpHost definieren
+#if defined(INCLUDE_3DMAPPER)
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
+#endif
     pHost->mpDockableMapWidget->setWidget(pHost->mpMap->mpMapper);
 
     if (loadDefaultMap && pHost->mpMap->mpRoomDB->getRoomIDList().isEmpty()) {
