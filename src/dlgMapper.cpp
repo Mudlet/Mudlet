@@ -59,7 +59,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     sizePolicy.setVerticalStretch(0);
     sizePolicy.setHeightForWidth(glWidget->sizePolicy().hasHeightForWidth());
     glWidget->setSizePolicy(sizePolicy);
-    verticalLayout_2->addWidget(glWidget);
+    verticalLayout_2->insertWidget(0, glWidget);
 
     glWidget->mpMap = pM;
 #endif
