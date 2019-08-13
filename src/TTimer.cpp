@@ -39,6 +39,7 @@ TTimer::TTimer(TTimer* parent, Host* pHost)
 , mNeedsToBeCompiled(true)
 , mpQTimer(new QTimer)
 , mModuleMember(false)
+, mRepeating(false)
 {
     mpQTimer->stop();
     mpQTimer->setProperty(scmProperty_HostName, mpHost->getName());
