@@ -298,7 +298,7 @@ if(USE_UPDATER)
   endif()
 endif()
 
-if(USE_UPDATER)
+if(USE_3DMAPPER)
     add_definitions(-DINCLUDE_3DMAPPER)
 endif()
 
