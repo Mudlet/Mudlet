@@ -1200,8 +1200,9 @@ void dlgProfilePreferences::loadEditorTab()
                                   : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->setFont(pHost->mDisplayFont);
+    config->setAutocompleteAutoShow(pHost->mEditorAutoComplete);
     config->endChanges();
-    edbeePreviewWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1Literal("Buck.lua")));
+    edbeePreviewWidget->textDocument()->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QStringLiteral("Buck.lua")));
     // disable shadows as their purpose (notify there is more text) is performed by scrollbars already
     edbeePreviewWidget->textScrollArea()->enableShadowWidget(false);
 
@@ -1229,6 +1230,8 @@ void dlgProfilePreferences::loadEditorTab()
     script_preview_combobox->setDuplicatesEnabled(true);
 
     theme_download_label->hide();
+
+    checkBox_autocompleteLuaCode->setChecked(pHost->mEditorAutoComplete);
 
     // changes the theme being previewed
     connect(code_editor_theme_selection_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_theme_selected);
@@ -2391,6 +2394,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->setWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
+        pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();
         if (pHost->mpEditorDialog) {
             pHost->mpEditorDialog->setThemeAndOtherSettings(pHost->mEditorTheme);
         }
