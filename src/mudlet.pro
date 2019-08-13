@@ -176,7 +176,7 @@ linux|macx|win32 {
 # don't include it either
 
 
-######################### 3D mapper toggle #########,#############
+######################### 3D mapper toggle #######################
 # To remove the 3D mapper, set the environment WITH_3DMAPPER variable to "NO"
 # ie: export WITH_3DMAPPER="NO" qmake
 #
@@ -236,10 +236,14 @@ unix:!macx {
     LIBS += -lpcre \
         -L/usr/local/lib/ \
         -lyajl \
-        -lGLU \
         -lzip \
         -lz \
         -lpugixml
+
+    isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
+       LIBS += -lGLU
+    }
+
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32 {
     MINGW_BASE_DIR = $$(MINGW_BASE_DIR)
