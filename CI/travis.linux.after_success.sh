@@ -6,13 +6,6 @@ set -e
 if [ "${DEPLOY}" = "deploy" ]; then
 
   if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
-    if $(git diff --name-only | grep -q "mudlet.ts"); then
-      git checkout development
-      git config user.name "mudlet-machine-account"
-      git config user.email "39947211+mudlet-machine-account@users.noreply.github.com"
-      git commit -m "Update strings to translate [skip ci]" translations/mudlet.ts
-      #git push "https://${MUDLET_MACHINE_ACCOUNT_API_KEY}@github.com/Mudlet/Mudlet.git" development
-    fi
     # instead of deployment, we upload to coverity for cron jobs
     cd build
     tar czf Mudlet.tgz cov-int
@@ -71,10 +64,10 @@ if [ "${DEPLOY}" = "deploy" ]; then
     scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}-linux-x64.AppImage.tar" "keneanung@mudlet.org:${DEPLOY_PATH}"
     # upload an unzipped, unversioned release for appimage.github.io
     scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet.AppImage" "keneanung@mudlet.org:${DEPLOY_PATH}"
-    DEPLOY_URL="http://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
+    DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
 
 
-    # Install dblsqd in know place
+    # push release to DBLSQD
     npm install -g dblsqd-cli
     dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
     dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${DEPLOY_URL}"

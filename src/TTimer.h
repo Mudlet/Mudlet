@@ -45,7 +45,7 @@ class TTimer : public Tree<TTimer>
 public:
     ~TTimer();
     TTimer(TTimer* parent, Host* pHost);
-    TTimer(const QString& name, QTime time, Host* pHost);
+    TTimer(const QString& name, QTime time, Host* pHost, bool repeating = false);
     void compileAll();
     QString& getName() { return mName; }
     void setName(const QString& name);
@@ -77,7 +77,7 @@ public:
     QTimer* getQTimer() { return mpQTimer; }
     // Override the Tree version as we need to insert the id number as a
     // property into the QTimer that mpQTimer points to as well:
-    void setID(const int);
+    void setID(int) override;
 
 
     // specifies whenever the payload is Lua code as a string
@@ -101,6 +101,8 @@ private:
     QMutex mLock;
     QTimer* mpQTimer;
     bool mModuleMember;
+    // temporary timers are single-shot by default, unless repeating is set
+    bool mRepeating;
 };
 
 #endif // MUDLET_TTIMER_H

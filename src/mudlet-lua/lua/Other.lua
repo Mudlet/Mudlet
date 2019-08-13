@@ -140,7 +140,7 @@ local group_creation_functions = {
     return not (permTimer(name, parent, 0, "") == -1)
   end,
   trigger = function(name, parent)
-    return not (permSubstringTrigger(name, parent, { "" }, "") == -1)
+    return not (permSubstringTrigger(name, parent, {}, "") == -1)
   end,
   alias = function(name, parent)
     return not (permAlias(name, parent, "", "") == -1)
@@ -643,17 +643,19 @@ function mudletOlderThan(inputmajor, inputminor, inputpatch)
   assert(inputminor == nil or type(inputminor) == "number", sformat("bad argument #2 type (optional minor version as number expected, got %s!)", type(inputminor)))
   assert(inputpatch == nil or type(inputpatch) == "number", sformat("bad argument #3 type (optional patch version as number expected, got %s!)", type(inputpatch)))
 
-
   if mudletmajor < inputmajor then
     return true
+  elseif mudletmajor > inputmajor then
+    return false
+  elseif inputminor then
+    if mudletminor < inputminor then
+      return true
+    elseif mudletminor > inputminor then
+      return false
+    elseif inputpatch and (mudletpatch < inputpatch) then
+        return true
+    end
   end
-  if inputminor and (mudletminor < inputminor) then
-    return true
-  end
-  if inputpatch and (mudletpatch < inputpatch) then
-    return true
-  end
-
   return false
 end
 
@@ -903,4 +905,22 @@ creplaceLine = function(str)
 	selectString(line,1)
 	replace("")
 	cinsertText(str)
+end
+
+function translateTable(data, language)
+  language = language or mudlet.translations.interfacelanguage
+  assert(type(data) == "table", string.format("translateTable: bad argument #1 type (input as table expected, got %s!)", type(data)))
+
+  local t, translations = {}, mudlet.translations[language]
+
+  if not translations then
+    return nil, language.." doesn't have any translations for it"
+  end
+
+  for i = 1, #data do
+    local key = data[i]
+    t[#t+1] = translations[key] or key
+  end
+
+  return t
 end

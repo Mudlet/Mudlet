@@ -53,8 +53,6 @@ GLWidget::GLWidget(QWidget *parent)
     : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
 , mShowInfo()
 , dehnung()
-, rotTri()
-, rotQuad()
 , mTarget()
 {
     mpMap = nullptr;
@@ -96,8 +94,6 @@ GLWidget::GLWidget(TMap* pM, QWidget* parent)
 , dehnung()
 , mShowTopLevels()
 , mShowBottomLevels()
-, rotTri()
-, rotQuad()
 , mScale()
 , mTarget()
 {
@@ -2128,10 +2124,6 @@ void GLWidget::paintGL()
 
         zPlane += 1.0;
     }
-    //   qDebug()<<"FINAL: mQuads.size()="<<mQuads.size()<<"area.size()="<<pArea->rooms.size()<<" quads="<<quads<<" verts="<<verts;
-    //    qDebug()<<"mScale="<<mScale<<" 1/mScale="<<1/mScale<<" env="<<env;
-    //    cout<<"dif r="<<diffuseLight[0]<<" g="<<diffuseLight[1]<<" b="<<diffuseLight[2]<<endl;
-    //    cout << "xRot:"<<xRot<<" yRot:"<<yRot<<" zRot:"<<zRot<<endl;
     glFlush();
 }
 
@@ -2168,7 +2160,6 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         gluPerspective(60 * mScale, (GLfloat)width() / (GLfloat)height(), 0.0001, 10000.0);
         glMatrixMode(GL_MODELVIEW);
 
-        mQuads.clear();
         mTarget = -22;
         selectionMode = true;
         paintGL();

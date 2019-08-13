@@ -409,3 +409,30 @@ function table.deepcopy(t)
   setmetatable(res, mt)
   return res
 end
+
+-- Table keys
+--
+-- @return a table that is the collection of the keys in use by the table passed in.
+---
+--- @usage Example:
+---   <pre>
+---   local testTable = {
+---     name = "thing",
+---     type = "test",
+---     malfunction = "major"
+---   }
+---   local keys = table.keys(testTable)
+---   -- key is now a table { "name", "type", "malfunction" } but the order cannot be guaranteed
+---   -- as pairs() does not iterate in a guaranteed order. If you want the keys in alphabetical
+---   -- run table.sort(keys) and keys == { "malfunction", "name", "type" }
+---   </pre>
+function table.keys(t)
+  local keys={}
+  local index=0
+
+  for key,_ in pairs(t) do
+    index=index+1
+    keys[index]=key
+  end
+	return keys
+end
