@@ -37,7 +37,10 @@
 //   and promptly quits. Installer updates Mudlet and launches Mudlet when its done
 // mac: handled completely outside of Mudlet by Sparkle
 
-Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent), mUpdateInstalled(false), mpInstallOrRestart(new QPushButton(tr("Update")))
+Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent)
+, mUpdateInstalled(false)
+, mpInstallOrRestart(new QPushButton(tr("Update")))
+, updateDialog(nullptr)
 {
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
     this->settings = settings;
