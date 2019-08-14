@@ -84,7 +84,7 @@ msvc:QMAKE_CXXFLAGS += -MP
 # Mac specific flags.
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.12
 
-QT += network opengl uitools multimedia gui concurrent
+QT += network uitools multimedia gui concurrent
 qtHaveModule(gamepad) {
     QT += gamepad
     message("Using Gamepad module")
@@ -257,8 +257,6 @@ unix:!macx {
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
         -lyajl \
-        -lopengl32 \
-        -lglu32 \
         -lpugixml \
         -lWs2_32 \
         -L"$${MINGW_BASE_DIR}\\bin"
@@ -644,6 +642,13 @@ linux|macx|win32 {
     contains( DEFINES, INCLUDE_3DMAPPER ) {
         HEADERS += glwidget.h
         SOURCES += glwidget.cpp
+        QT += opengl
+
+        win32 {
+            LIBS += -lopengl32 \
+                    -lglu32
+        }
+
         !build_pass{
             message("The 3D mapper code is included in this configuration")
         }
