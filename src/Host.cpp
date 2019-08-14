@@ -39,7 +39,9 @@
 
 #include "pre_guard.h"
 #include <QtUiTools>
+#include <QNetworkProxy>
 #include <zip.h>
+#include <memory>
 #include "post_guard.h"
 
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
@@ -66,6 +68,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mFORCE_NO_COMPRESSION(false)
 , mFORCE_SAVE_ON_EXIT(false)
 , mInsertedMissingLF(false)
+, mSslTsl(false)
+, mUseProxy(false)
+, mProxyAddress(QString())
+, mProxyPort(0)
+, mProxyUsername(QString())
+, mProxyPassword(QString())
 , mIsGoingDown(false)
 , mIsProfileLoadingSequence(false)
 , mLF_ON_GA(true)
@@ -90,6 +98,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mUSE_UNIX_EOL(false)
 , mWrapAt(100)
 , mWrapIndentCount(0)
+, mEditorAutoComplete(true)
 , mEditorTheme(QLatin1String("Mudlet"))
 , mEditorThemeFile(QLatin1String("Mudlet.tmTheme"))
 , mThemePreviewItemID(-1)
@@ -394,7 +403,6 @@ void Host::resetProfile_phase2()
     mEventMap.clear();
     mLuaInterpreter.initLuaGlobals();
     mLuaInterpreter.loadGlobal();
-    mLuaInterpreter.initIndenterGlobals();
     mBlockScriptCompile = false;
 
     getTriggerUnit()->compileAll();
@@ -474,7 +482,6 @@ std::tuple<bool, QString, QString> Host::saveProfileAs(const QString& file)
 
 void Host::xmlSaved(const QString& xmlName)
 {
-    qDebug() << "saved" << xmlName;
     if (writers.contains(xmlName)) {
         auto writer = writers.take(xmlName);
         delete writer;
@@ -1765,4 +1772,32 @@ void Host::setName(const QString& newName)
         mpConsole->setProfileName(newName);
     }
     mTimerUnit.changeHostName(newName);
+}
+
+void Host::updateProxySettings(QNetworkAccessManager* manager)
+{
+    if (mUseProxy && !mProxyAddress.isEmpty() && mProxyPort != 0) {
+        auto& proxy = getConnectionProxy();
+        manager->setProxy(*proxy);
+    } else {
+        manager->setProxy(QNetworkProxy::DefaultProxy);
+    }
+}
+
+std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
+{
+    if (!mpDownloaderProxy) {
+        mpDownloaderProxy = std::make_unique<QNetworkProxy>(QNetworkProxy::Socks5Proxy);
+    }
+    auto& proxy = mpDownloaderProxy;
+    proxy->setHostName(mProxyAddress);
+    proxy->setPort(mProxyPort);
+    if (!mProxyUsername.isEmpty()) {
+        proxy->setUser(mProxyUsername);
+    }
+    if (!mProxyPassword.isEmpty()) {
+        proxy->setPassword(mProxyPassword);
+    }
+
+    return mpDownloaderProxy;
 }

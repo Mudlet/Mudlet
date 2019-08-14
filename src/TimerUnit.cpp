@@ -26,12 +26,9 @@
 #include "mudlet.h"
 #include "TTimer.h"
 
-
-using namespace std;
-
 void TimerUnit::_uninstall(TTimer* pChild, const QString& packageName)
 {
-    list<TTimer*>* childrenList = pChild->mpMyChildrenList;
+    std::list<TTimer*>* childrenList = pChild->mpMyChildrenList;
     for (auto timer : *childrenList) {
         _uninstall(timer, packageName);
         uninstallList.append(timer);
@@ -389,7 +386,7 @@ void TimerUnit::markCleanup(TTimer* pT)
 
 void TimerUnit::_assembleReport(TTimer* pChild)
 {
-    list<TTimer*>* childrenList = pChild->mpMyChildrenList;
+    std::list<TTimer*>* childrenList = pChild->mpMyChildrenList;
     for (auto timer : *childrenList) {
         _assembleReport(timer);
         if (timer->isActive()) {
@@ -415,7 +412,7 @@ QString TimerUnit::assembleReport()
             statsTempTriggers++;
         }
         statsTriggerTotal++;
-        list<TTimer*>* childrenList = rootTimer->mpMyChildrenList;
+        std::list<TTimer*>* childrenList = rootTimer->mpMyChildrenList;
         for (auto childTimer : *childrenList) {
             _assembleReport(childTimer);
             if (childTimer->isActive()) {

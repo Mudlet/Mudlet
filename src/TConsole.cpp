@@ -47,9 +47,6 @@
 #include <QTextCodec>
 #include "post_guard.h"
 
-
-using namespace std;
-
 const QString TConsole::cmLuaLineVariable("line");
 
 TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
@@ -2042,18 +2039,18 @@ bool TConsole::selectSection(int from, int to)
 std::tuple<bool, QString, int, int> TConsole::getSelection()
 {
     if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
-        return make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
+        return std::make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
     }
 
     const auto start = P_begin.x();
     const auto length = P_end.x() - P_begin.x();
     const auto line = buffer.line(mUserCursor.y());
     if (line.size() < start) {
-        return make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
+        return std::make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
     }
 
     const auto text = line.mid(start, length);
-    return make_tuple(true, text, start, length);
+    return std::make_tuple(true, text, start, length);
 }
 
 void TConsole::setLink(const QStringList& linkFunction, const QStringList& linkHint)
@@ -2252,7 +2249,22 @@ void TConsole::createMapper(int x, int y, int width, int height)
     }
     mpMapper->resize(width, height);
     mpMapper->move(x, y);
+
+    // Qt bug workaround: on Windows and during profile load only, if the mapper widget is created
+    // it gives a height and width to mpLeftToolBar, mpRightToolBar, and mpTopToolBar for
+    // some reason. Those widgets size back down immediately after on their own (?!), however if
+    // getMainWindowSize() is called right after map create, the sizes reported will be wrong
+#if defined(Q_OS_WIN32)
+    mpLeftToolBar->setHidden(true);
+    mpRightToolBar->setHidden(true);
+    mpTopToolBar->setHidden(true);
     mpMapper->show();
+    mpLeftToolBar->setVisible(true);
+    mpRightToolBar->setVisible(true);
+    mpTopToolBar->setVisible(true);
+#else
+    mpMapper->show();
+#endif
 }
 
 bool TConsole::createButton(const QString& name, int x, int y, int width, int height, bool fillBackground)

@@ -31,6 +31,7 @@
         <file>icons/batmud_mud.png</file>
         <file>icons/bookmarks.png</file>
         <file>icons/chronometer.png</file>
+        <file>icons/clessidra.jpg</file>
         <file>icons/configure.png</file>
         <file>icons/dash-dot-dot-line.png</file>
         <file>icons/dash-dot-line.png</file>
@@ -95,6 +96,8 @@
         <file>icons/folder-yellow-locked.png</file>
         <file>icons/folder-yellow.png</file>
         <file>icons/folder.png</file>
+        <file>icons/frame_plaque.png</file>
+        <file>icons/frame_swords.png</file>
         <file>icons/function.png</file>
         <file>icons/games-solve.png</file>
         <file>icons/generic_mud.jpg</file>
@@ -131,6 +134,7 @@
         <file>icons/offsettimer-on.png</file>
         <file>icons/package-manager.png</file>
         <file>icons/package-exporter.png</file>
+        <file>icons/Patreon_Mark_Primary.png</file>
         <file>icons/place_of_interest.png</file>
         <file>icons/preferences-desktop-keyboard.png</file>
         <file>icons/preferences-web-browser-cache.png</file>
@@ -163,6 +167,8 @@
         <file>icons/wotmudicon.png</file>
         <file>icons/zombiemud.png</file>
         <file>lua-function-list.json</file>
+        <file>mudlet-lua/lua/generic-mapper/generic_mapper.xml</file>
+        <file>mudlet-lua/lua/utf8_filenames.lua</file>
         <file>mudlet-mapper.xml</file>
         <file>Mudlet_splashscreen_main.png</file>
         <file>run-lua-code-v4.xml</file>
@@ -180,5 +186,8 @@
         <file>mudlet-lua/lua/generic-mapper/generic_mapper.xml</file>
         <file>icons/clessidra.jpg</file>
         <file>mudlet-lua/lua/utf8_filenames.lua</file>
+        <file>icons/Patreon_Mark_Primary.png</file>
+        <file>icons/frame_plaque.png</file>
+        <file>icons/frame_swords.png</file>
     </qresource>
 </RCC>

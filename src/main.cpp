@@ -42,9 +42,6 @@
 #include <pcre.h>
 #endif // _MSC_VER && _DEBUG
 
-
-using namespace std;
-
 TConsole* spDebugConsole = nullptr;
 
 #if defined(Q_OS_WIN32)
@@ -199,18 +196,18 @@ int main(int argc, char* argv[])
 
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
-	QStringList texts;
+    QStringList texts;
     if (startupAction & 2) {
         // Do "version" action - wording and format is quite tightly specified by the coding standards
 #if defined(QT_DEBUG)
         texts << QCoreApplication::translate("main", "%1 %2%3 (with debug symbols, without optimisations)\n",
-		 "%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev")
+         "%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev")
                  .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), QLatin1String(APP_BUILD));
 #else // ! defined(QT_DEBUG)
         texts << QLatin1String(APP_TARGET " " APP_VERSION APP_BUILD " \n");
 #endif // ! defined(QT_DEBUG)
         texts << QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)\n",
-	         "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion());
+             "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion());
         texts << QCoreApplication::translate("main", "Copyright © 2008-%1  Mudlet developers\n").arg(QStringLiteral(__DATE__).mid(7, 4));
         texts << QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html\n");
         texts << QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
@@ -373,14 +370,6 @@ int main(int argc, char* argv[])
     // seed random number generator (should be done once per lifetime)
     qsrand(static_cast<quint64>(QTime::currentTime().msecsSinceStartOfDay()));
 
-    // workaround latency spikes with wifi on Qt < 5.9.4, see https://github.com/Mudlet/Mudlet/issues/1587
-    // set the timeout to infinite
-#if (QT_VERSION < QT_VERSION_CHECK(5, 9, 4))
-    if (qgetenv("QT_BEARER_POLL_TIMEOUT").isEmpty()) {
-        qputenv("QT_BEARER_POLL_TIMEOUT", QByteArray::number(-1));
-    }
-#endif
-
     QString homeDirectory = mudlet::getMudletPath(mudlet::mainPath);
     QDir dir;
     bool first_launch = false;
@@ -403,6 +392,10 @@ int main(int argc, char* argv[])
     QString ubuntuFontDirectory(QStringLiteral("%1/ubuntu-font-family-0.83").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
     if (!dir.exists(ubuntuFontDirectory)) {
         dir.mkpath(ubuntuFontDirectory);
+    }
+    QString notoFontDirectory(QStringLiteral("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    if (!dir.exists(notoFontDirectory)) {
+        dir.mkpath(notoFontDirectory);
     }
 
     // The original code plonks the fonts AND the Copyright into the MAIN mudlet
@@ -452,6 +445,9 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-BI.ttf"));
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-R.ttf"));
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
+
+    copyFont(notoFontDirectory, QStringLiteral("fonts/notocoloremoji-unhinted-2018-04-24-pistol-update"), QStringLiteral("NotoColorEmoji.ttf"));
+    copyFont(notoFontDirectory, QStringLiteral("fonts/notocoloremoji-unhinted-2018-04-24-pistol-update"), QStringLiteral("LICENSE_OFL.txt"));
 #endif
 
     mudlet::debugMode = false;
