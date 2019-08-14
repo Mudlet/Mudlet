@@ -89,6 +89,7 @@ public slots:
 #if defined(Q_OS_LINUX)
     // might want to make these private
     void updateBinaryOnLinux();
+    virtual ~Updater();
 #endif
 };
 
