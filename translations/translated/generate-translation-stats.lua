@@ -1,5 +1,13 @@
-local yajl = require 'yajl'
-assert(yajl, "yajl is not available (luarocks install lua-yajl)")
+local status, result = pcall(require, 'yajl')
+if not status then
+  print("warning: lua-yajl not available - translation statistics in settings won't be shown.")
+  io.output("translation-stats.json")
+  io.write("{}")
+
+  return
+end
+
+local yajl = result
 
 -- see if the file exists
 function file_exists(file)
