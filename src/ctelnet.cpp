@@ -37,6 +37,9 @@
 #include "dlgComposer.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
+#if defined(INCLUDE_3DMAPPER)
+#include "glwidget.h"
+#endif
 
 #include "pre_guard.h"
 #include <QNetworkProxy>
@@ -1574,8 +1577,12 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
     if (var.startsWith(QLatin1String("RoomNum"))) {
         if (mpHost->mpMap) {
             mpHost->mpMap->mRoomIdHash[mProfileName] = arg.toInt();
-            if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
+#if defined(INCLUDE_3DMAPPER)
+            if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper) {
                 mpHost->mpMap->mpM->update();
+            }
+#endif
+            if (mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
                 mpHost->mpMap->mpMapper->mp2dMap->update();
             }
         }

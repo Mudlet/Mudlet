@@ -28,6 +28,9 @@
 #include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
+#if defined(INCLUDE_3DMAPPER)
+#include "glwidget.h"
+#endif
 
 #include "pre_guard.h"
 #include <QListWidget>
@@ -44,7 +47,23 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 {
     setupUi(this);
 
+#if defined(INCLUDE_3DMAPPER)
+    if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper) {
+        mpHost->mpMap->mpM->update();
+    }
+    glWidget = new GLWidget(widget);
+    glWidget->setObjectName(QString::fromUtf8("glWidget"));
+
+    QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    sizePolicy.setHorizontalStretch(0);
+    sizePolicy.setVerticalStretch(0);
+    sizePolicy.setHeightForWidth(glWidget->sizePolicy().hasHeightForWidth());
+    glWidget->setSizePolicy(sizePolicy);
+    verticalLayout_2->insertWidget(0, glWidget);
+
     glWidget->mpMap = pM;
+#endif
+
     mp2dMap->mpMap = pM;
     mp2dMap->mpHost = pH;
     QMapIterator<int, QString> it(mpMap->mpRoomDB->getAreaNamesMap());
@@ -75,19 +94,26 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     panel->setVisible(mpHost->mShowPanel);
     connect(bubbles, &QAbstractButton::clicked, this, &dlgMapper::slot_bubbles);
     connect(showInfo, &QAbstractButton::clicked, this, &dlgMapper::slot_info);
-    connect(ortho, &QAbstractButton::pressed, glWidget, &GLWidget::fullView);
-    connect(singleLevel, &QAbstractButton::pressed, glWidget, &GLWidget::singleView);
-    connect(increaseTop, &QAbstractButton::pressed, glWidget, &GLWidget::increaseTop);
-    connect(increaseBottom, &QAbstractButton::pressed, glWidget, &GLWidget::increaseBottom);
-    connect(reduceTop, &QAbstractButton::pressed, glWidget, &GLWidget::reduceTop);
-    connect(reduceBottom, &QAbstractButton::pressed, glWidget, &GLWidget::reduceBottom);
     connect(shiftZup, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftZup);
     connect(shiftZdown, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftZdown);
     connect(shiftLeft, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftLeft);
     connect(shiftRight, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftRight);
     connect(shiftUp, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftUp);
     connect(shiftDown, &QAbstractButton::pressed, mp2dMap, &T2DMap::shiftDown);
+    connect(lineSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_lineSize);
+    connect(roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_roomSize);
+    connect(togglePanel, &QAbstractButton::pressed, this, &dlgMapper::slot_togglePanel);
+    connect(showArea, qOverload<const QString&>(&QComboBox::activated), mp2dMap, &T2DMap::slot_switchArea);
+    connect(dim2, &QAbstractButton::pressed, this, &dlgMapper::show2dView);
+    connect(showRoomIDs, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
 
+#if defined(INCLUDE_3DMAPPER)
+    connect(ortho, &QAbstractButton::pressed, glWidget, &GLWidget::fullView);
+    connect(singleLevel, &QAbstractButton::pressed, glWidget, &GLWidget::singleView);
+    connect(increaseTop, &QAbstractButton::pressed, glWidget, &GLWidget::increaseTop);
+    connect(increaseBottom, &QAbstractButton::pressed, glWidget, &GLWidget::increaseBottom);
+    connect(reduceTop, &QAbstractButton::pressed, glWidget, &GLWidget::reduceTop);
+    connect(reduceBottom, &QAbstractButton::pressed, glWidget, &GLWidget::reduceBottom);    
     connect(shiftZup, &QAbstractButton::pressed, glWidget, &GLWidget::shiftZup);
     connect(shiftZdown, &QAbstractButton::pressed, glWidget, &GLWidget::shiftZdown);
     connect(shiftLeft, &QAbstractButton::pressed, glWidget, &GLWidget::shiftLeft);
@@ -95,19 +121,20 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(shiftUp, &QAbstractButton::pressed, glWidget, &GLWidget::shiftUp);
     connect(shiftDown, &QAbstractButton::pressed, glWidget, &GLWidget::shiftDown);
     connect(showInfo, &QAbstractButton::clicked, glWidget, &GLWidget::showInfo);
-    connect(showArea, qOverload<const QString&>(&QComboBox::activated), mp2dMap, &T2DMap::slot_switchArea);
     connect(defaultView, &QAbstractButton::pressed, glWidget, &GLWidget::defaultView);
-    connect(dim2, &QAbstractButton::pressed, this, &dlgMapper::show2dView);
     connect(sideView, &QAbstractButton::pressed, glWidget, &GLWidget::sideView);
     connect(topView, &QAbstractButton::pressed, glWidget, &GLWidget::topView);
-    connect(togglePanel, &QAbstractButton::pressed, this, &dlgMapper::slot_togglePanel);
-    connect(lineSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_lineSize);
-    connect(roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_roomSize);
     connect(scale, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setScale);
     connect(xRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setXRotation);
     connect(yRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setYRotation);
     connect(zRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setZRotation);
-    connect(showRoomIDs, &QCheckBox::stateChanged, this, &dlgMapper::slot_toggleShowRoomIDs);
+
+    glWidget->hide();
+#else
+    dim2->setDisabled(true);
+    dim2->setToolTip(tr("3D mapper is not available in this version of Mudlet"));
+#endif
+
     // Explicitly set the font otherwise it changes between the Application and
     // the default System one as the mapper is docked and undocked!
     QFont mapperFont = QFont(mpHost->mDisplayFont.family());
@@ -118,7 +145,6 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     }
     setFont(mapperFont);
     mp2dMap->mFontHeight = QFontMetrics(mpHost->mDisplayFont).height();
-    glWidget->hide();
     mpMap->customEnvColors[257] = mpHost->mRed_2;
     mpMap->customEnvColors[258] = mpHost->mGreen_2;
     mpMap->customEnvColors[259] = mpHost->mYellow_2;
@@ -199,6 +225,7 @@ void dlgMapper::slot_togglePanel()
 
 void dlgMapper::show2dView()
 {
+#if defined(INCLUDE_3DMAPPER)
     glWidget->setVisible(!glWidget->isVisible());
     mp2dMap->setVisible(!mp2dMap->isVisible());
     if (glWidget->isVisible()) {
@@ -206,6 +233,10 @@ void dlgMapper::show2dView()
     } else {
         d3buttons->setVisible(false);
     }
+#else
+    mp2dMap->setVisible(true);
+    d3buttons->setVisible(false);
+#endif
 }
 
 void dlgMapper::choseRoom(QListWidgetItem* pT)
