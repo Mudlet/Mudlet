@@ -45,6 +45,7 @@
 #include <QShortcut>
 #include <QTextBoundaryFinder>
 #include <QTextCodec>
+#include <QPainter>
 #include "post_guard.h"
 
 const QString TConsole::cmLuaLineVariable("line");
@@ -2226,7 +2227,9 @@ void TConsole::createMapper(int x, int y, int width, int height)
 {
     if (!mpMapper) {
         mpMapper = new dlgMapper(mpMainFrame, mpHost, mpHost->mpMap.data());
+#if defined(INCLUDE_3DMAPPER)
         mpHost->mpMap->mpM = mpMapper->glWidget;
+#endif
         mpHost->mpMap->mpHost = mpHost;
         mpHost->mpMap->mpMapper = mpMapper;
         qDebug() << "TConsole::createMapper() - restore map case 2.";

@@ -44,6 +44,9 @@
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
+#if defined(INCLUDE_3DMAPPER)
+#include "glwidget.h"
+#endif
 
 #include "pre_guard.h"
 #include <QCollator>
@@ -1267,9 +1270,11 @@ int TLuaInterpreter::updateMap(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (host.mpMap) {
+#if defined(INCLUDE_3DMAPPER)
         if (host.mpMap->mpM) {
             host.mpMap->mpM->update();
         }
+#endif
         if (host.mpMap->mpMapper) {
             if (host.mpMap->mpMapper->mp2dMap) {
                 host.mpMap->mpMapper->mp2dMap->mNewMoveAction = true;
@@ -1525,9 +1530,11 @@ int TLuaInterpreter::centerview(lua_State* L)
     if (pR) {
         host.mpMap->mRoomIdHash[host.getName()] = roomId;
         host.mpMap->mNewMove = true;
+#if defined(INCLUDE_3DMAPPER)
         if (host.mpMap->mpM) {
             host.mpMap->mpM->update();
         }
+#endif
 
         if (host.mpMap->mpMapper->mp2dMap) {
             host.mpMap->mpMapper->mp2dMap->isCenterViewCall = true;
@@ -10476,9 +10483,11 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
         if (host.mpMap->mpMapper) {
             host.mpMap->mpMapper->mp2dMap->update();
         }
+#if defined(INCLUDE_3DMAPPER)
         if (host.mpMap->mpM) {
             host.mpMap->mpM->update();
         }
+#endif
     }
     lua_pushboolean(L, result);
     return 1;
@@ -10515,9 +10524,11 @@ int TLuaInterpreter::resetRoomArea(lua_State* L)
             if (host.mpMap->mpMapper) {
                 host.mpMap->mpMapper->mp2dMap->update();
             }
+#if defined(INCLUDE_3DMAPPER)
             if (host.mpMap->mpM) {
                 host.mpMap->mpM->update();
             }
+#endif
         }
         lua_pushboolean(L, result);
         return 1;
