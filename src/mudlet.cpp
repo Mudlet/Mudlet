@@ -129,27 +129,457 @@ mudlet* mudlet::self()
     return _self;
 }
 
-void mudlet::loadLanguagesMap()
+mudlet::mudlet()
+: QMainWindow()
+, mFontManager()
+, mDiscord()
+, mToolbarIconSize(0)
+, mEditorTreeWidgetIconSize(0)
+, mWindowMinimized(false)
+, mReplaySpeed(1)
+, version(QString("Mudlet ") + QString(APP_VERSION) + QString(APP_BUILD))
+, mpCurrentActiveHost(nullptr)
+, mIsLoadingLayout(false)
+, mHasSavedLayout(false)
+, mpAboutDlg(nullptr)
+, mpModuleDlg(nullptr)
+, mpPackageManagerDlg(nullptr)
+, mShowIconsOnDialogs(true)
+, mShowIconsOnMenuCheckedState(Qt::PartiallyChecked)
+, mEnableFullScreenMode(false)
+, mCopyAsImageTimeout{3}
+, mInterfaceLanguage(QStringLiteral("en_US"))
+, mUsingMudletDictionaries(false)
+, mIsGoingDown(false)
+, mMenuBarVisibility(visibleAlways)
+, mToolbarVisibility(visibleAlways)
+, mpActionReplaySpeedDown(nullptr)
+, mpActionReplaySpeedUp(nullptr)
+, mpActionSpeedDisplay(nullptr)
+, mpActionReplayTime(nullptr)
+, mpLabelReplaySpeedDisplay(nullptr)
+, mpLabelReplayTime(nullptr)
+, mpTimerReplay(nullptr)
+, mpToolBarReplay(nullptr)
+, moduleTable(nullptr)
+, mshowMapAuditErrors(false)
+, mCompactInputLine(false)
+, mTimeFormat(tr("hh:mm:ss",
+                 "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
+, mHunspell_sharedDictionary(nullptr)
 {
-    mLanguageCodeMap = {
-            {"en_US", std::make_pair(QStringLiteral("English (American)"), 0)},
-            {"en_GB", std::make_pair(QStringLiteral("English (British)"), 0)},
-            {"zh_CN", std::make_pair(QStringLiteral(u"简化字"), 0)},
-            {"zh_TW", std::make_pair(QStringLiteral(u"繁體字"), 0)},
-            {"nl_NL", std::make_pair(QStringLiteral("Nederlands"), 0)},
-            {"fr_FR", std::make_pair(QStringLiteral(u"Français"), 0)},
-            {"de_DE", std::make_pair(QStringLiteral("Deutsch"), 0)},
-            {"el_GR", std::make_pair(QStringLiteral(u"ελληνικά"), 0)},
-            {"it_IT", std::make_pair(QStringLiteral("Italiano"), 0)},
-            {"pl_PL", std::make_pair(QStringLiteral("Polszczyzna"), 0)},
-            {"ru_RU", std::make_pair(QStringLiteral(u"Pусский"), 0)},
-            {"es_ES", std::make_pair(QStringLiteral(u"Español"), 0)},
-            {"pt_PT", std::make_pair(QStringLiteral(u"Português"), 0)},
-    };
+    mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
+    mpSettings = getQSettings();
+    readEarlySettings(*mpSettings);
+    if (mShowIconsOnMenuCheckedState != Qt::PartiallyChecked) {
+        // If the setting is not the "tri-state" one then force the setting,
+        // have to invert the sense because the attribute is a negative one:
+        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, (mShowIconsOnMenuCheckedState == Qt::Unchecked));
+    }
 
-    // Primarily use to identify Hunspell dictionaries (some of which are not
-    // useful - the "_med" ones are suppliments and no good for Mudlet) - all
-    // keys are to be lower cased so that the values can be looked up with a
+    qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
+
+    scanForMudletTranslations(QStringLiteral(":/lang"));
+    scanForQtTranslations(getMudletPath(qtTranslationsPath));
+    loadTranslators(mInterfaceLanguage);
+
+    setupUi(this);
+    setUnifiedTitleAndToolBarOnMac(true);
+    setContentsMargins(0, 0, 0, 0);
+    menuGames->setToolTipsVisible(true);
+    menuEditor->setToolTipsVisible(true);
+    menuOptions->setToolTipsVisible(true);
+    menuHelp->setToolTipsVisible(true);
+    menuAbout->setToolTipsVisible(true);
+
+    mudlet::debugMode = false;
+    setAttribute(Qt::WA_DeleteOnClose);
+    QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    setWindowTitle(version);
+    setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_main_48px.png")));
+    mpMainToolBar = new QToolBar(this);
+    mpMainToolBar->setObjectName(QStringLiteral("mpMainToolBar"));
+    mpMainToolBar->setWindowTitle(tr("Main Toolbar"));
+    addToolBar(mpMainToolBar);
+    mpMainToolBar->setMovable(false);
+    addToolBarBreak();
+    auto frame = new QWidget(this);
+    frame->setFocusPolicy(Qt::NoFocus);
+    setCentralWidget(frame);
+    mpTabBar = new TTabBar(frame);
+    mpTabBar->setMaximumHeight(30);
+    mpTabBar->setFocusPolicy(Qt::NoFocus);
+    mpTabBar->setTabsClosable(true);
+    mpTabBar->setAutoHide(true);
+    connect(mpTabBar, &QTabBar::tabCloseRequested, this, &mudlet::slot_close_profile_requested);
+    mpTabBar->setMovable(true);
+    connect(mpTabBar, &QTabBar::currentChanged, this, &mudlet::slot_tab_changed);
+    auto layoutTopLevel = new QVBoxLayout(frame);
+    layoutTopLevel->setContentsMargins(0, 0, 0, 0);
+    layoutTopLevel->addWidget(mpTabBar);
+    mainPane = new QWidget(frame);
+    QPalette mainPalette;
+    mainPane->setPalette(mainPalette);
+    mainPane->setAutoFillBackground(true);
+    mainPane->setFocusPolicy(Qt::NoFocus);
+    layoutTopLevel->addWidget(mainPane);
+    auto layout = new QHBoxLayout(mainPane);
+    layout->setContentsMargins(0, 0, 0, 0);
+
+    mainPane->setContentsMargins(0, 0, 0, 0);
+    mainPane->setSizePolicy(sizePolicy);
+    mainPane->setFocusPolicy(Qt::NoFocus);
+
+    QFile file_autolog(getMudletPath(mainDataItemPath, QStringLiteral("autolog")));
+    if (file_autolog.exists()) {
+        mAutolog = true;
+    } else {
+        mAutolog = false;
+    }
+
+    mpButtonConnect = new QToolButton(this);
+    mpButtonConnect->setText(tr("Connect"));
+    mpButtonConnect->setObjectName(QStringLiteral("connect"));
+    mpButtonConnect->setContextMenuPolicy(Qt::ActionsContextMenu);
+    mpButtonConnect->setPopupMode(QToolButton::MenuButtonPopup);
+    mpButtonConnect->setAutoRaise(true);
+    mpMainToolBar->addWidget(mpButtonConnect);
+
+    mpActionConnect = new QAction(tr("Connect"), this);
+    mpActionConnect->setIcon(QIcon(QStringLiteral(":/icons/preferences-web-browser-cache.png")));
+    mpActionConnect->setIconText(tr("Connect"));
+    mpActionConnect->setObjectName(QStringLiteral("connect"));
+
+    mpActionDisconnect = new QAction(tr("Disconnect"), this);
+    mpActionDisconnect->setObjectName(QStringLiteral("disconnect"));
+
+    mpButtonConnect->addAction(mpActionConnect);
+    mpButtonConnect->addAction(mpActionDisconnect);
+    mpButtonConnect->setDefaultAction(mpActionConnect);
+
+    mpActionTriggers = new QAction(QIcon(QStringLiteral(":/icons/tools-wizard.png")), tr("Triggers"), this);
+    mpActionTriggers->setToolTip(tr("Show and edit triggers"));
+    mpMainToolBar->addAction(mpActionTriggers);
+    mpActionTriggers->setObjectName(QStringLiteral("triggers_action"));
+    // add name to the action's widget in the toolbar, which doesn't have one by default
+    // see https://stackoverflow.com/a/32460562/72944
+    mpMainToolBar->widgetForAction(mpActionTriggers)->setObjectName(mpActionTriggers->objectName());
+
+    mpActionAliases = new QAction(QIcon(QStringLiteral(":/icons/system-users.png")), tr("Aliases"), this);
+    mpActionAliases->setToolTip(tr("Show and edit aliases"));
+    mpMainToolBar->addAction(mpActionAliases);
+    mpActionAliases->setObjectName(QStringLiteral("aliases_action"));
+    mpMainToolBar->widgetForAction(mpActionAliases)->setObjectName(mpActionAliases->objectName());
+
+    mpActionTimers = new QAction(QIcon(QStringLiteral(":/icons/chronometer.png")), tr("Timers"), this);
+    mpActionTimers->setToolTip(tr("Show and edit timers"));
+    mpMainToolBar->addAction(mpActionTimers);
+    mpActionTimers->setObjectName(QStringLiteral("timers_action"));
+    mpMainToolBar->widgetForAction(mpActionTimers)->setObjectName(mpActionTimers->objectName());
+
+    mpActionButtons = new QAction(QIcon(QStringLiteral(":/icons/bookmarks.png")), tr("Buttons"), this);
+    mpActionButtons->setToolTip(tr("Show and edit easy buttons"));
+    mpMainToolBar->addAction(mpActionButtons);
+    mpActionButtons->setObjectName(QStringLiteral("buttons_action"));
+    mpMainToolBar->widgetForAction(mpActionButtons)->setObjectName(mpActionButtons->objectName());
+
+    mpActionScripts = new QAction(QIcon(QStringLiteral(":/icons/document-properties.png")), tr("Scripts"), this);
+    mpActionScripts->setToolTip(tr("Show and edit scripts"));
+    mpMainToolBar->addAction(mpActionScripts);
+    mpActionScripts->setObjectName(QStringLiteral("scripts_action"));
+    mpMainToolBar->widgetForAction(mpActionScripts)->setObjectName(mpActionScripts->objectName());
+
+    mpActionKeys = new QAction(QIcon(QStringLiteral(":/icons/preferences-desktop-keyboard.png")), tr("Keys"), this);
+    mpActionKeys->setToolTip(tr("Show and edit keys"));
+    mpMainToolBar->addAction(mpActionKeys);
+    mpActionKeys->setObjectName(QStringLiteral("keys_action"));
+    mpMainToolBar->widgetForAction(mpActionKeys)->setObjectName(mpActionKeys->objectName());
+
+    mpActionVariables = new QAction(QIcon(QStringLiteral(":/icons/variables.png")), tr("Variables"), this);
+    mpActionVariables->setToolTip(tr("Show and edit Lua variables"));
+    mpMainToolBar->addAction(mpActionVariables);
+    mpActionVariables->setObjectName(QStringLiteral("variables_action"));
+    mpMainToolBar->widgetForAction(mpActionVariables)->setObjectName(mpActionVariables->objectName());
+
+    mpButtonDiscord = new QToolButton(this);
+    mpButtonDiscord->setText(tr("Discord"));
+    mpButtonDiscord->setObjectName(QStringLiteral("discord"));
+    mpButtonDiscord->setContextMenuPolicy(Qt::ActionsContextMenu);
+    mpButtonDiscord->setPopupMode(QToolButton::MenuButtonPopup);
+    mpButtonDiscord->setAutoRaise(true);
+    mpMainToolBar->addWidget(mpButtonDiscord);
+
+    mpActionDiscord = new QAction(tr("Open Discord"), this);
+    mpActionDiscord->setIcon(QIcon(QStringLiteral(":/icons/Discord-Logo-Color.png")));
+    mpActionDiscord->setIconText(tr("Discord"));
+    mpActionDiscord->setObjectName(QStringLiteral("openDiscord"));
+
+    mpActionIRC = new QAction(tr("Open IRC"), this);
+    mpActionIRC->setIcon(QIcon(QStringLiteral(":/icons/internet-telephony.png")));
+    mpActionIRC->setObjectName(QStringLiteral("openIRC"));
+
+    mpButtonDiscord->addAction(mpActionDiscord);
+    mpButtonDiscord->addAction(mpActionIRC);
+    mpButtonDiscord->setDefaultAction(mpActionDiscord);
+
+    mpActionMapper = new QAction(QIcon(QStringLiteral(":/icons/applications-internet.png")), tr("Map"), this);
+    mpActionMapper->setToolTip(tr("Show/hide the map"));
+    mpMainToolBar->addAction(mpActionMapper);
+    mpActionMapper->setObjectName(QStringLiteral("map_action"));
+    mpMainToolBar->widgetForAction(mpActionMapper)->setObjectName(mpActionMapper->objectName());
+
+    mpActionHelp = new QAction(QIcon(QStringLiteral(":/icons/help-hint.png")), tr("Manual"), this);
+    mpActionHelp->setToolTip(tr("Browse reference material and documentation"));
+    mpMainToolBar->addAction(mpActionHelp);
+    mpActionHelp->setObjectName(QStringLiteral("manual_action"));
+    mpMainToolBar->widgetForAction(mpActionHelp)->setObjectName(mpActionHelp->objectName());
+
+    mpActionOptions = new QAction(QIcon(QStringLiteral(":/icons/configure.png")), tr("Settings"), this);
+    mpActionOptions->setToolTip(tr("See and edit profile preferences"));
+    mpMainToolBar->addAction(mpActionOptions);
+    mpActionOptions->setObjectName(QStringLiteral("settings_action"));
+    mpMainToolBar->widgetForAction(mpActionOptions)->setObjectName(mpActionOptions->objectName());
+
+    // TODO: Consider changing to ":/icons/mudlet_notepad.png" as per the icon
+    // now used for the window when the visual change to the toolbar caused can
+    // be managed
+    mpActionNotes = new QAction(QIcon(QStringLiteral(":/icons/applications-accessories.png")), tr("Notepad"), this);
+    mpActionNotes->setToolTip(tr("Open a notepad that you can store your notes in"));
+    mpMainToolBar->addAction(mpActionNotes);
+    mpActionNotes->setObjectName(QStringLiteral("notepad_action"));
+    mpMainToolBar->widgetForAction(mpActionNotes)->setObjectName(mpActionNotes->objectName());
+
+    mpButtonPackageManagers = new QToolButton(this);
+    mpButtonPackageManagers->setText(tr("Package Manager"));
+    mpButtonPackageManagers->setObjectName(QStringLiteral("package_manager"));
+    mpButtonPackageManagers->setContextMenuPolicy(Qt::ActionsContextMenu);
+    mpButtonPackageManagers->setPopupMode(QToolButton::MenuButtonPopup);
+    mpButtonPackageManagers->setAutoRaise(true);
+    mpMainToolBar->addWidget(mpButtonPackageManagers);
+
+    mpActionPackageManager = new QAction(tr("Package Manager"), this);
+    mpActionPackageManager->setIcon(QIcon(QStringLiteral(":/icons/package-manager.png")));
+    mpActionPackageManager->setIconText(tr("Package Manager"));
+    mpActionPackageManager->setObjectName(QStringLiteral("package_manager"));
+
+    mpActionModuleManager = new QAction(tr("Module Manager"), this);
+    mpActionModuleManager->setIcon(QIcon(QStringLiteral(":/icons/module-manager.png")));
+    mpActionModuleManager->setObjectName(QStringLiteral("module_manager"));
+
+    mpActionPackageExporter = new QAction(tr("Package Exporter"), this);
+    mpActionPackageExporter->setIcon(QIcon(QStringLiteral(":/icons/package-exporter.png")));
+    mpActionPackageExporter->setObjectName(QStringLiteral("package_exporter"));
+
+    mpButtonPackageManagers->addAction(mpActionPackageManager);
+    mpButtonPackageManagers->addAction(mpActionModuleManager);
+    mpButtonPackageManagers->addAction(mpActionPackageExporter);
+    mpButtonPackageManagers->setDefaultAction(mpActionPackageManager);
+
+
+    mpActionReplay = new QAction(QIcon(QStringLiteral(":/icons/media-optical.png")), tr("Replay"), this);
+    mpActionReplay->setObjectName(QStringLiteral("replay_action"));
+    mpMainToolBar->addAction(mpActionReplay);
+    mpMainToolBar->widgetForAction(mpActionReplay)->setObjectName(mpActionReplay->objectName());
+
+    mpActionReconnect = new QAction(QIcon(QStringLiteral(":/icons/system-restart.png")), tr("Reconnect"), this);
+    mpActionReconnect->setToolTip(tr("Disconnects you from the game and connects once again"));
+    mpMainToolBar->addAction(mpActionReconnect);
+    mpActionReconnect->setObjectName(QStringLiteral("reconnect_action"));
+    mpMainToolBar->widgetForAction(mpActionReconnect)->setObjectName(mpActionReconnect->objectName());
+
+    mpActionMultiView = new QAction(QIcon(QStringLiteral(":/icons/view-split-left-right.png")), tr("MultiView"), this);
+    mpActionMultiView->setToolTip(tr("If you've got multiple profiles open, splits Mudlet screen to show them all at once"));
+    mpMainToolBar->addAction(mpActionMultiView);
+    mpActionMultiView->setObjectName(QStringLiteral("multiview_action"));
+    mpMainToolBar->widgetForAction(mpActionMultiView)->setObjectName(mpActionMultiView->objectName());
+
+    mpActionAbout = new QAction(QIcon(QStringLiteral(":/icons/mudlet_information.png")), tr("About"), this);
+    mpActionAbout->setToolTip(tr("<p>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</p>",
+                                 // Intentional comment
+                                 "Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation)."));
+    mpMainToolBar->addAction(mpActionAbout);
+    mpActionAbout->setObjectName(QStringLiteral("about_action"));
+    mpMainToolBar->widgetForAction(mpActionAbout)->setObjectName(mpActionAbout->objectName());
+
+    disableToolbarButtons();
+
+    QFont mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
+    if (mEnableFullScreenMode) {
+        showFullScreen();
+        QAction* actionFullScreeniew = new QAction(QIcon(QStringLiteral(":/icons/dialog-cancel.png")), tr("Toggle Full Screen View"), this);
+        actionFullScreeniew->setStatusTip(tr("Toggle Full Screen View"));
+        mpMainToolBar->addAction(actionFullScreeniew);
+        actionFullScreeniew->setObjectName(QStringLiteral("fullscreen_action"));
+        mpMainToolBar->widgetForAction(actionFullScreeniew)->setObjectName(actionFullScreeniew->objectName());
+        connect(actionFullScreeniew, &QAction::triggered, this, &mudlet::toggleFullScreenView);
+    }
+    // This is the only place the tabBar font is set and it influences the
+    // height of the tabs used - since we now want to adjust the appearance of
+    // the tab if it is not the active one and new data has arrived to show in
+    // the related profile - make the font size a little larger that the 6 it
+    // once was so that it is a bit more obvious when it changes:
+    QFont mdiFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
+    setFont(mainFont);
+    mainPane->setFont(mainFont);
+    mpTabBar->setFont(mdiFont);
+
+    mainPane->show();
+
+    connect(mpActionConnect.data(), &QAction::triggered, this, &mudlet::slot_show_connection_dialog);
+    connect(mpActionHelp.data(), &QAction::triggered, this, &mudlet::show_help_dialog);
+    connect(mpActionTimers.data(), &QAction::triggered, this, &mudlet::show_timer_dialog);
+    connect(mpActionAliases.data(), &QAction::triggered, this, &mudlet::show_alias_dialog);
+    connect(mpActionScripts.data(), &QAction::triggered, this, &mudlet::show_script_dialog);
+    connect(mpActionKeys.data(), &QAction::triggered, this, &mudlet::show_key_dialog);
+    connect(mpActionVariables.data(), &QAction::triggered, this, &mudlet::show_variable_dialog);
+    connect(mpActionButtons.data(), &QAction::triggered, this, &mudlet::show_action_dialog);
+    connect(mpActionOptions.data(), &QAction::triggered, this, &mudlet::slot_show_options_dialog);
+    connect(mpActionAbout.data(), &QAction::triggered, this, &mudlet::slot_show_about_dialog);
+    connect(mpActionMultiView.data(), &QAction::triggered, this, &mudlet::slot_multi_view);
+    connect(mpActionReconnect.data(), &QAction::triggered, this, &mudlet::slot_reconnect);
+    connect(mpActionDisconnect.data(), &QAction::triggered, this, &mudlet::slot_disconnect);
+    connect(mpActionReplay.data(), &QAction::triggered, this, &mudlet::slot_replay);
+    connect(mpActionNotes.data(), &QAction::triggered, this, &mudlet::slot_notes);
+    connect(mpActionMapper.data(), &QAction::triggered, this, &mudlet::slot_mapper);
+    connect(mpActionIRC.data(), &QAction::triggered, this, &mudlet::slot_irc);
+    connect(mpActionDiscord.data(), &QAction::triggered, this, &mudlet::slot_discord);
+    connect(mpActionPackageManager.data(), &QAction::triggered, this, &mudlet::slot_package_manager);
+    connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_module_manager);
+    connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_package_exporter);
+
+    // PLACEMARKER: Save for later restoration (1 of 2) (by adding a "Close" (profile) option to first menu on menu bar:
+    // QAction* mactionCloseProfile = new QAction(tr("Close"), this);
+
+    connect(dactionConnect, &QAction::triggered, this, &mudlet::slot_show_connection_dialog);
+    connect(dactionReconnect, &QAction::triggered, this, &mudlet::slot_reconnect);
+    connect(dactionDisconnect, &QAction::triggered, this, &mudlet::slot_disconnect);
+    connect(dactionNotepad, &QAction::triggered, this, &mudlet::slot_notes);
+    connect(dactionReplay, &QAction::triggered, this, &mudlet::slot_replay);
+
+    connect(dactionHelp, &QAction::triggered, this, &mudlet::show_help_dialog);
+    connect(dactionVideo, &QAction::triggered, this, &mudlet::slot_show_help_dialog_video);
+    connect(dactionForum, &QAction::triggered, this, &mudlet::slot_show_help_dialog_forum);
+    connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
+    connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_discord);
+    connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_irc);
+#if !defined(INCLUDE_UPDATER)
+    // Hide the update menu item if the code is not included
+    dactionUpdate->setVisible(false);
+#else
+    // Also, only show it if this is a release version
+    dactionUpdate->setVisible(!scmIsDevelopmentVersion);
+#endif
+    connect(dactionPackageManager, &QAction::triggered, this, &mudlet::slot_package_manager);
+    connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_package_exporter);
+    connect(dactionModuleManager, &QAction::triggered, this, &mudlet::slot_module_manager);
+    connect(dactionMultiView, &QAction::triggered, this, &mudlet::slot_multi_view);
+    connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_toggle_compact_input_line);
+    connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::show_trigger_dialog);
+    connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::show_trigger_dialog);
+    connect(dactionShowMap, &QAction::triggered, this, &mudlet::slot_mapper);
+    connect(dactionOptions, &QAction::triggered, this, &mudlet::slot_show_options_dialog);
+    connect(dactionAbout, &QAction::triggered, this, &mudlet::slot_show_about_dialog);
+
+    // we historically use Alt on Windows and Linux, but that is uncomfortable on macOS
+#if defined(Q_OS_MACOS)
+    triggersKeySequence = QKeySequence(Qt::CTRL | Qt::Key_E);
+    showMapKeySequence = QKeySequence(Qt::CTRL | Qt::Key_M);
+    inputLineKeySequence = QKeySequence(Qt::CTRL | Qt::Key_L);
+    optionsKeySequence = QKeySequence(Qt::CTRL | Qt::Key_P);
+    notepadKeySequence = QKeySequence(Qt::CTRL | Qt::Key_N);
+    packagesKeySequence = QKeySequence(Qt::CTRL | Qt::Key_O);
+    modulesKeySequence = QKeySequence(Qt::CTRL | Qt::Key_I);
+    multiViewKeySequence = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_V);
+    connectKeySequence = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_C);
+    disconnectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_D);
+    reconnectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_R);
+#else
+    triggersKeySequence = QKeySequence(Qt::ALT | Qt::Key_E);
+    showMapKeySequence = QKeySequence(Qt::ALT | Qt::Key_M);
+    inputLineKeySequence = QKeySequence(Qt::ALT | Qt::Key_L);
+    optionsKeySequence = QKeySequence(Qt::ALT | Qt::Key_P);
+    notepadKeySequence = QKeySequence(Qt::ALT | Qt::Key_N);
+    packagesKeySequence = QKeySequence(Qt::ALT | Qt::Key_O);
+    modulesKeySequence = QKeySequence(Qt::ALT | Qt::Key_I);
+    multiViewKeySequence = QKeySequence(Qt::ALT | Qt::Key_V);
+    connectKeySequence = QKeySequence(Qt::ALT | Qt::Key_C);
+    disconnectKeySequence = QKeySequence(Qt::ALT | Qt::Key_D);
+    reconnectKeySequence = QKeySequence(Qt::ALT | Qt::Key_R);
+#endif
+    connect(this, &mudlet::signal_menuBarVisibilityChanged, this, &mudlet::slot_update_shortcuts);
+
+    mpSettings = getQSettings();
+    readLateSettings(*mpSettings);
+    // The previous line will set an option used in the slot method:
+    connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
+
+#if defined(INCLUDE_UPDATER)
+    updater = new Updater(this, mpSettings);
+    connect(updater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
+    connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
+#if defined(Q_OS_MACOS)
+    // ensure that 'Check for updates' is under the Applications menu per convention
+    dactionUpdate->setMenuRole(QAction::ApplicationSpecificRole);
+#else
+    connect(updater, &Updater::signal_updateInstalled, this, &mudlet::slot_update_installed);
+#endif // !Q_OS_MACOS
+#endif // INCLUDE_UPDATER
+
+    if (!mToolbarIconSize) {
+        setToolBarIconSize(mEnableFullScreenMode ? 2 : 3);
+    }
+
+#if defined(QT_GAMEPAD_LIB)
+    connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonPressEvent, this, &mudlet::slot_gamepadButtonPress);
+    connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonReleaseEvent, this, &mudlet::slot_gamepadButtonRelease);
+    connect(QGamepadManager::instance(), &QGamepadManager::gamepadConnected, this, &mudlet::slot_gamepadConnected);
+    connect(QGamepadManager::instance(), &QGamepadManager::gamepadDisconnected, this, &mudlet::slot_gamepadDisconnected);
+    connect(QGamepadManager::instance(), &QGamepadManager::gamepadAxisEvent, this, &mudlet::slot_gamepadAxisEvent);
+#endif // if defined(QT_GAMEPAD_LIB)
+    // Edbee has a singleton that needs some initialisation
+    initEdbee();
+
+    // load bundled fonts
+    mFontManager.addFonts();
+    loadDictionaryLanguageMap();
+}
+
+QSettings* mudlet::getQSettings()
+{
+    /*In case sensitive environments, two different config directories
+        were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
+        Furthermore, we skip the version from the application name to follow the convention.
+        For compatibility with older settings, if no config is loaded
+        from the config directory "mudlet", application "Mudlet", we try to load from the config
+        directory "Mudlet", application "Mudlet 1.0". */
+    QSettings settings_new("mudlet", "Mudlet");
+    return new QSettings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
+}
+
+void mudlet::initEdbee()
+{
+    auto edbee = edbee::Edbee::instance();
+    edbee->init();
+    edbee->autoShutDownOnAppExit();
+
+    auto grammarManager = edbee->grammarManager();
+    // We only need the single Lua lexer, probably ever
+    grammarManager->readGrammarFile(QLatin1Literal(":/edbee_defaults/Lua.tmLanguage"));
+
+    //Open and parse the luaFunctionList document into a stringlist for use with autocomplete
+    loadLuaFunctionList();
+
+    //QFile file(fileName);
+    //if( file.exists() && file.open(QIODevice::ReadOnly) ) {
+
+    loadEdbeeTheme(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
+}
+
+void mudlet::loadDictionaryLanguageMap()
+{
+    // Used to identify Hunspell dictionaries (some of which are not useful -
+    // the "_med" ones are suppliments and no good for Mudlet) - all keys are to
+    // be lower cased so that the values can be looked up with a
     // QMap<T1, T2>::value(const T1&) where the parameter has been previously
     // been converted to all-lower case:
     // From https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes:
@@ -394,564 +824,193 @@ void mudlet::loadLanguagesMap()
                                   {QStringLiteral("zh_cn"), tr("Chinese (China - simplified)")},
                                   {QStringLiteral("zh_tw"), tr("Chinese (Taiwan - traditional)")},
                                   {QStringLiteral("zu"), tr("Zulu")}};
+}
 
-    QFile file(QStringLiteral(":/translation-stats.json"));
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning() << "translation statistics file isn't available, won't show stats in preferences";
+// migrates the Central Debug Console to the next available host, if any
+void mudlet::migrateDebugConsole(Host* currentHost)
+{
+    if (!mpDebugArea) {
         return;
     }
 
-    QByteArray saveData = file.readAll();
-    QJsonDocument loadDoc(QJsonDocument::fromJson(saveData));
-    QJsonObject translationStats = loadDoc.object();
-
-    for (auto& languageKey : translationStats.keys()) {
-        auto languageData = mLanguageCodeMap.value(languageKey);
-
-        auto value = translationStats.value(languageKey).toObject().value(QStringLiteral("translatedpc"));
-        if (value == QJsonValue::Undefined) {
-            continue;
-        }
-        auto translatedpc = value.toInt();
-
-        // show translation % for languages with less than 95%
-        // for languages above 95%, show a gold star
-        if (translatedpc < mTranslationStar) {
-            mLanguageCodeMap.insert(
-                    languageKey,
-                    std::make_pair(tr("%1 (%2% done)", "%1 is the language name, %2 is the amount of texts in percent that is translated in Mudlet").arg(languageData.first).arg(translatedpc),
-                              translatedpc));
-        } else {
-            mLanguageCodeMap.insert(languageKey, std::make_pair(languageData.first, translatedpc));
-        }
-    }
- }
-
-mudlet::mudlet()
-: QMainWindow()
-, mFontManager()
-, mDiscord()
-, mToolbarIconSize(0)
-, mEditorTreeWidgetIconSize(0)
-, mWindowMinimized(false)
-, mReplaySpeed(1)
-, version(QString("Mudlet ") + QString(APP_VERSION) + QString(APP_BUILD))
-, mpCurrentActiveHost(nullptr)
-, mIsLoadingLayout(false)
-, mHasSavedLayout(false)
-, mpAboutDlg(nullptr)
-, mpModuleDlg(nullptr)
-, mpPackageManagerDlg(nullptr)
-, mShowIconsOnDialogs(true)
-, mShowIconsOnMenuCheckedState(Qt::PartiallyChecked)
-, mEnableFullScreenMode(false)
-, mInterfaceLanguage(QStringLiteral("en_US"))
-, mCopyAsImageTimeout{3}
-, mUsingMudletDictionaries(false)
-, mIsGoingDown(false)
-, mMenuBarVisibility(visibleAlways)
-, mToolbarVisibility(visibleAlways)
-, mpActionReplaySpeedDown(nullptr)
-, mpActionReplaySpeedUp(nullptr)
-, mpActionSpeedDisplay(nullptr)
-, mpActionReplayTime(nullptr)
-, mpLabelReplaySpeedDisplay(nullptr)
-, mpLabelReplayTime(nullptr)
-, mpTimerReplay(nullptr)
-, mpToolBarReplay(nullptr)
-, moduleTable(nullptr)
-, mshowMapAuditErrors(false)
-, mCompactInputLine(false)
-, mTimeFormat(tr("hh:mm:ss",
-                 "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
-, mHunspell_sharedDictionary(nullptr)
-{
-    mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
-    mpSettings = getQSettings();
-    readEarlySettings(*mpSettings);
-    if (mShowIconsOnMenuCheckedState != Qt::PartiallyChecked) {
-        // If the setting is not the "tri-state" one then force the setting,
-        // have to invert the sense because the attribute is a negative one:
-        qApp->setAttribute(Qt::AA_DontShowIconsInMenus, (mShowIconsOnMenuCheckedState == Qt::Unchecked));
-    }
-
-    qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
-
-    loadTranslators();
-
-    setupUi(this);
-    setUnifiedTitleAndToolBarOnMac(true);
-    setContentsMargins(0, 0, 0, 0);
-    menuGames->setToolTipsVisible(true);
-    menuEditor->setToolTipsVisible(true);
-    menuOptions->setToolTipsVisible(true);
-    menuHelp->setToolTipsVisible(true);
-    menuAbout->setToolTipsVisible(true);
-
-    mudlet::debugMode = false;
-    setAttribute(Qt::WA_DeleteOnClose);
-    QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    setWindowTitle(version);
-    setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_main_48px.png")));
-    mpMainToolBar = new QToolBar(this);
-    mpMainToolBar->setObjectName(QStringLiteral("mpMainToolBar"));
-    mpMainToolBar->setWindowTitle(tr("Main Toolbar"));
-    addToolBar(mpMainToolBar);
-    mpMainToolBar->setMovable(false);
-    addToolBarBreak();
-    auto frame = new QWidget(this);
-    frame->setFocusPolicy(Qt::NoFocus);
-    setCentralWidget(frame);
-    mpTabBar = new TTabBar(frame);
-    mpTabBar->setMaximumHeight(30);
-    mpTabBar->setFocusPolicy(Qt::NoFocus);
-    mpTabBar->setTabsClosable(true);
-    connect(mpTabBar, &QTabBar::tabCloseRequested, this, &mudlet::slot_close_profile_requested);
-    mpTabBar->setMovable(true);
-    connect(mpTabBar, &QTabBar::currentChanged, this, &mudlet::slot_tab_changed);
-    auto layoutTopLevel = new QVBoxLayout(frame);
-    layoutTopLevel->setContentsMargins(0, 0, 0, 0);
-    layoutTopLevel->addWidget(mpTabBar);
-    mainPane = new QWidget(frame);
-    QPalette mainPalette;
-    mainPane->setPalette(mainPalette);
-    mainPane->setAutoFillBackground(true);
-    mainPane->setFocusPolicy(Qt::NoFocus);
-    layoutTopLevel->addWidget(mainPane);
-    auto layout = new QHBoxLayout(mainPane);
-    layout->setContentsMargins(0, 0, 0, 0);
-
-    mainPane->setContentsMargins(0, 0, 0, 0);
-    mainPane->setSizePolicy(sizePolicy);
-    mainPane->setFocusPolicy(Qt::NoFocus);
-
-    QFile file_autolog(getMudletPath(mainDataItemPath, QStringLiteral("autolog")));
-    if (file_autolog.exists()) {
-        mAutolog = true;
-    } else {
-        mAutolog = false;
-    }
-
-    mpButtonConnect = new QToolButton(this);
-    mpButtonConnect->setText(tr("Connect"));
-    mpButtonConnect->setObjectName(QStringLiteral("connect"));
-    mpButtonConnect->setContextMenuPolicy(Qt::ActionsContextMenu);
-    mpButtonConnect->setPopupMode(QToolButton::MenuButtonPopup);
-    mpButtonConnect->setAutoRaise(true);
-    mpMainToolBar->addWidget(mpButtonConnect);
-
-    mpActionConnect = new QAction(tr("Connect"), this);
-    mpActionConnect->setIcon(QIcon(QStringLiteral(":/icons/preferences-web-browser-cache.png")));
-    mpActionConnect->setIconText(tr("Connect"));
-    mpActionConnect->setObjectName(QStringLiteral("connect"));
-
-    mpActionDisconnect = new QAction(tr("Disconnect"), this);
-    mpActionDisconnect->setObjectName(QStringLiteral("disconnect"));
-
-    mpButtonConnect->addAction(mpActionConnect);
-    mpButtonConnect->addAction(mpActionDisconnect);
-    mpButtonConnect->setDefaultAction(mpActionConnect);
-
-    mpActionTriggers = new QAction(QIcon(QStringLiteral(":/icons/tools-wizard.png")), tr("Triggers"), this);
-    mpActionTriggers->setToolTip(tr("Show and edit triggers"));
-    mpMainToolBar->addAction(mpActionTriggers);
-    mpActionTriggers->setObjectName(QStringLiteral("triggers_action"));
-    // add name to the action's widget in the toolbar, which doesn't have one by default
-    // see https://stackoverflow.com/a/32460562/72944
-    mpMainToolBar->widgetForAction(mpActionTriggers)->setObjectName(mpActionTriggers->objectName());
-
-    mpActionAliases = new QAction(QIcon(QStringLiteral(":/icons/system-users.png")), tr("Aliases"), this);
-    mpActionAliases->setToolTip(tr("Show and edit aliases"));
-    mpMainToolBar->addAction(mpActionAliases);
-    mpActionAliases->setObjectName(QStringLiteral("aliases_action"));
-    mpMainToolBar->widgetForAction(mpActionAliases)->setObjectName(mpActionAliases->objectName());
-
-    mpActionTimers = new QAction(QIcon(QStringLiteral(":/icons/chronometer.png")), tr("Timers"), this);
-    mpActionTimers->setToolTip(tr("Show and edit timers"));
-    mpMainToolBar->addAction(mpActionTimers);
-    mpActionTimers->setObjectName(QStringLiteral("timers_action"));
-    mpMainToolBar->widgetForAction(mpActionTimers)->setObjectName(mpActionTimers->objectName());
-
-    mpActionButtons = new QAction(QIcon(QStringLiteral(":/icons/bookmarks.png")), tr("Buttons"), this);
-    mpActionButtons->setToolTip(tr("Show and edit easy buttons"));
-    mpMainToolBar->addAction(mpActionButtons);
-    mpActionButtons->setObjectName(QStringLiteral("buttons_action"));
-    mpMainToolBar->widgetForAction(mpActionButtons)->setObjectName(mpActionButtons->objectName());
-
-    mpActionScripts = new QAction(QIcon(QStringLiteral(":/icons/document-properties.png")), tr("Scripts"), this);
-    mpActionScripts->setToolTip(tr("Show and edit scripts"));
-    mpMainToolBar->addAction(mpActionScripts);
-    mpActionScripts->setObjectName(QStringLiteral("scripts_action"));
-    mpMainToolBar->widgetForAction(mpActionScripts)->setObjectName(mpActionScripts->objectName());
-
-    mpActionKeys = new QAction(QIcon(QStringLiteral(":/icons/preferences-desktop-keyboard.png")), tr("Keys"), this);
-    mpActionKeys->setToolTip(tr("Show and edit keys"));
-    mpMainToolBar->addAction(mpActionKeys);
-    mpActionKeys->setObjectName(QStringLiteral("keys_action"));
-    mpMainToolBar->widgetForAction(mpActionKeys)->setObjectName(mpActionKeys->objectName());
-
-    mpActionVariables = new QAction(QIcon(QStringLiteral(":/icons/variables.png")), tr("Variables"), this);
-    mpActionVariables->setToolTip(tr("Show and edit Lua variables"));
-    mpMainToolBar->addAction(mpActionVariables);
-    mpActionVariables->setObjectName(QStringLiteral("variables_action"));
-    mpMainToolBar->widgetForAction(mpActionVariables)->setObjectName(mpActionVariables->objectName());
-
-    mpButtonDiscord = new QToolButton(this);
-    mpButtonDiscord->setText(tr("Discord"));
-    mpButtonDiscord->setObjectName(QStringLiteral("discord"));
-    mpButtonDiscord->setContextMenuPolicy(Qt::ActionsContextMenu);
-    mpButtonDiscord->setPopupMode(QToolButton::MenuButtonPopup);
-    mpButtonDiscord->setAutoRaise(true);
-    mpMainToolBar->addWidget(mpButtonDiscord);
-
-    mpActionDiscord = new QAction(tr("Open Discord"), this);
-    mpActionDiscord->setIcon(QIcon(QStringLiteral(":/icons/Discord-Logo-Color.png")));
-    mpActionDiscord->setIconText(tr("Discord"));
-    mpActionDiscord->setObjectName(QStringLiteral("openDiscord"));
-
-    mpActionIRC = new QAction(tr("Open IRC"), this);
-    mpActionIRC->setIcon(QIcon(QStringLiteral(":/icons/internet-telephony.png")));
-    mpActionIRC->setObjectName(QStringLiteral("openIRC"));
-
-    mpButtonDiscord->addAction(mpActionDiscord);
-    mpButtonDiscord->addAction(mpActionIRC);
-    mpButtonDiscord->setDefaultAction(mpActionDiscord);
-
-    mpActionMapper = new QAction(QIcon(QStringLiteral(":/icons/applications-internet.png")), tr("Map"), this);
-    mpActionMapper->setToolTip(tr("Show/hide the map"));
-    mpMainToolBar->addAction(mpActionMapper);
-    mpActionMapper->setObjectName(QStringLiteral("map_action"));
-    mpMainToolBar->widgetForAction(mpActionMapper)->setObjectName(mpActionMapper->objectName());
-
-    mpActionHelp = new QAction(QIcon(QStringLiteral(":/icons/help-hint.png")), tr("Manual"), this);
-    mpActionHelp->setToolTip(tr("Browse reference material and documentation"));
-    mpMainToolBar->addAction(mpActionHelp);
-    mpActionHelp->setObjectName(QStringLiteral("manual_action"));
-    mpMainToolBar->widgetForAction(mpActionHelp)->setObjectName(mpActionHelp->objectName());
-
-    mpActionOptions = new QAction(QIcon(QStringLiteral(":/icons/configure.png")), tr("Settings"), this);
-    mpActionOptions->setToolTip(tr("See and edit profile preferences"));
-    mpMainToolBar->addAction(mpActionOptions);
-    mpActionOptions->setObjectName(QStringLiteral("settings_action"));
-    mpMainToolBar->widgetForAction(mpActionOptions)->setObjectName(mpActionOptions->objectName());
-
-    // TODO: Consider changing to ":/icons/mudlet_notepad.png" as per the icon
-    // now used for the window when the visual change to the toolbar caused can
-    // be managed
-    mpActionNotes = new QAction(QIcon(QStringLiteral(":/icons/applications-accessories.png")), tr("Notepad"), this);
-    mpActionNotes->setToolTip(tr("Open a notepad that you can store your notes in"));
-    mpMainToolBar->addAction(mpActionNotes);
-    mpActionNotes->setObjectName(QStringLiteral("notepad_action"));
-    mpMainToolBar->widgetForAction(mpActionNotes)->setObjectName(mpActionNotes->objectName());
-
-    mpButtonPackageManagers = new QToolButton(this);
-    mpButtonPackageManagers->setText(tr("Package Manager"));
-    mpButtonPackageManagers->setObjectName(QStringLiteral("package_manager"));
-    mpButtonPackageManagers->setContextMenuPolicy(Qt::ActionsContextMenu);
-    mpButtonPackageManagers->setPopupMode(QToolButton::MenuButtonPopup);
-    mpButtonPackageManagers->setAutoRaise(true);
-    mpMainToolBar->addWidget(mpButtonPackageManagers);
-
-    mpActionPackageManager = new QAction(tr("Package Manager"), this);
-    mpActionPackageManager->setIcon(QIcon(QStringLiteral(":/icons/package-manager.png")));
-    mpActionPackageManager->setIconText(tr("Package Manager"));
-    mpActionPackageManager->setObjectName(QStringLiteral("package_manager"));
-
-    mpActionModuleManager = new QAction(tr("Module Manager"), this);
-    mpActionModuleManager->setIcon(QIcon(QStringLiteral(":/icons/module-manager.png")));
-    mpActionModuleManager->setObjectName(QStringLiteral("module_manager"));
-
-    mpActionPackageExporter = new QAction(tr("Package Exporter"), this);
-    mpActionPackageExporter->setIcon(QIcon(QStringLiteral(":/icons/package-exporter.png")));
-    mpActionPackageExporter->setObjectName(QStringLiteral("package_exporter"));
-
-    mpButtonPackageManagers->addAction(mpActionPackageManager);
-    mpButtonPackageManagers->addAction(mpActionModuleManager);
-    mpButtonPackageManagers->addAction(mpActionPackageExporter);
-    mpButtonPackageManagers->setDefaultAction(mpActionPackageManager);
-
-
-    mpActionReplay = new QAction(QIcon(QStringLiteral(":/icons/media-optical.png")), tr("Replay"), this);
-    mpActionReplay->setObjectName(QStringLiteral("replay_action"));
-    mpMainToolBar->addAction(mpActionReplay);
-    mpMainToolBar->widgetForAction(mpActionReplay)->setObjectName(mpActionReplay->objectName());
-
-    mpActionReconnect = new QAction(QIcon(QStringLiteral(":/icons/system-restart.png")), tr("Reconnect"), this);
-    mpActionReconnect->setToolTip(tr("Disconnects you from the game and connects once again"));
-    mpMainToolBar->addAction(mpActionReconnect);
-    mpActionReconnect->setObjectName(QStringLiteral("reconnect_action"));
-    mpMainToolBar->widgetForAction(mpActionReconnect)->setObjectName(mpActionReconnect->objectName());
-
-    mpActionMultiView = new QAction(QIcon(QStringLiteral(":/icons/view-split-left-right.png")), tr("MultiView"), this);
-    mpActionMultiView->setToolTip(tr("If you've got multiple profiles open, splits Mudlet screen to show them all at once"));
-    mpMainToolBar->addAction(mpActionMultiView);
-    mpActionMultiView->setObjectName(QStringLiteral("multiview_action"));
-    mpMainToolBar->widgetForAction(mpActionMultiView)->setObjectName(mpActionMultiView->objectName());
-
-    mpActionAbout = new QAction(QIcon(QStringLiteral(":/icons/mudlet_information.png")), tr("About"), this);
-    mpActionAbout->setToolTip(tr("<p>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</p>",
-                                 // Intentional comment
-                                 "Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation)."));
-    mpMainToolBar->addAction(mpActionAbout);
-    mpActionAbout->setObjectName(QStringLiteral("about_action"));
-    mpMainToolBar->widgetForAction(mpActionAbout)->setObjectName(mpActionAbout->objectName());
-
-    disableToolbarButtons();
-
-    mpDebugArea = new QMainWindow(nullptr);
-    // PLACEMARKER: Host creation (1) - "default_host" case
-    QString defaultHost(QStringLiteral("default_host"));
-    // We DO NOT emit a signal_hostCreated for THIS case:
-    mHostManager.addHost(defaultHost, QString(), QString(), QString());
-    mpDefaultHost = mHostManager.getHost(defaultHost);
-    mpDebugConsole = new TConsole(mpDefaultHost, TConsole::CentralDebugConsole);
-    mpDebugConsole->setSizePolicy(sizePolicy);
-    mpDebugConsole->setWrapAt(100);
-    mpDebugArea->setCentralWidget(mpDebugConsole);
-    mpDebugArea->setWindowTitle(tr("Central Debug Console"));
-    mpDebugArea->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_debug.png")));
-
-    auto consoleCloser = new TConsoleMonitor(mpDebugArea);
-    mpDebugArea->installEventFilter(consoleCloser);
-
-    QSize generalRule(qApp->desktop()->size());
-    generalRule -= QSize(30, 30);
-    mpDebugArea->resize(QSize(800, 600).boundedTo(generalRule));
-    mpDebugArea->hide();
-    QFont mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
-    if (mEnableFullScreenMode) {
-        showFullScreen();
-        QAction* actionFullScreeniew = new QAction(QIcon(QStringLiteral(":/icons/dialog-cancel.png")), tr("Toggle Full Screen View"), this);
-        actionFullScreeniew->setStatusTip(tr("Toggle Full Screen View"));
-        mpMainToolBar->addAction(actionFullScreeniew);
-        actionFullScreeniew->setObjectName(QStringLiteral("fullscreen_action"));
-        mpMainToolBar->widgetForAction(actionFullScreeniew)->setObjectName(actionFullScreeniew->objectName());
-        connect(actionFullScreeniew, &QAction::triggered, this, &mudlet::toggleFullScreenView);
-    }
-    // This is the only place the tabBar font is set and it influences the
-    // height of the tabs used - since we now want to adjust the appearance of
-    // the tab if it is not the active one and new data has arrived to show in
-    // the related profile - make the font size a little larger that the 6 it
-    // once was so that it is a bit more obvious when it changes:
-    QFont mdiFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
-    setFont(mainFont);
-    mainPane->setFont(mainFont);
-    mpTabBar->setFont(mdiFont);
-
-    mainPane->show();
-
-    connect(mpActionConnect.data(), &QAction::triggered, this, &mudlet::slot_show_connection_dialog);
-    connect(mpActionHelp.data(), &QAction::triggered, this, &mudlet::show_help_dialog);
-    connect(mpActionTimers.data(), &QAction::triggered, this, &mudlet::show_timer_dialog);
-    connect(mpActionAliases.data(), &QAction::triggered, this, &mudlet::show_alias_dialog);
-    connect(mpActionScripts.data(), &QAction::triggered, this, &mudlet::show_script_dialog);
-    connect(mpActionKeys.data(), &QAction::triggered, this, &mudlet::show_key_dialog);
-    connect(mpActionVariables.data(), &QAction::triggered, this, &mudlet::show_variable_dialog);
-    connect(mpActionButtons.data(), &QAction::triggered, this, &mudlet::show_action_dialog);
-    connect(mpActionOptions.data(), &QAction::triggered, this, &mudlet::slot_show_options_dialog);
-    connect(mpActionAbout.data(), &QAction::triggered, this, &mudlet::slot_show_about_dialog);
-    connect(mpActionMultiView.data(), &QAction::triggered, this, &mudlet::slot_multi_view);
-    connect(mpActionReconnect.data(), &QAction::triggered, this, &mudlet::slot_reconnect);
-    connect(mpActionDisconnect.data(), &QAction::triggered, this, &mudlet::slot_disconnect);
-    connect(mpActionReplay.data(), &QAction::triggered, this, &mudlet::slot_replay);
-    connect(mpActionNotes.data(), &QAction::triggered, this, &mudlet::slot_notes);
-    connect(mpActionMapper.data(), &QAction::triggered, this, &mudlet::slot_mapper);
-    connect(mpActionIRC.data(), &QAction::triggered, this, &mudlet::slot_irc);
-    connect(mpActionDiscord.data(), &QAction::triggered, this, &mudlet::slot_discord);
-    connect(mpActionPackageManager.data(), &QAction::triggered, this, &mudlet::slot_package_manager);
-    connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_module_manager);
-    connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_package_exporter);
-
-    // PLACEMARKER: Save for later restoration (1 of 2) (by adding a "Close" (profile) option to first menu on menu bar:
-    // QAction* mactionCloseProfile = new QAction(tr("Close"), this);
-
-    connect(dactionConnect, &QAction::triggered, this, &mudlet::slot_show_connection_dialog);
-    connect(dactionReconnect, &QAction::triggered, this, &mudlet::slot_reconnect);
-    connect(dactionDisconnect, &QAction::triggered, this, &mudlet::slot_disconnect);
-    connect(dactionNotepad, &QAction::triggered, this, &mudlet::slot_notes);
-    connect(dactionReplay, &QAction::triggered, this, &mudlet::slot_replay);
-
-    connect(dactionHelp, &QAction::triggered, this, &mudlet::show_help_dialog);
-    connect(dactionVideo, &QAction::triggered, this, &mudlet::slot_show_help_dialog_video);
-    connect(dactionForum, &QAction::triggered, this, &mudlet::slot_show_help_dialog_forum);
-    connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
-    connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_discord);
-    connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_discord);
-#if !defined(INCLUDE_UPDATER)
-    // Hide the update menu item if the code is not included
-    dactionUpdate->setVisible(false);
-#else
-    // Also, only show it if this is a release version
-    dactionUpdate->setVisible(!scmIsDevelopmentVersion);
-#endif
-    connect(dactionPackageManager, &QAction::triggered, this, &mudlet::slot_package_manager);
-    connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_package_exporter);
-    connect(dactionModuleManager, &QAction::triggered, this, &mudlet::slot_module_manager);
-    connect(dactionMultiView, &QAction::triggered, this, &mudlet::slot_multi_view);
-    connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_toggle_compact_input_line);
-    connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::show_trigger_dialog);
-    connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::show_trigger_dialog);
-    connect(dactionShowMap, &QAction::triggered, this, &mudlet::slot_mapper);
-    connect(dactionOptions, &QAction::triggered, this, &mudlet::slot_show_options_dialog);
-    connect(dactionAbout, &QAction::triggered, this, &mudlet::slot_show_about_dialog);
-    // PLACEMARKER: Save for later restoration (2 of 2) (by adding a "Close" (profile) option to first menu on menu bar:
-    // connect(mactionCloseProfile, &QAction::triggered, this, &mudlet::slot_close_profile);
-
-    // we historically use Alt on Windows and Linux, but that is uncomfortable on macOS
-#if defined(Q_OS_MACOS)
-    triggersKeySequence = QKeySequence(Qt::CTRL | Qt::Key_E);
-    showMapKeySequence = QKeySequence(Qt::CTRL | Qt::Key_M);
-    inputLineKeySequence = QKeySequence(Qt::CTRL | Qt::Key_L);
-    optionsKeySequence = QKeySequence(Qt::CTRL | Qt::Key_P);
-    notepadKeySequence = QKeySequence(Qt::CTRL | Qt::Key_N);
-    packagesKeySequence = QKeySequence(Qt::CTRL | Qt::Key_O);
-    modulesKeySequence = QKeySequence(Qt::CTRL | Qt::Key_I);
-    multiViewKeySequence = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_V);
-    connectKeySequence = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_C);
-    disconnectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_D);
-    reconnectKeySequence = QKeySequence(Qt::CTRL | Qt::Key_R);
-#else
-    triggersKeySequence = QKeySequence(Qt::ALT | Qt::Key_E);
-    showMapKeySequence = QKeySequence(Qt::ALT | Qt::Key_M);
-    inputLineKeySequence = QKeySequence(Qt::ALT | Qt::Key_L);
-    optionsKeySequence = QKeySequence(Qt::ALT | Qt::Key_P);
-    notepadKeySequence = QKeySequence(Qt::ALT | Qt::Key_N);
-    packagesKeySequence = QKeySequence(Qt::ALT | Qt::Key_O);
-    modulesKeySequence = QKeySequence(Qt::ALT | Qt::Key_I);
-    multiViewKeySequence = QKeySequence(Qt::ALT | Qt::Key_V);
-    connectKeySequence = QKeySequence(Qt::ALT | Qt::Key_C);
-    disconnectKeySequence = QKeySequence(Qt::ALT | Qt::Key_D);
-    reconnectKeySequence = QKeySequence(Qt::ALT | Qt::Key_R);
-#endif
-    connect(this, &mudlet::signal_menuBarVisibilityChanged, this, &mudlet::slot_update_shortcuts);
-
-    mpSettings = getQSettings();
-    readLateSettings(*mpSettings);
-    // The previous line will set an option used in the slot method:
-    connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
-
-#if defined(INCLUDE_UPDATER)
-    updater = new Updater(this, mpSettings);
-    connect(updater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
-    connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_check_manual_update);
-#if defined(Q_OS_MACOS)
-    // ensure that 'Check for updates' is under the Applications menu per convention
-    dactionUpdate->setMenuRole(QAction::ApplicationSpecificRole);
-#else
-    connect(updater, &Updater::signal_updateInstalled, this, &mudlet::slot_update_installed);
-#endif // !Q_OS_MACOS
-#endif // INCLUDE_UPDATER
-
-    if (!mToolbarIconSize) {
-        setToolBarIconSize(mEnableFullScreenMode ? 2 : 3);
-    }
-
-#if defined(QT_GAMEPAD_LIB)
-    connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonPressEvent, this, &mudlet::slot_gamepadButtonPress);
-    connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonReleaseEvent, this, &mudlet::slot_gamepadButtonRelease);
-    connect(QGamepadManager::instance(), &QGamepadManager::gamepadConnected, this, &mudlet::slot_gamepadConnected);
-    connect(QGamepadManager::instance(), &QGamepadManager::gamepadDisconnected, this, &mudlet::slot_gamepadDisconnected);
-    connect(QGamepadManager::instance(), &QGamepadManager::gamepadAxisEvent, this, &mudlet::slot_gamepadAxisEvent);
-#endif // if defined(QT_GAMEPAD_LIB)
-    // Edbee has a singleton that needs some initialisation
-    initEdbee();
-
-    // load bundled fonts
-    mFontManager.addFonts();
-    loadLanguagesMap();
-}
-
-QSettings* mudlet::getQSettings()
-{
-    /*In case sensitive environments, two different config directories
-        were used: "Mudlet" for QSettings, and "mudlet" anywhere else.
-        Furthermore, we skip the version from the application name to follow the convention.
-        For compatibility with older settings, if no config is loaded
-        from the config directory "mudlet", application "Mudlet", we try to load from the config
-        directory "Mudlet", application "Mudlet 1.0". */
-    QSettings settings_new("mudlet", "Mudlet");
-    return new QSettings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
-}
-
-void mudlet::initEdbee()
-{
-    auto edbee = edbee::Edbee::instance();
-    edbee->init();
-    edbee->autoShutDownOnAppExit();
-
-    auto grammarManager = edbee->grammarManager();
-    // We only need the single Lua lexer, probably ever
-    grammarManager->readGrammarFile(QLatin1Literal(":/edbee_defaults/Lua.tmLanguage"));
-
-    //Open and parse the luaFunctionList document into a stringlist for use with autocomplete
-    loadLuaFunctionList();
-
-    //QFile file(fileName);
-    //if( file.exists() && file.open(QIODevice::ReadOnly) ) {
-
-    loadEdbeeTheme(QStringLiteral("Mudlet"), QStringLiteral("Mudlet.tmTheme"));
-}
-
-void mudlet::loadTranslationFile(const QString& fileName, const QString& filePath, QString& languageCode)
-{
-    QPointer<QTranslator> pMudletTranslator = new QTranslator();
-    auto translatorList = mTranslatorsMap.value(languageCode);
-
-    if (pMudletTranslator->load(fileName, filePath)) {
-        translatorList.append(pMudletTranslator);
-
-        if (!mTranslatorsMap.contains(languageCode)) {
-            mTranslatorsMap.insert(languageCode, translatorList);
-        }
-    } else {
-        qDebug() << "mudlet::mudlet() Failed to load translation file" << fileName << "from" << filePath;
-    }
-
-    if (languageCode != mInterfaceLanguage) {
+    const auto debugConsoleHost = mpDebugConsole->getHost();
+    if (debugConsoleHost != currentHost) {
         return;
     }
 
-    qDebug() << "mudlet::mudlet() INFO - loading Mudlet:" << languageCode << "translations from:" << fileName;
-
-    for (auto& translator : qAsConst(translatorList)) {
-        if (!qApp->installTranslator(translator)) {
-            qDebug() << "mudlet::mudlet() ERROR - Failed to directly load a translator for:" << languageCode << "a translation to the specified language will not be available";
-        } else {
-            mTranslatorsLoadedList.append(translator);
-        }
-    }
+    mpDebugArea->setAttribute(Qt::WA_DeleteOnClose);
+    mpDebugArea->close();
 }
 
-void mudlet::loadTranslators()
+// As we are currently only using files from a resource file we only need to
+// analyse them once per application run - if we were loading from a user
+// selectable location, or even from a read-only part of their computer's
+// file-system we would have to do this each time they looked to change
+// language/locale:
+void mudlet::scanForMudletTranslations(const QString& path)
 {
-    auto loadTranslations =
-            [=](const QString& path) {
-                qDebug() << "mudlet::mudlet() INFO - Seeking Mudlet translations files in:" << path;
+    mMudletTranslationsPathName = path;
+    qDebug().nospace().noquote() << "mudlet::scanForMudletTranslations(\"" << path << "\") INFO - Seeking Mudlet translation files:";
+    mTranslationsMap.clear();
 
-                QDir translationDir(path);
-                translationDir.setNameFilters(QStringList() << QStringLiteral("mudlet_*.qm"));
-                QStringList translationFilesList(translationDir.entryList(QDir::Files | QDir::Readable, QDir::Name));
+    QDir translationDir(path);
+    translationDir.setNameFilters(QStringList() << QStringLiteral("mudlet_*.qm"));
+    QStringList translationFilesList(translationDir.entryList(QDir::Files | QDir::Readable, QDir::Name));
 
-                for (auto& translationFileName : qAsConst(translationFilesList)) {
-                    QString languageCode(translationFileName);
+    QJsonObject translationStats;
+    if (path == QStringLiteral(":/lang")) {
+        QFile file(QStringLiteral(":/translation-stats.json"));
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QByteArray saveData = file.readAll();
+            QJsonDocument loadDoc(QJsonDocument::fromJson(saveData));
+            translationStats = loadDoc.object();
+            file.close();
+        } else {
+            qWarning() << "translation statistics file isn't available, won't show stats in preferences";
+        }
+    }
 
-                    languageCode.remove(QStringLiteral("mudlet_"), Qt::CaseInsensitive);
-                    languageCode.remove(QStringLiteral(".qm"), Qt::CaseInsensitive);
+    for (auto& translationFileName : qAsConst(translationFilesList)) {
+        QString languageCode(translationFileName);
+        languageCode.remove(QStringLiteral("mudlet_"), Qt::CaseInsensitive);
+        languageCode.remove(QStringLiteral(".qm"), Qt::CaseInsensitive);
+        int percentageTranslated = -1;
 
-                    loadTranslationFile(translationFileName, path, languageCode);
+        std::unique_ptr<QTranslator> pMudletTranslator = std::make_unique<QTranslator>();
+        if (Q_LIKELY(pMudletTranslator->load(translationFileName, path))) {
+            qDebug().noquote().nospace() << "    found a Mudlet translation for locale code: \"" << languageCode << "\".";
+            if (!translationStats.isEmpty()) {
+                // For this to not be empty then we are reading the translations
+                // from the expected resource file and the translation
+                // statistics file was also found from there
+
+                auto value = translationStats.value(languageCode).toObject().value(QStringLiteral("translatedpc"));
+                if (value != QJsonValue::Undefined) {
+                    percentageTranslated = value.toInt();
+                } else {
+                    percentageTranslated = 0;
                 }
-            };
+            }
+            // PLACEMARKER: Start of locale codes to native language decoding - insert an entry here for any futher Mudlet supported languages
+            translation currentTranslation(percentageTranslated);
+            if (!languageCode.compare(QLatin1String("en_US"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = QStringLiteral("English (American)");
+            } else if (!languageCode.compare(QLatin1String("en_GB"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = QStringLiteral("English (British)");
+            } else if (!languageCode.compare(QLatin1String("zh_CN"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = QStringLiteral("简化字");
+            } else if (!languageCode.compare(QLatin1String("zh_TW"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = QStringLiteral("繁體字");
+            } else if (!languageCode.compare(QLatin1String("nl_NL"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = QStringLiteral("Nederlands");
+            } else if (!languageCode.compare(QLatin1String("fr_FR"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = QStringLiteral("Français");
+            } else if (!languageCode.compare(QLatin1String("de_DE"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = QStringLiteral("Deutsch");
+            } else if (!languageCode.compare(QLatin1String("el_GR"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = QStringLiteral("ελληνικά");
+            } else if (!languageCode.compare(QLatin1String("it_IT"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = QStringLiteral("Italiano");
+            } else if (!languageCode.compare(QLatin1String("pl_PL"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = QStringLiteral("Polszczyzna");
+            } else if (!languageCode.compare(QLatin1String("ru_RU"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = QStringLiteral("Pусский");
+            } else if (!languageCode.compare(QLatin1String("es_ES"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = QStringLiteral("Español");
+            } else if (!languageCode.compare(QLatin1String("pt_PT"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = QStringLiteral("Portugês");
+            } else {
+                currentTranslation.mNativeName = languageCode;
+            }
+            currentTranslation.mMudletTranslationFileName = translationFileName;
+            mTranslationsMap.insert(languageCode, currentTranslation);
+        } else {
+            // This is very unlikely to be reached as it means that a file that
+            // matched the naming to be a Mudlet translation file was not infact
+            // one...
+            qDebug().noquote().nospace() << "    no Mudlet translation found for locale code: \"" << languageCode << "\".";
+        }
+    }
+}
 
-    QPointer<QTranslator> pMudletTranslator = new QTranslator();
-    auto translatorList = mTranslatorsMap.value(QStringLiteral("en_US"));
-    translatorList.append(pMudletTranslator);
-    mTranslatorsMap.insert(QStringLiteral("en_US"), translatorList);
+// To be used AFTER scanForMudletTranslations(...) has been called, this will
+// insert the corresponding Qt system translation pathFileNames (path to
+// filenames: qt_xx.qm or qt_xx_YY.qm) into the entries in the mTranslationsMap
+// QMap.
+void mudlet::scanForQtTranslations(const QString& path)
+{
+    mQtTranslationsPathName = path;
+    qDebug().nospace().noquote() << "mudlet::scanForQtTranslations(\"" << path << "\") INFO - Seeking Qt translation files:";
+    QMutableMapIterator<QString, translation> itTranslation(mTranslationsMap);
+    while (itTranslation.hasNext()) {
+        itTranslation.next();
+        const QString languageCode = itTranslation.key();
+        std::unique_ptr<QTranslator> pQtTranslator = std::make_unique<QTranslator>();
+        QString translationFileName(QStringLiteral("qt_%1.qm").arg(languageCode));
+        if (pQtTranslator->load(translationFileName, path)) {
+            qDebug().noquote().nospace() << "    found a Qt translation for locale code: \"" << languageCode << "\"";
+            /*
+             * Unfortunately, success in this operation does not mean that
+             * a qt_xx_YY.qm translation file has been located, as the
+             * (bool) QTranslator::load(...)
+             * call can forget about both the _YY and even the _xx if filenames
+             * with those elements are not found but a less detailed filename
+             * IS detected.
+             *
+             * So although we can note the load of a given pathFileName is
+             * sucessful it might not be exactly what it seems to be!
+             */
+            translation current = itTranslation.value();
+            current.mQtTranslationFileName = translationFileName;
+            itTranslation.setValue(current);
+        } else {
+            qDebug().noquote().nospace() << "    no Qt translation found for locale code: \"" << languageCode << "\"";
+        }
+    }
+}
 
-    // Qt translations are not loaded properly at the moment
-    loadTranslations(getMudletPath(qtTranslationsPath));
-    loadTranslations(QStringLiteral(":/lang"));
+void mudlet::loadTranslators(const QString& languageCode)
+{
+    if (!mTranslatorsLoadedList.isEmpty()) {
+        qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - uninstalling existing translation previously loaded...";
+        QMutableListIterator<QPointer<QTranslator>> itTranslator(mTranslatorsLoadedList);
+        itTranslator.toBack();
+        while (itTranslator.hasPrevious()) {
+            QPointer<QTranslator> pTranslator = itTranslator.previous();
+            if (pTranslator) {
+                qApp->removeTranslator(pTranslator);
+                itTranslator.remove();
+                delete pTranslator;
+            }
+        }
+    }
 
+    translation currentTranslation = mTranslationsMap.value(languageCode);
+    QPointer<QTranslator> pQtTranslator = new QTranslator;
+    QString qtTranslatorFileName = currentTranslation.getQtTranslationFileName();
+    if (!qtTranslatorFileName.isEmpty()) {
+        // Need to use load(fileName (e.g. {qt_xx_YY.qm"}, pathName) form - Qt
+        // mangles the former to find the actual best one to use, but we
+        // shouldn't include the path in the first element as it seems to mess
+        // up the process of locating the file:
+        pQtTranslator->load(qtTranslatorFileName, mQtTranslationsPathName);
+        if (!pQtTranslator->isEmpty()) {
+            qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Qt libraries' translation from a path and file name specified as: \"" << mQtTranslationsPathName << "/"<< qtTranslatorFileName << "\"...";
+            qApp->installTranslator(pQtTranslator);
+            mTranslatorsLoadedList.append(pQtTranslator);
+        }
+    }
 
+    QPointer<QTranslator> pMudletTranslator = new QTranslator;
+    QString mudletTranslatorFileName = currentTranslation.getMudletTranslationFileName();
+    if (!mudletTranslatorFileName.isEmpty()) {
+        pMudletTranslator->load(mudletTranslatorFileName, mMudletTranslationsPathName);
+        if (!pMudletTranslator->isEmpty()) {
+            qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Mudlet translation from: \"" << mMudletTranslationsPathName << "/" << mudletTranslatorFileName << "\"...";
+            qApp->installTranslator(pMudletTranslator);
+            mTranslatorsLoadedList.append(pMudletTranslator);
+        }
+    }
 }
 
 bool mudlet::moduleTableVisible()
@@ -1339,16 +1398,17 @@ void mudlet::slot_close_profile_requested(int tab)
 
     pH->stopAllTriggers();
     pH->mpEditorDialog->close();
-    for (auto consoleName : hostConsoleMap.keys()) {
-        hostConsoleMap[consoleName]->close();
-        hostConsoleMap.remove(consoleName);
 
+    for (auto consoleName : hostConsoleMap.keys()) {
         if (dockWindowMap.contains(consoleName)) {
             dockWindowMap[consoleName]->setAttribute(Qt::WA_DeleteOnClose);
             dockWindowMap[consoleName]->close();
             removeDockWidget(dockWindowMap[consoleName]);
             dockWindowMap.remove(consoleName);
         }
+
+        hostConsoleMap[consoleName]->close();
+        hostConsoleMap.remove(consoleName);
     }
 
     if (pH->mpNotePad) {
@@ -1371,109 +1431,32 @@ void mudlet::slot_close_profile_requested(int tab)
         mpIrcClientMap[pH]->deleteLater();
     }
 
+    migrateDebugConsole(pH);
+
     // Wait for disconnection to complete
     while (pH->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
         QApplication::processEvents();
     }
 
-    mConsoleMap[pH]->close();
-    if (mTabMap.contains(pH->getName())) {
-        mpTabBar->removeTab(tab);
-        mConsoleMap.remove(pH);
-        mTabMap.remove(pH->getName());
-        // PLACEMARKER: Host destruction (1) - from close button on tab bar
-        // Unfortunately the spaghetti nature of the code means that the profile
-        // is also (maybe) saved (or not) in the TConsole::close() call prior to
-        // here but because that is optional we cannot only force a "save"
-        // operation in the profile preferences dialog for the Host specific
-        // details BEFORE the save (so any changes make it into the save) -
-        // instead we just have to accept that any profile changes will not be
-        // saved if the preferences dialog is not closed before the profile is...
-        int hostCount = mHostManager.getHostCount();
-        emit signal_hostDestroyed(pH, --hostCount);
-        mHostManager.deleteHost(pH->getName());
+    mConsoleMap.value(pH)->close();
+    if (!mTabMap.contains(pH->getName())) {
+        return;
     }
 
-    // hide the tab bar if we only have 1 or no tabs available. saves screen space.
-    if (mConsoleMap.size() > 1) {
-        mpTabBar->show();
-    } else {
-        mpTabBar->hide();
-    }
-}
-
-// Not currently used - may not be properly functional anymore!
-void mudlet::slot_close_profile()
-{
-    if (mpCurrentActiveHost) {
-        if (mConsoleMap.contains(mpCurrentActiveHost)) {
-            Host* pH = mpCurrentActiveHost;
-            if (pH) {
-                std::list<QPointer<TToolBar>> hostTToolBarMap = pH->getActionUnit()->getToolBarList();
-                QMap<QString, TDockWidget*>& dockWindowMap = pH->mpConsole->mDockWidgetMap;
-                QMap<QString, TConsole*>& hostConsoleMap = pH->mpConsole->mSubConsoleMap;
-                QString name = pH->getName();
-
-                pH->closingDown();
-
-                // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-                pH->mTelnet.disconnectIt();
-
-                mpCurrentActiveHost->mpEditorDialog->close();
-                for (auto consoleName : hostConsoleMap.keys()) {
-                    hostConsoleMap[consoleName]->close();
-                    hostConsoleMap.remove(consoleName);
-
-                    if (dockWindowMap.contains(consoleName)) {
-                        dockWindowMap[consoleName]->setAttribute(Qt::WA_DeleteOnClose);
-                        dockWindowMap[consoleName]->close();
-                        removeDockWidget(dockWindowMap[consoleName]);
-                        dockWindowMap.remove(consoleName);
-                    }
-                }
-
-                if (pH->mpNotePad) {
-                    pH->mpNotePad->save();
-                    pH->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-                    pH->mpNotePad->close();
-                    pH->mpNotePad = nullptr;
-                }
-
-                for (TToolBar* pTB : hostTToolBarMap) {
-                    if (pTB) {
-                        pTB->setAttribute(Qt::WA_DeleteOnClose);
-                        pTB->deleteLater();
-                    }
-                }
-
-                // close IRC client window if it is open.
-                if (mpIrcClientMap.contains(pH)) {
-                    mpIrcClientMap[pH]->setAttribute(Qt::WA_DeleteOnClose);
-                    mpIrcClientMap[pH]->deleteLater();
-                }
-
-                // Wait for disconnection to complete
-                while (pH->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
-                    QApplication::processEvents();
-                }
-
-                mConsoleMap[pH]->close();
-                if (mTabMap.contains(name)) {
-                    mpTabBar->removeTab(mpTabBar->currentIndex());
-                    mConsoleMap.remove(pH);
-                    // PLACEMARKER: Host destruction (2) - normal case
-                    int hostCount = mHostManager.getHostCount();
-                    emit signal_hostDestroyed(pH, --hostCount);
-                    mHostManager.deleteHost(name);
-                    mTabMap.remove(name);
-                }
-                mpCurrentActiveHost = Q_NULLPTR;
-            }
-        }
-
-    } else {
-        disableToolbarButtons();
-    }
+    mpTabBar->removeTab(tab);
+    mConsoleMap.remove(pH);
+    mTabMap.remove(pH->getName());
+    // PLACEMARKER: Host destruction (1) - from close button on tab bar
+    // Unfortunately the spaghetti nature of the code means that the profile
+    // is also (maybe) saved (or not) in the TConsole::close() call prior to
+    // here but because that is optional we cannot only force a "save"
+    // operation in the profile preferences dialog for the Host specific
+    // details BEFORE the save (so any changes make it into the save) -
+    // instead we just have to accept that any profile changes will not be
+    // saved if the preferences dialog is not closed before the profile is...
+    int hostCount = mHostManager.getHostCount();
+    emit signal_hostDestroyed(pH, --hostCount);
+    mHostManager.deleteHost(pH->getName());
 }
 
 void mudlet::slot_tab_changed(int tabID)
@@ -1567,11 +1550,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
      */
     mpTabBar->setTabData(newTabID, tabName);
     mTabMap[pH->getName()] = pConsole;
-    if (mConsoleMap.size() > 1) {
-        mpTabBar->show();
-    } else {
-        mpTabBar->hide();
-    }
+
     //update the main window title when we spawn a new tab
     setWindowTitle(pH->getName() + " - " + version);
 
@@ -1674,6 +1653,7 @@ void mudlet::disableToolbarButtons()
     mpMainToolBar->actions()[13]->setEnabled(false);
     mpMainToolBar->actions()[14]->setEnabled(false);
 
+    mpActionIRC->setEnabled(false);
     mpActionReplay->setEnabled(false);
     mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                                .arg(tr("<p>Load a Mudlet replay.</p>"
@@ -1703,6 +1683,7 @@ void mudlet::enableToolbarButtons()
     mpMainToolBar->actions()[12]->setEnabled(true);
     mpMainToolBar->actions()[13]->setEnabled(true);
     mpMainToolBar->actions()[14]->setEnabled(true);
+    mpActionIRC->setEnabled(true);
 
     if (!mpToolBarReplay) {
         // Only enable the replay button if it is not disabled because there is
@@ -1931,56 +1912,56 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
     }
 
     auto hostName(pHost->getName());
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    auto pD = pHost->mpConsole->mDockWidgetMap.value(name);
+    auto console = pHost->mpConsole->mSubConsoleMap.value(name);
+    auto dockwidget = pHost->mpConsole->mDockWidgetMap.value(name);
 
-    if (!pC && !pD) {
+    if (!console && !dockwidget) {
         // The name is not used in either the QMaps of all user created TConsole
         // or TDockWidget instances - so we can make a NEW one:
-        pD = new TDockWidget(pHost, name);
-        pD->setObjectName(QStringLiteral("dockWindow_%1_%2").arg(hostName, name));
-        pD->setContentsMargins(0, 0, 0, 0);
-        pD->setFeatures(QDockWidget::AllDockWidgetFeatures);
-        pD->setWindowTitle(tr("User window - %1 - %2").arg(hostName, name));
-        pHost->mpConsole->mDockWidgetMap.insert(name, pD);
+        dockwidget = new TDockWidget(pHost, name);
+        dockwidget->setObjectName(QStringLiteral("dockWindow_%1_%2").arg(hostName, name));
+        dockwidget->setContentsMargins(0, 0, 0, 0);
+        dockwidget->setFeatures(QDockWidget::AllDockWidgetFeatures);
+        dockwidget->setWindowTitle(tr("User window - %1 - %2").arg(hostName, name));
+        pHost->mpConsole->mDockWidgetMap.insert(name, dockwidget);
         // It wasn't obvious but the parent passed to the TConsole constructor
         // is sliced down to a QWidget and is NOT a TDockWidget pointer:
-        pC = new TConsole(pHost, TConsole::UserWindow, pD->widget());
-        pC->setObjectName(QStringLiteral("dockWindowConsole_%1_%2").arg(hostName, name));
+        console = new TConsole(pHost, TConsole::UserWindow, dockwidget->widget());
+        console->setObjectName(QStringLiteral("dockWindowConsole_%1_%2").arg(hostName, name));
         // Without this the TConsole instance inside the TDockWidget will be
         // left being called the default value of "main":
-        pC->mConsoleName = name;
-        pC->setContentsMargins(0, 0, 0, 0);
-        pD->setTConsole(pC);
-        pC->show();
-        pC->layerCommandLine->hide();
-        pC->mpScrollBar->hide();
-        pHost->mpConsole->mSubConsoleMap.insert(name, pC);
+        console->mConsoleName = name;
+        console->setContentsMargins(0, 0, 0, 0);
+        dockwidget->setTConsole(console);
+        console->show();
+        console->layerCommandLine->hide();
+        console->mpScrollBar->hide();
+        pHost->mpConsole->mSubConsoleMap.insert(name, console);
         // TODO: Allow user to specify alternate dock locations - and for it to be floating and not docked initially!
-        addDockWidget(Qt::RightDockWidgetArea, pD);
+        addDockWidget(Qt::RightDockWidgetArea, dockwidget);
 
         setWindowFontSize(pHost, name, 10);
 
-        if (loadLayout && !pD->hasLayoutAlready) {
+        if (loadLayout && !dockwidget->hasLayoutAlready) {
             loadWindowLayout();
-            pD->hasLayoutAlready = true;
+            dockwidget->hasLayoutAlready = true;
         }
 
         return true;
-    } else if (pC && pD) {
+    } else if (console && dockwidget) {
         // The name is used in BOTH the QMaps of all user created TConsole
         // and TDockWidget instances - so we HAVE an existing user window,
         // Lets confirm this:
-        Q_ASSERT_X(pC->getType()==TConsole::UserWindow, "mudlet::openWindow(...)", "An existing TConsole was expected to be marked as a User Window type but it isn't");
-        pD->update();
+        Q_ASSERT_X(console->getType()==TConsole::UserWindow, "mudlet::openWindow(...)", "An existing TConsole was expected to be marked as a User Window type but it isn't");
+        dockwidget->update();
         //do not change the ->show() order! Otherwise, it will automatically minimize the floating/dock window(!!)
-        pC->show();
-        pD->show();
-        pC->showWindow(name);
+        console->show();
+        dockwidget->show();
+        console->showWindow(name);
 
-        if (loadLayout && !pD->hasLayoutAlready) {
+        if (loadLayout && !dockwidget->hasLayoutAlready) {
             loadWindowLayout();
-            pD->hasLayoutAlready = true;
+            dockwidget->hasLayoutAlready = true;
         }
 
         return true;
@@ -2805,31 +2786,30 @@ void mudlet::closeEvent(QCloseEvent* event)
         mpDebugArea->setAttribute(Qt::WA_DeleteOnClose);
         mpDebugArea->close();
     }
+
     foreach (TConsole* pC, mConsoleMap) {
-        if (pC->mpHost->getName() != QStringLiteral("default_host")) {
-            // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-            pC->mpHost->mTelnet.disconnectIt();
+        // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
+        pC->mpHost->mTelnet.disconnectIt();
 
-            // close script-editor
-            if (pC->mpHost->mpEditorDialog) {
-                pC->mpHost->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
-                pC->mpHost->mpEditorDialog->close();
-            }
-            if (pC->mpHost->mpNotePad) {
-                pC->mpHost->mpNotePad->save();
-                pC->mpHost->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-                pC->mpHost->mpNotePad->close();
-                pC->mpHost->mpNotePad = nullptr;
-            }
-
-            // Wait for disconnection to complete
-            while (pC->mpHost->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
-                QApplication::processEvents();
-            }
-
-            // close console
-            pC->close();
+        // close script-editor
+        if (pC->mpHost->mpEditorDialog) {
+            pC->mpHost->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
+            pC->mpHost->mpEditorDialog->close();
         }
+        if (pC->mpHost->mpNotePad) {
+            pC->mpHost->mpNotePad->save();
+            pC->mpHost->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
+            pC->mpHost->mpNotePad->close();
+            pC->mpHost->mpNotePad = nullptr;
+        }
+
+        // Wait for disconnection to complete
+        while (pC->mpHost->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
+            QApplication::processEvents();
+        }
+
+        // close console
+        pC->close();
     }
 
     // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
@@ -2854,29 +2834,27 @@ void mudlet::forceClose()
         host->saveProfile();
         console->mUserAgreedToCloseConsole = true;
 
-        if (host->getName() != QStringLiteral("default_host")) {
-            host->mTelnet.disconnectIt();
-            // close script-editor
-            if (host->mpEditorDialog) {
-                host->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
-                host->mpEditorDialog->close();
-            }
+        host->mTelnet.disconnectIt();
+        // close script-editor
+        if (host->mpEditorDialog) {
+            host->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
+            host->mpEditorDialog->close();
+        }
 
-            if (host->mpNotePad) {
-                host->mpNotePad->save();
-                host->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-                host->mpNotePad->close();
-                host->mpNotePad = nullptr;
-            }
+        if (host->mpNotePad) {
+            host->mpNotePad->save();
+            host->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
+            host->mpNotePad->close();
+            host->mpNotePad = nullptr;
+        }
 
-            if (mpIrcClientMap.contains(host)) {
-                mpIrcClientMap.value(host)->close();
-            }
+        if (mpIrcClientMap.contains(host)) {
+            mpIrcClientMap.value(host)->close();
+        }
 
-            // Wait for disconnection to complete
-            while (host->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
-                QApplication::processEvents();
-            }
+        // Wait for disconnection to complete
+        while (host->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
+            QApplication::processEvents();
         }
 
         console->close();
@@ -3005,11 +2983,9 @@ void mudlet::setMenuBarVisibility(const controlsVisibility state)
 // This only adjusts the visibility as appropriate
 void mudlet::adjustMenuBarVisibility()
 {
-    // Are there any profiles loaded - note that the dummy "default_host" counts
-    // as the first one
-    if ((mHostManager.getHostCount() < 2 && mMenuBarVisibility & visibleAlways)
-      ||(mMenuBarVisibility & visibleMaskNormally)) {
-
+    // Are there any profiles loaded?
+    if ((mHostManager.getHostCount() && mMenuBarVisibility & visibleAlways)
+            || (mMenuBarVisibility & visibleMaskNormally)) {
         menuBar()->show();
     } else {
         menuBar()->hide();
@@ -3041,9 +3017,9 @@ void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 
 void mudlet::adjustToolBarVisibility()
 {
-    // Are there any profiles loaded - note that the dummy "default_host" counts
-    // as the first one
-    if ((mHostManager.getHostCount() < 2 && mToolbarVisibility & visibleAlways) || (mToolbarVisibility & visibleMaskNormally)) {
+    // Are there any profiles loaded?
+    if ((mHostManager.getHostCount() && mToolbarVisibility & visibleAlways)
+            || (mToolbarVisibility & visibleMaskNormally)) {
         mpMainToolBar->show();
     } else {
         mpMainToolBar->hide();
@@ -3358,7 +3334,9 @@ void mudlet::createMapper(bool loadDefaultMap)
     pHost->mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(hostName));
     pHost->mpDockableMapWidget->setObjectName(QStringLiteral("dockMap_%1").arg(hostName));
     pHost->mpMap->mpMapper = new dlgMapper(pHost->mpDockableMapWidget, pHost, pHost->mpMap.data()); //FIXME: mpHost definieren
+#if defined(INCLUDE_3DMAPPER)
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
+#endif
     pHost->mpDockableMapWidget->setWidget(pHost->mpMap->mpMapper);
 
     if (loadDefaultMap && pHost->mpMap->mpRoomDB->getRoomIDList().isEmpty()) {
@@ -3455,15 +3433,13 @@ void mudlet::slot_notes()
 void mudlet::slot_irc()
 {
     Host* pHost = getActiveHost();
-    bool isDefaultHost = false;
     if (!pHost) {
-        pHost = mpDefaultHost;
-        isDefaultHost = true;
+        return;
     }
 
     if (!mpIrcClientMap.contains(pHost)) {
         QPointer<dlgIRC> dlg = new dlgIRC(pHost);
-        dlg->setDefaultHostClient(isDefaultHost);
+        dlg->setDefaultHostClient(false);
         mpIrcClientMap[pHost] = dlg;
     }
     mpIrcClientMap.value(pHost)->raise();
@@ -3607,6 +3583,32 @@ void mudlet::startAutoLogin()
     }
 }
 
+// Ensure the debug area is attached to at least one Host
+void mudlet::attachDebugArea(const QString& hostname)
+{
+    qDebug() << "start of attachDebugArea";
+    if (mpDebugArea) {
+        return;
+    }
+
+    mpDebugArea = new QMainWindow(nullptr);
+    const auto host = mHostManager.getHost(hostname);
+    mpDebugConsole = new TConsole(host, TConsole::CentralDebugConsole);
+    mpDebugConsole->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    mpDebugConsole->setWrapAt(100);
+    mpDebugArea->setCentralWidget(mpDebugConsole);
+    mpDebugArea->setWindowTitle(tr("Central Debug Console"));
+    mpDebugArea->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_debug.png")));
+
+    auto consoleCloser = new TConsoleMonitor(mpDebugArea);
+    mpDebugArea->installEventFilter(consoleCloser);
+
+    QSize generalRule(qApp->desktop()->size());
+    generalRule -= QSize(30, 30);
+    mpDebugArea->resize(QSize(800, 600).boundedTo(generalRule));
+    mpDebugArea->hide();
+}
+
 void mudlet::doAutoLogin(const QString& profile_name)
 {
     if (profile_name.size() < 1) {
@@ -3653,9 +3655,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     // save the setting is on profile loading:
     pHost->mTelnet.setEncoding(readProfileData(profile_name, QLatin1String("encoding")), false);
 
-    // For the first real host created the getHostCount() will return 2 because
-    // there is already a "default_host"
-    signal_hostCreated(pHost, mHostManager.getHostCount());
+    emit signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, true);
     enableToolbarButtons();
 }
@@ -3842,6 +3842,19 @@ mudlet::~mudlet()
     if (mHunspell_sharedDictionary) {
         saveDictionary(getMudletPath(mainDataItemPath, QStringLiteral("mudlet")), mWordSet_shared);
         mHunspell_sharedDictionary = nullptr;
+    }
+    if (!mTranslatorsLoadedList.isEmpty()) {
+        qDebug().nospace().noquote() << "mudlet::~mudlet() INFO - uninstalling translation...";
+        QMutableListIterator<QPointer<QTranslator>> itTranslator(mTranslatorsLoadedList);
+        itTranslator.toBack();
+        while (itTranslator.hasPrevious()) {
+            QPointer<QTranslator> pTranslator = itTranslator.previous();
+            if (pTranslator) {
+                qApp->removeTranslator(pTranslator);
+                itTranslator.remove();
+                delete pTranslator;
+            }
+        }
     }
     mudlet::_self = nullptr;
 }
@@ -4741,7 +4754,16 @@ void mudlet::setShowIconsOnMenu(const Qt::CheckState state)
 
 void mudlet::setInterfaceLanguage(const QString& languageCode)
 {
-    mInterfaceLanguage = languageCode;
+    if (mInterfaceLanguage != languageCode) {
+        mInterfaceLanguage = languageCode;
+        loadTranslators(languageCode);
+        // For full dynamic language change support (no restart necessary) we
+        // would also need a call here to do the same in this class that the
+        // signal_guiLanguageChanged call will do in classes wired up to it
+        // {run retranslateUi(), and regenerate (persistent) texts generated
+        // within the Mudlet application code}...
+        emit signal_guiLanguageChanged(languageCode);
+    }
 }
 
 bool mudlet::setClickthrough(Host* pHost, const QString& name, bool clickthrough)

@@ -37,6 +37,9 @@
 #include "dlgComposer.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
+#if defined(INCLUDE_3DMAPPER)
+#include "glwidget.h"
+#endif
 
 #include "pre_guard.h"
 #include <QNetworkProxy>
@@ -128,16 +131,18 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 
     // initialize the socket after the Host initialisation is complete so we can access mSslTsl
     QTimer::singleShot(0, this, [this]() {
+#if !defined(QT_NO_SSL)
         if (mpHost->mSslTsl) {
             connect(&socket, &QSslSocket::encrypted, this, &cTelnet::handle_socket_signal_connected);
         } else {
             connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
         }
+        connect(&socket, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::handle_socket_signal_sslError);
+#else
+        connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
+#endif
         connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::handle_socket_signal_disconnected);
         connect(&socket, &QIODevice::readyRead, this, &cTelnet::handle_socket_signal_readyRead);
-#if !defined(QT_NO_SSL)
-        connect(&socket, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::handle_socket_signal_sslError);
-#endif
     });
 
 
@@ -1572,8 +1577,12 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
     if (var.startsWith(QLatin1String("RoomNum"))) {
         if (mpHost->mpMap) {
             mpHost->mpMap->mRoomIdHash[mProfileName] = arg.toInt();
-            if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
+#if defined(INCLUDE_3DMAPPER)
+            if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper) {
                 mpHost->mpMap->mpM->update();
+            }
+#endif
+            if (mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
                 mpHost->mpMap->mpMapper->mp2dMap->update();
             }
         }

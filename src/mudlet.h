@@ -88,6 +88,8 @@ class dlgIRC;
 class dlgAboutDialog;
 class dlgProfilePreferences;
 
+class translation;
+
 class mudlet : public QMainWindow, public Ui::main_window
 {
     Q_OBJECT
@@ -100,6 +102,7 @@ public:
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
     HostManager& getHostManager() { return mHostManager; }
+    void attachDebugArea(const QString& hostname);
     FontManager mFontManager;
     Discord mDiscord;
     QPointer<QSettings> mpSettings;
@@ -373,7 +376,8 @@ public:
     bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     void show_options_dialog(QString tab);
     void setInterfaceLanguage(const QString &languageCode);
-    QList<QString> getAvailableTranslationCodes() const { return mTranslatorsMap.keys(); }
+    const QString& getInterfaceLanguage() const { return mInterfaceLanguage; }
+    QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     QPair<bool, QStringList> getLines(Host* pHost, const QString& windowName, const int lineFrom, const int lineTo);
     void setEnableFullScreenMode(const bool);
 
@@ -389,6 +393,8 @@ public:
     QPair<bool, bool> addWordToSet(const QString&);
     QPair<bool, bool> removeWordFromSet(const QString&);
     QSet<QString> getWordSet();
+    void scanForMudletTranslations(const QString&);
+    void scanForQtTranslations(const QString&);
 
 
 #if defined(INCLUDE_UPDATER)
@@ -405,19 +411,18 @@ public:
     // approximate max duration that 'Copy as image' is allowed to take (seconds)
     int mCopyAsImageTimeout;
 
-    // Has default form of "en_US" but can be just an ISO langauge code e.g. "fr" for french,
-    // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
-    // file for GUI translation
-    QString mInterfaceLanguage;
+    QMap<QString, translation> mTranslationsMap;
 
-    // ISO language code, translated human-readable name w/ English, and percent translated
-    // ie: ru_RU, Русский (Russian), 75
-    QHash<QString, std::pair<QString, int>> mLanguageCodeMap;
     // translations done high enough will get a gold star to hide the last few percent
     // as well as encourage translators to maintain it;
-    const int mTranslationStar = 95;
+    const int mTranslationGoldStar = 95;
 
-    // A different version of the above intended for Dictionary identification - it might be possible to merge them:
+    // A list of potential dictionary languages - probably will cover a much
+    // wider range of languages compared to the translations - and is intended
+    // for Dictionary identification - there is a request for users to submit
+    // entries in their system if they do not appear in this and thus get
+    // reported in the dictionary selection as the hunspell dictionary/affix
+    // filename (e.g. a "xx" or "xx_YY" form rather than "words"):
     QHash<QString, QString>mDictionaryLanguageCodeMap;
 
     // This is used to keep track of where the main dictionary files are located
@@ -487,10 +492,10 @@ signals:
     void signal_menuBarVisibilityChanged(const controlsVisibility);
     void signal_toolBarVisibilityChanged(const controlsVisibility);
     void signal_showIconsOnMenusChanged(const Qt::CheckState);
+    void signal_guiLanguageChanged(const QString&);
 
 
 private slots:
-    void slot_close_profile();
     void slot_tab_changed(int);
     void show_help_dialog();
     void slot_show_connection_dialog();
@@ -515,22 +520,27 @@ private slots:
     void slot_update_installed();
     void slot_updateAvailable(const int);
 #endif
+    void slot_toggle_compact_input_line();
 
 private:
     void initEdbee();
     void goingDown() { mIsGoingDown = true; }
-    void loadTranslators();
     bool scanDictionaryFile(QFile&, int&, QHash<QString, unsigned int>&, QStringList&);
     int scanWordList(QStringList&, QHash<QString, unsigned int>&);
     bool overwriteDictionaryFile(QFile&, const QStringList&);
     bool overwriteAffixFile(QFile&, QHash<QString, unsigned int>&);
     int getDictionaryWordCount(QFile&);
+    void check_for_mappingscript();
+    void set_compact_input_line();
+    QSettings* getQSettings();
+    void loadTranslators(const QString &languageCode);
+    void loadDictionaryLanguageMap();
+    void migrateDebugConsole(Host* currentHost);
 
 
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
 
-    QPointer<Host> mpDefaultHost;
     QQueue<QString> tempLoginQueue;
     QQueue<QString> tempPassQueue;
     QQueue<Host*> tempHostQueue;
@@ -572,8 +582,6 @@ private:
     QKeySequence connectKeySequence;
     QKeySequence disconnectKeySequence;
     QKeySequence reconnectKeySequence;
-
-    void check_for_mappingscript();
 
     QPointer<QAction> mpActionReplay;
 
@@ -619,24 +627,21 @@ private:
     bool mshowMapAuditErrors;
 
     bool mCompactInputLine;
-    void slot_toggle_compact_input_line();
-    void set_compact_input_line();
-
-    QSettings* getQSettings();
 
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:
     QString mTimeFormat;
 
-    // QMap has key of interface languages (in format of mInterfaceLanguage)
-    // value: a QList of QPointers to all the translators needed (mudlet + Qt)
-    // for the specific GUI Language, on language change to remove
-    // the translators for the old settings and add the ones for
-    // the new language
-    QMap<QString, QList<QPointer <QTranslator>>> mTranslatorsMap;
+    // Has default form of "en_US" but can be just an ISO langauge code e.g. "fr" for french,
+    // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
+    // file for GUI translation
+    QString mInterfaceLanguage;
+    // The next pair retains the path argument supplied to the corresponding
+    // scanForXxxTranslations(...) method so it is available to the subsquent
+    // loadTranslators(...) call
+    QString mQtTranslationsPathName;
+    QString mMudletTranslationsPathName;
     QList<QPointer<QTranslator>> mTranslatorsLoadedList;
-    void loadTranslationFile(const QString& translationFileName, const QString &filePath, QString &languageCode);
-    void loadLanguagesMap();
 
     // Points to the common mudlet dictionary handle once a profile has
     // requested it, then gets closed at termination of the application.
@@ -662,5 +667,44 @@ protected:
     bool eventFilter(QObject* obj, QEvent* event) override;
 };
 
+
+// A convenience class to keep all the details for the translators for a
+// specific locale code (langauge only "xx" or language/country "xx_YY")
+// in one unified structure.
+class translation
+{
+    // The following must have friendship so they can set private members:
+    friend void mudlet::scanForMudletTranslations(const QString&);
+    friend void mudlet::scanForQtTranslations(const QString&);
+
+public:
+    translation(const int translationPercent = -1) : mTranslatedPercentage(translationPercent) {}
+
+    const QString& getNativeName() const { return mNativeName; }
+    const QString& getMudletTranslationFileName() const { return mMudletTranslationFileName; }
+    const QString& getQtTranslationFileName() const { return mQtTranslationFileName; }
+    const int& getTranslatedPercentage() const { return mTranslatedPercentage; }
+    bool fromResourceFile() const { return mTranslatedPercentage >= 0; }
+
+private:
+    // Used for display in the profile preferences and is never translated:
+    QString mNativeName;
+    // ONLY if the translation is loaded from an embedded resource file,
+    // is the percentage complete of the translation - determined via a lua
+    // script that parses the output of the lrelease executable that
+    // converts the source mudlet_xx_YY.ts files into the binary
+    // mudlet_xx_YY.qm files placed into the embedded resource file during
+    // building the application:
+    int mTranslatedPercentage;
+    // What the usable Mudlet translation file-was found to be:
+    QString mMudletTranslationFileName;
+    // What the usable Qt translation file was found to be, note that in most
+    // cases the loaded file will be a "xx" language only file even though it
+    // is an "xx_YY" one here:
+    QString mQtTranslationFileName;
+    // Further items like the above pair may be needed should some of the
+    // separate libraries with a textual content have their own translations
+    // that we do not provide ourselves.
+};
 
 #endif // MUDLET_MUDLET_H

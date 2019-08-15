@@ -73,7 +73,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
   $session.PutFiles("${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe", "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe")
   $session.Close()
   $session.Dispose()
-  $DEPLOY_URL="http://www.mudlet.org/wp-content/files/Mudlet-${Env:VERSION}-windows-installer.exe"
+  $DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${Env:VERSION}-windows-installer.exe"
   npm install -g dblsqd-cli
   dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${Env:DBLSQD_USER}" -p "${Env:DBLSQD_PASS}"
   dblsqd push -a mudlet -c release -r "${Env:VERSION}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"

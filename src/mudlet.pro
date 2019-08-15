@@ -34,8 +34,8 @@
 #                                                                          #
 ############################################################################
 
-lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 7)) {
-    error("Mudlet requires Qt 5.7 or later")
+lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 11)) {
+    error("Mudlet requires Qt 5.11 or later")
 }
 
 # Including IRC Library
@@ -84,7 +84,7 @@ msvc:QMAKE_CXXFLAGS += -MP
 # Mac specific flags.
 macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.12
 
-QT += network opengl uitools multimedia gui concurrent
+QT += network uitools multimedia gui concurrent
 qtHaveModule(gamepad) {
     QT += gamepad
     message("Using Gamepad module")
@@ -99,7 +99,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.22.1
+VERSION = 4.0.3
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -175,6 +175,18 @@ linux|macx|win32 {
 # else we are on another platform which the updater code will not support so
 # don't include it either
 
+
+######################### 3D mapper toggle #######################
+# To remove the 3D mapper, set the environment WITH_3DMAPPER variable to "NO"
+# ie: export WITH_3DMAPPER="NO" qmake
+#
+linux|macx|win32 {
+    3DMAPPER_TEST = $$upper($$(WITH_3DMAPPER))
+    isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
+       DEFINES += INCLUDE_3DMAPPER
+    }
+}
+
 ###################### Platform Specific Paths and related #####################
 # Specify default location for Lua files, in OS specific LUA_DEFAULT_DIR value
 # below, if this is not done then a hardcoded default of a ./mudlet-lua/lua
@@ -224,10 +236,14 @@ unix:!macx {
     LIBS += -lpcre \
         -L/usr/local/lib/ \
         -lyajl \
-        -lGLU \
         -lzip \
         -lz \
         -lpugixml
+
+    isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
+       LIBS += -lGLU
+    }
+
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32 {
     MINGW_BASE_DIR = $$(MINGW_BASE_DIR)
@@ -241,8 +257,6 @@ unix:!macx {
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
         -lyajl \
-        -lopengl32 \
-        -lglu32 \
         -lpugixml \
         -lWs2_32 \
         -L"$${MINGW_BASE_DIR}\\bin"
@@ -319,10 +333,10 @@ DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 # tweaking in that situation
 
 # Edbee widget needed in all cases.
-# Mudlet customised (Lua 5.1 specific?) lua-code-format source code needed in
+# Mudlet customised (Lua 5.1 specific) lua-code-format source code needed in
 # all cases. (The code is built into a lcf module within
 # TLuaInterpreter::initIndenterGlobals() on demand) - and we need to get the
-# git submodule from Mudlet's own GitHub server...
+# git submodule from Mudlet's own GitHub repository
 
 # NOTE: It does SEEM possible to prebuild and install this into a system wide
 # luarocks installation by changing to the "./3rdparty/lcf" directory with the
@@ -441,7 +455,6 @@ SOURCES += \
     EAction.cpp \
     exitstreewidget.cpp \
     FontManager.cpp \
-    glwidget.cpp \
     Host.cpp \
     HostManager.cpp \
     ircmessageformatter.cpp \
@@ -512,7 +525,6 @@ HEADERS += \
     dlgVarsMainArea.h \
     EAction.h \
     exitstreewidget.h \
-    glwidget.h \
     Host.h \
     HostManager.h \
     ircmessageformatter.h \
@@ -623,6 +635,31 @@ linux|macx|win32 {
 } else {
     !build_pass{
         message("The Updater code is excluded as on-line updating is not available on this platform")
+    }
+}
+
+linux|macx|win32 {
+    contains( DEFINES, INCLUDE_3DMAPPER ) {
+        HEADERS += glwidget.h
+        SOURCES += glwidget.cpp
+        QT += opengl
+
+        win32 {
+            LIBS += -lopengl32 \
+                    -lglu32
+        }
+
+        !build_pass{
+            message("The 3D mapper code is included in this configuration")
+        }
+    } else {
+        !build_pass{
+            message("The 3D mapper code is excluded from this configuration")
+        }
+    }
+} else {
+    !build_pass{
+        message("The 3D mapper code is excluded as OpenGL 1.5 might not be available on this platform")
     }
 }
 
@@ -1337,7 +1374,7 @@ DISTFILES += \
     ../CI/appveyor.after_success.ps1 \
     ../CI/appveyor.install.ps1 \
     ../CI/appveyor.set-build-info.ps1 \
-    ../CI/appveyor.set-environment.ps1 \
+    ../CI/appveyor.functions.ps1 \
     ../CI/appveyor.build.ps1 \
     mudlet-lua/lua/ldoc.css \
     mudlet-lua/genDoc.sh \

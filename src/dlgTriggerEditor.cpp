@@ -561,6 +561,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                                   ? edbee::TextEditorConfig::ShowWhitespaces
                                   : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+    config->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
     config->endChanges();
 
     connect(comboBox_searchTerms, qOverload<const QString&>(&QComboBox::activated), this, &dlgTriggerEditor::slot_searchMudletItems);
@@ -747,12 +748,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     widget_searchTerm->updateGeometry();
 
     if (mAutosaveInterval > 0) {
-#if QT_VERSION < QT_VERSION_CHECK(5, 9, 0)
-        startTimer(mAutosaveInterval * 1000 * 60);
-#else
         startTimer(mAutosaveInterval * 1min);
-#endif
-
     }
 }
 
@@ -3224,9 +3220,9 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
 
 
     pT->setName(name);
-    pT->setIsFolder(isFolder);
-    pT->setRegexCodeList(regexList, regexPropertyList, true);
+    pT->setRegexCodeList(regexList, regexPropertyList);
     pT->setScript(script);
+    pT->setIsFolder(isFolder);
     pT->setIsActive(false);
     pT->setIsMultiline(false);
     pT->mStayOpen = 0;
@@ -7077,6 +7073,8 @@ void dlgTriggerEditor::slot_script_main_area_add_handler()
 
 void dlgTriggerEditor::slot_debug_mode()
 {
+    mudlet::self()->attachDebugArea(mpHost->getName());
+
     mudlet::mpDebugArea->setVisible(!mudlet::debugMode);
     mudlet::debugMode = !mudlet::debugMode;
     mudlet::mpDebugArea->setWindowTitle("Central Debug Console");
@@ -8169,6 +8167,7 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
     config->setCaretBlinkRate(200);
     config->setIndentSize(2);
     config->setCaretWidth(1);
+    config->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
     config->endChanges();
 
     // If undo is not disabled when setting the initial text, the
@@ -8192,6 +8191,7 @@ void dlgTriggerEditor::setThemeAndOtherSettings(const QString& theme)
                                            ? edbee::TextEditorConfig::ShowWhitespaces
                                            : edbee::TextEditorConfig::HideWhitespaces);
         localConfig->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
+        localConfig->setAutocompleteAutoShow(mpHost->mEditorAutoComplete);
         localConfig->endChanges();
 }
 

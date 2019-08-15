@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>747</width>
+    <width>883</width>
     <height>808</height>
    </rect>
   </property>
@@ -42,7 +42,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>3</number>
      </property>
      <widget class="QWidget" name="tab_general">
       <property name="sizePolicy">
@@ -167,9 +167,6 @@
        </item>
        <item row="1" column="0">
         <widget class="QGroupBox" name="groupBox_encoding">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
          <property name="title">
           <string>Language &amp;&amp; data encoding</string>
          </property>
@@ -184,13 +181,8 @@
           <item row="0" column="1">
            <widget class="QComboBox" name="comboBox_guiLanguage">
             <property name="toolTip">
-             <string>&lt;p&gt;Can you help translate Mudlet? &lt;span style=&quot;font-weight:600;&quot;&gt;https://www.mudlet.org/translate&lt;/span&gt;&lt;/p&gt;</string>
+             <string>&lt;p&gt;Can you help translate Mudlet?&lt;/p&gt;&lt;p&gt;If so, please visit: &lt;b&gt;https://www.mudlet.org/translate&lt;/b&gt;.&lt;/p&gt;</string>
             </property>
-            <item>
-             <property name="text">
-              <string>English</string>
-             </property>
-            </item>
            </widget>
           </item>
           <item row="0" column="2">
@@ -206,7 +198,7 @@
              <bool>true</bool>
             </property>
             <property name="toolTip">
-             <string>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren't showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;&lt;p&gt;Note: While this will allow Mudlet to show text in other languages, internalisation is still in development so triggers or Lua code won't work yet.&lt;/p&gt;</string>
+             <string>&lt;p&gt;If you are playing a non-English game and seeing � instead of text, or special letters like &lt;span style=&quot; font-weight:600;&quot;&gt;ñ&lt;/span&gt; aren't showing right - try changing the encoding to UTF-8 or to one suggested by your game.&lt;/p&gt;</string>
             </property>
            </widget>
           </item>
@@ -228,9 +220,9 @@
        <item row="2" column="0">
         <widget class="QGroupBox" name="groupBox_miscellaneous">
          <property name="title">
-          <string>Misc</string>
+          <string>Miscellaneous</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout">
+         <layout class="QVBoxLayout" name="verticalLayout_groupBox_miscellaneous">
           <item>
            <widget class="QCheckBox" name="mAlertOnNewData">
             <property name="text">
@@ -531,7 +523,7 @@
          <property name="title">
           <string>Spell checking</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_2">
+         <layout class="QVBoxLayout" name="verticalLayout_groupBox_spellCheck">
           <item>
            <widget class="QCheckBox" name="checkBox_spellCheck">
             <property name="toolTip">
@@ -697,7 +689,7 @@
          <property name="title">
           <string>Display Border</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout">
+         <layout class="QGridLayout" name="gridLayout_groupBox_borders">
           <item row="0" column="0">
            <widget class="QLabel" name="label_26">
             <property name="sizePolicy">
@@ -1180,8 +1172,8 @@
       <attribute name="title">
        <string>Editor</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_tab_codeEditor">
-       <item row="0" column="0">
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
         <widget class="QGroupBox" name="groupbox_codeEditorThemeSelection">
          <property name="title">
           <string>Theme</string>
@@ -1261,7 +1253,23 @@
          </layout>
         </widget>
        </item>
-       <item row="1" column="0">
+       <item>
+        <widget class="QGroupBox" name="groupBox">
+         <property name="title">
+          <string>Autocomplete</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_4">
+          <item>
+           <widget class="QCheckBox" name="checkBox_autocompleteLuaCode">
+            <property name="text">
+             <string>Autocomplete Lua functions in code editor</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <spacer name="verticalSpacer_codeEditor">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -2797,20 +2805,16 @@
        <item>
         <widget class="QGroupBox" name="groupBox_ssl">
          <property name="title">
-          <string>SSL/TLS</string>
+          <string>TLS/SSL secure connection</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_ssl">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="checkBox_ssl">
-            <property name="toolTip">
-             <string extracomment="Enable SSL / TLS for this game"/>
-            </property>
-            <property name="text">
-             <string>Secure connection</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0" colspan="2">
+          <item row="0" column="0" colspan="2">
            <widget class="QGroupBox" name="groupBox_ssl_certificate">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -2896,37 +2900,7 @@
             </layout>
            </widget>
           </item>
-          <item row="2" column="0">
-           <widget class="QCheckBox" name="checkBox_self_signed">
-            <property name="toolTip">
-             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
-            </property>
-            <property name="text">
-             <string>Accept self-signed certificates</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QCheckBox" name="checkBox_expired">
-            <property name="toolTip">
-             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
-            </property>
-            <property name="text">
-             <string>Accept expired certificates</string>
-            </property>
-           </widget>
-          </item>
           <item row="3" column="0" colspan="2">
-           <widget class="QCheckBox" name="checkBox_ignore_all">
-            <property name="toolTip">
-             <string extracomment="Ignore all SSL/TLS errors - this negates the point of a secure connection, use carefully"/>
-            </property>
-            <property name="text">
-             <string>Accept all certificate errors       (unsecure)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0" colspan="2">
            <widget class="QFrame" name="notificationArea">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -4853,6 +4827,36 @@
             </layout>
            </widget>
           </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="checkBox_self_signed">
+            <property name="toolTip">
+             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
+            </property>
+            <property name="text">
+             <string>Accept self-signed certificates</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QCheckBox" name="checkBox_expired">
+            <property name="toolTip">
+             <string extracomment="Accept secure certificates from the game even if they have expired. This presents a security risk"/>
+            </property>
+            <property name="text">
+             <string>Accept expired certificates</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_ignore_all">
+            <property name="toolTip">
+             <string extracomment="Ignore all SSL/TLS errors - this negates the point of a secure connection, use carefully"/>
+            </property>
+            <property name="text">
+             <string>Accept all certificate errors       (unsecure)</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -4863,6 +4867,9 @@
          </property>
          <property name="checkable">
           <bool>true</bool>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_proxy">
           <item row="0" column="0">
@@ -4881,14 +4888,14 @@
           <item row="0" column="1">
            <widget class="QLabel" name="label_5">
             <property name="text">
-             <string>:</string>
+             <string notr="true">:</string>
             </property>
            </widget>
           </item>
           <item row="0" column="2">
            <widget class="QLineEdit" name="lineEdit_proxyPort">
             <property name="inputMask">
-             <string>00009</string>
+             <string notr="true">00009</string>
             </property>
             <property name="placeholderText">
              <string>port</string>
@@ -4958,7 +4965,7 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout">
+     <layout class="QHBoxLayout" name="horizontalLayout_widget_bottom">
       <item>
        <spacer name="horizontalSpacer_bottom">
         <property name="orientation">
