@@ -101,7 +101,7 @@ public:
     void compile();
     void execute();
     bool isFilterChain();
-    bool setRegexCodeList(QStringList regex, QList<int> regexPropertyList, const bool addingTrigger = false);
+    bool setRegexCodeList(QStringList regex, QList<int> regexPropertyList);
     QString getScript() { return mScript; }
     bool setScript(const QString& script);
     bool compileScript();

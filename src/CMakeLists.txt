@@ -55,7 +55,6 @@ set(mudlet_SRCS
     EAction.cpp
     exitstreewidget.cpp
     FontManager.cpp
-    glwidget.cpp
     Host.cpp
     HostManager.cpp
     ircmessageformatter.cpp
@@ -150,7 +149,6 @@ set(mudlet_MOC_HDRS
     dlgVarsMainArea.h
     EAction.h
     exitstreewidget.h
-    glwidget.h
     Host.h
     mudlet.h
     T2DMap.h
@@ -213,6 +211,12 @@ if(USE_UPDATER)
   list(APPEND mudlet_SRCS updater.cpp)
   list(APPEND mudlet_MOC_HDRS updater.h)
 endif(USE_UPDATER)
+
+
+if(USE_3DMAPPER)
+  list(APPEND mudlet_SRCS glwidget.cpp)
+  list(APPEND mudlet_MOC_HDRS glwidget.h)
+endif(USE_3DMAPPER)
 
 if(MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -MP") # parallel builds
@@ -334,25 +338,12 @@ if((APPLE) AND (PKG_CONFIG_FOUND))
   endif()
 endif()
 
-find_package(Qt5 5.7 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools Widgets Concurrent)
-
-# This is not present before Qt 5.7:
+find_package(Qt5 5.11 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools Widgets Concurrent)
 find_package(Qt5 COMPONENTS Gamepad QUIET)
-
-# This is not present before Qt 5.9:
 find_package(Qt5 COMPONENTS TextToSpeech QUIET)
 
-if (Qt5Core_VERSION VERSION_LESS 5.7)
-  message(FATAL_ERROR "Mudlet requires Qt 5.7 or later, yours is ${Qt5Core_VERSION}")
-elif(Qt5Core_VERSION VERSION_LESS 5.9)
-  # Qt Gamepad was a Technology Preview in 5.7
-  # Qt Gamepad was a Technology Preview 2 in 5.8
-  # Qt Speech (or at least the TTS part) was a Technology Preview in 5.8
-  message(WARNING "Qt version: ${Qt5Core_VERSION} - Gamepad and TextToSpeech may not be supported, as officially they requires 5.9 and 5.10 respectively")
-elif(Qt5Core_VERSION VERSION_LESS 5.10)
-  # Qt Speech (or at least the TTS part) was a Technology Preview 2 in 5.9, now supported on Mingw
-  # Qt Gamepad was officially released in 5.9
-  message(WARNING "Qt version: ${Qt5Core_VERSION} - TextToSpeech may not be supported, officially it requires 5.10")
+if (Qt5Core_VERSION VERSION_LESS 5.11)
+  message(FATAL_ERROR "Mudlet requires Qt 5.11 or later, yours is ${Qt5Core_VERSION}")
 else()
   # Qt Speech (or at least the TTS part) was officially release in 5.10
   message(STATUS "Qt version: ${Qt5Core_VERSION}")
@@ -376,6 +367,15 @@ else()
   message(STATUS "The Updater code is excluded as on-line updating is not available on this platform")
 endif()
 
+if((CMAKE_SYSTEM_NAME STREQUAL "Linux") OR (CMAKE_SYSTEM_NAME STREQUAL "Windows") OR (CMAKE_SYSTEM_NAME STREQUAL "Darwin"))
+  if(USE_3DMAPPER)
+    message(STATUS "The 3D mapper code is included in this configuration")
+  else(USE_3DMAPPER)
+    message(STATUS "The 3D mapper code is excluded from this configuration")
+  endif(USE_3DMAPPER)
+else()
+  message(STATUS "The 3D mapper code is excluded as it might not be supported on this platform")
+endif()
 
 if(WIN32)
   set(mudlet_RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico)
