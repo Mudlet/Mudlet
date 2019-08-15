@@ -175,7 +175,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // system message area
     mpSystemMessageArea = new dlgSystemMessageArea(this);
     mpSystemMessageArea->setObjectName(QStringLiteral("mpSystemMessageArea"));
-    splitter_right->addWidget(mpSystemMessageArea);
+    //splitter_right->addWidget(mpSystemMessageArea);
+    mpSystemMessageArea->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Minimum);
     connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, mpSystemMessageArea, &QWidget::hide);
 
     // main areas
@@ -265,6 +266,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpSourceEditorEdbee->textEditorComponent()->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(mpSourceEditorEdbee->textEditorComponent(), &QWidget::customContextMenuRequested, this, &dlgTriggerEditor::slot_editorContextMenu);
 
+    splitter_right->addWidget(mpSystemMessageArea);
+
     // option areas
     mpErrorConsole = new TConsole(mpHost, TConsole::ErrorConsole, this);
     mpErrorConsole->setWrapAt(100);
@@ -274,23 +277,23 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpErrorConsole->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Minimum);
     splitter_right->addWidget(mpErrorConsole);
 
-    splitter_right->setStretchFactor(0, 0); // mpSystemMessageArea
+    splitter_right->setStretchFactor(0, 1); // mpTriggersMainArea
     splitter_right->setCollapsible(0, false);
-    splitter_right->setStretchFactor(1, 1); // mpTriggersMainArea
+    splitter_right->setStretchFactor(1, 1); // mpTimersMainArea
     splitter_right->setCollapsible(1, false);
-    splitter_right->setStretchFactor(2, 1); // mpTimersMainArea
+    splitter_right->setStretchFactor(2, 1); // mpAliasMainArea
     splitter_right->setCollapsible(2, false);
-    splitter_right->setStretchFactor(3, 1); // mpAliasMainArea
+    splitter_right->setStretchFactor(3, 1); // mpActionsMainArea
     splitter_right->setCollapsible(3, false);
-    splitter_right->setStretchFactor(4, 1); // mpActionsMainArea
+    splitter_right->setStretchFactor(4, 1); // mpKeysMainArea
     splitter_right->setCollapsible(4, false);
-    splitter_right->setStretchFactor(5, 1); // mpKeysMainArea
+    splitter_right->setStretchFactor(5, 1); // mpVarsMainArea
     splitter_right->setCollapsible(5, false);
-    splitter_right->setStretchFactor(6, 1); // mpVarsMainArea
+    splitter_right->setStretchFactor(6, 1); // mpScriptsMainArea
     splitter_right->setCollapsible(6, false);
-    splitter_right->setStretchFactor(7, 1); // mpScriptsMainArea
+    splitter_right->setStretchFactor(7, 3); // mpSourceEditorArea
     splitter_right->setCollapsible(7, false);
-    splitter_right->setStretchFactor(8, 3); // mpSourceEditorArea
+    splitter_right->setStretchFactor(8, 0); // mpSystemMessageArea
     splitter_right->setCollapsible(8, false);
     splitter_right->setStretchFactor(9, 1); // mpErrorConsole
     splitter_right->setCollapsible(9, false);
