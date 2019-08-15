@@ -126,8 +126,6 @@ matrix:
         - qt511base
         - qt511multimedia
         - qt511tools
-before_cache:
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew cleanup; fi
 before_install:
   - if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ -d "${HOME}/.homebrew-cache" ]; then cp -f -R "${HOME}/.homebrew-cache" "/usr/local/Homebrew"; fi
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | tee -a "${HOME}/ca-file.pem"; fi
