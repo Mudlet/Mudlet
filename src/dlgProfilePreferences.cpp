@@ -724,10 +724,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mpMenu->clear();
     for (unsigned int i = 0, total = profileList.size(); i < total; ++i) {
         QString s = profileList.at(i);
-        if (s.isEmpty() || !s.compare(pHost->getName()) || !s.compare(QStringLiteral("default_host"))) {
+        if (s.isEmpty() || !s.compare(pHost->getName())) {
             // Do not include THIS profile in the list - it will
             // automatically get saved - as the file to copy to the other
-            // profiles!  Also exclude the dummy "default_host" one
+            // profiles!
             continue;
         }
 
@@ -1084,9 +1084,7 @@ void dlgProfilePreferences::clearHostDetails()
     acceptServerGUI->setChecked(false);
 
     // Given that the IRC sub-system can handle there NOT being an active host
-    // this may need revising - but then the IRC sub-system may need to be fixed
-    // to handle switching back to the "default_host" should the currently
-    // active one be the one "going away" at this point...
+    // this may need revising
     ircHostName->clear();
     ircHostPort->clear();
     ircChannels->clear();
@@ -2924,21 +2922,18 @@ void dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs(const bool sta
 
 /*
  * This is to deal particularly with the case where the preferences dialog is
- * opened without a host instance (other than the dummy "default_host") being
- * around - and then the user starts up a profile and one gets created.
- * In that situation we detect the signal that the mudlet class sends out (now)
+ * opened without a host instance being around - and then the user starts up
+ * a profile and one gets created.
+ * In that situation we detect the signal that the mudlet class sends out
  * when a host is created and wire it up into the controls that until then
  * have been disabled/greyed-out.
  */
 void dlgProfilePreferences::slot_handleHostAddition(Host* pHost, const quint8 count)
 {
-    // count will be 2 in the case we particularly want to handle (adding the
-    // first real Host instance):
-    if (!mpHost && pHost && count < 3) {
+    if (!mpHost && pHost && count < 2) {
         // We have not been constructed with a valid Host pointer,
         // AND a real Host instance has just been created
-        // AND there are only two Host instances (the "real" one and the
-        // "default_host") around.
+        // AND there is only one Host instance around.
         mpHost = pHost;
         // So make connections to the details of the real Host instance:
         initWithHost(pHost);
