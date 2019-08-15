@@ -210,6 +210,7 @@ mudlet::mudlet()
     mpTabBar->setMaximumHeight(30);
     mpTabBar->setFocusPolicy(Qt::NoFocus);
     mpTabBar->setTabsClosable(true);
+    mpTabBar->setAutoHide(true);
     connect(mpTabBar, &QTabBar::tabCloseRequested, this, &mudlet::slot_close_profile_requested);
     mpTabBar->setMovable(true);
     connect(mpTabBar, &QTabBar::currentChanged, this, &mudlet::slot_tab_changed);
@@ -402,26 +403,6 @@ mudlet::mudlet()
 
     disableToolbarButtons();
 
-    mpDebugArea = new QMainWindow(nullptr);
-    // PLACEMARKER: Host creation (1) - "default_host" case
-    QString defaultHost(QStringLiteral("default_host"));
-    // We DO NOT emit a signal_hostCreated for THIS case:
-    mHostManager.addHost(defaultHost, QString(), QString(), QString());
-    mpDefaultHost = mHostManager.getHost(defaultHost);
-    mpDebugConsole = new TConsole(mpDefaultHost, TConsole::CentralDebugConsole);
-    mpDebugConsole->setSizePolicy(sizePolicy);
-    mpDebugConsole->setWrapAt(100);
-    mpDebugArea->setCentralWidget(mpDebugConsole);
-    mpDebugArea->setWindowTitle(tr("Central Debug Console"));
-    mpDebugArea->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_debug.png")));
-
-    auto consoleCloser = new TConsoleMonitor(mpDebugArea);
-    mpDebugArea->installEventFilter(consoleCloser);
-
-    QSize generalRule(qApp->desktop()->size());
-    generalRule -= QSize(30, 30);
-    mpDebugArea->resize(QSize(800, 600).boundedTo(generalRule));
-    mpDebugArea->hide();
     QFont mainFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 8, QFont::Normal);
     if (mEnableFullScreenMode) {
         showFullScreen();
@@ -498,8 +479,6 @@ mudlet::mudlet()
     connect(dactionShowMap, &QAction::triggered, this, &mudlet::slot_mapper);
     connect(dactionOptions, &QAction::triggered, this, &mudlet::slot_show_options_dialog);
     connect(dactionAbout, &QAction::triggered, this, &mudlet::slot_show_about_dialog);
-    // PLACEMARKER: Save for later restoration (2 of 2) (by adding a "Close" (profile) option to first menu on menu bar:
-    // connect(mactionCloseProfile, &QAction::triggered, this, &mudlet::slot_close_profile);
 
     // we historically use Alt on Windows and Linux, but that is uncomfortable on macOS
 #if defined(Q_OS_MACOS)
@@ -845,6 +824,22 @@ void mudlet::loadDictionaryLanguageMap()
                                   {QStringLiteral("zh_cn"), tr("Chinese (China - simplified)")},
                                   {QStringLiteral("zh_tw"), tr("Chinese (Taiwan - traditional)")},
                                   {QStringLiteral("zu"), tr("Zulu")}};
+}
+
+// migrates the Central Debug Console to the next available host, if any
+void mudlet::migrateDebugConsole(Host* currentHost)
+{
+    if (!mpDebugArea) {
+        return;
+    }
+
+    const auto debugConsoleHost = mpDebugConsole->getHost();
+    if (debugConsoleHost != currentHost) {
+        return;
+    }
+
+    mpDebugArea->setAttribute(Qt::WA_DeleteOnClose);
+    mpDebugArea->close();
 }
 
 // As we are currently only using files from a resource file we only need to
@@ -1403,16 +1398,17 @@ void mudlet::slot_close_profile_requested(int tab)
 
     pH->stopAllTriggers();
     pH->mpEditorDialog->close();
-    for (auto consoleName : hostConsoleMap.keys()) {
-        hostConsoleMap[consoleName]->close();
-        hostConsoleMap.remove(consoleName);
 
+    for (auto consoleName : hostConsoleMap.keys()) {
         if (dockWindowMap.contains(consoleName)) {
             dockWindowMap[consoleName]->setAttribute(Qt::WA_DeleteOnClose);
             dockWindowMap[consoleName]->close();
             removeDockWidget(dockWindowMap[consoleName]);
             dockWindowMap.remove(consoleName);
         }
+
+        hostConsoleMap[consoleName]->close();
+        hostConsoleMap.remove(consoleName);
     }
 
     if (pH->mpNotePad) {
@@ -1435,109 +1431,32 @@ void mudlet::slot_close_profile_requested(int tab)
         mpIrcClientMap[pH]->deleteLater();
     }
 
+    migrateDebugConsole(pH);
+
     // Wait for disconnection to complete
     while (pH->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
         QApplication::processEvents();
     }
 
-    mConsoleMap[pH]->close();
-    if (mTabMap.contains(pH->getName())) {
-        mpTabBar->removeTab(tab);
-        mConsoleMap.remove(pH);
-        mTabMap.remove(pH->getName());
-        // PLACEMARKER: Host destruction (1) - from close button on tab bar
-        // Unfortunately the spaghetti nature of the code means that the profile
-        // is also (maybe) saved (or not) in the TConsole::close() call prior to
-        // here but because that is optional we cannot only force a "save"
-        // operation in the profile preferences dialog for the Host specific
-        // details BEFORE the save (so any changes make it into the save) -
-        // instead we just have to accept that any profile changes will not be
-        // saved if the preferences dialog is not closed before the profile is...
-        int hostCount = mHostManager.getHostCount();
-        emit signal_hostDestroyed(pH, --hostCount);
-        mHostManager.deleteHost(pH->getName());
+    mConsoleMap.value(pH)->close();
+    if (!mTabMap.contains(pH->getName())) {
+        return;
     }
 
-    // hide the tab bar if we only have 1 or no tabs available. saves screen space.
-    if (mConsoleMap.size() > 1) {
-        mpTabBar->show();
-    } else {
-        mpTabBar->hide();
-    }
-}
-
-// Not currently used - may not be properly functional anymore!
-void mudlet::slot_close_profile()
-{
-    if (mpCurrentActiveHost) {
-        if (mConsoleMap.contains(mpCurrentActiveHost)) {
-            Host* pH = mpCurrentActiveHost;
-            if (pH) {
-                std::list<QPointer<TToolBar>> hostTToolBarMap = pH->getActionUnit()->getToolBarList();
-                QMap<QString, TDockWidget*>& dockWindowMap = pH->mpConsole->mDockWidgetMap;
-                QMap<QString, TConsole*>& hostConsoleMap = pH->mpConsole->mSubConsoleMap;
-                QString name = pH->getName();
-
-                pH->closingDown();
-
-                // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-                pH->mTelnet.disconnectIt();
-
-                mpCurrentActiveHost->mpEditorDialog->close();
-                for (auto consoleName : hostConsoleMap.keys()) {
-                    hostConsoleMap[consoleName]->close();
-                    hostConsoleMap.remove(consoleName);
-
-                    if (dockWindowMap.contains(consoleName)) {
-                        dockWindowMap[consoleName]->setAttribute(Qt::WA_DeleteOnClose);
-                        dockWindowMap[consoleName]->close();
-                        removeDockWidget(dockWindowMap[consoleName]);
-                        dockWindowMap.remove(consoleName);
-                    }
-                }
-
-                if (pH->mpNotePad) {
-                    pH->mpNotePad->save();
-                    pH->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-                    pH->mpNotePad->close();
-                    pH->mpNotePad = nullptr;
-                }
-
-                for (TToolBar* pTB : hostTToolBarMap) {
-                    if (pTB) {
-                        pTB->setAttribute(Qt::WA_DeleteOnClose);
-                        pTB->deleteLater();
-                    }
-                }
-
-                // close IRC client window if it is open.
-                if (mpIrcClientMap.contains(pH)) {
-                    mpIrcClientMap[pH]->setAttribute(Qt::WA_DeleteOnClose);
-                    mpIrcClientMap[pH]->deleteLater();
-                }
-
-                // Wait for disconnection to complete
-                while (pH->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
-                    QApplication::processEvents();
-                }
-
-                mConsoleMap[pH]->close();
-                if (mTabMap.contains(name)) {
-                    mpTabBar->removeTab(mpTabBar->currentIndex());
-                    mConsoleMap.remove(pH);
-                    // PLACEMARKER: Host destruction (2) - normal case
-                    int hostCount = mHostManager.getHostCount();
-                    emit signal_hostDestroyed(pH, --hostCount);
-                    mHostManager.deleteHost(name);
-                    mTabMap.remove(name);
-                }
-                mpCurrentActiveHost = Q_NULLPTR;
-            }
-        }
-
-    } else {
-        disableToolbarButtons();
-    }
+    mpTabBar->removeTab(tab);
+    mConsoleMap.remove(pH);
+    mTabMap.remove(pH->getName());
+    // PLACEMARKER: Host destruction (1) - from close button on tab bar
+    // Unfortunately the spaghetti nature of the code means that the profile
+    // is also (maybe) saved (or not) in the TConsole::close() call prior to
+    // here but because that is optional we cannot only force a "save"
+    // operation in the profile preferences dialog for the Host specific
+    // details BEFORE the save (so any changes make it into the save) -
+    // instead we just have to accept that any profile changes will not be
+    // saved if the preferences dialog is not closed before the profile is...
+    int hostCount = mHostManager.getHostCount();
+    emit signal_hostDestroyed(pH, --hostCount);
+    mHostManager.deleteHost(pH->getName());
 }
 
 void mudlet::slot_tab_changed(int tabID)
@@ -1631,11 +1550,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
      */
     mpTabBar->setTabData(newTabID, tabName);
     mTabMap[pH->getName()] = pConsole;
-    if (mConsoleMap.size() > 1) {
-        mpTabBar->show();
-    } else {
-        mpTabBar->hide();
-    }
+
     //update the main window title when we spawn a new tab
     setWindowTitle(pH->getName() + " - " + version);
 
@@ -1738,6 +1653,7 @@ void mudlet::disableToolbarButtons()
     mpMainToolBar->actions()[13]->setEnabled(false);
     mpMainToolBar->actions()[14]->setEnabled(false);
 
+    mpActionIRC->setEnabled(false);
     mpActionReplay->setEnabled(false);
     mpActionReplay->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
                                .arg(tr("<p>Load a Mudlet replay.</p>"
@@ -1767,6 +1683,7 @@ void mudlet::enableToolbarButtons()
     mpMainToolBar->actions()[12]->setEnabled(true);
     mpMainToolBar->actions()[13]->setEnabled(true);
     mpMainToolBar->actions()[14]->setEnabled(true);
+    mpActionIRC->setEnabled(true);
 
     if (!mpToolBarReplay) {
         // Only enable the replay button if it is not disabled because there is
@@ -1995,56 +1912,56 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
     }
 
     auto hostName(pHost->getName());
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    auto pD = pHost->mpConsole->mDockWidgetMap.value(name);
+    auto console = pHost->mpConsole->mSubConsoleMap.value(name);
+    auto dockwidget = pHost->mpConsole->mDockWidgetMap.value(name);
 
-    if (!pC && !pD) {
+    if (!console && !dockwidget) {
         // The name is not used in either the QMaps of all user created TConsole
         // or TDockWidget instances - so we can make a NEW one:
-        pD = new TDockWidget(pHost, name);
-        pD->setObjectName(QStringLiteral("dockWindow_%1_%2").arg(hostName, name));
-        pD->setContentsMargins(0, 0, 0, 0);
-        pD->setFeatures(QDockWidget::AllDockWidgetFeatures);
-        pD->setWindowTitle(tr("User window - %1 - %2").arg(hostName, name));
-        pHost->mpConsole->mDockWidgetMap.insert(name, pD);
+        dockwidget = new TDockWidget(pHost, name);
+        dockwidget->setObjectName(QStringLiteral("dockWindow_%1_%2").arg(hostName, name));
+        dockwidget->setContentsMargins(0, 0, 0, 0);
+        dockwidget->setFeatures(QDockWidget::AllDockWidgetFeatures);
+        dockwidget->setWindowTitle(tr("User window - %1 - %2").arg(hostName, name));
+        pHost->mpConsole->mDockWidgetMap.insert(name, dockwidget);
         // It wasn't obvious but the parent passed to the TConsole constructor
         // is sliced down to a QWidget and is NOT a TDockWidget pointer:
-        pC = new TConsole(pHost, TConsole::UserWindow, pD->widget());
-        pC->setObjectName(QStringLiteral("dockWindowConsole_%1_%2").arg(hostName, name));
+        console = new TConsole(pHost, TConsole::UserWindow, dockwidget->widget());
+        console->setObjectName(QStringLiteral("dockWindowConsole_%1_%2").arg(hostName, name));
         // Without this the TConsole instance inside the TDockWidget will be
         // left being called the default value of "main":
-        pC->mConsoleName = name;
-        pC->setContentsMargins(0, 0, 0, 0);
-        pD->setTConsole(pC);
-        pC->show();
-        pC->layerCommandLine->hide();
-        pC->mpScrollBar->hide();
-        pHost->mpConsole->mSubConsoleMap.insert(name, pC);
+        console->mConsoleName = name;
+        console->setContentsMargins(0, 0, 0, 0);
+        dockwidget->setTConsole(console);
+        console->show();
+        console->layerCommandLine->hide();
+        console->mpScrollBar->hide();
+        pHost->mpConsole->mSubConsoleMap.insert(name, console);
         // TODO: Allow user to specify alternate dock locations - and for it to be floating and not docked initially!
-        addDockWidget(Qt::RightDockWidgetArea, pD);
+        addDockWidget(Qt::RightDockWidgetArea, dockwidget);
 
         setWindowFontSize(pHost, name, 10);
 
-        if (loadLayout && !pD->hasLayoutAlready) {
+        if (loadLayout && !dockwidget->hasLayoutAlready) {
             loadWindowLayout();
-            pD->hasLayoutAlready = true;
+            dockwidget->hasLayoutAlready = true;
         }
 
         return true;
-    } else if (pC && pD) {
+    } else if (console && dockwidget) {
         // The name is used in BOTH the QMaps of all user created TConsole
         // and TDockWidget instances - so we HAVE an existing user window,
         // Lets confirm this:
-        Q_ASSERT_X(pC->getType()==TConsole::UserWindow, "mudlet::openWindow(...)", "An existing TConsole was expected to be marked as a User Window type but it isn't");
-        pD->update();
+        Q_ASSERT_X(console->getType()==TConsole::UserWindow, "mudlet::openWindow(...)", "An existing TConsole was expected to be marked as a User Window type but it isn't");
+        dockwidget->update();
         //do not change the ->show() order! Otherwise, it will automatically minimize the floating/dock window(!!)
-        pC->show();
-        pD->show();
-        pC->showWindow(name);
+        console->show();
+        dockwidget->show();
+        console->showWindow(name);
 
-        if (loadLayout && !pD->hasLayoutAlready) {
+        if (loadLayout && !dockwidget->hasLayoutAlready) {
             loadWindowLayout();
-            pD->hasLayoutAlready = true;
+            dockwidget->hasLayoutAlready = true;
         }
 
         return true;
@@ -2869,31 +2786,30 @@ void mudlet::closeEvent(QCloseEvent* event)
         mpDebugArea->setAttribute(Qt::WA_DeleteOnClose);
         mpDebugArea->close();
     }
+
     foreach (TConsole* pC, mConsoleMap) {
-        if (pC->mpHost->getName() != QStringLiteral("default_host")) {
-            // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-            pC->mpHost->mTelnet.disconnectIt();
+        // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
+        pC->mpHost->mTelnet.disconnectIt();
 
-            // close script-editor
-            if (pC->mpHost->mpEditorDialog) {
-                pC->mpHost->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
-                pC->mpHost->mpEditorDialog->close();
-            }
-            if (pC->mpHost->mpNotePad) {
-                pC->mpHost->mpNotePad->save();
-                pC->mpHost->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-                pC->mpHost->mpNotePad->close();
-                pC->mpHost->mpNotePad = nullptr;
-            }
-
-            // Wait for disconnection to complete
-            while (pC->mpHost->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
-                QApplication::processEvents();
-            }
-
-            // close console
-            pC->close();
+        // close script-editor
+        if (pC->mpHost->mpEditorDialog) {
+            pC->mpHost->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
+            pC->mpHost->mpEditorDialog->close();
         }
+        if (pC->mpHost->mpNotePad) {
+            pC->mpHost->mpNotePad->save();
+            pC->mpHost->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
+            pC->mpHost->mpNotePad->close();
+            pC->mpHost->mpNotePad = nullptr;
+        }
+
+        // Wait for disconnection to complete
+        while (pC->mpHost->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
+            QApplication::processEvents();
+        }
+
+        // close console
+        pC->close();
     }
 
     // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
@@ -2918,29 +2834,27 @@ void mudlet::forceClose()
         host->saveProfile();
         console->mUserAgreedToCloseConsole = true;
 
-        if (host->getName() != QStringLiteral("default_host")) {
-            host->mTelnet.disconnectIt();
-            // close script-editor
-            if (host->mpEditorDialog) {
-                host->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
-                host->mpEditorDialog->close();
-            }
+        host->mTelnet.disconnectIt();
+        // close script-editor
+        if (host->mpEditorDialog) {
+            host->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
+            host->mpEditorDialog->close();
+        }
 
-            if (host->mpNotePad) {
-                host->mpNotePad->save();
-                host->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-                host->mpNotePad->close();
-                host->mpNotePad = nullptr;
-            }
+        if (host->mpNotePad) {
+            host->mpNotePad->save();
+            host->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
+            host->mpNotePad->close();
+            host->mpNotePad = nullptr;
+        }
 
-            if (mpIrcClientMap.contains(host)) {
-                mpIrcClientMap.value(host)->close();
-            }
+        if (mpIrcClientMap.contains(host)) {
+            mpIrcClientMap.value(host)->close();
+        }
 
-            // Wait for disconnection to complete
-            while (host->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
-                QApplication::processEvents();
-            }
+        // Wait for disconnection to complete
+        while (host->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
+            QApplication::processEvents();
         }
 
         console->close();
@@ -3069,11 +2983,9 @@ void mudlet::setMenuBarVisibility(const controlsVisibility state)
 // This only adjusts the visibility as appropriate
 void mudlet::adjustMenuBarVisibility()
 {
-    // Are there any profiles loaded - note that the dummy "default_host" counts
-    // as the first one
-    if ((mHostManager.getHostCount() < 2 && mMenuBarVisibility & visibleAlways)
-      ||(mMenuBarVisibility & visibleMaskNormally)) {
-
+    // Are there any profiles loaded?
+    if ((mHostManager.getHostCount() && mMenuBarVisibility & visibleAlways)
+            || (mMenuBarVisibility & visibleMaskNormally)) {
         menuBar()->show();
     } else {
         menuBar()->hide();
@@ -3105,9 +3017,9 @@ void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 
 void mudlet::adjustToolBarVisibility()
 {
-    // Are there any profiles loaded - note that the dummy "default_host" counts
-    // as the first one
-    if ((mHostManager.getHostCount() < 2 && mToolbarVisibility & visibleAlways) || (mToolbarVisibility & visibleMaskNormally)) {
+    // Are there any profiles loaded?
+    if ((mHostManager.getHostCount() && mToolbarVisibility & visibleAlways)
+            || (mToolbarVisibility & visibleMaskNormally)) {
         mpMainToolBar->show();
     } else {
         mpMainToolBar->hide();
@@ -3422,7 +3334,9 @@ void mudlet::createMapper(bool loadDefaultMap)
     pHost->mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(hostName));
     pHost->mpDockableMapWidget->setObjectName(QStringLiteral("dockMap_%1").arg(hostName));
     pHost->mpMap->mpMapper = new dlgMapper(pHost->mpDockableMapWidget, pHost, pHost->mpMap.data()); //FIXME: mpHost definieren
+#if defined(INCLUDE_3DMAPPER)
     pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
+#endif
     pHost->mpDockableMapWidget->setWidget(pHost->mpMap->mpMapper);
 
     if (loadDefaultMap && pHost->mpMap->mpRoomDB->getRoomIDList().isEmpty()) {
@@ -3519,15 +3433,13 @@ void mudlet::slot_notes()
 void mudlet::slot_irc()
 {
     Host* pHost = getActiveHost();
-    bool isDefaultHost = false;
     if (!pHost) {
-        pHost = mpDefaultHost;
-        isDefaultHost = true;
+        return;
     }
 
     if (!mpIrcClientMap.contains(pHost)) {
         QPointer<dlgIRC> dlg = new dlgIRC(pHost);
-        dlg->setDefaultHostClient(isDefaultHost);
+        dlg->setDefaultHostClient(false);
         mpIrcClientMap[pHost] = dlg;
     }
     mpIrcClientMap.value(pHost)->raise();
@@ -3702,6 +3614,32 @@ void mudlet::startAutoLogin()
     }
 }
 
+// Ensure the debug area is attached to at least one Host
+void mudlet::attachDebugArea(const QString& hostname)
+{
+    qDebug() << "start of attachDebugArea";
+    if (mpDebugArea) {
+        return;
+    }
+
+    mpDebugArea = new QMainWindow(nullptr);
+    const auto host = mHostManager.getHost(hostname);
+    mpDebugConsole = new TConsole(host, TConsole::CentralDebugConsole);
+    mpDebugConsole->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    mpDebugConsole->setWrapAt(100);
+    mpDebugArea->setCentralWidget(mpDebugConsole);
+    mpDebugArea->setWindowTitle(tr("Central Debug Console"));
+    mpDebugArea->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_debug.png")));
+
+    auto consoleCloser = new TConsoleMonitor(mpDebugArea);
+    mpDebugArea->installEventFilter(consoleCloser);
+
+    QSize generalRule(qApp->desktop()->size());
+    generalRule -= QSize(30, 30);
+    mpDebugArea->resize(QSize(800, 600).boundedTo(generalRule));
+    mpDebugArea->hide();
+}
+
 void mudlet::doAutoLogin(const QString& profile_name)
 {
     if (profile_name.size() < 1) {
@@ -3748,9 +3686,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     // save the setting is on profile loading:
     pHost->mTelnet.setEncoding(readProfileData(profile_name, QLatin1String("encoding")), false);
 
-    // For the first real host created the getHostCount() will return 2 because
-    // there is already a "default_host"
-    signal_hostCreated(pHost, mHostManager.getHostCount());
+    emit signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, true);
     enableToolbarButtons();
 }

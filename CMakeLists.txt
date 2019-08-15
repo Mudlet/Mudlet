@@ -75,7 +75,7 @@ endif()
 # To insure consistency please ensure the SAME of the first two values are also
 # assigned to the "VERSION" and "BUILD" variables in the native qmake project
 # file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 3.22.1)
+set(APP_VERSION 4.0.3)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
   set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
@@ -113,6 +113,30 @@ if((CMAKE_SYSTEM_NAME STREQUAL "Linux") OR (CMAKE_SYSTEM_NAME STREQUAL "Windows"
 else()
   # Option not available for other platforms
   set(USE_UPDATER NO)
+endif()
+
+# Enable the 3D mapper by default on the three main supported OS
+# unless environmental variable WITH_3DMAPPER is defined and set to "NO" (case
+# insensitive).
+# WITH_3DMAPPER is an environmental value/variable (so could be a number, a
+# string, something else or not even exist).
+set(3DMAPPER_TEST $ENV{WITH_3DMAPPER})
+if((CMAKE_SYSTEM_NAME STREQUAL "Linux") OR (CMAKE_SYSTEM_NAME STREQUAL "Windows") OR (CMAKE_SYSTEM_NAME STREQUAL "Darwin"))
+  # We are on one of the supported platforms
+  if(DEFINED 3DMAPPER_TEST)
+    string(TOUPPER ${3DMAPPER_TEST} 3DMAPPER_TEST)
+    if(3DMAPPER_TEST STREQUAL "NO")
+      option(USE_3DMAPPER "Include 3D mapper" OFF)
+    else()
+      option(USE_3DMAPPER "Include 3D mapper" ON)
+    endif()
+  else()
+    # An environmental variable not detected, apply platform default of "yes, include the updater"
+    option(USE_3DMAPPER "Include 3D mapper" ON)
+  endif()
+else()
+  # Option not available for other platforms
+  set(USE_3DMAPPER NO)
 endif()
 
 # Enable the inclusion of fonts currently carried in the source code by default
@@ -274,6 +298,9 @@ if(USE_UPDATER)
   endif()
 endif()
 
+if(USE_3DMAPPER)
+    add_definitions(-DINCLUDE_3DMAPPER)
+endif()
 
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)

@@ -44,6 +44,9 @@
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
+#if defined(INCLUDE_3DMAPPER)
+#include "glwidget.h"
+#endif
 
 #include "pre_guard.h"
 #include <QCollator>
@@ -1153,10 +1156,8 @@ int TLuaInterpreter::setProfileIcon(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    bool success;
-    QString message;
 
-    std::tie(success, message) = mudlet::self()->setProfileIcon(host.getName(), iconPath);
+    auto[success, message] = mudlet::self()->setProfileIcon(host.getName(), iconPath);
     if (success) {
         lua_pushboolean(L, true);
         return 1;
@@ -1171,10 +1172,8 @@ int TLuaInterpreter::setProfileIcon(lua_State* L)
 int TLuaInterpreter::resetProfileIcon(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    bool success;
-    QString message;
 
-    std::tie(success, message) = mudlet::self()->resetProfileIcon(host.getName());
+    auto [success, message] = mudlet::self()->resetProfileIcon(host.getName());
     if (success) {
         lua_pushboolean(L, true);
         return 1;
@@ -1271,9 +1270,11 @@ int TLuaInterpreter::updateMap(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     if (host.mpMap) {
+#if defined(INCLUDE_3DMAPPER)
         if (host.mpMap->mpM) {
             host.mpMap->mpM->update();
         }
+#endif
         if (host.mpMap->mpMapper) {
             if (host.mpMap->mpMapper->mp2dMap) {
                 host.mpMap->mpMapper->mp2dMap->mNewMoveAction = true;
@@ -1529,9 +1530,11 @@ int TLuaInterpreter::centerview(lua_State* L)
     if (pR) {
         host.mpMap->mRoomIdHash[host.getName()] = roomId;
         host.mpMap->mNewMove = true;
+#if defined(INCLUDE_3DMAPPER)
         if (host.mpMap->mpM) {
             host.mpMap->mpM->update();
         }
+#endif
 
         if (host.mpMap->mpMapper->mp2dMap) {
             host.mpMap->mpMapper->mp2dMap->isCenterViewCall = true;
@@ -4852,6 +4855,10 @@ int TLuaInterpreter::searchRoom(lua_State* L)
         if (!roomIdsFound.isEmpty()) {
             for (int i : roomIdsFound) {
                 TRoom* pR = host.mpMap->mpRoomDB->getRoom(i);
+                if (!pR) {
+                    continue;
+                }
+
                 QString name = pR->name;
                 int roomID = pR->getId();
                 lua_pushnumber(L, roomID);
@@ -6352,15 +6359,13 @@ int TLuaInterpreter::getMousePosition(lua_State* L)
 int TLuaInterpreter::tempTimer(lua_State* L)
 {
     double time;
-    bool repeating;
+    bool repeating{};
     if (!lua_isnumber(L, 1)) {
         lua_pushfstring(L, "tempTimer: bad argument #1 type (time in seconds as {maybe decimal} number expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     time = lua_tonumber(L, 1);
 
-    // This is a static function so will not have a this pointer and we will have
-    // to get a reference to a class object and its members by looking them up:
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     if (lua_isfunction(L, 2)) {
@@ -10386,11 +10391,8 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     }
 
     QNetworkRequest request = QNetworkRequest(url);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 9, 0))
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-#else
-    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
-#endif
+
     // This should fix: https://bugs.launchpad.net/mudlet/+bug/1366781
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
 #ifndef QT_NO_SSL
@@ -10481,9 +10483,11 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
         if (host.mpMap->mpMapper) {
             host.mpMap->mpMapper->mp2dMap->update();
         }
+#if defined(INCLUDE_3DMAPPER)
         if (host.mpMap->mpM) {
             host.mpMap->mpM->update();
         }
+#endif
     }
     lua_pushboolean(L, result);
     return 1;
@@ -10520,9 +10524,11 @@ int TLuaInterpreter::resetRoomArea(lua_State* L)
             if (host.mpMap->mpMapper) {
                 host.mpMap->mpMapper->mp2dMap->update();
             }
+#if defined(INCLUDE_3DMAPPER)
             if (host.mpMap->mpM) {
                 host.mpMap->mpM->update();
             }
+#endif
         }
         lua_pushboolean(L, result);
         return 1;
@@ -15809,7 +15815,7 @@ int TLuaInterpreter::startPermRegexTrigger(const QString& name, const QString& p
             return -1; //parent not found
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setRegexCodeList(regexList, propertyList, true);
+        pT->setRegexCodeList(regexList, propertyList);
     }
     pT->setIsFolder(regexList.empty());
     pT->setIsActive(true);
@@ -15840,7 +15846,7 @@ int TLuaInterpreter::startPermBeginOfLineStringTrigger(const QString& name, cons
             return -1; //parent not found
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setRegexCodeList(regexList, propertyList, true);
+        pT->setRegexCodeList(regexList, propertyList);
     }
     pT->setIsFolder(regexList.empty());
     pT->setIsActive(true);
@@ -15870,7 +15876,7 @@ int TLuaInterpreter::startPermSubstringTrigger(const QString& name, const QStrin
             return -1; //parent not found
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setRegexCodeList(regexList, propertyList, true);
+        pT->setRegexCodeList(regexList, propertyList);
     }
     pT->setIsFolder(regexList.empty());
     pT->setIsActive(true);
@@ -15899,7 +15905,7 @@ int TLuaInterpreter::startPermPromptTrigger(const QString& name, const QString& 
             return -1; //parent not found
         }
         pT = new TTrigger(pP, mpHost);
-        pT->setRegexCodeList(regexList, propertyList, true);
+        pT->setRegexCodeList(regexList, propertyList);
     }
     pT->setIsFolder(false);
     pT->setIsActive(true);

@@ -102,6 +102,7 @@ public:
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
     HostManager& getHostManager() { return mHostManager; }
+    void attachDebugArea(const QString& hostname);
     FontManager mFontManager;
     Discord mDiscord;
     QPointer<QSettings> mpSettings;
@@ -496,7 +497,6 @@ signals:
 
 
 private slots:
-    void slot_close_profile();
     void slot_tab_changed(int);
     void show_help_dialog();
     void slot_show_connection_dialog();
@@ -536,12 +536,12 @@ private:
     QSettings* getQSettings();
     void loadTranslators(const QString &languageCode);
     void loadDictionaryLanguageMap();
+    void migrateDebugConsole(Host* currentHost);
 
 
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
 
-    QPointer<Host> mpDefaultHost;
     QQueue<QString> tempLoginQueue;
     QQueue<QString> tempPassQueue;
     QQueue<Host*> tempHostQueue;
