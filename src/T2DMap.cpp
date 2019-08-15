@@ -32,6 +32,10 @@
 #include "dlgMapper.h"
 #include "dlgRoomExits.h"
 #include "mudlet.h"
+#if defined(INCLUDE_3DMAPPER)
+#include "glwidget.h"
+#endif
+
 
 #include "pre_guard.h"
 #include <QtEvents>
@@ -3098,9 +3102,11 @@ void T2DMap::slot_createRoom()
     mpHost->mpMap->setRoomCoordinates(roomID, mousePosition.first, mousePosition.second, mOz);
 
     mpHost->mpMap->mMapGraphNeedsUpdate = true;
+#if defined(INCLUDE_3DMAPPER)
     if (mpHost->mpMap->mpM) {
         mpHost->mpMap->mpM->update();
     }
+#endif
     if (mpHost->mpMap->mpMapper->mp2dMap) {
         mpHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = true;
         mpHost->mpMap->mpMapper->mp2dMap->update();
@@ -4197,9 +4203,12 @@ void T2DMap::slot_newMap()
 
     mpHost->mpMap->mRoomIdHash[mpMap->mProfileName] = roomID;
     mpHost->mpMap->mNewMove = true;
+
+#if defined(INCLUDE_3DMAPPER)
     if (mpHost->mpMap->mpM) {
         mpHost->mpMap->mpM->update();
     }
+#endif
 
     if (mpHost->mpMap->mpMapper->mp2dMap) {
         mpHost->mpMap->mpMapper->mp2dMap->isCenterViewCall = true;

@@ -1699,44 +1699,44 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
 {
     Q_UNUSED(_useDictionary);
     bool useDictionary = true;
-    QMutexLocker locker(& mLock);
-    bool isChanged = false;
+    QMutexLocker locker(&mLock);
+    bool dictionaryChanged {};
     // Copy the value while we have the lock:
     bool isSpellCheckingEnabled = mEnableSpellCheck;
     if (mEnableUserDictionary != useDictionary) {
         mEnableUserDictionary = useDictionary;
-        isChanged = true;
+        dictionaryChanged = true;
     }
 
     if (mUseSharedDictionary != useShared) {
         mUseSharedDictionary = useShared;
-        isChanged = true;
+        dictionaryChanged = true;
     }
     locker.unlock();
 
-    // During start-up this gets called for the default_host profile - but that
-    // has a null mpConsole:
-    if (mpConsole) {
-        if (isChanged) {
-            // This will propogate the changes in the two flags to the main
-            // TConsole's copies of them - although setProfileSpellDictionary() is
-            // also called in the main TConsole constructor:
-            mpConsole->setProfileSpellDictionary();
-        }
+    if (!mpConsole) {
+        return;
+    }
 
-        // This also needs to handle the spell checking against the system/mudlet
-        // bundled dictionary being switched on or off. Given that if it has
-        // been disabled the spell checking code won't run we need to clear any
-        // highlights in the TCommandLine instance that may have been present when
-        // spell checking is turned on or off:
-        if (isSpellCheckingEnabled) {
-            // Now enabled - so recheck the whole command line with whichever
-            // dictionaries are active:
-            mpConsole->mpCommandLine->recheckWholeLine();
-        } else {
-            // Or it is now disabled so clear any spelling marks:
-            mpConsole->mpCommandLine->clearMarksOnWholeLine();
-        }
+    if (dictionaryChanged) {
+        // This will propogate the changes in the two flags to the main
+        // TConsole's copies of them - although setProfileSpellDictionary() is
+        // also called in the main TConsole constructor:
+        mpConsole->setProfileSpellDictionary();
+    }
+
+    // This also needs to handle the spell checking against the system/mudlet
+    // bundled dictionary being switched on or off. Given that if it has
+    // been disabled the spell checking code won't run we need to clear any
+    // highlights in the TCommandLine instance that may have been present when
+    // spell checking is turned on or off:
+    if (isSpellCheckingEnabled) {
+        // Now enabled - so recheck the whole command line with whichever
+        // dictionaries are active:
+        mpConsole->mpCommandLine->recheckWholeLine();
+    } else {
+        // Or it is now disabled so clear any spelling marks:
+        mpConsole->mpCommandLine->clearMarksOnWholeLine();
     }
 }
 

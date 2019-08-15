@@ -37,6 +37,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QProgressDialog>
+#include <QPainter>
 #include "post_guard.h"
 
 TMap::TMap(Host* pH, const QString& profileName)
@@ -49,7 +50,9 @@ TMap::TMap(Host* pH, const QString& profileName)
 , m2DPanXStart(0.0f)
 , m2DPanYStart(0.0f)
 , mTargetID(0)
+#if defined(INCLUDE_3DMAPPER)
 , mpM(Q_NULLPTR)
+#endif
 , mpMapper(Q_NULLPTR)
 , mMapGraphNeedsUpdate(true)
 , mNewMove(true)
@@ -2051,7 +2054,9 @@ void TMap::postMessage(const QString text)
 // Used by the 2D mapper to send view center coordinates to 3D one
 void TMap::set3DViewCenter(const int areaId, const int xPos, const int yPos, const int zPos)
 {
+#if defined(INCLUDE_3DMAPPER)
     mpM->setViewCenter(areaId, xPos, yPos, zPos);
+#endif
 }
 
 void TMap::appendRoomErrorMsg(const int roomId, const QString msg, const bool isToSetFileViewingRecommended)

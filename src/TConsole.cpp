@@ -45,6 +45,7 @@
 #include <QShortcut>
 #include <QTextBoundaryFinder>
 #include <QTextCodec>
+#include <QPainter>
 #include "post_guard.h"
 
 const QString TConsole::cmLuaLineVariable("line");
@@ -757,38 +758,36 @@ void TConsole::closeEvent(QCloseEvent* event)
         }
     }
 
-    if (mProfileName != QLatin1String("default_host")) {
-        TEvent conCloseEvent {};
-        conCloseEvent.mArgumentList.append(QLatin1String("sysExitEvent"));
-        conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(conCloseEvent);
+    TEvent conCloseEvent{};
+    conCloseEvent.mArgumentList.append(QStringLiteral("sysExitEvent"));
+    conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(conCloseEvent);
 
-        if (mpHost->mFORCE_SAVE_ON_EXIT) {
-            mudlet::self()->saveWindowLayout();
-            mpHost->modulesToWrite.clear();
-            mpHost->saveProfile();
+    if (mpHost->mFORCE_SAVE_ON_EXIT) {
+        mudlet::self()->saveWindowLayout();
+        mpHost->modulesToWrite.clear();
+        mpHost->saveProfile();
 
-            if (mpHost->mpMap->mpRoomDB->size() > 0) {
-                QDir dir_map;
-                QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
-                // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (3 of 6)
-                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
-                if (!dir_map.exists(directory_map)) {
-                    dir_map.mkpath(directory_map);
-                }
-                QFile file_map(filename_map);
-                if (file_map.open(QIODevice::WriteOnly)) {
-                    QDataStream out(&file_map);
-                    mpHost->mpMap->serialize(out);
-                    file_map.close();
-                }
+        if (mpHost->mpMap->mpRoomDB->size() > 0) {
+            QDir dir_map;
+            QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
+            // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (3 of 6)
+            QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
+            if (!dir_map.exists(directory_map)) {
+                dir_map.mkpath(directory_map);
             }
-            event->accept();
-            return;
+            QFile file_map(filename_map);
+            if (file_map.open(QIODevice::WriteOnly)) {
+                QDataStream out(&file_map);
+                mpHost->mpMap->serialize(out);
+                file_map.close();
+            }
         }
+        event->accept();
+        return;
     }
 
-    if (mProfileName != "default_host" && !mUserAgreedToCloseConsole) {
+    if (!mUserAgreedToCloseConsole) {
     ASK:
         int choice = QMessageBox::question(this, tr("Save profile?"), tr("Do you want to save the profile %1?").arg(mProfileName), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
         if (choice == QMessageBox::Cancel) {
@@ -809,7 +808,7 @@ void TConsole::closeEvent(QCloseEvent* event)
                 QDir dir_map;
                 QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
                 // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (4 of 6)
-                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
+                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
                 if (!dir_map.exists(directory_map)) {
                     dir_map.mkpath(directory_map);
                 }
@@ -2226,7 +2225,9 @@ void TConsole::createMapper(int x, int y, int width, int height)
 {
     if (!mpMapper) {
         mpMapper = new dlgMapper(mpMainFrame, mpHost, mpHost->mpMap.data());
+#if defined(INCLUDE_3DMAPPER)
         mpHost->mpMap->mpM = mpMapper->glWidget;
+#endif
         mpHost->mpMap->mpHost = mpHost;
         mpHost->mpMap->mpMapper = mpMapper;
         qDebug() << "TConsole::createMapper() - restore map case 2.";
