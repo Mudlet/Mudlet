@@ -495,7 +495,7 @@ mudlet::mudlet()
     connect(dactionMultiView, &QAction::triggered, this, &mudlet::slot_multi_view);
     connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_toggle_compact_input_line);
     connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::show_trigger_dialog);
-    connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::show_trigger_dialog);
+    connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::show_editor_dialog);
     connect(dactionShowMap, &QAction::triggered, this, &mudlet::slot_mapper);
     connect(dactionOptions, &QAction::triggered, this, &mudlet::slot_show_options_dialog);
     connect(dactionAbout, &QAction::triggered, this, &mudlet::slot_show_about_dialog);
@@ -3076,6 +3076,21 @@ void mudlet::slot_show_connection_dialog()
     pDlg->show();
 }
 
+void mudlet::show_editor_dialog()
+{
+    Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
+    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    if (!pEditor) {
+        return;
+    }
+    pEditor->slot_show_current();
+    pEditor->raise();
+    pEditor->showNormal();
+}
+
 void mudlet::show_trigger_dialog()
 {
     Host* pHost = getActiveHost();
@@ -3206,7 +3221,7 @@ void mudlet::slot_update_shortcuts()
 {
     if (mpMainToolBar->isVisible()) {
         triggersShortcut = new QShortcut(triggersKeySequence, this);
-        connect(triggersShortcut.data(), &QShortcut::activated, this, &mudlet::show_trigger_dialog);
+        connect(triggersShortcut.data(), &QShortcut::activated, this, &mudlet::show_editor_dialog);
         dactionScriptEditor->setShortcut(QKeySequence());
 
         showMapShortcut = new QShortcut(showMapKeySequence, this);
