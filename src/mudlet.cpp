@@ -3086,6 +3086,7 @@ void mudlet::show_trigger_dialog()
     pEditor->slot_show_triggers();
     pEditor->raise();
     pEditor->showNormal();
+    pEditor->activateWindow();
 }
 
 void mudlet::show_alias_dialog()
@@ -3101,6 +3102,7 @@ void mudlet::show_alias_dialog()
     pEditor->slot_show_aliases();
     pEditor->raise();
     pEditor->showNormal();
+    pEditor->activateWindow();
 }
 
 void mudlet::show_timer_dialog()
@@ -3116,6 +3118,7 @@ void mudlet::show_timer_dialog()
     pEditor->slot_show_timers();
     pEditor->raise();
     pEditor->showNormal();
+    pEditor->activateWindow();
 }
 
 void mudlet::show_script_dialog()
@@ -3131,6 +3134,7 @@ void mudlet::show_script_dialog()
     pEditor->slot_show_scripts();
     pEditor->raise();
     pEditor->showNormal();
+    pEditor->activateWindow();
 }
 
 void mudlet::show_key_dialog()
@@ -3146,6 +3150,7 @@ void mudlet::show_key_dialog()
     pEditor->slot_show_keys();
     pEditor->raise();
     pEditor->showNormal();
+    pEditor->activateWindow();
 }
 
 void mudlet::show_variable_dialog()
@@ -3161,6 +3166,7 @@ void mudlet::show_variable_dialog()
     pEditor->slot_show_vars();
     pEditor->raise();
     pEditor->showNormal();
+    pEditor->activateWindow();
 }
 
 void mudlet::show_action_dialog()
@@ -3176,6 +3182,7 @@ void mudlet::show_action_dialog()
     pEditor->slot_show_actions();
     pEditor->raise();
     pEditor->showNormal();
+    pEditor->activateWindow();
 }
 
 
