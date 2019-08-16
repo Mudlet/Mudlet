@@ -286,7 +286,7 @@ QString cTelnet::errorString()
 }
 
 // returns the human-friendly one ("ISO 8859-5 (Cyrillic)") given a computer encoding name ("ISO 8859-5")
-const QString& cTelnet::getFriendlyEncoding()
+const QString& cTelnet::getFriendlyEncoding() const
 {
     int index = mAcceptableEncodings.indexOf(mEncoding);
     return mFriendlyEncodings.at(index);
