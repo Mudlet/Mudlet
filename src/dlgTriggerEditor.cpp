@@ -7363,6 +7363,7 @@ void dlgTriggerEditor::slot_previous_section()
     case EditorViewType::cmUnknownView:
         return;
     };
+}
 
 void dlgTriggerEditor::slot_activateMainWindow()
 {
