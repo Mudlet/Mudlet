@@ -126,8 +126,8 @@ public:
 
     void closingDown();
     bool isClosingDown();
-    const unsigned int assemblePath();
-    const bool checkForMappingScript();
+    unsigned int assemblePath();
+    bool checkForMappingScript();
 
     TriggerUnit* getTriggerUnit() { return &mTriggerUnit; }
     TimerUnit* getTimerUnit() { return &mTimerUnit; }

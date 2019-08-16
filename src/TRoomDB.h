@@ -56,8 +56,8 @@ public:
     int addArea(QString name);
     bool addArea(int id, QString name);
     bool setAreaName(int areaID, QString name);
-    const QList<TRoom*> getRoomPtrList();
-    const QList<TArea*> getAreaPtrList();
+    const QList<TRoom*> getRoomPtrList() const;
+    const QList<TArea*> getAreaPtrList() const;
     const QHash<int, TRoom*>& getRoomMap() const { return rooms; }
     const QMap<int, TArea*>& getAreaMap() const { return areas; }
     QList<int> getRoomIDList();
