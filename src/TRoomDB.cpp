@@ -418,7 +418,7 @@ void TRoomDB::buildAreas()
 }
 
 
-const QList<TRoom*> TRoomDB::getRoomPtrList()
+const QList<TRoom*> TRoomDB::getRoomPtrList() const
 {
     return rooms.values();
 }
@@ -558,7 +558,7 @@ bool TRoomDB::addArea(int id, QString name)
     }
 }
 
-const QList<TArea*> TRoomDB::getAreaPtrList()
+const QList<TArea*> TRoomDB::getAreaPtrList() const
 {
     return areas.values();
 }

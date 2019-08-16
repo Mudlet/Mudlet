@@ -154,7 +154,7 @@ public:
     const QStringList & getEncodingsList() const { return mAcceptableEncodings; }
     const QStringList & getFriendlyEncodingsList() const { return mFriendlyEncodings; }
     const QString& getComputerEncoding(const QString& encoding);
-    const QString& getFriendlyEncoding();
+    const QString& getFriendlyEncoding() const;
     QAbstractSocket::SocketError error();
     QString errorString();
 #if !defined(QT_NO_SSL)
