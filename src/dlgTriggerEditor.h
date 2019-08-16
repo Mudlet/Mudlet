@@ -233,6 +233,7 @@ public slots:
     void slot_show_aliases();
     void slot_show_actions();
     void slot_show_keys();
+    void slot_activateMainWindow();
     void slot_tree_selection_changed();
     void slot_trigger_selected(QTreeWidgetItem* pItem);
     void slot_timer_selected(QTreeWidgetItem* pItem);
