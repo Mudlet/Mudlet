@@ -6686,7 +6686,9 @@ void dlgTriggerEditor::slot_show_timers()
 
 void dlgTriggerEditor::slot_show_current()
 {
-    if (mCurrentView != EditorViewType::cmUnknownView) return;
+    if (mCurrentView != EditorViewType::cmUnknownView) {
+        return;
+    }
 
     changeView(EditorViewType::cmTriggerView);
     QTreeWidgetItem* pI = treeWidget_triggers->topLevelItem(0);
