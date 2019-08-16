@@ -3089,6 +3089,7 @@ void mudlet::show_editor_dialog()
     pEditor->slot_show_current();
     pEditor->raise();
     pEditor->showNormal();
+    pEditor->activateWindow();
 }
 
 void mudlet::show_trigger_dialog()
