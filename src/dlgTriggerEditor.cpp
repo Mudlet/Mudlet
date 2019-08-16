@@ -504,6 +504,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     showDebugAreaAction->setStatusTip(tr("Shows/Hides the separate Central Debug Console - when being displayed the system will be slower."));
     connect(showDebugAreaAction, &QAction::triggered, this, &dlgTriggerEditor::slot_debug_mode);
 
+    QShortcut *activateMainWindowAction = new QShortcut(QKeySequence((Qt::ALT | Qt::Key_E)), this);
+    QObject::connect(activateMainWindowAction, &QShortcut::activated, this, &dlgTriggerEditor::slot_activateMainWindow);
+
     toolBar = new QToolBar();
     toolBar2 = new QToolBar();
 
@@ -7078,6 +7081,12 @@ void dlgTriggerEditor::slot_debug_mode()
     mudlet::mpDebugArea->setVisible(!mudlet::debugMode);
     mudlet::debugMode = !mudlet::debugMode;
     mudlet::mpDebugArea->setWindowTitle("Central Debug Console");
+}
+
+void dlgTriggerEditor::slot_activateMainWindow()
+{
+    mudlet::self()->activateWindow();
+    mpHost->mpConsole->setFocus();
 }
 
 void dlgTriggerEditor::exportTrigger(const QString& fileName)
