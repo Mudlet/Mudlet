@@ -504,6 +504,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     showDebugAreaAction->setStatusTip(tr("Shows/Hides the separate Central Debug Console - when being displayed the system will be slower."));
     connect(showDebugAreaAction, &QAction::triggered, this, &dlgTriggerEditor::slot_debug_mode);
 
+    QShortcut *activateMainWindowAction = new QShortcut(QKeySequence((Qt::ALT | Qt::Key_E)), this);
+    QObject::connect(activateMainWindowAction, &QShortcut::activated, this, &dlgTriggerEditor::slot_activateMainWindow);
+
     toolBar = new QToolBar();
     toolBar2 = new QToolBar();
 
@@ -6684,6 +6687,27 @@ void dlgTriggerEditor::slot_show_timers()
     }
 }
 
+void dlgTriggerEditor::slot_show_current()
+{
+    if (mCurrentView != EditorViewType::cmUnknownView) {
+        return;
+    }
+
+    changeView(EditorViewType::cmTriggerView);
+    QTreeWidgetItem* pI = treeWidget_triggers->topLevelItem(0);
+    if (!pI || pI == treeWidget_triggers->currentItem() || !pI->childCount()) {
+        // There is no root item, we are on the root item or there are no other
+        // items - so show the help message:
+        mpTriggersMainArea->hide();
+        mpSourceEditorArea->hide();
+        showInfo(msgInfoAddTrigger);
+    } else {
+        mpTriggersMainArea->show();
+        mpSourceEditorArea->show();
+        slot_trigger_selected(treeWidget_triggers->currentItem());
+    }
+}
+
 void dlgTriggerEditor::slot_show_triggers()
 {
     changeView(EditorViewType::cmTriggerView);
@@ -7073,9 +7097,17 @@ void dlgTriggerEditor::slot_script_main_area_add_handler()
 
 void dlgTriggerEditor::slot_debug_mode()
 {
+    mudlet::self()->attachDebugArea(mpHost->getName());
+
     mudlet::mpDebugArea->setVisible(!mudlet::debugMode);
     mudlet::debugMode = !mudlet::debugMode;
     mudlet::mpDebugArea->setWindowTitle("Central Debug Console");
+}
+
+void dlgTriggerEditor::slot_activateMainWindow()
+{
+    mudlet::self()->activateWindow();
+    mpHost->mpConsole->setFocus();
 }
 
 void dlgTriggerEditor::exportTrigger(const QString& fileName)

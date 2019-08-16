@@ -55,7 +55,6 @@ set(mudlet_SRCS
     EAction.cpp
     exitstreewidget.cpp
     FontManager.cpp
-    glwidget.cpp
     Host.cpp
     HostManager.cpp
     ircmessageformatter.cpp
@@ -150,7 +149,6 @@ set(mudlet_MOC_HDRS
     dlgVarsMainArea.h
     EAction.h
     exitstreewidget.h
-    glwidget.h
     Host.h
     mudlet.h
     T2DMap.h
@@ -213,6 +211,12 @@ if(USE_UPDATER)
   list(APPEND mudlet_SRCS updater.cpp)
   list(APPEND mudlet_MOC_HDRS updater.h)
 endif(USE_UPDATER)
+
+
+if(USE_3DMAPPER)
+  list(APPEND mudlet_SRCS glwidget.cpp)
+  list(APPEND mudlet_MOC_HDRS glwidget.h)
+endif(USE_3DMAPPER)
 
 if(MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -MP") # parallel builds
@@ -363,6 +367,15 @@ else()
   message(STATUS "The Updater code is excluded as on-line updating is not available on this platform")
 endif()
 
+if((CMAKE_SYSTEM_NAME STREQUAL "Linux") OR (CMAKE_SYSTEM_NAME STREQUAL "Windows") OR (CMAKE_SYSTEM_NAME STREQUAL "Darwin"))
+  if(USE_3DMAPPER)
+    message(STATUS "The 3D mapper code is included in this configuration")
+  else(USE_3DMAPPER)
+    message(STATUS "The 3D mapper code is excluded from this configuration")
+  endif(USE_3DMAPPER)
+else()
+  message(STATUS "The 3D mapper code is excluded as it might not be supported on this platform")
+endif()
 
 if(WIN32)
   set(mudlet_RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico)

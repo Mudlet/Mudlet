@@ -1189,8 +1189,7 @@ void dlgConnectionProfiles::fillout_form() {
     mProfileList = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot,
                                                                                QDir::Name);
 
-    // if only the default_host is present it means no profiles have yet been created
-    if (mProfileList.isEmpty() || (mProfileList.size() == 1 && mProfileList.at(0) == QStringLiteral("default_host"))) {
+    if (mProfileList.isEmpty()) {
         welcome_message->show();
         requiredArea->hide();
         informationalArea->hide();
@@ -1604,13 +1603,7 @@ void dlgConnectionProfiles::fillout_form() {
 #if defined(QT_DEBUG)
     mudServer = QStringLiteral("Mudlet self-test");
     if (!deletedDefaultMuds.contains(mudServer) && !mProfileList.contains(mudServer)) {
-        for (int i = mProfileList.size() - 1; i >= 0; --i) {
-            if (mProfileList.at(i) == QLatin1String("default_host")) {
-                mProfileList.insert(i, mudServer);
-                break;
-            }
-        }
-
+        mProfileList.append(mudServer);
         pM = new QListWidgetItem(mudServer);
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
@@ -1628,36 +1621,36 @@ void dlgConnectionProfiles::fillout_form() {
     QString toselectProfileName;
     int toselectRow = -1;
     int test_profile_row = -1;
+    bool firstMudletLaunch = true;
 
     for (int i = 0; i < profiles_tree_widget->count(); i++) {
-        auto profile = profiles_tree_widget->item(i);
-        auto profileName = profile->text();
+        const auto profile = profiles_tree_widget->item(i);
+        const auto profileName = profile->text();
         if (profileName == QStringLiteral("Mudlet self-test")) {
             test_profile_row = i;
         }
 
-        QDateTime profile_lastRead = QFileInfo(
-                mudlet::getMudletPath(mudlet::profileXmlFilesPath, profileName)).lastModified();
-        // Since Qt 5.x null QTimes and QDateTimes are invalid - and might not
-        // work as expected - so test for validity of the test_date value as well
-        if ((!test_date.isValid()) || profile_lastRead > test_date) {
-            test_date = profile_lastRead;
-            toselectProfileName = profileName;
-            toselectRow = i;
+        const auto fileinfo = QFileInfo(
+                    mudlet::getMudletPath(mudlet::profileXmlFilesPath, profileName));
+
+        if (fileinfo.exists()) {
+            firstMudletLaunch = false;
+            QDateTime profile_lastRead = fileinfo.lastModified();
+            // Since Qt 5.x null QTimes and QDateTimes are invalid - and might not
+            // work as expected - so test for validity of the test_date value as well
+            if ((!test_date.isValid()) || profile_lastRead > test_date) {
+                test_date = profile_lastRead;
+                toselectProfileName = profileName;
+                toselectRow = i;
+            }
         }
     }
 
-    if (toselectRow != -1 && toselectProfileName == QStringLiteral("default_host") &&
-        profiles_tree_widget->count() > 1) {
-        // if the last profile read is default_host, it means the user hasn't created
-        // any profiles yet since default_host profile cannot actually be used. In this case,
-        // select a random pre-defined profile to give all MUDs a fair go
-
-        // make sure not to select the default_host or test_profile though
-        auto default_host_row = toselectRow;
-        // dont infinite loop.
-        if (test_profile_row == -1 || profiles_tree_widget->count() != 2) {
-            while (toselectRow == default_host_row || toselectRow == test_profile_row) {
+    if (firstMudletLaunch) {
+        // Select a random pre-defined profile to give all MUDs a fair go first time
+        // make sure not to select the test_profile though
+        if (profiles_tree_widget->count() != 1) {
+            while (toselectRow == -1 || toselectRow == test_profile_row) {
                 toselectRow = qrand() % profiles_tree_widget->count();
             }
         }
@@ -2027,11 +2020,11 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         return;
     }
     // load an old profile if there is any
-    // PLACEMARKER: Host creation (3) - normal case
+    // PLACEMARKER: Host creation (1) - normal case
     if (hostManager.addHost(profile_name, port_entry->text().trimmed(), QString(), QString())) {
         pHost = hostManager.getHost(profile_name);
         if (!pHost) {
-            return;
+            return ;
         }
     } else {
         return;
