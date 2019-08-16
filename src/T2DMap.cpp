@@ -451,14 +451,10 @@ void T2DMap::slot_switchArea(const QString& newAreaName)
                         }
                     }
 
-                    if (closestCenterRoom) {
-                        mOx = closestCenterRoom->x;
-                        // Map y coordinates are reversed on 2D map!
-                        mOy = -closestCenterRoom->y;
-                        mOz = closestCenterRoom->z;
-                    } else {
-                        mOx = mOy = mOz = 0;
-                    }
+                    mOx = closestCenterRoom->x;
+                    // Map y coordinates are reversed on 2D map!
+                    mOy = -closestCenterRoom->y;
+                    mOz = closestCenterRoom->z;
                 }
 
                 if (!validRoomFound) {
