@@ -6684,6 +6684,27 @@ void dlgTriggerEditor::slot_show_timers()
     }
 }
 
+void dlgTriggerEditor::slot_show_current()
+{
+    if (mCurrentView != EditorViewType::cmUnknownView) {
+        return;
+    }
+
+    changeView(EditorViewType::cmTriggerView);
+    QTreeWidgetItem* pI = treeWidget_triggers->topLevelItem(0);
+    if (!pI || pI == treeWidget_triggers->currentItem() || !pI->childCount()) {
+        // There is no root item, we are on the root item or there are no other
+        // items - so show the help message:
+        mpTriggersMainArea->hide();
+        mpSourceEditorArea->hide();
+        showInfo(msgInfoAddTrigger);
+    } else {
+        mpTriggersMainArea->show();
+        mpSourceEditorArea->show();
+        slot_trigger_selected(treeWidget_triggers->currentItem());
+    }
+}
+
 void dlgTriggerEditor::slot_show_triggers()
 {
     changeView(EditorViewType::cmTriggerView);
