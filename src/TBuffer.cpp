@@ -1046,7 +1046,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
             // Test whether the first byte is within the usable subset of the
             // allowed value - or not:
-            if (cParameter.indexOf(localBuffer[spanStart]) == -1) {
+            if (cParameter.indexOf(localBuffer[spanStart]) == -1 && cParameterInitial.indexOf(localBuffer[spanStart]) >= 0) {
                 // Oh dear, the CSI parameter string sequence begins with one of
                 // the reserved characters ('<', '=', '>' or '?') which we
                 // can/do not handle
@@ -1123,40 +1123,40 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         if (isOk) {
                             // we really do not handle these well...
                             // MXP line modes - comments are from http://www.zuggsoft.com/zmud/mxp.htm#MXP%20Line%20Tags
-			    mMXP = true; // some servers don't negotiate, they assume!
+                            mMXP = true; // some servers don't negotiate, they assume!
 
                             switch (modeCode) {
                             case 0: // open line - only MXP commands in the "open" category are allowed.  When a newline is received from the MUD, the mode reverts back to the Default mode.  OPEN MODE starts as the Default mode until changes with one of the "lock mode" tags listed below.
-				mMXP_MODE = MXP_MODE_OPEN;
-				break;
+                                mMXP_MODE = MXP_MODE_OPEN;
+                                break;
                             case 1: // secure line (until next newline) all tags and commands in MXP are allowed within the line.  When a newline is received from the MUD, the mode reverts back to the Default mode.
-				mMXP_MODE = MXP_MODE_SECURE;
-				break;
+                                mMXP_MODE = MXP_MODE_SECURE;
+                                break;
                             case 2: // locked line (until next newline) no MXP or HTML commands are allowed in the line.  The line is not parsed for any tags at all.  This is useful for "verbatim" text output from the MUD.  When a newline is received from the MUD, the mode reverts back to the Default mode.
-				mMXP_MODE = MXP_MODE_LOCKED;
+                                mMXP_MODE = MXP_MODE_LOCKED;
                                 break;
                             case 3: //  reset (MXP 0.4 or later) - close all open tags.  Set mode to Open.  Set text color and properties to default.
                                 closeT = 0;
                                 openT = 0;
-				mAssemblingToken = false;
-				mMXP_MODE = mMXP_DEFAULT;
+                                mAssemblingToken = false;
+                                mMXP_MODE = mMXP_DEFAULT;
                                 currentToken.clear();
                                 mParsingVar = false;
                                 break;
                             case 4: // temp secure mode (MXP 0.4 or later) - set secure mode for the next tag only.  Must be immediately followed by a < character to start a tag.  Remember to set secure mode when closing the tag also.
-				mMXP_MODE = MXP_MODE_TEMP_SECURE;
+                                mMXP_MODE = MXP_MODE_TEMP_SECURE;
                                 break;
                             case 5: // lock open mode (MXP 0.4 or later) - set open mode.  Mode remains in effect until changed.  OPEN mode becomes the new default mode.
-				mMXP_DEFAULT = mMXP_MODE = MXP_MODE_OPEN;
-				break;
+                                mMXP_DEFAULT = mMXP_MODE = MXP_MODE_OPEN;
+                                break;
                             case 6: // lock secure mode (MXP 0.4 or later) - set secure mode.  Mode remains in effect until changed.  Secure mode becomes the new default mode.
-				mMXP_DEFAULT = mMXP_MODE = MXP_MODE_SECURE;
-				break;
+                                mMXP_DEFAULT = mMXP_MODE = MXP_MODE_SECURE;
+                                break;
                             case 7: // lock locked mode (MXP 0.4 or later) - set locked mode.  Mode remains in effect until changed.  Locked mode becomes the new default mode.
-				mMXP_DEFAULT = mMXP_MODE = MXP_MODE_LOCKED;
-				break;
+                                mMXP_DEFAULT = mMXP_MODE = MXP_MODE_LOCKED;
+                                break;
                             default:
-			      qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
+                                qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
                             }
                         } else {
                             // isOk is false here as toInt(...) failed
@@ -2454,7 +2454,13 @@ void TBuffer::decodeSGR(const QString& sequence)
             // We do not have a colon separated string so we must just have a
             // number:
             bool isOk = false;
-            int tag = allParameterElements.toInt(&isOk);
+            int tag = 0;
+            if (!allParameterElements.isEmpty()) {
+                tag = allParameterElements.toInt(&isOk);
+            } else {
+                // Allow for an empty parameter to be treated as valid and equal to 0:
+                isOk = true;
+            }
             if (isOk) {
                 switch (tag) {
                 case 0:
