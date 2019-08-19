@@ -58,3 +58,23 @@ function Geyser.copyTable (table)
   end
   return copy
 end
+
+createMiniConsole("__Geyser__Fontconsole",0,0,0,0)
+hideWindow("__Geyser__Fontconsole")
+
+function Geyser.calcSizeForFont(fontName, fontSize)
+  local fcn = "__Geyser__Fontconsole"
+  local fontNameType = type(fontName)
+	local fontSizeType = type(fontSize)
+	local af = getAvailableFonts()
+  if fontNameType ~= "string" then
+	  error("Geyser.calcSizeForFont(fontName, fontSize): Argument Error: fontName as string expected, got " .. fontNameType)
+	elseif fontSizeType ~= "number" then
+	  error("Geyser.calcSizeForFont(fontName, fontSize): Argument Error: fontSize as number expect, got " .. fontSizeType)
+	elseif not table.contains(af, fontName) then
+	  error("Geyser.calcSizeForFont(fontNAme, fontSize): " .. fontName .. " is not available on this machine. Please check getAvailableFonts() for options.")
+  end
+  setFont(fcn, fontName)
+  setMiniConsoleFontSize(fcn, fontSize)
+	return calcFontSize(fcn)
+end
