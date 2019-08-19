@@ -1118,7 +1118,7 @@ if rex then
 
 	--- Echos a popup with embedded color name information.
   ---
-  --- @usage dechoPopup([window, ] string, {commands}, {hints})
+  --- @usage cechoPopup([window, ] string, {commands}, {hints})
   ---
   --- @see xEcho
   --- @see decho
@@ -1128,7 +1128,7 @@ if rex then
 
 	--- Echos a popup with embedded hex color information.
   ---
-  --- @usage hechoPopup([window, ] string, {commands}, {hints})
+  --- @usage cechoPopup([window, ] string, {commands}, {hints})
   ---
   --- @see xEcho
   --- @see hecho
