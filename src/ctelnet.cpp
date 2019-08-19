@@ -1617,11 +1617,6 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
     }
 
     if (transcodedMsg.startsWith(QStringLiteral("Client.GUI"))) {
-        // Parse a message containing the current "version" and
-        // "url" of where to find the current version of the client's
-        // Graphical User Interface (GUI).
-
-        // Do we accept GUI downloads from the server?
         if (!mpHost->mAcceptServerGUI) {
             return;
         }
@@ -1634,7 +1629,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         //
         // If the data does not parse as JSON, we'll try Raw telnet.
 
-        QString version;        
+        QString version;
         bool hasVersion = false;
         QString url;
         bool hasUrl = false;
@@ -1644,8 +1639,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         if (!document.isObject()) {
             // This is raw telnet, not JSON
             version = transcodedMsg.section(QChar::LineFeed, 0);
-            // Cannot use QLatin1String(...) as that is only introduced in Qt 5.11:
-            version.remove(QStringLiteral("Client.GUI "));
+            version.remove(QLatin1String("Client.GUI "));
             version.replace(QChar::LineFeed, QChar::Space);
             version = version.section(QChar::Space, 0, 0);
 
