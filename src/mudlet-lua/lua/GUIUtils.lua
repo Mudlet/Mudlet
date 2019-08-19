@@ -904,7 +904,7 @@ if rex then
       else
         error 'Improper arguments, usage: ([window, ] string, command, hint)'
       end
-		elseif string.find(func, "Popup") then
+    elseif string.find(func, "Popup") then
       if n < 3 then
         error 'Insufficient arguments, usage: ([window, ] string, {commands}, {hints})'
       elseif n == 3 then
