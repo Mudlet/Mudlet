@@ -507,6 +507,7 @@ public:
     static int getDictionaryWordList(lua_State*);
     static int getTextFormat(lua_State*);
     static int getWindowsCodepage(lua_State*);
+    static int putHttp(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 
@@ -515,7 +516,7 @@ public:
     void encodingChanged(const QString&);
 
 public slots:
-    void slot_replyFinished(QNetworkReply*);
+    void slot_httpRequestFinished(QNetworkReply*);
     void slotPurge();
     void slotDeleteSender(int, QProcess::ExitStatus);
 
@@ -528,6 +529,7 @@ private:
     static std::pair<bool, QString> discordApiEnabled(lua_State* L, bool writeAccess = false);
     void setupLanguageData();
     QString readScriptFile(const QString& path) const;
+    void handleHttpOK(QNetworkReply*);
 #if defined(Q_OS_WIN32)
     void loadUtf8Filenames();
 #endif
@@ -539,7 +541,7 @@ private:
     std::list<std::list<std::string>> mMultiCaptureGroupList;
     std::list<std::list<int>> mMultiCaptureGroupPosList;
 
-    QMap<QNetworkReply*, QString> downloadMap;
+    QMap<QNetworkReply*, QString> networkRequests;
 
     lua_State* pGlobalLua;
 
