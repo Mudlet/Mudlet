@@ -84,15 +84,7 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
-# Enable the built-in updater by default on the three main supported OS
-# unless environmental variable WITH_UPDATER is defined and set to "NO" (case
-# insensitive). Linux packagers will find it useful to do this since they are
-# likely to be responsible for updates there. Automatically exclude the
-# update stuff from other OSs such as FreeBSD and Cygwin because if they ever
-# get finished they have their own packaging system - and we do not support
-# updating them.
-# WITH_UPDATER is an environmental value/variable (so could be a number, a
-# string, something else or not even exist).
+# Set the environment variable WITH_UPDATER=NO to disable the built-in updater
 set(UPDATER_TEST $ENV{WITH_UPDATER})
 if((CMAKE_SYSTEM_NAME STREQUAL "Linux") OR (CMAKE_SYSTEM_NAME STREQUAL "Windows") OR (CMAKE_SYSTEM_NAME STREQUAL "Darwin"))
   # We are on one of the supported platforms
@@ -115,11 +107,7 @@ else()
   set(USE_UPDATER NO)
 endif()
 
-# Enable the 3D mapper by default on the three main supported OS
-# unless environmental variable WITH_3DMAPPER is defined and set to "NO" (case
-# insensitive).
-# WITH_3DMAPPER is an environmental value/variable (so could be a number, a
-# string, something else or not even exist).
+# Set the environment variable WITH_3DMAPPER=NO to disable the built-in 3D mapper
 set(3DMAPPER_TEST $ENV{WITH_3DMAPPER})
 if((CMAKE_SYSTEM_NAME STREQUAL "Linux") OR (CMAKE_SYSTEM_NAME STREQUAL "Windows") OR (CMAKE_SYSTEM_NAME STREQUAL "Darwin"))
   # We are on one of the supported platforms
@@ -139,13 +127,7 @@ else()
   set(USE_3DMAPPER NO)
 endif()
 
-# Enable the inclusion of fonts currently carried in the source code by default
-# unless the environmental variable WITH_FONTS is defined AND is set to a
-# (case insensitive) value of "NO". Linux packagers will find it useful to do
-# this since package managers may already package the relevant fonts - or are
-# not willing or able to include them.
-# WITH_FONTS is an environmental value/variable (so could be a number, a string,
-# something else or not even exist).
+# Set the environment variable WITH_FONTS=NO to disable including built-in fonts
 set(FONT_TEST $ENV{WITH_FONTS})
 if(DEFINED FONT_TEST)
   string(TOUPPER ${FONT_TEST} FONT_TEST)
