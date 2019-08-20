@@ -1076,37 +1076,37 @@ if rex then
     xEcho("Color", "echoLink", ...)
   end
 	
-	--- Inserts a link with embedded color name information at the current position
-	---
-	--- @usage cinsertLink([window, ] string, command, hint)
-	---
-	--- @see xEcho
-	--- @see cecho
+  --- Inserts a link with embedded color name information at the current position
+  ---
+  --- @usage cinsertLink([window, ] string, command, hint)
+  ---
+  --- @see xEcho
+  --- @see cecho
   function cinsertLink(...)
     xEcho("Color", "insertLink", ...)
   end
 
-	--- Inserts a link with embedded decimal color information at the current position
-	---
-	--- @usage dinsertLink([window, ] string, command, hint)
-	---
-	--- @see xEcho
-	--- @see decho
+  --- Inserts a link with embedded decimal color information at the current position
+  ---
+  --- @usage dinsertLink([window, ] string, command, hint)
+  ---
+  --- @see xEcho
+  --- @see decho
   function dinsertLink(...)
     xEcho("Decimal", "insertLink", ...)
   end
 
-	--- Inserts a link with embedded hex color information at the current position
-	---
-	--- @usage hinsertLink([window, ] string, command, hint)
-	---
-	--- @see xEcho
-	--- @see hecho
+  --- Inserts a link with embedded hex color information at the current position
+  ---
+  --- @usage hinsertLink([window, ] string, command, hint)
+  ---
+  --- @see xEcho
+  --- @see hecho
   function hinsertLink(...)
     xEcho("Hex", "insertLink", ...)
   end
 
-	--- Echos a popup with embedded color name information.
+  --- Echos a popup with embedded color name information.
   ---
   --- @usage cechoPopup([window, ] string, {commands}, {hints})
   ---
@@ -1116,7 +1116,7 @@ if rex then
     xEcho("Color", "echoPopup", ...)
   end
 
-	--- Echos a popup with embedded color name information.
+  --- Echos a popup with embedded color name information.
   ---
   --- @usage dechoPopup([window, ] string, {commands}, {hints})
   ---
@@ -1126,7 +1126,7 @@ if rex then
     xEcho("Decimal", "echoPopup", ...)
   end
 
-	--- Echos a popup with embedded hex color information.
+  --- Echos a popup with embedded hex color information.
   ---
   --- @usage hechoPopup([window, ] string, {commands}, {hints})
   ---
@@ -1136,7 +1136,7 @@ if rex then
     xEcho("Hex", "echoPopup", ...)
   end
 	
-	--- Echos a popup with embedded color name information.
+  --- Echos a popup with embedded color name information.
   ---
   --- @usage cinsertPopup([window, ] string, {commands}, {hints})
   ---
@@ -1146,7 +1146,7 @@ if rex then
     xEcho("Color", "insertPopup", ...)
   end
 
-	--- Echos a popup with embedded decimal color information.
+  --- Echos a popup with embedded decimal color information.
   ---
   --- @usage dinsertPopup([window, ] string, {commands}, {hints})
   ---
@@ -1156,7 +1156,7 @@ if rex then
     xEcho("Decimal", "insertPopup", ...)
   end
 
-	--- Echos a popup with embedded hex color information.
+  --- Echos a popup with embedded hex color information.
   ---
   --- @usage hinsertPopup([window, ] string, {commands}, {hints})
   ---
