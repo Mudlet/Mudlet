@@ -1624,15 +1624,13 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         // Mudlet supports two formats for parsing data associated with
         // Client.GUI package:
         //
-        // JSON:       Client.GUI = {"version": "1", "url": "https://example.com"}
+        // JSON:       Client.GUI = {"version" = "39", "url" = "https://www.example.com/example.mpackage"}
         // Raw Telnet: Client.GUI <version>\n<url>
         //
         // If the data does not parse as JSON, we'll try Raw telnet.
 
         QString version;
-        bool hasVersion = false;
         QString url;
-        bool hasUrl = false;
 
         auto document = QJsonDocument::fromJson(data.toUtf8());
 
@@ -1643,14 +1641,14 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
             version.replace(QChar::LineFeed, QChar::Space);
             version = version.section(QChar::Space, 0, 0);
 
-            if (!version.isEmpty()) {
-                hasVersion = true;
+            if (version.isEmpty()) {
+                return;
             }
 
             url = transcodedMsg.section(QChar::LineFeed, 1);
 
-            if (!url.isEmpty()) {
-                hasUrl = true;
+            if (url.isEmpty()) {
+                return;
             }
 
             qDebug() << "DEBUG: Client.GUI RAW version<" << version << "> and url<" << url << ">";
@@ -1666,21 +1664,19 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
 
             if (versionJSON != QJsonValue::Undefined && !versionJSON.toString().isEmpty()) {
                 version = versionJSON.toString();
-                hasVersion = true;
+            } else {
+                return;
             }
 
             auto urlJSON = json.value(QStringLiteral("url"));
 
             if (urlJSON != QJsonValue::Undefined && !urlJSON.toString().isEmpty()) {
                 url = urlJSON.toString();
-                hasUrl = true;
+            } else {
+                return;
             }
 
             qDebug() << "DEBUG: Client.GUI JSON version<" << version << "> and url<" << url << ">";
-        }
-
-        if (!hasVersion || !hasUrl) {
-            return;
         }
 
         QString packageName = url.section(QLatin1Char('/'), -1);
@@ -1695,8 +1691,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         packageName.remove(QLatin1Char('\\'));
         packageName.remove(QLatin1Char('.'));
 
-        // If the client does not have it the GUI or it does not have the current
-        // version it will be downloaded from url.
+        // If the client does not have the GUI or the current version it will be downloaded from the url.
         if (mpHost->mServerGUI_Package_version != version) {
             postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
                            "Uninstalling old version '%2'.")
