@@ -35,6 +35,7 @@ function Geyser.Label:echo(message, color, format)
   self.fgColor = color
 
   local fs = ""
+  local alignment = ""
   -- check for formatting commands
   if format then
     if string.find(format, "b") then
@@ -44,7 +45,14 @@ function Geyser.Label:echo(message, color, format)
       message = "<i>" .. message .. "</i>"
     end
     if string.find(format, "c") then
-      message = "<center>" .. message .. "</center>"
+      alignment = "center"
+    elseif string.find(format, "l") then
+      alignment = "left"
+    elseif string.find(format, "r") then
+      alignment = "right"
+    end
+    if alignment ~= "" then
+      alignment = string.format([[align="%s" ]], alignment)
     end
     if string.find(format, "u") then
       message = "<u>" .. message .. "</u>"
@@ -55,7 +63,7 @@ function Geyser.Label:echo(message, color, format)
     end
     fs = "font-size: " .. fs .. "pt; "
   end
-  message = [[<div style="color: ]] .. Geyser.Color.hex(self.fgColor) .. "; " .. fs ..
+  message = [[<div ]] .. alignment .. [[ style="color: ]] .. Geyser.Color.hex(self.fgColor) .. "; " .. fs ..
   [[">]] .. message .. [[</div>]]
   echo(self.name, message)
 end
