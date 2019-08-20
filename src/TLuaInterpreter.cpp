@@ -3670,12 +3670,12 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
 
     // font name and size are passed in as arguments
     if (lua_gettop(L) == 2) {
-        if (!lua_isstring(L, 1)) {
+        if (!lua_isnumber(L, 1)) {
             lua_pushfstring(L, R"(calcFontSize: bad argument #1 (font size as number expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         }
 
-        if (!lua_isnumber(L, 2)) {
+        if (!lua_isstring(L, 2)) {
             lua_pushfstring(L, R"(calcFontSize: bad argument #2 (font name as string expected, got %s!)", luaL_typename(L, 2));
             return lua_error(L);
         }
