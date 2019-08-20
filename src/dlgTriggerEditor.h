@@ -226,6 +226,8 @@ public slots:
     void slot_import();
     void slot_viewStatsAction();
     void slot_debug_mode();
+    void slot_next_section();
+    void slot_previous_section();
     void slot_show_current();
     void slot_show_timers();
     void slot_show_triggers();
