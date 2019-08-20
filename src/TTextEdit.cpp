@@ -836,7 +836,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     int y = (event->y() / mFontHeight) + imageTopLine();
     y = std::max(y, 0);
 
-    int x = convertMouseXToBufferX(event->x(), y);
+    int x = std::max(convertMouseXToBufferX(event->x(), y), 0);
 
     if (y < static_cast<int>(mpBuffer->buffer.size())) {
         if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
@@ -1002,7 +1002,6 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber) co
                 if (mShowTimeStamps) {
                     characterIndex -= 13;
                 }
-                characterIndex = std::max(characterIndex, 0);
                 return characterIndex;
             }
         }
@@ -1012,7 +1011,6 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber) co
     if (mShowTimeStamps) {
         characterIndex -= 13;
     }
-    characterIndex = std::max(characterIndex, 0);
     return characterIndex;
 }
 
@@ -1071,6 +1069,14 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         y = std::max(y, 0);
 
         int x = convertMouseXToBufferX(event->x(), y);
+
+        if (mShowTimeStamps) {
+            if (x < 0) {
+                mCtrlSelecting = true;
+            }
+        }
+
+        x = std::max(x, 0);
 
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
             if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
@@ -1156,7 +1162,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         int y = (event->y() / mFontHeight) + imageTopLine();
         y = std::max(y, 0);
 
-        int x = convertMouseXToBufferX(event->x(), y);
+        int x = std::max(convertMouseXToBufferX(event->x(), y), 0);
 
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
             if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
