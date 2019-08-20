@@ -1650,8 +1650,6 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
             if (url.isEmpty()) {
                 return;
             }
-
-            qDebug() << "DEBUG: Client.GUI RAW version<" << version << "> and url<" << url << ">";
         } else {
             // This is JSON
             auto json = document.object();
@@ -1675,8 +1673,6 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
             } else {
                 return;
             }
-
-            qDebug() << "DEBUG: Client.GUI JSON version<" << version << "> and url<" << url << ">";
         }
 
         QString packageName = url.section(QLatin1Char('/'), -1);
