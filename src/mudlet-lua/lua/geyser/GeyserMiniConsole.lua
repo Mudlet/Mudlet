@@ -153,6 +153,81 @@ function Geyser.MiniConsole:insertLink(...)
   insertLink(self.name, ...)
 end
 
+--- inserts clickable text with right-click menu into the miniconsole at the end of the current line
+function Geyser.MiniConsole:echoPopup(...)
+  echoPopup(self.name, ...)
+end
+
+--- inserts clickable text with right-click menu into the miniconsole at the end of the current cursor position
+function Geyser.MiniConsole:insertPopup(...)
+  insertPopup(self.name, ...)
+end
+
+--- inserts color name formatted clickable text into the miniconsole at the end of the current line
+function Geyser.MiniConsole:cechoLink(...)
+  cechoLink(self.name, ...)
+end
+--- inserts decimal color formatted clickable text into the miniconsole at the end of the current line
+function Geyser.MiniConsole:dechoLink(...)
+  dechoLink(self.name, ...)
+end
+--- inserts hexidecimal color formatted clickable text into the miniconsole at the end of the current line
+function Geyser.MiniConsole:hechoLink(...)
+  hechoLink(self.name, ...)
+end
+
+--- inserts color name formatted clickable text into the miniconsole at the end of the current cursor position
+function Geyser.MiniConsole:cinsertLink(...)
+  cinsertLink(self.name, ...)
+end
+--- inserts decimal color formatted clickable text into the miniconsole at the end of the current cursor position
+function Geyser.MiniConsole:dinsertLink(...)
+  dinsertLink(self.name, ...)
+end
+--- inserts hexidecimal color formatted clickable text into the miniconsole at the end of the current cursor position
+function Geyser.MiniConsole:hinsertLink(...)
+  hinsertLink(self.name, ...)
+end
+
+--- inserts color name formatted clickable text into the miniconsole at the end of the current line
+function Geyser.MiniConsole:cechoLink(...)
+  cechoLink(self.name, ...)
+end
+--- inserts decimal color formatted clickable text into the miniconsole at the end of the current line
+function Geyser.MiniConsole:dechoLink(...)
+  dechoLink(self.name, ...)
+end
+--- inserts hexidecimal color formatted clickable text into the miniconsole at the end of the current line
+function Geyser.MiniConsole:hechoLink(...)
+  hechoLink(self.name, ...)
+end
+
+--- inserts color name formatted clickable text with right-click menu into the miniconsole at the end of the current line
+function Geyser.MiniConsole:cechoPopup(...)
+  cechoPopup(self.name, ...)
+end
+--- inserts decimal color formatted clickable text with right-click menu into the miniconsole at the end of the current line
+function Geyser.MiniConsole:dechoPopup(...)
+  dechoPopup(self.name, ...)
+end
+--- inserts hexidecimal color formatted clickable text with right-click menu into the miniconsole at the end of the current line
+function Geyser.MiniConsole:hechoPopup(...)
+  hechoPopup(self.name, ...)
+end
+
+--- inserts color name formatted clickable text with right-click menu into the miniconsole at the end of the current cursor position
+function Geyser.MiniConsole:cinsertPopup(...)
+  cinsertPopup(self.name, ...)
+end
+--- inserts decimal color formatted clickable text with right-click menu into the miniconsole at the end of the current current cursor position
+function Geyser.MiniConsole:dinsertPopup(...)
+  dinsertPopup(self.name, ...)
+end
+--- inserts hexidecimal color formatted clickable text with right-click menu into the miniconsole at the end of the current current cursor position
+function Geyser.MiniConsole:hinsertPopup(...)
+  hinsertPopup(self.name, ...)
+end
+
 --- turns selected text info clickable text into the miniconsole
 function Geyser.MiniConsole:setLink(...)
   setLink(self.name, ...)
