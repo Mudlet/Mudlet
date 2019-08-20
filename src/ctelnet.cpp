@@ -1624,7 +1624,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         // Mudlet supports two formats for parsing data associated with
         // Client.GUI package:
         //
-        // JSON:       Client.GUI = {"version" = "39", "url" = "https://www.example.com/example.mpackage"}
+        // JSON:       Client.GUI {"version": "39", "url": "https://www.example.com/example.mpackage"}
         // Raw Telnet: Client.GUI <version>\n<url>
         //
         // If the data does not parse as JSON, we'll try Raw telnet.
