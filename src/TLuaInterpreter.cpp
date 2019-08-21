@@ -10158,21 +10158,6 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
         return 2;
     }
 
-    // TODO: Remove this block of code once it is not needed (map file format updated to 17)
-    {
-        static bool isWarningIssued = false;
-        if (!isWarningIssued && host.mpMap->mDefaultVersion <= 16 && host.mpMap->mSaveVersion < 17) {
-            QString warnMsg = tr("[ WARN ]  - Lua command setAreaUserData() used - it is currently flagged as experimental!");
-            QString infoMsg = tr("[ INFO ]  - This feature requires a newer map format. Please change your map\n"
-                                 "format to a newer version to be able to SAVE this feature's data.\n\n"
-                                 "To avoid filling the screen up with repeated messages, this is\n"
-                                 "your only warning about this command...!");
-            host.postMessage(warnMsg);
-            host.postMessage(infoMsg);
-            isWarningIssued = true;
-        }
-    }
-
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
     if (!pA) {
         lua_pushnil(L);
@@ -10216,21 +10201,6 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
         return 1;
     } else {
         value = QString::fromUtf8(lua_tostring(L, 2));
-    }
-
-    // TODO: Remove this block of code once it is not needed (map file format updated to 17)
-    {
-        static bool isWarningIssued = false;
-        if (!isWarningIssued && host.mpMap->mDefaultVersion <= 16 && host.mpMap->mSaveVersion < 17) {
-            QString warnMsg = tr("[ WARN ]  - Lua command setMapUserData() used - it is currently flagged as experimental!");
-            QString infoMsg = tr("[ INFO ]  - This feature requires a newer map format. Please change your map\n"
-                                 "format to a newer version to be able to SAVE this feature's data.\n\n"
-                                 "To avoid filling the screen up with repeated messages, this is\n"
-                                 "your only warning about this command...!");
-            host.postMessage(warnMsg);
-            host.postMessage(infoMsg);
-            isWarningIssued = true;
-        }
     }
 
     host.mpMap->mUserData[key] = value;
@@ -10925,7 +10895,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     int s = 1;
     int n = lua_gettop(L);
     // console name is an optional first argument
-    if (n > 4) {
+    if (n >= 4) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "insertPopup: wrong argument type");
             lua_error(L);
@@ -10991,7 +10961,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
         return 1;
     }
 
-    if (a1.empty()) {
+    if (a1.empty() || a1 == "main") {
         host.mpConsole->insertLink(txt, _commandList, _hintList, customFormat);
     } else {
         mudlet::self()->insertLink(&host, name, txt, _commandList, _hintList, customFormat);
@@ -11141,7 +11111,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
     int s = 1;
     int n = lua_gettop(L);
     // console name is an optional first argument
-    if (n > 4) {
+    if (n >= 4) {
         if (!lua_isstring(L, s)) {
             lua_pushfstring(L, "echoPopup: bad argument #%d type (window name as string expected, got %s!)", s, luaL_typename(L, s));
             return lua_error(L);

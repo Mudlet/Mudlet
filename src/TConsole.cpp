@@ -366,7 +366,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     timeStampButton->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
         tr("Show Time Stamps.")));
     timeStampButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-information.png")));
-    connect(timeStampButton, &QAbstractButton::pressed, mUpperPane, &TTextEdit::slot_toggleTimeStamps);
+    connect(timeStampButton, &QAbstractButton::toggled, mUpperPane, &TTextEdit::slot_toggleTimeStamps);
+    connect(timeStampButton, &QAbstractButton::toggled, mLowerPane, &TTextEdit::slot_toggleTimeStamps);
 
     auto replayButton = new QToolButton;
     replayButton->setCheckable(true);
