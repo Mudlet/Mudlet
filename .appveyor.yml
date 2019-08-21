@@ -1,4 +1,9 @@
 version: 1.0.{build}
+branches:
+  only:
+  - development    # build the default branch
+  - /^release-.+/  # build release branches
+  - /^Mudlet-.+/   # build release tags (yes, the option also applies to tags)
 init:
 - cmd: mkdir C:\src\
 environment:

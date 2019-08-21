@@ -183,11 +183,5 @@
         <file>ui/package_manager.ui</file>
         <file>ui/package_manager_unpack.ui</file>
         <file>ui/set_room_area.ui</file>
-        <file>mudlet-lua/lua/generic-mapper/generic_mapper.xml</file>
-        <file>icons/clessidra.jpg</file>
-        <file>mudlet-lua/lua/utf8_filenames.lua</file>
-        <file>icons/Patreon_Mark_Primary.png</file>
-        <file>icons/frame_plaque.png</file>
-        <file>icons/frame_swords.png</file>
     </qresource>
 </RCC>

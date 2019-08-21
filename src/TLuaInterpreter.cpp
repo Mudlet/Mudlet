@@ -3668,14 +3668,34 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
     QString windowName = QStringLiteral("main");
     QSize size;
 
-    // pre- setFont(), miniconsoles were fixed to the Bitsteam font and so calcFontSize was fixed to it as well
-    // the only parameter it took in was a font size
+    // font name and size are passed in as arguments
+    if (lua_gettop(L) == 2) {
+        if (!lua_isnumber(L, 1)) {
+            lua_pushfstring(L, R"(calcFontSize: bad argument #1 (font size as number expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        }
+
+        if (!lua_isstring(L, 2)) {
+            lua_pushfstring(L, R"(calcFontSize: bad argument #2 (font name as string expected, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        }
+
+        auto font = QFont(QString::fromUtf8(lua_tostring(L, 2)), static_cast<int> (lua_tonumber(L, 1)), QFont::Normal);
+        auto fontMetrics = QFontMetrics(font);
+        size = QSize(fontMetrics.averageCharWidth(), fontMetrics.height());
+
+        lua_pushnumber(L, size.width());
+        lua_pushnumber(L, size.height());
+        return 2;
+    }
+
+    // only either window name or font size is passed in
     if (lua_gettop(L) == 1 && lua_isnumber(L, 1)) {
         auto fontSize = lua_tonumber(L, 1);
         auto font = QFont(QStringLiteral("Bitstream Vera Sans Mono"), fontSize, QFont::Normal);
 
         auto fontMetrics = QFontMetrics(font);
-        size = QSize(fontMetrics.width(QChar('W')), fontMetrics.height());
+        size = QSize(fontMetrics.averageCharWidth(), fontMetrics.height());
     } else if (lua_gettop(L) && !lua_isstring(L, 1)) {
         lua_pushfstring(L, "calcFontSize: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
