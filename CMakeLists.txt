@@ -109,22 +109,16 @@ endif()
 
 # Set the environment variable WITH_3DMAPPER=NO to disable the built-in 3D mapper
 set(3DMAPPER_TEST $ENV{WITH_3DMAPPER})
-if((CMAKE_SYSTEM_NAME STREQUAL "Linux") OR (CMAKE_SYSTEM_NAME STREQUAL "Windows") OR (CMAKE_SYSTEM_NAME STREQUAL "Darwin"))
-  # We are on one of the supported platforms
-  if(DEFINED 3DMAPPER_TEST)
-    string(TOUPPER ${3DMAPPER_TEST} 3DMAPPER_TEST)
-    if(3DMAPPER_TEST STREQUAL "NO")
-      option(USE_3DMAPPER "Include 3D mapper" OFF)
-    else()
-      option(USE_3DMAPPER "Include 3D mapper" ON)
-    endif()
+if(DEFINED 3DMAPPER_TEST)
+  string(TOUPPER ${3DMAPPER_TEST} 3DMAPPER_TEST)
+  if(3DMAPPER_TEST STREQUAL "NO")
+    option(USE_3DMAPPER "Include 3D mapper" OFF)
   else()
-    # An environmental variable not detected, apply platform default of "yes, include the updater"
     option(USE_3DMAPPER "Include 3D mapper" ON)
   endif()
 else()
-  # Option not available for other platforms
-  set(USE_3DMAPPER NO)
+  # An environmental variable not detected, apply platform default of "yes, include the 3D mapper"
+  option(USE_3DMAPPER "Include 3D mapper" ON)
 endif()
 
 # Set the environment variable WITH_FONTS=NO to disable including built-in fonts
