@@ -23,9 +23,7 @@ Geyser.Label.numChildren = 0
 -- specified will use the last set value.
 -- @param message The message to print. Can contain html formatting.
 -- @param color The color to use.
--- @param format A format list to use. 'c' - center, 'b' - bold, 'i' - italics,
---               'u' - underline, '##' - font size.  For example, "cb18"
---               specifies center bold 18pt font be used.  Order doesn't matter.
+-- @param format A format list to use. 'c' - center, 'l' - left, 'r' - right,  'b' - bold, 'i' - italics, 'u' - underline, '##' - font size.  For example, "cb18" specifies center bold 18pt font be used.  Order doesn't matter.
 function Geyser.Label:echo(message, color, format)
   message = message or self.message
   self.message = message
