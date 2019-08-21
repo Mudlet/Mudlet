@@ -57,12 +57,12 @@ TMap::TMap(Host* pH, const QString& profileName)
 , mMapGraphNeedsUpdate(true)
 , mNewMove(true)
 // default map version that new maps will get
-, mDefaultVersion(18)
+, mDefaultVersion(20)
 // maximum version of the map format that this Mudlet can understand and will
 // allow the user to load
 , mMaxVersion(20)
 // minimum version this instance of Mudlet will allow the user to save maps in
-, mMinVersion(16)
+, mMinVersion(17)
 , mMapSymbolFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 12, QFont::Normal))
 , mMapSymbolFontFudgeFactor(1.0)
 , mIsOnlyMapSymbolFontToBeUsed(false)
@@ -1070,32 +1070,19 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     ofs << mpRoomDB->getAreaNamesMap();
     ofs << customEnvColors;
     ofs << mpRoomDB->hashToRoomID;
-    if (mSaveVersion >= 17) {
-        if (mSaveVersion < 19) {
-            // Save the data in the map user data for older versions
-            mUserData.insert(QStringLiteral("system.fallback_mapSymbolFont"), mMapSymbolFont.toString());
-            mUserData.insert(QStringLiteral("system.fallback_mapSymbolFontFudgeFactor"), QString::number(mMapSymbolFontFudgeFactor));
-            mUserData.insert(QStringLiteral("system.fallback_onlyUseMapSymbolFont"), mIsOnlyMapSymbolFontToBeUsed ? QStringLiteral("true") : QStringLiteral("false"));
-        }
-        ofs << mUserData;
-        if (mSaveVersion >= 19) {
-            // Save the data directly in supported format versions (19 and above)
-            ofs << mMapSymbolFont;
-            ofs << mMapSymbolFontFudgeFactor;
-            ofs << mIsOnlyMapSymbolFontToBeUsed;
-        }
+    if (mSaveVersion < 19) {
+        // Save the data in the map user data for older versions
+        mUserData.insert(QStringLiteral("system.fallback_mapSymbolFont"), mMapSymbolFont.toString());
+        mUserData.insert(QStringLiteral("system.fallback_mapSymbolFontFudgeFactor"), QString::number(mMapSymbolFontFudgeFactor));
+        mUserData.insert(QStringLiteral("system.fallback_onlyUseMapSymbolFont"), mIsOnlyMapSymbolFontToBeUsed ? QStringLiteral("true") : QStringLiteral("false"));
     }
-    // TODO: Remove when versions < 17 are not an option...
-    else {
-        if (!mUserData.isEmpty()) {
-            QString message = tr("[ ALERT ] - Map User data has been lost in saved map file.  Re-save in a\n"
-                                 "format of at least 17 to preserve it before quitting!")
-                                      .arg(mSaveVersion);
-            appendErrorMsgWithNoLf(message, false);
-            mpHost->mTelnet.postMessage(message);
-        }
+    ofs << mUserData;
+    if (mSaveVersion >= 19) {
+        // Save the data directly in supported format versions (19 and above)
+        ofs << mMapSymbolFont;
+        ofs << mMapSymbolFontFudgeFactor;
+        ofs << mIsOnlyMapSymbolFontToBeUsed;
     }
-    // End of TODO:
 
     ofs << mpRoomDB->getAreaMap().size();
     // serialize area table
@@ -1123,61 +1110,15 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pA->min_y;
         ofs << pA->min_z;
         ofs << pA->span;
-        if (mSaveVersion >= 17) {
-            ofs << pA->xmaxForZ;
-            ofs << pA->ymaxForZ;
-            ofs << pA->xminForZ;
-            ofs << pA->yminForZ;
-        } else { // Recreate the pointless z{min|max}ForZ items
-            QMap<int, int> dummyMinMaxForZ;
-            QListIterator<int> itZ(pA->zLevels);
-            while (itZ.hasNext()) {
-                int dummyEbenValue = itZ.next();
-                dummyMinMaxForZ.insert(dummyEbenValue, dummyEbenValue);
-            }
-            ofs << pA->xmaxForZ;
-            ofs << pA->ymaxForZ;
-            ofs << dummyMinMaxForZ;
-            ofs << pA->xminForZ;
-            ofs << pA->yminForZ;
-            ofs << dummyMinMaxForZ;
-        }
+        ofs << pA->xmaxForZ;
+        ofs << pA->ymaxForZ;
+        ofs << pA->xminForZ;
+        ofs << pA->yminForZ;
         ofs << pA->pos;
         ofs << pA->isZone;
         ofs << pA->zoneAreaRef;
-        if (mSaveVersion >= 17) {
-            ofs << pA->mUserData;
-        }
-        // TODO: Remove when versions < 17 are not an option...
-        else {
-            if (!pA->mUserData.isEmpty()) {
-                areasWithData.append(areaID);
-            }
-        }
-        // End of TODO:
+        ofs << pA->mUserData;
     }
-
-    // TODO: Remove when versions < 17 are not an option...
-    if (!areasWithData.isEmpty()) {
-        if (areasWithData.size() > 1) {
-            std::sort(areasWithData.begin(), areasWithData.end());
-        }
-        QStringList areaIds;
-        do {
-            int areaId = areasWithData.takeFirst();
-            areaIds.append(QString::number(areaId));
-            appendAreaErrorMsg(areaId,
-                               tr("[ ALERT ] - User data for this area has been lost in saved map file.  Re-save in a\n"
-                                  "format of at least 17 to preserve it before quitting!\n"));
-        } while (!areasWithData.isEmpty());
-
-        QString message = tr("[ ALERT ] - Area User data has been lost in saved map file.  Re-save in a\n"
-                             "format of at least 17 to preserve it before quitting!\n"
-                             "Areas id affected: %1.")
-                                  .arg(areaIds.join(QLatin1String(", ")));
-        mpHost->mTelnet.postMessage(message);
-    }
-    // End of TODO
 
     if (mSaveVersion >= 18) {
         // Revised in version 18 to store mRoomId as a per profile case so that
