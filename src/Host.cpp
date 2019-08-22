@@ -550,6 +550,11 @@ std::pair<bool, QString> Host::setDisplayFont(const QString& fontName)
     return setDisplayFont(QFont(fontName));
 }
 
+void Host::setDisplayFontFromString(const QString& fontData)
+{
+    mDisplayFont.fromString(fontData);
+}
+
 void Host::setDisplayFontSize(int size)
 {
     mDisplayFont.setPointSize(size);

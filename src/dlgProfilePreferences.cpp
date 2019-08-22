@@ -256,6 +256,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     generateDiscordTooltips();
 
     label_languageChangeWarning->hide();
+    label_invalidFontError->hide();
 
     comboBox_guiLanguage->clear();
     for (auto& code : pMudlet->getAvailableTranslationCodes()) {
