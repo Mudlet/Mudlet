@@ -145,7 +145,6 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     }
     setFont(mapperFont);
     mp2dMap->mFontHeight = QFontMetrics(mpHost->getDisplayFont()).height();
-    glWidget->hide();
     mpMap->customEnvColors[257] = mpHost->mRed_2;
     mpMap->customEnvColors[258] = mpHost->mGreen_2;
     mpMap->customEnvColors[259] = mpHost->mYellow_2;
