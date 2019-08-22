@@ -1509,25 +1509,37 @@ void dlgProfilePreferences::setDisplayFont()
     if (!pHost) {
         return;
     }
-    QFont font = fontComboBox->currentFont();
-    font.setPointSize(mFontSize);
-    if (auto [setNewFont, errorMessage] = pHost->setDisplayFont(font); pHost->getDisplayFont() != font && setNewFont) {
-        QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
-        if (mudlet::self()->mConsoleMap.contains(pHost)) {
-            mudlet::self()->mConsoleMap[pHost]->changeColors();
+    QFont newFont = fontComboBox->currentFont();
+    newFont.setPointSize(mFontSize);
 
-            // update the display properly when font or size selections change.
-            mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
-            mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();
-            mudlet::self()->mConsoleMap[pHost]->mLowerPane->updateScreenView();
-            mudlet::self()->mConsoleMap[pHost]->mLowerPane->forceUpdate();
-            mudlet::self()->mConsoleMap[pHost]->refresh();
-        }
-        auto config = edbeePreviewWidget->config();
-        config->beginChanges();
-        config->setFont(font);
-        config->endChanges();
+    if (pHost->getDisplayFont() == newFont) {
+        return;
     }
+
+    if (auto [validFont, errorMessage] = pHost->setDisplayFont(newFont); !validFont) {
+        label_invalidFontError->show();
+        return;
+    }
+    label_invalidFontError->hide();
+
+    QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
+    auto* mainConsole = mudlet::self()->mConsoleMap.value(pHost);
+    if (!mainConsole) {
+        return;
+    }
+
+    // update the display properly when font or size selections change.
+    mainConsole->changeColors();
+    mainConsole->mUpperPane->updateScreenView();
+    mainConsole->mUpperPane->forceUpdate();
+    mainConsole->mLowerPane->updateScreenView();
+    mainConsole->mLowerPane->forceUpdate();
+    mainConsole->refresh();
+
+    auto config = edbeePreviewWidget->config();
+    config->beginChanges();
+    config->setFont(newFont);
+    config->endChanges();
 }
 
 // Currently UNUSED!
