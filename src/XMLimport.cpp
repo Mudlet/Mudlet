@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -23,9 +23,8 @@
 #include "XMLimport.h"
 
 
-#include "dlgColorTrigger.h"
-#include "dlgTriggerEditor.h"
 #include "LuaInterface.h"
+#include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "VarUnit.h"
@@ -230,13 +229,11 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
 }
 
 // returns the type of item and ID of the first (root) element
-pair<int, int> XMLimport::importFromClipboard()
+std::pair<dlgTriggerEditor::EditorViewType, int> XMLimport::importFromClipboard()
 {
     QString xml;
     QClipboard* clipboard = QApplication::clipboard();
-
-    int packageType = 0;
-    pair<int, int> result;
+    std::pair<dlgTriggerEditor::EditorViewType, int> result;
 
     xml = clipboard->text(QClipboard::Clipboard);
 
@@ -517,7 +514,7 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
     }
 
     if (pT->id > 0) {
-        if ((++(*roomCount) % 100 == 0)) {
+        if (++(*roomCount) % 100 == 0) {
             mpHost->mpMap->reportStringToProgressDialog(tr("Parsing room data [count: %1]...").arg(*roomCount));
         }
         areamRoomMultiHash.insert(pT->area, pT->id);
@@ -544,9 +541,9 @@ void XMLimport::readUnknownMapElement()
 }
 
 // returns the type of item and ID of the first (root) element
-pair<int, int> XMLimport::readPackage()
+std::pair<dlgTriggerEditor::EditorViewType, int> XMLimport::readPackage()
 {
-    int objectType = 0;
+    dlgTriggerEditor::EditorViewType objectType = dlgTriggerEditor::EditorViewType::cmUnknownView;
     int rootItemID = -1;
     while (!atEnd()) {
         readNext();
@@ -557,34 +554,34 @@ pair<int, int> XMLimport::readPackage()
             if (name() == "HostPackage") {
                 readHostPackage();
             } else if (name() == "TriggerPackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmTriggerView);
+                objectType = dlgTriggerEditor::EditorViewType::cmTriggerView;
                 rootItemID = readTriggerPackage();
             } else if (name() == "TimerPackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmTimerView);
+                objectType = dlgTriggerEditor::EditorViewType::cmTimerView;
                 rootItemID = readTimerPackage();
             } else if (name() == "AliasPackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmAliasView);
+                objectType = dlgTriggerEditor::EditorViewType::cmAliasView;
                 rootItemID = readAliasPackage();
             } else if (name() == "ActionPackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmActionView);
+                objectType = dlgTriggerEditor::EditorViewType::cmActionView;
                 rootItemID = readActionPackage();
             } else if (name() == "ScriptPackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmScriptView);
+                objectType = dlgTriggerEditor::EditorViewType::cmScriptView;
                 rootItemID = readScriptPackage();
             } else if (name() == "KeyPackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmKeysView);
+                objectType = dlgTriggerEditor::EditorViewType::cmKeysView;
                 rootItemID = readKeyPackage();
             } else if (name() == "HelpPackage") {
                 readHelpPackage();
             } else if (name() == "VariablePackage") {
-                objectType = static_cast<int>(dlgTriggerEditor::EditorViewType::cmVarsView);
+                objectType = dlgTriggerEditor::EditorViewType::cmVarsView;
                 readVariablePackage();
             } else {
                 readUnknownPackage();
             }
         }
     }
-    return make_pair(objectType, rootItemID);
+    return std::make_pair(objectType, rootItemID);
 }
 
 void XMLimport::readHelpPackage()
@@ -809,9 +806,15 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mMapStrongHighlight = (attributes().value("mMapStrongHighlight") == "yes");
     pHost->mLogStatus = (attributes().value("mLogStatus") == "yes");
     pHost->mEnableSpellCheck = (attributes().value("mEnableSpellCheck") == "yes");
+    bool enableUserDictionary = (attributes().value("mEnableUserDictionary") == "yes");
+    bool useSharedDictionary = (attributes().value("mUseSharedDictionary") == "yes");
+    pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     pHost->mShowInfo = (attributes().value("mShowInfo") == "yes");
     pHost->mAcceptServerGUI = (attributes().value("mAcceptServerGUI") == "yes");
     pHost->mMapperUseAntiAlias = (attributes().value("mMapperUseAntiAlias") == "yes");
+    if (attributes().hasAttribute(QStringLiteral("mEditorAutoComplete"))) {
+        pHost->mEditorAutoComplete = (attributes().value(QStringLiteral("mEditorAutoComplete")) == "yes");
+    }
     if (attributes().hasAttribute(QLatin1String("mEditorTheme"))) {
         pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     }
@@ -836,7 +839,7 @@ void XMLimport::readHostPackage(Host* pHost)
     } else {
         pHost->mTimerDebugOutputSuppressionInterval = QTime();
     }
-  
+
     if (attributes().hasAttribute(QLatin1String("mDiscordAccessFlags"))) {
         pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(attributes().value("mDiscordAccessFlags").toString().toInt());
     }
@@ -885,6 +888,16 @@ void XMLimport::readHostPackage(Host* pHost)
     for (auto character : ignore) {
         pHost->mDoubleClickIgnore.insert(character);
     }
+    pHost->mUseProxy = (attributes().value("mUseProxy") == "yes");
+    pHost->mProxyAddress = attributes().value("mProxyAddress").toString();
+    if (attributes().hasAttribute(QLatin1String("mProxyPort"))) {
+        pHost->mProxyPort = attributes().value("mProxyPort").toInt();
+    } else {
+        pHost->mProxyPort = 0;
+    }
+    pHost->mProxyUsername = attributes().value("mProxyUsername").toString();
+    pHost->mProxyPassword = attributes().value("mProxyPassword").toString();
+
     pHost->mSslTsl = (attributes().value("mSslTsl") == "yes");
     pHost->mAutoReconnect = (attributes().value("mAutoReconnect") == "yes");
     pHost->mSslIgnoreExpired = (attributes().value("mSslIgnoreExpired") == "yes");
@@ -985,8 +998,12 @@ void XMLimport::readHostPackage(Host* pHost)
             } else if (name() == "mLightWhite") {
                 pHost->mLightWhite.setNamedColor(readElementText());
             } else if (name() == "mDisplayFont") {
-                pHost->mDisplayFont.fromString(readElementText());
-                pHost->mDisplayFont.setFixedPitch(true);
+                const auto oldDisplayFont = pHost->getDisplayFont();
+                if (auto [setNewFont, errorMessage] = pHost->setDisplayFont(readElementText()); !setNewFont) {
+                    pHost->setDisplayFont(oldDisplayFont);
+                }
+                QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
+                pHost->setDisplayFontFixedPitch(true);
             } else if (name() == "mCommandLineFont") {
                 pHost->mCommandLineFont.fromString(readElementText());
             } else if (name() == "commandSeperator") {
@@ -1032,7 +1049,7 @@ void XMLimport::readHostPackage(Host* pHost)
             } else if (name() == "mLightWhite2") {
                 pHost->mLightWhite_2.setNamedColor(readElementText());
             } else if (name() == "mSpellDic") {
-                pHost->mSpellDic = readElementText();
+                pHost->setSpellDic(readElementText());
             } else if (name() == "mLineSize" || name() == "mRoomSize") {
                 // These two have been dropped from the Xml format as these are
                 // duplicates of attributes that were being incorrected read in
@@ -1195,11 +1212,16 @@ int XMLimport::readTimerGroup(TTimer* pParent)
 {
     auto pT = new TTimer(pParent, mpHost);
 
-    pT->setIsFolder((attributes().value("isFolder") == "yes"));
-    pT->setTemporary((attributes().value("isTempTimer") == "yes"));
+    pT->setIsFolder(attributes().value("isFolder") == "yes");
+    // This should not ever be set here as, by definition, temporary timers
+    // are not saved:
+    pT->setTemporary(attributes().value("isTempTimer") == "yes");
 
+    // This clears the Tree<TTimer>::mUserActiveState flag so MUST be done
+    // BEFORE that flag is parsed:
     mpHost->getTimerUnit()->registerTimer(pT);
-    pT->setShouldBeActive((attributes().value("isActive") == "yes"));
+
+    pT->setShouldBeActive(attributes().value("isActive") == "yes");
 
     if (module) {
         pT->mModuleMember = true;
@@ -1230,8 +1252,6 @@ int XMLimport::readTimerGroup(TTimer* pParent)
             }
         }
     }
-
-    mudlet::self()->registerTimer(pT, pT->mpTimer);
 
     if (!pT->mpParent && pT->shouldBeActive()) {
         pT->setIsActive(true);

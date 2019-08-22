@@ -24,6 +24,7 @@
 
 #include "pre_guard.h"
 #include "ui_about_dialog.h"
+#include <memory>
 #include "post_guard.h"
 
 
@@ -34,6 +35,13 @@ class dlgAboutDialog : public QDialog, public Ui::about_dialog
 public:
     Q_DISABLE_COPY(dlgAboutDialog)
     dlgAboutDialog(QWidget* parent = nullptr);
+
+private:
+    std::unique_ptr<QTextDocument> supportersDocument;
+    void setAboutTab(const QString& htmlHead) const;
+    void setLicenseTab(const QString& htmlHead) const;
+    void setThirdPartyTab(const QString& htmlHead) const;
+    void setSupportersTab(const QString &htmlHead);
 };
 
 #endif // MUDLET_DLGABOUTDIALOG_H

@@ -45,7 +45,7 @@ class TTimer : public Tree<TTimer>
 public:
     ~TTimer();
     TTimer(TTimer* parent, Host* pHost);
-    TTimer(const QString& name, QTime time, Host* pHost);
+    TTimer(const QString& name, QTime time, Host* pHost, bool repeating = false);
     void compileAll();
     QString& getName() { return mName; }
     void setName(const QString& name);
@@ -59,8 +59,7 @@ public:
     void setCommand(const QString& cmd) { mCommand = cmd; }
     QString getScript() { return mScript; }
     bool setScript(const QString& script);
-    bool canBeUnlocked(TTimer*);
-    bool registerTimer();
+    bool canBeUnlocked();
     bool setIsActive(bool);
     void stop();
     void start();
@@ -71,13 +70,24 @@ public:
     void enableTimer(int);
     void disableTimer(int);
     void killTimer();
+    int remainingTime();
 
     bool isOffsetTimer();
+    QPointer<Host> getHost() { return mpHost; }
+    QTimer* getQTimer() { return mpQTimer; }
+    // Override the Tree version as we need to insert the id number as a
+    // property into the QTimer that mpQTimer points to as well:
+    void setID(int) override;
+
+
     // specifies whenever the payload is Lua code as a string
     // or a function
     bool mRegisteredAnonymousLuaFunction;
     bool exportItem;
     bool mModuleMasterFolder;
+
+    static const char* scmProperty_HostName;
+    static const char* scmProperty_TTimerId;
 
 private:
     TTimer() = default;
@@ -89,9 +99,10 @@ private:
     QPointer<Host> mpHost;
     bool mNeedsToBeCompiled;
     QMutex mLock;
-    QTimer* mpTimer;
+    QTimer* mpQTimer;
     bool mModuleMember;
-    //TLuaInterpreter *  mpLua;
+    // temporary timers are single-shot by default, unless repeating is set
+    bool mRepeating;
 };
 
 #endif // MUDLET_TTIMER_H

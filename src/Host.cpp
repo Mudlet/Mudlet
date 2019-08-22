@@ -27,6 +27,7 @@
 
 #include "LuaInterface.h"
 #include "TConsole.h"
+#include "TCommandLine.h"
 #include "TEvent.h"
 #include "TMap.h"
 #include "TRoomDB.h"
@@ -38,11 +39,13 @@
 
 #include "pre_guard.h"
 #include <QtUiTools>
+#include <QNetworkProxy>
 #include <zip.h>
+#include <memory>
 #include "post_guard.h"
 
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
-: mTelnet(this)
+: mTelnet(this, hostname)
 , mpConsole(nullptr)
 , mLuaInterpreter(this, id)
 , commandLineMinimumHeight(30)
@@ -56,7 +59,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBorderRightWidth(0)
 , mBorderTopHeight(0)
 , mCommandLineFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
-, mCommandSeparator(QLatin1String(";"))
+, mCommandSeparator(QLatin1String(";;"))
 , mDisplayFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
 , mEnableGMCP(true)
 , mEnableMSDP(false)
@@ -65,12 +68,18 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mFORCE_NO_COMPRESSION(false)
 , mFORCE_SAVE_ON_EXIT(false)
 , mInsertedMissingLF(false)
+, mSslTsl(false)
+, mUseProxy(false)
+, mProxyAddress(QString())
+, mProxyPort(0)
+, mProxyUsername(QString())
+, mProxyPassword(QString())
 , mIsGoingDown(false)
 , mIsProfileLoadingSequence(false)
 , mLF_ON_GA(true)
 , mNoAntiAlias(false)
 , mpEditorDialog(nullptr)
-, mpMap(new TMap(this))
+, mpMap(new TMap(this, hostname))
 , mpNotePad(nullptr)
 , mPrintCommand(true)
 , mIsRemoteEchoingActive(false)
@@ -89,6 +98,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mUSE_UNIX_EOL(false)
 , mWrapAt(100)
 , mWrapIndentCount(0)
+, mEditorAutoComplete(true)
 , mEditorTheme(QLatin1String("Mudlet"))
 , mEditorThemeFile(QLatin1String("Mudlet.tmTheme"))
 , mThemePreviewItemID(-1)
@@ -132,7 +142,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mFgColor_2(Qt::lightGray)
 , mBgColor_2(Qt::black)
 , mMapStrongHighlight(false)
-, mSpellDic(QLatin1String("en_US"))
 , mLogStatus(false)
 , mEnableSpellCheck(true)
 , mDiscordDisableServerSide(true)
@@ -172,6 +181,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mWideAmbigousWidthGlyphs(false)
 , mSGRCodeHasColSpaceId(false)
 , mServerMayRedefineColors(false)
+, mSpellDic(QStringLiteral("en_US"))
+// DISABLED: - Prevent "None" option for user dictionary - changed to true and not changed anywhere else
+, mEnableUserDictionary(true)
+, mUseSharedDictionary(false)
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
@@ -225,7 +238,6 @@ Host::~Host()
     }
     mIsGoingDown = true;
     mIsClosingDown = true;
-    mTelnet.disconnect();
     mErrorLogStream.flush();
     mErrorLogFile.close();
 }
@@ -365,14 +377,23 @@ void Host::reloadModule(const QString& reloadModuleName)
     }
 }
 
-void Host::resetProfile()
+void Host::resetProfile_phase1()
 {
-    getTimerUnit()->stopAllTriggers();
-    mudlet::self()->mTimerMap.clear();
+    mTriggerUnit.stopAllTriggers();
+    mTimerUnit.stopAllTriggers();
+    mKeyUnit.stopAllTriggers();
+    mResetProfile = true;
+
+    QTimer::singleShot(0, this, [this]() {
+        resetProfile_phase2();
+    });
+}
+
+void Host::resetProfile_phase2()
+{
     getTimerUnit()->removeAllTempTimers();
     getTriggerUnit()->removeAllTempTriggers();
     getKeyUnit()->removeAllTempKeys();
-
 
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
@@ -382,9 +403,7 @@ void Host::resetProfile()
     mEventMap.clear();
     mLuaInterpreter.initLuaGlobals();
     mLuaInterpreter.loadGlobal();
-    mLuaInterpreter.initIndenterGlobals();
     mBlockScriptCompile = false;
-
 
     getTriggerUnit()->compileAll();
     getAliasUnit()->compileAll();
@@ -395,8 +414,10 @@ void Host::resetProfile()
     mResetProfile = false;
 
     mTimerUnit.reenableAllTriggers();
+    mTriggerUnit.reenableAllTriggers();
+    mKeyUnit.reenableAllTriggers();
 
-    TEvent event;
+    TEvent event {};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(event);
@@ -461,7 +482,6 @@ std::tuple<bool, QString, QString> Host::saveProfileAs(const QString& file)
 
 void Host::xmlSaved(const QString& xmlName)
 {
-    qDebug() << "saved" << xmlName;
     if (writers.contains(xmlName)) {
         auto writer = writers.take(xmlName);
         delete writer;
@@ -514,8 +534,29 @@ QString Host::getMmpMapLocation() const
     return mpMap->getMmpMapLocation();
 }
 
+std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
+{
+    const QFontMetrics metrics(font);
+    if (metrics.averageCharWidth() == 0) {
+        return std::make_pair(false, QStringLiteral("specified font is invalid (its letters have 0 width)"));
+    }
+
+    mDisplayFont = font;
+    return std::make_pair(true, QString());
+}
+
+std::pair<bool, QString> Host::setDisplayFont(const QString& fontName)
+{
+    return setDisplayFont(QFont(fontName));
+}
+
+void Host::setDisplayFontSize(int size)
+{
+    mDisplayFont.setPointSize(size);
+}
+
 // Now returns the total weight of the path
-const unsigned int Host::assemblePath()
+unsigned int Host::assemblePath()
 {
     unsigned int totalWeight = 0;
     QStringList pathList;
@@ -539,7 +580,7 @@ const unsigned int Host::assemblePath()
     return totalWeight;
 }
 
-const bool Host::checkForMappingScript()
+bool Host::checkForMappingScript()
 {
     // the mapper script reminder is only shown once
     // because it is too difficult and error prone (->proper script sequence)
@@ -684,9 +725,6 @@ void Host::incomingStreamProcessor(const QString& data, int line)
     mTriggerUnit.processDataStream(data, line);
 
     mTimerUnit.doCleanup();
-    if (mResetProfile) {
-        resetProfile();
-    }
 }
 
 void Host::registerEventHandler(const QString& name, TScript* pScript)
@@ -744,7 +782,7 @@ void Host::raiseEvent(const TEvent& pE)
 
 void Host::postIrcMessage(const QString& a, const QString& b, const QString& c)
 {
-    TEvent event;
+    TEvent event {};
     event.mArgumentList << QLatin1String("sysIrcMessage");
     event.mArgumentList << a << b << c;
     event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
@@ -924,7 +962,7 @@ bool Host::installPackage(const QString& fileName, int module)
                 }
             }
             // continuing, so update the folder name on disk
-            QString newpath(QStringLiteral("%1/%2/").arg(_home, packageName));
+            QString newpath(QStringLiteral("%1/%2").arg(_home, packageName));
             _dir.rename(_dir.absolutePath(), newpath);
             _dir = QDir(newpath);
         }
@@ -993,14 +1031,14 @@ bool Host::installPackage(const QString& fileName, int module)
     // raise 2 events - a generic one and a more detailed one to serve both
     // a simple need ("I just want the install event") and a more specific need
     // ("I specifically need to know when the module was synced")
-    TEvent genericInstallEvent;
+    TEvent genericInstallEvent {};
     genericInstallEvent.mArgumentList.append(QLatin1String("sysInstall"));
     genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     genericInstallEvent.mArgumentList.append(packageName);
     genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(genericInstallEvent);
 
-    TEvent detailedInstallEvent;
+    TEvent detailedInstallEvent {};
     switch (module) {
     case 0:
         detailedInstallEvent.mArgumentList.append(QLatin1String("sysInstallPackage"));
@@ -1073,14 +1111,14 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     // raise 2 events - a generic one and a more detailed one to serve both
     // a simple need ("I just want the uninstall event") and a more specific need
     // ("I specifically need to know when the module was uninstalled via Lua")
-    TEvent genericUninstallEvent;
+    TEvent genericUninstallEvent {};
     genericUninstallEvent.mArgumentList.append(QLatin1String("sysUninstall"));
     genericUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     genericUninstallEvent.mArgumentList.append(packageName);
     genericUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(genericUninstallEvent);
 
-    TEvent detailedUninstallEvent;
+    TEvent detailedUninstallEvent {};
     switch (module) {
     case 0:
         detailedUninstallEvent.mArgumentList.append(QLatin1String("sysUninstallPackage"));
@@ -1191,8 +1229,11 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
         return;
     } else {
         // error
-        std::string e = "no error message available from Lua";
-        e = lua_tostring(L, -1);
+        std::string e = lua_tostring(L, -1);
+        if (e.empty()) {
+            e = "no error message available from Lua";
+        }
+
         std::string reason;
         switch (error) {
         case 4:
@@ -1213,10 +1254,10 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
         }
 
         if (mudlet::debugMode) {
-            qDebug() << reason.c_str() << " in config.lua:" << e.c_str();
+            qDebug() << reason.c_str() << " in config.lua: " << e.c_str();
         }
         // should print error to main display
-        QString msg = QString("%1 in config.lua: %2\n").arg(reason.c_str(), e.c_str());
+        QString msg = QStringLiteral("%1 in config.lua: %2\n").arg(reason.c_str(), e.c_str());
         mpConsole->printSystemMessage(msg);
 
 
@@ -1667,7 +1708,132 @@ void Host::setSpellDic(const QString& newDict)
         isChanged = true;
     }
     locker.unlock();
-    if (isChanged) {
-        emit signal_changeSpellDict(mSpellDic);
+    if (isChanged && mpConsole) {
+        mpConsole->setSystemSpellDictionary(newDict);
     }
+}
+
+// When called from dlgProfilePreferences the second flag will only be changed
+// if necessary:
+// DISABLED: - Prevent "None" option for user dictionary - modified to prevent original useDictionary argument from being false:
+void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useShared)
+{
+    Q_UNUSED(_useDictionary);
+    bool useDictionary = true;
+    QMutexLocker locker(&mLock);
+    bool dictionaryChanged {};
+    // Copy the value while we have the lock:
+    bool isSpellCheckingEnabled = mEnableSpellCheck;
+    if (mEnableUserDictionary != useDictionary) {
+        mEnableUserDictionary = useDictionary;
+        dictionaryChanged = true;
+    }
+
+    if (mUseSharedDictionary != useShared) {
+        mUseSharedDictionary = useShared;
+        dictionaryChanged = true;
+    }
+    locker.unlock();
+
+    if (!mpConsole) {
+        return;
+    }
+
+    if (dictionaryChanged) {
+        // This will propogate the changes in the two flags to the main
+        // TConsole's copies of them - although setProfileSpellDictionary() is
+        // also called in the main TConsole constructor:
+        mpConsole->setProfileSpellDictionary();
+    }
+
+    // This also needs to handle the spell checking against the system/mudlet
+    // bundled dictionary being switched on or off. Given that if it has
+    // been disabled the spell checking code won't run we need to clear any
+    // highlights in the TCommandLine instance that may have been present when
+    // spell checking is turned on or off:
+    if (isSpellCheckingEnabled) {
+        // Now enabled - so recheck the whole command line with whichever
+        // dictionaries are active:
+        mpConsole->mpCommandLine->recheckWholeLine();
+    } else {
+        // Or it is now disabled so clear any spelling marks:
+        mpConsole->mpCommandLine->clearMarksOnWholeLine();
+    }
+}
+
+// This does not take care of any QMaps or other containers that the mudlet
+// and HostManager classes have that use the name of this profile as a key,
+// however it should ensure that other classes get updated:
+void Host::setName(const QString& newName)
+{
+    if (mHostName == newName) {
+        return;
+    }
+
+    int currentPlayerRoom = 0;
+    if (mpMap) {
+        currentPlayerRoom = mpMap->mRoomIdHash.take(mHostName);
+    }
+
+    QMutexLocker locker(& mLock);
+    // Now we have the exclusive lock on this class's protected members
+    mHostName = newName;
+    // We have made the change to the protected aspects of this class so can unlock the mutex locker and proceed:
+    locker.unlock();
+
+    mTelnet.mProfileName = newName;
+    if (mpMap) {
+        mpMap->mProfileName = newName;
+        if (currentPlayerRoom) {
+            mpMap->mRoomIdHash.insert(newName, currentPlayerRoom);
+        }
+    }
+
+    if (mpConsole) {
+        mpConsole->setProfileName(newName);
+    }
+    mTimerUnit.changeHostName(newName);
+}
+
+void Host::updateProxySettings(QNetworkAccessManager* manager)
+{
+    if (mUseProxy && !mProxyAddress.isEmpty() && mProxyPort != 0) {
+        auto& proxy = getConnectionProxy();
+        manager->setProxy(*proxy);
+    } else {
+        manager->setProxy(QNetworkProxy::DefaultProxy);
+    }
+}
+
+std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
+{
+    if (!mpDownloaderProxy) {
+        mpDownloaderProxy = std::make_unique<QNetworkProxy>(QNetworkProxy::Socks5Proxy);
+    }
+    auto& proxy = mpDownloaderProxy;
+    proxy->setHostName(mProxyAddress);
+    proxy->setPort(mProxyPort);
+    if (!mProxyUsername.isEmpty()) {
+        proxy->setUser(mProxyUsername);
+    }
+    if (!mProxyPassword.isEmpty()) {
+        proxy->setPassword(mProxyPassword);
+    }
+
+    return mpDownloaderProxy;
+}
+
+void Host::setDisplayFontSpacing(const qreal spacing)
+{
+    mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, spacing);
+}
+
+void Host::setDisplayFontStyle(QFont::StyleStrategy s)
+{
+    mDisplayFont.setStyleStrategy(s);
+}
+
+void Host::setDisplayFontFixedPitch(bool enable)
+{
+    mDisplayFont.setFixedPitch(enable);
 }

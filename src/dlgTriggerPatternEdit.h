@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,6 +27,7 @@
 #include "ui_trigger_pattern_edit.h"
 #include "post_guard.h"
 
+class QAction;
 
 class dlgTriggerPatternEdit : public QWidget, public Ui::trigger_pattern_edit
 {
@@ -35,8 +37,15 @@ public:
     Q_DISABLE_COPY(dlgTriggerPatternEdit)
     dlgTriggerPatternEdit(QWidget*);
 
-//private:
     int mRow;
+
+
+public slots:
+    void slot_triggerTypeComboBoxChanged(const int);
+
+
+private:
+    QAction* mAction_typeIndication;
 };
 
 #endif // MUDLET_DLGTRIGGERPATTERNEDIT_H

@@ -75,24 +75,16 @@ endif()
 # To insure consistency please ensure the SAME of the first two values are also
 # assigned to the "VERSION" and "BUILD" variables in the native qmake project
 # file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 3.17.1)
+set(APP_VERSION 4.0.3)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
-  SET(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
+  set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
   set(APP_BUILD "-dev")
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
-# Enable the built-in updater by default on the three main supported OS
-# unless environmental variable WITH_UPDATER is defined and set to "NO" (case
-# insensitive). Linux packagers will find it useful to do this since they are
-# likely to be responsible for updates there. Automatically exclude the
-# update stuff from other OSs such as FreeBSD and Cygwin because if they ever
-# get finished they have their own packaging system - and we do not support
-# updating them.
-# WITH_UPDATER is an environmental value/variable (so could be a number, a
-# string, something else or not even exist).
+# Set the environment variable WITH_UPDATER=NO to disable the built-in updater
 set(UPDATER_TEST $ENV{WITH_UPDATER})
 if((CMAKE_SYSTEM_NAME STREQUAL "Linux") OR (CMAKE_SYSTEM_NAME STREQUAL "Windows") OR (CMAKE_SYSTEM_NAME STREQUAL "Darwin"))
   # We are on one of the supported platforms
@@ -115,13 +107,21 @@ else()
   set(USE_UPDATER NO)
 endif()
 
-# Enable the inclusion of fonts currently carried in the source code by default
-# unless the environmental variable WITH_FONTS is defined AND is set to a
-# (case insensitive) value of "NO". Linux packagers will find it useful to do
-# this since package managers may already package the relevant fonts - or are
-# not willing or able to include them.
-# WITH_FONTS is an environmental value/variable (so could be a number, a string,
-# something else or not even exist).
+# Set the environment variable WITH_3DMAPPER=NO to disable the built-in 3D mapper
+set(3DMAPPER_TEST $ENV{WITH_3DMAPPER})
+if(DEFINED 3DMAPPER_TEST)
+  string(TOUPPER ${3DMAPPER_TEST} 3DMAPPER_TEST)
+  if(3DMAPPER_TEST STREQUAL "NO")
+    option(USE_3DMAPPER "Include 3D mapper" OFF)
+  else()
+    option(USE_3DMAPPER "Include 3D mapper" ON)
+  endif()
+else()
+  # An environmental variable not detected, apply platform default of "yes, include the 3D mapper"
+  option(USE_3DMAPPER "Include 3D mapper" ON)
+endif()
+
+# Set the environment variable WITH_FONTS=NO to disable including built-in fonts
 set(FONT_TEST $ENV{WITH_FONTS})
 if(DEFINED FONT_TEST)
   string(TOUPPER ${FONT_TEST} FONT_TEST)
@@ -214,13 +214,24 @@ endif()
 
 file(GLOB_RECURSE lua_files RELATIVE "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/lua/" "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/lua/*.lua")
 list(LENGTH lua_files lua_file_count)
-if(lua_file_count EQUAL 26)
+if(lua_file_count EQUAL 28)
   message(STATUS "Found Mudlet & Geyser lua files")
 else()
-  message(WARNING "Found ${lua_file_count} Mudlet & Geyser lua files but 26 were expected:")
+  message(WARNING "Found ${lua_file_count} Mudlet & Geyser lua files but 28 were expected:")
   foreach(lua_file ${lua_files})
     message(STATUS "    ${lua_file}")
   endforeach(lua_file)
+endif()
+
+file(GLOB_RECURSE lua_test_files RELATIVE "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/tests/" "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/tests/*.lua")
+list(LENGTH lua_test_files lua_test_file_count)
+if(lua_test_file_count EQUAL 4)
+  message(STATUS "Found Mudlet Lua test files")
+else()
+  message(WARNING "Found ${lua_test_file_count} Mudlet Lua test files but 4 were expected:")
+  foreach(lua_test_file ${lua_test_files})
+    message(STATUS "    ${lua_test_file}")
+  endforeach()
 endif()
 
 if(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/lcf/lcf-scm-1.rockspec")
@@ -263,6 +274,9 @@ if(USE_UPDATER)
   endif()
 endif()
 
+if(USE_3DMAPPER)
+    add_definitions(-DINCLUDE_3DMAPPER)
+endif()
 
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
@@ -273,3 +287,4 @@ endif(CCACHE_FOUND)
 add_subdirectory(src)
 add_subdirectory(3rdparty/communi)
 add_subdirectory(translations/translated)
+

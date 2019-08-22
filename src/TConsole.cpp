@@ -40,14 +40,14 @@
 #include "pre_guard.h"
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QRegularExpression>
 #include <QScrollBar>
 #include <QShortcut>
+#include <QTextBoundaryFinder>
 #include <QTextCodec>
 #include <QFileInfo>
+#include <QPainter>
 #include "post_guard.h"
-
-
-using namespace std;
 
 const QString TConsole::cmLuaLineVariable("line");
 
@@ -92,6 +92,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mTriggerEngineMode(false)
 , mWrapAt(100)
 , networkLatency(new QLineEdit)
+, mProfileName(mpHost ? mpHost->getName() : QStringLiteral("debug console"))
 , mIsPromptLine(false)
 , mUserAgreedToCloseConsole(false)
 , mpBufferSearchBox(new QLineEdit)
@@ -101,6 +102,10 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mSearchQuery()
 , mpButtonMainLayer(nullptr)
 , mType(type)
+, mSpellDic()
+, mpHunspell_system(nullptr)
+, mpHunspell_shared(nullptr)
+, mpHunspell_profile(nullptr)
 {
     auto ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
@@ -138,11 +143,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mStandardFormat.setTextFormat(mpHost->mFgColor, mpHost->mBgColor, TChar::None);
     }
     setContentsMargins(0, 0, 0, 0);
-    if (mpHost) {
-        profile_name = mpHost->getName();
-    } else {
-        profile_name = "debug console";
-    }
     mFormatSystemMessage.setBackground(mBgColor);
     mFormatSystemMessage.setForeground(Qt::red);
     setAttribute(Qt::WA_DeleteOnClose);
@@ -367,7 +367,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     timeStampButton->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
         tr("Show Time Stamps.")));
     timeStampButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-information.png")));
-    connect(timeStampButton, &QAbstractButton::pressed, mUpperPane, &TTextEdit::slot_toggleTimeStamps);
+    connect(timeStampButton, &QAbstractButton::toggled, mUpperPane, &TTextEdit::slot_toggleTimeStamps);
+    connect(timeStampButton, &QAbstractButton::toggled, mLowerPane, &TTextEdit::slot_toggleTimeStamps);
 
     auto replayButton = new QToolButton;
     replayButton->setCheckable(true);
@@ -551,7 +552,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layerCommandLine->setPalette(__pal);
 
     changeColors();
-    if (mType & (MainConsole|Buffer)) {
+    if (mType == MainConsole) {
         // During first use where mIsDebugConsole IS true mudlet::self() is null
         // then - but we rely on that flag to avoid having to also test for a
         // non-null mudlet::self() - the connect(...) will produce a debug
@@ -565,6 +566,29 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
         // For some odd reason the first seems to get connected twice - the
         // last flag prevents multiple ones being made
+
+        // Load up the spelling dictionary from the system:
+        setSystemSpellDictionary(mpHost->getSpellDic());
+
+        // Load up the spelling dictionary for the profile - needs to handle the
+        // absence of files for the first run in a new profile or from an older
+        // Mudlet version:
+        setProfileSpellDictionary();
+    }
+}
+
+TConsole::~TConsole()
+{
+    if (mpHunspell_system) {
+        Hunspell_destroy(mpHunspell_system);
+        mpHunspell_system = nullptr;
+    }
+    if (mpHunspell_profile) {
+        Hunspell_destroy(mpHunspell_profile);
+        mpHunspell_profile = nullptr;
+        // Need to commit any changes to personal dictionary
+        qDebug() << "TCommandLine::~TConsole(...) INFO - Saving profile's own Hunspell dictionary...";
+        mudlet::self()->saveDictionary(mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mProfileName, QStringLiteral("profile")), mWordSet_profile);
     }
 
 }
@@ -629,7 +653,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
         QString n = "WindowResizeEvent";
         pLua->call(func, n);
 
-        TEvent mudletEvent;
+        TEvent mudletEvent {};
         mudletEvent.mArgumentList.append(QLatin1String("sysWindowResizeEvent"));
         mudletEvent.mArgumentList.append(QString::number(x - mMainFrameLeftWidth - mMainFrameRightWidth));
         mudletEvent.mArgumentList.append(QString::number(y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height()));
@@ -698,9 +722,11 @@ void TConsole::closeEvent(QCloseEvent* event)
 
     if (mType & (SubConsole|Buffer)) {
         if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
-            QString key = objectName();
-            auto pC = mpHost->mpConsole->mSubConsoleMap.take(key);
+            auto pC = mpHost->mpConsole->mSubConsoleMap.take(mConsoleName);
             if (pC) {
+                // As it happens pC will be identical to 'this' it is just that
+                // we will have removed it from the main TConsole's
+                // mSubConsoleMap:
                 mUpperPane->close();
                 mLowerPane->close();
             }
@@ -716,10 +742,12 @@ void TConsole::closeEvent(QCloseEvent* event)
 
     if (mType == UserWindow) {
         if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
-            QString key = objectName();
-            auto pC = mpHost->mpConsole->mSubConsoleMap.take(key);
-            auto pD = mpHost->mpConsole->mDockWidgetMap.take(key);
+            auto pC = mpHost->mpConsole->mSubConsoleMap.take(mConsoleName);
+            auto pD = mpHost->mpConsole->mDockWidgetMap.take(mConsoleName);
             if (pC) {
+                // As it happens pC will be identical to 'this' it is just that
+                // we will have removed it from the main TConsole's
+                // mSubConsoleMap:
                 mUpperPane->close();
                 mLowerPane->close();
             }
@@ -736,40 +764,38 @@ void TConsole::closeEvent(QCloseEvent* event)
         }
     }
 
-    if (profile_name != "default_host") {
-        TEvent conCloseEvent;
-        conCloseEvent.mArgumentList.append(QLatin1String("sysExitEvent"));
-        conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(conCloseEvent);
+    TEvent conCloseEvent{};
+    conCloseEvent.mArgumentList.append(QStringLiteral("sysExitEvent"));
+    conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(conCloseEvent);
 
-        if (mpHost->mFORCE_SAVE_ON_EXIT) {
-            mudlet::self()->saveWindowLayout();
-            mpHost->modulesToWrite.clear();
-            mpHost->saveProfile();
+    if (mpHost->mFORCE_SAVE_ON_EXIT) {
+        mudlet::self()->saveWindowLayout();
+        mpHost->modulesToWrite.clear();
+        mpHost->saveProfile();
 
-            if (mpHost->mpMap->mpRoomDB->size() > 0) {
-                QDir dir_map;
-                QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
-                // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (3 of 6)
-                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, profile_name, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
-                if (!dir_map.exists(directory_map)) {
-                    dir_map.mkpath(directory_map);
-                }
-                QFile file_map(filename_map);
-                if (file_map.open(QIODevice::WriteOnly)) {
-                    QDataStream out(&file_map);
-                    mpHost->mpMap->serialize(out);
-                    file_map.close();
-                }
+        if (mpHost->mpMap->mpRoomDB->size() > 0) {
+            QDir dir_map;
+            QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
+            // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (3 of 6)
+            QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
+            if (!dir_map.exists(directory_map)) {
+                dir_map.mkpath(directory_map);
             }
-            event->accept();
-            return;
+            QFile file_map(filename_map);
+            if (file_map.open(QIODevice::WriteOnly)) {
+                QDataStream out(&file_map);
+                mpHost->mpMap->serialize(out);
+                file_map.close();
+            }
         }
+        event->accept();
+        return;
     }
 
-    if (profile_name != "default_host" && !mUserAgreedToCloseConsole) {
+    if (!mUserAgreedToCloseConsole) {
     ASK:
-        int choice = QMessageBox::question(this, tr("Save profile?"), tr("Do you want to save the profile %1?").arg(profile_name), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+        int choice = QMessageBox::question(this, tr("Save profile?"), tr("Do you want to save the profile %1?").arg(mProfileName), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
         if (choice == QMessageBox::Cancel) {
             event->setAccepted(false);
             event->ignore();
@@ -786,9 +812,9 @@ void TConsole::closeEvent(QCloseEvent* event)
                 goto ASK;
             } else if (mpHost->mpMap && mpHost->mpMap->mpRoomDB->size() > 0) {
                 QDir dir_map;
-                QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
+                QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
                 // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (4 of 6)
-                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, profile_name, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
+                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
                 if (!dir_map.exists(directory_map)) {
                     dir_map.mkpath(directory_map);
                 }
@@ -846,7 +872,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
         QString logFileName;
         // If no log directory is set, default to Mudlet's replay and log files path
         if (mpHost->mLogDir == nullptr || mpHost->mLogDir.isEmpty()) {
-            directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
+            directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, mProfileName);
         } else {
             directoryLogFile = mpHost->mLogDir;
         }
@@ -947,7 +973,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
             // switches away from the ASCII default
             logStream << "  <meta name='generator' content='" << tr("Mudlet MUD Client version: %1%2").arg(APP_VERSION, APP_BUILD) << "'>\n";
             // Nice to identify what made the file!
-            logStream << "  <title>" << tr("Mudlet, log from %1 profile").arg(profile_name) << "</title>\n";
+            logStream << "  <title>" << tr("Mudlet, log from %1 profile").arg(mProfileName) << "</title>\n";
             // Web-page title
             logStream << "  <style type='text/css'>\n";
             logStream << "   <!-- body { font-family: '" << fontsList.join("', '") << "'; font-size: 100%; line-height: 1.125em; white-space: nowrap; color:rgb("
@@ -983,7 +1009,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
                 logStream << "  </div><hr><div>\n";
             }
             logStream << QStringLiteral("<p>%1</p>\n")
-                         .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'",
+                         .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.",
                                                       "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
             // <div></div> tags required around outside of the body <span></spans> for
             // strict HTML 4 as we do not use <p></p>s or anything else
@@ -1004,8 +1030,9 @@ void TConsole::toggleLogging(bool isMessageEnabled)
                 // file to not trigger the insertion of this line:
                 mLogStream << QStringLiteral("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯").repeated(8).append(QChar::LineFeed);
             }
-            mLogStream << logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.\n",
-                                                  "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale"));
+            mLogStream << QStringLiteral("%1\n")
+                         .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.",
+                                                  "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
 
         }
         logButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
@@ -1013,9 +1040,8 @@ void TConsole::toggleLogging(bool isMessageEnabled)
     } else {
         // Logging is being turned off
         buffer.logRemainingOutput();
-        QString endDateTimeLine = tr("Log session ending at %1.")
-                .arg(logDateTime.toString(tr("hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy",
-                                             "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
+        QString endDateTimeLine = logDateTime.toString(tr("'Log session ending at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.",
+                                             "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale"));
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             mLogStream << QStringLiteral("<p>%1</p>\n").arg(endDateTimeLine);
             mLogStream << "  </div></body>\n";
@@ -1053,7 +1079,7 @@ void TConsole::slot_toggleReplayRecording()
     }
     mRecordReplay = !mRecordReplay;
     if (mRecordReplay) {
-        QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
+        QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, mProfileName);
         // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (5 of 6)
         QString mLogFileName = QStringLiteral("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
         QDir dirLogFile;
@@ -1099,11 +1125,11 @@ void TConsole::changeColors()
         const QString t = "123";
         p.drawText(r, 1, t, &r2);
         // N/U:        int mFontHeight = QFontMetrics( mDisplayFont ).height();
-        int mFontWidth = QFontMetrics(mDisplayFont).width(QChar('W'));
+        int mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
         auto letterSpacing = static_cast<qreal>(mFontWidth - static_cast<qreal>(r2.width() / t.size()));
         mUpperPane->mLetterSpacing = letterSpacing;
         mLowerPane->mLetterSpacing = letterSpacing;
-        mpHost->mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
+        mpHost->setDisplayFontSpacing(letterSpacing);
         mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, mUpperPane->mLetterSpacing);
 #endif
         mDisplayFont.setFixedPitch(true);
@@ -1128,32 +1154,32 @@ void TConsole::changeColors()
             mpCommandLine->mRegularPalette = pal;
         }
         if (mpHost->mNoAntiAlias) {
-            mpHost->mDisplayFont.setStyleStrategy(QFont::NoAntialias);
+            mpHost->setDisplayFontStyle(QFont::NoAntialias);
         } else {
-            mpHost->mDisplayFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferAntialias | QFont::PreferQuality));
+            mpHost->setDisplayFontStyle(QFont::StyleStrategy(QFont::PreferAntialias | QFont::PreferQuality));
         }
-        mpHost->mDisplayFont.setFixedPitch(true);
+        mpHost->setDisplayFontFixedPitch(true);
         mDisplayFont.setFixedPitch(true);
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap(2000, 600);
         QPainter p(&pixmap);
-        QFont _font = mpHost->mDisplayFont;
+        QFont _font = mpHost->getDisplayFont();
         _font.setLetterSpacing(QFont::AbsoluteSpacing, 0);
         p.setFont(_font);
         const QRectF r = QRectF(0, 0, 2000, 600);
         QRectF r2;
         const QString t = "123";
         p.drawText(r, 1, t, &r2);
-        // N/U:        int mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
-        int mFontWidth = QFontMetrics(mpHost->mDisplayFont).width(QChar('W'));
+        // N/U:        int mFontHeight = QFontMetrics( mpHost->getDisplayFont() ).height();
+        int mFontWidth = QFontMetrics(mpHost->getDisplayFont()).averageCharWidth();
         auto letterSpacing = static_cast<qreal>(mFontWidth - static_cast<qreal>(r2.width() / t.size()));
         mUpperPane->mLetterSpacing = letterSpacing;
         mLowerPane->mLetterSpacing = letterSpacing;
-        mpHost->mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
+        mpHost->setDisplayFontSpacing(letterSpacing);
         mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, mUpperPane->mLetterSpacing);
 #endif
-        mUpperPane->setFont(mpHost->mDisplayFont);
-        mLowerPane->setFont(mpHost->mDisplayFont);
+        mUpperPane->setFont(mpHost->getDisplayFont());
+        mLowerPane->setFont(mpHost->getDisplayFont());
         QPalette palette;
         palette.setColor(QPalette::Text, mpHost->mFgColor);
         palette.setColor(QPalette::Highlight, QColor(55, 55, 255));
@@ -1165,7 +1191,7 @@ void TConsole::changeColors()
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
         if (mpCommandLine) {
-            mpCommandLine->setFont(mpHost->mDisplayFont);
+            mpCommandLine->setFont(mpHost->getDisplayFont());
         }
         mFormatCurrent.setColors(mpHost->mFgColor, mpHost->mBgColor);
     } else {
@@ -1239,7 +1265,7 @@ void TConsole::printOnDisplay(std::string& incomingSocketData, const bool isFrom
     // method is only used on the "main" console so no need to filter depending
     // on TConsole types:
 
-    emit signal_newDataAlert(mpHost->getName());
+    emit signal_newDataAlert(mProfileName);
 }
 
 void TConsole::runTriggers(int line)
@@ -1500,11 +1526,11 @@ bool TConsole::saveMap(const QString& location, int saveVersion)
 {
     QDir dir_map;
     QString filename_map;
-    QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
+    QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
 
     if (location.isEmpty()) {
         // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (6 of 6)
-        filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, profile_name, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
+        filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
     } else {
         filename_map = location;
     }
@@ -1621,7 +1647,7 @@ bool TConsole::importMap(const QString& location, QString* errMsg)
     if (!fileInfo.filePath().isEmpty()) {
         if (fileInfo.isRelative()) {
             // Resolve the name relative to the profile home directory:
-            filePathNameString = QDir::cleanPath(mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), fileInfo.filePath()));
+            filePathNameString = QDir::cleanPath(mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileInfo.filePath()));
         } else {
             if (fileInfo.exists()) {
                 filePathNameString = fileInfo.canonicalFilePath(); // Cannot use cannonical path if file doesn't exist!
@@ -1821,6 +1847,31 @@ std::list<int> TConsole::getBgColor(std::string& buf)
     return {};
 }
 
+QPair<quint8, TChar> TConsole::getTextAttributes() const
+{
+    int x = P_begin.x();
+    int y = P_begin.y();
+    if (y < 0 || x < 0 || y >= static_cast<int>(buffer.buffer.size()) || x >= (static_cast<int>(buffer.buffer.at(y).size()) - 1)) {
+        return qMakePair(2, TChar());
+    }
+
+    return qMakePair(0, buffer.buffer.at(y).at(x));
+}
+
+QPair<quint8, TChar> TConsole::getTextAttributes(const QString& name) const
+{
+    if (name.isEmpty() || name == QLatin1String("main")) {
+        return getTextAttributes();
+    }
+
+    auto pC = mSubConsoleMap.value(name);
+    if (pC) {
+        return pC->getTextAttributes();
+    }
+
+    return qMakePair(1, TChar());
+}
+
 void TConsole::luaWrapLine(std::string& buf, int line)
 {
     QString key = QString::fromUtf8(buf.c_str());
@@ -1963,9 +2014,7 @@ int TConsole::select(const QString& text, int numOfMatch)
 bool TConsole::selectSection(int from, int to)
 {
     if (mudlet::debugMode) {
-        if (mudlet::debugMode) {
-            TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "\nselectSection(" << from << "," << to << "): line under current user cursor: " << buffer.line(mUserCursor.y()) << "\n" >> 0;
-        }
+        TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "\nselectSection(" << from << "," << to << "): line under current user cursor: " << buffer.line(mUserCursor.y()) << "\n" >> 0;
     }
     if (from < 0) {
         return false;
@@ -1995,18 +2044,18 @@ bool TConsole::selectSection(int from, int to)
 std::tuple<bool, QString, int, int> TConsole::getSelection()
 {
     if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
-        return make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
+        return std::make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
     }
 
     const auto start = P_begin.x();
     const auto length = P_end.x() - P_begin.x();
     const auto line = buffer.line(mUserCursor.y());
     if (line.size() < start) {
-        return make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
+        return std::make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
     }
 
     const auto text = line.mid(start, length);
-    return make_tuple(true, text, start, length);
+    return std::make_tuple(true, text, start, length);
 }
 
 void TConsole::setLink(const QStringList& linkFunction, const QStringList& linkHint)
@@ -2182,7 +2231,9 @@ void TConsole::createMapper(int x, int y, int width, int height)
 {
     if (!mpMapper) {
         mpMapper = new dlgMapper(mpMainFrame, mpHost, mpHost->mpMap.data());
+#if defined(INCLUDE_3DMAPPER)
         mpHost->mpMap->mpM = mpMapper->glWidget;
+#endif
         mpHost->mpMap->mpHost = mpHost;
         mpHost->mpMap->mpMapper = mpMapper;
         qDebug() << "TConsole::createMapper() - restore map case 2.";
@@ -2198,14 +2249,29 @@ void TConsole::createMapper(int x, int y, int width, int height)
 
         mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
 
-        TEvent mapOpenEvent;
+        TEvent mapOpenEvent {};
         mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
         mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(mapOpenEvent);
     }
     mpMapper->resize(width, height);
     mpMapper->move(x, y);
+
+    // Qt bug workaround: on Windows and during profile load only, if the mapper widget is created
+    // it gives a height and width to mpLeftToolBar, mpRightToolBar, and mpTopToolBar for
+    // some reason. Those widgets size back down immediately after on their own (?!), however if
+    // getMainWindowSize() is called right after map create, the sizes reported will be wrong
+#if defined(Q_OS_WIN32)
+    mpLeftToolBar->setHidden(true);
+    mpRightToolBar->setHidden(true);
+    mpTopToolBar->setHidden(true);
     mpMapper->show();
+    mpLeftToolBar->setVisible(true);
+    mpRightToolBar->setVisible(true);
+    mpTopToolBar->setVisible(true);
+#else
+    mpMapper->show();
+#endif
 }
 
 bool TConsole::createButton(const QString& name, int x, int y, int width, int height, bool fillBackground)
@@ -2581,9 +2647,8 @@ void TConsole::slot_reloadMap(QList<QString> profilesList)
         return;
     }
 
-    QString ourName = pHost->getName();
-    if (!profilesList.contains(ourName)) {
-        qDebug() << "TConsole::slot_reloadMap(" << profilesList << ") request received but we:" << ourName << "are not mentioned - so we are ignoring it...!";
+    if (!profilesList.contains(mProfileName)) {
+        qDebug() << "TConsole::slot_reloadMap(" << profilesList << ") request received but we:" << mProfileName << "are not mentioned - so we are ignoring it...!";
         return;
     }
 
@@ -2633,5 +2698,172 @@ void TConsole::slot_openFiles()
         // we left off.
         mReplayFile.open(QIODevice::Append);
         mReplayStream.setDevice(&mReplayFile);
+    }
+}
+=======
+QPair<bool, QString> TConsole::addWordToSet(const QString& word)
+{
+    QString errMsg = QStringLiteral("the word \"%1\" already seems to be in the user dictionary");
+    QPair<bool, QString> result{};
+    if (!mEnableUserDictionary) {
+        return qMakePair(false, QLatin1String("a user dictionary is not enable for this profile"));
+    }
+
+    if (!mUseSharedDictionary) {
+        // The return value from this function is unclear - it does not seems to
+        // indicate anything useful
+        Hunspell_add(mpHunspell_profile, word.toUtf8().constData());
+        if (!mWordSet_profile.contains(word)) {
+            mWordSet_profile.insert(word);
+            qDebug().noquote().nospace() << "TConsole::addWordToSet(\"" << word << "\") INFO - word added to profile mWordSet.";
+            result.first = true;
+        } else {
+            result.second = errMsg.arg(word);
+        }
+
+    } else {
+        auto pMudlet = mudlet::self();
+        QPair<bool, bool> sharedDictionaryResult = pMudlet->addWordToSet(word);
+        while (!sharedDictionaryResult.first) {
+            qDebug() << "TConsole::addWordToSet(...) ALERT - failed to get a write lock to access mWordSet_shared and loaded shared hunspell dictionary, retrying...";
+            sharedDictionaryResult = pMudlet->addWordToSet(word);
+        }
+
+        if (sharedDictionaryResult.second) {
+            // Successfully added word:
+            result.first = true;
+        } else {
+            // Word already present
+            result.second = errMsg.arg(word);
+        }
+    }
+
+    return result;
+}
+
+QPair<bool, QString> TConsole::removeWordFromSet(const QString& word)
+{
+    QString errMsg = QStringLiteral("the word \"%1\" does not seem to be in the user dictionary");
+    QPair<bool, QString> result{};
+    if (!mEnableUserDictionary) {
+        return qMakePair(false, QLatin1String("a user dictionary is not enable for this profile"));
+    }
+
+    if (!mUseSharedDictionary) {
+        // The return value from this function is unclear - it does not seems to
+        // indicate anything useful
+        Hunspell_remove(mpHunspell_profile, word.toUtf8().constData());
+        if (mWordSet_profile.remove(word)) {
+            qDebug().noquote().nospace() << "TConsole::removeWordFromSet(\"" << word << "\") INFO - word removed from profile mWordSet.";
+            result.first = true;
+        } else {
+            result.second = errMsg.arg(word);
+        }
+
+    } else {
+        auto pMudlet = mudlet::self();
+        QPair<bool, bool> sharedDictionaryResult = pMudlet->removeWordFromSet(word);
+        while (!sharedDictionaryResult.first) {
+            qDebug() << "TConsole::removeWordFromSet(...) ALERT - failed to get a write lock to access mWordSet_shared and loaded shared hunspell dictionary, retrying...";
+            sharedDictionaryResult = pMudlet->removeWordFromSet(word);
+        }
+
+        if (sharedDictionaryResult.second) {
+            // Successfully added word:
+            result.first = true;
+        } else {
+            // Word already present
+            result.second = errMsg.arg(word);
+        }
+    }
+
+    return result;
+}
+
+void TConsole::setSystemSpellDictionary(const QString& newDict)
+{
+    if (newDict.isEmpty() || mSpellDic == newDict) {
+        return;
+    }
+
+    mSpellDic = newDict;
+
+    QString path = mudlet::getMudletPath(mudlet::hunspellDictionaryPath, mpHost->getSpellDic());
+    QString spell_aff = QStringLiteral("%1%2.aff").arg(path, newDict);
+    QString spell_dic = QStringLiteral("%1%2.dic").arg(path, newDict);
+
+    if (mpHunspell_system) {
+        Hunspell_destroy(mpHunspell_system);
+    }
+
+#if defined(Q_OS_WIN32)
+    // strip non-ASCII characters from the path because hunspell can't handle them
+    // when compiled with MinGW 7.3.0
+    mudlet::self()->sanitizeUtf8Path(spell_aff, QStringLiteral("%1.aff").arg(newDict));
+    mudlet::self()->sanitizeUtf8Path(spell_dic, QStringLiteral("%1.dic").arg(newDict));
+#endif
+
+    mpHunspell_system = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
+    if (mpHunspell_system) {
+        mHunspellCodecName_system = QByteArray(Hunspell_get_dic_encoding(mpHunspell_system));
+        qDebug().noquote().nospace() << "TCommandLine::setSystemSpellDictionary(\"" << newDict << "\") INFO - System Hunspell dictionary loaded for profile, it uses a \"" << Hunspell_get_dic_encoding(mpHunspell_system) << "\" encoding...";
+        mpHunspellCodec_system = QTextCodec::codecForName(mHunspellCodecName_system);
+    }
+}
+
+// NOTE: mEnabledUserDictionary has been wedged on (it will never be false)
+void TConsole::setProfileSpellDictionary()
+{
+    // Determine and copy the configuration settings from the Host instance:
+    mpHost->getUserDictionaryOptions(mEnableUserDictionary, mUseSharedDictionary);
+    if (!mEnableUserDictionary) {
+        if (mpHunspell_profile) {
+            Hunspell_destroy(mpHunspell_profile);
+            mpHunspell_profile = nullptr;
+            // Need to commit any changes to personal dictionary
+            qDebug() << "TConsole::setProfileSpellDictionary() INFO - Saving profile's own Hunspell dictionary...";
+            mudlet::self()->saveDictionary(mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mProfileName, QStringLiteral("profile")), mWordSet_profile);
+        }
+        // Nothing else to do if not using the shared one
+
+    } else {
+        if (!mUseSharedDictionary) {
+            // Want to use per profile dictionary, is it loaded?
+            if (!mpHunspell_profile) {
+                // No - so load it
+                qDebug() << "TConsole::setProfileSpellDictionary() INFO - Preparing profile's own Hunspell dictionary...";
+                mpHunspell_profile = mudlet::self()->prepareProfileDictionary(mpHost->getName(), mWordSet_profile);
+            }
+            // Else no need to load it
+
+        } else {
+            // Want to use the shared dictionary - this will open it if needed:
+            mpHunspell_shared = mudlet::self()->prepareSharedDictionary();
+        }
+    }
+}
+
+QSet<QString> TConsole::getWordSet() const
+{
+    if (!mEnableUserDictionary) {
+        return QSet<QString>();
+    }
+
+    if (!mUseSharedDictionary) {
+        return mWordSet_profile;
+    } else {
+        return mudlet::self()->getWordSet();
+    }
+}
+
+void TConsole::setProfileName(const QString& newName)
+{
+    mProfileName = newName;
+    if (mType != MainConsole) {
+        return;
+    }
+
+    for (auto pC : mSubConsoleMap) {
+        pC->setProfileName(newName);
     }
 }

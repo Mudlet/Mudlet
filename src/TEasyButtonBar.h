@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017, 2019 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -47,21 +47,20 @@ public:
     void setHorizontalOrientation() { mVerticalOrientation = false; }
     void clear();
     void finalize();
-    TAction* mpTAction;
     void recordMove() { mRecordMove = true; }
+
+    TAction* mpTAction;
+
+public slots:
+    void slot_pressed(bool);
 
 private:
     bool mVerticalOrientation;
     QWidget* mpWidget;
-    QString mName;
     bool mRecordMove;
     QGridLayout* mpLayout;
     int mItemCount;
-    QWidget* mpBar;
     std::list<TFlipButton*> mButtonList;
-
-public slots:
-    void slot_pressed(bool);
 };
 
 #endif // MUDLET_TEASYBUTTONBAR_H

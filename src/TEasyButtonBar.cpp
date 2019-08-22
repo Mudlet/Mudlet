@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017, 2019 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -36,14 +36,13 @@ TEasyButtonBar::TEasyButtonBar(TAction* pA, QString name, QWidget* pW)
 : QWidget( pW )
 , mpTAction( pA )
 , mVerticalOrientation( false )
-, mpWidget( new QWidget )
-, mName( name )
+, mpWidget( new QWidget(this) )
 , mRecordMove( false )
 , mpLayout( nullptr )
 , mItemCount( 0 )
-, mpBar( pW )
 {
     mButtonList.clear();
+    auto hostName(pA->mpHost->getName());
     auto layout = new QVBoxLayout;
     setLayout(layout);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -67,6 +66,10 @@ TEasyButtonBar::TEasyButtonBar(TAction* pA, QString name, QWidget* pW)
     }
     setStyleSheet(mpTAction->css);
     mpWidget->setStyleSheet(mpTAction->css);
+    setObjectName(QStringLiteral("easyButtonBar_%1_%2").arg(hostName, name));
+    mpWidget->setObjectName(QStringLiteral("easyButtonBar_Widget_%1_%2").arg(hostName, name));
+    // It is not entirely clear if this is ever visible:
+    setWindowTitle(tr("Easybutton Bar - %1 - %2").arg(hostName, name));
 }
 
 void TEasyButtonBar::addButton(TFlipButton* pB)
@@ -191,8 +194,12 @@ void TEasyButtonBar::clear()
         disconnect(flipButton, &QAbstractButton::clicked, this, &TEasyButtonBar::slot_pressed);
     }
     mButtonList.clear();
+    // Transfer the object name to the new instance:
+    auto widgetObjectName(mpWidget->objectName());
+    mpWidget->setObjectName(QString());
     mpWidget->deleteLater();
     mpWidget = pW;
+    mpWidget->setObjectName(widgetObjectName);
 
     if (!mpTAction->mUseCustomLayout) {
         mpLayout = new QGridLayout;

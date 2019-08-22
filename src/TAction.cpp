@@ -32,9 +32,6 @@
 #include "TToolBar.h"
 #include "mudlet.h"
 
-
-using namespace std;
-
 TAction::TAction(TAction* parent, Host* pHost)
 : Tree<TAction>(parent)
 , mpToolBar(nullptr)
@@ -417,4 +414,17 @@ void TAction::insertActions(TEasyButtonBar* pT, QMenu* menu)
     action->setStatusTip(mName);
     Q_ASSERT_X(menu, "TAction::insertActions( TEasyButtonBar *, QMenu * )", "method called with a NULL QMenu pointer!");
     menu->addAction(action);
+}
+
+void TAction::setName(const QString& name)
+{
+    if (name != mName) {
+        setDataChanged();
+        mName = name;
+        if (mpToolBar) {
+            // Need to revise the objectName and displayed name in the titlebar
+            // if floating and the main window context menu:
+            mpToolBar->setName(name);
+        }
+    }
 }

@@ -34,9 +34,6 @@
 #include <cassert>
 #include <sstream>
 
-
-using namespace std;
-
 // Some extraordinary numbers outside of the range (0-255) used for ANSI colors:
 // Changing them WILL modify the Lua API of TLuaInterpreter::tempColorTrigger
 // and the replacement TLuaInterpreter::tempAnsiColorTrigger
@@ -178,7 +175,8 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
     }
 
     if ((propertyList.empty()) && (!isFolder()) && (!mColorTrigger)) {
-        setError("No patterns defined.");
+        setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
+                .arg(tr("Error: This trigger has no patterns defined, yet. Add some to activate it.")));
         mOK_init = false;
         return false;
     }
@@ -209,7 +207,8 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
                     TDebug(QColor(Qt::red), QColor(Qt::gray)) << R"(in: ")" << regexp.constData() << "\"\n" >> 0;
                 }
                 setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
-                                 .arg(tr(R"(Error: in item %1, perl regex: "%2", it failed to compile, reason: "%3".)").arg(QString::number(i + 1), regexp.constData(), error)));
+                         .arg(tr(R"(Error: in item %1, perl regex "%2" failed to compile, reason: "%3".)")
+                         .arg(QString::number(i + 1), regexp.constData(), error)));
                 state = false;
             } else {
                 if (mudlet::debugMode) {
@@ -229,7 +228,8 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
             QString error;
             if (!mpLua->compile(code, error, QString::fromStdString(funcName))) {
                 setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
-                                 .arg(tr(R"(Error: in item %1, lua condition function "%2" failed to compile, reason: "%3".)").arg(QString::number(i + 1), regexList.at(i), error)));
+                         .arg(tr(R"(Error: in item %1, lua function "%2" failed to compile, reason: "%3".)")
+                         .arg(QString::number(i + 1), regexList.at(i), error)));
                 state = false;
                 if (mudlet::debugMode) {
                     TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA ERROR: failed to compile, reason:\n" << error << "\n" >> 0;
@@ -401,6 +401,9 @@ END : {
         int b2 = mFgColor.blue();
         int total = captureList.size();
         TConsole* pC = mpHost->mpConsole;
+        if (Q_UNLIKELY(!pC)) {
+            return true;
+        }
         pC->deselect();
         auto its = captureList.begin();
         auto iti = posList.begin();
@@ -478,6 +481,9 @@ bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QStri
             int g2 = mFgColor.green();
             int b2 = mFgColor.blue();
             TConsole* pC = mpHost->mpConsole;
+            if (Q_UNLIKELY(!pC)) {
+                return true;
+            }
             auto its = captureList.begin();
             for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
                 int begin = *iti;
@@ -594,6 +600,9 @@ bool TTrigger::match_substring(const QString& toMatch, const QString& regex, int
             int g2 = mFgColor.green();
             int b2 = mFgColor.blue();
             TConsole* pC = mpHost->mpConsole;
+            if (Q_UNLIKELY(!pC)) {
+                return true;
+            }
             pC->deselect();
             auto its = captureList.begin();
             for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
@@ -664,8 +673,8 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
         // Ideally we should base the matching on only the ANSI code but not
         // all parts of the text come from the Server and can be determined to
         // have come from a decoded ANSI code number:
-        if (  ((pCT->ansiFg == scmIgnored)||((pCT->ansiFg == scmDefault) && mpHost->mpConsole->mFgColor == (*it).foreground())||(pCT->mFgColor == (*it).foreground()))
-            &&((pCT->ansiBg == scmIgnored)||((pCT->ansiBg == scmDefault) && mpHost->mpConsole->mBgColor == (*it).foreground())||(pCT->mBgColor == (*it).background()))) {
+        if (((pCT->ansiFg == scmIgnored)||((pCT->ansiFg == scmDefault) && mpHost->mpConsole->mFgColor == (*it).foreground())||(pCT->mFgColor == (*it).foreground()))
+            &&((pCT->ansiBg == scmIgnored)||((pCT->ansiBg == scmDefault) && mpHost->mpConsole->mBgColor == (*it).background())||(pCT->mBgColor == (*it).background()))) {
 
             if (matchBegin == -1) {
                 matchBegin = pos;
@@ -701,6 +710,9 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
             int g2 = mFgColor.green();
             int b2 = mFgColor.blue();
             TConsole* pC = mpHost->mpConsole;
+            if (Q_UNLIKELY(!pC)) {
+                return true;
+            }
             pC->deselect();
             auto its = captureList.begin();
             for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
@@ -753,7 +765,7 @@ bool TTrigger::match_line_spacer(int regexNumber)
                                 >> 0;
                     }
                     matchStatePair.second->conditionMatched();
-                    std::list<string> captureList;
+                    std::list<std::string> captureList;
                     std::list<int> posList;
                     matchStatePair.second->multiCaptureList.push_back(captureList);
                     matchStatePair.second->multiCapturePosList.push_back(posList);
@@ -827,6 +839,9 @@ bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, in
             int g2 = mFgColor.green();
             int b2 = mFgColor.blue();
             TConsole* pC = mpHost->mpConsole;
+            if (Q_UNLIKELY(!pC)) {
+                return true;
+            }
             auto its = captureList.begin();
             for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
                 int begin = *iti;
@@ -949,7 +964,7 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
         if (mIsMultiline) {
             int k = 0;
             conditionMet = false; //invalidate conditionMet as it has no meaning for multiline triggers
-            list<TMatchState*> removeList;
+            std::list<TMatchState*> removeList;
 
             for (auto& matchStatePair : mConditionMap) {
                 k++;
@@ -1202,10 +1217,10 @@ bool TTrigger::setScript(const QString& script)
 
 bool TTrigger::compileScript()
 {
-    mFuncName = QString("Trigger") + QString::number(mID);
-    QString code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    mFuncName = QStringLiteral("Trigger%1").arg(QString::number(mID));
+    QString code = QStringLiteral("function %1()\n%2\nend\n").arg(mFuncName, mScript);
     QString error;
-    if (mpLua->compile(code, error, QString("Trigger: ") + getName())) {
+    if (mpLua->compile(code, error, QStringLiteral("Trigger: %1").arg(getName()))) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;

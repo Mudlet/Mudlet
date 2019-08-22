@@ -12,9 +12,10 @@ else {
 
 cd "$sourceDir"
 
-. CI\appveyor.set-environment.ps1
+. CI\appveyor.functions.ps1
 SetQtBaseDir "C:\src\verbose_output.log"
 SetMingwBaseDir "C:\src\verbose_output.log"
+SetLuarocksPath "C:\src\verbose_output.log"
 
 if(-NOT (Test-Path "$sourceDir\build")){
     New-Item -ItemType Directory "$sourceDir\build"

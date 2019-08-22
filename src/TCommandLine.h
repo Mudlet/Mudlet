@@ -24,7 +24,6 @@
 
 
 #include "pre_guard.h"
-#include <QMap>
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QString>
@@ -32,8 +31,6 @@
 #include <QTextDecoder>
 #include "post_guard.h"
 
-#include <hunspell/hunspell.hxx>
-#include <hunspell/hunspell.h>
 
 class TConsole;
 class KeyUnit;
@@ -47,9 +44,10 @@ class TCommandLine : public QPlainTextEdit //QLineEdit
 public:
     Q_DISABLE_COPY(TCommandLine)
     TCommandLine(Host*, TConsole*, QWidget*);
-    ~TCommandLine();
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
+    void recheckWholeLine();
+    void clearMarksOnWholeLine();
 
 
     QPalette mRegularPalette;
@@ -66,7 +64,7 @@ private:
     void enterCommand(QKeyEvent*);
     void adjustHeight();
     void processNormalKey(QEvent*);
-    bool processPotentialKeyBinding(QKeyEvent*);
+    bool keybindingMatched(QKeyEvent*);
 
 
     QPointer<Host> mpHost;
@@ -81,7 +79,8 @@ private:
 
 public slots:
     void slot_popupMenu();
-    void slot_changeSpellDict(const QString&);
+    void slot_addWord();
+    void slot_removeWord();
 
 
 private:
@@ -91,11 +90,13 @@ private:
     int mSelectionStart;
     QString mTabCompletionOld;
     QPoint mPopupPosition;
-    Hunhandle* mpHunspell;
-    QByteArray mHunspellCodecName;
-    QTextCodec* mpHunspellCodec;
-    int mHunspellSuggestionNumber;
-    char** mpHunspellSuggestionList;
+    QString mSpellCheckedWord;
+    int mSystemDictionarySuggestionsCount;
+    int mUserDictionarySuggestionsCount;
+    char** mpSystemSuggestionsList;
+    char** mpUserSuggestionsList;
+    void spellCheckWord(QTextCursor& c);
+    bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
 };
 
 #endif // MUDLET_TCOMMANDLINE_H

@@ -2,11 +2,19 @@
 
 TS_FILES += $$files(mudlet_*.ts)
 
+# The American translation is plurals only and has to be done separately (by
+# hand) so is not to be included in the built-in Qt TRANSLATIONS variable as the
+# default processing of it will not have the needed extra `-pluralonly`
+TS_FILES -= mudlet_en_US.ts
+
 # need to use full path, otherwise running
 # `lupdate` will generate *.ts files in project root directory
 for(file, TS_FILES) {
     TRANSLATIONS += "$${PWD}/$${file}"
 }
+
+# Now put the file back
+TS_FILES += mudlet_en_US.ts
 
 isEmpty(QMAKE_LRELEASE) {
     win32 {
@@ -27,7 +35,11 @@ write_file(lrelease_output.txt)
 message("Building translations")
 TS_FILES_NOEXT = $$replace(TS_FILES, ".ts", "")
 for(file, TS_FILES_NOEXT) {
-    system("$$QMAKE_LRELEASE $${file}.ts -compress -qm $${file}.qm >> lrelease_output.txt")
+    win32 {
+        system("$$QMAKE_LRELEASE $${file}.ts -compress -qm $${file}.qm >> lrelease_output.txt")
+    } else {
+        system("LANG=C $$QMAKE_LRELEASE $${file}.ts -compress -qm $${file}.qm >> lrelease_output.txt")
+    }
 }
 STATS_GENERATOR = $$shell_path("$${PWD}/generate-translation-stats.lua")
 

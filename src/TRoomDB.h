@@ -27,7 +27,6 @@
 #include <QApplication>
 #include <QHash>
 #include <QMap>
-#include <QMultiHash>
 #include <QString>
 #include "post_guard.h"
 
@@ -51,14 +50,14 @@ public:
     bool removeRoom(int);
     void removeRoom(QSet<int>&);
     bool removeArea(int id);
-    bool removeArea(QString name);
+    bool removeArea(const QString& name);
     void removeArea(TArea*);
     bool addArea(int id);
     int addArea(QString name);
     bool addArea(int id, QString name);
     bool setAreaName(int areaID, QString name);
-    const QList<TRoom*> getRoomPtrList();
-    const QList<TArea*> getAreaPtrList();
+    const QList<TRoom*> getRoomPtrList() const;
+    const QList<TArea*> getAreaPtrList() const;
     const QHash<int, TRoom*>& getRoomMap() const { return rooms; }
     const QMap<int, TArea*>& getAreaMap() const { return areas; }
     QList<int> getRoomIDList();
@@ -80,8 +79,14 @@ public:
     void restoreSingleRoom(int, TRoom*);
     const QString getDefaultAreaName() { return mDefaultAreaName; }
 
-
-    QMap<QString, int> hashTable;
+    // This is for muds that provide hashes to rooms instead of IDs.
+    // If it exists, we delete the info when deleting a room.
+    // But we rely on the user to add the data, don't do any checking,
+    // and it isn't audited.
+    // It should be a QHash, but changing it would break loading from files
+    // saved under the old version.
+    QMap<QString, int> hashToRoomID;
+    QMap<int, QString> roomIDToHash;
 
 
 private:

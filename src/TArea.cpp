@@ -377,10 +377,10 @@ void TArea::addRoom(int id)
 
 void TArea::calcSpan()
 {
-    xminEbene.clear();
-    yminEbene.clear();
-    xmaxEbene.clear();
-    ymaxEbene.clear();
+    xminForZ.clear();
+    yminForZ.clear();
+    xmaxForZ.clear();
+    ymaxForZ.clear();
     zLevels.clear();
 
     bool isFirstDone = false;
@@ -401,10 +401,10 @@ void TArea::calcSpan()
             min_z = pR->z;
             max_z = min_z;
             zLevels.push_back(pR->z);
-            xminEbene.insert(pR->z, pR->x);
-            xmaxEbene.insert(pR->z, pR->x);
-            yminEbene.insert(pR->z, pR->y);
-            ymaxEbene.insert(pR->z, pR->y);
+            xminForZ.insert(pR->z, pR->x);
+            xmaxForZ.insert(pR->z, pR->x);
+            yminForZ.insert(pR->z, pR->y);
+            ymaxForZ.insert(pR->z, pR->y);
             isFirstDone = true;
             continue;
         } else {
@@ -414,30 +414,30 @@ void TArea::calcSpan()
                 zLevels.push_back(pR->z);
             }
 
-            if (!xminEbene.contains(pR->z)) {
-                xminEbene.insert(pR->z, pR->x);
-            } else if (pR->x < xminEbene.value(pR->z)) {
-                xminEbene.insert(pR->z, pR->x);
+            if (!xminForZ.contains(pR->z)) {
+                xminForZ.insert(pR->z, pR->x);
+            } else if (pR->x < xminForZ.value(pR->z)) {
+                xminForZ.insert(pR->z, pR->x);
             }
 
             if (pR->x < min_x) {
                 min_x = pR->x;
             }
 
-            if (!xmaxEbene.contains(pR->z)) {
-                xmaxEbene.insert(pR->z, pR->x);
-            } else if (pR->x > xmaxEbene.value(pR->z)) {
-                xmaxEbene.insert(pR->z, pR->x);
+            if (!xmaxForZ.contains(pR->z)) {
+                xmaxForZ.insert(pR->z, pR->x);
+            } else if (pR->x > xmaxForZ.value(pR->z)) {
+                xmaxForZ.insert(pR->z, pR->x);
             }
 
             if (pR->x > max_x) {
                 max_x = pR->x;
             }
 
-            if (!yminEbene.contains(pR->z)) {
-                yminEbene.insert(pR->z, (-1 * pR->y));
-            } else if ((-1 * pR->y) < yminEbene.value(pR->z)) {
-                yminEbene.insert(pR->z, (-1 * pR->y));
+            if (!yminForZ.contains(pR->z)) {
+                yminForZ.insert(pR->z, (-1 * pR->y));
+            } else if ((-1 * pR->y) < yminForZ.value(pR->z)) {
+                yminForZ.insert(pR->z, (-1 * pR->y));
             }
 
             if ((-1 * pR->y) < min_y) {
@@ -448,10 +448,10 @@ void TArea::calcSpan()
                 max_y = (-1 * pR->y);
             }
 
-            if (!ymaxEbene.contains(pR->z)) {
-                ymaxEbene.insert(pR->z, (-1 * pR->y));
-            } else if ((-1 * pR->y) > ymaxEbene.value(pR->z)) {
-                ymaxEbene.insert(pR->z, (-1 * pR->y));
+            if (!ymaxForZ.contains(pR->z)) {
+                ymaxForZ.insert(pR->z, (-1 * pR->y));
+            } else if ((-1 * pR->y) > ymaxForZ.value(pR->z)) {
+                ymaxForZ.insert(pR->z, (-1 * pR->y));
             }
 
             if (pR->z < min_z) {
@@ -466,7 +466,7 @@ void TArea::calcSpan()
 
     if (zLevels.size() > 1) {
         // Not essential but it makes debugging a bit clearer if they are sorted
-        // The {x|y}{min|max}Ebene are, by definition!
+        // The {x|y}{min|max}ForZ are, by definition!
         std::sort(zLevels.begin(), zLevels.end());
     }
 }
@@ -492,13 +492,13 @@ void TArea::removeRoom(int room, bool isToDeferAreaRelatedRecalculations)
         if (pR) {
             // Now see if the room is on an extreme - if it the only room on a
             // particular z-coordinate it will be on all four
-            if (xminEbene.contains(pR->z) && xminEbene.value(pR->z) >= pR->x) {
+            if (xminForZ.contains(pR->z) && xminForZ.value(pR->z) >= pR->x) {
                 isOnExtreme = true;
-            } else if (xmaxEbene.contains(pR->z) && xmaxEbene.value(pR->z) <= pR->x) {
+            } else if (xmaxForZ.contains(pR->z) && xmaxForZ.value(pR->z) <= pR->x) {
                 isOnExtreme = true;
-            } else if (yminEbene.contains(pR->z) && yminEbene.value(pR->z) >= (-1 * pR->y)) {
+            } else if (yminForZ.contains(pR->z) && yminForZ.value(pR->z) >= (-1 * pR->y)) {
                 isOnExtreme = true;
-            } else if (ymaxEbene.contains(pR->z) && ymaxEbene.value(pR->z) <= (-1 * pR->y)) {
+            } else if (ymaxForZ.contains(pR->z) && ymaxForZ.value(pR->z) <= (-1 * pR->y)) {
                 isOnExtreme = true;
             } else if (min_x >= pR->x || min_y >= (-1 * pR->y) || max_x <= pR->x || max_y <= (-1 * pR->y)) {
                 isOnExtreme = true;

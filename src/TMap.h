@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018 by Stephen Lyons                        *
+ *   Copyright (C) 2014-2016, 2018-2019 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -25,6 +25,9 @@
 
 
 #include "TAstar.h"
+#if defined(INCLUDE_3DMAPPER)
+#include "glwidget.h"
+#endif
 
 #include "pre_guard.h"
 #include <QApplication>
@@ -43,7 +46,9 @@
 
 class dlgMapper;
 class Host;
+#if defined(INCLUDE_3DMAPPER)
 class GLWidget;
+#endif
 class TArea;
 class TRoom;
 class TRoomDB;
@@ -82,7 +87,7 @@ class TMap : public QObject
 
 public:
     Q_DISABLE_COPY(TMap)
-    TMap(Host*);
+    TMap(Host*, const QString&);
     ~TMap();
     void mapClear();
     int createMapLabelID(int area);
@@ -154,6 +159,7 @@ public:
     TRoomDB* mpRoomDB;
     QMap<int, int> envColors;
     QPointer<Host> mpHost;
+    QString mProfileName;
 
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name
@@ -173,7 +179,9 @@ public:
     // contains complementary directions of dirs on TRoom.h
     QMap<int, int> reverseDirections;
 
+#if defined(INCLUDE_3DMAPPER)
     QPointer<GLWidget> mpM;
+#endif
     QPointer<dlgMapper> mpMapper;
     QMap<int, int> roomidToIndex;
 

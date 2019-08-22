@@ -25,8 +25,6 @@
 
 #include "pre_guard.h"
 #include <QDebug>
-#include <QDebugStateSaver>
-#include <QList>
 #include <QStringBuilder>
 #include <QStringList>
 #include "post_guard.h"

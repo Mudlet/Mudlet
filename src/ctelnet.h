@@ -6,7 +6,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2014-2015 by Florian Scheel - keneanung@googlemail.com  *
- *   Copyright (C) 2015, 2017-2018 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2017-2019 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -46,7 +46,6 @@
 #include <string>
 
 #if defined(Q_OS_WIN32)
-#include <Winsock2.h>
 #include <ws2tcpip.h>
 #include "mstcpip.h"
 #else
@@ -127,10 +126,11 @@ class cTelnet : public QObject
 
 public:
     Q_DISABLE_COPY(cTelnet)
-    cTelnet(Host* pH);
+    cTelnet(Host* pH, const QString&);
     ~cTelnet();
     void connectIt(const QString& address, int port);
-    void disconnect();
+    void reconnect();
+    void disconnectIt();
     void abortConnection();
     bool sendData(QString& data);
     void setATCPVariables(const QByteArray&);
@@ -149,12 +149,12 @@ public:
     void setChannel102Variables(const QString&);
     bool socketOutRaw(std::string& data);
     const QString & getEncoding() const { return mEncoding; }
-    QPair<bool, QString> setEncoding(const QString &, bool isToStore = true);
+    QPair<bool, QString> setEncoding(const QString &, bool saveValue = true);
     void postMessage(QString);
     const QStringList & getEncodingsList() const { return mAcceptableEncodings; }
     const QStringList & getFriendlyEncodingsList() const { return mFriendlyEncodings; }
     const QString& getComputerEncoding(const QString& encoding);
-    const QString& getFriendlyEncoding();
+    const QString& getFriendlyEncoding() const;
     QAbstractSocket::SocketError error();
     QString errorString();
 #if !defined(QT_NO_SSL)
@@ -166,10 +166,10 @@ public:
     bool isATCPEnabled() const { return enableATCP; }
     bool isGMCPEnabled() const { return enableGMCP; }
     bool isChannel102Enabled() const { return enableChannel102; }
-
     void requestDiscordInfo();
-
     QString decodeOption(const unsigned char) const;
+    QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
+
 
     QMap<int, bool> supportedTelnetOptions;
     bool mResponseProcessed;
@@ -182,6 +182,8 @@ public:
     QNetworkAccessManager* mpDownloader;
     QProgressDialog* mpProgressDialog;
     QString mServerPackage;
+    QString mProfileName;
+
 
 public slots:
     void setDownloadProgress(qint64, qint64);
@@ -237,7 +239,6 @@ private:
     QTextEncoder* outgoingDataEncoder;
     QString hostName;
     int hostPort;
-    bool hostSslTsl;
     double networkLatencyMin;
     double networkLatencyMax;
     bool mWaitingForResponse;
@@ -297,6 +298,9 @@ private:
     // encoding (when the user wants to use characters that cannot be encoded in
     // the current Server Encoding) - gets reset when the encoding is changed:
     bool mEncodingWarningIssued;
+
+    // Set if the current connection is via a proxy
+    bool mConnectViaProxy;
 
 private slots:
 #if !defined(QT_NO_SSL)

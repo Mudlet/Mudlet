@@ -46,12 +46,9 @@ extern "C" {
 #include <lualib.h>
 }
 
-#include <iostream>
 #include <list>
-#include <map>
-#include <ostream>
-#include <queue>
 #include <string>
+#include <memory>
 
 
 class Host;
@@ -112,7 +109,7 @@ public:
     static int dirToNumber(lua_State*, int);
 
 
-    int startTempTimer(double, const QString&);
+    QPair<int, QString> startTempTimer(double timeout, const QString& function, const bool repeating = false);
     int startTempAlias(const QString&, const QString&);
     int startTempKey(int&, int&, QString&);
     int startTempTrigger(const QString& regex, const QString& function, int expiryCount = -1);
@@ -126,7 +123,7 @@ public:
     int startPermSubstringTrigger(const QString& name, const QString& parent, const QStringList& regex, const QString& function);
     int startPermBeginOfLineStringTrigger(const QString& name, const QString& parent, QStringList& regex, const QString& function);
     int startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
-    int startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
+    QPair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     int startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
     int startPermKey(QString&, QString&, int&, int&, QString&);
 
@@ -268,6 +265,7 @@ public:
     static int enableTimer(lua_State* L);
     static int disableTimer(lua_State* L);
     static int killTimer(lua_State* L);
+    static int remainingTime(lua_State* L);
     static int moveCursor(lua_State* L);
     static int insertHTML(lua_State* L);
     static int insertText(lua_State* L);
@@ -338,6 +336,8 @@ public:
     static int getMainWindowSize(lua_State*);
     static int getMousePosition(lua_State*);
     static int setMiniConsoleFontSize(lua_State*);
+    static int setProfileIcon(lua_State*);
+    static int resetProfileIcon(lua_State*);
     static int getCurrentLine(lua_State*);
     static int selectCurrentLine(lua_State*);
     static int spawn(lua_State*);
@@ -364,11 +364,18 @@ public:
     static int isAnsiBgColor(lua_State*);
     static int stopSounds(lua_State*);
     static int playSoundFile(lua_State*);
+    static void setBorderSize(lua_State*, int, int, bool resizeMudlet = true);
+    static int setBorderSizes(lua_State*);
     static int setBorderTop(lua_State*);
     static int setBorderBottom(lua_State*);
     static int setBorderLeft(lua_State*);
     static int setBorderRight(lua_State*);
     static int setBorderColor(lua_State*);
+    static int getBorderTop(lua_State*);
+    static int getBorderBottom(lua_State*);
+    static int getBorderLeft(lua_State*);
+    static int getBorderRight(lua_State*);
+    static int getBorderSizes(lua_State* L);
     static int setConsoleBufferSize(lua_State*);
     static int enableScrollBar(lua_State*);
     static int disableScrollBar(lua_State*);
@@ -493,6 +500,13 @@ public:
     static int setDiscordGame(lua_State*);
     static int getPlayerRoom(lua_State*);
     static int getMapSelection(lua_State*);
+    static int addWordToDictionary(lua_State*);
+    static int removeWordFromDictionary(lua_State*);
+    static int spellCheckWord(lua_State*);
+    static int spellSuggestWord(lua_State*);
+    static int getDictionaryWordList(lua_State*);
+    static int getTextFormat(lua_State*);
+    static int getWindowsCodepage(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 
@@ -512,6 +526,11 @@ private:
     QByteArray encodeBytes(const char*);
     void setMatches(lua_State* L);
     static std::pair<bool, QString> discordApiEnabled(lua_State* L, bool writeAccess = false);
+    void setupLanguageData();
+    QString readScriptFile(const QString& path) const;
+#if defined(Q_OS_WIN32)
+    void loadUtf8Filenames();
+#endif
 
     QNetworkAccessManager* mpFileDownloader;
 
@@ -523,7 +542,14 @@ private:
     QMap<QNetworkReply*, QString> downloadMap;
 
     lua_State* pGlobalLua;
-    lua_State* pIndenterState;
+
+    struct lua_state_deleter {
+      void operator()(lua_State* ptr) const noexcept {
+        lua_close(ptr);
+      }
+    };
+
+    std::unique_ptr<lua_State, lua_state_deleter> pIndenterState;
 
     QPointer<Host> mpHost;
     int mHostID;

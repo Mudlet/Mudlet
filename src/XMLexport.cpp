@@ -28,6 +28,7 @@
 #include "LuaInterface.h"
 #include "TAction.h"
 #include "TAlias.h"
+#include "TConsole.h"
 #include "TKey.h"
 #include "TScript.h"
 #include "TTimer.h"
@@ -38,11 +39,8 @@
 #include "pre_guard.h"
 #include <QtConcurrent>
 #include <QFile>
-#include <fstream>
 #include <sstream>
 #include "post_guard.h"
-
-using namespace std;
 
 XMLexport::XMLexport( Host * pH )
 : mpHost( pH )
@@ -312,8 +310,8 @@ bool XMLexport::saveXml(const QString& fileName)
         return false;
     }
 
-    bool result = false;
-    if (!saveXmlFile(file)) {
+    bool result = saveXmlFile(file);
+    if (!result) {
         if (file.error() != QFile::NoError) {
             // Error reason was related to QFile:
             qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to save package, reason: " << file.errorString() << ".";
@@ -322,6 +320,7 @@ bool XMLexport::saveXml(const QString& fileName)
             qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to save package, reason: XML document preparation failure.";
         }
     }
+
     file.close();
     return result;
 }
@@ -333,7 +332,7 @@ bool XMLexport::saveXml(const QString& fileName)
 // TODO: Refactor dlgTriggerEditor::slot_export() {at least} to call this method instead of saveXml(const QString&)
 bool XMLexport::saveXmlFile(QFile& file)
 {
-    std::stringstream saveStringStream(ios::out);
+    std::stringstream saveStringStream(std::ios::out);
     // Remember, the mExportDoc is the data in the form of a pugi::xml_document
     // instance - the save method needs a stream that impliments the
     // std::ostream interface into which it can push the data:
@@ -354,7 +353,7 @@ bool XMLexport::saveXmlFile(QFile& file)
 
 QString XMLexport::saveXml()
 {
-    std::stringstream saveStringStream(ios::out);
+    std::stringstream saveStringStream(std::ios::out);
     std::string output;
 
     mExportDoc.save(saveStringStream);
@@ -396,6 +395,11 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mMapStrongHighlight") = pHost->mMapStrongHighlight ? "yes" : "no";
     host.append_attribute("mLogStatus") = pHost->mLogStatus ? "yes" : "no";
     host.append_attribute("mEnableSpellCheck") = pHost->mEnableSpellCheck ? "yes" : "no";
+    bool enableUserDictionary;
+    bool useSharedDictionary;
+    mpHost->getUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
+    host.append_attribute("mEnableUserDictionary") = enableUserDictionary ? "yes" : "no";
+    host.append_attribute("mUseSharedDictionary") = useSharedDictionary ? "yes" : "no";
     host.append_attribute("mShowInfo") = pHost->mShowInfo ? "yes" : "no";
     host.append_attribute("mAcceptServerGUI") = pHost->mAcceptServerGUI ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
@@ -407,14 +411,20 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mShowRoomIDs") = pHost->mShowRoomID ? "yes" : "no";
     host.append_attribute("mShowPanel") = pHost->mShowPanel ? "yes" : "no";
     host.append_attribute("mHaveMapperScript") = pHost->mHaveMapperScript ? "yes" : "no";
+    host.append_attribute("mEditorAutoComplete") = pHost->mEditorAutoComplete ? "yes" : "no";
     host.append_attribute("mEditorTheme") = pHost->mEditorTheme.toUtf8().constData();
     host.append_attribute("mEditorThemeFile") = pHost->mEditorThemeFile.toUtf8().constData();
     host.append_attribute("mThemePreviewItemID") = QString::number(pHost->mThemePreviewItemID).toUtf8().constData();
     host.append_attribute("mThemePreviewType") = pHost->mThemePreviewType.toUtf8().constData();
     host.append_attribute("mSearchEngineName") = pHost->mSearchEngineName.toUtf8().constData();
     host.append_attribute("mTimerSupressionInterval") = pHost->mTimerDebugOutputSuppressionInterval.toString(QLatin1String("HH:mm:ss.zzz")).toUtf8().constData();
-    host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";
+    host.append_attribute("mUseProxy") = pHost->mUseProxy ? "yes" : "no";
+    host.append_attribute("mProxyAddress") = pHost->mProxyAddress.toUtf8().constData();
+    host.append_attribute("mProxyPort") = QString::number(pHost->mProxyPort).toUtf8().constData();
+    host.append_attribute("mProxyUsername") = pHost->mProxyUsername.toUtf8().constData();
+    host.append_attribute("mProxyPassword") = pHost->mProxyPassword.toUtf8().constData();
     host.append_attribute("mAutoReconnect") = pHost->mAutoReconnect ? "yes" : "no";
+    host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";
     host.append_attribute("mSslIgnoreExpired") = pHost->mSslIgnoreExpired ? "yes" : "no";
     host.append_attribute("mSslIgnoreSelfSigned") = pHost->mSslIgnoreSelfSigned ? "yes" : "no";
     host.append_attribute("mSslIgnoreAll") = pHost->mSslIgnoreAll ? "yes" : "no";
@@ -489,7 +499,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mLightMagenta").text().set(pHost->mLightMagenta.name().toUtf8().constData());
         host.append_child("mWhite").text().set(pHost->mWhite.name().toUtf8().constData());
         host.append_child("mLightWhite").text().set(pHost->mLightWhite.name().toUtf8().constData());
-        host.append_child("mDisplayFont").text().set(pHost->mDisplayFont.toString().toUtf8().constData());
+        host.append_child("mDisplayFont").text().set(pHost->getDisplayFont().toString().toUtf8().constData());
         host.append_child("mCommandLineFont").text().set(pHost->mCommandLineFont.toString().toUtf8().constData());
         // There was a mis-spelt duplicate commandSeperator above but it is now gone
         host.append_child("mCommandSeparator").text().set(pHost->mCommandSeparator.toUtf8().constData());
@@ -513,7 +523,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mLightMagenta2").text().set(pHost->mLightMagenta_2.name().toUtf8().constData());
         host.append_child("mWhite2").text().set(pHost->mWhite_2.name().toUtf8().constData());
         host.append_child("mLightWhite2").text().set(pHost->mLightWhite_2.name().toUtf8().constData());
-        host.append_child("mSpellDic").text().set(pHost->mSpellDic.toUtf8().constData());
+        host.append_child("mSpellDic").text().set(pHost->mpConsole->getSystemSpellDictionary().toUtf8().constData());
         // TODO: Consider removing these sub-elements that duplicate the same
         // attributes - which WERE bugged - when we update the XML format, must leave
         // them in place for now even though we no longer use them for compatibility
@@ -1156,7 +1166,7 @@ QStringList XMLexport::remapAnsiToColorNumber(const QStringList & patternList, c
                     } else if (match.captured(2) == QLatin1String("IGNORE")) {
                         // Ignore is NOT handled by old system but use -2 (the value
                         // we use internally)
-                        isFgOk = true;
+                        isBgOk = true;
                         bg = -2;
                     } else {
                         bg = match.captured(2).toInt(&isBgOk);

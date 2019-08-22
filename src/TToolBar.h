@@ -46,9 +46,11 @@ public:
     void setHorizontalOrientation() { mVerticalOrientation = false; }
     void clear();
     void finalize();
-    TAction* mpTAction;
     void recordMove() { mRecordMove = true; }
-    QString getName() { return mName; }
+    QString getName() const { return mName; }
+    void setName(const QString&);
+
+    TAction* mpTAction;
 
 private:
     bool mVerticalOrientation;

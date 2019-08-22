@@ -26,6 +26,7 @@
 #include "TConsole.h"
 
 #include "pre_guard.h"
+#include <QTextBoundaryFinder>
 #include <QTextCodec>
 #include <QRegularExpression>
 #include "post_guard.h"
@@ -697,6 +698,9 @@ TChar::TChar(const TChar& copy)
 {
 }
 
+const QString timeStampFormat = QStringLiteral("hh:mm:ss.zzz ");
+const QString blankTimeStamp  = QStringLiteral("------------ ");
+
 TBuffer::TBuffer(Host* pH)
 : mLinkID(0)
 , mLinesLimit(10000)
@@ -705,6 +709,8 @@ TBuffer::TBuffer(Host* pH)
 , mWrapIndent(0)
 , mCursorY(0)
 , mMXP(false)
+, mMXP_MODE(MXP_MODE_OPEN)
+, mMXP_DEFAULT(MXP_MODE_OPEN)
 , mAssemblingToken(false)
 , openT(0)
 , closeT(0)
@@ -713,6 +719,7 @@ TBuffer::TBuffer(Host* pH)
 , mParsingVar(false)
 , mOpenMainQuote()
 , mMXP_SEND_NO_REF_MODE(false)
+, mEchoingText(false)
 , mGotESC(false)
 , mGotCSI(false)
 , mGotOSC(false)
@@ -762,11 +769,13 @@ TBuffer::TBuffer(Host* pH)
     _aURL.hint = "";
     mMXP_Elements["A"] = _aURL;
 
+#ifdef QT_DEBUG
     // Validate the encoding tables in case there has been an edit which breaks
     // things:
     for (auto table : csmEncodingTable) {
         Q_ASSERT_X(table.second.size() == 128, "TBuffer", "Mis-sized encoding look-up table.");
     }
+#endif
 }
 
 void TBuffer::setBufferSize(int s, int batch)
@@ -837,7 +846,7 @@ int TBuffer::getLastLineNumber()
 
 void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, TChar format)
 {
-    if (++mLinkID > 1000) {
+    if (++mLinkID > scmMaxLinks) {
         mLinkID = 1;
     }
     mLinkStore[mLinkID] = command;
@@ -1033,14 +1042,14 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             size_t spanStart = localBufferPosition;
             size_t spanEnd = spanStart;
             while (spanEnd < localBufferLength
-                   && (((spanStart < spanEnd) && cParameterInitial.indexOf(localBuffer[spanEnd]) >= 0)
-                      ||(spanStart == spanEnd) && cParameter.indexOf(localBuffer[spanEnd]) >= 0)) {
+                   && ((((spanStart < spanEnd) && cParameterInitial.indexOf(localBuffer[spanEnd]) >= 0))
+                      ||((spanStart == spanEnd) && cParameter.indexOf(localBuffer[spanEnd]) >= 0))) {
                 ++spanEnd;
             }
 
             // Test whether the first byte is within the usable subset of the
             // allowed value - or not:
-            if (cParameter.indexOf(localBuffer[spanStart]) == -1) {
+            if (cParameter.indexOf(localBuffer[spanStart]) == -1 && cParameterInitial.indexOf(localBuffer[spanStart]) >= 0) {
                 // Oh dear, the CSI parameter string sequence begins with one of
                 // the reserved characters ('<', '=', '>' or '?') which we
                 // can/do not handle
@@ -1117,46 +1126,45 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         if (isOk) {
                             // we really do not handle these well...
                             // MXP line modes - comments are from http://www.zuggsoft.com/zmud/mxp.htm#MXP%20Line%20Tags
+                            mMXP = true; // some servers don't negotiate, they assume!
 
                             switch (modeCode) {
-                            case 7: // lock locked mode (MXP 0.4 or later) - set locked mode.  Mode remains in effect until changed.  Locked mode becomes the new default mode.
-                                [[clang::fallthrough]];
-                            case 2: // locked line (until next newline) no MXP or HTML commands are allowed in the line.  The line is not parsed for any tags at all.  This is useful for "verbatim" text output from the MUD.  When a newline is received from the MUD, the mode reverts back to the Default mode.
-                                mMXP = false;
+                            case 0: // open line - only MXP commands in the "open" category are allowed.  When a newline is received from the MUD, the mode reverts back to the Default mode.  OPEN MODE starts as the Default mode until changes with one of the "lock mode" tags listed below.
+                                mMXP_MODE = MXP_MODE_OPEN;
                                 break;
-
-                            case 6: // lock secure mode (MXP 0.4 or later) - set secure mode.  Mode remains in effect until changed.  Secure mode becomes the new default mode.
-                                [[clang::fallthrough]];
                             case 1: // secure line (until next newline) all tags and commands in MXP are allowed within the line.  When a newline is received from the MUD, the mode reverts back to the Default mode.
-                                [[clang::fallthrough]];
-                            case 4: // temp secure mode (MXP 0.4 or later) - set secure mode for the next tag only.  Must be immediately followed by a < character to start a tag.  Remember to set secure mode when closing the tag also.
-                                mMXP = true;
+                                mMXP_MODE = MXP_MODE_SECURE;
                                 break;
-
+                            case 2: // locked line (until next newline) no MXP or HTML commands are allowed in the line.  The line is not parsed for any tags at all.  This is useful for "verbatim" text output from the MUD.  When a newline is received from the MUD, the mode reverts back to the Default mode.
+                                mMXP_MODE = MXP_MODE_LOCKED;
+                                break;
                             case 3: //  reset (MXP 0.4 or later) - close all open tags.  Set mode to Open.  Set text color and properties to default.
                                 closeT = 0;
                                 openT = 0;
                                 mAssemblingToken = false;
+                                mMXP_MODE = mMXP_DEFAULT;
                                 currentToken.clear();
                                 mParsingVar = false;
                                 break;
-
+                            case 4: // temp secure mode (MXP 0.4 or later) - set secure mode for the next tag only.  Must be immediately followed by a < character to start a tag.  Remember to set secure mode when closing the tag also.
+                                mMXP_MODE = MXP_MODE_TEMP_SECURE;
+                                break;
                             case 5: // lock open mode (MXP 0.4 or later) - set open mode.  Mode remains in effect until changed.  OPEN mode becomes the new default mode.
-                                [[clang::fallthrough]];
-                            case 0: // open line - only MXP commands in the "open" category are allowed.  When a newline is received from the MUD, the mode reverts back to the Default mode.  OPEN MODE starts as the Default mode until changes with one of the "lock mode" tags listed below.
-                                [[clang::fallthrough]];
+                                mMXP_DEFAULT = mMXP_MODE = MXP_MODE_OPEN;
+                                break;
+                            case 6: // lock secure mode (MXP 0.4 or later) - set secure mode.  Mode remains in effect until changed.  Secure mode becomes the new default mode.
+                                mMXP_DEFAULT = mMXP_MODE = MXP_MODE_SECURE;
+                                break;
+                            case 7: // lock locked mode (MXP 0.4 or later) - set locked mode.  Mode remains in effect until changed.  Locked mode becomes the new default mode.
+                                mMXP_DEFAULT = mMXP_MODE = MXP_MODE_LOCKED;
+                                break;
                             default:
-                                 if (modeCode <= 0 | modeCode == 5 | modeCode> 7) {
-                                   // 0 and 5 are not even handled in current code
-                                   qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
-                                 }
+                                qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
                             }
-
                         } else {
                             // isOk is false here as toInt(...) failed
                             qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Non-numeric MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
                         }
-
                     }
                     // end of if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF)
                     // We have manually disabled MXP negotiation
@@ -1220,7 +1228,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
         // We are outside of a CSI or OSC sequence if we get to here:
 
-        if (mMXP && mpHost->mServerMXPenabled) {
+        if (mMXP && mpHost->mServerMXPenabled && (mMXP_MODE != MXP_MODE_LOCKED)) {
 
             // ignore < and > inside of parameter strings
             if (openT == 1) {
@@ -1264,7 +1272,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
                 if ((openT > 0) && (closeT == openT)) {
                     mAssemblingToken = false;
-                    std::string::size_type _pfs = currentToken.find_first_of(' ');
+		    // If we were in temp secure mode, then we switch back to default after the next tag
+                    if (mMXP_MODE == MXP_MODE_TEMP_SECURE) {
+                       mMXP_MODE = mMXP_DEFAULT;
+                    }
+		    std::string::size_type _pfs = currentToken.find_first_of(' ');
                     QString _tn;
                     if (_pfs == std::string::npos) {
                         _tn = currentToken.c_str();
@@ -1281,31 +1293,24 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         mpHost->mTelnet.sendData(payload);
                     }
                     if (_tn == "BR") {
-                        /*
-                         * FIXME: The Zuggsoft MXP specification states:
-                         * "<BR> = Line break.  Forces a line break inside or
-                         * outside of a paragraph.  Note that <BR> is NOT parsed
-                         * as a newline from the MUD as far as mode changes are
-                         * concerned."
-                         * This does not appear to be how it is done here...!
-                         */
-                        ch = '\n';
+		        // a <BR> is a newline, but doesn't reset the MXP mode
+		        ch = '\n';
                         openT = 0;
                         closeT = 0;
                         currentToken.clear();
-                        goto COMMIT_LINE;
+                        goto COMMIT_LINE; // jump ahead of the part that resets MXP mode on newline
                     }
                     if (_tn.startsWith("!EL")) {
                         QString _tp = currentToken.substr(currentToken.find_first_of(' ')).c_str();
                         _tn = _tp.section(' ', 1, 1).toUpper();
                         _tp = _tp.section(' ', 2).toUpper();
-                        if ((_tp.indexOf("SEND") != -1)) {
+                        if ((_tp.indexOf("<SEND") != -1)) {
                             QString _t2 = _tp;
                             int pRef = _t2.indexOf("HREF=");
                             bool _got_ref = false;
                             // wenn kein href angegeben ist, dann gilt das 1. parameter als href
                             if (pRef == -1) {
-                                pRef = _t2.indexOf("SEND ");
+                                pRef = _t2.indexOf("<SEND ") + 1;
                             } else {
                                 _got_ref = true;
                             }
@@ -1496,7 +1501,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                             mMXP_SEND_NO_REF_MODE = true;
                         }
                         mLinkID++;
-                        if (mLinkID > 1000) {
+                        if (mLinkID > scmMaxLinks) {
                             mLinkID = 1;
                         }
                         QStringList _tl = _t2.split('|');
@@ -1605,7 +1610,12 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             mAssembleRef += ch;
         }
 
-    COMMIT_LINE:
+        if (mMXP && ((ch == '\n') || (ch == '\xff') || (ch == '\r'))) {
+            // after a newline (but not a <br>) return to default mode
+	    mMXP_MODE = mMXP_DEFAULT;
+        }
+
+COMMIT_LINE:
         if ((ch == '\n') || (ch == '\xff') || (ch == '\r')) {
             // DE: MUD Zeilen werden immer am Zeilenanfang geschrieben
             // EN: MUD lines are always written at the beginning of the line
@@ -1633,7 +1643,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 }
                 buffer.push_back(mMudBuffer);
                 dirty << true;
-                timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+                timeBuffer << QTime::currentTime().toString(timeStampFormat);
                 if (ch == '\xff') {
                     promptBuffer.append(true);
                 } else {
@@ -1651,7 +1661,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 }
                 buffer.back() = mMudBuffer;
                 dirty.back() = true;
-                timeBuffer.back() = QTime::currentTime().toString("hh:mm:ss.zzz") + "   ";
+                timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
                 if (ch == '\xff') {
                     promptBuffer.back() = true;
                 } else {
@@ -1672,7 +1682,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             std::deque<TChar> newLine;
             buffer.push_back(newLine);
             lineBuffer.push_back(QString());
-            timeBuffer.push_back("   ");
+            timeBuffer.push_back(QString());
             promptBuffer << false;
             dirty << true;
             if (static_cast<int>(buffer.size()) > mLinesLimit) {
@@ -2283,7 +2293,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                         break;
                     case 1: // This uses no extra arguments and, as it means
                             // transparent, is no use to us
-                        [[clang::fallthrough]];
+                        [[fallthrough]];
                     default:
                         break;
                     }
@@ -2380,7 +2390,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                         break;
                     case 1: // This uses no extra arguments and, as it means
                             // transparent, is no use to us
-                        [[clang::fallthrough]];
+                        [[fallthrough]];
                     default:
                         break;
                     }
@@ -2403,7 +2413,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                     mUnderline = true;
                     break;
                 case 2: // Double underline - not supported, treat as single
-                    [[clang::fallthrough]];
+                    [[fallthrough]];
                 case 3: // Wavey underline - not supported, treat as single
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - unsupported underline parameter element (the second part) in a SGR...;4:" << parameterElements.at(1) << ";../m sequence treating it as a one!";
                     mUnderline = true;
@@ -2447,7 +2457,13 @@ void TBuffer::decodeSGR(const QString& sequence)
             // We do not have a colon separated string so we must just have a
             // number:
             bool isOk = false;
-            int tag = allParameterElements.toInt(&isOk);
+            int tag = 0;
+            if (!allParameterElements.isEmpty()) {
+                tag = allParameterElements.toInt(&isOk);
+            } else {
+                // Allow for an empty parameter to be treated as valid and equal to 0:
+                isOk = true;
+            }
             if (isOk) {
                 switch (tag) {
                 case 0:
@@ -2652,7 +2668,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                         break;
                     case 1: // This uses no extra arguments and, as it means
                             // transparent, is no use to us
-                        [[clang::fallthrough]];
+                        [[fallthrough]];
                     default:
                         break;
                     }
@@ -2769,7 +2785,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                         break;
                     case 1: // This uses no extra arguments and, as it means
                             // transparent, is no use to us
-                        [[clang::fallthrough]];
+                        [[fallthrough]];
                     default:
                         break;
                     }
@@ -3045,13 +3061,12 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         // The ternary operator is used here to set/reset only the TChar::Echo bit in the flags:
         TChar c(format.mFgColor,
                 format.mBgColor,
-                (mEchoText
-                 ? (TChar::Echo | (format.mFlags & TChar::TestMask))
+                (mEchoingText ? (TChar::Echo | (format.mFlags & TChar::TestMask))
                  : (format.mFlags & TChar::TestMask)));
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(QStringLiteral("hh:mm:ss.zzz   "));
+        timeBuffer << QTime::currentTime().toString(timeStampFormat);
         promptBuffer << false;
         dirty << true;
         last = 0;
@@ -3072,7 +3087,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
             std::deque<TChar> newLine;
             buffer.push_back(newLine);
             lineBuffer.push_back(QString());
-            timeBuffer << QStringLiteral("-------------");
+            timeBuffer << blankTimeStamp;
             promptBuffer << false;
             dirty << true;
             firstChar = true;
@@ -3105,7 +3120,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
                     } else {
                         lineBuffer.append(QString());
                     }
-                    timeBuffer << QStringLiteral("-------------");
+                    timeBuffer << blankTimeStamp;
                     promptBuffer << false;
                     dirty << true;
                     log(size() - 2, size() - 2);
@@ -3119,13 +3134,12 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         lineBuffer.back().append(text.at(i));
         TChar c(format.mFgColor,
                 format.mBgColor,
-                (mEchoText
-                 ? (TChar::Echo | (format.mFlags & TChar::TestMask))
+                (mEchoingText ? (TChar::Echo | (format.mFlags & TChar::TestMask))
                  : (format.mFlags & TChar::TestMask)),
                 linkID);
         buffer.back().push_back(c);
         if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(QStringLiteral("hh:mm:ss.zzz   "));
+            timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
             firstChar = false;
         }
     }
@@ -3142,11 +3156,11 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     int last = buffer.size() - 1;
     if (last < 0) {
         std::deque<TChar> newLine;
-        TChar c(fgColor, bgColor, (mEchoText ? (TChar::Echo | flags) : flags));
+        TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags));
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(QStringLiteral("hh:mm:ss.zzz   "));
+        timeBuffer << QTime::currentTime().toString(timeStampFormat);
         promptBuffer << false;
         dirty << true;
         last = 0;
@@ -3166,7 +3180,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             std::deque<TChar> newLine;
             buffer.push_back(newLine);
             lineBuffer.push_back(QString());
-            timeBuffer << QStringLiteral("-------------");
+            timeBuffer << blankTimeStamp;
             promptBuffer << false;
             dirty << true;
             firstChar = true;
@@ -3199,7 +3213,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
                     } else {
                         lineBuffer.append(QString());
                     }
-                    timeBuffer << QStringLiteral("-------------");
+                    timeBuffer << blankTimeStamp;
                     promptBuffer << false;
                     dirty << true;
                     log(size() - 2, size() - 2);
@@ -3211,10 +3225,10 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             }
         }
         lineBuffer.back().append(text.at(i));
-        TChar c(fgColor, bgColor, (mEchoText ? (TChar::Echo | flags) : flags), linkID);
+        TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
         if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(QStringLiteral("hh:mm:ss.zzz   "));
+            timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
             firstChar = false;
         }
     }
@@ -3234,11 +3248,11 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
     if (Q_UNLIKELY(lastLine < 0)) {
         // There are NO lines in the buffer - so initialize with a new empty line
         std::deque<TChar> newLine;
-        TChar c(fgColor, bgColor, (mEchoText ? (TChar::Echo | flags) : flags));
+        TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags));
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
-        timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+        timeBuffer << QTime::currentTime().toString(timeStampFormat);
         promptBuffer << false;
         dirty << true;
         lastLine = 0;
@@ -3256,10 +3270,10 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
 
     for (int i = sub_start; i <= (sub_start + lineEndPos); i++) {
         lineBuffer.back().append(text.at(i));
-        TChar c(fgColor, bgColor, (mEchoText ? (TChar::Echo | flags) : flags), linkID);
+        TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
         if (firstChar) {
-            timeBuffer.back() = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+            timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
             firstChar = false;
         }
     }
@@ -3384,18 +3398,19 @@ void TBuffer::appendBuffer(const TBuffer& chunk)
     append(QString(QChar::LineFeed), 0, 1, Qt::black, Qt::black, TChar::None);
 }
 
-int TBuffer::calcWrapPos(int line, int begin, int end)
+int TBuffer::calculateWrapPosition(int lineNumber, int begin, int end)
 {
-    const QString lineBreaks = ",.- \n";
-    if (lineBuffer.size() < line) {
+    const QString lineBreaks = QStringLiteral("- \n");
+    if (lineBuffer.size() < lineNumber) {
         return 0;
     }
-    int lineSize = static_cast<int>(lineBuffer[line].size()) - 1;
+    int lineSize = static_cast<int>(lineBuffer[lineNumber].size()) - 1;
     if (lineSize < end) {
         end = lineSize;
     }
+    const auto line = lineBuffer[lineNumber];
     for (int i = end; i >= begin; --i) {
-        if (lineBreaks.indexOf(lineBuffer[line].at(i)) > -1) {
+        if (lineBreaks.indexOf(line.at(i)) > -1) {
             return i;
         }
     }
@@ -3456,7 +3471,7 @@ inline int TBuffer::wrap(int startLine)
         }
         for (int i2 = 0, total = static_cast<int>(buffer[i].size()); i2 < total;) {
             if (length - i2 > mWrapAt - indent) {
-                wrapPos = calcWrapPos(i, i2, i2 + mWrapAt - indent);
+                wrapPos = calculateWrapPosition(i, i2, i2 + mWrapAt - indent);
                 lastSpace = qMax(0, wrapPos);
             } else {
                 lastSpace = 0;
@@ -3558,7 +3573,7 @@ void TBuffer::log(int fromLine, int toLine)
             // This only handles a single line of logged text at a time:
             linesToLog << bufferToHtml(mpHost->mIsLoggingTimestamps, i);
         } else {
-            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(13) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
+            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(timeStampFormat.length()) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
         }
     }
 
@@ -3589,45 +3604,45 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
     QStringList tempList;
     int lineCount = 0;
 
-    for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
-        if (i > startLine) {
+    for (int line = startLine, total = static_cast<int>(buffer.size()); line < total; ++line) {
+        if (line > startLine) {
             break; //only wrap one line of text
         }
         std::deque<TChar> newLine;
         QString lineText;
 
         int indent = 0;
-        if (static_cast<int>(buffer[i].size()) >= screenWidth) {
-            for (int i3 = 0; i3 < indentSize; ++i3) {
+        if (static_cast<int>(buffer[line].size()) >= screenWidth) {
+            for (int prependSpaces = 0; prependSpaces < indentSize; ++prependSpaces) {
                 TChar pSpace = format;
                 newLine.push_back(pSpace);
-                lineText.append(" ");
+                lineText.append(QChar::Space);
             }
             indent = indentSize;
         }
         int lastSpace = -1;
         int wrapPos = -1;
-        auto length = static_cast<int>(buffer[i].size());
+        auto lineLength = static_cast<int>(buffer[line].size());
 
-        for (int i2 = 0, total = static_cast<int>(buffer[i].size()); i2 < total;) {
-            if (length - i2 > screenWidth - indent) {
-                wrapPos = calcWrapPos(i, i2, i2 + screenWidth - indent);
+        for (int characterPosition = 0, total = static_cast<int>(buffer[line].size()); characterPosition < total;) {
+            if (lineLength - characterPosition > screenWidth - indent) {
+                wrapPos = calculateWrapPosition(line, characterPosition, characterPosition + screenWidth - indent);
                 lastSpace = qMax(-1, wrapPos);
             } else {
                 lastSpace = -1;
             }
             for (int i3 = 0, total = screenWidth - indent; i3 < total; ++i3) {
                 if (lastSpace > 0) {
-                    if (i2 >= lastSpace) {
-                        i2++;
+                    if (characterPosition >= lastSpace) {
+                        characterPosition++;
                         break;
                     }
                 }
-                if (i2 >= static_cast<int>(buffer[i].size())) {
+                if (characterPosition >= static_cast<int>(buffer[line].size())) {
                     break;
                 }
-                if (lineBuffer[i][i2] == QChar('\n')) {
-                    i2++;
+                if (lineBuffer[line][characterPosition] == QChar::LineFeed) {
+                    characterPosition++;
 
                     if (newLine.empty()) {
                         tempList.append(QString());
@@ -3639,9 +3654,9 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
                     }
                     goto OPT_OUT_CLEAN;
                 }
-                newLine.push_back(buffer[i][i2]);
-                lineText.append(lineBuffer[i].at(i2));
-                i2++;
+                newLine.push_back(buffer[line][characterPosition]);
+                lineText.append(lineBuffer[line].at(characterPosition));
+                characterPosition++;
             }
             queue.push(newLine);
             tempList.append(lineText);
@@ -3892,7 +3907,7 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
                     incLinkID = true;
                     mLinkID++;
                     linkID = mLinkID;
-                    if (mLinkID > 1000) {
+                    if (mLinkID > scmMaxLinks) {
                         mLinkID = 1;
                     }
                     mLinkStore[mLinkID] = linkFunction;
@@ -4085,7 +4100,8 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     // This combination of color values (black on black) cannot usefully be used in practice
     // - so use as initialization values
 
-    // Assume we are on the first line until told otherwise:
+    // Assume we are on the first line until told otherwise - and we will need
+    // to NOT close a previous <span ...>:
     bool firstSpan = true;
     // If times stamps are to be shown AND the first line is a partial
     // then we need:
@@ -4093,10 +4109,17 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     // we will NOT need a closing "</span>"
     if (showTimeStamp && !timeBuffer.at(row).isEmpty()) {
         // TODO: formatting according to TTextEdit.cpp: if( i2 < timeOffset ) - needs updating if we allow the colours to be user set:
-        s.append(QStringLiteral("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); \">%1").arg(timeBuffer.at(row).left(13)));
+        s.append(QStringLiteral("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); \">%1").arg(timeBuffer.at(row).left(timeStampFormat.length())));
+        // Set the current idea of what the formatting is so we can spot if it
+        // changes:
+        currentFgColor = QColor(200,150,0);
+        currentBgColor = QColor(22,22,22);
+        currentFlags = TChar::None;
+        // We are no longer before the first span - so we need to flag that
+        // there will be one to close:
+        firstSpan = false;
     }
 
-    // Pad out a partial first line:
     if (spacePadding > 0) {
         // used for "copy HTML", this is the first line of selection (because of
         // the padding needed)
@@ -4107,8 +4130,8 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
             s.append(QLatin1String("</span>"));
         }
 
-        s.append(QStringLiteral("<span>%1").arg(QString(spacePadding, QChar::Space)));
         // Pad out with spaces to the right so a partial first line lines up
+        s.append(QStringLiteral("<span>%1").arg(QString(spacePadding, QChar::Space)));
     }
 
     for (auto cookedPos = static_cast<unsigned long>(pos); pos < lastPos; ++cookedPos, ++pos) {
@@ -4137,15 +4160,9 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
                               currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
                               currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline ) // remainder is arg 9
                               ? QStringLiteral(" text-decoration:%1%2%3")
-                                .arg(currentFlags & TChar::Underline
-                                     ? QLatin1String(" undeline")
-                                     : QString(),
-                                     currentFlags & TChar::StrikeOut
-                                     ? QLatin1String(" line-through")
-                                     : QString(),
-                                     currentFlags & TChar::Overline
-                                     ? QLatin1String(" overline")
-                                     : QString())
+                                .arg(currentFlags & TChar::Underline ? QLatin1String(" underline") : QString(),
+                                     currentFlags & TChar::StrikeOut ? QLatin1String(" line-through") : QString(),
+                                     currentFlags & TChar::Overline ? QLatin1String(" overline") : QString())
                               : QString()));
             } else {
                 s.append(QStringLiteral("<span style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6); %7%8%9\">")
@@ -4155,7 +4172,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
                               currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
                               currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline ) // remainder is arg 9
                               ? QStringLiteral(" text-decoration:%1%2%3")
-                                .arg(currentFlags & TChar::Underline ? QLatin1String(" undeline") : QString(),
+                                .arg(currentFlags & TChar::Underline ? QLatin1String(" underline") : QString(),
                                      currentFlags & TChar::StrikeOut ? QLatin1String(" line-through") : QString(),
                                      currentFlags & TChar::Overline ? QLatin1String(" overline") : QString())
                               : QString()));
@@ -4298,7 +4315,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             }
 
         // Fall-through
-            [[clang::fallthrough]];
+            [[fallthrough]];
         case 3:
             if ((bufferData.at(pos + 2) & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
@@ -4353,7 +4370,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             }
 
         // Fall-through
-            [[clang::fallthrough]];
+            [[fallthrough]];
         case 2:
             if ((static_cast<quint8>(bufferData.at(pos + 1)) & 0xC0) != 0x80) {
 #if defined(DEBUG_UTF8_PROCESSING)
@@ -4403,7 +4420,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
             case 2:
                 isNonBMPCharacter = true;
                 // Fall-through
-                [[clang::fallthrough]];
+                [[fallthrough]];
             case 1:
 #if defined(DEBUG_UTF8_PROCESSING)
                 qDebug().nospace() << "TBuffer::processUtf8Sequence(...) " << utf8SequenceLength << "-byte UTF-8 sequence accepted, it was " << codePoint.size() << " QChar(s) long [" << codePoint
@@ -4841,7 +4858,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
             case 2:
                 isNonBmpCharacter = true;
             // Fall-through
-                [[clang::fallthrough]];
+                [[fallthrough]];
             case 1:
 #if defined(DEBUG_GB_PROCESSING)
                 qDebug().nospace() << "TBuffer::processGBSequence(...) " << gbSequenceLength << "-byte " << (isGB18030 ? "GB18030" : "GB2312/GBK") << " sequence accepted, it is " << codePoint.size()
@@ -4957,7 +4974,7 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
                     break;
                 case 2:
                     // Fall-through
-                    [[clang::fallthrough]];
+                    [[fallthrough]];
                 case 1:
                     // If Qt's decoder found bad characters, update status flags to reflect that.
                     if (codePoint.contains(QChar::ReplacementCharacter)) {
@@ -5092,4 +5109,21 @@ QString TBuffer::processSupportsRequest(const QString& elements)
     }
 
     return result.join(QLatin1String(" "));
+}
+
+// Count the graphemes in a QString - returning its length in terms of those:
+int TBuffer::lengthInGraphemes(const QString& text)
+{
+    if (text.isEmpty()) {
+        return 0;
+    }
+
+    QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, text);
+    int pos = graphemeFinder.toNextBoundary();
+    int count = 0;
+    while (pos > 0) {
+        ++count;
+        pos = graphemeFinder.toNextBoundary();
+    }
+    return count;
 }
