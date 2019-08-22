@@ -261,7 +261,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(comboBox_toolBarVisibility, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShowToolBar);
     connect(comboBox_selectConfigDir, SIGNAL(currentIndexChanged(int)), this, SLOT(slot_configDirOptionChange(int)));
     connect(toolButton_setConfigDir, SIGNAL(clicked(bool)), this, SLOT(slot_setConfigDir()));
-    
+
     // This group of signal/slot connections handle updating *this* instance of
     // the "Profile preferences" form/dialog when a *different* profile saves
     // new settings from it's one - there is a further connect(...) above which
