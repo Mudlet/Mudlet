@@ -996,9 +996,12 @@ void XMLimport::readHostPackage(Host* pHost)
             } else if (name() == "mLightWhite") {
                 pHost->mLightWhite.setNamedColor(readElementText());
             } else if (name() == "mDisplayFont") {
-                pHost->mDisplayFont.fromString(readElementText());
+                const auto oldDisplayFont = pHost->getDisplayFont();
+                if (auto [setNewFont, errorMessage] = pHost->setDisplayFont(readElementText()); !setNewFont) {
+                    pHost->setDisplayFont(oldDisplayFont);
+                }
                 QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
-                pHost->mDisplayFont.setFixedPitch(true);
+                pHost->setDisplayFontFixedPitch(true);
             } else if (name() == "mCommandLineFont") {
                 pHost->mCommandLineFont.fromString(readElementText());
             } else if (name() == "commandSeperator") {
