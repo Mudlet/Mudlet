@@ -354,10 +354,13 @@ win32 {
         # PowerShell - for cmd.exe the nearest equivalent is '&'
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/edbee-lib")
     }
-
     !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/lcf")
+    }
+    !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
+        message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
+        system("cd $${PWD}\.. & git submodule update --init 3rdparty/qtkeychain")
     }
 } else {
     !exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
@@ -367,6 +370,10 @@ win32 {
     !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}/.. ; git submodule update --init 3rdparty/lcf")
+    }
+    !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
+        message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
+        system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qtkeychain")
     }
 }
 
@@ -404,6 +411,12 @@ exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
 
 !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
     error("Cannot locate lua code formatter submodule source code, build abandoned!")
+}
+
+exists("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri") {
+    include("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri")
+} else {
+    error("Cannot locate QtKeychain submodule source code, build abandoned!")
 }
 
 contains( DEFINES, INCLUDE_UPDATER ) {
