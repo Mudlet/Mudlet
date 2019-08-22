@@ -2689,7 +2689,7 @@ void TConsole::slot_openFiles()
     if (mRecordReplay) {
         QFileInfo replayFileInfo(mReplayFile.fileName());
         QString replayFileName = replayFileInfo.fileName();
-        
+
         QString path = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, mpHost->getName());
 
         mReplayFile.setFileName(QStringLiteral("%1/%2").arg(path, replayFileName));
