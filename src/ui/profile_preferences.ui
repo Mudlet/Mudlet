@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>883</width>
-    <height>808</height>
+    <height>947</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -20,7 +20,7 @@
    <string>Profile preferences</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../mudlet.qrc">
+   <iconset>
     <normaloff>:/icons/mudlet_configure.png</normaloff>:/icons/mudlet_configure.png</iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout_main">
@@ -42,7 +42,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>7</number>
      </property>
      <widget class="QWidget" name="tab_general">
       <property name="sizePolicy">
@@ -2439,8 +2439,8 @@
       <attribute name="title">
        <string>Special Options</string>
       </attribute>
-      <layout class="QGridLayout" name="gridLayout_tab_specialOptions">
-       <item row="0" column="0" colspan="2">
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
         <widget class="QGroupBox" name="groupBox_specialOptions">
          <property name="title">
           <string>Special options needed for some older game drivers (needs client restart to take effect)</string>
@@ -2505,38 +2505,12 @@
          </layout>
         </widget>
        </item>
-       <item row="1" column="0" colspan="2">
+       <item>
         <widget class="QGroupBox" name="groupBox_discordPrivacy">
          <property name="title">
           <string>Discord privacy</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_discordPrivacy" columnstretch="2,1,1,1">
-          <item row="0" column="0" colspan="2">
-           <widget class="QComboBox" name="comboBox_discordLargeIconPrivacy">
-            <item>
-             <property name="text">
-              <string>Don't hide large icon or tooltip</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Hide large icon tooltip</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Hide large icon and tooltip</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-          <item row="0" column="2" colspan="2">
-           <widget class="QCheckBox" name="checkBox_discordServerAccessToDetail">
-            <property name="text">
-             <string>Hide detail</string>
-            </property>
-           </widget>
-          </item>
+         <layout class="QGridLayout" name="gridLayout_groupBox_discordPrivacy" columnstretch="2,0,0,0">
           <item row="1" column="0" colspan="2">
            <widget class="QComboBox" name="comboBox_discordSmallIconPrivacy">
             <item>
@@ -2556,24 +2530,10 @@
             </item>
            </widget>
           </item>
-          <item row="1" column="2" colspan="2">
-           <widget class="QCheckBox" name="checkBox_discordServerAccessToState">
-            <property name="text">
-             <string>Hide state</string>
-            </property>
-           </widget>
-          </item>
           <item row="2" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_discordServerAccessToPartyInfo">
             <property name="text">
              <string>Hide party details</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="2" colspan="2">
-           <widget class="QCheckBox" name="checkBox_discordServerAccessToTimerInfo">
-            <property name="text">
-             <string>Hide timer</string>
             </property>
            </widget>
           </item>
@@ -2587,6 +2547,46 @@
             </property>
             <property name="checked">
              <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0" colspan="2">
+           <widget class="QComboBox" name="comboBox_discordLargeIconPrivacy">
+            <item>
+             <property name="text">
+              <string>Don't hide large icon or tooltip</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Hide large icon tooltip</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Hide large icon and tooltip</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="1" column="2" colspan="2">
+           <widget class="QCheckBox" name="checkBox_discordServerAccessToState">
+            <property name="text">
+             <string>Hide state</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2" colspan="2">
+           <widget class="QCheckBox" name="checkBox_discordServerAccessToTimerInfo">
+            <property name="text">
+             <string>Hide timer</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2" colspan="2">
+           <widget class="QCheckBox" name="checkBox_discordServerAccessToDetail">
+            <property name="text">
+             <string>Hide detail</string>
             </property>
            </widget>
           </item>
@@ -2663,7 +2663,7 @@
          </layout>
         </widget>
        </item>
-       <item row="2" column="0" colspan="2">
+       <item>
         <widget class="QGroupBox" name="groupBox_ircOptions">
          <property name="title">
           <string>IRC client options</string>
@@ -2734,7 +2734,19 @@
          </layout>
         </widget>
        </item>
-       <item row="3" column="0">
+       <item>
+        <widget class="QGroupBox" name="groupbox_searchEngineSelection">
+         <property name="title">
+          <string>Search Engine</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_searchEngineSelection">
+          <item>
+           <widget class="QComboBox" name="search_engine_combobox"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <widget class="QGroupBox" name="groupBox_updates">
          <property name="title">
           <string>Mudlet updates</string>
@@ -2750,19 +2762,7 @@
          </layout>
         </widget>
        </item>
-       <item row="3" column="1">
-        <widget class="QGroupBox" name="groupbox_searchEngineSelection">
-         <property name="title">
-          <string>Search Engine</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_searchEngineSelection">
-          <item>
-           <widget class="QComboBox" name="search_engine_combobox"/>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="4" column="0" colspan="2">
+       <item>
         <widget class="QGroupBox" name="groupBox_debug">
          <property name="title">
           <string>Other Special options</string>
@@ -2797,7 +2797,85 @@
          </layout>
         </widget>
        </item>
-       <item row="5" column="0">
+       <item>
+        <widget class="QGroupBox" name="groupBox_config">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="toolTip">
+          <string>Option to use a custom location for your Mudlet profiles is coming soon</string>
+         </property>
+         <property name="title">
+          <string>Configuration options</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_16">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_selectConfigDir">
+            <property name="text">
+             <string>Store settings in:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1" colspan="2">
+           <widget class="QComboBox" name="comboBox_selectConfigDir">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>2</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <item>
+             <property name="text">
+              <string>Default</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Select a directory</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Relative to the application file (for use with the portable version of Mudlet)</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_setConfigDir">
+            <property name="text">
+             <string>Select a directory:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="lineEdit_configDir">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QToolButton" name="toolButton_setConfigDir">
+            <property name="text">
+             <string>Browse...</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="3">
+           <widget class="QCheckBox" name="checkBox_moveConfigDir">
+            <property name="text">
+             <string>Move configuration from the current folder</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <spacer name="verticalSpacer_specialOptions">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -3186,6 +3264,15 @@
                     </color>
                    </brush>
                   </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
                  </active>
                  <inactive>
                   <colorrole role="WindowText">
@@ -3317,6 +3404,15 @@
                   <colorrole role="ToolTipText">
                    <brush brushstyle="SolidPattern">
                     <color alpha="255">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
                      <red>0</red>
                      <green>0</green>
                      <blue>0</blue>
@@ -3460,6 +3556,15 @@
                     </color>
                    </brush>
                   </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
                  </disabled>
                 </palette>
                </property>
@@ -3470,7 +3575,7 @@
                 <string/>
                </property>
                <property name="pixmap">
-                <pixmap resource="../mudlet.qrc">:/icons/dialog-warning.png</pixmap>
+                <pixmap>:/icons/dialog-warning.png</pixmap>
                </property>
                <property name="scaledContents">
                 <bool>false</bool>
@@ -3635,6 +3740,15 @@
                     </color>
                    </brush>
                   </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
                  </active>
                  <inactive>
                   <colorrole role="WindowText">
@@ -3766,6 +3880,15 @@
                   <colorrole role="ToolTipText">
                    <brush brushstyle="SolidPattern">
                     <color alpha="255">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
                      <red>0</red>
                      <green>0</green>
                      <blue>0</blue>
@@ -3909,6 +4032,15 @@
                     </color>
                    </brush>
                   </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
                  </disabled>
                 </palette>
                </property>
@@ -3919,7 +4051,7 @@
                 <string/>
                </property>
                <property name="pixmap">
-                <pixmap resource="../mudlet.qrc">:/icons/dialog-error.png</pixmap>
+                <pixmap>:/icons/dialog-error.png</pixmap>
                </property>
                <property name="scaledContents">
                 <bool>false</bool>
@@ -4084,6 +4216,15 @@
                     </color>
                    </brush>
                   </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
                  </active>
                  <inactive>
                   <colorrole role="WindowText">
@@ -4215,6 +4356,15 @@
                   <colorrole role="ToolTipText">
                    <brush brushstyle="SolidPattern">
                     <color alpha="255">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
                      <red>0</red>
                      <green>0</green>
                      <blue>0</blue>
@@ -4358,6 +4508,15 @@
                     </color>
                    </brush>
                   </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
                  </disabled>
                 </palette>
                </property>
@@ -4368,7 +4527,7 @@
                 <string/>
                </property>
                <property name="pixmap">
-                <pixmap resource="../mudlet.qrc">:/icons/dialog-information.png</pixmap>
+                <pixmap>:/icons/dialog-information.png</pixmap>
                </property>
                <property name="scaledContents">
                 <bool>false</bool>
@@ -4533,6 +4692,15 @@
                     </color>
                    </brush>
                   </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
                  </active>
                  <inactive>
                   <colorrole role="WindowText">
@@ -4670,6 +4838,15 @@
                     </color>
                    </brush>
                   </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
                  </inactive>
                  <disabled>
                   <colorrole role="WindowText">
@@ -4801,6 +4978,15 @@
                   <colorrole role="ToolTipText">
                    <brush brushstyle="SolidPattern">
                     <color alpha="255">
+                     <red>0</red>
+                     <green>0</green>
+                     <blue>0</blue>
+                    </color>
+                   </brush>
+                  </colorrole>
+                  <colorrole role="PlaceholderText">
+                   <brush brushstyle="NoBrush">
+                    <color alpha="128">
                      <red>0</red>
                      <green>0</green>
                      <blue>0</blue>
@@ -5028,8 +5214,6 @@
   <tabstop>show_sent_text_checkbox</tabstop>
   <tabstop>command_separator_lineedit</tabstop>
  </tabstops>
- <resources>
-  <include location="../mudlet.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>

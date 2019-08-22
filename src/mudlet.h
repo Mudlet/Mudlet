@@ -541,7 +541,6 @@ private:
     int getDictionaryWordCount(QFile&);
     void check_for_mappingscript();
     void set_compact_input_line();
-    QSettings* getQSettings();
     void loadTranslators(const QString &languageCode);
     void loadDictionaryLanguageMap();
     void migrateDebugConsole(Host* currentHost);
@@ -636,8 +635,6 @@ private:
     bool mshowMapAuditErrors;
 
     bool mCompactInputLine;
-    void slot_toggle_compact_input_line();
-    void set_compact_input_line();
 
     // Argument to QDateTime::toString(...) to format the elapsed time display
     // on the mpToolBarReplay:

@@ -39,7 +39,7 @@ public:
     dlgConnectionProfiles(QWidget* parent = nullptr);
     void fillout_form();
     QPointer<QSettings> getProfileSettings(const QString& profile);
-    QString readProfileData(const QString& profile, const QString& item);
+    QString readProfileData(const QString& profile, const QString& item) const;
     void accept() override;
     void closeEvent(QCloseEvent* event) override;
 

@@ -171,12 +171,8 @@ mudlet::mudlet()
 , mCompactInputLine(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
-, mDiscord()
 , mConfigDir(QString())
 , mConfigDirIndex(0)
-, mShowIconsOnDialogs(true)
-, mCopyAsImageTimeout{3}
-, mInterfaceLanguage(QStringLiteral("en_US"))
 , mHunspell_sharedDictionary(nullptr)
 {
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);

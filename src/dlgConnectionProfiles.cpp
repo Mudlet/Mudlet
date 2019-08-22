@@ -223,7 +223,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mErrorPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
     mErrorPalette.setColor(QPalette::Base, QColor(255, 235, 235));
 
-    profiles_tree_widget->setViewMode(QListView::IconMode);
+    profiles_tree_widget->setViewMode(QListView::IconMode);    
 }
 
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it
@@ -576,12 +576,12 @@ QPointer<QSettings> dlgConnectionProfiles::getProfileSettings(const QString& pro
     return new QSettings(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, QStringLiteral("profile.ini")), QSettings::IniFormat);
 }
 
-QString dlgConnectionProfiles::readProfileData(const QString& profile, const QString& item)
+QString dlgConnectionProfiles::readProfileData(const QString& profile, const QString& item) const
 {
     // Read profile data from a config file in the INI format inside the
     // profile's home path.
     if (!mCurrentQSettings) {
-        mCurrentQSettings = getProfileSettings(profile);
+        qWarning() << "dlgConnectionProfiles::readProfileData() ERROR: no mCurrentQSettings available, can't read profile settings!";
     }
 
     if (mCurrentQSettings->contains(item)) {
@@ -2222,27 +2222,6 @@ bool dlgConnectionProfiles::validateProfile()
         }
     }
 
-        QUrl check;
-        QString url = host_name_entry->text().trimmed();
-        check.setHost(url);
-        if (!check.isValid()) {
-            notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Please enter the URL or IP address of the Game server.\n\n%1").arg(check.errorString())));
-            host_name_entry->setPalette(mErrorPalette);
-            validUrl = false;
-            valid = false;
-        }
-
-        if (url.indexOf(QRegularExpression(QStringLiteral("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
-            if (port_ssl_tsl->isChecked()) {
-                notificationAreaIconLabelError->show();
-                notificationAreaMessageBox->setText(QString("%1\n%2").arg(notificationAreaMessageBox->text(), tr("SSL connections require the URL of the Game server.\n\n%1").arg(check.errorString())));
-                host_name_entry->setPalette(mErrorPalette);
-                validUrl = false;
-                valid = false;
-            }
-        }
-
         if (valid) {
             port_entry->setPalette(mOKPalette);
             host_name_entry->setPalette(mOKPalette);
@@ -2280,7 +2259,7 @@ bool dlgConnectionProfiles::validateProfile()
             return false;
         }
         return false;
-    }
+
 }
 
 // credit: http://www.qtcentre.org/archive/index.php/t-23469.html

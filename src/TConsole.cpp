@@ -2690,7 +2690,7 @@ void TConsole::slot_openFiles()
         QFileInfo replayFileInfo(mReplayFile.fileName());
         QString replayFileName = replayFileInfo.fileName();
         
-        QString path = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, profile_name);
+        QString path = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, mpHost->getName());
 
         mReplayFile.setFileName(QStringLiteral("%1/%2").arg(path, replayFileName));
         // Open in 'Append', as the recording of the replay file was not
@@ -2700,7 +2700,7 @@ void TConsole::slot_openFiles()
         mReplayStream.setDevice(&mReplayFile);
     }
 }
-=======
+
 QPair<bool, QString> TConsole::addWordToSet(const QString& word)
 {
     QString errMsg = QStringLiteral("the word \"%1\" already seems to be in the user dictionary");
