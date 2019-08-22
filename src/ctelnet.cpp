@@ -43,7 +43,7 @@
 
 #include "pre_guard.h"
 #include <QJsonDocument>
-#include <QJsonObject>>
+#include <QJsonObject>
 #include <QNetworkProxy>
 #include <QProgressDialog>
 #include <QTextCodec>
