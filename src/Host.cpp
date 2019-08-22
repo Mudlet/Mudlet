@@ -556,7 +556,7 @@ void Host::setDisplayFontSize(int size)
 }
 
 // Now returns the total weight of the path
-const unsigned int Host::assemblePath()
+unsigned int Host::assemblePath()
 {
     unsigned int totalWeight = 0;
     QStringList pathList;
@@ -580,7 +580,7 @@ const unsigned int Host::assemblePath()
     return totalWeight;
 }
 
-const bool Host::checkForMappingScript()
+bool Host::checkForMappingScript()
 {
     // the mapper script reminder is only shown once
     // because it is too difficult and error prone (->proper script sequence)

@@ -1,4 +1,5 @@
 language: cpp
+if: branch = development OR branch =~ ^release OR tag IS present
 cache:
   timeout: 600
   ccache: true

@@ -698,6 +698,9 @@ TChar::TChar(const TChar& copy)
 {
 }
 
+const QString timeStampFormat = QStringLiteral("hh:mm:ss.zzz ");
+const QString blankTimeStamp  = QStringLiteral("------------ ");
+
 TBuffer::TBuffer(Host* pH)
 : mLinkID(0)
 , mLinesLimit(10000)
@@ -1046,7 +1049,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
             // Test whether the first byte is within the usable subset of the
             // allowed value - or not:
-            if (cParameter.indexOf(localBuffer[spanStart]) == -1) {
+            if (cParameter.indexOf(localBuffer[spanStart]) == -1 && cParameterInitial.indexOf(localBuffer[spanStart]) >= 0) {
                 // Oh dear, the CSI parameter string sequence begins with one of
                 // the reserved characters ('<', '=', '>' or '?') which we
                 // can/do not handle
@@ -1123,40 +1126,40 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         if (isOk) {
                             // we really do not handle these well...
                             // MXP line modes - comments are from http://www.zuggsoft.com/zmud/mxp.htm#MXP%20Line%20Tags
-			    mMXP = true; // some servers don't negotiate, they assume!
+                            mMXP = true; // some servers don't negotiate, they assume!
 
                             switch (modeCode) {
                             case 0: // open line - only MXP commands in the "open" category are allowed.  When a newline is received from the MUD, the mode reverts back to the Default mode.  OPEN MODE starts as the Default mode until changes with one of the "lock mode" tags listed below.
-				mMXP_MODE = MXP_MODE_OPEN;
-				break;
+                                mMXP_MODE = MXP_MODE_OPEN;
+                                break;
                             case 1: // secure line (until next newline) all tags and commands in MXP are allowed within the line.  When a newline is received from the MUD, the mode reverts back to the Default mode.
-				mMXP_MODE = MXP_MODE_SECURE;
-				break;
+                                mMXP_MODE = MXP_MODE_SECURE;
+                                break;
                             case 2: // locked line (until next newline) no MXP or HTML commands are allowed in the line.  The line is not parsed for any tags at all.  This is useful for "verbatim" text output from the MUD.  When a newline is received from the MUD, the mode reverts back to the Default mode.
-				mMXP_MODE = MXP_MODE_LOCKED;
+                                mMXP_MODE = MXP_MODE_LOCKED;
                                 break;
                             case 3: //  reset (MXP 0.4 or later) - close all open tags.  Set mode to Open.  Set text color and properties to default.
                                 closeT = 0;
                                 openT = 0;
-				mAssemblingToken = false;
-				mMXP_MODE = mMXP_DEFAULT;
+                                mAssemblingToken = false;
+                                mMXP_MODE = mMXP_DEFAULT;
                                 currentToken.clear();
                                 mParsingVar = false;
                                 break;
                             case 4: // temp secure mode (MXP 0.4 or later) - set secure mode for the next tag only.  Must be immediately followed by a < character to start a tag.  Remember to set secure mode when closing the tag also.
-				mMXP_MODE = MXP_MODE_TEMP_SECURE;
+                                mMXP_MODE = MXP_MODE_TEMP_SECURE;
                                 break;
                             case 5: // lock open mode (MXP 0.4 or later) - set open mode.  Mode remains in effect until changed.  OPEN mode becomes the new default mode.
-				mMXP_DEFAULT = mMXP_MODE = MXP_MODE_OPEN;
-				break;
+                                mMXP_DEFAULT = mMXP_MODE = MXP_MODE_OPEN;
+                                break;
                             case 6: // lock secure mode (MXP 0.4 or later) - set secure mode.  Mode remains in effect until changed.  Secure mode becomes the new default mode.
-				mMXP_DEFAULT = mMXP_MODE = MXP_MODE_SECURE;
-				break;
+                                mMXP_DEFAULT = mMXP_MODE = MXP_MODE_SECURE;
+                                break;
                             case 7: // lock locked mode (MXP 0.4 or later) - set locked mode.  Mode remains in effect until changed.  Locked mode becomes the new default mode.
-				mMXP_DEFAULT = mMXP_MODE = MXP_MODE_LOCKED;
-				break;
+                                mMXP_DEFAULT = mMXP_MODE = MXP_MODE_LOCKED;
+                                break;
                             default:
-			      qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
+                                qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled MXP control sequence CSI " << code << " z received, Mudlet will ignore it.";
                             }
                         } else {
                             // isOk is false here as toInt(...) failed
@@ -1640,7 +1643,7 @@ COMMIT_LINE:
                 }
                 buffer.push_back(mMudBuffer);
                 dirty << true;
-                timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+                timeBuffer << QTime::currentTime().toString(timeStampFormat);
                 if (ch == '\xff') {
                     promptBuffer.append(true);
                 } else {
@@ -1658,7 +1661,7 @@ COMMIT_LINE:
                 }
                 buffer.back() = mMudBuffer;
                 dirty.back() = true;
-                timeBuffer.back() = QTime::currentTime().toString("hh:mm:ss.zzz") + "   ";
+                timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
                 if (ch == '\xff') {
                     promptBuffer.back() = true;
                 } else {
@@ -1679,7 +1682,7 @@ COMMIT_LINE:
             std::deque<TChar> newLine;
             buffer.push_back(newLine);
             lineBuffer.push_back(QString());
-            timeBuffer.push_back("   ");
+            timeBuffer.push_back(QString());
             promptBuffer << false;
             dirty << true;
             if (static_cast<int>(buffer.size()) > mLinesLimit) {
@@ -2454,7 +2457,13 @@ void TBuffer::decodeSGR(const QString& sequence)
             // We do not have a colon separated string so we must just have a
             // number:
             bool isOk = false;
-            int tag = allParameterElements.toInt(&isOk);
+            int tag = 0;
+            if (!allParameterElements.isEmpty()) {
+                tag = allParameterElements.toInt(&isOk);
+            } else {
+                // Allow for an empty parameter to be treated as valid and equal to 0:
+                isOk = true;
+            }
             if (isOk) {
                 switch (tag) {
                 case 0:
@@ -3057,7 +3066,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(QStringLiteral("hh:mm:ss.zzz   "));
+        timeBuffer << QTime::currentTime().toString(timeStampFormat);
         promptBuffer << false;
         dirty << true;
         last = 0;
@@ -3078,7 +3087,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
             std::deque<TChar> newLine;
             buffer.push_back(newLine);
             lineBuffer.push_back(QString());
-            timeBuffer << QStringLiteral("-------------");
+            timeBuffer << blankTimeStamp;
             promptBuffer << false;
             dirty << true;
             firstChar = true;
@@ -3111,7 +3120,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
                     } else {
                         lineBuffer.append(QString());
                     }
-                    timeBuffer << QStringLiteral("-------------");
+                    timeBuffer << blankTimeStamp;
                     promptBuffer << false;
                     dirty << true;
                     log(size() - 2, size() - 2);
@@ -3130,7 +3139,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
                 linkID);
         buffer.back().push_back(c);
         if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(QStringLiteral("hh:mm:ss.zzz   "));
+            timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
             firstChar = false;
         }
     }
@@ -3151,7 +3160,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
-        timeBuffer << QTime::currentTime().toString(QStringLiteral("hh:mm:ss.zzz   "));
+        timeBuffer << QTime::currentTime().toString(timeStampFormat);
         promptBuffer << false;
         dirty << true;
         last = 0;
@@ -3171,7 +3180,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             std::deque<TChar> newLine;
             buffer.push_back(newLine);
             lineBuffer.push_back(QString());
-            timeBuffer << QStringLiteral("-------------");
+            timeBuffer << blankTimeStamp;
             promptBuffer << false;
             dirty << true;
             firstChar = true;
@@ -3204,7 +3213,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
                     } else {
                         lineBuffer.append(QString());
                     }
-                    timeBuffer << QStringLiteral("-------------");
+                    timeBuffer << blankTimeStamp;
                     promptBuffer << false;
                     dirty << true;
                     log(size() - 2, size() - 2);
@@ -3219,7 +3228,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
         if (firstChar) {
-            timeBuffer.back() = QTime::currentTime().toString(QStringLiteral("hh:mm:ss.zzz   "));
+            timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
             firstChar = false;
         }
     }
@@ -3243,7 +3252,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
-        timeBuffer << (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+        timeBuffer << QTime::currentTime().toString(timeStampFormat);
         promptBuffer << false;
         dirty << true;
         lastLine = 0;
@@ -3264,7 +3273,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
         if (firstChar) {
-            timeBuffer.back() = (QTime::currentTime()).toString("hh:mm:ss.zzz") + "   ";
+            timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
             firstChar = false;
         }
     }
@@ -3564,7 +3573,7 @@ void TBuffer::log(int fromLine, int toLine)
             // This only handles a single line of logged text at a time:
             linesToLog << bufferToHtml(mpHost->mIsLoggingTimestamps, i);
         } else {
-            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(13) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
+            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(timeStampFormat.length()) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
         }
     }
 
@@ -4100,7 +4109,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     // we will NOT need a closing "</span>"
     if (showTimeStamp && !timeBuffer.at(row).isEmpty()) {
         // TODO: formatting according to TTextEdit.cpp: if( i2 < timeOffset ) - needs updating if we allow the colours to be user set:
-        s.append(QStringLiteral("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); \">%1").arg(timeBuffer.at(row).left(13)));
+        s.append(QStringLiteral("<span style=\"color: rgb(200,150,0); background: rgb(22,22,22); \">%1").arg(timeBuffer.at(row).left(timeStampFormat.length())));
         // Set the current idea of what the formatting is so we can spot if it
         // changes:
         currentFgColor = QColor(200,150,0);
