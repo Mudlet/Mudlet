@@ -65,11 +65,12 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
 , mUseOldUnicode8(false)
 , mTabStopwidth(8)
+, mTimeStampWidth(13) // Should be the same as the size of the timeStampFormat constant in the TBuffer class
 {
     mLastClickTimer.start();
     if (pC->getType() != TConsole::CentralDebugConsole) {
         mFontHeight = QFontMetrics(mpHost->mDisplayFont).height();
-        mFontWidth = QFontMetrics(mpHost->mDisplayFont).width(QChar('W'));
+        mFontWidth = QFontMetrics(mpHost->mDisplayFont).averageCharWidth();
         mScreenWidth = 100;
         if ((width() / mFontWidth) < mScreenWidth) {
             mScreenWidth = 100; //width()/mFontWidth;
@@ -92,7 +93,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
         // This is part of the Central Debug Console
         mShowTimeStamps = true;
         mFontHeight = QFontMetrics(mDisplayFont).height();
-        mFontWidth = QFontMetrics(mDisplayFont).width(QChar('W'));
+        mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
         mScreenWidth = 100;
         mDisplayFont.setFixedPitch(true);
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
@@ -173,11 +174,13 @@ void TTextEdit::focusInEvent(QFocusEvent* event)
 }
 
 
-void TTextEdit::slot_toggleTimeStamps()
+void TTextEdit::slot_toggleTimeStamps(const bool state)
 {
-    mShowTimeStamps = !mShowTimeStamps;
-    forceUpdate();
-    update();
+    if (mShowTimeStamps != state) {
+        mShowTimeStamps = state;
+        forceUpdate();
+        update();
+    }
 }
 
 void TTextEdit::slot_scrollBarMoved(int line)
@@ -225,7 +228,7 @@ void TTextEdit::initDefaultSettings()
 void TTextEdit::updateScreenView()
 {
     if (isHidden()) {
-        mFontWidth = QFontMetrics(mDisplayFont).width(QChar(' '));
+        mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
         mFontDescent = QFontMetrics(mDisplayFont).descent();
         mFontAscent = QFontMetrics(mDisplayFont).ascent();
         mFontHeight = mFontAscent + mFontDescent;
@@ -249,7 +252,7 @@ void TTextEdit::updateScreenView()
     // This was "if (pC->mType == TConsole::MainConsole) {"
     // and mIsMiniConsole is true for user created Mini Consoles and User Windows
     if (mpConsole->getType() == TConsole::MainConsole) {
-        mFontWidth = QFontMetrics(mpHost->mDisplayFont).width(QChar('W'));
+        mFontWidth = QFontMetrics(mpHost->mDisplayFont).averageCharWidth();
         mFontDescent = QFontMetrics(mpHost->mDisplayFont).descent();
         mFontAscent = QFontMetrics(mpHost->mDisplayFont).ascent();
         mFontHeight = mFontAscent + mFontDescent;
@@ -270,7 +273,7 @@ void TTextEdit::updateScreenView()
         }
 #endif
     } else {
-        mFontWidth = QFontMetrics(mDisplayFont).width(QChar('W'));
+        mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
         mFontDescent = QFontMetrics(mDisplayFont).descent();
         mFontAscent = QFontMetrics(mDisplayFont).ascent();
         mFontHeight = mFontAscent + mFontDescent;
@@ -440,25 +443,34 @@ inline void TTextEdit::drawCharacters(QPainter& painter, const QRect& rect, QStr
 #endif
 }
 
+// Extract the base (first) part which will be one or two QChars
+// and if they ARE a surrogate pair convert them back to the single
+// Unicode codepoint (needs around 21 bits, can be contained in a
+// 32bit unsigned integer) value:
 inline uint TTextEdit::getGraphemeBaseCharacter(const QString& str) const
 {
     if (str.isEmpty()) {
         return 0;
     }
+
     QChar first = str.at(0);
     if (first.isSurrogate() && str.size() >= 2) {
         QChar second = str.at(1);
         if (first.isHighSurrogate() && second.isLowSurrogate()) {
             return QChar::surrogateToUcs4(first, second);
-        } else if (first.isLowSurrogate() && second.isHighSurrogate()) {
-            return QChar::surrogateToUcs4(second, first);
-        } else {
-            // str format error
-            return first.unicode();
         }
-    } else {
+
+        if (Q_UNLIKELY(first.isLowSurrogate() && second.isHighSurrogate())) {
+            qDebug().noquote().nospace() << "TTextEdit::getGraphemeBaseCharacter(\"str\") INFO - passed a QString comprising a Low followed by a High surrogate QChar, this is not expected, they will be swapped around to try and recover but if this causes mojibake (text corrupted into meaningless symbols) please report this to the developers!";
+            return QChar::surrogateToUcs4(second, first);
+        }
+
+        // str format error ?
         return first.unicode();
+
     }
+
+    return first.unicode();
 }
 
 void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) const
@@ -827,22 +839,27 @@ void TTextEdit::swap(QPoint& p1, QPoint& p2)
     p2 = tmp;
 }
 
+void TTextEdit::normaliseSelection()
+{
+    if (mPA.y() > mPB.y() || ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x()))) {
+        swap(mPA, mPB);
+    }
+}
+
 void TTextEdit::mouseMoveEvent(QMouseEvent* event)
 {
     if (mFontWidth == 0 || mFontHeight == 0) {
         return;
     }
 
-    int y = (event->y() / mFontHeight) + imageTopLine();
-    y = std::max(y, 0);
+    int lineIndex = std::max(0, (event->y() / mFontHeight) + imageTopLine());
+    int tCharIndex = convertMouseXToBufferX(event->x(), lineIndex);
 
-    int x = std::max(convertMouseXToBufferX(event->x(), y), 0);
-
-    if (y < static_cast<int>(mpBuffer->buffer.size())) {
-        if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
-            if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
+    if (lineIndex < static_cast<int>(mpBuffer->buffer.size())) {
+        if (tCharIndex < static_cast<int>(mpBuffer->buffer[lineIndex].size())) {
+            if (mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex()) {
                 setCursor(Qt::PointingHandCursor);
-                QStringList tooltip = mpBuffer->mHintStore[mpBuffer->buffer.at(y).at(x).linkIndex()];
+                QStringList tooltip = mpBuffer->mHintStore[mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex()];
                 QToolTip::showText(event->globalPos(), tooltip.join("\n"));
             } else {
                 setCursor(Qt::IBeamCursor);
@@ -861,37 +878,37 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     if (event->y() >= height() - 10) {
         mpConsole->scrollDown(3);
     }
-    if ((y > (int)mpBuffer->size() - 1)) {
+    if (lineIndex > static_cast<int>(mpBuffer->size() - 1)) {
         return;
     }
 
-    QPoint PC(x, y);
+    QPoint PC(tCharIndex, lineIndex);
 
     if (mCtrlSelecting) {
         int oldAY = mPA.y();
         int oldBY = mPB.y();
-        if (PC.y() == mDragStartY) {
-            mPA.setY(PC.y());
-            mPB.setY(PC.y());
-        } else if (PC.y() < mDragStartY) {
-            mPA.setY(PC.y());
+        if (lineIndex == mDragStartY) {
+            mPA.setY(lineIndex);
+            mPB.setY(lineIndex);
+        } else if (lineIndex < mDragStartY) {
+            mPA.setY(lineIndex);
             mPB.setY(mDragStartY);
-        } else if (PC.y() > mDragStartY) {
+        } else if (lineIndex > mDragStartY) {
             mPA.setY(mDragStartY);
-            mPB.setY(PC.y());
+            mPB.setY(lineIndex);
         }
 
         if (oldAY < mPA.y()) {
-            for (int y = oldAY, total = mPA.y(); y < total; ++y) {
-                for (auto& x : mpBuffer->buffer[y]) {
-                    x.deselect();
+            for (int yIndex = oldAY, total = mPA.y(); yIndex < total; ++yIndex) {
+                for (auto& TQchar : mpBuffer->buffer[yIndex]) {
+                    TQchar.deselect();
                 }
             }
         }
         if (oldBY > mPB.y()) {
-            for (int y = mPB.y() + 1; y <= oldBY; ++y) {
-                for (auto& x : mpBuffer->buffer[y]) {
-                    x.deselect();
+            for (int yIndex = mPB.y() + 1; yIndex <= oldBY; ++yIndex) {
+                for (auto& TQchar : mpBuffer->buffer[yIndex]) {
+                    TQchar.deselect();
                 }
             }
         }
@@ -902,70 +919,96 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         highlight();
         return;
     }
-    if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
-        swap(mPA, mPB);
-    }
-    if (mPA.y() > mPB.y()) {
-        swap(mPA, mPB);
-    }
+
+    normaliseSelection();
     QPoint p1 = mPA - PC;
     QPoint p2 = mPB - PC;
-    if (p1.manhattanLength() < p2.manhattanLength()) {
-        if (mPA.y() < PC.y() || ((mPA.x() < PC.x()) && (mPA.y() == PC.y()))) {
-            int y1 = PC.y();
-            for (int y = y1, total = mPA.y(); y >= total; --y) {
-                if (y >= static_cast<int>(mpBuffer->buffer.size()) || y < 0) {
+    if ( (abs(p1.y()) < abs(p2.y()))
+       ||((abs(p1.y()) == abs(p2.y()) && abs(p1.x()) < abs(p2.x())))) {
+        // The cursor position is nearer to the start than to the end of the existing selection:
+
+        if (mPA.y() < lineIndex || (mPA.y() == lineIndex && mPA.x() < tCharIndex)) {
+            // The old start of the selection is further from the end than the
+            // current cursor position:
+
+            // So, starting on the line of the cursor and working towards the
+            // start of the buffer, deselect elements backward to the old
+            // selection start (mPA):
+            for (int yIndex = lineIndex, total = mPA.y(); yIndex >= total; --yIndex) {
+                if (yIndex >= static_cast<int>(mpBuffer->buffer.size()) || yIndex < 0) {
+                    // Abort if we are considering a line not in the buffer:
                     break;
                 }
-                int x = mpBuffer->buffer.at(y).size() - 1;
-                if (y == y1) {
-                    x = PC.x();
-                    if (x >= static_cast<int>(mpBuffer->buffer.at(y).size())) {
-                        x = static_cast<int>(mpBuffer->buffer.at(y).size()) - 1;
-                    }
-                    if (x < 0) {
-                        x = 0;
-                    }
-                }
-                for (;; --x) {
-                    if ((y == mPA.y()) && (x < mPA.x())) {
-                        break;
+
+                auto& bufferLine = mpBuffer->buffer.at(yIndex);
+                // We start on the last index in the line:
+                int xIndex = bufferLine.size() - 1;
+
+                if (yIndex == lineIndex) {
+                    // On the first line being processed - which contains the
+                    // cursor - so select the first element BEFORE it:
+                    xIndex = tCharIndex - 1;
+                    if (Q_UNLIKELY(xIndex >= static_cast<int>(bufferLine.size()))) {
+                        // Oops - that is past the end of the line - so clamp it
+                        // to the end of the line:
+                        xIndex = static_cast<int>(bufferLine.size()) - 1;
                     }
 
-                    if (x < static_cast<int>(mpBuffer->buffer[y].size()) && x >= 0) {
-                        if (mpBuffer->buffer.at(y).at(x).isSelected()) {
-                            mpBuffer->buffer.at(y).at(x).deselect();
-                            mpBuffer->dirty[y] = true;
-                        }
-                    } else {
-                        break;
+                    if (Q_UNLIKELY(xIndex < 0)) {
+                        // Oops - that is before the start of the line so abort
+                        // this line and go to the previous one:
+                        continue;
+                    }
+                }
+
+                for (; xIndex >=0; --xIndex) {
+                    if (bufferLine.at(xIndex).isSelected()) {
+                        bufferLine[xIndex].deselect();
+                        mpBuffer->dirty[yIndex] = true;
                     }
                 }
             }
         }
+
         mPA = PC;
+
     } else {
-        if (mPB.y() > PC.y() || (mPB.x() > PC.x() && mPB.y() == PC.y())) {
-            int y1 = PC.y();
-            for (int y = y1, total = mPB.y(); y <= total; ++y) {
-                int x = 0;
-                if (y == y1) {
-                    x = PC.x();
-                }
-                if (y >= static_cast<int>(mpBuffer->buffer.size()) || y < 0) {
+        // The cursor position is nearer to or the same distance to the end than
+        // to the start of the existing selection:
+
+        if (mPB.y() > lineIndex || (mPB.y() == lineIndex && mPB.x() > tCharIndex)) {
+            // The old end of the selection is further from the start than the
+            // current cursor position:
+
+            // So, starting on the line of the cursor and working towards the
+            // end of the buffer, deselect elements forwards to the old
+            // selection end (mPB):
+            for (int yIndex = lineIndex, total = mPB.y(); yIndex <= total; ++yIndex) {
+                if (yIndex >= static_cast<int>(mpBuffer->buffer.size()) || yIndex < 0) {
+                    // Abort if we are considering a line not in the buffer:
                     break;
                 }
-                for (;; ++x) {
-                    if ((y == mPB.y()) && (x > mPB.x())) {
-                        break;
+
+                // We start at the first index in the line:
+                int xIndex = 0;
+                if (yIndex == lineIndex) {
+                    // Oh, this is the line containing the cursor so adjust the
+                    // start to be there:
+                    QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, mpBuffer->lineBuffer.at(yIndex));
+                    graphemeFinder.setPosition(tCharIndex);
+                    xIndex = graphemeFinder.toNextBoundary();
+                    if (xIndex == -1) {
+                        // There is no grapheme after the given one so nothing
+                        // to do on this line
+                        continue;
                     }
-                    if (x < static_cast<int>(mpBuffer->buffer.at(y).size())) {
-                        if (mpBuffer->buffer.at(y).at(x).isSelected()) {
-                            mpBuffer->buffer.at(y).at(x).deselect();
-                            mpBuffer->dirty[y] = true;
-                        }
-                    } else {
-                        break;
+                }
+
+                auto& bufferLine = mpBuffer->buffer.at(yIndex);
+                for (; xIndex < static_cast<int>(bufferLine.size()); ++xIndex) {
+                    if (bufferLine.at(xIndex).isSelected()) {
+                        bufferLine[xIndex].deselect();
+                        mpBuffer->dirty[yIndex] = true;
                     }
                 }
             }
@@ -973,45 +1016,66 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
 
         mPB = PC;
     }
-    if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
-        swap(mPA, mPB);
-    }
-    if (mPA.y() > mPB.y()) {
-        swap(mPA, mPB);
-    }
 
+    normaliseSelection();
+    // FIXME: There is an issue now that deselecting a selection upwards in the
+    // left column will leave the first column highlighted - it turns out that
+    // those first columns are being deselected but the highlight() below is not
+    // including the portion of the display with the now deselected portion on
+    // the left margin within the area that gets repainted...
     highlight();
 }
 
+// Returns the index into the relevant TBuffer::lineBuffer of the FIRST QChar
+// of the grapheme under the mouse - it ALSO returns zero (which will probably
+// NOT be a valid index) if there is no valid index to return; it might be
+// worth changing that to -1 but that will probably require revision to the
+// caller(s):
 int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber) const
 {
-    int characterIndex = -1;
-    if (lineNumber < mpBuffer->lineBuffer.size()) {
-        int characterWidth = 1;
-        int currentX = 0;
-        for (const auto character : mpBuffer->lineBuffer.at(lineNumber)) {
-            const uint unicode = getGraphemeBaseCharacter(character);
+    if (lineNumber >= 0 && lineNumber < mpBuffer->lineBuffer.size()) {
+        // Line number is (should be) within range of lines in the
+        // TBuffer::lineBuffer - might need to check that this still works after
+        // that buffer has reached the limit when it starts to have the
+        // beginning lines deleted!
+
+        // Count of "normal" width equivalent characters - we will multiply that
+        // by the average character width to determine whether the mouse is over
+        // a particular grapheme:
+        int column = 0;
+        // These are the calculated horizontal limits in pixels from the left
+        // for the current grapheme being considered in the line:
+        int leftX = 0;
+        int rightX = 0;
+        QString lineText = mpBuffer->lineBuffer.at(lineNumber);
+        // QStringList debugText;
+        QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
+        for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total;) {
+            int nextBoundary = boundaryFinder.toNextBoundary();
+            // Width in "normal" width characters equivalent of this grapheme:
+            int charWidth = 0;
+            // This could contain a surrogate pair (i.e. pair of QChars) and/or
+            // include suffixed combining diacritical marks (additional QChars):
+            const QString grapheme = lineText.mid(indexOfChar, nextBoundary - indexOfChar);
+            const uint unicode = getGraphemeBaseCharacter(grapheme);
             if (unicode == '\t') {
-                characterWidth = 8;
+                charWidth = mTabStopwidth - (column % mTabStopwidth);
             } else {
-                characterWidth = getGraphemeWidth(unicode);
+                charWidth = getGraphemeWidth(unicode);
             }
-            currentX += characterWidth * mFontWidth;
-            characterIndex++;
-            if (currentX >= mouseX) {
-                if (mShowTimeStamps) {
-                    characterIndex -= 13;
-                }
-                return characterIndex;
+            column +=charWidth;
+            leftX = rightX;
+            rightX = (mShowTimeStamps ? mTimeStampWidth + column : column) * mFontWidth;
+            // debugText << QStringLiteral("[%1]%2[%3]").arg(QString::number(leftX), grapheme, QString::number(rightX - 1));
+            if (leftX <= mouseX && mouseX < rightX) {
+                // qDebug().nospace().noquote() << "TTextEdit::convertMouseXToBufferX(" << mouseX << ", " << lineNumber << ") INFO - placing cursor over the last grapheme within the calculated limits of:\n" << debugText.join(QString());
+                return std::max(0, indexOfChar);
             }
+            indexOfChar = nextBoundary;
         }
     }
 
-    characterIndex = mouseX / mFontWidth;
-    if (mShowTimeStamps) {
-        characterIndex -= 13;
-    }
-    return characterIndex;
+    return 0;
 }
 
 void TTextEdit::contextMenuEvent(QContextMenuEvent* event)
@@ -1069,14 +1133,6 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         y = std::max(y, 0);
 
         int x = convertMouseXToBufferX(event->x(), y);
-
-        if (mShowTimeStamps) {
-            if (x < 0) {
-                mCtrlSelecting = true;
-            }
-        }
-
-        x = std::max(x, 0);
 
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
             if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
@@ -1162,7 +1218,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         int y = (event->y() / mFontHeight) + imageTopLine();
         y = std::max(y, 0);
 
-        int x = std::max(convertMouseXToBufferX(event->x(), y), 0);
+        int x = convertMouseXToBufferX(event->x(), y);
 
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
             if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
@@ -1306,12 +1362,7 @@ void TTextEdit::slot_copySelectionToClipboard()
 
 void TTextEdit::slot_copySelectionToClipboardHTML()
 {
-    if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
-        swap(mPA, mPB);
-    }
-    if (mPA.y() > mPB.y()) {
-        swap(mPA, mPB);
-    }
+    normaliseSelection();
 
     QString title;
     if (mpConsole->getType() == TConsole::CentralDebugConsole) {
@@ -1403,6 +1454,9 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     forceUpdate();
 }
 
+// Technically this copies whole lines into the image even if the selection does
+// not start at the beginning of the first line or end at the last grapheme on
+// the last line.
 void TTextEdit::slot_copySelectionToClipboardImage()
 {
     mCopyImageStartTime = std::chrono::high_resolution_clock::now();
@@ -1412,13 +1466,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
 
     // if selection was made backwards swap
     // right to left
-    if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
-        swap(mPA, mPB);
-    }
-    // down to up
-    if (mPA.y() > mPB.y()) {
-        swap(mPA, mPB);
-    }
+    normaliseSelection();
 
     if (mFontWidth <= 0 || mFontHeight <= 0) {
         return;
@@ -1437,20 +1485,41 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     }
 
     // Qt says: "Maximum supported image dimension is 65500 pixels" in stdout
-    auto heightpx = qMin(65500, (mPB.y() - mPA.y() + 1) * mFontHeight);
+    auto heightpx = std::min(65500, (mPB.y() - mPA.y() + 1) * mFontHeight);
     auto lineOffset = mPA.y();
 
     // find the biggest width of text we need to work with
-    int characterWidth = 0;
+    int largestLine{};
     for (int y = mPA.y(), total = mPB.y() + 1; y < total; ++y) {
-        const auto lineWidth = static_cast<int>(mpBuffer->buffer.at(y).size());
-        characterWidth = qMax(lineWidth, characterWidth);
+        const QString lineText{mpBuffer->lineBuffer.at(y)};
+        // Will accumulate the width in pixels of the current line:
+        int lineWidth{(mShowTimeStamps ? mTimeStampWidth : 0) * mFontWidth};
+        // Accumulated width in "normal" width characters:
+        int column{};
+        QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
+        for (int indexOfChar{}, total{lineText.size()}; indexOfChar < total;) {
+            int nextBoundary{boundaryFinder.toNextBoundary()};
+            // Width in "normal" width equivalent of this grapheme:
+            int charWidth{};
+            const QString grapheme = lineText.mid(indexOfChar, nextBoundary - indexOfChar);
+            const uint unicode = getGraphemeBaseCharacter(grapheme);
+            if (unicode == '\t') {
+                charWidth = mTabStopwidth - (column % mTabStopwidth);
+            } else {
+                charWidth = getGraphemeWidth(unicode);
+            }
+            column +=charWidth;
+            // The timestamp is (currently) 13 "normal width" characters
+            // but that might not always be the case in some future I18n
+            // situations:
+            lineWidth = (mShowTimeStamps ? mTimeStampWidth + column : column) * mFontWidth;
+            indexOfChar = nextBoundary;
+        }
+        largestLine = std::max(lineWidth, largestLine);
     }
 
-    auto widthpx = qMin(65500, characterWidth * mFontWidth);
-
+    auto widthpx = std::min(65500, largestLine);
     auto rect = QRect(mPA.x(), mPA.y(), widthpx, heightpx);
-
     auto pixmap = QPixmap(widthpx, heightpx);
     pixmap.fill(palette().base().color());
 
@@ -1527,13 +1596,7 @@ QString TTextEdit::getSelectedText(char newlineChar)
 
     // if selection was made backwards swap
     // right to left
-    if ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x())) {
-        swap(mPA, mPB);
-    }
-    // down to up
-    if (mPA.y() > mPB.y()) {
-        swap(mPA, mPB);
-    }
+    normaliseSelection();
 
     QString text;
 
@@ -1717,18 +1780,18 @@ int TTextEdit::bufferScrollDown(int lines)
         }
         return lines;
 
-    } else if (mpBuffer->mCursorY >= (int)(mpBuffer->size() - 1)) {
+    } else if (mpBuffer->mCursorY >= static_cast<int>(mpBuffer->size() - 1)) {
         mIsTailMode = true;
         mpBuffer->mCursorY = mpBuffer->lineBuffer.size();
         forceUpdate();
         return 0;
 
     } else {
-        lines = (int)(mpBuffer->size() - 1) - mpBuffer->mCursorY;
+        lines = static_cast<int>(mpBuffer->size() - 1) - mpBuffer->mCursorY;
         if (mpBuffer->mCursorY + lines < mScreenHeight + lines) {
             mpBuffer->mCursorY = mScreenHeight + lines;
-            if (mpBuffer->mCursorY > (int)(mpBuffer->size() - 1)) {
-                mpBuffer->mCursorY = mpBuffer->size() - 1;
+            if (mpBuffer->mCursorY > static_cast<int>(mpBuffer->size() - 1)) {
+                mpBuffer->mCursorY = static_cast<int>(mpBuffer->size() - 1);
                 mIsTailMode = true;
             }
 
