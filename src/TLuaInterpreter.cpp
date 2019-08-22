@@ -2807,16 +2807,17 @@ int TLuaInterpreter::setFont(lua_State* L)
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
-            // get host profile display font and alter it, since that is how it's done in Settings.
-            QFont displayFont = pHost->mDisplayFont;
-            displayFont.setFamily(font);
-            pHost->mDisplayFont = displayFont;
-            QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
+            if (auto [setNewFont, errorMessage] = pHost->setDisplayFont(font); !setNewFont) {
+                lua_pushnil(L);
+                lua_pushstring(L, errorMessage.toUtf8().constData());
+                return 2;
+            }
+
             // apply changes to main console and its while-scrolling component too.
-            mudlet::self()->mConsoleMap[pHost]->mUpperPane->setFont(displayFont);
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->setFont(pHost->getDisplayFont());
             mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
             mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();
-            mudlet::self()->mConsoleMap[pHost]->mLowerPane->setFont(displayFont);
+            mudlet::self()->mConsoleMap[pHost]->mLowerPane->setFont(pHost->getDisplayFont());
             mudlet::self()->mConsoleMap[pHost]->mLowerPane->updateScreenView();
             mudlet::self()->mConsoleMap[pHost]->mLowerPane->forceUpdate();
             mudlet::self()->mConsoleMap[pHost]->refresh();
@@ -2907,10 +2908,7 @@ int TLuaInterpreter::setFontSize(lua_State* L)
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
             // get host profile display font and alter it, since that is how it's done in Settings.
-            QFont font = pHost->mDisplayFont;
-            font.setPointSize(size);
-            pHost->mDisplayFont = font;
-            QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
+            pHost->setDisplayFontSize(size);
             // apply changes to main console and its while-scrolling component too.
             mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
             mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();
@@ -2950,13 +2948,13 @@ int TLuaInterpreter::getFontSize(lua_State* L)
             windowName = QString::fromUtf8(lua_tostring(L, 1));
 
             if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-                rval = pHost->mDisplayFont.pointSize();
+                rval = pHost->getDisplayFont().pointSize();
             } else {
                 rval = mudlet::self()->getFontSize(pHost, windowName);
             }
         }
     } else {
-        rval = pHost->mDisplayFont.pointSize();
+        rval = pHost->getDisplayFont().pointSize();
     }
 
     if (rval <= -1) {
@@ -6344,7 +6342,7 @@ int TLuaInterpreter::getNetworkLatency(lua_State* L)
 int TLuaInterpreter::getMainConsoleWidth(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    int fw = QFontMetrics(host.mDisplayFont).averageCharWidth();
+    int fw = QFontMetrics(host.getDisplayFont()).averageCharWidth();
     fw *= host.mWrapAt + 1;
     lua_pushnumber(L, fw);
     return 1;

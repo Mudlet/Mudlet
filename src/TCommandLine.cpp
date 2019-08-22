@@ -50,7 +50,7 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
 
-    setFont(mpHost->mDisplayFont);
+    setFont(mpHost->getDisplayFont());
 
     mRegularPalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor); //QColor(0,0,192));
     mRegularPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
@@ -566,7 +566,7 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
 void TCommandLine::adjustHeight()
 {
     int lines = document()->size().height();
-    int fontH = QFontMetrics(mpHost->mDisplayFont).height();
+    int fontH = QFontMetrics(mpHost->getDisplayFont()).height();
     if (lines < 1) {
         lines = 1;
     }

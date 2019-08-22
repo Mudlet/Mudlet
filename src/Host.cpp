@@ -534,6 +534,27 @@ QString Host::getMmpMapLocation() const
     return mpMap->getMmpMapLocation();
 }
 
+std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
+{
+    const QFontMetrics metrics(font);
+    if (metrics.averageCharWidth() == 0) {
+        return std::make_pair(false, QStringLiteral("specified font is invalid (its letters have 0 width)"));
+    }
+
+    mDisplayFont = font;
+    return std::make_pair(true, QString());
+}
+
+std::pair<bool, QString> Host::setDisplayFont(const QString& fontName)
+{
+    return setDisplayFont(QFont(fontName));
+}
+
+void Host::setDisplayFontSize(int size)
+{
+    mDisplayFont.setPointSize(size);
+}
+
 // Now returns the total weight of the path
 unsigned int Host::assemblePath()
 {
@@ -1800,4 +1821,19 @@ std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
     }
 
     return mpDownloaderProxy;
+}
+
+void Host::setDisplayFontSpacing(const qreal spacing)
+{
+    mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, spacing);
+}
+
+void Host::setDisplayFontStyle(QFont::StyleStrategy s)
+{
+    mDisplayFont.setStyleStrategy(s);
+}
+
+void Host::setDisplayFontFixedPitch(bool enable)
+{
+    mDisplayFont.setFixedPitch(enable);
 }

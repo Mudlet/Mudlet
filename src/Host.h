@@ -228,6 +228,13 @@ public:
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
+    const QFont& getDisplayFont() const { return mDisplayFont; }
+    std::pair<bool, QString> setDisplayFont(const QFont& font);
+    std::pair<bool, QString> setDisplayFont(const QString& fontName);
+    void setDisplayFontSize(int size);
+    void setDisplayFontSpacing(const qreal spacing);
+    void setDisplayFontStyle(QFont::StyleStrategy s);
+    void setDisplayFontFixedPitch(bool enable);
     void updateProxySettings(QNetworkAccessManager* manager);
     std::unique_ptr<QNetworkProxy>& getConnectionProxy();
 
@@ -247,7 +254,6 @@ public:
     int mBorderTopHeight;
     QFont mCommandLineFont;
     QString mCommandSeparator;
-    QFont mDisplayFont;
     bool mEnableGMCP;
     bool mEnableMSDP;
     bool mServerMXPenabled;
@@ -450,7 +456,7 @@ private slots:
 
 private:
     void installPackageFonts(const QString &packageName);
-
+    QFont mDisplayFont;
     QStringList mModulesToSync;
 
     QScopedPointer<LuaInterface> mLuaInterface;
