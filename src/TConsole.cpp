@@ -366,7 +366,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     timeStampButton->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
         tr("Show Time Stamps.")));
     timeStampButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-information.png")));
-    connect(timeStampButton, &QAbstractButton::pressed, mUpperPane, &TTextEdit::slot_toggleTimeStamps);
+    connect(timeStampButton, &QAbstractButton::toggled, mUpperPane, &TTextEdit::slot_toggleTimeStamps);
+    connect(timeStampButton, &QAbstractButton::toggled, mLowerPane, &TTextEdit::slot_toggleTimeStamps);
 
     auto replayButton = new QToolButton;
     replayButton->setCheckable(true);
@@ -1119,7 +1120,7 @@ void TConsole::changeColors()
         const QString t = "123";
         p.drawText(r, 1, t, &r2);
         // N/U:        int mFontHeight = QFontMetrics( mDisplayFont ).height();
-        int mFontWidth = QFontMetrics(mDisplayFont).width(QChar('W'));
+        int mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
         auto letterSpacing = static_cast<qreal>(mFontWidth - static_cast<qreal>(r2.width() / t.size()));
         mUpperPane->mLetterSpacing = letterSpacing;
         mLowerPane->mLetterSpacing = letterSpacing;
@@ -1165,7 +1166,7 @@ void TConsole::changeColors()
         const QString t = "123";
         p.drawText(r, 1, t, &r2);
         // N/U:        int mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
-        int mFontWidth = QFontMetrics(mpHost->mDisplayFont).width(QChar('W'));
+        int mFontWidth = QFontMetrics(mpHost->mDisplayFont).averageCharWidth();
         auto letterSpacing = static_cast<qreal>(mFontWidth - static_cast<qreal>(r2.width() / t.size()));
         mUpperPane->mLetterSpacing = letterSpacing;
         mLowerPane->mLetterSpacing = letterSpacing;
