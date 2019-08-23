@@ -191,12 +191,18 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
         event.mArgumentList << QStringLiteral("sysPostHttpDone");
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
+        event.mArgumentList << reply->url().toString();
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+
         event.mArgumentList << QString(reply->readAll());
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         break;
 
     case QNetworkAccessManager::PutOperation:
         event.mArgumentList << QStringLiteral("sysPutHttpDone");
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+
+        event.mArgumentList << reply->url().toString();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
         event.mArgumentList << QString(reply->readAll());
