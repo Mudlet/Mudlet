@@ -891,8 +891,8 @@ if rex then
     local out, reset
     local args = { ... }
     local n = #args
-
-    if func == 'echoLink' then
+    
+    if string.find(func, "Link") then
       if n < 3 then
         error 'Insufficient arguments, usage: ([window, ] string, command, hint)'
       elseif n == 3 then
@@ -904,6 +904,19 @@ if rex then
       else
         error 'Improper arguments, usage: ([window, ] string, command, hint)'
       end
+    elseif string.find(func, "Popup") then
+      if n < 3 then
+        error 'Insufficient arguments, usage: ([window, ] string, {commands}, {hints})'
+      elseif n == 3 then
+        str, cmd, hint = ...
+      elseif n == 4 and type(args[4]) == 'boolean' then
+        str, cmd, hint, fmt = ...
+      elseif n >= 4 and type(args[4]) == 'table' then
+        win, str, cmd, hint, fmt = ...
+      else
+        error 'Improper arguments, usage: ([window, ] string, {commands}, {hints})'
+      end
+      
     else
       if args[1] and args[2] and args[1] ~= "main" then
         win, str = args[1], args[2]
@@ -918,9 +931,9 @@ if rex then
     out = function(...)
       _G[func](...)
     end
-
+    
     local t = _Echos.Process(str, style)
-
+    
     deselect(win)
     resetFormat(win)
     if not str then error(style:sub(1,1):lower() .. func .. ": bad argument #1, string expected, got nil",3) end
@@ -1061,6 +1074,96 @@ if rex then
   --- @see cecho
   function cechoLink(...)
     xEcho("Color", "echoLink", ...)
+  end
+	
+  --- Inserts a link with embedded color name information at the current position
+  ---
+  --- @usage cinsertLink([window, ] string, command, hint)
+  ---
+  --- @see xEcho
+  --- @see cecho
+  function cinsertLink(...)
+    xEcho("Color", "insertLink", ...)
+  end
+
+  --- Inserts a link with embedded decimal color information at the current position
+  ---
+  --- @usage dinsertLink([window, ] string, command, hint)
+  ---
+  --- @see xEcho
+  --- @see decho
+  function dinsertLink(...)
+    xEcho("Decimal", "insertLink", ...)
+  end
+
+  --- Inserts a link with embedded hex color information at the current position
+  ---
+  --- @usage hinsertLink([window, ] string, command, hint)
+  ---
+  --- @see xEcho
+  --- @see hecho
+  function hinsertLink(...)
+    xEcho("Hex", "insertLink", ...)
+  end
+
+  --- Echos a popup with embedded color name information.
+  ---
+  --- @usage cechoPopup([window, ] string, {commands}, {hints})
+  ---
+  --- @see xEcho
+  --- @see cecho
+  function cechoPopup(...)
+    xEcho("Color", "echoPopup", ...)
+  end
+
+  --- Echos a popup with embedded color name information.
+  ---
+  --- @usage dechoPopup([window, ] string, {commands}, {hints})
+  ---
+  --- @see xEcho
+  --- @see decho
+  function dechoPopup(...)
+    xEcho("Decimal", "echoPopup", ...)
+  end
+
+  --- Echos a popup with embedded hex color information.
+  ---
+  --- @usage hechoPopup([window, ] string, {commands}, {hints})
+  ---
+  --- @see xEcho
+  --- @see hecho
+  function hechoPopup(...)
+    xEcho("Hex", "echoPopup", ...)
+  end
+	
+  --- Echos a popup with embedded color name information.
+  ---
+  --- @usage cinsertPopup([window, ] string, {commands}, {hints})
+  ---
+  --- @see xEcho
+  --- @see cecho
+  function cinsertPopup(...)
+    xEcho("Color", "insertPopup", ...)
+  end
+
+  --- Echos a popup with embedded decimal color information.
+  ---
+  --- @usage dinsertPopup([window, ] string, {commands}, {hints})
+  ---
+  --- @see xEcho
+  --- @see decho
+  function dinsertPopup(...)
+    xEcho("Decimal", "insertPopup", ...)
+  end
+
+  --- Echos a popup with embedded hex color information.
+  ---
+  --- @usage hinsertPopup([window, ] string, {commands}, {hints})
+  ---
+  --- @see xEcho
+  --- @see hecho
+  function hinsertPopup(...)
+    xEcho("Hex", "insertPopup", ...)
   end
 
 

@@ -366,7 +366,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     timeStampButton->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
         tr("Show Time Stamps.")));
     timeStampButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-information.png")));
-    connect(timeStampButton, &QAbstractButton::pressed, mUpperPane, &TTextEdit::slot_toggleTimeStamps);
+    connect(timeStampButton, &QAbstractButton::toggled, mUpperPane, &TTextEdit::slot_toggleTimeStamps);
+    connect(timeStampButton, &QAbstractButton::toggled, mLowerPane, &TTextEdit::slot_toggleTimeStamps);
 
     auto replayButton = new QToolButton;
     replayButton->setCheckable(true);
@@ -1119,11 +1120,11 @@ void TConsole::changeColors()
         const QString t = "123";
         p.drawText(r, 1, t, &r2);
         // N/U:        int mFontHeight = QFontMetrics( mDisplayFont ).height();
-        int mFontWidth = QFontMetrics(mDisplayFont).width(QChar('W'));
+        int mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
         auto letterSpacing = static_cast<qreal>(mFontWidth - static_cast<qreal>(r2.width() / t.size()));
         mUpperPane->mLetterSpacing = letterSpacing;
         mLowerPane->mLetterSpacing = letterSpacing;
-        mpHost->mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
+        mpHost->setDisplayFontSpacing(letterSpacing);
         mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, mUpperPane->mLetterSpacing);
 #endif
         mDisplayFont.setFixedPitch(true);
@@ -1148,32 +1149,32 @@ void TConsole::changeColors()
             mpCommandLine->mRegularPalette = pal;
         }
         if (mpHost->mNoAntiAlias) {
-            mpHost->mDisplayFont.setStyleStrategy(QFont::NoAntialias);
+            mpHost->setDisplayFontStyle(QFont::NoAntialias);
         } else {
-            mpHost->mDisplayFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferAntialias | QFont::PreferQuality));
+            mpHost->setDisplayFontStyle(QFont::StyleStrategy(QFont::PreferAntialias | QFont::PreferQuality));
         }
-        mpHost->mDisplayFont.setFixedPitch(true);
+        mpHost->setDisplayFontFixedPitch(true);
         mDisplayFont.setFixedPitch(true);
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap(2000, 600);
         QPainter p(&pixmap);
-        QFont _font = mpHost->mDisplayFont;
+        QFont _font = mpHost->getDisplayFont();
         _font.setLetterSpacing(QFont::AbsoluteSpacing, 0);
         p.setFont(_font);
         const QRectF r = QRectF(0, 0, 2000, 600);
         QRectF r2;
         const QString t = "123";
         p.drawText(r, 1, t, &r2);
-        // N/U:        int mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
-        int mFontWidth = QFontMetrics(mpHost->mDisplayFont).width(QChar('W'));
+        // N/U:        int mFontHeight = QFontMetrics( mpHost->getDisplayFont() ).height();
+        int mFontWidth = QFontMetrics(mpHost->getDisplayFont()).averageCharWidth();
         auto letterSpacing = static_cast<qreal>(mFontWidth - static_cast<qreal>(r2.width() / t.size()));
         mUpperPane->mLetterSpacing = letterSpacing;
         mLowerPane->mLetterSpacing = letterSpacing;
-        mpHost->mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
+        mpHost->setDisplayFontSpacing(letterSpacing);
         mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, mUpperPane->mLetterSpacing);
 #endif
-        mUpperPane->setFont(mpHost->mDisplayFont);
-        mLowerPane->setFont(mpHost->mDisplayFont);
+        mUpperPane->setFont(mpHost->getDisplayFont());
+        mLowerPane->setFont(mpHost->getDisplayFont());
         QPalette palette;
         palette.setColor(QPalette::Text, mpHost->mFgColor);
         palette.setColor(QPalette::Highlight, QColor(55, 55, 255));
@@ -1185,7 +1186,7 @@ void TConsole::changeColors()
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
         if (mpCommandLine) {
-            mpCommandLine->setFont(mpHost->mDisplayFont);
+            mpCommandLine->setFont(mpHost->getDisplayFont());
         }
         mFormatCurrent.setColors(mpHost->mFgColor, mpHost->mBgColor);
     } else {

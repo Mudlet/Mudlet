@@ -180,11 +180,9 @@ linux|macx|win32 {
 # To remove the 3D mapper, set the environment WITH_3DMAPPER variable to "NO"
 # ie: export WITH_3DMAPPER="NO" qmake
 #
-linux|macx|win32 {
-    3DMAPPER_TEST = $$upper($$(WITH_3DMAPPER))
-    isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
-       DEFINES += INCLUDE_3DMAPPER
-    }
+3DMAPPER_TEST = $$upper($$(WITH_3DMAPPER))
+isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
+    DEFINES += INCLUDE_3DMAPPER
 }
 
 ###################### Platform Specific Paths and related #####################
@@ -638,28 +636,23 @@ linux|macx|win32 {
     }
 }
 
-linux|macx|win32 {
-    contains( DEFINES, INCLUDE_3DMAPPER ) {
-        HEADERS += glwidget.h
-        SOURCES += glwidget.cpp
-        QT += opengl
 
-        win32 {
-            LIBS += -lopengl32 \
-                    -lglu32
-        }
+contains( DEFINES, INCLUDE_3DMAPPER ) {
+    HEADERS += glwidget.h
+    SOURCES += glwidget.cpp
+    QT += opengl
 
-        !build_pass{
-            message("The 3D mapper code is included in this configuration")
-        }
-    } else {
-        !build_pass{
-            message("The 3D mapper code is excluded from this configuration")
-        }
+    win32 {
+        LIBS += -lopengl32 \
+                -lglu32
+    }
+
+    !build_pass{
+        message("The 3D mapper code is included in this configuration")
     }
 } else {
     !build_pass{
-        message("The 3D mapper code is excluded as OpenGL 1.5 might not be available on this platform")
+        message("The 3D mapper code is excluded from this configuration")
     }
 }
 
