@@ -136,15 +136,18 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
         return;
     }
 
-    if (!downloadMap.contains(reply)) {
-        reply->deleteLater();
-        return;
-    }
-
-    QString localFileName = downloadMap.value(reply);
     if (reply->error() != QNetworkReply::NoError) {
         TEvent event {};
         switch (reply->operation()) {
+        case QNetworkAccessManager::PostOperation:
+            event.mArgumentList << QStringLiteral("sysPostHttpError");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << reply->errorString();
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << reply->url().toString();
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            break;
+
         case QNetworkAccessManager::PutOperation:
             event.mArgumentList << QStringLiteral("sysPutHttpError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -159,8 +162,10 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << reply->errorString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-            event.mArgumentList << localFileName;
+            event.mArgumentList << downloadMap.value(reply);
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+
+            downloadMap.remove(reply);
             break;
         }
 
@@ -175,7 +180,6 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
 
 void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
 {
-    QString localFileName = downloadMap.value(reply);
     TEvent event {};
     Host* pHost = mpHost;
     if (!pHost) {
@@ -183,12 +187,25 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
     }
 
     switch (reply->operation()) {
+    case QNetworkAccessManager::PostOperation:
+        event.mArgumentList << QStringLiteral("sysPostHttpDone");
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+
+        event.mArgumentList << QString(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        break;
+
     case QNetworkAccessManager::PutOperation:
         event.mArgumentList << QStringLiteral("sysPutHttpDone");
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+
+        event.mArgumentList << QString(reply->readAll());
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         break;
 
     case QNetworkAccessManager::GetOperation:
+        QString localFileName = downloadMap.value(reply);
+        downloadMap.remove(reply);
         QFile localFile(localFileName);
         if (!localFile.open(QFile::WriteOnly)) {
             event.mArgumentList << QLatin1String("sysDownloadError");
@@ -241,7 +258,6 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
 
 
     reply->deleteLater();
-    downloadMap.remove(reply);
     pHost->raiseEvent(event);
 }
 
@@ -14575,6 +14591,7 @@ int TLuaInterpreter::getAvailableFonts(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#putHttp
 int TLuaInterpreter::putHttp(lua_State* L)
 {
     auto& host = getHostFromLua(L);
@@ -14620,8 +14637,59 @@ int TLuaInterpreter::putHttp(lua_State* L)
 #endif
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
-    QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->put(request, dataToPut.toUtf8().constData());
-    host.mLuaInterpreter.downloadMap.insert(reply, url.toString());
+    QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->put(request, dataToPut.toUtf8());
+    lua_pushboolean(L, true);
+    lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#postHttp
+int TLuaInterpreter::postHttp(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    QString dataToPost;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "postHttp: bad argument #1 type (data to send as string expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        return 1;
+    } else {
+        dataToPost = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    QString urlString;
+    if (!lua_isstring(L, 2)) {
+        lua_pushfstring(L, "postHttp: bad argument #2 type (remote url as string expected, got %s!)", luaL_typename(L, 2));
+        lua_error(L);
+        return 1;
+    } else {
+        urlString = QString::fromUtf8(lua_tostring(L, 2));
+    }
+
+    QUrl url = QUrl::fromUserInput(urlString);
+
+    if (!url.isValid()) {
+        lua_pushnil(L);
+        lua_pushfstring(L,
+                        "postHttp: bad argument #2 value (url is not deemed valid), validation\n"
+                        "produced the following error message:\n%s.",
+                        url.errorString().toUtf8().constData());
+        return 2;
+    }
+
+    QNetworkRequest request = QNetworkRequest(url);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
+#ifndef QT_NO_SSL
+    if (url.scheme() == QStringLiteral("https")) {
+        QSslConfiguration config(QSslConfiguration::defaultConfiguration());
+        request.setSslConfiguration(config);
+    }
+#endif
+
+    host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
+    QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->post(request, dataToPost.toUtf8());
     lua_pushboolean(L, true);
     lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
     return 2;
@@ -15150,6 +15218,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getDictionaryWordList", TLuaInterpreter::getDictionaryWordList);
     lua_register(pGlobalLua, "getTextFormat", TLuaInterpreter::getTextFormat);
     lua_register(pGlobalLua, "getWindowsCodepage", TLuaInterpreter::getWindowsCodepage);
+    lua_register(pGlobalLua, "putHttp", TLuaInterpreter::putHttp);
+    lua_register(pGlobalLua, "postHttp", TLuaInterpreter::postHttp);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     // prepend profile path to package.path and package.cpath

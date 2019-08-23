@@ -508,6 +508,7 @@ public:
     static int getTextFormat(lua_State*);
     static int getWindowsCodepage(lua_State*);
     static int putHttp(lua_State*);
+    static int postHttp(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
 
 
