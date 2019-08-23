@@ -14598,13 +14598,13 @@ int TLuaInterpreter::getAvailableFonts(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#putHttp
-int TLuaInterpreter::putHttp(lua_State* L)
+int TLuaInterpreter::putHTTP(lua_State* L)
 {
     auto& host = getHostFromLua(L);
 
     QString dataToPut;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "putHttp: bad argument #1 type (data to send as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "putHTTP: bad argument #1 type (data to send as string expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
@@ -14613,7 +14613,7 @@ int TLuaInterpreter::putHttp(lua_State* L)
 
     QString urlString;
     if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "putHttp: bad argument #2 type (remote url as string expected, got %s!)", luaL_typename(L, 2));
+        lua_pushfstring(L, "putHTTP: bad argument #2 type (remote url as string expected, got %s!)", luaL_typename(L, 2));
         lua_error(L);
         return 1;
     } else {
@@ -14625,7 +14625,7 @@ int TLuaInterpreter::putHttp(lua_State* L)
     if (!url.isValid()) {
         lua_pushnil(L);
         lua_pushfstring(L,
-                        "putHttp: bad argument #2 value (url is not deemed valid), validation\n"
+                        "putHTTP: bad argument #2 value (url is not deemed valid), validation\n"
                         "produced the following error message:\n%s.",
                         url.errorString().toUtf8().constData());
         return 2;
@@ -14650,13 +14650,13 @@ int TLuaInterpreter::putHttp(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#postHttp
-int TLuaInterpreter::postHttp(lua_State* L)
+int TLuaInterpreter::postHTTP(lua_State* L)
 {
     auto& host = getHostFromLua(L);
 
     QString dataToPost;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "postHttp: bad argument #1 type (data to send as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "postHTTP: bad argument #1 type (data to send as string expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
@@ -14665,7 +14665,7 @@ int TLuaInterpreter::postHttp(lua_State* L)
 
     QString urlString;
     if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "postHttp: bad argument #2 type (remote url as string expected, got %s!)", luaL_typename(L, 2));
+        lua_pushfstring(L, "postHTTP: bad argument #2 type (remote url as string expected, got %s!)", luaL_typename(L, 2));
         lua_error(L);
         return 1;
     } else {
@@ -14677,7 +14677,7 @@ int TLuaInterpreter::postHttp(lua_State* L)
     if (!url.isValid()) {
         lua_pushnil(L);
         lua_pushfstring(L,
-                        "postHttp: bad argument #2 value (url is not deemed valid), validation\n"
+                        "postHTTP: bad argument #2 value (url is not deemed valid), validation\n"
                         "produced the following error message:\n%s.",
                         url.errorString().toUtf8().constData());
         return 2;
@@ -15224,8 +15224,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getDictionaryWordList", TLuaInterpreter::getDictionaryWordList);
     lua_register(pGlobalLua, "getTextFormat", TLuaInterpreter::getTextFormat);
     lua_register(pGlobalLua, "getWindowsCodepage", TLuaInterpreter::getWindowsCodepage);
-    lua_register(pGlobalLua, "putHttp", TLuaInterpreter::putHttp);
-    lua_register(pGlobalLua, "postHttp", TLuaInterpreter::postHttp);
+    lua_register(pGlobalLua, "putHTTP", TLuaInterpreter::putHTTP);
+    lua_register(pGlobalLua, "postHTTP", TLuaInterpreter::postHTTP);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     // prepend profile path to package.path and package.cpath

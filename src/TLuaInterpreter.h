@@ -507,8 +507,8 @@ public:
     static int getDictionaryWordList(lua_State*);
     static int getTextFormat(lua_State*);
     static int getWindowsCodepage(lua_State*);
-    static int putHttp(lua_State*);
-    static int postHttp(lua_State*);
+    static int putHTTP(lua_State* L);
+    static int postHTTP(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
 
 
