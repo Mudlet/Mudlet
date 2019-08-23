@@ -541,7 +541,7 @@ private:
     std::list<std::list<std::string>> mMultiCaptureGroupList;
     std::list<std::list<int>> mMultiCaptureGroupPosList;
 
-    QMap<QNetworkReply*, QString> networkRequests;
+    QMap<QNetworkReply*, QString> downloadMap;
 
     lua_State* pGlobalLua;
 

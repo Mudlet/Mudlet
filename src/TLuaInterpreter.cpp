@@ -136,12 +136,12 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
         return;
     }
 
-    if (!networkRequests.contains(reply)) {
+    if (!downloadMap.contains(reply)) {
         reply->deleteLater();
         return;
     }
 
-    QString localFileName = networkRequests.value(reply);
+    QString localFileName = downloadMap.value(reply);
     if (reply->error() != QNetworkReply::NoError) {
         TEvent event {};
         switch (reply->operation()) {
@@ -165,7 +165,7 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
         }
 
         reply->deleteLater();
-        networkRequests.remove(reply);
+        downloadMap.remove(reply);
         pHost->raiseEvent(event);
         return;
     }
@@ -175,7 +175,7 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
 
 void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
 {
-    QString localFileName = networkRequests.value(reply);
+    QString localFileName = downloadMap.value(reply);
     TEvent event {};
     Host* pHost = mpHost;
     if (!pHost) {
@@ -241,7 +241,7 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
 
 
     reply->deleteLater();
-    networkRequests.remove(reply);
+    downloadMap.remove(reply);
     pHost->raiseEvent(event);
 }
 
@@ -10413,7 +10413,7 @@ int TLuaInterpreter::downloadFile(lua_State* L)
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->get(request);
-    host.mLuaInterpreter.networkRequests.insert(reply, localFile);
+    host.mLuaInterpreter.downloadMap.insert(reply, localFile);
     lua_pushboolean(L, true);
     lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
     return 2;
@@ -14621,7 +14621,7 @@ int TLuaInterpreter::putHttp(lua_State* L)
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->put(request, dataToPut.toUtf8().constData());
-    host.mLuaInterpreter.networkRequests.insert(reply, url.toString());
+    host.mLuaInterpreter.downloadMap.insert(reply, url.toString());
     lua_pushboolean(L, true);
     lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
     return 2;
