@@ -231,6 +231,7 @@ public:
     const QFont& getDisplayFont() const { return mDisplayFont; }
     std::pair<bool, QString> setDisplayFont(const QFont& font);
     std::pair<bool, QString> setDisplayFont(const QString& fontName);
+    void setDisplayFontFromString(const QString& fontData);
     void setDisplayFontSize(int size);
     void setDisplayFontSpacing(const qreal spacing);
     void setDisplayFontStyle(QFont::StyleStrategy s);
