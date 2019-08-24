@@ -530,16 +530,18 @@ private:
     static std::pair<bool, QString> discordApiEnabled(lua_State* L, bool writeAccess = false);
     void setupLanguageData();
     QString readScriptFile(const QString& path) const;
+    static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
     void handleHttpOK(QNetworkReply*);
 #if defined(Q_OS_WIN32)
     void loadUtf8Filenames();
+
 #endif
 
     QNetworkAccessManager* mpFileDownloader;
-
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
+
     std::list<std::list<int>> mMultiCaptureGroupPosList;
 
     QMap<QNetworkReply*, QString> downloadMap;
@@ -553,7 +555,6 @@ private:
     };
 
     std::unique_ptr<lua_State, lua_state_deleter> pIndenterState;
-
     QPointer<Host> mpHost;
     int mHostID;
     QList<QObject*> objectsToDelete;
