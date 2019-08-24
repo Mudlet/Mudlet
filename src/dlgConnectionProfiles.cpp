@@ -978,7 +978,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
 
     val = readProfileData(profile, QStringLiteral("password"));
     character_password_entry->setText(QString());
-    setSecuredPassword(profile);
+    setSecuredPassword(profile, [this](const QString& password) {
+        character_password_entry->setText(password);
+    });
 
     val = readProfileData(profile, QStringLiteral("login"));
     login_entry->setText(val);
@@ -1725,8 +1727,8 @@ void dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidge
     auto icon = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
     profile->setIcon(icon);
 }
-
-void dlgConnectionProfiles::setSecuredPassword(const QString &profile)
+template <typename L>
+void dlgConnectionProfiles::setSecuredPassword(const QString &profile, L callback)
 {
     // character_password_entry
 
@@ -1736,19 +1738,23 @@ void dlgConnectionProfiles::setSecuredPassword(const QString &profile)
 
     job->setKey(profile);
 
-    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job *job) {
+    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* job) {
         if (job->error() && job->errorString() != QStringLiteral("No match")) {
             qDebug() << "dlgConnectionProfiles::setSecuredPassword ERROR: couldn't retrieve secure password for" << profile << ", error is:" << job->errorString();
         } else {
             auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
             qDebug() << profile << "password is" << readJob->textData();
-            character_password_entry->setText(readJob->textData());
+            callback(readJob->textData());
         }
 
         job->deleteLater();
     });
 
     job->start();
+}
+
+void dlgConnectionProfiles::migrateSecuredPassword(const QString& oldProfile, const QString& newProfile) {
+
 }
 
 void dlgConnectionProfiles::generateCustomProfile(const QFont& font, int i, const QString& profileName) const

@@ -86,7 +86,9 @@ private:
     void loadCustomProfile(const QFont& font, const QString& profileName) const;
     void generateCustomProfile(const QFont& font, int i, const QString& profileName) const;
     void setCustomIcon(const QString& profileName, QListWidgetItem* profile) const;
-    void setSecuredPassword(const QString& profile);
+    template <typename L>
+    void setSecuredPassword(const QString& profile, L callback);
+    void migrateSecuredPassword(const QString& oldProfile, const QString& newProfile);
 
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
