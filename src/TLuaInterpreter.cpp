@@ -14642,6 +14642,27 @@ int TLuaInterpreter::putHTTP(lua_State* L)
     }
 #endif
 
+    if (lua_gettop(L) >= 3) {
+        if (!lua_istable(L, 3)) {
+            lua_pushfstring(L, "putHTTP: bad argument #3 type (headers as a table expected, got %s!)", luaL_typename(L, 3));
+            return lua_error(L);
+        } else {
+            lua_pushnil(L);
+            while (lua_next(L, 3) != 0) {
+                // key at index -2 and value at index -1
+                if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
+                    QString cmd = lua_tostring(L, -1);
+                    request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
+                } else {
+                    lua_pushfstring(L, "putHTTP: bad argument #3 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))", luaL_typename(L, -2), luaL_typename(L, -1));
+                    return lua_error(L);
+                }
+                // removes value, but keeps key for next iteration
+                lua_pop(L, 1);
+            }
+        }
+    }
+
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->put(request, dataToPut.toUtf8());
     lua_pushboolean(L, true);
@@ -14657,8 +14678,7 @@ int TLuaInterpreter::postHTTP(lua_State* L)
     QString dataToPost;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "postHTTP: bad argument #1 type (data to send as string expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         dataToPost = QString::fromUtf8(lua_tostring(L, 1));
     }
@@ -14666,8 +14686,7 @@ int TLuaInterpreter::postHTTP(lua_State* L)
     QString urlString;
     if (!lua_isstring(L, 2)) {
         lua_pushfstring(L, "postHTTP: bad argument #2 type (remote url as string expected, got %s!)", luaL_typename(L, 2));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         urlString = QString::fromUtf8(lua_tostring(L, 2));
     }
@@ -14693,6 +14712,27 @@ int TLuaInterpreter::postHTTP(lua_State* L)
         request.setSslConfiguration(config);
     }
 #endif
+
+    if (lua_gettop(L) >= 3) {
+        if (!lua_istable(L, 3)) {
+            lua_pushfstring(L, "postHTTP: bad argument #3 type (headers as a table expected, got %s!)", luaL_typename(L, 3));
+            return lua_error(L);
+        } else {
+            lua_pushnil(L);
+            while (lua_next(L, 3) != 0) {
+                // key at index -2 and value at index -1
+                if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
+                    QString cmd = lua_tostring(L, -1);
+                    request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
+                } else {
+                    lua_pushfstring(L, "postHTTP: bad argument #3 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))", luaL_typename(L, -2), luaL_typename(L, -1));
+                    return lua_error(L);
+                }
+                // removes value, but keeps key for next iteration
+                lua_pop(L, 1);
+            }
+        }
+    }
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->post(request, dataToPost.toUtf8());
