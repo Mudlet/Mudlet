@@ -36,7 +36,7 @@ function table.n_flatten(input)
   local flattened = {}
   for _, element in ipairs(input) do
     if type(element) == 'table' then
-      for i, v in ipairs(table.n_flatten(element)) do
+      for _, v in ipairs(table.n_flatten(element)) do
         flattened[#flattened + 1] = v
       end
     else
