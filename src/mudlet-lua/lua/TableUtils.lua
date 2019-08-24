@@ -19,6 +19,17 @@ function table.is_empty(tbl)
   end
 end
 
+-- The filter() method creates a new table with all elements that pass the test
+-- implemented by the provided function.
+function table.n_filter(t, cb)
+  local filtered = {}
+  for i, v in ipairs(t) do
+    if cb(v, i, t) then
+      filtered[#filtered + 1] = v
+    end
+  end
+  return filtered
+end
 
 
 --- Lua debug function that prints the content of a Lua table on the screen, split up in keys and values.
