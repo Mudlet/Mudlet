@@ -24,7 +24,7 @@ end
 function table.n_filter(t, cb)
   local filtered = {}
   for i, v in ipairs(t) do
-    if cb(v) then
+    if cb(v, i, t) then
       filtered[#filtered + 1] = v
     end
   end
