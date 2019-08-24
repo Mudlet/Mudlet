@@ -977,7 +977,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     port_entry->setText(host_port);
 
     val = readProfileData(profile, QStringLiteral("password"));
-//    character_password_entry->setText(val);
+    character_password_entry->setText(QString());
     setSecuredPassword(profile);
 
     val = readProfileData(profile, QStringLiteral("login"));
