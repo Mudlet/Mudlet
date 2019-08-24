@@ -33,7 +33,7 @@
 #include <QtUiTools>
 #include <QSettings>
 #include <sstream>
-#include <qtkeychain/keychain.h>
+#include <../3rdparty/qtkeychain/keychain.h>
 #include "post_guard.h"
 
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)

@@ -26,7 +26,7 @@
 #include "ui_connection_profiles.h"
 #include "QDir"
 #include <pugixml.hpp>
-#include <qtkeychain/keychain.h>
+#include <../3rdparty/qtkeychain/keychain.h>
 #include "post_guard.h"
 
 class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
