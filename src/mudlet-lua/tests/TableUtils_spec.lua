@@ -24,7 +24,7 @@ describe("Tests TableUtils.lua functions", function()
       end
 
       local entriesByID = table.n_filter(entries, filterByID)
-      assert.are.equal(invalidEntries, 4)
+      assert.are.equal(invalidEntries, 5)
       assert.are.same(entriesByID, {
         { id = 15 }, { id = -1 }, { id = 3 }, { id = 12.2 }
       })
