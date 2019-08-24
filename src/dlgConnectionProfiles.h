@@ -26,6 +26,7 @@
 #include "ui_connection_profiles.h"
 #include "QDir"
 #include <pugixml.hpp>
+#include <qtkeychain/keychain.h>
 #include "post_guard.h"
 
 class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
@@ -85,6 +86,7 @@ private:
     void loadCustomProfile(const QFont& font, const QString& profileName) const;
     void generateCustomProfile(const QFont& font, int i, const QString& profileName) const;
     void setCustomIcon(const QString& profileName, QListWidgetItem* profile) const;
+    void setSecuredPassword(const QString& profile);
 
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
@@ -109,6 +111,7 @@ private slots:
     void slot_profile_menu(QPoint pos);
     void slot_set_custom_icon();
     void slot_reset_custom_icon();
+    void slot_password_saved(QKeychain::Job *job);
 };
 
 
