@@ -41,4 +41,15 @@ describe("Tests TableUtils.lua functions", function()
       assert.are.same(filterItems(fruits, 'an'), {'banana', 'mango', 'orange'})
     end)
   end)
+
+  describe("Tests table.n_flatten() method", function()
+    it("Should flatten nested tables", function()
+      local t1 = {1, 2, {3, 4}};
+      local t2 = {1, 2, {3, 4, {5, 6}}};
+      local t3 = {1, 2, {3, 4, {5, 6, {7, 8, {9, 10}}}}};
+      assert.are.same(table.n_flatten(t1), {1, 2, 3, 4})
+      assert.are.same(table.n_flatten(t2), {1, 2, 3, 4, 5, 6})
+      assert.are.same(table.n_flatten(t3), {1, 2, 3, 4, 5, 6, 7, 8, 9, 10})
+    end)
+  end)
 end)

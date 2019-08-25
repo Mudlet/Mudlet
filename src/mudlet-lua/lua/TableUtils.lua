@@ -31,6 +31,20 @@ function table.n_filter(t, cb)
   return filtered
 end
 
+-- The flatten() method creates a new table with all sub-table elements concatenated into it recursively.
+function table.n_flatten(input)
+  local flattened = {}
+  for _, element in ipairs(input) do
+    if type(element) == 'table' then
+      for _, v in ipairs(table.n_flatten(element)) do
+        flattened[#flattened + 1] = v
+      end
+    else
+      flattened[#flattened + 1] = element
+    end
+  end
+  return flattened
+end
 
 --- Lua debug function that prints the content of a Lua table on the screen, split up in keys and values.
 --- Useful if you want to see what the capture groups contain i. e. the Lua table "matches".
