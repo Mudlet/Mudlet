@@ -799,7 +799,7 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mFORCE_NO_COMPRESSION = (attributes().value("mFORCE_NO_COMPRESSION") == "yes");
     pHost->mFORCE_GA_OFF = (attributes().value("mFORCE_GA_OFF") == "yes");
     pHost->mFORCE_SAVE_ON_EXIT = (attributes().value("mFORCE_SAVE_ON_EXIT") == "yes");
-    pHost->mEnableGMCP = (attributes().value("mEnableGMCP") == "yes");    
+    pHost->mEnableGMCP = (attributes().value("mEnableGMCP") == "yes");
     if (attributes().hasAttribute(QLatin1String("mEnableMSSP"))) {
         pHost->mEnableMSSP = (attributes().value(QStringLiteral("mEnableMSSP")) == "yes");
     } else {
