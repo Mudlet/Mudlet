@@ -127,7 +127,7 @@ matrix:
         - qt511multimedia
         - qt511tools
 before_install:
-  - if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ -d "${HOME}/.homebrew-cache" ]; then cp -f -R "${HOME}/.homebrew-cache" "/usr/local/Homebrew"; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ] && [ -d "${HOME}/.homebrew-cache" ]; then mv -f "${HOME}/.homebrew-cache" "/usr/local/Homebrew"; fi
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | tee -a "${HOME}/ca-file.pem"; fi
   # add to the path here to pick up things as soon as its installed
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then export PATH="${HOME}/.npm-global/bin:${HOME}/latest-gcc-symlinks:$PATH"; fi
