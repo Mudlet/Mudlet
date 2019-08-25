@@ -3986,7 +3986,7 @@ or your nameservers are not working properly.</source>
       <location filename="../src/ctelnet.cpp" line="466"/>
       <source>[ INFO ]  - Connection time: %1
     </source>
-      <translation>[ ИНФО ] - время соединения: %1
+      <translation>[ ИНФО ] - Время соединения: %1
     </translation>
     </message>
     <message>
