@@ -13821,8 +13821,6 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
             for (int j = 0; j < payloadList.size(); j++) {
                 if (j < 1) {
                     msspVAR = payloadList[j];
-                    // Some MSSP variables have spaces.  Convert to underscores for improved scripting.
-                    msspVAR.replace(QChar::Space, QLatin1String("_"));
                     lua_pushstring(L, msspVAR.toUtf8().constData());
                 } else {
                     msspVAL = payloadList[j];
