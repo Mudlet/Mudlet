@@ -11,13 +11,9 @@
 		61568F531FB3087F00ADE411 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 61568F521FB3087F00ADE411 /* main.m */; };
 		61568F551FB3087F00ADE411 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 61568F541FB3087F00ADE411 /* Assets.xcassets */; };
 		61568F581FB3087F00ADE411 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 61568F561FB3087F00ADE411 /* MainMenu.xib */; };
-		BC9741EC97FE86EC9BC9329F /* libPods-Empty.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A42522A2DF7A0EBA57859AF /* libPods-Empty.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		0A42522A2DF7A0EBA57859AF /* libPods-Empty.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Empty.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		359A48E8F0E64B3D1BFDEA10 /* Pods-Empty.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Empty.release.xcconfig"; path = "Pods/Target Support Files/Pods-Empty/Pods-Empty.release.xcconfig"; sourceTree = "<group>"; };
-		3A9F4AD5415F512D2DC3933F /* Pods-Empty.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Empty.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Empty/Pods-Empty.debug.xcconfig"; sourceTree = "<group>"; };
 		61568F4B1FB3087F00ADE411 /* Empty.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Empty.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		61568F4E1FB3087F00ADE411 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		61568F4F1FB3087F00ADE411 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
@@ -32,7 +28,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BC9741EC97FE86EC9BC9329F /* libPods-Empty.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -44,8 +39,6 @@
 			children = (
 				61568F4D1FB3087F00ADE411 /* Empty */,
 				61568F4C1FB3087F00ADE411 /* Products */,
-				6747B75BEC9ECF7DB9D22EC1 /* Pods */,
-				B2EFADACD3B3DD6067642E42 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -78,23 +71,6 @@
 			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
-		6747B75BEC9ECF7DB9D22EC1 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				3A9F4AD5415F512D2DC3933F /* Pods-Empty.debug.xcconfig */,
-				359A48E8F0E64B3D1BFDEA10 /* Pods-Empty.release.xcconfig */,
-			);
-			name = Pods;
-			sourceTree = "<group>";
-		};
-		B2EFADACD3B3DD6067642E42 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				0A42522A2DF7A0EBA57859AF /* libPods-Empty.a */,
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -102,11 +78,9 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 61568F5C1FB3087F00ADE411 /* Build configuration list for PBXNativeTarget "Empty" */;
 			buildPhases = (
-				3BC8238011631DC156525423 /* [CP] Check Pods Manifest.lock */,
 				61568F471FB3087E00ADE411 /* Sources */,
 				61568F481FB3087E00ADE411 /* Frameworks */,
 				61568F491FB3087E00ADE411 /* Resources */,
-				08FBE16F779ED23639BF1907 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -161,55 +135,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
-
-/* Begin PBXShellScriptBuildPhase section */
-		08FBE16F779ED23639BF1907 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${SRCROOT}/Pods/Target Support Files/Pods-Empty/Pods-Empty-frameworks.sh",
-				"${PODS_ROOT}/Sparkle/Sparkle.framework",
-				"${PODS_ROOT}/Sparkle/Sparkle.framework.dSYM",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Sparkle.framework",
-				"${DWARF_DSYM_FOLDER_PATH}/Sparkle.framework.dSYM",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-Empty/Pods-Empty-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		3BC8238011631DC156525423 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-Empty-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		61568F471FB3087E00ADE411 /* Sources */ = {
@@ -324,7 +249,6 @@
 		};
 		61568F5D1FB3087F00ADE411 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 3A9F4AD5415F512D2DC3933F /* Pods-Empty.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -337,7 +261,6 @@
 		};
 		61568F5E1FB3087F00ADE411 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 359A48E8F0E64B3D1BFDEA10 /* Pods-Empty.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				COMBINE_HIDPI_IMAGES = YES;
