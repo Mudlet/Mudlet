@@ -13805,6 +13805,7 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
     QStringList packageList = string_data.split(MSSP_VAR);
 
     if (packageList.size() > 0) {
+        Host& host = getHostFromLua(L);
         lua_getglobal(L, "mssp");
 
         for (int i = 1; i < packageList.size(); i++) {
@@ -13820,6 +13821,8 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
             for (int j = 0; j < payloadList.size(); j++) {
                 if (j < 1) {
                     msspVAR = payloadList[j];
+                    // Some MSSP variables have spaces.  Convert to underscores for improved scripting.
+                    msspVAR.replace(QChar::Space, QLatin1String("_"));
                     lua_pushstring(L, msspVAR.toUtf8().constData());
                 } else {
                     msspVAL = payloadList[j];
@@ -13828,6 +13831,23 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
             }
 
             lua_rawset(L, -3);
+
+            // Raise an event
+            QString protocol = QStringLiteral("mssp");
+            QString token = protocol;
+            token.append(".");
+            token.append(msspVAR);
+
+            TEvent event {};
+            event.mArgumentList.append(token);
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            event.mArgumentList.append(token);
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            if (mudlet::debugMode) {
+                QString msg = QStringLiteral("\n%1 event <%2> display(%1) to see the full content\n").arg(protocol, token);
+                host.mpConsole->printSystemMessage(msg);
+            }
+            host.raiseEvent(event);
         }
 
         lua_pop(L, lua_gettop(L));
