@@ -158,7 +158,7 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
             break;
 
         case QNetworkAccessManager::GetOperation:
-            event.mArgumentList << QLatin1String("sysDownloadError");
+            event.mArgumentList << QStringLiteral("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << reply->errorString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -166,6 +166,15 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
 
             downloadMap.remove(reply);
+            break;
+
+        case QNetworkAccessManager::DeleteOperation:
+            break;
+        case QNetworkAccessManager::HeadOperation:
+            break;
+        case QNetworkAccessManager::CustomOperation:
+            break;
+        case QNetworkAccessManager::UnknownOperation:
             break;
         }
 
@@ -14770,10 +14779,48 @@ int TLuaInterpreter::postHTTP(lua_State* L)
     }
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
-    QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->post(request, fileToUpload.isEmpty() ?dataToPost.toUtf8() : fileToUpload);
+    QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->post(request, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
 
     if (mudlet::debugMode) {
-        TDebug(QColor(Qt::white), QColor(Qt::blue)) << "postHTTP: script is uploading data to " << reply->url().toString() << "\n" >> 0;
+        TDebug(QColor(Qt::white), QColor(Qt::blue)) << QStringLiteral("postHTTP: script is uploading data to %1\n").arg(reply->url().toString()) >> 0;
+    }
+
+    lua_pushboolean(L, true);
+    lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
+    return 2;
+}
+
+int TLuaInterpreter::deleteHTTP(lua_State *L)
+{
+    auto& host = getHostFromLua(L);
+
+    QString urlString;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "deleteHTTP: bad argument #1 type (remote url as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        urlString = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    QUrl url = QUrl::fromUserInput(urlString);
+
+    if (!url.isValid()) {
+        lua_pushnil(L);
+        lua_pushfstring(L,
+                        "deleteHTTP: bad argument #1 value (url is not deemed valid), validation\n"
+                        "produced the following error message:\n%s.",
+                        url.errorString().toUtf8().constData());
+        return 2;
+    }
+
+    QNetworkRequest request = QNetworkRequest(url);
+    setRequestDefaults(url, request);
+
+    host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
+    QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->deleteResource(request);
+
+    if (mudlet::debugMode) {
+        TDebug(QColor(Qt::white), QColor(Qt::blue)) << QStringLiteral("deleteHTTP: script is sending delete request for %1\n").arg(reply->url().toString()) >> 0;
     }
 
     lua_pushboolean(L, true);
@@ -15306,6 +15353,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getWindowsCodepage", TLuaInterpreter::getWindowsCodepage);
     lua_register(pGlobalLua, "putHTTP", TLuaInterpreter::putHTTP);
     lua_register(pGlobalLua, "postHTTP", TLuaInterpreter::postHTTP);
+    lua_register(pGlobalLua, "deleteHTTP", TLuaInterpreter::deleteHTTP);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     // prepend profile path to package.path and package.cpath

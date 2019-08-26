@@ -509,6 +509,7 @@ public:
     static int getWindowsCodepage(lua_State*);
     static int putHTTP(lua_State* L);
     static int postHTTP(lua_State* L);
+    static int deleteHTTP(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
 
 
