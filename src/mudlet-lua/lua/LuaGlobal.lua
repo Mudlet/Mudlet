@@ -25,6 +25,7 @@ end
 
 json_to_value = yajl.to_value
 gmcp = {}
+mssp = {}
 
 function __gmcp_merge_gmcp_sub_tables( a, key )
   local _m = a.__needMerge;

@@ -13628,6 +13628,23 @@ void TLuaInterpreter::setGMCPTable(QString& key, const QString& string_data)
 }
 
 // No documentation available in wiki - internal function
+void TLuaInterpreter::setMSSPTable(const QString& string_data)
+{
+    lua_State* L = pGlobalLua;
+    lua_getglobal(L, "mssp"); //defined in Lua init
+    if (!lua_istable(L, -1)) {
+        lua_newtable(L);
+        lua_setglobal(L, "mssp");
+        lua_getglobal(L, "mssp");
+        if (!lua_istable(L, -1)) {
+            qDebug() << "ERROR: mssp table not defined";
+            return;
+        }
+    }
+    parseMSSP(string_data);
+}
+
+// No documentation available in wiki - internal function
 void TLuaInterpreter::setMSDPTable(QString& key, const QString& string_data)
 {
     lua_State* L = pGlobalLua;
@@ -13771,6 +13788,68 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         }
     }
     lua_pop(L, lua_gettop(L));
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::parseMSSP(const QString& string_data)
+{
+    lua_State* L = pGlobalLua;
+
+    if (!L) {
+        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
+        return;
+    }
+
+    // string_data is in the format of MSSP_VAR "PLAYERS" MSSP_VAL "52" MSSP_VAR "UPTIME" MSSP_VAL "1234567890"
+    // The quote characters mean that the encased word is a string, the quotes themselves are not sent.
+    QStringList packageList = string_data.split(MSSP_VAR);
+
+    if (packageList.size() > 0) {
+        Host& host = getHostFromLua(L);
+        lua_getglobal(L, "mssp");
+
+        for (int i = 1; i < packageList.size(); i++) {
+            QStringList payloadList = packageList[i].split(MSSP_VAL);
+
+            if (payloadList.size() != 2) {
+                return;
+            }
+
+            QString msspVAR;
+            QString msspVAL;
+
+            for (int j = 0; j < payloadList.size(); j++) {
+                if (j < 1) {
+                    msspVAR = payloadList[j];
+                    lua_pushstring(L, msspVAR.toUtf8().constData());
+                } else {
+                    msspVAL = payloadList[j];
+                    lua_pushlstring(L, msspVAL.toUtf8().constData(), msspVAL.toUtf8().length());
+                }
+            }
+
+            lua_rawset(L, -3);
+
+            // Raise an event
+            QString protocol = QStringLiteral("mssp");
+            QString token = protocol;
+            token.append(".");
+            token.append(msspVAR);
+
+            TEvent event {};
+            event.mArgumentList.append(token);
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            event.mArgumentList.append(token);
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            if (mudlet::debugMode) {
+                QString msg = QStringLiteral("\n%1 event <%2> display(%1) to see the full content\n").arg(protocol, token);
+                host.mpConsole->printSystemMessage(msg);
+            }
+            host.raiseEvent(event);
+        }
+
+        lua_pop(L, lua_gettop(L));
+    }
 }
 
 // No documentation available in wiki - internal function
