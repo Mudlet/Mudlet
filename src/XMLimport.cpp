@@ -800,6 +800,9 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mFORCE_GA_OFF = (attributes().value("mFORCE_GA_OFF") == "yes");
     pHost->mFORCE_SAVE_ON_EXIT = (attributes().value("mFORCE_SAVE_ON_EXIT") == "yes");
     pHost->mEnableGMCP = (attributes().value("mEnableGMCP") == "yes");
+    if (attributes().hasAttribute(QLatin1String("mEnableMSSP"))) {
+        pHost->mEnableMSSP = (attributes().value(QStringLiteral("mEnableMSSP")) == "yes");
+    }
     pHost->mEnableMSDP = (attributes().value("mEnableMSDP") == "yes");
     pHost->mMapStrongHighlight = (attributes().value("mMapStrongHighlight") == "yes");
     pHost->mLogStatus = (attributes().value("mLogStatus") == "yes");

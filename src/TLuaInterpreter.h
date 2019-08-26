@@ -76,6 +76,7 @@ public:
     ~TLuaInterpreter();
     void setMSDPTable(QString& key, const QString& string_data);
     void parseJSON(QString& key, const QString& string_data, const QString& protocol);
+    void parseMSSP(const QString& string_data);
     void msdp2Lua(const char*);
     void initLuaGlobals();
     void initIndenterGlobals();
@@ -91,6 +92,7 @@ public:
     bool compileScript(const QString&);
     void setAtcpTable(const QString&, const QString&);
     void setGMCPTable(QString&, const QString&);
+    void setMSSPTable(const QString&);
     void setChannel102Table(int& var, int& arg);
     bool compileAndExecuteScript(const QString&);
     QString formatLuaCode(const QString &);

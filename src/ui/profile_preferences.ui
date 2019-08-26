@@ -274,6 +274,16 @@
            </widget>
           </item>
           <item row="2" column="0">
+           <widget class="QCheckBox" name="mEnableMSSP">
+            <property name="toolTip">
+             <string>&lt;p&gt;Enables MSSP - provides Mud Server Status Protocol information upon connection for supported games&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable MSSP</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
            <widget class="QLabel" name="need_reconnect_for_data_protocol">
             <property name="enabled">
              <bool>true</bool>

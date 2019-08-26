@@ -711,6 +711,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     //encoding->setCurrentIndex( pHost->mEncoding );
     mFORCE_SAVE_ON_EXIT->setChecked(pHost->mFORCE_SAVE_ON_EXIT);
     mEnableGMCP->setChecked(pHost->mEnableGMCP);
+    mEnableMSSP->setChecked(pHost->mEnableMSSP);
     mEnableMSDP->setChecked(pHost->mEnableMSDP);
 
     // load profiles into mappers "copy map to profile" combobox
@@ -977,6 +978,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_background_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setBgColor2);
 
     connect(mEnableGMCP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableMSSP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSDP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
 
     connect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
@@ -1057,6 +1059,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_background_color_2, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(mEnableGMCP, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(mEnableMSSP, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(mEnableMSDP, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, nullptr, nullptr);
@@ -1134,6 +1137,7 @@ void dlgProfilePreferences::clearHostDetails()
     mAlertOnNewData->setChecked(false);
     mFORCE_SAVE_ON_EXIT->setChecked(false);
     mEnableGMCP->setChecked(false);
+    mEnableMSSP->setChecked(false);
     mEnableMSDP->setChecked(false);
 
     pushButton_chooseProfiles->setEnabled(false);
@@ -2255,6 +2259,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mFORCE_GA_OFF = mFORCE_GA_OFF->isChecked();
         pHost->mFORCE_SAVE_ON_EXIT = mFORCE_SAVE_ON_EXIT->isChecked();
         pHost->mEnableGMCP = mEnableGMCP->isChecked();
+        pHost->mEnableMSSP = mEnableMSSP->isChecked();
         pHost->mEnableMSDP = mEnableMSDP->isChecked();
         pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
         if (pHost->mpMap && pHost->mpMap->mpMapper) {
