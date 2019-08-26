@@ -169,7 +169,14 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
             break;
 
         case QNetworkAccessManager::DeleteOperation:
+            event.mArgumentList << QStringLiteral("sysDeleteHttpError");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << reply->errorString();
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << reply->url().toString();
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             break;
+
         case QNetworkAccessManager::HeadOperation:
             break;
         case QNetworkAccessManager::CustomOperation:
@@ -196,13 +203,27 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
     }
 
     switch (reply->operation()) {
+    case QNetworkAccessManager::HeadOperation:
+        break;
+    case QNetworkAccessManager::DeleteOperation:
+        event.mArgumentList << QStringLiteral("sysDeleteHttpDone");
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << reply->url().toString();
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << QString(reply->readAll());
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        break;
+
+    case QNetworkAccessManager::CustomOperation:
+        break;
+    case QNetworkAccessManager::UnknownOperation:
+        break;
+
     case QNetworkAccessManager::PostOperation:
         event.mArgumentList << QStringLiteral("sysPostHttpDone");
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-
         event.mArgumentList << reply->url().toString();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-
         event.mArgumentList << QString(reply->readAll());
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         break;
@@ -210,10 +231,8 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
     case QNetworkAccessManager::PutOperation:
         event.mArgumentList << QStringLiteral("sysPutHttpDone");
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-
         event.mArgumentList << reply->url().toString();
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-
         event.mArgumentList << QString(reply->readAll());
         event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         break;
@@ -269,6 +288,7 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
 
         localFile.close();
         break;
+
     }
 
 
@@ -14815,6 +14835,29 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
 
     QNetworkRequest request = QNetworkRequest(url);
     setRequestDefaults(url, request);
+
+    if (!lua_istable(L, 2) && !lua_isnoneornil(L, 2)) {
+        lua_pushfstring(L, "postHTTP: bad argument #2 type (headers as a table expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    } else if (lua_istable(L, 2)) {
+        lua_pushnil(L);
+        while (lua_next(L, 2) != 0) {
+            // key at index -2 and value at index -1
+            if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
+
+                QString cmd = lua_tostring(L, -1);
+                request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
+            } else {
+                lua_pushfstring(L,
+                                "postHTTP: bad argument #2 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
+                                luaL_typename(L, -2),
+                                luaL_typename(L, -1));
+                return lua_error(L);
+            }
+            // removes value, but keeps key for next iteration
+            lua_pop(L, 1);
+        }
+    }
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->deleteResource(request);
