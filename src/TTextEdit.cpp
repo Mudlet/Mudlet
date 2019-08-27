@@ -482,6 +482,15 @@ void TTextEdit::drawLine(QPainter& painter, int lineNumber, int lineOfScreen) co
 
     if (mShowTimeStamps) {
         TChar timeStampStyle(QColor(200, 150, 0), QColor(22, 22, 22));
+        if (!mpBuffer->buffer.at(lineNumber).empty()) {
+            const std::deque<TChar>& lineAttributes = mpBuffer->buffer.at(lineNumber);
+            std::size_t lastTCharIndex = lineAttributes.size() - 1;
+            if (lineAttributes.at(0).isSelected() || lineAttributes.at(lastTCharIndex).isSelected()) {
+                // Activate the "selection" flag if the first OR last character
+                // on a non-empty line has the selected flag set:
+                timeStampStyle.select();
+            }
+        }
         QString timestamp(mpBuffer->timeBuffer.at(lineNumber));
         for (const QChar c : timestamp) {
             cursor.setX(cursor.x() + drawGrapheme(painter, cursor, c, 0, timeStampStyle));
