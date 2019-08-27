@@ -4745,6 +4745,24 @@ void mudlet::setEnableFullScreenMode(const bool state)
     emit signal_enableFulScreenModeChanged(state);
 }
 
+
+void mudlet::migratePasswordsToSecureStorage()
+{
+    static bool migrating = false;
+    if (migrating) {
+        return;
+    }
+
+    QStringList profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath))
+                                   .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+
+    for (const auto& entry : profiles) {
+        qDebug() << "profile" << entry;
+    }
+
+    emit signal_passwordMigrationCompleted();
+}
+
 void mudlet::setShowMapAuditErrors(const bool state)
 {
     if (mshowMapAuditErrors != state) {

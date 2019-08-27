@@ -1739,8 +1739,11 @@ void dlgConnectionProfiles::setSecuredPassword(const QString &profile, L callbac
     job->setKey(profile);
 
     connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* job) {
-        if (job->error() && job->errorString() != QStringLiteral("No match")) {
-            qDebug() << "dlgConnectionProfiles::setSecuredPassword ERROR: couldn't retrieve secure password for" << profile << ", error is:" << job->errorString();
+        if (job->error()) {
+            const auto error = job->errorString();
+            if (error != QStringLiteral("Entry not found") && error != QStringLiteral("No match")) {
+            qDebug() << "dlgConnectionProfiles::setSecuredPassword ERROR: couldn't retrieve secure password for" << profile << ", error is:" << error;
+            }
         } else {
             auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
             qDebug() << profile << "password is" << readJob->textData();

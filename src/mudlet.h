@@ -380,6 +380,7 @@ public:
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     QPair<bool, QStringList> getLines(Host* pHost, const QString& windowName, const int lineFrom, const int lineTo);
     void setEnableFullScreenMode(const bool);
+    void migratePasswordsToSecureStorage();
 
     // Both of these revises the contents of the .aff file: the first will
     // handle a .dic file that has been updated externally/manually (to add
@@ -493,6 +494,7 @@ signals:
     void signal_toolBarVisibilityChanged(const controlsVisibility);
     void signal_showIconsOnMenusChanged(const Qt::CheckState);
     void signal_guiLanguageChanged(const QString&);
+    void signal_passwordMigrationCompleted();
 
 
 private slots:
