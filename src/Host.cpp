@@ -62,6 +62,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mCommandSeparator(QLatin1String(";;"))
 , mDisplayFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
 , mEnableGMCP(true)
+, mEnableMSSP(true)
 , mEnableMSDP(false)
 , mServerMXPenabled(true)
 , mFORCE_GA_OFF(false)
@@ -548,6 +549,11 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
 std::pair<bool, QString> Host::setDisplayFont(const QString& fontName)
 {
     return setDisplayFont(QFont(fontName));
+}
+
+void Host::setDisplayFontFromString(const QString& fontData)
+{
+    mDisplayFont.fromString(fontData);
 }
 
 void Host::setDisplayFontSize(int size)
