@@ -53,6 +53,7 @@
 #include <QTimer>
 #include <QToolButton>
 #include "edbee/models/textautocompleteprovider.h"
+#include <../3rdparty/qtkeychain/keychain.h>
 #include <QShortcut>
 #include <QKeySequence>
 #ifdef QT_GAMEPAD_LIB
@@ -164,6 +165,7 @@ public:
     void setFgColor(Host*, const QString& name, int, int, int);
     void setBgColor(Host*, const QString& name, int, int, int);
     QString readProfileData(const QString& profile, const QString& item);
+    void deleteProfileData(const QString &profile, const QString &item);
     bool setWindowWrap(Host* pHost, const QString& name, int& wrap);
     bool setWindowWrapIndent(Host* pHost, const QString& name, int& wrap);
     bool copy(Host* pHost, const QString& name);
@@ -431,7 +433,6 @@ public:
     // the system
     bool mUsingMudletDictionaries;
 
-
 public slots:
     void processEventLoopHack_timerRun();
     void slot_mapper();
@@ -494,7 +495,6 @@ signals:
     void signal_toolBarVisibilityChanged(const controlsVisibility);
     void signal_showIconsOnMenusChanged(const Qt::CheckState);
     void signal_guiLanguageChanged(const QString&);
-    void signal_passwordMigrationCompleted();
 
 
 private slots:
@@ -524,6 +524,7 @@ private slots:
     void slot_updateAvailable(const int);
 #endif
     void slot_toggle_compact_input_line();
+    void slot_password_saved(QKeychain::Job *job);
 
 private:
     void initEdbee();

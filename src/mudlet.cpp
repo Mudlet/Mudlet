@@ -3587,6 +3587,13 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
     return ret;
 }
 
+void mudlet::deleteProfileData(const QString& profile, const QString& item)
+{
+    if (!QFile::remove(getMudletPath(profileDataItemPath, profile, item))) {
+        qWarning() << "Couldn't delete profile data file" << item;
+    }
+}
+
 // this slot is called via a timer in the constructor of mudlet::mudlet()
 void mudlet::startAutoLogin()
 {
@@ -4748,19 +4755,41 @@ void mudlet::setEnableFullScreenMode(const bool state)
 
 void mudlet::migratePasswordsToSecureStorage()
 {
-    static bool migrating = false;
-    if (migrating) {
-        return;
-    }
-
     QStringList profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath))
                                    .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
-    for (const auto& entry : profiles) {
-        qDebug() << "profile" << entry;
+    for (const auto& profile : profiles) {
+        const auto password = readProfileData(profile, QStringLiteral("password"));
+        if (password.isEmpty()) {
+            continue;
+        }
+
+        auto *job = new QKeychain::WritePasswordJob(QStringLiteral("Mudlet profile"));
+        job->setAutoDelete(false);
+        job->setInsecureFallback(false);
+
+        job->setKey(profile);
+        job->setTextData(password);
+        job->setProperty("profile", profile);
+
+        connect(job, &QKeychain::WritePasswordJob::finished, this, &mudlet::slot_password_saved);
+
+        job->start();
     }
 
-    emit signal_passwordMigrationCompleted();
+}
+
+void mudlet::slot_password_saved(QKeychain::Job *job)
+{
+    if (job->error()) {
+        qWarning() << "mudlet::slot_password_saved ERROR: couldn't migrate for" << job->property("profile") << "; error was:" << job->errorString();
+    } else {
+        const auto& profile = job->property("profile").toString();
+
+        deleteProfileData(profile, QStringLiteral("password"));
+    }
+
+    job->deleteLater();
 }
 
 void mudlet::setShowMapAuditErrors(const bool state)

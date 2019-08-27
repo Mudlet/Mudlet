@@ -266,7 +266,6 @@ void dlgConnectionProfiles::slot_update_pass(const QString &pass)
     }
 
     QString profile = pItem->text();
-    writeProfileData(profile, QStringLiteral("password"), pass);
 
     auto *job = new QKeychain::WritePasswordJob(QStringLiteral("Mudlet profile"));
     job->setAutoDelete(false);
@@ -274,7 +273,7 @@ void dlgConnectionProfiles::slot_update_pass(const QString &pass)
 
     job->setKey(profile);
     job->setTextData(pass);
-    job->setProperty("profile", pass);
+    job->setProperty("profile", profile);
 
     connect(job, &QKeychain::WritePasswordJob::finished, this, &dlgConnectionProfiles::slot_password_saved);
 
@@ -862,7 +861,6 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     }
     host_name_entry->setText(host_url);
 
-
     QString host_port = readProfileData(profile, QStringLiteral("port"));
     QString val = readProfileData(profile, QStringLiteral("ssl_tsl"));
     if (val.toInt() == Qt::Checked) {
@@ -976,10 +974,13 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
 
     port_entry->setText(host_port);
 
-    val = readProfileData(profile, QStringLiteral("password"));
     character_password_entry->setText(QString());
-    setSecuredPassword(profile, [this](const QString& password) {
-        character_password_entry->setText(password);
+    setSecuredPassword(profile, [this, profile_name](const QString& password) {
+        if (!password.isEmpty()) {
+            character_password_entry->setText(password);
+        } else {
+            character_password_entry->setText(readProfileData(profile_name, QStringLiteral("password")));
+        }
     });
 
     val = readProfileData(profile, QStringLiteral("login"));
@@ -1727,6 +1728,7 @@ void dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidge
     auto icon = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
     profile->setIcon(icon);
 }
+
 template <typename L>
 void dlgConnectionProfiles::setSecuredPassword(const QString &profile, L callback)
 {
@@ -1754,10 +1756,6 @@ void dlgConnectionProfiles::setSecuredPassword(const QString &profile, L callbac
     });
 
     job->start();
-}
-
-void dlgConnectionProfiles::migrateSecuredPassword(const QString& oldProfile, const QString& newProfile) {
-
 }
 
 void dlgConnectionProfiles::generateCustomProfile(const QFont& font, int i, const QString& profileName) const
