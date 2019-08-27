@@ -1748,7 +1748,6 @@ void dlgConnectionProfiles::setSecuredPassword(const QString &profile, L callbac
             }
         } else {
             auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
-            qDebug() << profile << "password is" << readJob->textData();
             callback(readJob->textData());
         }
 
