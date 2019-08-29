@@ -87,8 +87,10 @@ private:
     void generateCustomProfile(const QFont& font, int i, const QString& profileName) const;
     void setCustomIcon(const QString& profileName, QListWidgetItem* profile) const;
     template <typename L>
-    void setSecuredPassword(const QString& profile, L callback);
+    void loadSecuredPassword(const QString& profile, L callback);
     void migrateSecuredPassword(const QString& oldProfile, const QString& newProfile);
+    void writeSecurePassword(const QString& profile, const QString& pass) const;
+    void deleteSecurePassword(const QString& profile) const;
 
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
@@ -113,7 +115,8 @@ private slots:
     void slot_profile_menu(QPoint pos);
     void slot_set_custom_icon();
     void slot_reset_custom_icon();
-    void slot_password_saved(QKeychain::Job *job);
+    void slot_password_saved(QKeychain::Job* job);
+    void slot_password_deleted(QKeychain::Job* job);
 };
 
 

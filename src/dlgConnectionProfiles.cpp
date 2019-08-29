@@ -265,8 +265,11 @@ void dlgConnectionProfiles::slot_update_pass(const QString &pass)
         return;
     }
 
-    QString profile = pItem->text();
+    writeSecurePassword(pItem->text(), pass);
+}
 
+void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QString& pass) const
+{
     auto *job = new QKeychain::WritePasswordJob(QStringLiteral("Mudlet profile"));
     job->setAutoDelete(false);
     job->setInsecureFallback(false);
@@ -276,6 +279,20 @@ void dlgConnectionProfiles::slot_update_pass(const QString &pass)
     job->setProperty("profile", profile);
 
     connect(job, &QKeychain::WritePasswordJob::finished, this, &dlgConnectionProfiles::slot_password_saved);
+
+    job->start();
+}
+
+void dlgConnectionProfiles::deleteSecurePassword(const QString& profile) const
+{
+    auto *job = new QKeychain::DeletePasswordJob(QStringLiteral("Mudlet profile"));
+    job->setAutoDelete(false);
+    job->setInsecureFallback(false);
+
+    job->setKey(profile);
+    job->setProperty("profile", profile);
+
+    connect(job, &QKeychain::WritePasswordJob::finished, this, &dlgConnectionProfiles::slot_password_deleted);
 
     job->start();
 }
@@ -418,6 +435,8 @@ void dlgConnectionProfiles::slot_save_name()
     if (currentProfileEditName == newProfileName) {
         return;
     }
+
+    migrateSecuredPassword(currentProfileEditName, newProfileName);
 
     pItem->setText(newProfileName);
 
@@ -975,7 +994,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     port_entry->setText(host_port);
 
     character_password_entry->setText(QString());
-    setSecuredPassword(profile, [this, profile_name](const QString& password) {
+    loadSecuredPassword(profile, [this, profile_name](const QString& password) {
         if (!password.isEmpty()) {
             character_password_entry->setText(password);
         } else {
@@ -1729,8 +1748,17 @@ void dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidge
     profile->setIcon(icon);
 }
 
+// When a profile is renamed, migrate password storage to the new profile
+void dlgConnectionProfiles::migrateSecuredPassword(const QString &oldProfile, const QString &newProfile)
+{
+    const auto& password = character_password_entry->text().trimmed();
+
+    deleteSecurePassword(oldProfile);
+    writeSecurePassword(newProfile, password);
+}
+
 template <typename L>
-void dlgConnectionProfiles::setSecuredPassword(const QString &profile, L callback)
+void dlgConnectionProfiles::loadSecuredPassword(const QString &profile, L callback)
 {
     // character_password_entry
 
@@ -1744,7 +1772,7 @@ void dlgConnectionProfiles::setSecuredPassword(const QString &profile, L callbac
         if (job->error()) {
             const auto error = job->errorString();
             if (error != QStringLiteral("Entry not found") && error != QStringLiteral("No match")) {
-            qDebug() << "dlgConnectionProfiles::setSecuredPassword ERROR: couldn't retrieve secure password for" << profile << ", error is:" << error;
+            qDebug() << "dlgConnectionProfiles::loadSecuredPassword ERROR: couldn't retrieve secure password for" << profile << ", error is:" << error;
             }
         } else {
             auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
@@ -1866,6 +1894,15 @@ void dlgConnectionProfiles::slot_password_saved(QKeychain::Job *job)
 {
     if (job->error()) {
         qWarning() << "dlgConnectionProfiles::slot_password_saved ERROR: couldn't save password for" << job->property("profile") << "; error was:" << job->errorString();
+    }
+
+    job->deleteLater();
+}
+
+void dlgConnectionProfiles::slot_password_deleted(QKeychain::Job *job)
+{
+    if (job->error()) {
+        qWarning() << "dlgConnectionProfiles::slot_password_deleted ERROR: couldn't delete password for" << job->property("profile") << "; error was:" << job->errorString();
     }
 
     job->deleteLater();
