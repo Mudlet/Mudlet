@@ -3986,7 +3986,7 @@ or your nameservers are not working properly.</source>
       <location filename="../src/ctelnet.cpp" line="466"/>
       <source>[ INFO ]  - Connection time: %1
     </source>
-      <translation>[ ИНФО ] - время соединения: %1
+      <translation>[ ИНФО ] - Время соединения: %1
     </translation>
     </message>
     <message>
@@ -4032,7 +4032,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1363"/>
       <location filename="../src/ctelnet.cpp" line="1644"/>
       <source>[ INFO ]  - Server offers downloadable GUI (url=&apos;%1&apos;) (package=&apos;%2&apos;).</source>
-      <translation>[ ИНФО ]  - Сервер предлагает загружаемый графический интерфейс (URL-адрес=&apos;%1&apos;) (пакет=&apos;%2&apos;).</translation>
+      <translation>[ ИНФО ]  - Сервер предлагает загружаемый интерфейс (адрес=&apos;%1&apos;) (пакет=&apos;%2&apos;).</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="372"/>
