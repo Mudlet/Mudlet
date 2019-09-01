@@ -161,6 +161,22 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 
     welcome_message->setDocument(pWelcome_document);
 
+    mpAction_revealPassword = new QAction(this);
+    mpAction_revealPassword->setCheckable(true);
+    mpAction_revealPassword->setChecked(this);
+    mpAction_revealPassword->setObjectName(QStringLiteral("mpAction_revealPassword"));
+    mpAction_revealPassword->setIcon(QPixmap(QStringLiteral(":/icons/layer-visible-off.png")));
+    mpAction_revealPassword->setToolTip(tr("<p>Click to reveal the password for a short time.</p>"));
+
+    mpTimer_passwordRevealTimeout = new QTimer(this);
+    mpTimer_passwordRevealTimeout->setSingleShot(true);
+    // Use a 5 second timeout:
+    mpTimer_passwordRevealTimeout->setInterval(5000);
+
+    character_password_entry->addAction(mpAction_revealPassword, QLineEdit::TrailingPosition);
+
+    connect(mpAction_revealPassword, &QAction::triggered, this, &dlgConnectionProfiles::slot_togglePasswordVisibility);
+    connect(mpTimer_passwordRevealTimeout, &QTimer::timeout, this, &dlgConnectionProfiles::slot_passwordRevealTimeout);
     connect(offline_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_load);
     connect(connect_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::accept);
     connect(abort, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_cancel);
@@ -178,6 +194,9 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     connect(login_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_login);
     connect(character_password_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_pass);
     connect(mud_description_textedit, &QPlainTextEdit::textChanged, this, &dlgConnectionProfiles::slot_update_description);
+    // We make use of the slot that makes the password hide itself after a timer
+    // has expired to also do that if the user selects a different item:
+    connect(profiles_tree_widget, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_passwordRevealTimeout);
     connect(profiles_tree_widget, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_item_clicked);
     connect(profiles_tree_widget, &QListWidget::itemDoubleClicked, this, &dlgConnectionProfiles::accept);
 
@@ -770,6 +789,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         return;
     }
 
+    slot_togglePasswordVisibility(false);
 
     QString profile_name = pItem->text();
 
@@ -1180,7 +1200,8 @@ void dlgConnectionProfiles::updateDiscordStatus()
 }
 
 // (re-)creates the dialogs profile list
-void dlgConnectionProfiles::fillout_form() {
+void dlgConnectionProfiles::fillout_form()
+{
     profiles_tree_widget->clear();
     profile_name_entry->clear();
     host_name_entry->clear();
@@ -2286,5 +2307,46 @@ void dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QStrin
         QString srcName = sourceFolder + QDir::separator() + files[i];
         QString destName = destFolder + QDir::separator() + files[i];
         copyFolder(srcName, destName);
+    }
+}
+
+void dlgConnectionProfiles::slot_passwordRevealTimeout()
+{
+    slot_togglePasswordVisibility(false);
+}
+
+// As it is wired to the triggered() signal it is only called that way when
+// the user clicks on the action, and not when setChecked() is used.
+void dlgConnectionProfiles::slot_togglePasswordVisibility(const bool showPassword)
+{
+    if (mpAction_revealPassword->isChecked() != showPassword) {
+        // This will only be reached and needed by a direct call above from
+        // the timeout or when a different profile is selected - as the state
+        // (reflected in the argument) would already have been changed to match
+        // if it was called because the action was clicked on:
+        mpAction_revealPassword->setChecked(showPassword);
+    } else {
+        // We are processing a click action
+        if (showPassword) {
+            // Have just been requested to show password- so start the timeout
+            mpTimer_passwordRevealTimeout->start();
+        } else {
+            // Have just been requested to hide password- so no need to keep
+            // the timeout running:
+            mpTimer_passwordRevealTimeout->stop();
+        }
+    }
+
+    if (mpAction_revealPassword->isChecked()) {
+        character_password_entry->setEchoMode(QLineEdit::Normal);
+        // In practice I could not get the icon to change based upon supplying
+        // different QPixmaps for the QIcon for different states - so lets do it
+        // directly:
+        mpAction_revealPassword->setIcon(QPixmap(QStringLiteral(":/icons/layer-visible-on.png")));
+        mpAction_revealPassword->setToolTip(tr("<p>Click to hide the password; it will also automatically hide after a short time.</p>"));
+    } else {
+        character_password_entry->setEchoMode(QLineEdit::Password);
+        mpAction_revealPassword->setIcon(QPixmap(QStringLiteral(":/icons/layer-visible-off.png")));
+        mpAction_revealPassword->setToolTip(tr("<p>Click to reveal the password for a short time.</p>"));
     }
 }
