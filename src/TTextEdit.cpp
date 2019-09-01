@@ -1029,7 +1029,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
 
 // Returns the index into the relevant TBuffer::lineBuffer of the FIRST QChar
 // of the grapheme under the mouse - it ALSO returns zero (which will probably
-// NOT be a valid index) if there is no valid index to retur.
+// NOT be a valid index) if there is no valid index to return.
 // If a pointer to a boolean is provided as a third argument then it will
 // be set to true if the mouse is positioned over a visible time stamp
 // and left unchanged otherwise.
