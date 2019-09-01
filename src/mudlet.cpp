@@ -4783,10 +4783,6 @@ void mudlet::slot_password_saved(QKeychain::Job *job)
 {
     if (job->error()) {
         qWarning() << "mudlet::slot_password_saved ERROR: couldn't migrate for" << job->property("profile") << "; error was:" << job->errorString();
-    } else {
-        const auto& profile = job->property("profile").toString();
-
-        deleteProfileData(profile, QStringLiteral("password"));
     }
 
     job->deleteLater();
