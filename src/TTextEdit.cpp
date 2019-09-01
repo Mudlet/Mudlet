@@ -1029,10 +1029,11 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
 
 // Returns the index into the relevant TBuffer::lineBuffer of the FIRST QChar
 // of the grapheme under the mouse - it ALSO returns zero (which will probably
-// NOT be a valid index) if there is no valid index to return; it might be
-// worth changing that to -1 but that will probably require revision to the
-// caller(s):
-int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber) const
+// NOT be a valid index) if there is no valid index to return.
+// If a pointer to a boolean is provided as a third argument then it will
+// be set to true if the mouse is positioned over a visible time stamp
+// and left unchanged otherwise.
+int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bool* isOverTimeStamp) const
 {
     if (lineNumber >= 0 && lineNumber < mpBuffer->lineBuffer.size()) {
         // Line number is (should be) within range of lines in the
@@ -1065,6 +1066,17 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber) co
                 charWidth = getGraphemeWidth(unicode);
             }
             column +=charWidth;
+
+            // Do an additional check if we need to establish whether we are
+            // over just the timestamp part of the line:
+            if (Q_UNLIKELY(isOverTimeStamp && mShowTimeStamps && indexOfChar == 0)) {
+                if (mouseX < (mTimeStampWidth * mFontWidth)) {
+                    // The mouse position is actually over the timestamp region
+                    // to the left of the main text:
+                    *isOverTimeStamp = true;
+                }
+            }
+
             leftX = rightX;
             rightX = (mShowTimeStamps ? mTimeStampWidth + column : column) * mFontWidth;
             // debugText << QStringLiteral("[%1]%2[%3]").arg(QString::number(leftX), grapheme, QString::number(rightX - 1));
@@ -1126,14 +1138,25 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
     }
 
     if (event->button() == Qt::LeftButton) {
+        int y = (event->y() / mFontHeight) + imageTopLine();
+        int x = 0;
+        y = std::max(y, 0);
+
         if (event->modifiers() & Qt::ControlModifier) {
             mCtrlSelecting = true;
         }
 
-        int y = (event->y() / mFontHeight) + imageTopLine();
-        y = std::max(y, 0);
-
-        int x = convertMouseXToBufferX(event->x(), y);
+        if (!mCtrlSelecting && mShowTimeStamps) {
+            bool isOverTimeStamp = false;
+            x = convertMouseXToBufferX(event->x(), y, &isOverTimeStamp);
+            if (isOverTimeStamp) {
+                // If we have clicked on the timestamp then emulate the effect
+                // of control clicking - i.e. select the WHOLE line:
+                mCtrlSelecting = true;
+            }
+        } else {
+            x = convertMouseXToBufferX(event->x(), y);
+        }
 
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
             if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
