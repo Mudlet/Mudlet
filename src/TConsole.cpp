@@ -2056,6 +2056,8 @@ std::tuple<bool, QString, int, int> TConsole::getSelection()
 void TConsole::setLink(const QStringList& linkFunction, const QStringList& linkHint)
 {
     buffer.applyLink(P_begin, P_end, linkFunction, linkHint);
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 // Set or Reset ALL the specified (but not others)
@@ -2063,28 +2065,38 @@ void TConsole::setDisplayAttributes(const TChar::AttributeFlags attributes, cons
 {
     mFormatCurrent.setAllDisplayAttributes((mFormatCurrent.allDisplayAttributes() & ~(attributes)) | (b ? attributes : TChar::None));
     buffer.applyAttribute(P_begin, P_end, attributes, b);
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 void TConsole::setFgColor(int r, int g, int b)
 {
     setFgColor(QColor(r, g, b));
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 void TConsole::setBgColor(int r, int g, int b)
 {
     setBgColor(QColor(r, g, b));
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 void TConsole::setBgColor(const QColor& newColor)
 {
     mFormatCurrent.setBackground(newColor);
     buffer.applyBgColor(P_begin, P_end, newColor);
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 void TConsole::setFgColor(const QColor& newColor)
 {
     mFormatCurrent.setForeground(newColor);
     buffer.applyFgColor(P_begin, P_end, newColor);
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 void TConsole::setScrollBarVisible(bool isVisible)
