@@ -21,7 +21,7 @@ FIND_PATH(HUNSPELL_INCLUDE_DIR hunspell/hunspell.h
 )
 
 FIND_LIBRARY(HUNSPELL_LIBRARY_RELEASE 
-  NAMES hunspell libhunspell hunspell-1.6 hunspell-1.5 hunspell-1.4 hunspell-1.3
+  NAMES hunspell libhunspell hunspell-1.7 hunspell-1.6 hunspell-1.5 hunspell-1.4 hunspell-1.3
   HINTS
   ${HUNSPELL_DIR} $ENV{HUNSPELL_DIR}
   PATH_SUFFIXES lib64 lib
@@ -37,7 +37,7 @@ FIND_LIBRARY(HUNSPELL_LIBRARY_RELEASE
 )
 
 FIND_LIBRARY(HUNSPELL_LIBRARY_DEBUG 
-  NAMES hunspelld libhunspelld hunspelld-1.6 hunspelld-1.5 hunspelld-1.4 hunspelld-1.3
+  NAMES hunspelld libhunspelld hunspelld-1.7 hunspelld-1.6 hunspelld-1.5 hunspelld-1.4 hunspelld-1.3
   HINTS
   ${HUNSPELL_DIR} $ENV{HUNSPELL_DIR}
   PATH_SUFFIXES lib64 lib
