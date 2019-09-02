@@ -232,6 +232,7 @@ unix:!macx {
         INCLUDEPATH += /usr/include/lua5.1
     }
     LIBS += -lpcre \
+        -lpcre16 \
         -L/usr/local/lib/ \
         -lyajl \
         -lzip \

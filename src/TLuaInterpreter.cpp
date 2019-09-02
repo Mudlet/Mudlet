@@ -1019,12 +1019,12 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
     // luaNumOfMatch :
     if (--captureGroup < static_cast<int>(host.getLuaInterpreter()->mCaptureGroupList.size())) {
         TLuaInterpreter* pL = host.getLuaInterpreter();
-        auto iti = pL->mCaptureGroupPosList.begin();
+        auto iti = pL->mCaptureGroupUtf16PosList.begin();
         auto its = pL->mCaptureGroupList.begin();
         int begin = *iti;
         std::string& s = *its;
 
-        for (int i = 0; iti != pL->mCaptureGroupPosList.end(); ++iti, ++i) {
+        for (int i = 0; iti != pL->mCaptureGroupUtf16PosList.end(); ++iti, ++i) {
             begin = *iti;
             if (i >= captureGroup) {
                 break;
@@ -1037,7 +1037,7 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
             }
         }
 
-        int length = s.size();
+        int length = QString::fromStdString(s).size();
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::white), QColor(Qt::red)) << "selectCaptureGroup(" << begin << ", " << length << ")\n" >> 0;
         }
@@ -13545,10 +13545,15 @@ void TLuaInterpreter::setMultiCaptureGroups(const std::list<std::list<std::strin
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList, const std::list<int>& posList)
+void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList, const std::list<int>& posList, const std::list<int>& utf16PosList)
 {
     mCaptureGroupList = captureList;
     mCaptureGroupPosList = posList;
+    if (utf16PosList.empty()) {
+        mCaptureGroupUtf16PosList = posList;
+    } else {
+        mCaptureGroupUtf16PosList = utf16PosList;
+    }
 
     /*std::list<string>::iterator it2 = mCaptureGroupList.begin();
        std::list<int>::iterator it1 = mCaptureGroupPosList.begin();
@@ -13564,6 +13569,7 @@ void TLuaInterpreter::clearCaptureGroups()
 {
     mCaptureGroupList.clear();
     mCaptureGroupPosList.clear();
+    mCaptureGroupUtf16PosList.clear();
     mMultiCaptureGroupList.clear();
     mMultiCaptureGroupPosList.clear();
 

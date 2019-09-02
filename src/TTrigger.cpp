@@ -1,4 +1,4 @@
-/***************************************************************************
+﻿/***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -143,6 +143,11 @@ static void pcre_deleter(pcre* pointer)
     pcre_free(pointer);
 }
 
+static void pcre16_deleter(pcre16* pointer)
+{
+    pcre16_free(pointer);
+}
+
 //FIXME: sperren, wenn code nicht compiliert werden kann *ODER* regex falsch
 bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
 {
@@ -194,21 +199,24 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
         if (propertyList.at(i) == REGEX_PERL) {
             const char* error;
             const QByteArray& regexp = regexList.at(i).toUtf8();
+            const QString& regexp16 = regexList.at(i);
 
             int erroffset;
 
             // PCRE_UTF8 needed to run compile in UTF-8 mode
             // PCRE_UCP needed for \d, \w etc. to use Unicode properties:
-            QSharedPointer<pcre> re(pcre_compile(regexp.constData(), PCRE_UTF8 | PCRE_UCP, &error, &erroffset, nullptr), pcre_deleter);
+            QSharedPointer<pcre> re(pcre_compile(regexp.data(), PCRE_UTF8 | PCRE_UCP, &error, &erroffset, nullptr), pcre_deleter);
+            // PCRE_UTF16 needed to run compile in UTF-16 mode
+            QSharedPointer<pcre16> re16(pcre16_compile(regexp16.utf16(), PCRE_UTF16 | PCRE_UCP, &error, &erroffset, nullptr), pcre16_deleter);
 
             if (!re) {
                 if (mudlet::debugMode) {
                     TDebug(QColor(Qt::white), QColor(Qt::red)) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> 0;
-                    TDebug(QColor(Qt::red), QColor(Qt::gray)) << R"(in: ")" << regexp.constData() << "\"\n" >> 0;
+                    TDebug(QColor(Qt::red), QColor(Qt::gray)) << R"(in: ")" << regexp16 << "\"\n" >> 0;
                 }
                 setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
                          .arg(tr(R"(Error: in item %1, perl regex "%2" failed to compile, reason: "%3".)")
-                         .arg(QString::number(i + 1), regexp.constData(), error)));
+                         .arg(QString::number(i + 1), regexp16, error)));
                 state = false;
             } else {
                 if (mudlet::debugMode) {
@@ -216,6 +224,7 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
                 }
             }
             mRegexMap[i] = re;
+            mRegexMap16[i] = re16;
             mTriggerContainsPerlRegex = true;
         }
 
@@ -275,6 +284,7 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
     assert(mRegexMap.contains(regexNumber));
 
     QSharedPointer<pcre> re = mRegexMap[regexNumber];
+    QSharedPointer<pcre16> re16 = mRegexMap16[regexNumber];
 
     if (!re) {
         if (mudlet::debugMode) {
@@ -291,13 +301,17 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
     int namecount;
     int name_entry_size;
 
-    int subject_length = strlen(subject);
-    int rc, i;
+    int subject_length = strlen(subject);;
+    int toMatch_length = toMatch.size();
+    int rc, rc16, i;
     std::list<std::string> captureList;
     std::list<int> posList;
+    std::list<int> posList16;
     int ovector[300]; // 100 capture groups max (can be increase nbGroups=1/3 ovector
+    int ovector16[300]; // 100 capture groups max (can be increase nbGroups=1/3 ovector
 
     rc = pcre_exec(re.data(), nullptr, subject, subject_length, 0, 0, ovector, 100);
+    rc16 = pcre16_exec(re16.data(), nullptr, toMatch.utf16(), toMatch_length, 0, 0, ovector16, 100);
 
     if (rc < 0) {
         return false;
@@ -316,12 +330,14 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
         if (substring_length < 1) {
             captureList.push_back(match);
             posList.push_back(-1);
+            posList16.push_back(-1);
             continue;
         }
 
         match.append(substring_start, substring_length);
         captureList.push_back(match);
         posList.push_back(ovector[2 * i] + posOffset);
+        posList16.push_back(ovector16[2 * i] + posOffset);
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::darkCyan), QColor(Qt::black)) << "capture group #" << (i + 1) << " = " >> 0;
             TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "<" << match.c_str() << ">\n" >> 0;
@@ -349,6 +365,7 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
     for (; mPerlSlashGOption;) {
         int options = 0;
         int start_offset = ovector[1];
+        int start_offset16 = ovector16[1];
 
         if (ovector[0] == ovector[1]) {
             if (ovector[0] >= subject_length) {
@@ -358,12 +375,14 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
         }
 
         rc = pcre_exec(re.data(), nullptr, subject, subject_length, start_offset, options, ovector, 30);
+        rc16 = pcre16_exec(re16.data(), nullptr, toMatch.utf16(), toMatch_length, start_offset16, options, ovector16, 30);
 
         if (rc == PCRE_ERROR_NOMATCH) {
             if (options == 0) {
                 break;
             }
             ovector[1] = start_offset + 1;
+            ovector16[1] = start_offset16 + 1;
             continue;
         } else if (rc < 0) {
             goto END;
@@ -379,11 +398,13 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
             if (substring_length < 1) {
                 captureList.push_back(match);
                 posList.push_back(-1);
+                posList16.push_back(-1);
                 continue;
             }
             match.append(substring_start, substring_length);
             captureList.push_back(match);
             posList.push_back(ovector[2 * i] + posOffset);
+            posList16.push_back(ovector16[2 * i] + posOffset);
             if (mudlet::debugMode) {
                 TDebug(QColor(Qt::darkCyan), QColor(Qt::black)) << "<regex mode: match all> capture group #" << (i + 1) << " = " >> 0;
                 TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "<" << match.c_str() << ">\n" >> 0;
@@ -406,11 +427,11 @@ END : {
         }
         pC->deselect();
         auto its = captureList.begin();
-        auto iti = posList.begin();
-        for (int i = 1; iti != posList.end(); ++iti, ++its, i++) {
+        auto iti = posList16.begin();
+        for (int i = 1; iti != posList16.end(); ++iti, ++its, i++) {
             int begin = *iti;
             std::string& s = *its;
-            int length = QString::fromStdString(s).size();
+            int length = QString::fromStdString(s).size();;
             if (total > 1) {
                 // skip complete match in Perl /g option type of triggers
                 // to enable people to highlight capture groups if there are any
@@ -433,7 +454,7 @@ END : {
         return true;
     } else {
         TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-        pL->setCaptureGroups(captureList, posList);
+        pL->setCaptureGroups(captureList, posList, posList16);
         execute();
         pL->clearCaptureGroups();
         if (mFilterTrigger) {

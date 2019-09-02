@@ -176,6 +176,7 @@ private:
 
     QList<int> mRegexCodePropertyList;
     QMap<int, QSharedPointer<pcre>> mRegexMap;
+    QMap<int, QSharedPointer<pcre16>> mRegexMap16;
 
     // Lua code as a string to run
     QString mScript;
