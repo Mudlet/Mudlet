@@ -556,8 +556,7 @@ void dlgConnectionProfiles::slot_addProfile()
 // enables the deletion button once the correct text (profile name) is entered
 void dlgConnectionProfiles::slot_deleteprofile_check(const QString& text)
 {
-    QString profile = profiles_tree_widget->currentItem()->text();
-    if (profile != text) {
+    if (text.isEmpty()) {
         delete_button->setDisabled(true);
     } else {
         delete_button->setEnabled(true);
@@ -591,8 +590,6 @@ void dlgConnectionProfiles::slot_deleteProfile()
         return;
     }
 
-    QString profile = profiles_tree_widget->currentItem()->text();
-
     QUiLoader loader;
 
     QFile file(QStringLiteral(":/ui/delete_profile_confirmation.ui"));
@@ -616,10 +613,10 @@ void dlgConnectionProfiles::slot_deleteProfile()
     connect(delete_profile_lineedit, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_deleteprofile_check);
     connect(delete_profile_dialog, &QDialog::accepted, this, &dlgConnectionProfiles::slot_reallyDeleteProfile);
 
-    delete_profile_lineedit->setPlaceholderText(profile);
+    delete_profile_lineedit->setPlaceholderText("Type Anything Here To Confirm");
     delete_profile_lineedit->setFocus();
     delete_button->setDisabled(true);
-    delete_profile_dialog->setWindowTitle(tr("Deleting '%1'").arg(profile));
+    delete_profile_dialog->setWindowTitle(tr("Deleting '%1'").arg(profiles_tree_widget->currentItem()->text()));
 
     delete_profile_dialog->show();
     delete_profile_dialog->raise();

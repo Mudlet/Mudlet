@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>389</width>
-    <height>180</height>
+    <height>196</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -25,7 +25,7 @@
      <property name="text">
       <string>Are you sure that you'd like to delete this profile? Everything (aliases, triggers, backups, etc) will be gone.
 
-If you are, please type in the profile name as a confirmation:</string>
+If you are, please type anything in the box below to confirm:</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
