@@ -805,11 +805,14 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     QString DiscordHeader(tr("<h2><u>Discord - Rich Presence - RPC library</u></h2>"
                              "<h3>Copyright © 2017 Discord, Inc.</h3>"));
 
+    QString QtKeyChainHeader(tr("<h2><u>QtKeyChain - Platform-independent Qt API for storing passwords securely</u></h2>"
+                                 "<h3>Copyright © 2011-2019 Frank Osterfeld &lt;frank.osterfeld@gmail.com&gt;.</h3>"));
+
     // Now start to assemble the fragments above:
     QStringList license_3rdParty_texts;
     license_3rdParty_texts.append(QStringLiteral("<html>%1<body>%2<hr>")
                                           .arg(htmlHead,                       //  1 - Html Header
-                                               thirdPartiesHeader)); //  2 - Introductory header - translatable
+                                               thirdPartiesHeader));           //  2 - Introductory header - translatable
 
     license_3rdParty_texts.append(QStringLiteral("%3%4%5<hr>")
                                           .arg(communiHeader,                  //  3 - Communi (IRC) header - translatable
@@ -823,16 +826,16 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                           .arg(luaHeader,                      //  6 - lua header - translatable
                                                MIT_Body,                       //  7 - lua body MIT - not translatable
                                                luaYajlHeader,                  //  8 - lua_yajl header - translatable
-                                               MIT_Body));    //  9 - lua_yajl body MIT - not translatable
+                                               MIT_Body));                     //  9 - lua_yajl body MIT - not translatable
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
     license_3rdParty_texts.append(QStringLiteral("%10%11<hr>")
-                                          .arg(luaZipHeader, // 10 - macOS luazip header - translatable
-                                               MIT_Body));   // 11 - macOS luazip body MIT - not translatable
+                                          .arg(luaZipHeader,                   // 10 - macOS luazip header - translatable
+                                               MIT_Body));                     // 11 - macOS luazip body MIT - not translatable
 #endif
 
     license_3rdParty_texts.append(QStringLiteral("%12%13")
                                           .arg(edbeeHeader,                    // 12 - edbee header - translatable
-                                               MIT_Body));  // 13 - edbee body MIT - not translatable
+                                               MIT_Body));                     // 13 - edbee body MIT - not translatable
 
     license_3rdParty_texts.append(QStringLiteral("<hr width=\"50%\">%14"
                                                  "%15%16<hr width=\"33%\">"
@@ -861,13 +864,13 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 #if defined(INCLUDE_UPDATER) || defined(DEBUG_SHOWALL)
     license_3rdParty_texts.append(QStringLiteral("<hr>%23%24")
                                           .arg(DblsqdHeader,                   // 23 - dblsqd Header - translatable
-                                               APACHE2_Body)); // 24 - dblsqd body APACHE2 - not translatable
+                                               APACHE2_Body));                 // 24 - dblsqd body APACHE2 - not translatable
 #if defined(Q_OS_MACOS) || defined(DEBUG_SHOWALL)
     license_3rdParty_texts.append(QStringLiteral("<hr width=\"50%\">%25%26<hr width=\"33%\">%27%28<hr width=\"33%\">%29%30")
-                                          .arg(SparkleHeader,         // 25 - Sparkle header - translatable
-                                               MIT_Body,              // 26 - Sparkle body MIT - not translatable
-                                               Sparkle3rdPartyHeader, // 27 - Sparkle 3rd Party headers - translatable
-                                               BSD2Clause_Body        // 28 - Sparkle 3rd Party body BSD2 ("AUTHOR") - not translatable
+                                          .arg(SparkleHeader,                  // 25 - Sparkle header - translatable
+                                               MIT_Body,                       // 26 - Sparkle body MIT - not translatable
+                                               Sparkle3rdPartyHeader,          // 27 - Sparkle 3rd Party headers - translatable
+                                               BSD2Clause_Body                 // 28 - Sparkle 3rd Party body BSD2 ("AUTHOR") - not translatable
                                                        .arg(QLatin1String("AUTHOR"), QLatin1String("AUTHOR")),
                                                SparkleGlueHeader, // 29 - Sparkle glue header - translatable
                                                BSD2Clause_Body    // 30 - Sparkle glue body BSD2 ("COPYRIGHT HOLDERS AND/OR CONTRIBUTORS") - not translatable
@@ -877,17 +880,23 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 
 #if defined(INCLUDE_FONTS) || defined(DEBUG_SHOWALL)
     license_3rdParty_texts.append(QStringLiteral("<hr>%31")
-                                  .arg(UbuntuFontText));               // 31 - Ubuntu Font Text - not translatable
+                                  .arg(UbuntuFontText));                       // 31 - Ubuntu Font Text - not translatable
     license_3rdParty_texts.append(QStringLiteral("<hr>%32")
-                                  .arg(SILOpenFontText));              // 32 - SIL Open Font Text - not translatable
+                                  .arg(SILOpenFontText));                      // 32 - SIL Open Font Text - not translatable
 
 #endif
 
     license_3rdParty_texts.append(QStringLiteral("<hr><br>"
                                                  "<center><img src=\":/icons/Discord-Logo+Wordmark-Color_400x136px.png\"/></center><br>"
                                                  "%33%34")
-                                  .arg(DiscordHeader,                  // 33 - Discord header - translatable
-                                       MIT_Body));                     // 34 - Discord body MIT - not translatable
+                                  .arg(DiscordHeader,                          // 33 - Discord header - translatable
+                                       MIT_Body));                             // 34 - Discord body MIT - not translatable
+
+    license_3rdParty_texts.append(QStringLiteral("<hr><br>"
+                                                 "%35%36")
+                                  .arg(QtKeyChainHeader,                       // 35 - QtKeyChain header - translatable
+                                       BSD2Clause_Body                         // 36 - QtKeyChain body BSD2 ("AUTHOR") - not translatable
+                                       .arg(QLatin1String("AUTHOR"), QLatin1String("AUTHOR"))));
 
     license_3rdParty_texts.append(QStringLiteral("</body></html>"));
 
