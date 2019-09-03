@@ -2093,6 +2093,7 @@ bool mudlet::setDisplayAttributes(Host* pHost, const QString& name, const TChar:
     if (pC) {
         // Set or reset all the specified attributes (but leave others unchanged)
         pC->mFormatCurrent.setAllDisplayAttributes((pC->mFormatCurrent.allDisplayAttributes() &~(attributes)) | (state ? attributes : TChar::None));
+        pC->buffer.applyAttribute(pC->P_begin, pC->P_end, attributes, state);
         return true;
     } else {
         return false;
