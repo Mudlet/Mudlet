@@ -5079,7 +5079,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="77"/>
       <source>Connect</source>
-      <translation>Подключится</translation>
+      <translation>Подключиться</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1116"/>
