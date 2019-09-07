@@ -1649,14 +1649,16 @@ void dlgConnectionProfiles::fillout_form() {
     if (firstMudletLaunch) {
         // Select a random pre-defined profile to give all MUDs a fair go first time
         // make sure not to select the test_profile though
-        if (profiles_tree_widget->count() != 1) {
+        if (profiles_tree_widget->count() > 1) {
             while (toselectRow == -1 || toselectRow == test_profile_row) {
                 toselectRow = qrand() % profiles_tree_widget->count();
             }
         }
     }
 
-    profiles_tree_widget->setCurrentRow(toselectRow);
+    if (toselectRow != -1) {
+        profiles_tree_widget->setCurrentRow(toselectRow);
+    }
 
     updateDiscordStatus();
 }
