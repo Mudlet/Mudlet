@@ -1656,7 +1656,9 @@ void dlgConnectionProfiles::fillout_form() {
         }
     }
 
-    profiles_tree_widget->setCurrentRow(toselectRow);
+    if (toselectRow != -1) {
+        profiles_tree_widget->setCurrentRow(toselectRow);
+    }
 
     updateDiscordStatus();
 }
