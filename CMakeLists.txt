@@ -164,6 +164,18 @@ if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/edbee-lib/CMakeLists.txt")
   endif()
 endif()
 
+if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/qtkeychain/CMakeLists.txt")
+  message(STATUS "git submodule for required QtKeychain missing from source code, will attempt to get it...")
+  execute_process(COMMAND git submodule update --init 3rdparty/qtkeychain
+          TIMEOUT 30
+          WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
+          OUTPUT_VARIABLE output_text
+          ERROR_VARIABLE error_text)
+  if(output_text OR error_text)
+    message(STATUS ${output_text} ${error_text})
+  endif()
+endif()
+
 if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/lcf/lcf-scm-1.rockspec")
   message(STATUS "git submodule for required lua code formatter source code missing, will attempt to get it...")
   execute_process(COMMAND git submodule update --init 3rdparty/lcf
@@ -210,6 +222,13 @@ if(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/edbee-lib/CMakeLists.txt")
   add_subdirectory(3rdparty/edbee-lib/edbee-lib)
 elseif()
   message(FATAL_ERROR "Cannot locate edbee-lib editor widget submodule source code, build abandoned!")
+endif()
+
+if(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/qtkeychain/CMakeLists.txt")
+  add_definitions(-DQTKEYCHAIN_NO_EXPORT)
+  add_subdirectory(3rdparty/qtkeychain)
+elseif()
+  message(FATAL_ERROR "Cannot locate QtKeychain submodule source code, build abandoned!")
 endif()
 
 file(GLOB_RECURSE lua_files RELATIVE "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/lua/" "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/lua/*.lua")
