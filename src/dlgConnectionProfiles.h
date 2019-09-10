@@ -105,7 +105,6 @@ private:
     QString mDiscordApplicationId;
     const QStringList mDefaultGames;
     QAction* mpAction_revealPassword;
-    QTimer* mpTimer_passwordRevealTimeout;
 
 
 private slots:
@@ -113,7 +112,7 @@ private slots:
     void slot_set_custom_icon();
     void slot_reset_custom_icon();
     void slot_togglePasswordVisibility(const bool);
-    void slot_passwordRevealTimeout();
+    void slot_hidePassword();
 };
 
 
