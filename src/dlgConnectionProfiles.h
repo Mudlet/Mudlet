@@ -118,7 +118,6 @@ private slots:
     void slot_set_custom_icon();
     void slot_reset_custom_icon();
     void slot_togglePasswordVisibility(const bool);
-    void slot_hidePassword();
     void slot_password_saved(QKeychain::Job* job);
     void slot_password_deleted(QKeychain::Job* job);
 };

@@ -166,7 +166,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     mpAction_revealPassword = new QAction(this);
     mpAction_revealPassword->setCheckable(true);
     mpAction_revealPassword->setObjectName(QStringLiteral("mpAction_revealPassword"));
-    slot_hidePassword();
+    slot_togglePasswordVisibility(false);
 
     character_password_entry->addAction(mpAction_revealPassword, QLineEdit::TrailingPosition);
 
@@ -188,9 +188,6 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     connect(login_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_login);
     connect(character_password_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_pass);
     connect(mud_description_textedit, &QPlainTextEdit::textChanged, this, &dlgConnectionProfiles::slot_update_description);
-    // We make use of the slot that makes the password hide itself after a timer
-    // has expired to also do that if the user selects a different item:
-    connect(profiles_tree_widget, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_hidePassword);
     connect(profiles_tree_widget, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_item_clicked);
     connect(profiles_tree_widget, &QListWidget::itemDoubleClicked, this, &dlgConnectionProfiles::accept);
 
@@ -2398,24 +2395,14 @@ void dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QStrin
     }
 }
 
-// This has to be a slot because it is connected to signal from an entity on
-// the UI but it has to be separate from the slot_togglePasswordVisibility(...)
-// method because the signal that is wired to this slot does not have the bool
-// arguement that the other slot needs:
-void dlgConnectionProfiles::slot_hidePassword()
-{
-    slot_togglePasswordVisibility(false);
-}
-
 // As it is wired to the triggered() signal it is only called that way when
 // the user clicks on the action, and not when setChecked() is used.
 void dlgConnectionProfiles::slot_togglePasswordVisibility(const bool showPassword)
 {
     if (mpAction_revealPassword->isChecked() != showPassword) {
         // This will only be reached and needed by a call NOT prompted by the
-        // user clicking on the icon - i.e. either from the above
-        // slot_hidePassword() {when a different profile is selected} or when
-        // called from the constructor:
+        // user clicking on the icon - i.e. either when a different profile is
+        // selected or when called from the constructor:
         mpAction_revealPassword->setChecked(showPassword);
     }
 
