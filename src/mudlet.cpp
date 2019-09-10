@@ -2077,6 +2077,8 @@ bool mudlet::setTextFormat(Host* pHost, const QString& name, const QColor& bgCol
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
         pC->mFormatCurrent.setTextFormat(fgColor, bgColor, attributes);
+        pC->mUpperPane->forceUpdate();
+        pC->mLowerPane->forceUpdate();
         return true;
     } else {
         return false;
@@ -2094,6 +2096,8 @@ bool mudlet::setDisplayAttributes(Host* pHost, const QString& name, const TChar:
         // Set or reset all the specified attributes (but leave others unchanged)
         pC->mFormatCurrent.setAllDisplayAttributes((pC->mFormatCurrent.allDisplayAttributes() &~(attributes)) | (state ? attributes : TChar::None));
         pC->buffer.applyAttribute(pC->P_begin, pC->P_end, attributes, state);
+        pC->mUpperPane->forceUpdate();
+        pC->mLowerPane->forceUpdate();
         return true;
     } else {
         return false;
@@ -2560,6 +2564,8 @@ void mudlet::setLink(Host* pHost, const QString& name, QStringList& linkFunction
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
         pC->setLink(linkFunction, linkHint);
+        pC->mUpperPane->forceUpdate();
+        pC->mLowerPane->forceUpdate();
     }
 }
 
@@ -2572,6 +2578,8 @@ void mudlet::setFgColor(Host* pHost, const QString& name, int r, int g, int b)
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
         pC->setFgColor(r, g, b);
+        pC->mUpperPane->forceUpdate();
+        pC->mLowerPane->forceUpdate();
     }
 }
 
@@ -2584,6 +2592,8 @@ void mudlet::setBgColor(Host* pHost, const QString& name, int r, int g, int b)
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
         pC->setBgColor(r, g, b);
+        pC->mUpperPane->forceUpdate();
+        pC->mLowerPane->forceUpdate();
     }
 }
 
@@ -3586,6 +3596,13 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
     ifs >> ret;
     file.close();
     return ret;
+}
+
+void mudlet::deleteProfileData(const QString& profile, const QString& item)
+{
+    if (!QFile::remove(getMudletPath(profileDataItemPath, profile, item))) {
+        qWarning() << "Couldn't delete profile data file" << item;
+    }
 }
 
 // this slot is called via a timer in the constructor of mudlet::mudlet()
@@ -4744,6 +4761,42 @@ void mudlet::setEnableFullScreenMode(const bool state)
     // Emit the signal whatever the stored value is - so that if there are
     // multiple profile preference dialogs open they all update themselves:
     emit signal_enableFulScreenModeChanged(state);
+}
+
+
+void mudlet::migratePasswordsToSecureStorage()
+{
+    QStringList profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath))
+                                   .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+
+    for (const auto& profile : profiles) {
+        const auto password = readProfileData(profile, QStringLiteral("password"));
+        if (password.isEmpty()) {
+            continue;
+        }
+
+        auto *job = new QKeychain::WritePasswordJob(QStringLiteral("Mudlet profile"));
+        job->setAutoDelete(false);
+        job->setInsecureFallback(false);
+
+        job->setKey(profile);
+        job->setTextData(password);
+        job->setProperty("profile", profile);
+
+        connect(job, &QKeychain::WritePasswordJob::finished, this, &mudlet::slot_password_saved);
+
+        job->start();
+    }
+
+}
+
+void mudlet::slot_password_saved(QKeychain::Job *job)
+{
+    if (job->error()) {
+        qWarning() << "mudlet::slot_password_saved ERROR: couldn't migrate for" << job->property("profile") << "; error was:" << job->errorString();
+    }
+
+    job->deleteLater();
 }
 
 void mudlet::setShowMapAuditErrors(const bool state)

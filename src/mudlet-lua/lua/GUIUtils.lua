@@ -710,7 +710,7 @@ end
 ---   </pre>
 ---
 --- @see color_table
-local function calc_lumosity(r,g,b)
+local function calc_luminosity(r,g,b)
   r = r < 11 and r / (255 * 12.92) or ((0.055 + r / 255) / 1.055) ^ 2.4
   g = g < 11 and g / (255 * 12.92) or ((0.055 + g / 255) / 1.055) ^ 2.4
   b = b < 11 and b / (255 * 12.92) or ((0.055 + b / 255) / 1.055) ^ 2.4
@@ -740,7 +740,7 @@ function showColors(...)
     if k:lower():find(search) then
       local v = color_table[k]
       local fgc = "white"
-      if calc_lumosity(v[1],v[2],v[3]) > 0.5 then
+      if calc_luminosity(v[1],v[2],v[3]) > 0.5 then
         fgc = "black"
       end
       cechoLink(string.format('<%s:%s>%-23s<reset>  ',fgc,k,k), [[printCmdLine("]] .. k .. [[")]], table.concat(v, ", "), true)

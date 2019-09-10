@@ -212,7 +212,6 @@ if(USE_UPDATER)
   list(APPEND mudlet_MOC_HDRS updater.h)
 endif(USE_UPDATER)
 
-
 if(USE_3DMAPPER)
   list(APPEND mudlet_SRCS glwidget.cpp)
   list(APPEND mudlet_MOC_HDRS glwidget.h)
@@ -504,6 +503,7 @@ target_link_libraries(mudlet
     ${PUGIXML_LIBRARIES}
     communi
     edbee-lib
+    qt5keychain
 )
 
 if(Qt5TextToSpeech_FOUND)

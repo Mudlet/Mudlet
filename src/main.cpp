@@ -508,6 +508,8 @@ int main(int argc, char* argv[])
 
     mudlet::self()->show();
 
+    mudlet::self()->migratePasswordsToSecureStorage();
+
     mudlet::self()->startAutoLogin();
 
 #if defined(INCLUDE_UPDATER)
