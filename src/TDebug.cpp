@@ -39,7 +39,9 @@ TDebug::TDebug(const QColor& c, const QColor& d)
 TDebug& TDebug::operator>>(const int code)
 {
     Q_UNUSED(code);
-    mudlet::mpDebugConsole->print(msg, fgColor, bgColor);
+    if (mudlet::mpDebugConsole) {
+        mudlet::mpDebugConsole->print(msg, fgColor, bgColor);
+    }
     return *this;
 }
 
