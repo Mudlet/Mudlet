@@ -1931,7 +1931,14 @@ local function capture_move_cmd(dir,priority)
         end
     end
 end
+local function deduplicate_exits(exits)
+  local deduplicated_exits = {}
+  for _, v in ipairs(exits) do
+    deduplicated_exits[v] = true
+  end
 
+  return table.keys(deduplicated_exits)
+end
 local function capture_room_info(name, exits)
     -- captures room info, and tries to move map to match
     if (not vision_fail) and name and exits then
@@ -1952,6 +1959,8 @@ local function capture_room_info(name, exits)
                 table.insert(map.currentExits,w)
             end
         end
+	undupeExits = deduplicate_exits(map.currentExits)
+	map.set("currentExits", undupeExits)
         map.echo(string.format("Exits Captured: %s (%s)",exits, table.concat(map.currentExits, " ")),true)
         move_map()
     elseif vision_fail then
