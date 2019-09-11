@@ -1085,7 +1085,9 @@ bool TCommandLine::handleCtrlTabChange(QKeyEvent* key, int tabNumber)
     if ((key->modifiers() & allModifiers) == Qt::ControlModifier) {
         // let user-defined Ctrl+# keys match first - and only if the user hasn't created
         // then we fallback to tab switching
-        if (!keybindingMatched(key) && mudlet::self()->mpTabBar->count() >= (tabNumber)) {
+        if (keybindingMatched(key)) {
+            return true;
+        } else if (mudlet::self()->mpTabBar->count() >= (tabNumber)) {
             mudlet::self()->mpTabBar->setCurrentIndex(tabNumber - 1);
             key->accept();
             return true;
