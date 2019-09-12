@@ -245,6 +245,7 @@ public:
     int findStopWatchId(const QString&) const;
     QPair<bool, QString> setStopWatchName(const int, const QString&);
     QPair<bool, QString> setStopWatchName(const QString&, const QString&);
+    QPair<bool, QString> resetAndRestartStopWatch(const int);
 
     void startSpeedWalk();
     void saveModules(int sync, bool backup = true);

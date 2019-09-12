@@ -1820,7 +1820,24 @@ int TLuaInterpreter::startStopWatch(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (lua_type(L, 1) == LUA_TNUMBER) {
-        QPair<bool, QString> result = host.startStopWatch(lua_tointeger(L, 1));
+        // Flag (if true) to replicate previous (reset and start again from zero
+        // if call is repeated without any other actions being carried out on
+        // stopwatch) behaviour if only a single NUMBERIC argument (ID) supplied:
+        bool autoResetAndRestart = true;
+        if (lua_gettop(L) > 1) {
+            if (!lua_isboolean(L, 2)) {
+                lua_pushfstring(L, "startStopWatch: bad argument #2 type (automatic reset and restart as boolean is optional with a numeric stopwatch id, got %s!)", luaL_typename(L, 2));
+                return lua_error(L);
+            }
+            autoResetAndRestart = lua_toboolean(L, 2);
+        }
+
+        QPair<bool, QString> result;
+        if (autoResetAndRestart) {
+            result = host.resetAndRestartStopWatch(lua_tointeger(L, 1));
+        } else {
+            result = host.startStopWatch(lua_tointeger(L, 1));
+        }
         if (!result.first) {
             lua_pushnil(L);
             lua_pushstring(L, result.second.toUtf8().constData());

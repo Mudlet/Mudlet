@@ -1000,7 +1000,23 @@ QPair<bool, QString> Host::resetStopWatch(const int id)
         }
 
         return qMakePair(false, QStringLiteral("stopwatch with id %1 was already reset").arg(id));
-    };
+    }
+
+    return qMakePair(false, QStringLiteral("stopwatch with id %1 not found").arg(id));
+}
+
+// Used when emulating past behavior for startStopWatch - there is only one
+// which takes a numeric argument as that is what old scripts will be using and
+// not a text name:
+QPair<bool, QString> Host::resetAndRestartStopWatch(const int id)
+{
+    auto pStopWatch = mStopWatchMap.value(id);
+    if (pStopWatch) {
+        pStopWatch->stop();
+        pStopWatch->reset();
+        pStopWatch->start();
+        return qMakePair(true, QString());
+    }
 
     return qMakePair(false, QStringLiteral("stopwatch with id %1 not found").arg(id));
 }
@@ -1011,7 +1027,7 @@ bool Host::makeStopWatchPersistent(const int id, const bool state)
     if (pStopWatch) {
         pStopWatch->setPersistent(state);
         return true;
-    };
+    }
 
     return false;
 }
@@ -1040,7 +1056,7 @@ QPair<bool, QString> Host::setStopWatchName(const int id, const QString& newName
         // Okay found the one we want:
         pStopWatch->setName(newName);
         return qMakePair(true, QString());
-    };
+    }
 
     return qMakePair(false, QStringLiteral("stopwatch with id %1 not found").arg(id));
 }
