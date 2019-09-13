@@ -71,13 +71,13 @@ public:
     int max_y;
     int max_z;
     // Key = z-level, Value = the relevant x or y extreme:
-    QMap<int, int> xminEbene;
-    QMap<int, int> xmaxEbene;
-    QMap<int, int> yminEbene;
-    QMap<int, int> ymaxEbene;
+    QMap<int, int> xminForZ;
+    QMap<int, int> xmaxForZ;
+    QMap<int, int> yminForZ;
+    QMap<int, int> ymaxForZ;
 // Pointless:
-//    QMap<int, int> zminEbene;
-//    QMap<int, int> zmaxEbene;
+//    QMap<int, int> zminForZ;
+//    QMap<int, int> zmaxForZ;
     QList<int> zLevels; // The z-levels that ARE used, not guaranteed to be in order
     bool gridMode;
     bool isZone;

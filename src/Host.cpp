@@ -39,7 +39,9 @@
 
 #include "pre_guard.h"
 #include <QtUiTools>
+#include <QNetworkProxy>
 #include <zip.h>
+#include <memory>
 #include "post_guard.h"
 
 stopWatch::stopWatch()
@@ -192,15 +194,22 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBorderRightWidth(0)
 , mBorderTopHeight(0)
 , mCommandLineFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
-, mCommandSeparator(QLatin1String(";"))
+, mCommandSeparator(QLatin1String(";;"))
 , mDisplayFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
 , mEnableGMCP(true)
+, mEnableMSSP(true)
 , mEnableMSDP(false)
 , mServerMXPenabled(true)
 , mFORCE_GA_OFF(false)
 , mFORCE_NO_COMPRESSION(false)
 , mFORCE_SAVE_ON_EXIT(false)
 , mInsertedMissingLF(false)
+, mSslTsl(false)
+, mUseProxy(false)
+, mProxyAddress(QString())
+, mProxyPort(0)
+, mProxyUsername(QString())
+, mProxyPassword(QString())
 , mIsGoingDown(false)
 , mIsProfileLoadingSequence(false)
 , mLF_ON_GA(true)
@@ -225,6 +234,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mUSE_UNIX_EOL(false)
 , mWrapAt(100)
 , mWrapIndentCount(0)
+, mEditorAutoComplete(true)
 , mEditorTheme(QLatin1String("Mudlet"))
 , mEditorThemeFile(QLatin1String("Mudlet.tmTheme"))
 , mThemePreviewItemID(-1)
@@ -530,7 +540,6 @@ void Host::resetProfile_phase2()
     mEventMap.clear();
     mLuaInterpreter.initLuaGlobals();
     mLuaInterpreter.loadGlobal();
-    mLuaInterpreter.initIndenterGlobals();
     mBlockScriptCompile = false;
 
     getTriggerUnit()->compileAll();
@@ -610,7 +619,6 @@ std::tuple<bool, QString, QString> Host::saveProfileAs(const QString& file)
 
 void Host::xmlSaved(const QString& xmlName)
 {
-    qDebug() << "saved" << xmlName;
     if (writers.contains(xmlName)) {
         auto writer = writers.take(xmlName);
         delete writer;
@@ -663,8 +671,34 @@ QString Host::getMmpMapLocation() const
     return mpMap->getMmpMapLocation();
 }
 
+std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
+{
+    const QFontMetrics metrics(font);
+    if (metrics.averageCharWidth() == 0) {
+        return std::make_pair(false, QStringLiteral("specified font is invalid (its letters have 0 width)"));
+    }
+
+    mDisplayFont = font;
+    return std::make_pair(true, QString());
+}
+
+std::pair<bool, QString> Host::setDisplayFont(const QString& fontName)
+{
+    return setDisplayFont(QFont(fontName));
+}
+
+void Host::setDisplayFontFromString(const QString& fontData)
+{
+    mDisplayFont.fromString(fontData);
+}
+
+void Host::setDisplayFontSize(int size)
+{
+    mDisplayFont.setPointSize(size);
+}
+
 // Now returns the total weight of the path
-const unsigned int Host::assemblePath()
+unsigned int Host::assemblePath()
 {
     unsigned int totalWeight = 0;
     QStringList pathList;
@@ -688,7 +722,7 @@ const unsigned int Host::assemblePath()
     return totalWeight;
 }
 
-const bool Host::checkForMappingScript()
+bool Host::checkForMappingScript()
 {
     // the mapper script reminder is only shown once
     // because it is too difficult and error prone (->proper script sequence)
@@ -1365,7 +1399,7 @@ bool Host::installPackage(const QString& fileName, int module)
                 }
             }
             // continuing, so update the folder name on disk
-            QString newpath(QStringLiteral("%1/%2/").arg(_home, packageName));
+            QString newpath(QStringLiteral("%1/%2").arg(_home, packageName));
             _dir.rename(_dir.absolutePath(), newpath);
             _dir = QDir(newpath);
         }
@@ -1631,8 +1665,11 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
         return;
     } else {
         // error
-        std::string e = "no error message available from Lua";
-        e = lua_tostring(L, -1);
+        std::string e = lua_tostring(L, -1);
+        if (e.empty()) {
+            e = "no error message available from Lua";
+        }
+
         std::string reason;
         switch (error) {
         case 4:
@@ -1653,10 +1690,10 @@ void Host::readPackageConfig(const QString& luaConfig, QString& packageName)
         }
 
         if (mudlet::debugMode) {
-            qDebug() << reason.c_str() << " in config.lua:" << e.c_str();
+            qDebug() << reason.c_str() << " in config.lua: " << e.c_str();
         }
         // should print error to main display
-        QString msg = QString("%1 in config.lua: %2\n").arg(reason.c_str(), e.c_str());
+        QString msg = QStringLiteral("%1 in config.lua: %2\n").arg(reason.c_str(), e.c_str());
         mpConsole->printSystemMessage(msg);
 
 
@@ -2121,44 +2158,44 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
 {
     Q_UNUSED(_useDictionary);
     bool useDictionary = true;
-    QMutexLocker locker(& mLock);
-    bool isChanged = false;
+    QMutexLocker locker(&mLock);
+    bool dictionaryChanged {};
     // Copy the value while we have the lock:
     bool isSpellCheckingEnabled = mEnableSpellCheck;
     if (mEnableUserDictionary != useDictionary) {
         mEnableUserDictionary = useDictionary;
-        isChanged = true;
+        dictionaryChanged = true;
     }
 
     if (mUseSharedDictionary != useShared) {
         mUseSharedDictionary = useShared;
-        isChanged = true;
+        dictionaryChanged = true;
     }
     locker.unlock();
 
-    // During start-up this gets called for the default_host profile - but that
-    // has a null mpConsole:
-    if (mpConsole) {
-        if (isChanged) {
-            // This will propogate the changes in the two flags to the main
-            // TConsole's copies of them - although setProfileSpellDictionary() is
-            // also called in the main TConsole constructor:
-            mpConsole->setProfileSpellDictionary();
-        }
+    if (!mpConsole) {
+        return;
+    }
 
-        // This also needs to handle the spell checking against the system/mudlet
-        // bundled dictionary being switched on or off. Given that if it has
-        // been disabled the spell checking code won't run we need to clear any
-        // highlights in the TCommandLine instance that may have been present when
-        // spell checking is turned on or off:
-        if (isSpellCheckingEnabled) {
-            // Now enabled - so recheck the whole command line with whichever
-            // dictionaries are active:
-            mpConsole->mpCommandLine->recheckWholeLine();
-        } else {
-            // Or it is now disabled so clear any spelling marks:
-            mpConsole->mpCommandLine->clearMarksOnWholeLine();
-        }
+    if (dictionaryChanged) {
+        // This will propogate the changes in the two flags to the main
+        // TConsole's copies of them - although setProfileSpellDictionary() is
+        // also called in the main TConsole constructor:
+        mpConsole->setProfileSpellDictionary();
+    }
+
+    // This also needs to handle the spell checking against the system/mudlet
+    // bundled dictionary being switched on or off. Given that if it has
+    // been disabled the spell checking code won't run we need to clear any
+    // highlights in the TCommandLine instance that may have been present when
+    // spell checking is turned on or off:
+    if (isSpellCheckingEnabled) {
+        // Now enabled - so recheck the whole command line with whichever
+        // dictionaries are active:
+        mpConsole->mpCommandLine->recheckWholeLine();
+    } else {
+        // Or it is now disabled so clear any spelling marks:
+        mpConsole->mpCommandLine->clearMarksOnWholeLine();
     }
 }
 
@@ -2167,28 +2204,29 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
 // however it should ensure that other classes get updated:
 void Host::setName(const QString& newName)
 {
-    int currentPlayerRoom;
+    if (mHostName == newName) {
+        return;
+    }
+
+    int currentPlayerRoom = 0;
     if (mpMap) {
         currentPlayerRoom = mpMap->mRoomIdHash.take(mHostName);
     }
 
     QMutexLocker locker(& mLock);
-    if (mHostName == newName) {
-        // Oh, it hasn't changed after all so put the player room back and bail
-        // out:
-        mpMap->mRoomIdHash.insert(newName, currentPlayerRoom);
-        return;
-    }
-
+    // Now we have the exclusive lock on this class's protected members
     mHostName = newName;
-    // We have made the change so can unlock the mutex locker and procede:
+    // We have made the change to the protected aspects of this class so can unlock the mutex locker and proceed:
     locker.unlock();
 
     mTelnet.mProfileName = newName;
     if (mpMap) {
         mpMap->mProfileName = newName;
-        mpMap->mRoomIdHash.insert(newName, currentPlayerRoom);
+        if (currentPlayerRoom) {
+            mpMap->mRoomIdHash.insert(newName, currentPlayerRoom);
+        }
     }
+
     if (mpConsole) {
         mpConsole->setProfileName(newName);
     }
@@ -2208,4 +2246,47 @@ void Host::removeAllNonPersistentStopWatches()
         itStopWatch.remove();
         delete pStopWatch;
     }
+}
+
+void Host::updateProxySettings(QNetworkAccessManager* manager)
+{
+    if (mUseProxy && !mProxyAddress.isEmpty() && mProxyPort != 0) {
+        auto& proxy = getConnectionProxy();
+        manager->setProxy(*proxy);
+    } else {
+        manager->setProxy(QNetworkProxy::DefaultProxy);
+    }
+}
+
+std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
+{
+    if (!mpDownloaderProxy) {
+        mpDownloaderProxy = std::make_unique<QNetworkProxy>(QNetworkProxy::Socks5Proxy);
+    }
+    auto& proxy = mpDownloaderProxy;
+    proxy->setHostName(mProxyAddress);
+    proxy->setPort(mProxyPort);
+    if (!mProxyUsername.isEmpty()) {
+        proxy->setUser(mProxyUsername);
+    }
+    if (!mProxyPassword.isEmpty()) {
+        proxy->setPassword(mProxyPassword);
+    }
+
+    return mpDownloaderProxy;
+}
+
+void Host::setDisplayFontSpacing(const qreal spacing)
+{
+    mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, spacing);
+}
+
+void Host::setDisplayFontStyle(QFont::StyleStrategy s)
+{
+    mDisplayFont.setStyleStrategy(s);
+}
+
+void Host::setDisplayFontFixedPitch(bool enable)
+{
+    mDisplayFont.setFixedPitch(enable);
 }

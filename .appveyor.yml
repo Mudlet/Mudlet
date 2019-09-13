@@ -1,4 +1,9 @@
 version: 1.0.{build}
+branches:
+  only:
+  - development    # build the default branch
+  - /^release-.+/  # build release branches
+  - /^Mudlet-.+/   # build release tags (yes, the option also applies to tags)
 init:
 - cmd: mkdir C:\src\
 environment:
@@ -13,7 +18,8 @@ environment:
   DBLSQD_PASS:
     secure: Bm5PLJjC39XmRC55RPGVP9c5CFxvWu2VorAAmu5QS38=
   matrix:
-  - QT_BASE_DIR: C:\Qt\5.11\mingw53_32
+  - QT_BASE_DIR: C:\Qt\5.12.3\mingw73_32
+    MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32
 install:
 - cd "%APPVEYOR_BUILD_FOLDER%\CI"
 - powershell ".\appveyor.install.ps1"
@@ -26,9 +32,8 @@ on_failure:
 - cd C:\src
 - bash -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
 
-artifacts:
-- path: src\release
-  name: mudlet
+cache:
+  - '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
 
 notifications:
 - provider: Webhook

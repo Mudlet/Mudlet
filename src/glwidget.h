@@ -112,15 +112,10 @@ private:
     float dehnung;
     int mShowTopLevels;
     int mShowBottomLevels;
-    QPoint lastPos;
-    QColor qtGreen;
-    QColor qtPurple;
 
-    GLfloat rotTri, rotQuad;
     float mScale;
     int mTarget;
     QPointer<Host> mpHost;
-    QMap<int, int> mQuads;
 };
 
 #endif // MUDLET_GLWIDGET_H

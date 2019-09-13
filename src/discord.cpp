@@ -23,9 +23,7 @@
 
 #include "pre_guard.h"
 #include <QtDebug>
-#include <QSet>
 #include <QHash>
-#include <ctime>
 #include <string.h>
 #include "post_guard.h"
 

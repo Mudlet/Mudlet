@@ -45,10 +45,8 @@
 #include <QShortcut>
 #include <QTextBoundaryFinder>
 #include <QTextCodec>
+#include <QPainter>
 #include "post_guard.h"
-
-
-using namespace std;
 
 const QString TConsole::cmLuaLineVariable("line");
 
@@ -368,7 +366,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     timeStampButton->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>").arg(
         tr("Show Time Stamps.")));
     timeStampButton->setIcon(QIcon(QStringLiteral(":/icons/dialog-information.png")));
-    connect(timeStampButton, &QAbstractButton::pressed, mUpperPane, &TTextEdit::slot_toggleTimeStamps);
+    connect(timeStampButton, &QAbstractButton::toggled, mUpperPane, &TTextEdit::slot_toggleTimeStamps);
+    connect(timeStampButton, &QAbstractButton::toggled, mLowerPane, &TTextEdit::slot_toggleTimeStamps);
 
     auto replayButton = new QToolButton;
     replayButton->setCheckable(true);
@@ -718,9 +717,11 @@ void TConsole::closeEvent(QCloseEvent* event)
 
     if (mType & (SubConsole|Buffer)) {
         if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
-            QString key = objectName();
-            auto pC = mpHost->mpConsole->mSubConsoleMap.take(key);
+            auto pC = mpHost->mpConsole->mSubConsoleMap.take(mConsoleName);
             if (pC) {
+                // As it happens pC will be identical to 'this' it is just that
+                // we will have removed it from the main TConsole's
+                // mSubConsoleMap:
                 mUpperPane->close();
                 mLowerPane->close();
             }
@@ -736,10 +737,12 @@ void TConsole::closeEvent(QCloseEvent* event)
 
     if (mType == UserWindow) {
         if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
-            QString key = objectName();
-            auto pC = mpHost->mpConsole->mSubConsoleMap.take(key);
-            auto pD = mpHost->mpConsole->mDockWidgetMap.take(key);
+            auto pC = mpHost->mpConsole->mSubConsoleMap.take(mConsoleName);
+            auto pD = mpHost->mpConsole->mDockWidgetMap.take(mConsoleName);
             if (pC) {
+                // As it happens pC will be identical to 'this' it is just that
+                // we will have removed it from the main TConsole's
+                // mSubConsoleMap:
                 mUpperPane->close();
                 mLowerPane->close();
             }
@@ -756,38 +759,36 @@ void TConsole::closeEvent(QCloseEvent* event)
         }
     }
 
-    if (mProfileName != QLatin1String("default_host")) {
-        TEvent conCloseEvent {};
-        conCloseEvent.mArgumentList.append(QLatin1String("sysExitEvent"));
-        conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(conCloseEvent);
+    TEvent conCloseEvent{};
+    conCloseEvent.mArgumentList.append(QStringLiteral("sysExitEvent"));
+    conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(conCloseEvent);
 
-        if (mpHost->mFORCE_SAVE_ON_EXIT) {
-            mudlet::self()->saveWindowLayout();
-            mpHost->modulesToWrite.clear();
-            mpHost->saveProfile();
+    if (mpHost->mFORCE_SAVE_ON_EXIT) {
+        mudlet::self()->saveWindowLayout();
+        mpHost->modulesToWrite.clear();
+        mpHost->saveProfile();
 
-            if (mpHost->mpMap->mpRoomDB->size() > 0) {
-                QDir dir_map;
-                QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
-                // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (3 of 6)
-                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
-                if (!dir_map.exists(directory_map)) {
-                    dir_map.mkpath(directory_map);
-                }
-                QFile file_map(filename_map);
-                if (file_map.open(QIODevice::WriteOnly)) {
-                    QDataStream out(&file_map);
-                    mpHost->mpMap->serialize(out);
-                    file_map.close();
-                }
+        if (mpHost->mpMap->mpRoomDB->size() > 0) {
+            QDir dir_map;
+            QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
+            // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (3 of 6)
+            QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
+            if (!dir_map.exists(directory_map)) {
+                dir_map.mkpath(directory_map);
             }
-            event->accept();
-            return;
+            QFile file_map(filename_map);
+            if (file_map.open(QIODevice::WriteOnly)) {
+                QDataStream out(&file_map);
+                mpHost->mpMap->serialize(out);
+                file_map.close();
+            }
         }
+        event->accept();
+        return;
     }
 
-    if (mProfileName != "default_host" && !mUserAgreedToCloseConsole) {
+    if (!mUserAgreedToCloseConsole) {
     ASK:
         int choice = QMessageBox::question(this, tr("Save profile?"), tr("Do you want to save the profile %1?").arg(mProfileName), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
         if (choice == QMessageBox::Cancel) {
@@ -808,7 +809,7 @@ void TConsole::closeEvent(QCloseEvent* event)
                 QDir dir_map;
                 QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
                 // CHECKME: Consider changing datetime spec to more "sortable" "yyyy-MM-dd#HH-mm-ss" (4 of 6)
-                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("dd-MM-yyyy#hh-mm-ss"));
+                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(QStringLiteral("dd-MM-yyyy#hh-mm-ss")));
                 if (!dir_map.exists(directory_map)) {
                     dir_map.mkpath(directory_map);
                 }
@@ -1003,7 +1004,7 @@ void TConsole::toggleLogging(bool isMessageEnabled)
                 logStream << "  </div><hr><div>\n";
             }
             logStream << QStringLiteral("<p>%1</p>\n")
-                         .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'",
+                         .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.",
                                                       "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
             // <div></div> tags required around outside of the body <span></spans> for
             // strict HTML 4 as we do not use <p></p>s or anything else
@@ -1024,8 +1025,9 @@ void TConsole::toggleLogging(bool isMessageEnabled)
                 // file to not trigger the insertion of this line:
                 mLogStream << QStringLiteral("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯").repeated(8).append(QChar::LineFeed);
             }
-            mLogStream << logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.\n",
-                                                  "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale"));
+            mLogStream << QStringLiteral("%1\n")
+                         .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.",
+                                                  "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
 
         }
         logButton->setToolTip(QStringLiteral("<html><head/><body>%1</body></html>")
@@ -1033,9 +1035,8 @@ void TConsole::toggleLogging(bool isMessageEnabled)
     } else {
         // Logging is being turned off
         buffer.logRemainingOutput();
-        QString endDateTimeLine = tr("Log session ending at %1.")
-                .arg(logDateTime.toString(tr("hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy",
-                                             "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
+        QString endDateTimeLine = logDateTime.toString(tr("'Log session ending at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.",
+                                             "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale"));
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             mLogStream << QStringLiteral("<p>%1</p>\n").arg(endDateTimeLine);
             mLogStream << "  </div></body>\n";
@@ -1119,11 +1120,11 @@ void TConsole::changeColors()
         const QString t = "123";
         p.drawText(r, 1, t, &r2);
         // N/U:        int mFontHeight = QFontMetrics( mDisplayFont ).height();
-        int mFontWidth = QFontMetrics(mDisplayFont).width(QChar('W'));
+        int mFontWidth = QFontMetrics(mDisplayFont).averageCharWidth();
         auto letterSpacing = static_cast<qreal>(mFontWidth - static_cast<qreal>(r2.width() / t.size()));
         mUpperPane->mLetterSpacing = letterSpacing;
         mLowerPane->mLetterSpacing = letterSpacing;
-        mpHost->mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
+        mpHost->setDisplayFontSpacing(letterSpacing);
         mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, mUpperPane->mLetterSpacing);
 #endif
         mDisplayFont.setFixedPitch(true);
@@ -1148,32 +1149,32 @@ void TConsole::changeColors()
             mpCommandLine->mRegularPalette = pal;
         }
         if (mpHost->mNoAntiAlias) {
-            mpHost->mDisplayFont.setStyleStrategy(QFont::NoAntialias);
+            mpHost->setDisplayFontStyle(QFont::NoAntialias);
         } else {
-            mpHost->mDisplayFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferAntialias | QFont::PreferQuality));
+            mpHost->setDisplayFontStyle(QFont::StyleStrategy(QFont::PreferAntialias | QFont::PreferQuality));
         }
-        mpHost->mDisplayFont.setFixedPitch(true);
+        mpHost->setDisplayFontFixedPitch(true);
         mDisplayFont.setFixedPitch(true);
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap(2000, 600);
         QPainter p(&pixmap);
-        QFont _font = mpHost->mDisplayFont;
+        QFont _font = mpHost->getDisplayFont();
         _font.setLetterSpacing(QFont::AbsoluteSpacing, 0);
         p.setFont(_font);
         const QRectF r = QRectF(0, 0, 2000, 600);
         QRectF r2;
         const QString t = "123";
         p.drawText(r, 1, t, &r2);
-        // N/U:        int mFontHeight = QFontMetrics( mpHost->mDisplayFont ).height();
-        int mFontWidth = QFontMetrics(mpHost->mDisplayFont).width(QChar('W'));
+        // N/U:        int mFontHeight = QFontMetrics( mpHost->getDisplayFont() ).height();
+        int mFontWidth = QFontMetrics(mpHost->getDisplayFont()).averageCharWidth();
         auto letterSpacing = static_cast<qreal>(mFontWidth - static_cast<qreal>(r2.width() / t.size()));
         mUpperPane->mLetterSpacing = letterSpacing;
         mLowerPane->mLetterSpacing = letterSpacing;
-        mpHost->mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, letterSpacing);
+        mpHost->setDisplayFontSpacing(letterSpacing);
         mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, mUpperPane->mLetterSpacing);
 #endif
-        mUpperPane->setFont(mpHost->mDisplayFont);
-        mLowerPane->setFont(mpHost->mDisplayFont);
+        mUpperPane->setFont(mpHost->getDisplayFont());
+        mLowerPane->setFont(mpHost->getDisplayFont());
         QPalette palette;
         palette.setColor(QPalette::Text, mpHost->mFgColor);
         palette.setColor(QPalette::Highlight, QColor(55, 55, 255));
@@ -1185,7 +1186,7 @@ void TConsole::changeColors()
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
         if (mpCommandLine) {
-            mpCommandLine->setFont(mpHost->mDisplayFont);
+            mpCommandLine->setFont(mpHost->getDisplayFont());
         }
         mFormatCurrent.setColors(mpHost->mFgColor, mpHost->mBgColor);
     } else {
@@ -2038,23 +2039,25 @@ bool TConsole::selectSection(int from, int to)
 std::tuple<bool, QString, int, int> TConsole::getSelection()
 {
     if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
-        return make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
+        return std::make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
     }
 
     const auto start = P_begin.x();
     const auto length = P_end.x() - P_begin.x();
     const auto line = buffer.line(mUserCursor.y());
     if (line.size() < start) {
-        return make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
+        return std::make_tuple(false, QStringLiteral("the selection is no longer valid"), 0, 0);
     }
 
     const auto text = line.mid(start, length);
-    return make_tuple(true, text, start, length);
+    return std::make_tuple(true, text, start, length);
 }
 
 void TConsole::setLink(const QStringList& linkFunction, const QStringList& linkHint)
 {
     buffer.applyLink(P_begin, P_end, linkFunction, linkHint);
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 // Set or Reset ALL the specified (but not others)
@@ -2062,28 +2065,38 @@ void TConsole::setDisplayAttributes(const TChar::AttributeFlags attributes, cons
 {
     mFormatCurrent.setAllDisplayAttributes((mFormatCurrent.allDisplayAttributes() & ~(attributes)) | (b ? attributes : TChar::None));
     buffer.applyAttribute(P_begin, P_end, attributes, b);
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 void TConsole::setFgColor(int r, int g, int b)
 {
     setFgColor(QColor(r, g, b));
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 void TConsole::setBgColor(int r, int g, int b)
 {
     setBgColor(QColor(r, g, b));
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 void TConsole::setBgColor(const QColor& newColor)
 {
     mFormatCurrent.setBackground(newColor);
     buffer.applyBgColor(P_begin, P_end, newColor);
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 void TConsole::setFgColor(const QColor& newColor)
 {
     mFormatCurrent.setForeground(newColor);
     buffer.applyFgColor(P_begin, P_end, newColor);
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 void TConsole::setScrollBarVisible(bool isVisible)
@@ -2225,7 +2238,9 @@ void TConsole::createMapper(int x, int y, int width, int height)
 {
     if (!mpMapper) {
         mpMapper = new dlgMapper(mpMainFrame, mpHost, mpHost->mpMap.data());
+#if defined(INCLUDE_3DMAPPER)
         mpHost->mpMap->mpM = mpMapper->glWidget;
+#endif
         mpHost->mpMap->mpHost = mpHost;
         mpHost->mpMap->mpMapper = mpMapper;
         qDebug() << "TConsole::createMapper() - restore map case 2.";
@@ -2248,7 +2263,22 @@ void TConsole::createMapper(int x, int y, int width, int height)
     }
     mpMapper->resize(width, height);
     mpMapper->move(x, y);
+
+    // Qt bug workaround: on Windows and during profile load only, if the mapper widget is created
+    // it gives a height and width to mpLeftToolBar, mpRightToolBar, and mpTopToolBar for
+    // some reason. Those widgets size back down immediately after on their own (?!), however if
+    // getMainWindowSize() is called right after map create, the sizes reported will be wrong
+#if defined(Q_OS_WIN32)
+    mpLeftToolBar->setHidden(true);
+    mpRightToolBar->setHidden(true);
+    mpTopToolBar->setHidden(true);
     mpMapper->show();
+    mpLeftToolBar->setVisible(true);
+    mpRightToolBar->setVisible(true);
+    mpTopToolBar->setVisible(true);
+#else
+    mpMapper->show();
+#endif
 }
 
 bool TConsole::createButton(const QString& name, int x, int y, int width, int height, bool fillBackground)
@@ -2730,14 +2760,20 @@ void TConsole::setSystemSpellDictionary(const QString& newDict)
     mSpellDic = newDict;
 
     QString path = mudlet::getMudletPath(mudlet::hunspellDictionaryPath, mpHost->getSpellDic());
-
     QString spell_aff = QStringLiteral("%1%2.aff").arg(path, newDict);
     QString spell_dic = QStringLiteral("%1%2.dic").arg(path, newDict);
-    // The man page for hunspell advises Utf8 encoding of the pathFileNames for
-    // use on Windows platforms which can have non ASCII characters...
+
     if (mpHunspell_system) {
         Hunspell_destroy(mpHunspell_system);
     }
+
+#if defined(Q_OS_WIN32)
+    // strip non-ASCII characters from the path because hunspell can't handle them
+    // when compiled with MinGW 7.3.0
+    mudlet::self()->sanitizeUtf8Path(spell_aff, QStringLiteral("%1.aff").arg(newDict));
+    mudlet::self()->sanitizeUtf8Path(spell_dic, QStringLiteral("%1.dic").arg(newDict));
+#endif
+
     mpHunspell_system = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
     if (mpHunspell_system) {
         mHunspellCodecName_system = QByteArray(Hunspell_get_dic_encoding(mpHunspell_system));

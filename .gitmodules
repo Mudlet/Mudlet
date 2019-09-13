@@ -1,6 +1,6 @@
 [submodule "3rdparty/edbee-lib"]
 	path = 3rdparty/edbee-lib
-	url = http://github.com/dicene/edbee-lib.git
+	url = https://github.com/Mudlet/edbee-lib.git
 [submodule "3rdparty/lua_code_formatter"]
 	path = 3rdparty/lcf
 	url = https://github.com/martin-eden/lua_code_formatter.git
@@ -10,3 +10,6 @@
 [submodule "3rdparty/sparkle-glue"]
 	path = 3rdparty/sparkle-glue
 	url = https://github.com/Mudlet/mixing-cocoa-and-qt.git
+[submodule "3rdparty/qtkeychain"]
+	path = 3rdparty/qtkeychain
+	url = https://github.com/frankosterfeld/qtkeychain.git

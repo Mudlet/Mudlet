@@ -248,9 +248,13 @@ bool LuaInterface::reparentVariable(QTreeWidgetItem* newP, QTreeWidgetItem* cIte
     //if both exist:
     //this means we were moved from inside a table to inside another table
     //and in both instances, this table was not _G
+    TVar* curVar = varUnit->getWVar(cItem);
+    if (!curVar) {
+        return false;
+    }
+
     L = interpreter->pGlobalLua;
     TVar* newParent = varUnit->getWVar(newP);
-    TVar* curVar = varUnit->getWVar(cItem);
     TVar* oldParent = varUnit->getWVar(oldP);
     TVar* from = oldParent;
     TVar* to = newParent;

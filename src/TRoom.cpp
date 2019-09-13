@@ -43,16 +43,16 @@ QDataStream &operator>>(QDataStream& ds, Qt::PenStyle& value)
     ds >> temporary;
     switch(temporary) {
     case Qt::DotLine:
-        [[clang::fallthrough]];
+        [[fallthrough]];
     case Qt::DashLine:
-        [[clang::fallthrough]];
+        [[fallthrough]];
     case Qt::DashDotLine:
-        [[clang::fallthrough]];
+        [[fallthrough]];
     case Qt::DashDotDotLine:
         value = static_cast<Qt::PenStyle>(temporary);
         break;
     case Qt::SolidLine:
-        [[clang::fallthrough]];
+        [[fallthrough]];
     default:
     // Force anything else to be a solidline
         value = Qt::SolidLine;
@@ -198,12 +198,11 @@ void TRoom::setExitWeight(const QString& cmd, int w)
     }
 }
 
-// Declared in header but was missing!
 // Uses lower case initials: n,ne,e,se,s,sw,w,nw
 //
 // also: up, down, in, out or any unprefixed special exit command
 // all of which can be stored but aren't (yet?) showable on the 2D mapper
-const bool TRoom::setDoor(const QString& cmd, const int doorStatus)
+bool TRoom::setDoor(const QString& cmd, const int doorStatus)
 {
     if (doorStatus > 0 && doorStatus <= 3) {
         if (doors.value(cmd, 0) != doorStatus) {
@@ -629,7 +628,7 @@ void TRoom::setSpecialExit(int to, const QString& cmd)
     // Have definitely removed the existing case of this command
     // Now add it to map if wanted
 
-    if (to > 1) {
+    if (to > 0) {
         if (_prefix.isEmpty()) {
             _prefix = '0';
         }
@@ -844,7 +843,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             QMap<QString, QList<int>> oldLinesColorData;
             ifs >> oldLinesColorData;
             QMapIterator<QString, QList<int>> itCustomLineColor(oldLinesColorData);
-            while (itCustomLine.hasNext()) {
+            while (itCustomLineColor.hasNext()) {
                 itCustomLineColor.next();
                 QString direction(itCustomLineColor.key());
                 if (direction == QLatin1String("N") || direction == QLatin1String("E") || direction == QLatin1String("S") || direction == QLatin1String("W") || direction == QLatin1String("UP")
@@ -855,10 +854,36 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
                     || direction == QLatin1String("NW")
                     || direction == QLatin1String("IN")
                     || direction == QLatin1String("OUT")) {
-                    customLinesColor.insert(itCustomLineColor.key().toLower(), QColor(itCustomLineColor.value().at(0), itCustomLineColor.value().at(1), itCustomLineColor.value().at(2)));
+
+                    // Fixup broken custom lines caused by maps saved prior to
+                    // https://github.com/Mudlet/Mudlet/pull/2559 going into the
+                    // code by only adding the value if it contains enough
+                    // colour components to be a valid colour:
+                    if (itCustomLineColor.value().count() > 2) {
+                        customLinesColor.insert(itCustomLineColor.key().toLower(), QColor(itCustomLineColor.value().at(0), itCustomLineColor.value().at(1), itCustomLineColor.value().at(2)));
+                    }
+                    // Otherwise we will fixup both empty
+                    // itCustomLineColor.value() entites AND altogether missing
+                    // ones outside of the while() {...}:
                 } else {
-                    customLinesColor.insert(itCustomLineColor.key(), QColor(itCustomLineColor.value().at(0), itCustomLineColor.value().at(1), itCustomLineColor.value().at(2)));
+                    if (itCustomLineColor.value().count() > 2) {
+                        customLinesColor.insert(itCustomLineColor.key(), QColor(itCustomLineColor.value().at(0), itCustomLineColor.value().at(1), itCustomLineColor.value().at(2)));
+                    }
                 }
+            }
+
+            // Create new (RED) colour customLinesColor entities for any custom
+            // exit lines that does not have one or has an empty one as a result
+            // of https://github.com/Mudlet/Mudlet/issues/2558 - use a QSet
+            // rather than a QList when manipulating the present/absent
+            // direction keys as there won't be any duplicate keys and the
+            // operation we want to perform (obtain the directions of all custom
+            // exit lines and remove those which are already included in the
+            // colours) is much easier to perform on a QSet rather than a QList:
+            QSet<QString> missingKeys = customLines.keys().toSet().subtract(customLinesColor.keys().toSet());
+            QSetIterator<QString> itMissingCustomLineColourKey(missingKeys);
+            while (itMissingCustomLineColourKey.hasNext()) {
+                customLinesColor.insert(itMissingCustomLineColourKey.next(), QColor(Qt::red));
             }
 
             QMap<QString, QString> oldLineStyleData;

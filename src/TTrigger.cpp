@@ -34,9 +34,6 @@
 #include <cassert>
 #include <sstream>
 
-
-using namespace std;
-
 // Some extraordinary numbers outside of the range (0-255) used for ANSI colors:
 // Changing them WILL modify the Lua API of TLuaInterpreter::tempColorTrigger
 // and the replacement TLuaInterpreter::tempAnsiColorTrigger
@@ -178,7 +175,8 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
     }
 
     if ((propertyList.empty()) && (!isFolder()) && (!mColorTrigger)) {
-        setError("No patterns defined.");
+        setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
+                .arg(tr("Error: This trigger has no patterns defined, yet. Add some to activate it.")));
         mOK_init = false;
         return false;
     }
@@ -209,7 +207,8 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
                     TDebug(QColor(Qt::red), QColor(Qt::gray)) << R"(in: ")" << regexp.constData() << "\"\n" >> 0;
                 }
                 setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
-                                 .arg(tr(R"(Error: in item %1, perl regex: "%2", it failed to compile, reason: "%3".)").arg(QString::number(i + 1), regexp.constData(), error)));
+                         .arg(tr(R"(Error: in item %1, perl regex "%2" failed to compile, reason: "%3".)")
+                         .arg(QString::number(i + 1), regexp.constData(), error)));
                 state = false;
             } else {
                 if (mudlet::debugMode) {
@@ -229,7 +228,8 @@ bool TTrigger::setRegexCodeList(QStringList regexList, QList<int> propertyList)
             QString error;
             if (!mpLua->compile(code, error, QString::fromStdString(funcName))) {
                 setError(QStringLiteral("<b><font color='blue'>%1</font></b>")
-                                 .arg(tr(R"(Error: in item %1, lua condition function "%2" failed to compile, reason: "%3".)").arg(QString::number(i + 1), regexList.at(i), error)));
+                         .arg(tr(R"(Error: in item %1, lua function "%2" failed to compile, reason: "%3".)")
+                         .arg(QString::number(i + 1), regexList.at(i), error)));
                 state = false;
                 if (mudlet::debugMode) {
                     TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA ERROR: failed to compile, reason:\n" << error << "\n" >> 0;
@@ -765,7 +765,7 @@ bool TTrigger::match_line_spacer(int regexNumber)
                                 >> 0;
                     }
                     matchStatePair.second->conditionMatched();
-                    std::list<string> captureList;
+                    std::list<std::string> captureList;
                     std::list<int> posList;
                     matchStatePair.second->multiCaptureList.push_back(captureList);
                     matchStatePair.second->multiCapturePosList.push_back(posList);
@@ -964,7 +964,7 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
         if (mIsMultiline) {
             int k = 0;
             conditionMet = false; //invalidate conditionMet as it has no meaning for multiline triggers
-            list<TMatchState*> removeList;
+            std::list<TMatchState*> removeList;
 
             for (auto& matchStatePair : mConditionMap) {
                 k++;

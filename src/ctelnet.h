@@ -46,7 +46,6 @@
 #include <string>
 
 #if defined(Q_OS_WIN32)
-#include <Winsock2.h>
 #include <ws2tcpip.h>
 #include "mstcpip.h"
 #else
@@ -105,6 +104,7 @@ const char OPT_TERMINAL_TYPE = 24;
 const char OPT_EOR = 25;
 const char OPT_NAWS = 31;
 const char OPT_MSDP = 69; // http://tintin.sourceforge.net/msdp/
+const char OPT_MSSP = static_cast<char>(70); // https://tintin.sourceforge.io/protocols/mssp/
 const char OPT_COMPRESS = 85;
 const char OPT_COMPRESS2 = 86;
 const char OPT_MSP = 90;
@@ -112,6 +112,9 @@ const char OPT_MXP = 91;
 const char OPT_102 = 102;
 const char OPT_ATCP = static_cast<char>(200);
 const char OPT_GMCP = static_cast<char>(201);
+
+const char MSSP_VAR = 1;
+const char MSSP_VAL = 2;
 
 const char MSDP_VAR = 1;
 const char MSDP_VAL = 2;
@@ -130,11 +133,13 @@ public:
     cTelnet(Host* pH, const QString&);
     ~cTelnet();
     void connectIt(const QString& address, int port);
+    void reconnect();
     void disconnectIt();
     void abortConnection();
     bool sendData(QString& data);
     void setATCPVariables(const QByteArray&);
     void setGMCPVariables(const QByteArray&);
+    void setMSSPVariables(const QByteArray&);
     void atcpComposerCancel();
     void atcpComposerSave(QString);
     void setDisplayDimensions();
@@ -149,12 +154,12 @@ public:
     void setChannel102Variables(const QString&);
     bool socketOutRaw(std::string& data);
     const QString & getEncoding() const { return mEncoding; }
-    QPair<bool, QString> setEncoding(const QString &, bool isToStore = true);
+    QPair<bool, QString> setEncoding(const QString &, bool saveValue = true);
     void postMessage(QString);
     const QStringList & getEncodingsList() const { return mAcceptableEncodings; }
     const QStringList & getFriendlyEncodingsList() const { return mFriendlyEncodings; }
     const QString& getComputerEncoding(const QString& encoding);
-    const QString& getFriendlyEncoding();
+    const QString& getFriendlyEncoding() const;
     QAbstractSocket::SocketError error();
     QString errorString();
 #if !defined(QT_NO_SSL)
@@ -165,6 +170,7 @@ public:
     std::string encodeAndCookBytes(const std::string&);
     bool isATCPEnabled() const { return enableATCP; }
     bool isGMCPEnabled() const { return enableGMCP; }
+    bool isMSSPEnabled() const { return enableMSSP; }
     bool isChannel102Enabled() const { return enableChannel102; }
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
@@ -281,6 +287,7 @@ private:
     int lastTimeOffset;
     bool enableATCP;
     bool enableGMCP;
+    bool enableMSSP;
     bool enableChannel102;
     bool mDontReconnect;
     bool mAutoReconnect;
@@ -296,6 +303,9 @@ private:
     // encoding (when the user wants to use characters that cannot be encoded in
     // the current Server Encoding) - gets reset when the encoding is changed:
     bool mEncodingWarningIssued;
+
+    // Set if the current connection is via a proxy
+    bool mConnectViaProxy;
 
 private slots:
 #if !defined(QT_NO_SSL)

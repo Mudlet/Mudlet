@@ -44,7 +44,7 @@ public:
     bool hasChildren() const { return (!mpMyChildrenList->empty()); }
     int getChildCount() const { return mpMyChildrenList->size(); }
     int getID() const { return mID; }
-    void setID(const int id) { mID = id; }
+    virtual void setID(const int id) { mID = id; }
     void addChild(T* newChild, int parentPostion = -1, int parentPosition = -1);
     bool popChild(T* removeChild);
     void setParent(T* parent);

@@ -31,8 +31,6 @@
 
 void FontManager::addFonts()
 {
-    // load all font files we see. I'd also like to load files with mime type of "application/x-font-ttf" but Qt lacks a function to check for them
-
     QDir dir(mudlet::getMudletPath(mudlet::mainFontsPath));
 
     if (!dir.exists()) {

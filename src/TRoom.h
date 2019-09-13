@@ -78,7 +78,7 @@ public:
     const QMap<QString, int>& getExitWeights() const { return exitWeights; }
     void setExitWeight(const QString& cmd, int w);
     bool hasExitWeight(const QString& cmd);
-    const bool setDoor(const QString& cmd, int doorStatus); //0=no door, 1=open door, 2=closed, 3=locked
+    bool setDoor(const QString& cmd, int doorStatus); //0=no door, 1=open door, 2=closed, 3=locked
     int getDoor(const QString& cmd);
     bool hasExitStub(int direction);
     void setExitStub(int direction, bool status);

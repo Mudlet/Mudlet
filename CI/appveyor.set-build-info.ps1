@@ -3,7 +3,7 @@ cd $Env:APPVEYOR_BUILD_FOLDER
 if ($Env:APPVEYOR_REPO_TAG -eq "false") {
   $Env:MUDLET_VERSION_BUILD = "-testing"
   if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
-      $Script:Commit = git rev-parse --short $Env:APPVEYOR_REPO_COMMIT
+      $Script:Commit = git rev-parse --short $Env:APPVEYOR_PULL_REQUEST_HEAD_COMMIT
       $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-PR$Env:APPVEYOR_PULL_REQUEST_NUMBER-$Commit"
   } else {
     $Script:Commit = git rev-parse --short HEAD
