@@ -2250,6 +2250,7 @@ function map.stop_mapping()
 end
 
 function map.clear_moves()
+    local commands_in_queue = #move_queue
     move_queue = {}
     map.echo("Move queue cleared, "..commands_in_queue.." commands removed.")
 end
