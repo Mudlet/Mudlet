@@ -2411,11 +2411,11 @@ void dlgConnectionProfiles::slot_togglePasswordVisibility(const bool showPasswor
         // In practice I could not get the icon to change based upon supplying
         // different QPixmaps for the QIcon for different states - so lets do it
         // directly:
-        mpAction_revealPassword->setIcon(QPixmap(QStringLiteral(":/icons/layer-visible-on.png")));
+        mpAction_revealPassword->setIcon(QIcon::fromTheme(QStringLiteral("password-show-on"), QIcon(QStringLiteral(":/icons/password-show-on.png"))));
         mpAction_revealPassword->setToolTip(tr("<p>Click to hide the password; it will also hide if another profile is selected.</p>"));
     } else {
         character_password_entry->setEchoMode(QLineEdit::Password);
-        mpAction_revealPassword->setIcon(QPixmap(QStringLiteral(":/icons/layer-visible-off-redlined.png")));
+        mpAction_revealPassword->setIcon(QIcon::fromTheme(QStringLiteral("password-show-off"), QIcon(QStringLiteral(":/icons/password-show-off.png"))));
         mpAction_revealPassword->setToolTip(tr("<p>Click to reveal the password for this profile.</p>"));
     }
 }
