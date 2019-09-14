@@ -233,9 +233,7 @@ function Geyser.Container:flash (time)
   resizeWindow(name, width, height)
   moveWindow(name, x, y)
   setBackgroundColor(name, 190, 190, 190, 128)
-  if self.clickCallback then
-    setLabelClickCallback(name, self.clickCallback, unpack(self.clickArgs))
-  end
+  enableClickthrough(name)
   showWindow(name)
   tempTimer(time, "hideWindow(\"" .. name .. "\")")
 end
