@@ -31,6 +31,12 @@ Geyser.Gauge = Geyser.Container:new({
 -- @param maxValue Maximum numeric value.  Optionally nil, see above.
 -- @param text The text to display on the gauge, it is optional.
 function Geyser.Gauge:setValue (currentValue, maxValue, text)
+  if type(currentValue) ~= "number" then
+    error("Geyser.Gauge:setValue(currentValue, maxValue, text) currentValue as number expected, got " .. type(currentValue))
+  end
+  if maxValue and type(maxValue) ~= "number" then
+    error("Geyser.Gauge:setValue(currentValue, maxValue, text) maxValue as number expected, got " .. type(maxValue))
+  end
   -- Use sensible defaults for missing parameters.
   if currentValue < 0 then
     currentValue = 0
