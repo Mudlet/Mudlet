@@ -4301,16 +4301,14 @@ int TLuaInterpreter::setRoomEnv(lua_State* L)
 {
     int id, env;
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "setRoomEnv: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "setRoomEnv: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         id = lua_tonumber(L, 1);
     }
     if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "setRoomEnv: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "setRoomEnv: bad argument #2 type (environment id as number expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
     } else {
         env = lua_tonumber(L, 2);
     }
@@ -4318,9 +4316,13 @@ int TLuaInterpreter::setRoomEnv(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         pR->environment = env;
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, "room %d doesn't exist", id);
+        return 2;
     }
-
-    return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomName
