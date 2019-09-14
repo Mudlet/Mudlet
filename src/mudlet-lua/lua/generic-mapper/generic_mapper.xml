@@ -1406,12 +1406,15 @@ function map.show_help(cmd)
         if target then
             local before, link, after = w:match("(.*)&lt;link: [^&gt;]+&gt;(.*)&lt;/link&gt;(.*)")
             cecho(before)
-            link = "&lt;yellow&gt;"..link.."&lt;reset&gt;"
+            fg("yellow")
+            setUnderline(true)
             if target ~= "1" then
-                cechoLink(link,[[map.show_help("]]..target..[[")]],"View: map help " .. target,true)
+                echoLink(link,[[map.show_help("]]..target..[[")]],"View: map help " .. target,true)
             else
-                cechoLink(link,[[map.show_help()]],"View: map help",true)
+                echoLink(link,[[map.show_help()]],"View: map help",true)
             end
+            setUnderline(false)
+            resetFormat()
             cecho(after)
         else
             cecho(w)
