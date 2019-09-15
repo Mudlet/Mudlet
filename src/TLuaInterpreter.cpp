@@ -2095,11 +2095,11 @@ int TLuaInterpreter::adjustStopWatch(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#destroyStopWatch
-int TLuaInterpreter::destroyStopWatch(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteStopWatch
+int TLuaInterpreter::deleteStopWatch(lua_State* L)
 {
     if (!(lua_isnumber(L, 1) || lua_isstring(L, 1))) {
-        lua_pushfstring(L, "destroyStopWatch: bad argument #1 type (stopwatch id as number or name as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "deleteStopWatch: bad argument #1 type (stopwatch id as number or name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
 
@@ -15608,7 +15608,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "startStopWatch", TLuaInterpreter::startStopWatch);
     lua_register(pGlobalLua, "resetStopWatch", TLuaInterpreter::resetStopWatch);
     lua_register(pGlobalLua, "adjustStopWatch", TLuaInterpreter::adjustStopWatch);
-    lua_register(pGlobalLua, "destroyStopWatch", TLuaInterpreter::destroyStopWatch);
+    lua_register(pGlobalLua, "deleteStopWatch", TLuaInterpreter::deleteStopWatch);
     lua_register(pGlobalLua, "setStopWatchPersistence", TLuaInterpreter::setStopWatchPersistence);
     lua_register(pGlobalLua, "getStopWatches", TLuaInterpreter::getStopWatches);
     lua_register(pGlobalLua, "setStopWatchName", TLuaInterpreter::setStopWatchName);

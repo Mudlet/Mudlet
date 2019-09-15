@@ -322,7 +322,7 @@ public:
     static int startStopWatch(lua_State*);
     static int resetStopWatch(lua_State*);
     static int adjustStopWatch(lua_State*);
-    static int destroyStopWatch(lua_State*);
+    static int deleteStopWatch(lua_State*);
     static int setStopWatchPersistence(lua_State*);
     static int getStopWatches(lua_State*);
     static int setStopWatchName(lua_State*);
