@@ -14,9 +14,8 @@
 ---   end
 ---   </pre>
 function table.is_empty(tbl)
-  if next(tbl) == nil then
-    return true else return false
-  end
+  assert(type(tbl) == "table", string.format("bad argument #1 type (table expected, got %s!)", type(currentValue)))
+  return next(tbl) == nil
 end
 
 -- The filter() method creates a new table with all elements that pass the test
