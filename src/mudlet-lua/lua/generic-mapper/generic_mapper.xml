@@ -2218,7 +2218,7 @@ function map.start_mapping(area_name)
         area_name = areas[map.currentArea]
     end
     if not area_name then
-        show_err("No current area name, set one like this: &lt;yellow&gt;start mapping &lt;area name&gt;&lt;reset&gt;")
+        show_err("You haven't started mapping yet, how should the first area be called? Set it with: &lt;yellow&gt;start mapping &lt;area name&gt;&lt;reset&gt;")
     end
     map.echo("Now mapping in area: " .. area_name)
     map.set("mapping", true)
