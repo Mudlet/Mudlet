@@ -1199,45 +1199,32 @@ map.help.translate = [[
         northwest, northeast, southwest, southeast, up, down, in, and out.
 ]]
 map.help.quick_start = [[
-    MAP BASICS (Quick Start Guide)
+    &lt;link: quick_start&gt;map basics&lt;/link&gt; (quick start guide)
     ----------------------------------------
-    To see this again: &lt;yellow&gt;map basics&lt;reset&gt;
 
-    Quick Commands:
-    1. &lt;link: 1&gt;map help&lt;/link&gt;
-       This will bring up a more detailed help file, starting with the available
-       help topics.
-    2. &lt;link: show&gt;map show&lt;/link&gt;
-       This will toggle the map window. If you don't see the map window, type
-       this command first.
-    3. &lt;link: find prompt&gt;find prompt&lt;/link&gt;
-       This will make the script start looking for a prompt using several standard
-       prompt patterns. If a prompt is found, you will be notified, if not, you
-       will need to set a prompt pattern yourself.
-    4. &lt;link: prompt&gt;map prompt&lt;/link&gt;
-       This sets the prompt pattern you specify, using Lua String Library type
-       patterns.
-    5. &lt;link: ignore&gt;map ignore&lt;/link&gt;
-       This creates a pattern for text to ignore when the script is looking for
-       the room name. This should include anything that might appear between
-       the sent movement command or the prompt preceeding the room description,
-       and the room name itself. This can also be used to remove extra text
-       on the same line as the room name that should not be included.
-    6. &lt;link: debug&gt;map debug&lt;/link&gt;
+    Mudlet Mapper works in tandem with a script, and this generic mapper script needs
+    to know 2 things to work: 
+      - &lt;dim_grey&gt;room name&lt;reset&gt; $ROOM_NAME_STATUS ($ROOM_NAME)
+      - &lt;dim_grey&gt;exits&lt;reset&gt;     $ROOM_EXITS_STATUS ($ROOM_EXITS)
+
+    1. &lt;link: start mapping&gt;start mapping &lt;optional area name&gt;&lt;/link&gt;
+       If both room name and exits are good, you can start mapping! Give it the
+       area name you're currently in, usually optional but required for the first one.
+    2. &lt;link: find prompt&gt;find prompt&lt;/link&gt;
+       Room name or exits aren't recognised? Try this command then. It will make
+       the script start looking for a prompt using several standard prompt
+       patterns. If a prompt is found, you will be notified, if not, you will
+       need to set a prompt pattern yourself using &lt;link: prompt&gt;map prompt&lt;/link&gt;. 
+       Reach out to the &lt;urllink: https://discord.gg/kuYvMQ9&gt;Mudlet community&lt;/urllink&gt; for help, we'd be happy to help
+       you figure it out!
+    3. &lt;link: debug&gt;map debug&lt;/link&gt;
        This toggles debug mode. When on, messages will be displayed showing what
        information is captured and a few additional error messages that can help
-       with getting the script fully functional.
-
-    At this point, there are two ways to use the script:
-    (A) Load in a map file using a script provided from another user. That user
-        will need to specify any manual adjustments to the script that one might
-        need to make to make their script work.
-    (B) Begin mapping yourself. If you want to map yourself, the help files do
-        their best to explain every alias and script tool. If you need further
-        assistance, reach out to the Mudlet community.
+       with getting the script fully compatible with your game.
+    4. &lt;link: 1&gt;map help&lt;/link&gt;
+       This will bring up a more detailed help file, starting with the available
+       help topics.
 ]]
---    &lt;red&gt;IF YOU RUN INTO ANY ISSUES &lt;yellow&gt;map &lt;cyan&gt;troubleshoot &lt;red&gt;DOES ITS BEST TO COVER THEM.&lt;reset&gt;
---]]
 
 map.character = map.character or ""
 map.prompt = map.prompt or {}
@@ -1390,6 +1377,17 @@ local mapper_tag = "&lt;112,229,0&gt;(&lt;73,149,0&gt;mapper&lt;112,229,0&gt;): 
 local debug_tag = "&lt;255,165,0&gt;(&lt;200,120,0&gt;debug&lt;255,165,0&gt;): &lt;255,255,255&gt;"
 local err_tag = "&lt;255,0,0&gt;(&lt;178,34,34&gt;error&lt;255,0,0&gt;): &lt;255,255,255&gt;"
 
+
+local function parse_help_text(text)
+  text = text:gsub("%$ROOM_NAME_STATUS", (map.currentName and map.currentName ~= "") and '✔' or '❌')
+  text = text:gsub("%$ROOM_NAME", map.currentName or '')
+
+  text = text:gsub("%$ROOM_EXITS_STATUS", table.is_empty(map.currentExits) and '❌' or '✔️')
+  text = text:gsub("%$ROOM_EXITS", table.concat(map.currentExits, ' '))
+
+  return text
+end
+
 function map.show_help(cmd)
     if cmd and cmd ~= "" then
         if cmd:starts("map ") then cmd = cmd:sub(5) end
@@ -1401,18 +1399,29 @@ function map.show_help(cmd)
         cmd = 1
     end
 
-    for w in map.help[cmd]:gmatch("[^\n]*\n") do
-        local target = w:match("&lt;link: ([^&gt;]+)&gt;")
-        if target then
-            local before, link, after = w:match("(.*)&lt;link: [^&gt;]+&gt;(.*)&lt;/link&gt;(.*)")
+    for w in parse_help_text(map.help[cmd]):gmatch("[^\n]*\n") do
+        local url, target = rex.match(w, [[&lt;(url)?link: ([^&gt;]+)&gt;]])
+        -- lrexlib returns a non-capture as 'false', so determine which variable the capture went into
+        if target == nil then target = url end
+        if target then        
+            local before, linktext, _, link, _, after, ok = rex.match(w, 
+                          [[(.*)&lt;((url)?link): [^&gt;]+&gt;(.*)&lt;\/(url)?link&gt;(.*)]], 0, 'm')
+            -- could not get rex.match to capture the newline - fallback to string.match
+            local _, _, after = w:match("(.*)&lt;u?r?l?link: [^&gt;]+&gt;(.*)&lt;/u?r?l?link&gt;(.*)")
+
             cecho(before)
-            link = "&lt;yellow&gt;"..link.."&lt;reset&gt;"
-            if target ~= "1" then
-                cechoLink(link,[[map.show_help("]]..target..[[")]],"View: map help " .. target,true)
+            fg("yellow")
+            setUnderline(true)
+            if linktext == "urllink" then
+                echoLink(link, [[openWebPage("]]..target..[[")]], "Open Mudlet Discord", true)
+            elseif target ~= "1" then
+                echoLink(link,[[map.show_help("]]..target..[[")]],"View: map help " .. target,true)
             else
-                cechoLink(link,[[map.show_help()]],"View: map help",true)
+                echoLink(link,[[map.show_help()]],"View: map help",true)
             end
-            cecho(after)
+            setUnderline(false)
+            resetFormat()
+            if after then cecho(after) end
         else
             cecho(w)
         end
@@ -2242,7 +2251,7 @@ end
 
 function map.clear_moves()
     move_queue = {}
-    map.echo("Move queue cleared.")
+    map.echo("Move queue cleared, "..commands_in_queue.." commands removed.")
 end
 
 function map.set_area(name)
@@ -2400,9 +2409,9 @@ function map.find_me(name, exits, dir, manual)
         find_portal = false
     elseif table.is_empty(match_IDs) then
         if not manual then
-            map.echo("Room not found", true, true)
+            map.echo("Room not found in map database", true, true)
         else
-            map.echo("Room not found", false, true)
+            map.echo("Room not found in map database", false, true)
         end
     end
 end
@@ -2669,7 +2678,7 @@ local function name_search()
         if not lines[line_count] then break end
         cur_line = lines[line_count]
         for k,v in ipairs(map.save.ignore_patterns) do
-	          cur_line = string.trim(string.gsub(cur_line,v,""))
+            cur_line = string.trim(string.gsub(cur_line,v,""))
         end
         if string.find(cur_line,prompt_pattern) then
             cur_line = string.trim(string.gsub(cur_line,prompt_pattern,""))
@@ -2871,7 +2880,7 @@ function map.showMap(shown)
     end
 end
 
-function map.eventHandler(event,...)
+function map.eventHandler(event, ...)
     if event == "onNewRoom" then
         handle_exits(arg[1])
         if walking and map.configs.speedwalk_wait then
@@ -2923,8 +2932,8 @@ function map.eventHandler(event,...)
         config()
     elseif event == "mapOpenEvent" then
         if not help_shown and not map.save.prompt_pattern[map.character or ""] then
-            map.show_help("quick_start")
-            help_shown = true
+            send("look", true)
+            tempTimer(3, function() map.show_help("quick_start"); help_shown = true end)            
         end
     elseif event == "mapStop" then
         map.set("mapping", false)
