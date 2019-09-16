@@ -256,7 +256,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
 
 QString dlgAboutDialog::createMakerHTML(const aboutMaker& maker) const
 {
-    QString coloredText("<span style=\"color:#%1;\">%2</span>");
+    QString coloredText = QStringLiteral("<span style=\"color:#%1;\">%2</span>");
     QStringList contactDetails;
     if (!maker.discord.isEmpty()) {contactDetails.append(coloredText.arg(QStringLiteral("7289DA"), maker.discord));}
     if (!maker.github.isEmpty()) {contactDetails.append(coloredText.arg(QStringLiteral("40b040"), maker.github));}
