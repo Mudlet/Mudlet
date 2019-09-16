@@ -258,12 +258,12 @@ QString dlgAboutDialog::createMakerHTML(const aboutMaker& maker) const
 {
     QString coloredText("<span style=\"color:#%1;\">%2</span>");
     QStringList contactDetails;
-    if (!maker.discord.isEmpty()) {contactDetails.append(coloredText.arg("7289DA", maker.discord));}
-    if (!maker.github.isEmpty()) {contactDetails.append(coloredText.arg("40b040", maker.github));}
-    if (!maker.email.isEmpty()) {contactDetails.append(coloredText.arg("0000ff", maker.email));}
+    if (!maker.discord.isEmpty()) {contactDetails.append(coloredText.arg(QStringLiteral("7289DA"), maker.discord));}
+    if (!maker.github.isEmpty()) {contactDetails.append(coloredText.arg(QStringLiteral("40b040"), maker.github));}
+    if (!maker.email.isEmpty()) {contactDetails.append(coloredText.arg(QStringLiteral("0000ff"), maker.email));}
 
     return QStringLiteral("<p>%1%2 %3</p>\n") // name (big?), contacts (if any?), description
-        .arg(coloredText.arg("bc8942", QStringLiteral("<b>%1</b>")
+        .arg(coloredText.arg(QStringLiteral("bc8942"), QStringLiteral("<b>%1</b>")
              .arg((maker.big) ? QStringLiteral("<big>%1</big>").arg(maker.name) : maker.name)),
              (contactDetails.isEmpty()) ? QString() :
                  QStringLiteral(" (%1)").arg(contactDetails.join(QChar::Space)),
