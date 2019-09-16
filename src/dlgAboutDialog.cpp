@@ -254,7 +254,7 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
     // clang-format on
 }
 
-QString dlgAboutDialog::createMakerHTML(const aboutMaker maker) const
+QString dlgAboutDialog::createMakerHTML(const aboutMaker& maker) const
 {
     QString coloredText("<span style=\"color:#%1;\">%2</span>");
     QStringList contactDetails;
