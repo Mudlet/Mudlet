@@ -2200,7 +2200,8 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     // Attempts to ensure INFO message gets shown before download is initiated!
 
     pHost->updateProxySettings(mpNetworkAccessManager);
-    mpNetworkReply = mpNetworkAccessManager->get(QNetworkRequest(QUrl(url)));
+    mudlet::self()->setNetworkRequestDefaults(url, request);
+    mpNetworkReply = mpNetworkAccessManager->get(QNetworkRequest(url));
     // Using zero for both min and max values should cause the bar to oscillate
     // until the first update
     mpProgressDialog = new QProgressDialog(tr("Downloading XML map file for use in %1...",
