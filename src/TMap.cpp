@@ -2380,6 +2380,27 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
                 file.flush();
                 file.close();
 
+                if (file.fileName().endsWith(QStringLiteral("xml"), Qt::CaseInsensitive)) {
+                    auto pHost = mpHost;
+                    if (!pHost) {
+                        return;
+                    }
+
+                    QString infoMsg = tr("[ INFO ]  - ... map downloaded and stored, now parsing it...");
+                    postMessage(infoMsg);
+                    if (pHost->mpConsole->loadMap(file.fileName())) {
+                        TEvent mapDownloadEvent {};
+                        mapDownloadEvent.mArgumentList.append(QLatin1String("sysMapDownloadEvent"));
+                        mapDownloadEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                        pHost->raiseEvent(mapDownloadEvent);
+                    } else {
+                        QString alertMsg = tr("[ ERROR ] - Map download problem, failure in parsing destination file:\n%1.").arg(file.fileName());
+                        postMessage(alertMsg);
+                    }
+
+                    return;
+                }
+
                 if (file.open(QFile::ReadOnly | QFile::Text)) {
                     QString infoMsg = tr("[ INFO ]  - ... map downloaded and stored, now parsing it...");
                     postMessage(infoMsg);
