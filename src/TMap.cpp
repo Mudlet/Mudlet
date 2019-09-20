@@ -2432,7 +2432,6 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
                     Host* pHost = mpHost;
                     if (!pHost) {
                         qWarning() << "TMap::slot_replyFinished( QNetworkReply * ) ERROR - NULL Host pointer - something is really wrong!";
-                        mXmlImportMutex.unlock();
                         cleanup();
                         return;
                     }
