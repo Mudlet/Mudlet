@@ -106,7 +106,7 @@ public:
     QRegion mSelectedRegion;
     bool mShowTimeStamps;
     int mWrapAt;
-    int mWrapIndentCount;
+    int mWrapIndentCount {};
     qreal mLetterSpacing;
 
 public slots:
@@ -146,8 +146,8 @@ private:
     // last line offset rendered
     int mLastRenderBottom;
     bool mMouseTracking;
-    bool mCtrlSelecting;
-    int mDragStartY;
+    bool mCtrlSelecting {};
+    int mDragStartY {};
     int mOldScrollPos;
     QPoint mPA;
     QPoint mPB;
