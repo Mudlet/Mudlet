@@ -535,6 +535,14 @@ QString Host::getMmpMapLocation() const
     return mpMap->getMmpMapLocation();
 }
 
+void Host::updateErrorConsoleFont()
+{
+    if (mpEditorDialog && mpEditorDialog->mpErrorConsole) {
+        mpEditorDialog->mpErrorConsole->setMiniConsoleFont(mDisplayFont.family());
+        mpEditorDialog->mpErrorConsole->setMiniConsoleFontSize(mDisplayFont.pointSize());
+    }
+}
+
 std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
 {
     const QFontMetrics metrics(font);
@@ -543,22 +551,27 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
     }
 
     mDisplayFont = font;
+    updateErrorConsoleFont();
     return std::make_pair(true, QString());
 }
 
 std::pair<bool, QString> Host::setDisplayFont(const QString& fontName)
 {
-    return setDisplayFont(QFont(fontName));
+    const auto result = setDisplayFont(QFont(fontName));
+    updateErrorConsoleFont();
+    return result;
 }
 
 void Host::setDisplayFontFromString(const QString& fontData)
 {
     mDisplayFont.fromString(fontData);
+    updateErrorConsoleFont();
 }
 
 void Host::setDisplayFontSize(int size)
 {
     mDisplayFont.setPointSize(size);
+    updateErrorConsoleFont();
 }
 
 // Now returns the total weight of the path
