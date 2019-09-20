@@ -1858,7 +1858,7 @@ void Host::loadSecuredPassword()
         if (job->error()) {
             const auto error = job->errorString();
             if (error != QStringLiteral("Entry not found") && error != QStringLiteral("No match")) {
-                qDebug() << "dlgConnectionProfiles::Host ERROR: couldn't retrieve secure password for" << getName() << ", error is:" << error;
+                qDebug() << "Host::loadSecuredPassword ERROR: couldn't retrieve secure password for" << getName() << ", error is:" << error;
             }
         } else {
             auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
