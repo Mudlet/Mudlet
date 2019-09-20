@@ -870,6 +870,15 @@ QString cTelnet::decodeOption(const unsigned char ch) const
     }
 }
 
+std::pair<QString, int> cTelnet::getConnectionInfo() const
+{
+    if (hostName.isEmpty() && hostPort == 0) {
+        return {mpHost->getUrl(), mpHost->getPort()};
+    } else {
+        return {hostName, hostPort};
+    }
+}
+
 void cTelnet::processTelnetCommand(const std::string& command)
 {
     char ch = command[1];

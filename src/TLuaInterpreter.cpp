@@ -14968,6 +14968,18 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
     return 2;
 }
 
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getConnectionInfo
+int TLuaInterpreter::getConnectionInfo(lua_State *L)
+{
+    Host& host = getHostFromLua(L);
+
+    auto [hostName, hostPort] = host.mTelnet.getConnectionInfo();
+    lua_pushstring(L, hostName.toUtf8().constData());
+    lua_pushnumber(L, hostPort);
+    return 2;
+}
+
 // No documentation available in wiki - internal function
 void TLuaInterpreter::set_lua_table(const QString& tableName, QStringList& variableList)
 {
@@ -15494,6 +15506,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "putHTTP", TLuaInterpreter::putHTTP);
     lua_register(pGlobalLua, "postHTTP", TLuaInterpreter::postHTTP);
     lua_register(pGlobalLua, "deleteHTTP", TLuaInterpreter::deleteHTTP);
+    lua_register(pGlobalLua, "getConnectionInfo", TLuaInterpreter::getConnectionInfo);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     // prepend profile path to package.path and package.cpath
