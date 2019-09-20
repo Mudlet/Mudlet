@@ -421,7 +421,6 @@ void cTelnet::slot_send_login()
 
 void cTelnet::slot_send_pass()
 {
-    qDebug() << "password" << mpHost->getPass();
     if (!mpHost->getPass().isEmpty()) {
         sendData(mpHost->getPass());
     }
