@@ -552,7 +552,7 @@ private:
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
     void updateModuleZips() const;
-    void updateErrorConsoleFont();
+    void updateConsolesFont();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

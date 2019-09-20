@@ -534,12 +534,18 @@ QString Host::getMmpMapLocation() const
 {
     return mpMap->getMmpMapLocation();
 }
-
-void Host::updateErrorConsoleFont()
+// error and debug consoles inherit font of the main console
+void Host::updateConsolesFont()
 {
-    if (mpEditorDialog && mpEditorDialog->mpErrorConsole) {
-        mpEditorDialog->mpErrorConsole->setMiniConsoleFont(mDisplayFont.family());
-        mpEditorDialog->mpErrorConsole->setMiniConsoleFontSize(mDisplayFont.pointSize());
+    if (mpEditorDialog) {
+        if (mpEditorDialog->mpErrorConsole) {
+            mpEditorDialog->mpErrorConsole->setMiniConsoleFont(mDisplayFont.family());
+            mpEditorDialog->mpErrorConsole->setMiniConsoleFontSize(mDisplayFont.pointSize());
+        }
+        if (mudlet::self()->mpDebugArea) {
+            mudlet::self()->mpDebugConsole->setMiniConsoleFont(mDisplayFont.family());
+            mudlet::self()->mpDebugConsole->setMiniConsoleFontSize(mDisplayFont.pointSize());
+        }
     }
 }
 
@@ -551,27 +557,27 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
     }
 
     mDisplayFont = font;
-    updateErrorConsoleFont();
+    updateConsolesFont();
     return std::make_pair(true, QString());
 }
 
 std::pair<bool, QString> Host::setDisplayFont(const QString& fontName)
 {
     const auto result = setDisplayFont(QFont(fontName));
-    updateErrorConsoleFont();
+    updateConsolesFont();
     return result;
 }
 
 void Host::setDisplayFontFromString(const QString& fontData)
 {
     mDisplayFont.fromString(fontData);
-    updateErrorConsoleFont();
+    updateConsolesFont();
 }
 
 void Host::setDisplayFontSize(int size)
 {
     mDisplayFont.setPointSize(size);
-    updateErrorConsoleFont();
+    updateConsolesFont();
 }
 
 // Now returns the total weight of the path
