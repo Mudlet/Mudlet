@@ -401,7 +401,7 @@ map.echo("Map debug set to: " .. (map.configs.debug and "on" or "off"))</script>
 				<packageName></packageName>
 				<regex>^map debug$</regex>
 			</Alias>
-			<Alias isActive="no" isFolder="no">
+			<Alias isActive="yes" isFolder="no">
 				<name>Map Update Alias</name>
 				<script>map.updateVersion()</script>
 				<command></command>
