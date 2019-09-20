@@ -14968,6 +14968,8 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
     return 2;
 }
 
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getConnectionInfo
 int TLuaInterpreter::getConnectionInfo(lua_State *L)
 {
     Host& host = getHostFromLua(L);
