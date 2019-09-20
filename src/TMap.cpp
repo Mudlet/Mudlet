@@ -2398,7 +2398,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
                 file.flush();
                 file.close();
 
-                if (file.fileName().endsWith(QStringLiteral("xml"), Qt::CaseInsensitive)) {
+                if (!file.fileName().endsWith(QStringLiteral("xml"), Qt::CaseInsensitive)) {
                     auto pHost = mpHost;
                     if (!pHost) {
                         cleanup();
