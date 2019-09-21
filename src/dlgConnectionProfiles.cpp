@@ -1002,14 +1002,19 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
 
     port_entry->setText(host_port);
 
-    character_password_entry->setText(QString());
-    loadSecuredPassword(profile, [this, profile_name](const QString& password) {
-        if (!password.isEmpty()) {
-            character_password_entry->setText(password);
-        } else {
-            character_password_entry->setText(readProfileData(profile_name, QStringLiteral("password")));
-        }
-    });
+    // if we're currently copying a profile, don't blank and re-load the password,
+    // because there isn't one in storage yet. It'll be copied over into the widget
+    // by the copy method
+    if (!mCopyingProfile) {
+        character_password_entry->setText(QString());
+        loadSecuredPassword(profile, [this, profile_name](const QString& password) {
+            if (!password.isEmpty()) {
+                character_password_entry->setText(password);
+            } else {
+                character_password_entry->setText(readProfileData(profile_name, QStringLiteral("password")));
+            }
+        });
+    }
 
     val = readProfileData(profile, QStringLiteral("login"));
     login_entry->setText(val);
@@ -1929,16 +1934,22 @@ void dlgConnectionProfiles::slot_cancel()
 
 void dlgConnectionProfiles::slot_copy_profile()
 {
+    mCopyingProfile = true;
+
     QString profile_name;
     QString oldname;
     QListWidgetItem* pItem;
+    const auto oldPassword = character_password_entry->text();
+
     if (!copyProfileWidget(profile_name, oldname, pItem)) {
+        mCopyingProfile = false;
         return;
     }
 
     // copy the folder on-disk
     QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, oldname));
     if (!dir.exists()) {
+        mCopyingProfile = false;
         return;
     }
 
@@ -1950,6 +1961,10 @@ void dlgConnectionProfiles::slot_copy_profile()
     // one may have had it enabled does not mean we can assume the new one would
     // want it set:
     discord_optin_checkBox->setChecked(false);
+
+    // restore the password, which won't be copied by the disk copy if stored in the credential manager
+    character_password_entry->setText(oldPassword);
+    mCopyingProfile = false;
 }
 
 void dlgConnectionProfiles::slot_copy_profilesettings_only()
