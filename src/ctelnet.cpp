@@ -421,7 +421,7 @@ void cTelnet::slot_send_login()
 
 void cTelnet::slot_send_pass()
 {
-    if (!mpHost->getPass().isEmpty()) {
+    if (!mpHost->getLogin().isEmpty() && !mpHost->getPass().isEmpty()) {
         sendData(mpHost->getPass());
     }
 }
