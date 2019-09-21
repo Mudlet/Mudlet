@@ -1478,7 +1478,7 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
     bool hasInvite = false;
     auto inviteUrl = discordInfo.value(QStringLiteral("inviteurl"));
     // Will be of form: "https://discord.gg/#####"
-    if (inviteUrl != QJsonValue::Undefined && !inviteUrl.toString().isEmpty()) {
+    if (inviteUrl != QJsonValue::Undefined && !inviteUrl.toString().isEmpty() && inviteUrl.toString() != QStringLiteral("0")) {
         hasInvite = true;
     }
 
@@ -1502,9 +1502,9 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
 
     if (hasInvite) {
         if (hasCustomAppID) {
-            qDebug() << "Game using a custom Discord server. Invite URL: " << inviteUrl.toString();
+            qDebug() << "Game using a custom Discord server. Invite URL:" << inviteUrl.toString();
         } else if (hasApplicationId) {
-            qDebug() << "Game using Mudlet's Discord server. Invite URL: " << inviteUrl.toString();
+            qDebug() << "Game using Mudlet's Discord server. Invite URL:" << inviteUrl.toString();
         } else {
             qDebug() << "Discord invite URL: " << inviteUrl.toString();
         }
