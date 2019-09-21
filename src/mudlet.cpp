@@ -4813,7 +4813,6 @@ bool mudlet::migratePasswordsToSecureStorage()
 
         job->start();
     }
-    qDebug() << "migrating the following profiles to secure storage:" << mProfilePasswordsToMigrate;
 
     if (mProfilePasswordsToMigrate.isEmpty()) {
         QTimer::singleShot(0, this, [this]() {
@@ -4863,8 +4862,6 @@ bool mudlet::migratePasswordsToProfileStorage()
         connect(job, &QKeychain::ReadPasswordJob::finished, this, &mudlet::slot_password_migrated_to_profile);
         job->start();
     }
-
-    qDebug() << "migrating the following profiles to profile storage:" << mProfilePasswordsToMigrate;
 
     if (mProfilePasswordsToMigrate.isEmpty()) {
         QTimer::singleShot(0, this, [this]() {

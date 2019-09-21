@@ -323,7 +323,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
 void dlgProfilePreferences::setupPasswordsMigration()
 {
-
     hidePasswordMigrationLabelTimer = std::make_unique<QTimer>(this);
     hidePasswordMigrationLabelTimer->setSingleShot(true);
 
@@ -404,7 +403,7 @@ void dlgProfilePreferences::disableHostDetails()
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
     comboBox_mapFileSaveFormatVersion->clear();
     label_mapFileActionResult->hide();
-    label_password_migration_notification->hide();
+    hidePasswordMigrationLabel();
     label_mapSymbolsFont->setEnabled(false);
     fontComboBox_mapSymbols->setEnabled(false);
     checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(false);
@@ -786,7 +785,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // label to show on successful map file action
     label_mapFileActionResult->hide();
 
-    label_password_migration_notification->hide();
+    hidePasswordMigrationLabel();
 
     //doubleclick ignore
     QString ignore;
@@ -1192,7 +1191,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     label_mapFileActionResult->hide();
 
-    label_password_migration_notification->hide();
+    hidePasswordMigrationLabel();
 
     doubleclick_ignore_lineedit->clear();
 
@@ -1993,6 +1992,7 @@ void dlgProfilePreferences::hidePasswordMigrationLabel()
 
 void dlgProfilePreferences::slot_passwords_location_changed(int index)
 {
+    // index 0 = use secure storage, index 1 = use profile storage
     if (index == 0) {
         if (mudlet::self()->migratePasswordsToSecureStorage()) {
             label_password_migration_notification->setText(tr("Migrating passwords to secure storage..."));
