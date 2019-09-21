@@ -329,7 +329,7 @@ void dlgProfilePreferences::setupPasswordsMigration()
     connect(hidePasswordMigrationLabelTimer.get(), &QTimer::timeout, this, &dlgProfilePreferences::hidePasswordMigrationLabel);
 
     connect(mudlet::self(), &mudlet::signal_passwordsMigratedToSecure, [=]() {
-        label_password_migration_notification->setText(tr("Migrated all passwords to secure storage ✓"));
+        label_password_migration_notification->setText(tr("Migrated all passwords to secure storage."));
         comboBox_store_passwords_in->setEnabled(true);
         hidePasswordMigrationLabelTimer->start(10s);
     });
