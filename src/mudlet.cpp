@@ -2910,13 +2910,13 @@ void mudlet::readEarlySettings(const QSettings& settings)
 
 void mudlet::readLateSettings(const QSettings& settings)
 {
-    QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
-    QSize size = settings.value("size", QSize(750, 550)).toSize();
+    QPoint pos = settings.value(QStringLiteral("pos"), QPoint(0, 0)).toPoint();
+    QSize size = settings.value(QStringLiteral("size"), QSize(750, 550)).toSize();
     // A sensible default has already been set up according to whether we are on
     // a netbook or not before this gets called so only change if there is a
     // setting stored:
-    if (settings.contains("mainiconsize")) {
-        setToolBarIconSize(settings.value("mainiconsize").toInt());
+    if (settings.contains(QStringLiteral("mainiconsize"))) {
+        setToolBarIconSize(settings.value(QStringLiteral("mainiconsize")).toInt());
     }
     setEditorTreeWidgetIconSize(settings.value("tefoldericonsize", QVariant(3)).toInt());
     // We have abandoned previous "showMenuBar" / "showToolBar" booleans
@@ -2929,6 +2929,7 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mCompactInputLine = settings.value("compactInputLine", QVariant(false)).toBool();
+    mStorePasswordsSecurely = settings.value("storePasswordsSecurely", QVariant(true)).toBool();
 
 
     resize(size);
@@ -3067,6 +3068,7 @@ void mudlet::writeSettings()
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
     settings.setValue("compactInputLine", mCompactInputLine);
+    settings.setValue("storePasswordsSecurely", mStorePasswordsSecurely);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
@@ -4786,6 +4788,7 @@ bool mudlet::migratePasswordsToSecureStorage()
         qWarning() << "mudlet::migratePasswordsToSecureStorage() warning: password migration is already in progress, won't start another.";
         return false;
     }
+    mStorePasswordsSecurely = true;
 
     QStringList profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath))
                                    .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
@@ -4811,6 +4814,13 @@ bool mudlet::migratePasswordsToSecureStorage()
         job->start();
     }
     qDebug() << "migrating the following profiles to secure storage:" << mProfilePasswordsToMigrate;
+
+    if (mProfilePasswordsToMigrate.isEmpty()) {
+        QTimer::singleShot(0, this, [this]() {
+            emit signal_passwordsMigratedToProfiles();
+        });
+    }
+
     return true;
 }
 
@@ -4827,7 +4837,6 @@ void mudlet::slot_password_migrated_to_secure(QKeychain::Job* job)
 
     if (mProfilePasswordsToMigrate.isEmpty()) {
         emit signal_passwordsMigratedToSecure();
-        qDebug() << "all passwords migrated to secure storage :)";
     } else {
         emit signal_passwordMigratedToSecure(profileName);
     }
@@ -4839,6 +4848,7 @@ bool mudlet::migratePasswordsToProfileStorage()
         qWarning() << "mudlet::migratePasswordsToProfileStorage() warning: password migration is already in progress, won't start another.";
         return false;
     }
+    mStorePasswordsSecurely = false;
 
     QStringList profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
@@ -4855,6 +4865,12 @@ bool mudlet::migratePasswordsToProfileStorage()
     }
 
     qDebug() << "migrating the following profiles to profile storage:" << mProfilePasswordsToMigrate;
+
+    if (mProfilePasswordsToMigrate.isEmpty()) {
+        QTimer::singleShot(0, this, [this]() {
+            emit signal_passwordsMigratedToProfiles();
+        });
+    }
     return true;
 }
 
@@ -4883,7 +4899,6 @@ void mudlet::slot_password_migrated_to_profile(QKeychain::Job* job)
 
     if (mProfilePasswordsToMigrate.isEmpty()) {
         emit signal_passwordsMigratedToProfiles();
-        qDebug() << "all passwords migrated to the profile :)";
     }
 }
 

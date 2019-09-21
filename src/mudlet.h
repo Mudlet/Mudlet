@@ -385,6 +385,7 @@ public:
     void setEnableFullScreenMode(const bool);
     bool migratePasswordsToSecureStorage();
     bool migratePasswordsToProfileStorage();
+    bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
 
     // Both of these revises the contents of the .aff file: the first will
     // handle a .dic file that has been updated externally/manually (to add
@@ -662,7 +663,10 @@ private:
 
     QString mMudletDiscordInvite = QStringLiteral("https://discordapp.com/invite/kuYvMQ9");
 
+    // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate {};
+
+    bool mStorePasswordsSecurely {true};
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

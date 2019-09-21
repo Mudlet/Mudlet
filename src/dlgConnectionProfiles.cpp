@@ -1786,10 +1786,10 @@ void dlgConnectionProfiles::loadSecuredPassword(const QString &profile, L callba
             if (error != QStringLiteral("Entry not found") && error != QStringLiteral("No match")) {
             qDebug() << "dlgConnectionProfiles::loadSecuredPassword ERROR: couldn't retrieve secure password for" << profile << ", error is:" << error;
             }
-        } else {
-            auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
-            callback(readJob->textData());
         }
+
+        auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
+        callback(readJob->textData());
 
         job->deleteLater();
     });

@@ -323,28 +323,36 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
 void dlgProfilePreferences::setupPasswordsMigration()
 {
-    connect(comboBox_store_passwords_in, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_passwords_location_changed);
 
     hidePasswordMigrationLabelTimer = std::make_unique<QTimer>(this);
     hidePasswordMigrationLabelTimer->setSingleShot(true);
 
     connect(hidePasswordMigrationLabelTimer.get(), &QTimer::timeout, this, &dlgProfilePreferences::hidePasswordMigrationLabel);
 
-    connect(mudlet::self(), &mudlet::signal_passwordsMigratedToSecure, [=](){
-        label_password_migration_notification->setText(tr("Migrated all passwords to secure storage."));
+    connect(mudlet::self(), &mudlet::signal_passwordsMigratedToSecure, [=]() {
+        label_password_migration_notification->setText(tr("Migrated all passwords to secure storage ✓"));
         comboBox_store_passwords_in->setEnabled(true);
         hidePasswordMigrationLabelTimer->start(10s);
     });
 
-    connect(mudlet::self(), &mudlet::signal_passwordMigratedToSecure, [=](const QString& profile){
-        label_password_migration_notification->setText(tr("Migrated %1...", "This notifies the user that progress is being made on profile migration by saying what profile was just migrated to store passwords securely").arg(profile));
+    connect(mudlet::self(), &mudlet::signal_passwordMigratedToSecure, [=](const QString& profile) {
+        label_password_migration_notification->setText(
+                tr("Migrated %1...", "This notifies the user that progress is being made on profile migration by saying what profile was just migrated to store passwords securely").arg(profile));
     });
 
-    connect(mudlet::self(), &mudlet::signal_passwordsMigratedToProfiles, [=](){
+    connect(mudlet::self(), &mudlet::signal_passwordsMigratedToProfiles, [=]() {
         label_password_migration_notification->setText(tr("Migrated all passwords to profile storage."));
         comboBox_store_passwords_in->setEnabled(true);
         hidePasswordMigrationLabelTimer->start(10s);
     });
+
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        comboBox_store_passwords_in->setCurrentIndex(0);
+    } else {
+        comboBox_store_passwords_in->setCurrentIndex(1);
+    }
+
+    connect(comboBox_store_passwords_in, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_passwords_location_changed);
 }
 
 void dlgProfilePreferences::disableHostDetails()
