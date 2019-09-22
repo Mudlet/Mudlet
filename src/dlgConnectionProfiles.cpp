@@ -273,7 +273,12 @@ void dlgConnectionProfiles::slot_update_pass(const QString &pass)
         return;
     }
 
-    writeSecurePassword(pItem->text(), pass);
+    const auto profile = pItem->text();
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        writeSecurePassword(profile, pass);
+    } else {
+        writeProfileData(profile, QStringLiteral("password"), pass);
+    }
 }
 
 void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QString& pass) const
