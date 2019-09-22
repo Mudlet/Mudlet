@@ -75,7 +75,7 @@ endif()
 # To insure consistency please ensure the SAME of the first two values are also
 # assigned to the "VERSION" and "BUILD" variables in the native qmake project
 # file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 4.0.3)
+set(APP_VERSION 4.1.2)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
   set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
@@ -164,6 +164,18 @@ if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/edbee-lib/CMakeLists.txt")
   endif()
 endif()
 
+if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/qtkeychain/CMakeLists.txt")
+  message(STATUS "git submodule for required QtKeychain missing from source code, will attempt to get it...")
+  execute_process(COMMAND git submodule update --init 3rdparty/qtkeychain
+          TIMEOUT 30
+          WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
+          OUTPUT_VARIABLE output_text
+          ERROR_VARIABLE error_text)
+  if(output_text OR error_text)
+    message(STATUS ${output_text} ${error_text})
+  endif()
+endif()
+
 if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/lcf/lcf-scm-1.rockspec")
   message(STATUS "git submodule for required lua code formatter source code missing, will attempt to get it...")
   execute_process(COMMAND git submodule update --init 3rdparty/lcf
@@ -212,6 +224,13 @@ elseif()
   message(FATAL_ERROR "Cannot locate edbee-lib editor widget submodule source code, build abandoned!")
 endif()
 
+if(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/qtkeychain/CMakeLists.txt")
+  add_definitions(-DQTKEYCHAIN_NO_EXPORT)
+  add_subdirectory(3rdparty/qtkeychain)
+elseif()
+  message(FATAL_ERROR "Cannot locate QtKeychain submodule source code, build abandoned!")
+endif()
+
 file(GLOB_RECURSE lua_files RELATIVE "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/lua/" "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/lua/*.lua")
 list(LENGTH lua_files lua_file_count)
 if(lua_file_count EQUAL 28)
@@ -225,10 +244,10 @@ endif()
 
 file(GLOB_RECURSE lua_test_files RELATIVE "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/tests/" "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/tests/*.lua")
 list(LENGTH lua_test_files lua_test_file_count)
-if(lua_test_file_count EQUAL 4)
+if(lua_test_file_count EQUAL 5)
   message(STATUS "Found Mudlet Lua test files")
 else()
-  message(WARNING "Found ${lua_test_file_count} Mudlet Lua test files but 4 were expected:")
+  message(WARNING "Found ${lua_test_file_count} Mudlet Lua test files but 5 were expected:")
   foreach(lua_test_file ${lua_test_files})
     message(STATUS "    ${lua_test_file}")
   endforeach()

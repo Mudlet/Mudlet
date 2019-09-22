@@ -175,6 +175,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // system message area
     mpSystemMessageArea = new dlgSystemMessageArea(this);
     mpSystemMessageArea->setObjectName(QStringLiteral("mpSystemMessageArea"));
+    mpSystemMessageArea->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Minimum);
     splitter_right->addWidget(mpSystemMessageArea);
     connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, mpSystemMessageArea, &QWidget::hide);
 
@@ -8458,6 +8459,7 @@ void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* ew, const QString&
                                   : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
     config->setSmartTab(true);
+    config->setUseTabChar(false); // when you press Enter for a newline, pad with spaces and not tabs
     config->setCaretBlinkRate(200);
     config->setIndentSize(2);
     config->setCaretWidth(1);

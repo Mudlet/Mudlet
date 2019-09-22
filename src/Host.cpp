@@ -62,6 +62,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mCommandSeparator(QLatin1String(";;"))
 , mDisplayFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
 , mEnableGMCP(true)
+, mEnableMSSP(true)
 , mEnableMSDP(false)
 , mServerMXPenabled(true)
 , mFORCE_GA_OFF(false)
@@ -229,6 +230,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     if (!optin.isEmpty()) {
         mDiscordDisableServerSide = optin.toInt() == Qt::Unchecked ? true : false;
     }
+
+    loadSecuredPassword();
 }
 
 Host::~Host()
@@ -548,6 +551,11 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
 std::pair<bool, QString> Host::setDisplayFont(const QString& fontName)
 {
     return setDisplayFont(QFont(fontName));
+}
+
+void Host::setDisplayFontFromString(const QString& fontData)
+{
+    mDisplayFont.fromString(fontData);
 }
 
 void Host::setDisplayFontSize(int size)
@@ -1836,4 +1844,29 @@ void Host::setDisplayFontStyle(QFont::StyleStrategy s)
 void Host::setDisplayFontFixedPitch(bool enable)
 {
     mDisplayFont.setFixedPitch(enable);
+}
+
+void Host::loadSecuredPassword()
+{
+    auto *job = new QKeychain::ReadPasswordJob(QStringLiteral("Mudlet profile"));
+    job->setAutoDelete(false);
+    job->setInsecureFallback(false);
+
+    job->setKey(getName());
+
+    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* job) {
+        if (job->error()) {
+            const auto error = job->errorString();
+            if (error != QStringLiteral("Entry not found") && error != QStringLiteral("No match")) {
+                qDebug() << "Host::loadSecuredPassword ERROR: couldn't retrieve secure password for" << getName() << ", error is:" << error;
+            }
+        } else {
+            auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
+            setPass(readJob->textData());
+        }
+
+        job->deleteLater();
+    });
+
+    job->start();
 }

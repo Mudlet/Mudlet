@@ -53,6 +53,7 @@
 #include <QTimer>
 #include <QToolButton>
 #include "edbee/models/textautocompleteprovider.h"
+#include <../3rdparty/qtkeychain/keychain.h>
 #include <QShortcut>
 #include <QKeySequence>
 #ifdef QT_GAMEPAD_LIB
@@ -164,6 +165,7 @@ public:
     void setFgColor(Host*, const QString& name, int, int, int);
     void setBgColor(Host*, const QString& name, int, int, int);
     QString readProfileData(const QString& profile, const QString& item);
+    void deleteProfileData(const QString &profile, const QString &item);
     bool setWindowWrap(Host* pHost, const QString& name, int& wrap);
     bool setWindowWrapIndent(Host* pHost, const QString& name, int& wrap);
     bool copy(Host* pHost, const QString& name);
@@ -386,6 +388,7 @@ public:
     void setEnableFullScreenMode(const bool);
     static QPointer<QSettings> getConfig();
     QPointer<QSettings> getQSettings();
+    void migratePasswordsToSecureStorage();
 
     // Both of these revises the contents of the .aff file: the first will
     // handle a .dic file that has been updated externally/manually (to add
@@ -435,7 +438,6 @@ public:
     // will be true if they are ones bundled with Mudlet, false if provided by
     // the system
     bool mUsingMudletDictionaries;
-
 
 public slots:
     void processEventLoopHack_timerRun();
@@ -530,6 +532,7 @@ private slots:
     void slot_updateAvailable(const int);
 #endif
     void slot_toggle_compact_input_line();
+    void slot_password_saved(QKeychain::Job *job);
 
 private:
     void initEdbee();

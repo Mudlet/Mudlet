@@ -231,6 +231,7 @@ public:
     const QFont& getDisplayFont() const { return mDisplayFont; }
     std::pair<bool, QString> setDisplayFont(const QFont& font);
     std::pair<bool, QString> setDisplayFont(const QString& fontName);
+    void setDisplayFontFromString(const QString& fontData);
     void setDisplayFontSize(int size);
     void setDisplayFontSpacing(const qreal spacing);
     void setDisplayFontStyle(QFont::StyleStrategy s);
@@ -255,6 +256,7 @@ public:
     QFont mCommandLineFont;
     QString mCommandSeparator;
     bool mEnableGMCP;
+    bool mEnableMSSP;
     bool mEnableMSDP;
     bool mServerMXPenabled;
     QTextStream mErrorLogStream;
@@ -550,6 +552,7 @@ private:
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
     void updateModuleZips() const;
+    void loadSecuredPassword();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

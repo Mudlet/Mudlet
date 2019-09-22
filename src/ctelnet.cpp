@@ -87,6 +87,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , lastTimeOffset()
 , enableATCP(false)
 , enableGMCP(false)
+, enableMSSP(false)
 , enableChannel102(false)
 , mAutoReconnect(false)
 , loadingReplay(false)
@@ -415,12 +416,16 @@ void cTelnet::handle_socket_signal_error()
 
 void cTelnet::slot_send_login()
 {
-    sendData(mpHost->getLogin());
+    if (!mpHost->getLogin().isEmpty()) {
+        sendData(mpHost->getLogin());
+    }
 }
 
 void cTelnet::slot_send_pass()
 {
-    sendData(mpHost->getPass());
+    if (!mpHost->getLogin().isEmpty() && !mpHost->getPass().isEmpty()) {
+        sendData(mpHost->getPass());
+    }
 }
 
 void cTelnet::handle_socket_signal_connected()
@@ -442,10 +447,8 @@ void cTelnet::handle_socket_signal_connected()
     QString nothing = "";
     mpHost->mLuaInterpreter.call(func, nothing);
     mConnectionTime.start();
-    if ((mpHost->getLogin().size() > 0) && (mpHost->getPass().size() > 0)) {
-        mTimerLogin->start(2000);
-        mTimerPass->start(3000);
-    }
+    mTimerLogin->start(2000);
+    mTimerPass->start(3000);
 
     emit signal_connected(mpHost);
 
@@ -888,6 +891,15 @@ QString cTelnet::decodeOption(const unsigned char ch) const
     }
 }
 
+std::pair<QString, int> cTelnet::getConnectionInfo() const
+{
+    if (hostName.isEmpty() && hostPort == 0) {
+        return {mpHost->getUrl(), mpHost->getPort()};
+    } else {
+        return {hostName, hostPort};
+    }
+}
+
 void cTelnet::processTelnetCommand(const std::string& command)
 {
     char ch = command[1];
@@ -1053,6 +1065,18 @@ void cTelnet::processTelnetCommand(const std::string& command)
             break;
         }
 
+        if (option == OPT_MSSP) {
+            if (!mpHost->mEnableMSSP) {
+                break;
+            }
+
+            enableMSSP = true;
+            sendTelnetOption(TN_DO, OPT_MSSP);
+            qDebug() << "MSSP enabled";
+            raiseProtocolEvent("sysProtocolEnabled", "MSSP");
+            break;
+        }
+
         if (option == OPT_MXP) {
             if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF) {
                 sendTelnetOption(TN_DO, OPT_MXP);
@@ -1151,6 +1175,12 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 raiseProtocolEvent("sysProtocolDisabled", "GMCP");
             }
 
+            if (option == OPT_MSSP) {
+                // MSSP got turned off
+                enableMSSP = false;
+                raiseProtocolEvent("sysProtocolDisabled", "MSSP");
+            }
+
             if (option == OPT_MXP) {
                 // MXP got turned off
                 mpHost->mServerMXPenabled = false;
@@ -1214,6 +1244,14 @@ void cTelnet::processTelnetCommand(const std::string& command)
             enableGMCP = true;
             sendTelnetOption(TN_WILL, OPT_GMCP);
             raiseProtocolEvent("sysProtocolEnabled", "GMCP");
+            break;
+        }
+
+        if (option == OPT_MSSP && mpHost->mEnableMSSP) {
+            // MSSP support
+            enableMSSP = true;
+            sendTelnetOption(TN_WILL, OPT_MSSP);
+            raiseProtocolEvent("sysProtocolEnabled", "MSSP");
             break;
         }
 
@@ -1288,6 +1326,12 @@ void cTelnet::processTelnetCommand(const std::string& command)
             // GMCP got turned off
             enableGMCP = false;
             raiseProtocolEvent("sysProtocolDisabled", "GMCP");
+        }
+
+        if (option == OPT_MSSP) {
+            // MSSP got turned off
+            enableMSSP = false;
+            raiseProtocolEvent("sysProtocolDisabled", "MSSP");
         }
 
         if (option == OPT_MXP) {
@@ -1418,6 +1462,22 @@ void cTelnet::processTelnetCommand(const std::string& command)
             // strip first 3 characters to get rid of <IAC><SB><201>
             // and strip the last 2 characters to get rid of <IAC><TN_SE>
             setGMCPVariables(payload);
+            return;
+        }
+
+        // MSSP
+        if (option == OPT_MSSP) {
+            QByteArray payload = command.c_str();
+            if (payload.size() < 6) {
+                return;
+            }
+            // payload is in the Mud Server's encoding, trim off the Telnet suboption
+            // bytes from beginning (3) and end (2):
+            payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
+
+            // strip first 3 characters to get rid of <IAC><SB><201>
+            // and strip the last 2 characters to get rid of <IAC><TN_SE>
+            setMSSPVariables(payload);
             return;
         }
 
@@ -1748,6 +1808,27 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
     }
 
     mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
+}
+
+void cTelnet::setMSSPVariables(const QByteArray& msg)
+{
+    QString transcodedMsg;
+
+    if (mpOutOfBandDataIncomingCodec) {
+        // Message is encoded
+        transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
+    } else {
+        // Message is in ASCII (though this can handle Utf-8):
+        transcodedMsg = QString::fromUtf8(msg);
+    }
+
+    transcodedMsg.remove(QChar::LineFeed);
+    // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
+    transcodedMsg.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
+    // remove \r's from the data, as yajl doesn't like it
+    transcodedMsg.remove(QChar::CarriageReturn);
+
+    mpHost->mLuaInterpreter.setMSSPTable(transcodedMsg);
 }
 
 void cTelnet::setChannel102Variables(const QString& msg)

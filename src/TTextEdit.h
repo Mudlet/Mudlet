@@ -106,7 +106,7 @@ public:
     QRegion mSelectedRegion;
     bool mShowTimeStamps;
     int mWrapAt;
-    int mWrapIndentCount;
+    int mWrapIndentCount {};
     qreal mLetterSpacing;
 
 public slots:
@@ -130,7 +130,7 @@ private:
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
     static QString byteToLuaCodeOrChar(const char*);
     std::pair<bool, int> drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;
-    int convertMouseXToBufferX(const int mouseX, const int lineNumber) const;
+    int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool *isOverTimeStamp = nullptr) const;
     int getGraphemeWidth(uint unicode) const;
     void normaliseSelection();
 
@@ -146,8 +146,8 @@ private:
     // last line offset rendered
     int mLastRenderBottom;
     bool mMouseTracking;
-    bool mCtrlSelecting;
-    int mDragStartY;
+    bool mCtrlSelecting {};
+    int mDragStartY {};
     int mOldScrollPos;
     QPoint mPA;
     QPoint mPB;
