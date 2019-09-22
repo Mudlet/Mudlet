@@ -163,6 +163,14 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 
     welcome_message->setDocument(pWelcome_document);
 
+    mpAction_revealPassword = new QAction(this);
+    mpAction_revealPassword->setCheckable(true);
+    mpAction_revealPassword->setObjectName(QStringLiteral("mpAction_revealPassword"));
+    slot_togglePasswordVisibility(false);
+
+    character_password_entry->addAction(mpAction_revealPassword, QLineEdit::TrailingPosition);
+
+    connect(mpAction_revealPassword, &QAction::triggered, this, &dlgConnectionProfiles::slot_togglePasswordVisibility);
     connect(offline_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_load);
     connect(connect_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::accept);
     connect(abort, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_cancel);
@@ -804,6 +812,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         return;
     }
 
+    slot_togglePasswordVisibility(false);
 
     QString profile_name = pItem->text();
 
@@ -1219,7 +1228,8 @@ void dlgConnectionProfiles::updateDiscordStatus()
 }
 
 // (re-)creates the dialogs profile list
-void dlgConnectionProfiles::fillout_form() {
+void dlgConnectionProfiles::fillout_form()
+{
     profiles_tree_widget->clear();
     profile_name_entry->clear();
     host_name_entry->clear();
@@ -2382,5 +2392,30 @@ void dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QStrin
         QString srcName = sourceFolder + QDir::separator() + files[i];
         QString destName = destFolder + QDir::separator() + files[i];
         copyFolder(srcName, destName);
+    }
+}
+
+// As it is wired to the triggered() signal it is only called that way when
+// the user clicks on the action, and not when setChecked() is used.
+void dlgConnectionProfiles::slot_togglePasswordVisibility(const bool showPassword)
+{
+    if (mpAction_revealPassword->isChecked() != showPassword) {
+        // This will only be reached and needed by a call NOT prompted by the
+        // user clicking on the icon - i.e. either when a different profile is
+        // selected or when called from the constructor:
+        mpAction_revealPassword->setChecked(showPassword);
+    }
+
+    if (mpAction_revealPassword->isChecked()) {
+        character_password_entry->setEchoMode(QLineEdit::Normal);
+        // In practice I could not get the icon to change based upon supplying
+        // different QPixmaps for the QIcon for different states - so lets do it
+        // directly:
+        mpAction_revealPassword->setIcon(QIcon::fromTheme(QStringLiteral("password-show-on"), QIcon(QStringLiteral(":/icons/password-show-on.png"))));
+        mpAction_revealPassword->setToolTip(tr("<p>Click to hide the password; it will also hide if another profile is selected.</p>"));
+    } else {
+        character_password_entry->setEchoMode(QLineEdit::Password);
+        mpAction_revealPassword->setIcon(QIcon::fromTheme(QStringLiteral("password-show-off"), QIcon(QStringLiteral(":/icons/password-show-off.png"))));
+        mpAction_revealPassword->setToolTip(tr("<p>Click to reveal the password for this profile.</p>"));
     }
 }

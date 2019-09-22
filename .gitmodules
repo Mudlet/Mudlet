@@ -12,4 +12,4 @@
 	url = https://github.com/Mudlet/mixing-cocoa-and-qt.git
 [submodule "3rdparty/qtkeychain"]
 	path = 3rdparty/qtkeychain
-	url = https://github.com/frankosterfeld/qtkeychain.git
+	url = https://github.com/Mudlet/qtkeychain.git
