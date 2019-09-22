@@ -169,6 +169,11 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     slot_togglePasswordVisibility(false);
 
     character_password_entry->addAction(mpAction_revealPassword, QLineEdit::TrailingPosition);
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        character_password_entry->setToolTip(tr("Characters password, stored securely in the computer's credential manager"));
+    } else {
+        character_password_entry->setToolTip(tr("Characters password. Note that the password isn't encrypted in storage"));
+    }
 
     connect(mpAction_revealPassword, &QAction::triggered, this, &dlgConnectionProfiles::slot_togglePasswordVisibility);
     connect(offline_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_load);
