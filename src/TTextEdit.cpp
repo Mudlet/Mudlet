@@ -1070,6 +1070,7 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
         QString lineText = mpBuffer->lineBuffer.at(lineNumber);
         // QStringList debugText;
         QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
+        int indexOfLastChar = 0;
         for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total;) {
             int nextBoundary = boundaryFinder.toNextBoundary();
             // Width in "normal" width characters equivalent of this grapheme:
@@ -1097,13 +1098,21 @@ int TTextEdit::convertMouseXToBufferX(const int mouseX, const int lineNumber, bo
 
             leftX = rightX;
             rightX = (mShowTimeStamps ? mTimeStampWidth + column : column) * mFontWidth;
-            // debugText << QStringLiteral("[%1]%2[%3]").arg(QString::number(leftX), grapheme, QString::number(rightX - 1));
+            // Format of display "[index of FIRST QChar in grapheme|leftX]grapheme[rightX|index of LAST QChar in grapheme (may be same as FIRST)]" ...
+            // debugText << QStringLiteral("[%1|%2]%3[%4|%5]").arg(QString::number(indexOfChar), QString::number(leftX), grapheme, QString::number(rightX - 1), QString::number(nextBoundary - 1));
             if (leftX <= mouseX && mouseX < rightX) {
-                // qDebug().nospace().noquote() << "TTextEdit::convertMouseXToBufferX(" << mouseX << ", " << lineNumber << ") INFO - placing cursor over the last grapheme within the calculated limits of:\n" << debugText.join(QString());
+                // qDebug().nospace().noquote() << "TTextEdit::convertMouseXToBufferX(" << mouseX << ", " << lineNumber << ") INFO - returning: " << std::max(0, indexOfChar) << " reckoning cursor is over the last grapheme within the calculated limits of:\n" << debugText.join(QString());
                 return std::max(0, indexOfChar);
+            }
+            if (nextBoundary >= 0) {
+                // nextBoundary will be -1 at end of line and we do not want THAT:
+                indexOfLastChar = indexOfChar;
             }
             indexOfChar = nextBoundary;
         }
+
+//        qDebug().nospace().noquote() << "TTextEdit::convertMouseXToBufferX(" << mouseX << ", " << lineNumber << ") INFO - falling out of bottom of for loop and returning: " << indexOfLastChar << " !";
+        return std::max(0, indexOfLastChar);
     }
 
     return 0;
