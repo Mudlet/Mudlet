@@ -414,12 +414,16 @@ void cTelnet::handle_socket_signal_error()
 
 void cTelnet::slot_send_login()
 {
-    sendData(mpHost->getLogin());
+    if (!mpHost->getLogin().isEmpty()) {
+        sendData(mpHost->getLogin());
+    }
 }
 
 void cTelnet::slot_send_pass()
 {
-    sendData(mpHost->getPass());
+    if (!mpHost->getLogin().isEmpty() && !mpHost->getPass().isEmpty()) {
+        sendData(mpHost->getPass());
+    }
 }
 
 void cTelnet::handle_socket_signal_connected()
@@ -441,10 +445,8 @@ void cTelnet::handle_socket_signal_connected()
     QString nothing = "";
     mpHost->mLuaInterpreter.call(func, nothing);
     mConnectionTime.start();
-    if ((mpHost->getLogin().size() > 0) && (mpHost->getPass().size() > 0)) {
-        mTimerLogin->start(2000);
-        mTimerPass->start(3000);
-    }
+    mTimerLogin->start(2000);
+    mTimerPass->start(3000);
 
     emit signal_connected(mpHost);
 
