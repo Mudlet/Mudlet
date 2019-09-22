@@ -1964,7 +1964,9 @@ void dlgConnectionProfiles::slot_copy_profile()
 
     // restore the password, which won't be copied by the disk copy if stored in the credential manager
     character_password_entry->setText(oldPassword);
-    writeSecurePassword(profile_name, oldPassword);
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        writeSecurePassword(profile_name, oldPassword);
+    }
     mCopyingProfile = false;
 }
 
