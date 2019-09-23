@@ -10464,7 +10464,7 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     }
 
     QNetworkRequest request = QNetworkRequest(url);
-    setRequestDefaults(url, request);
+    mudlet::self()->setNetworkRequestDefaults(url, request);
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->get(request);
@@ -14747,7 +14747,7 @@ int TLuaInterpreter::putHTTP(lua_State* L)
     }
 
     QNetworkRequest request = QNetworkRequest(url);
-    setRequestDefaults(url, request);
+    mudlet::self()->setNetworkRequestDefaults(url, request);
 
     if (!lua_istable(L, 3) && !lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "putHTTP: bad argument #3 type (headers as a table expected, got %s!)", luaL_typename(L, 3));
@@ -14804,19 +14804,6 @@ int TLuaInterpreter::putHTTP(lua_State* L)
     return 2;
 }
 
-void TLuaInterpreter::setRequestDefaults(const QUrl& url, QNetworkRequest& request)
-{
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-
-    request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
-#ifndef QT_NO_SSL
-    if (url.scheme() == QStringLiteral("https")) {
-        QSslConfiguration config(QSslConfiguration::defaultConfiguration());
-        request.setSslConfiguration(config);
-    }
-#endif
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#postHTTP
 int TLuaInterpreter::postHTTP(lua_State* L)
 {
@@ -14850,7 +14837,7 @@ int TLuaInterpreter::postHTTP(lua_State* L)
     }
 
     QNetworkRequest request = QNetworkRequest(url);
-    setRequestDefaults(url, request);
+    mudlet::self()->setNetworkRequestDefaults(url, request);
 
     if (!lua_istable(L, 3) && !lua_isnoneornil(L, 3)) {
         lua_pushfstring(L, "postHTTP: bad argument #3 type (headers as a table expected, got %s!)", luaL_typename(L, 3));
@@ -14931,7 +14918,7 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
     }
 
     QNetworkRequest request = QNetworkRequest(url);
-    setRequestDefaults(url, request);
+    mudlet::self()->setNetworkRequestDefaults(url, request);
 
     if (!lua_istable(L, 2) && !lua_isnoneornil(L, 2)) {
         lua_pushfstring(L, "postHTTP: bad argument #2 type (headers as a table expected, got %s!)", luaL_typename(L, 2));

@@ -2179,18 +2179,8 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     }
 
     QNetworkRequest request = QNetworkRequest(url);
-    // This should prevent similar problems to those mentioned in:
-    // https://bugs.launchpad.net/mudlet/+bug/1366781 although the fix for THAT
-    // is elsewhere and is to be inserted separately to the changeset that
-    // placed this code here:
-    request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
-
-#ifndef QT_NO_SSL
-    if (url.scheme() == QStringLiteral("https")) {
-        QSslConfiguration config(QSslConfiguration::defaultConfiguration());
-        request.setSslConfiguration(config);
-    }
-#endif
+    pHost->updateProxySettings(mpNetworkAccessManager);
+    mudlet::self()->setNetworkRequestDefaults(url, request);
 
     mExpectedFileSize = 4000000;
 
@@ -2199,8 +2189,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     qApp->processEvents();
     // Attempts to ensure INFO message gets shown before download is initiated!
 
-    pHost->updateProxySettings(mpNetworkAccessManager);
-    mpNetworkReply = mpNetworkAccessManager->get(QNetworkRequest(QUrl(url)));
+    mpNetworkReply = mpNetworkAccessManager->get(request);
     // Using zero for both min and max values should cause the bar to oscillate
     // until the first update
     mpProgressDialog = new QProgressDialog(tr("Downloading XML map file for use in %1...",

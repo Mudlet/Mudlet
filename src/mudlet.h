@@ -383,9 +383,10 @@ public:
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     QPair<bool, QStringList> getLines(Host* pHost, const QString& windowName, const int lineFrom, const int lineTo);
     void setEnableFullScreenMode(const bool);
-    bool migratePasswordsToSecureStorage();
     bool migratePasswordsToProfileStorage();
     bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
+    void migratePasswordsToSecureStorage();
+    static void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
 
     // Both of these revises the contents of the .aff file: the first will
     // handle a .dic file that has been updated externally/manually (to add

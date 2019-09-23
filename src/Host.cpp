@@ -536,6 +536,20 @@ QString Host::getMmpMapLocation() const
 {
     return mpMap->getMmpMapLocation();
 }
+// error and debug consoles inherit font of the main console
+void Host::updateConsolesFont()
+{
+    if (mpEditorDialog) {
+        if (mpEditorDialog->mpErrorConsole) {
+            mpEditorDialog->mpErrorConsole->setMiniConsoleFont(mDisplayFont.family());
+            mpEditorDialog->mpErrorConsole->setMiniConsoleFontSize(mDisplayFont.pointSize());
+        }
+        if (mudlet::self()->mpDebugArea) {
+            mudlet::self()->mpDebugConsole->setMiniConsoleFont(mDisplayFont.family());
+            mudlet::self()->mpDebugConsole->setMiniConsoleFontSize(mDisplayFont.pointSize());
+        }
+    }
+}
 
 std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
 {
@@ -545,22 +559,27 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
     }
 
     mDisplayFont = font;
+    updateConsolesFont();
     return std::make_pair(true, QString());
 }
 
 std::pair<bool, QString> Host::setDisplayFont(const QString& fontName)
 {
-    return setDisplayFont(QFont(fontName));
+    const auto result = setDisplayFont(QFont(fontName));
+    updateConsolesFont();
+    return result;
 }
 
 void Host::setDisplayFontFromString(const QString& fontData)
 {
     mDisplayFont.fromString(fontData);
+    updateConsolesFont();
 }
 
 void Host::setDisplayFontSize(int size)
 {
     mDisplayFont.setPointSize(size);
+    updateConsolesFont();
 }
 
 // Now returns the total weight of the path
@@ -1480,7 +1499,7 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
     bool hasInvite = false;
     auto inviteUrl = discordInfo.value(QStringLiteral("inviteurl"));
     // Will be of form: "https://discord.gg/#####"
-    if (inviteUrl != QJsonValue::Undefined && !inviteUrl.toString().isEmpty()) {
+    if (inviteUrl != QJsonValue::Undefined && !inviteUrl.toString().isEmpty() && inviteUrl.toString() != QStringLiteral("0")) {
         hasInvite = true;
     }
 
@@ -1504,9 +1523,9 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
 
     if (hasInvite) {
         if (hasCustomAppID) {
-            qDebug() << "Game using a custom Discord server. Invite URL: " << inviteUrl.toString();
+            qDebug() << "Game using a custom Discord server. Invite URL:" << inviteUrl.toString();
         } else if (hasApplicationId) {
-            qDebug() << "Game using Mudlet's Discord server. Invite URL: " << inviteUrl.toString();
+            qDebug() << "Game using Mudlet's Discord server. Invite URL:" << inviteUrl.toString();
         } else {
             qDebug() << "Discord invite URL: " << inviteUrl.toString();
         }
