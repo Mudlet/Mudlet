@@ -543,6 +543,7 @@ private:
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
     void updateModuleZips() const;
+    void loadSecuredPassword();
     void removeAllNonPersistentStopWatches();
 
     QFont mDisplayFont;
@@ -639,11 +640,6 @@ private:
     // looked up directly by that class:
     bool mEnableUserDictionary;
     bool mUseSharedDictionary;
-
-    void processGMCPDiscordStatus(const QJsonObject& discordInfo);
-    void processGMCPDiscordInfo(const QJsonObject& discordInfo);
-    void updateModuleZips() const;
-    void loadSecuredPassword();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)
