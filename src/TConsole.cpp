@@ -410,7 +410,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     networkLatency->setPalette(basePalette);
     networkLatency->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
-
     QFont latencyFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
     int width;
     int maxWidth = 120;
@@ -570,6 +569,14 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         // absence of files for the first run in a new profile or from an older
         // Mudlet version:
         setProfileSpellDictionary();
+    }
+
+    // error and debug consoles inherit font of the main console
+    if (mType & (ErrorConsole | CentralDebugConsole)) {
+        mDisplayFont = mpHost->getDisplayFont();
+        mDisplayFontName = mDisplayFont.family();
+        mDisplayFontSize = mDisplayFont.pointSize();
+        refreshMiniConsole();
     }
 }
 
