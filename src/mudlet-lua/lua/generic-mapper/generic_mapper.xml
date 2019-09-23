@@ -639,7 +639,7 @@ end</script>
 			<packageName></packageName>
 			<script>-- Jor'Mox's Generic Map Script
 -- 11/07/2018
-local version = "2.0.15"
+local version = "2.0.16"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -1203,7 +1203,7 @@ map.help.quick_start = [[
     ----------------------------------------
 
     Mudlet Mapper works in tandem with a script, and this generic mapper script needs
-    to know 2 things to work: 
+    to know 2 things to work:
       - &lt;dim_grey&gt;room name&lt;reset&gt; $ROOM_NAME_STATUS ($ROOM_NAME)
       - &lt;dim_grey&gt;exits&lt;reset&gt;     $ROOM_EXITS_STATUS ($ROOM_EXITS)
 
@@ -1214,7 +1214,7 @@ map.help.quick_start = [[
        Room name or exits aren't recognised? Try this command then. It will make
        the script start looking for a prompt using several standard prompt
        patterns. If a prompt is found, you will be notified, if not, you will
-       need to set a prompt pattern yourself using &lt;link: prompt&gt;map prompt&lt;/link&gt;. 
+       need to set a prompt pattern yourself using &lt;link: prompt&gt;map prompt&lt;/link&gt;.
        Reach out to the &lt;urllink: https://discord.gg/kuYvMQ9&gt;Mudlet community&lt;/urllink&gt; for help, we'd be happy to help
        you figure it out!
     3. &lt;link: debug&gt;map debug&lt;/link&gt;
@@ -1271,7 +1271,7 @@ map.defaults = {
         northwest = 'northwest', up = 'up', down = 'down',
     },
     debug = false,
-    download_path = "https://raw.githubusercontent.com/JorMox/Mudlet/development/src/mudlet-lua/lua/generic-mapper",
+    download_path = "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/mudlet-lua/lua/generic-mapper",
 }
 
 local move_queue, lines = {}, {}
@@ -1303,6 +1303,10 @@ local function config()
         coordmap[count] = {v[3],v[4],v[5]}
         stubmap[count] = v[1]
         stubmap[v[1]] = count
+    end
+    -- update to the current download path
+    if map.configs.download_path == "https://raw.githubusercontent.com/JorMox/Mudlet/development/src/mudlet-lua/lua/generic-mapper" then
+        map.configs.download_path = "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/mudlet-lua/lua/generic-mapper"
     end
 
     -- setup metatable to store sensitive values
@@ -1403,8 +1407,8 @@ function map.show_help(cmd)
         local url, target = rex.match(w, [[&lt;(url)?link: ([^&gt;]+)&gt;]])
         -- lrexlib returns a non-capture as 'false', so determine which variable the capture went into
         if target == nil then target = url end
-        if target then        
-            local before, linktext, _, link, _, after, ok = rex.match(w, 
+        if target then
+            local before, linktext, _, link, _, after, ok = rex.match(w,
                           [[(.*)&lt;((url)?link): [^&gt;]+&gt;(.*)&lt;\/(url)?link&gt;(.*)]], 0, 'm')
             -- could not get rex.match to capture the newline - fallback to string.match
             local _, _, after = w:match("(.*)&lt;u?r?l?link: [^&gt;]+&gt;(.*)&lt;/u?r?l?link&gt;(.*)")
@@ -1968,8 +1972,8 @@ local function capture_room_info(name, exits)
                 table.insert(map.currentExits,w)
             end
         end
-	undupeExits = deduplicate_exits(map.currentExits)
-	map.set("currentExits", undupeExits)
+    undupeExits = deduplicate_exits(map.currentExits)
+    map.set("currentExits", undupeExits)
         map.echo(string.format("Exits Captured: %s (%s)",exits, table.concat(map.currentExits, " ")),true)
         move_map()
     elseif vision_fail then
@@ -2934,7 +2938,7 @@ function map.eventHandler(event, ...)
     elseif event == "mapOpenEvent" then
         if not help_shown and not map.save.prompt_pattern[map.character or ""] then
             send("look", true)
-            tempTimer(3, function() map.show_help("quick_start"); help_shown = true end)            
+            tempTimer(3, function() map.show_help("quick_start"); help_shown = true end)
         end
     elseif event == "mapStop" then
         map.set("mapping", false)

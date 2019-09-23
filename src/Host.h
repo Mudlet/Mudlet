@@ -553,6 +553,7 @@ private:
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
     void updateModuleZips() const;
     void updateConsolesFont();
+    void loadSecuredPassword();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

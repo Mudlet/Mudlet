@@ -110,11 +110,14 @@ private:
     QPushButton* delete_button;
     QString mDiscordApplicationId;
     const QStringList mDefaultGames;
+    QAction* mpAction_revealPassword;
+
 
 private slots:
     void slot_profile_menu(QPoint pos);
     void slot_set_custom_icon();
     void slot_reset_custom_icon();
+    void slot_togglePasswordVisibility(const bool);
     void slot_password_saved(QKeychain::Job* job);
     void slot_password_deleted(QKeychain::Job* job);
 };
