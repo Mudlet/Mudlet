@@ -180,6 +180,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpSystemMessageArea = new dlgSystemMessageArea(this);
     mpSystemMessageArea->setObjectName(QStringLiteral("mpSystemMessageArea"));
     mpSystemMessageArea->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Minimum);
+    // set the stretch factor of the message area to 0 and everything else to 1,
+    // so our errors box doesn't stretch to produce a grey area
     layoutColumn->addWidget(mpSystemMessageArea, 0);
     connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, mpSystemMessageArea, &QWidget::hide);
 
@@ -280,36 +282,12 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpErrorConsole->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Minimum);
     splitter_right->addWidget(mpErrorConsole);
 
-//    layoutColumn->setStretchFactor(0, 0); // mpSystemMessageArea
-//    layoutColumn->setStretchFactor(1, 0); // mpTriggersMainArea
-//    layoutColumn->setStretchFactor(2, 0); // mpTimersMainArea
-//    layoutColumn->setStretchFactor(3, 0); // mpAliasMainArea
-//    layoutColumn->setStretchFactor(4, 0); // mpActionsMainArea
-//    layoutColumn->setStretchFactor(5, 0); // mpKeysMainArea
-//    layoutColumn->setStretchFactor(6, 0); // mpVarsMainArea
-//    layoutColumn->setStretchFactor(7, 1); // mpScriptsMainArea
-
     splitter_right->setStretchFactor(0, 1); // mpNonCodeWidgets
     splitter_right->setCollapsible(0, false);
     splitter_right->setStretchFactor(1, 1); // mpSourceEditorArea
     splitter_right->setCollapsible(1, false);
     splitter_right->setStretchFactor(2, 1); // mpErrorConsole
     splitter_right->setCollapsible(2, false);
-
-//    splitter_right->setStretchFactor(3, 1); // mpAliasMainArea
-//    splitter_right->setCollapsible(3, false);
-//    splitter_right->setStretchFactor(4, 1); // mpActionsMainArea
-//    splitter_right->setCollapsible(4, false);
-//    splitter_right->setStretchFactor(5, 1); // mpKeysMainArea
-//    splitter_right->setCollapsible(5, false);
-//    splitter_right->setStretchFactor(6, 1); // mpVarsMainArea
-//    splitter_right->setCollapsible(6, false);
-//    splitter_right->setStretchFactor(7, 1); // mpScriptsMainArea
-//    splitter_right->setCollapsible(7, false);
-//    splitter_right->setStretchFactor(8, 3); // mpSourceEditorArea
-//    splitter_right->setCollapsible(8, false);
-//    splitter_right->setStretchFactor(9, 1); // mpErrorConsole
-//    splitter_right->setCollapsible(9, false);
 
     mpErrorConsole->hide();
 
