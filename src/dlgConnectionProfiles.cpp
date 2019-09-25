@@ -233,7 +233,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     mErrorPalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
     mErrorPalette.setColor(QPalette::Base, QColor(255, 235, 235));
 
-    profiles_tree_widget->setViewMode(QListView::IconMode);    
+    profiles_tree_widget->setViewMode(QListView::IconMode);
 }
 
 // the dialog can be accepted by pressing Enter on an qlineedit; this is a safeguard against it
@@ -254,18 +254,8 @@ void dlgConnectionProfiles::closeEvent(QCloseEvent* event)
         QString profile = pItem->text();
         writeProfileData(profile);
     }
-    
+
     event->accept();
-}
-
-void dlgConnectionProfiles::slot_update_pass(const QString &pass)
-{
-    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
-    if (!pItem) {
-        return;
-    }
-
-    writeSecurePassword(pItem->text(), pass);
 }
 
 void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QString& pass) const
@@ -295,15 +285,6 @@ void dlgConnectionProfiles::deleteSecurePassword(const QString& profile) const
     connect(job, &QKeychain::WritePasswordJob::finished, this, &dlgConnectionProfiles::slot_password_deleted);
 
     job->start();
-}
-
-void dlgConnectionProfiles::slot_update_login(const QString &login)
-{
-    QListWidgetItem* pItem = profiles_tree_widget->currentItem();
-    if (pItem) {
-        QString profile = pItem->text();
-        writeProfileData(profile, QStringLiteral("login"), login);
-    }
 }
 
 void dlgConnectionProfiles::slot_validate_url(const QString& url)
@@ -578,7 +559,7 @@ void dlgConnectionProfiles::slot_reallyDeleteProfile()
 
     fillout_form();
 
-    profiles_tree_widget->setFocus();    
+    profiles_tree_widget->setFocus();
 
     mCurrentQSettings.clear();
 
@@ -2339,7 +2320,7 @@ bool dlgConnectionProfiles::validateProfile()
     if (url.indexOf(QRegularExpression(QStringLiteral("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
         if (port_ssl_tsl->isChecked()) {
             notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(QStringLiteral("%1\n%2").arg(notificationAreaMessageBox->text(), tr("SSL connections require the URL of the Game server.\n\n%1").arg(check.errorString())));
+            notificationAreaMessageBox->setText(QStringLiteral("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Secure  connections require the URL of the Game server.\n\n%1").arg(check.errorString())));
             host_name_entry->setPalette(mErrorPalette);
             validUrl = false;
             valid = false;
