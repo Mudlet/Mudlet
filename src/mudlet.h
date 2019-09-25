@@ -385,7 +385,7 @@ public:
     void setEnableFullScreenMode(const bool);
     bool migratePasswordsToProfileStorage();
     bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
-    void migratePasswordsToSecureStorage();
+    bool migratePasswordsToSecureStorage();
     static void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
 
     // Both of these revises the contents of the .aff file: the first will
