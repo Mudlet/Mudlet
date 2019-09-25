@@ -180,12 +180,12 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpSystemMessageArea = new dlgSystemMessageArea(this);
     mpSystemMessageArea->setObjectName(QStringLiteral("mpSystemMessageArea"));
     mpSystemMessageArea->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Minimum);
-    layoutColumn->addWidget(mpSystemMessageArea);
+    layoutColumn->addWidget(mpSystemMessageArea, 0);
     connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, mpSystemMessageArea, &QWidget::hide);
 
     // main areas
     mpTriggersMainArea = new dlgTriggersMainArea(this);
-    layoutColumn->addWidget(mpTriggersMainArea);
+    layoutColumn->addWidget(mpTriggersMainArea, 1);
     connect(mpTriggersMainArea->pushButtonFgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorizeTriggerSetFgColor);
     connect(mpTriggersMainArea->pushButtonBgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorizeTriggerSetBgColor);
     connect(mpTriggersMainArea->pushButtonSound, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_soundTrigger);
@@ -193,24 +193,24 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpTriggersMainArea->toolButton_clearSoundFile, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_clearSoundFile);
 
     mpTimersMainArea = new dlgTimersMainArea(this);
-    layoutColumn->addWidget(mpTimersMainArea);
+    layoutColumn->addWidget(mpTimersMainArea, 1);
 
     mpAliasMainArea = new dlgAliasMainArea(this);
-    layoutColumn->addWidget(mpAliasMainArea);
+    layoutColumn->addWidget(mpAliasMainArea, 1);
 
     mpActionsMainArea = new dlgActionMainArea(this);
-    layoutColumn->addWidget(mpActionsMainArea);
+    layoutColumn->addWidget(mpActionsMainArea, 1);
     connect(mpActionsMainArea->checkBox_action_button_isPushDown, &QCheckBox::stateChanged, this, &dlgTriggerEditor::slot_toggle_isPushDownButton);
 
     mpKeysMainArea = new dlgKeysMainArea(this);
-    layoutColumn->addWidget(mpKeysMainArea);
+    layoutColumn->addWidget(mpKeysMainArea, 1);
     connect(mpKeysMainArea->pushButton_key_grabKey, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_key_grab);
 
     mpVarsMainArea = new dlgVarsMainArea(this);
-    layoutColumn->addWidget(mpVarsMainArea);
+    layoutColumn->addWidget(mpVarsMainArea, 1);
 
     mpScriptsMainArea = new dlgScriptsMainArea(this);
-    layoutColumn->addWidget(mpScriptsMainArea);
+    layoutColumn->addWidget(mpScriptsMainArea, 1);
 
     mIsScriptsMainAreaEditHandler = false;
     mpScriptsMainAreaEditHandlerItem = nullptr;
@@ -280,12 +280,22 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpErrorConsole->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Minimum);
     splitter_right->addWidget(mpErrorConsole);
 
-    splitter_right->setStretchFactor(0, 1); // mpSystemMessageArea
+//    layoutColumn->setStretchFactor(0, 0); // mpSystemMessageArea
+//    layoutColumn->setStretchFactor(1, 0); // mpTriggersMainArea
+//    layoutColumn->setStretchFactor(2, 0); // mpTimersMainArea
+//    layoutColumn->setStretchFactor(3, 0); // mpAliasMainArea
+//    layoutColumn->setStretchFactor(4, 0); // mpActionsMainArea
+//    layoutColumn->setStretchFactor(5, 0); // mpKeysMainArea
+//    layoutColumn->setStretchFactor(6, 0); // mpVarsMainArea
+//    layoutColumn->setStretchFactor(7, 1); // mpScriptsMainArea
+
+    splitter_right->setStretchFactor(0, 1); // mpNonCodeWidgets
     splitter_right->setCollapsible(0, false);
-    splitter_right->setStretchFactor(1, 1); // mpTriggersMainArea
+    splitter_right->setStretchFactor(1, 1); // mpSourceEditorArea
     splitter_right->setCollapsible(1, false);
-    splitter_right->setStretchFactor(2, 1); // mpTimersMainArea
+    splitter_right->setStretchFactor(2, 1); // mpErrorConsole
     splitter_right->setCollapsible(2, false);
+
 //    splitter_right->setStretchFactor(3, 1); // mpAliasMainArea
 //    splitter_right->setCollapsible(3, false);
 //    splitter_right->setStretchFactor(4, 1); // mpActionsMainArea
