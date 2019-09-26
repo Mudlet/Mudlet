@@ -99,7 +99,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.0.3
+VERSION = 4.1.2
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -180,11 +180,9 @@ linux|macx|win32 {
 # To remove the 3D mapper, set the environment WITH_3DMAPPER variable to "NO"
 # ie: export WITH_3DMAPPER="NO" qmake
 #
-linux|macx|win32 {
-    3DMAPPER_TEST = $$upper($$(WITH_3DMAPPER))
-    isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
-       DEFINES += INCLUDE_3DMAPPER
-    }
+3DMAPPER_TEST = $$upper($$(WITH_3DMAPPER))
+isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
+    DEFINES += INCLUDE_3DMAPPER
 }
 
 ###################### Platform Specific Paths and related #####################
@@ -356,10 +354,13 @@ win32 {
         # PowerShell - for cmd.exe the nearest equivalent is '&'
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/edbee-lib")
     }
-
     !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/lcf")
+    }
+    !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
+        message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
+        system("cd $${PWD}\.. & git submodule update --init 3rdparty/qtkeychain")
     }
 } else {
     !exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
@@ -369,6 +370,10 @@ win32 {
     !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}/.. ; git submodule update --init 3rdparty/lcf")
+    }
+    !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
+        message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
+        system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qtkeychain")
     }
 }
 
@@ -406,6 +411,12 @@ exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
 
 !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
     error("Cannot locate lua code formatter submodule source code, build abandoned!")
+}
+
+exists("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri") {
+    include("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri")
+} else {
+    error("Cannot locate QtKeychain submodule source code, build abandoned!")
 }
 
 contains( DEFINES, INCLUDE_UPDATER ) {
@@ -638,28 +649,23 @@ linux|macx|win32 {
     }
 }
 
-linux|macx|win32 {
-    contains( DEFINES, INCLUDE_3DMAPPER ) {
-        HEADERS += glwidget.h
-        SOURCES += glwidget.cpp
-        QT += opengl
 
-        win32 {
-            LIBS += -lopengl32 \
-                    -lglu32
-        }
+contains( DEFINES, INCLUDE_3DMAPPER ) {
+    HEADERS += glwidget.h
+    SOURCES += glwidget.cpp
+    QT += opengl
 
-        !build_pass{
-            message("The 3D mapper code is included in this configuration")
-        }
-    } else {
-        !build_pass{
-            message("The 3D mapper code is excluded from this configuration")
-        }
+    win32 {
+        LIBS += -lopengl32 \
+                -lglu32
+    }
+
+    !build_pass{
+        message("The 3D mapper code is included in this configuration")
     }
 } else {
     !build_pass{
-        message("The 3D mapper code is excluded as OpenGL 1.5 might not be available on this platform")
+        message("The 3D mapper code is excluded from this configuration")
     }
 }
 

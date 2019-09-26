@@ -475,7 +475,7 @@ mudlet::mudlet()
     connect(dactionMultiView, &QAction::triggered, this, &mudlet::slot_multi_view);
     connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_toggle_compact_input_line);
     connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::show_trigger_dialog);
-    connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::show_trigger_dialog);
+    connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::show_editor_dialog);
     connect(dactionShowMap, &QAction::triggered, this, &mudlet::slot_mapper);
     connect(dactionOptions, &QAction::triggered, this, &mudlet::slot_show_options_dialog);
     connect(dactionAbout, &QAction::triggered, this, &mudlet::slot_show_about_dialog);
@@ -1890,7 +1890,7 @@ QSize mudlet::calcFontSize(Host* pHost, const QString& windowName)
 
     QFont font;
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-        font = pHost->mDisplayFont;
+        font = pHost->getDisplayFont();
     } else {
         auto pC = pHost->mpConsole->mSubConsoleMap.value(windowName);
         if (pC) {
@@ -2077,6 +2077,8 @@ bool mudlet::setTextFormat(Host* pHost, const QString& name, const QColor& bgCol
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
         pC->mFormatCurrent.setTextFormat(fgColor, bgColor, attributes);
+        pC->mUpperPane->forceUpdate();
+        pC->mLowerPane->forceUpdate();
         return true;
     } else {
         return false;
@@ -2093,6 +2095,9 @@ bool mudlet::setDisplayAttributes(Host* pHost, const QString& name, const TChar:
     if (pC) {
         // Set or reset all the specified attributes (but leave others unchanged)
         pC->mFormatCurrent.setAllDisplayAttributes((pC->mFormatCurrent.allDisplayAttributes() &~(attributes)) | (state ? attributes : TChar::None));
+        pC->buffer.applyAttribute(pC->P_begin, pC->P_end, attributes, state);
+        pC->mUpperPane->forceUpdate();
+        pC->mLowerPane->forceUpdate();
         return true;
     } else {
         return false;
@@ -2559,6 +2564,8 @@ void mudlet::setLink(Host* pHost, const QString& name, QStringList& linkFunction
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
         pC->setLink(linkFunction, linkHint);
+        pC->mUpperPane->forceUpdate();
+        pC->mLowerPane->forceUpdate();
     }
 }
 
@@ -2571,6 +2578,8 @@ void mudlet::setFgColor(Host* pHost, const QString& name, int r, int g, int b)
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
         pC->setFgColor(r, g, b);
+        pC->mUpperPane->forceUpdate();
+        pC->mLowerPane->forceUpdate();
     }
 }
 
@@ -2583,6 +2592,8 @@ void mudlet::setBgColor(Host* pHost, const QString& name, int r, int g, int b)
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (pC) {
         pC->setBgColor(r, g, b);
+        pC->mUpperPane->forceUpdate();
+        pC->mLowerPane->forceUpdate();
     }
 }
 
@@ -3073,6 +3084,22 @@ void mudlet::slot_show_connection_dialog()
     pDlg->show();
 }
 
+void mudlet::show_editor_dialog()
+{
+    Host* pHost = getActiveHost();
+    if (!pHost) {
+        return;
+    }
+    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    if (!pEditor) {
+        return;
+    }
+    pEditor->slot_show_current();
+    pEditor->raise();
+    pEditor->showNormal();
+    pEditor->activateWindow();
+}
+
 void mudlet::show_trigger_dialog()
 {
     Host* pHost = getActiveHost();
@@ -3086,6 +3113,7 @@ void mudlet::show_trigger_dialog()
     pEditor->slot_show_triggers();
     pEditor->raise();
     pEditor->showNormal();
+    pEditor->activateWindow();
 }
 
 void mudlet::show_alias_dialog()
@@ -3101,6 +3129,7 @@ void mudlet::show_alias_dialog()
     pEditor->slot_show_aliases();
     pEditor->raise();
     pEditor->showNormal();
+    pEditor->activateWindow();
 }
 
 void mudlet::show_timer_dialog()
@@ -3116,6 +3145,7 @@ void mudlet::show_timer_dialog()
     pEditor->slot_show_timers();
     pEditor->raise();
     pEditor->showNormal();
+    pEditor->activateWindow();
 }
 
 void mudlet::show_script_dialog()
@@ -3131,6 +3161,7 @@ void mudlet::show_script_dialog()
     pEditor->slot_show_scripts();
     pEditor->raise();
     pEditor->showNormal();
+    pEditor->activateWindow();
 }
 
 void mudlet::show_key_dialog()
@@ -3146,6 +3177,7 @@ void mudlet::show_key_dialog()
     pEditor->slot_show_keys();
     pEditor->raise();
     pEditor->showNormal();
+    pEditor->activateWindow();
 }
 
 void mudlet::show_variable_dialog()
@@ -3161,6 +3193,7 @@ void mudlet::show_variable_dialog()
     pEditor->slot_show_vars();
     pEditor->raise();
     pEditor->showNormal();
+    pEditor->activateWindow();
 }
 
 void mudlet::show_action_dialog()
@@ -3176,6 +3209,7 @@ void mudlet::show_action_dialog()
     pEditor->slot_show_actions();
     pEditor->raise();
     pEditor->showNormal();
+    pEditor->activateWindow();
 }
 
 
@@ -3203,7 +3237,7 @@ void mudlet::slot_update_shortcuts()
 {
     if (mpMainToolBar->isVisible()) {
         triggersShortcut = new QShortcut(triggersKeySequence, this);
-        connect(triggersShortcut.data(), &QShortcut::activated, this, &mudlet::show_trigger_dialog);
+        connect(triggersShortcut.data(), &QShortcut::activated, this, &mudlet::show_editor_dialog);
         dactionScriptEditor->setShortcut(QKeySequence());
 
         showMapShortcut = new QShortcut(showMapKeySequence, this);
@@ -3421,7 +3455,7 @@ void mudlet::slot_notes()
         pNotes = pHost->mpNotePad;
 
         QTextCharFormat format;
-        format.setFont(pHost->mDisplayFont);
+        format.setFont(pHost->getDisplayFont());
         pNotes->notesEdit->setCurrentCharFormat(format);
         pNotes->setWindowTitle(tr("%1 - notes").arg(pHost->getName()));
         pNotes->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_notepad.png")));
@@ -3562,6 +3596,13 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
     ifs >> ret;
     file.close();
     return ret;
+}
+
+void mudlet::deleteProfileData(const QString& profile, const QString& item)
+{
+    if (!QFile::remove(getMudletPath(profileDataItemPath, profile, item))) {
+        qWarning() << "Couldn't delete profile data file" << item;
+    }
 }
 
 // this slot is called via a timer in the constructor of mudlet::mudlet()
@@ -4753,6 +4794,42 @@ void mudlet::setEnableFullScreenMode(const bool state)
     emit signal_enableFulScreenModeChanged(state);
 }
 
+
+void mudlet::migratePasswordsToSecureStorage()
+{
+    QStringList profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath))
+                                   .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+
+    for (const auto& profile : profiles) {
+        const auto password = readProfileData(profile, QStringLiteral("password"));
+        if (password.isEmpty()) {
+            continue;
+        }
+
+        auto *job = new QKeychain::WritePasswordJob(QStringLiteral("Mudlet profile"));
+        job->setAutoDelete(false);
+        job->setInsecureFallback(false);
+
+        job->setKey(profile);
+        job->setTextData(password);
+        job->setProperty("profile", profile);
+
+        connect(job, &QKeychain::WritePasswordJob::finished, this, &mudlet::slot_password_saved);
+
+        job->start();
+    }
+
+}
+
+void mudlet::slot_password_saved(QKeychain::Job *job)
+{
+    if (job->error()) {
+        qWarning() << "mudlet::slot_password_saved ERROR: couldn't migrate for" << job->property("profile") << "; error was:" << job->errorString();
+    }
+
+    job->deleteLater();
+}
+
 void mudlet::setShowMapAuditErrors(const bool state)
 {
     if (mshowMapAuditErrors != state) {
@@ -5317,3 +5394,17 @@ void mudlet::sanitizeUtf8Path(QString& originalLocation, const QString& fileName
     }
 }
 #endif
+
+// Enable redirects and HTTPS support for a given url
+void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request)
+{
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
+#ifndef QT_NO_SSL
+    if (url.scheme() == QStringLiteral("https")) {
+        QSslConfiguration config(QSslConfiguration::defaultConfiguration());
+        request.setSslConfiguration(config);
+    }
+#endif
+}

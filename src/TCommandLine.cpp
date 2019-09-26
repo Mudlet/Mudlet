@@ -50,7 +50,7 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
 
-    setFont(mpHost->mDisplayFont);
+    setFont(mpHost->getDisplayFont());
 
     mRegularPalette.setColor(QPalette::Text, mpHost->mCommandLineFgColor); //QColor(0,0,192));
     mRegularPalette.setColor(QPalette::Highlight, QColor(0, 0, 192));
@@ -476,55 +476,46 @@ bool TCommandLine::event(QEvent* event)
             if (handleCtrlTabChange(ke, 1)) {
                 return true;
             }
-            break;
 
         case Qt::Key_2:
             if (handleCtrlTabChange(ke, 2)) {
                 return true;
             }
-            break;
 
         case Qt::Key_3:
             if (handleCtrlTabChange(ke, 3)) {
                 return true;
             }
-            break;
 
         case Qt::Key_4:
             if (handleCtrlTabChange(ke, 4)) {
                 return true;
             }
-            break;
 
         case Qt::Key_5:
             if (handleCtrlTabChange(ke, 5)) {
                 return true;
             }
-            break;
 
         case Qt::Key_6:
             if (handleCtrlTabChange(ke, 6)) {
                 return true;
             }
-            break;
 
         case Qt::Key_7:
             if (handleCtrlTabChange(ke, 7)) {
                 return true;
             }
-            break;
 
         case Qt::Key_8:
             if (handleCtrlTabChange(ke, 8)) {
                 return true;
             }
-            break;
 
         case Qt::Key_9:
             if (handleCtrlTabChange(ke, 9)) {
                 return true;
             }
-            break;
 
         default:
             // Process as a possible key binding if there are ANY modifiers
@@ -566,7 +557,7 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
 void TCommandLine::adjustHeight()
 {
     int lines = document()->size().height();
-    int fontH = QFontMetrics(mpHost->mDisplayFont).height();
+    int fontH = QFontMetrics(mpHost->getDisplayFont()).height();
     if (lines < 1) {
         lines = 1;
     }
@@ -1094,7 +1085,9 @@ bool TCommandLine::handleCtrlTabChange(QKeyEvent* key, int tabNumber)
     if ((key->modifiers() & allModifiers) == Qt::ControlModifier) {
         // let user-defined Ctrl+# keys match first - and only if the user hasn't created
         // then we fallback to tab switching
-        if (!keybindingMatched(key) && mudlet::self()->mpTabBar->count() >= (tabNumber)) {
+        if (keybindingMatched(key)) {
+            return true;
+        } else if (mudlet::self()->mpTabBar->count() >= (tabNumber)) {
             mudlet::self()->mpTabBar->setCurrentIndex(tabNumber - 1);
             key->accept();
             return true;

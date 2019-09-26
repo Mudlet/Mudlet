@@ -53,6 +53,7 @@
 #include <QTimer>
 #include <QToolButton>
 #include "edbee/models/textautocompleteprovider.h"
+#include <../3rdparty/qtkeychain/keychain.h>
 #include <QShortcut>
 #include <QKeySequence>
 #ifdef QT_GAMEPAD_LIB
@@ -164,6 +165,7 @@ public:
     void setFgColor(Host*, const QString& name, int, int, int);
     void setBgColor(Host*, const QString& name, int, int, int);
     QString readProfileData(const QString& profile, const QString& item);
+    void deleteProfileData(const QString &profile, const QString &item);
     bool setWindowWrap(Host* pHost, const QString& name, int& wrap);
     bool setWindowWrapIndent(Host* pHost, const QString& name, int& wrap);
     bool copy(Host* pHost, const QString& name);
@@ -380,6 +382,8 @@ public:
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     QPair<bool, QStringList> getLines(Host* pHost, const QString& windowName, const int lineFrom, const int lineTo);
     void setEnableFullScreenMode(const bool);
+    void migratePasswordsToSecureStorage();
+    static void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
 
     // Both of these revises the contents of the .aff file: the first will
     // handle a .dic file that has been updated externally/manually (to add
@@ -429,7 +433,7 @@ public:
     // will be true if they are ones bundled with Mudlet, false if provided by
     // the system
     bool mUsingMudletDictionaries;
-    
+
     QString mCMDLineURI;
 
 public slots:
@@ -500,6 +504,7 @@ private slots:
     void slot_tab_changed(int);
     void show_help_dialog();
     void slot_show_connection_dialog();
+    void show_editor_dialog();
     void show_trigger_dialog();
     void show_alias_dialog();
     void show_script_dialog();
@@ -522,6 +527,7 @@ private slots:
     void slot_updateAvailable(const int);
 #endif
     void slot_toggle_compact_input_line();
+    void slot_password_saved(QKeychain::Job *job);
 
 private:
     void initEdbee();

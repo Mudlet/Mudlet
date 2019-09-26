@@ -106,7 +106,7 @@ TLuaInterpreter::TLuaInterpreter(Host* pH, int id) : mpHost(pH), mHostID(id), pu
     connect(&purgeTimer, &QTimer::timeout, this, &TLuaInterpreter::slotPurge);
 
     mpFileDownloader = new QNetworkAccessManager(this);
-    connect(mpFileDownloader, &QNetworkAccessManager::finished, this, &TLuaInterpreter::slot_replyFinished);
+    connect(mpFileDownloader, &QNetworkAccessManager::finished, this, &TLuaInterpreter::slot_httpRequestFinished);
 
     initLuaGlobals();
 
@@ -119,14 +119,7 @@ TLuaInterpreter::~TLuaInterpreter()
 }
 
 // No documentation available in wiki - internal function
-// Previous code didn't tell the Qt libraries when we had finished with a
-// QNetworkReply so all the data downloaded would be held in memory until the
-// profile was closed - importantly the documentation for the signal
-// QNetworkReply::finished() which is connected to this SLOT stresses that
-// delete() must NOT be called in this slot (it wasn't as it happens), but
-// deleteLater() - which is now done to free the resources when appropriate...
-// - Slysven
-// The code now raises additional sysDownloadError Events on failure to process
+// Raises additional sysDownloadError Events on failure to process
 // the local file, the second argument is "failureToWriteLocalFile" and besides
 // the file to be written being the third argument (as multiple downloads are
 // supported) a fourth argument gives the local file problem, one of:
@@ -135,34 +128,129 @@ TLuaInterpreter::~TLuaInterpreter()
 // or a QFile::errorString() for the issue at hand
 // Upon success we now give an additional (third value) which gives the number
 // of bytes written into the downloaded file.
-void TLuaInterpreter::slot_replyFinished(QNetworkReply* reply)
+void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
 {
     Host* pHost = mpHost;
     if (!pHost) {
-        qWarning() << QStringLiteral("TLuaInterpreter::slot_replyFinished(...) ERROR: NULL Host pointer!");
-        return; // Uh, oh!
-    }
-
-    if (!downloadMap.contains(reply)) {
-        reply->deleteLater();
+        qWarning() << QStringLiteral("TLuaInterpreter::slot_httpRequestFinished(...) ERROR: NULL Host pointer!");
         return;
     }
 
-    QString localFileName = downloadMap.value(reply);
-    TEvent event {};
     if (reply->error() != QNetworkReply::NoError) {
-        event.mArgumentList << QLatin1String("sysDownloadError");
-        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        event.mArgumentList << reply->errorString();
-        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        event.mArgumentList << localFileName;
-        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        TEvent event {};
+        switch (reply->operation()) {
+        case QNetworkAccessManager::PostOperation:
+            event.mArgumentList << QStringLiteral("sysPostHttpError");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << reply->errorString();
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << reply->url().toString();
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            break;
+
+        case QNetworkAccessManager::PutOperation:
+            event.mArgumentList << QStringLiteral("sysPutHttpError");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << reply->errorString();
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << reply->url().toString();
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            break;
+
+        case QNetworkAccessManager::GetOperation:
+            event.mArgumentList << QStringLiteral("sysDownloadError");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << reply->errorString();
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << downloadMap.value(reply);
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+
+            downloadMap.remove(reply);
+            break;
+
+        case QNetworkAccessManager::DeleteOperation:
+            event.mArgumentList << QStringLiteral("sysDeleteHttpError");
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << reply->errorString();
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            event.mArgumentList << reply->url().toString();
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+            break;
+
+        case QNetworkAccessManager::HeadOperation:
+            break;
+        case QNetworkAccessManager::CustomOperation:
+            break;
+        case QNetworkAccessManager::UnknownOperation:
+            break;
+        }
 
         reply->deleteLater();
         downloadMap.remove(reply);
         pHost->raiseEvent(event);
         return;
-    } else { // reply IS ok...
+    }
+
+    handleHttpOK(reply);
+}
+
+void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
+{
+    TEvent event {};
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    switch (reply->operation()) {
+    case QNetworkAccessManager::HeadOperation:
+        break;
+    case QNetworkAccessManager::DeleteOperation:
+        event.mArgumentList << QStringLiteral("sysDeleteHttpDone");
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << reply->url().toString();
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        if (auto replyText = QString(reply->readAll()); replyText.size() <= 10000) {
+
+            // our linewrapping algorithm doesn't like 150k long lines, so don't show the response if it's too big
+            event.mArgumentList << replyText;
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        }
+        break;
+
+    case QNetworkAccessManager::CustomOperation:
+        break;
+    case QNetworkAccessManager::UnknownOperation:
+        break;
+
+    case QNetworkAccessManager::PostOperation:
+        event.mArgumentList << QStringLiteral("sysPostHttpDone");
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << reply->url().toString();
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        if (auto replyText = QString(reply->readAll()); replyText.size() <= 10000) {
+            // our linewrapping algorithm doesn't like 150k long lines, so don't show the response if it's too big
+            event.mArgumentList << replyText;
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        }
+        break;
+
+    case QNetworkAccessManager::PutOperation:
+        event.mArgumentList << QStringLiteral("sysPutHttpDone");
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        event.mArgumentList << reply->url().toString();
+        event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        if (auto replyText = QString(reply->readAll()); replyText.size() <= 10000) {
+
+            // our linewrapping algorithm doesn't like 150k long lines, so don't show the response if it's too big
+            event.mArgumentList << replyText;
+            event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+        }
+        break;
+
+    case QNetworkAccessManager::GetOperation:
+        QString localFileName = downloadMap.value(reply);
+        downloadMap.remove(reply);
         QFile localFile(localFileName);
         if (!localFile.open(QFile::WriteOnly)) {
             event.mArgumentList << QLatin1String("sysDownloadError");
@@ -173,11 +261,7 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply* reply)
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << QLatin1String("unableToOpenLocalFileForWriting");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-
-            reply->deleteLater();
-            downloadMap.remove(reply);
-            pHost->raiseEvent(event);
-            return;
+            break;
         }
 
         qint64 bytesWritten = localFile.write(reply->readAll());
@@ -190,11 +274,7 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply* reply)
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << QLatin1String("unableToWriteLocalFile");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-
-            reply->deleteLater();
-            downloadMap.remove(reply);
-            pHost->raiseEvent(event);
-            return;
+            break;
         }
 
         localFile.flush();
@@ -218,10 +298,13 @@ void TLuaInterpreter::slot_replyFinished(QNetworkReply* reply)
         }
 
         localFile.close();
-        reply->deleteLater();
-        downloadMap.remove(reply);
-        pHost->raiseEvent(event);
+        break;
+
     }
+
+
+    reply->deleteLater();
+    pHost->raiseEvent(event);
 }
 
 // No documentation available in wiki - internal function
@@ -2807,16 +2890,17 @@ int TLuaInterpreter::setFont(lua_State* L)
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
-            // get host profile display font and alter it, since that is how it's done in Settings.
-            QFont displayFont = pHost->mDisplayFont;
-            displayFont.setFamily(font);
-            pHost->mDisplayFont = displayFont;
-            QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
+            if (auto [setNewFont, errorMessage] = pHost->setDisplayFont(font); !setNewFont) {
+                lua_pushnil(L);
+                lua_pushstring(L, errorMessage.toUtf8().constData());
+                return 2;
+            }
+
             // apply changes to main console and its while-scrolling component too.
-            mudlet::self()->mConsoleMap[pHost]->mUpperPane->setFont(displayFont);
+            mudlet::self()->mConsoleMap[pHost]->mUpperPane->setFont(pHost->getDisplayFont());
             mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
             mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();
-            mudlet::self()->mConsoleMap[pHost]->mLowerPane->setFont(displayFont);
+            mudlet::self()->mConsoleMap[pHost]->mLowerPane->setFont(pHost->getDisplayFont());
             mudlet::self()->mConsoleMap[pHost]->mLowerPane->updateScreenView();
             mudlet::self()->mConsoleMap[pHost]->mLowerPane->forceUpdate();
             mudlet::self()->mConsoleMap[pHost]->refresh();
@@ -2907,10 +2991,7 @@ int TLuaInterpreter::setFontSize(lua_State* L)
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
             // get host profile display font and alter it, since that is how it's done in Settings.
-            QFont font = pHost->mDisplayFont;
-            font.setPointSize(size);
-            pHost->mDisplayFont = font;
-            QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
+            pHost->setDisplayFontSize(size);
             // apply changes to main console and its while-scrolling component too.
             mudlet::self()->mConsoleMap[pHost]->mUpperPane->updateScreenView();
             mudlet::self()->mConsoleMap[pHost]->mUpperPane->forceUpdate();
@@ -2950,13 +3031,13 @@ int TLuaInterpreter::getFontSize(lua_State* L)
             windowName = QString::fromUtf8(lua_tostring(L, 1));
 
             if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
-                rval = pHost->mDisplayFont.pointSize();
+                rval = pHost->getDisplayFont().pointSize();
             } else {
                 rval = mudlet::self()->getFontSize(pHost, windowName);
             }
         }
     } else {
-        rval = pHost->mDisplayFont.pointSize();
+        rval = pHost->getDisplayFont().pointSize();
     }
 
     if (rval <= -1) {
@@ -3668,14 +3749,34 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
     QString windowName = QStringLiteral("main");
     QSize size;
 
-    // pre- setFont(), miniconsoles were fixed to the Bitsteam font and so calcFontSize was fixed to it as well
-    // the only parameter it took in was a font size
+    // font name and size are passed in as arguments
+    if (lua_gettop(L) == 2) {
+        if (!lua_isnumber(L, 1)) {
+            lua_pushfstring(L, R"(calcFontSize: bad argument #1 (font size as number expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        }
+
+        if (!lua_isstring(L, 2)) {
+            lua_pushfstring(L, R"(calcFontSize: bad argument #2 (font name as string expected, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        }
+
+        auto font = QFont(QString::fromUtf8(lua_tostring(L, 2)), static_cast<int> (lua_tonumber(L, 1)), QFont::Normal);
+        auto fontMetrics = QFontMetrics(font);
+        size = QSize(fontMetrics.averageCharWidth(), fontMetrics.height());
+
+        lua_pushnumber(L, size.width());
+        lua_pushnumber(L, size.height());
+        return 2;
+    }
+
+    // only either window name or font size is passed in
     if (lua_gettop(L) == 1 && lua_isnumber(L, 1)) {
         auto fontSize = lua_tonumber(L, 1);
         auto font = QFont(QStringLiteral("Bitstream Vera Sans Mono"), fontSize, QFont::Normal);
 
         auto fontMetrics = QFontMetrics(font);
-        size = QSize(fontMetrics.width(QChar('W')), fontMetrics.height());
+        size = QSize(fontMetrics.averageCharWidth(), fontMetrics.height());
     } else if (lua_gettop(L) && !lua_isstring(L, 1)) {
         lua_pushfstring(L, "calcFontSize: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
@@ -4200,16 +4301,14 @@ int TLuaInterpreter::setRoomEnv(lua_State* L)
 {
     int id, env;
     if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "setRoomEnv: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "setRoomEnv: bad argument #1 type (room id as number expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     } else {
         id = lua_tonumber(L, 1);
     }
     if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "setRoomEnv: wrong argument type");
-        lua_error(L);
-        return 1;
+        lua_pushfstring(L, "setRoomEnv: bad argument #2 type (environment id as number expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
     } else {
         env = lua_tonumber(L, 2);
     }
@@ -4217,9 +4316,13 @@ int TLuaInterpreter::setRoomEnv(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         pR->environment = env;
+        lua_pushboolean(L, true);
+        return 1;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, "room %d doesn't exist", id);
+        return 2;
     }
-
-    return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomName
@@ -6324,7 +6427,7 @@ int TLuaInterpreter::getNetworkLatency(lua_State* L)
 int TLuaInterpreter::getMainConsoleWidth(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    int fw = QFontMetrics(host.mDisplayFont).width("W");
+    int fw = QFontMetrics(host.getDisplayFont()).averageCharWidth();
     fw *= host.mWrapAt + 1;
     lua_pushnumber(L, fw);
     return 1;
@@ -10138,21 +10241,6 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
         return 2;
     }
 
-    // TODO: Remove this block of code once it is not needed (map file format updated to 17)
-    {
-        static bool isWarningIssued = false;
-        if (!isWarningIssued && host.mpMap->mDefaultVersion <= 16 && host.mpMap->mSaveVersion < 17) {
-            QString warnMsg = tr("[ WARN ]  - Lua command setAreaUserData() used - it is currently flagged as experimental!");
-            QString infoMsg = tr("[ INFO ]  - This feature requires a newer map format. Please change your map\n"
-                                 "format to a newer version to be able to SAVE this feature's data.\n\n"
-                                 "To avoid filling the screen up with repeated messages, this is\n"
-                                 "your only warning about this command...!");
-            host.postMessage(warnMsg);
-            host.postMessage(infoMsg);
-            isWarningIssued = true;
-        }
-    }
-
     TArea* pA = host.mpMap->mpRoomDB->getArea(areaId);
     if (!pA) {
         lua_pushnil(L);
@@ -10196,21 +10284,6 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
         return 1;
     } else {
         value = QString::fromUtf8(lua_tostring(L, 2));
-    }
-
-    // TODO: Remove this block of code once it is not needed (map file format updated to 17)
-    {
-        static bool isWarningIssued = false;
-        if (!isWarningIssued && host.mpMap->mDefaultVersion <= 16 && host.mpMap->mSaveVersion < 17) {
-            QString warnMsg = tr("[ WARN ]  - Lua command setMapUserData() used - it is currently flagged as experimental!");
-            QString infoMsg = tr("[ INFO ]  - This feature requires a newer map format. Please change your map\n"
-                                 "format to a newer version to be able to SAVE this feature's data.\n\n"
-                                 "To avoid filling the screen up with repeated messages, this is\n"
-                                 "your only warning about this command...!");
-            host.postMessage(warnMsg);
-            host.postMessage(infoMsg);
-            isWarningIssued = true;
-        }
     }
 
     host.mpMap->mUserData[key] = value;
@@ -10391,20 +10464,16 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     }
 
     QNetworkRequest request = QNetworkRequest(url);
-    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-
-    // This should fix: https://bugs.launchpad.net/mudlet/+bug/1366781
-    request.setRawHeader(QByteArray("User-Agent"), QByteArray(QStringLiteral("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
-#ifndef QT_NO_SSL
-    if (url.scheme() == QStringLiteral("https")) {
-        QSslConfiguration config(QSslConfiguration::defaultConfiguration());
-        request.setSslConfiguration(config);
-    }
-#endif
+    mudlet::self()->setNetworkRequestDefaults(url, request);
 
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->get(request);
     host.mLuaInterpreter.downloadMap.insert(reply, localFile);
+
+    if (mudlet::debugMode) {
+        TDebug(QColor(Qt::white), QColor(Qt::blue)) << "downloadFile: script is downloading from " << reply->url().toString() << "\n" >> 0;
+    }
+
     lua_pushboolean(L, true);
     lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
     return 2;
@@ -10905,7 +10974,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     int s = 1;
     int n = lua_gettop(L);
     // console name is an optional first argument
-    if (n > 4) {
+    if (n >= 4) {
         if (!lua_isstring(L, s)) {
             lua_pushstring(L, "insertPopup: wrong argument type");
             lua_error(L);
@@ -10971,7 +11040,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
         return 1;
     }
 
-    if (a1.empty()) {
+    if (a1.empty() || a1 == "main") {
         host.mpConsole->insertLink(txt, _commandList, _hintList, customFormat);
     } else {
         mudlet::self()->insertLink(&host, name, txt, _commandList, _hintList, customFormat);
@@ -11121,7 +11190,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
     int s = 1;
     int n = lua_gettop(L);
     // console name is an optional first argument
-    if (n > 4) {
+    if (n >= 4) {
         if (!lua_isstring(L, s)) {
             lua_pushfstring(L, "echoPopup: bad argument #%d type (window name as string expected, got %s!)", s, luaL_typename(L, s));
             return lua_error(L);
@@ -13640,6 +13709,23 @@ void TLuaInterpreter::setGMCPTable(QString& key, const QString& string_data)
 }
 
 // No documentation available in wiki - internal function
+void TLuaInterpreter::setMSSPTable(const QString& string_data)
+{
+    lua_State* L = pGlobalLua;
+    lua_getglobal(L, "mssp"); //defined in Lua init
+    if (!lua_istable(L, -1)) {
+        lua_newtable(L);
+        lua_setglobal(L, "mssp");
+        lua_getglobal(L, "mssp");
+        if (!lua_istable(L, -1)) {
+            qDebug() << "ERROR: mssp table not defined";
+            return;
+        }
+    }
+    parseMSSP(string_data);
+}
+
+// No documentation available in wiki - internal function
 void TLuaInterpreter::setMSDPTable(QString& key, const QString& string_data)
 {
     lua_State* L = pGlobalLua;
@@ -13783,6 +13869,68 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         }
     }
     lua_pop(L, lua_gettop(L));
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::parseMSSP(const QString& string_data)
+{
+    lua_State* L = pGlobalLua;
+
+    if (!L) {
+        qDebug() << "LUA CRITICAL ERROR: no suitable Lua execution unit found.";
+        return;
+    }
+
+    // string_data is in the format of MSSP_VAR "PLAYERS" MSSP_VAL "52" MSSP_VAR "UPTIME" MSSP_VAL "1234567890"
+    // The quote characters mean that the encased word is a string, the quotes themselves are not sent.
+    QStringList packageList = string_data.split(MSSP_VAR);
+
+    if (packageList.size() > 0) {
+        Host& host = getHostFromLua(L);
+        lua_getglobal(L, "mssp");
+
+        for (int i = 1; i < packageList.size(); i++) {
+            QStringList payloadList = packageList[i].split(MSSP_VAL);
+
+            if (payloadList.size() != 2) {
+                return;
+            }
+
+            QString msspVAR;
+            QString msspVAL;
+
+            for (int j = 0; j < payloadList.size(); j++) {
+                if (j < 1) {
+                    msspVAR = payloadList[j];
+                    lua_pushstring(L, msspVAR.toUtf8().constData());
+                } else {
+                    msspVAL = payloadList[j];
+                    lua_pushlstring(L, msspVAL.toUtf8().constData(), msspVAL.toUtf8().length());
+                }
+            }
+
+            lua_rawset(L, -3);
+
+            // Raise an event
+            QString protocol = QStringLiteral("mssp");
+            QString token = protocol;
+            token.append(".");
+            token.append(msspVAR);
+
+            TEvent event {};
+            event.mArgumentList.append(token);
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            event.mArgumentList.append(token);
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            if (mudlet::debugMode) {
+                QString msg = QStringLiteral("\n%1 event <%2> display(%1) to see the full content\n").arg(protocol, token);
+                host.mpConsole->printSystemMessage(msg);
+            }
+            host.raiseEvent(event);
+        }
+
+        lua_pop(L, lua_gettop(L));
+    }
 }
 
 // No documentation available in wiki - internal function
@@ -14566,6 +14714,259 @@ int TLuaInterpreter::getAvailableFonts(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#putHTTP
+int TLuaInterpreter::putHTTP(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    QString dataToPost;
+    if (!lua_isstring(L, 1) && !lua_isstring(L, 4)) {
+        lua_pushfstring(L, "putHTTP: bad argument #1 type (data to send as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else if (lua_isstring(L, 1)) {
+        dataToPost = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    QString urlString;
+    if (!lua_isstring(L, 2)) {
+        lua_pushfstring(L, "putHTTP: bad argument #2 type (remote url as string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    } else {
+        urlString = QString::fromUtf8(lua_tostring(L, 2));
+    }
+
+    QUrl url = QUrl::fromUserInput(urlString);
+
+    if (!url.isValid()) {
+        lua_pushnil(L);
+        lua_pushfstring(L,
+                        "putHTTP: bad argument #2 value (url is not deemed valid), validation\n"
+                        "produced the following error message:\n%s.",
+                        url.errorString().toUtf8().constData());
+        return 2;
+    }
+
+    QNetworkRequest request = QNetworkRequest(url);
+    mudlet::self()->setNetworkRequestDefaults(url, request);
+
+    if (!lua_istable(L, 3) && !lua_isnoneornil(L, 3)) {
+        lua_pushfstring(L, "putHTTP: bad argument #3 type (headers as a table expected, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
+    } else if (lua_istable(L, 3)) {
+        lua_pushnil(L);
+        while (lua_next(L, 3) != 0) {
+            // key at index -2 and value at index -1
+            if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
+                QString cmd = lua_tostring(L, -1);
+                request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
+            } else {
+                lua_pushfstring(L,
+                                "putHTTP: bad argument #3 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
+                                luaL_typename(L, -2),
+                                luaL_typename(L, -1));
+                return lua_error(L);
+            }
+            // removes value, but keeps key for next iteration
+            lua_pop(L, 1);
+        }
+    }
+
+    QByteArray fileToUpload;
+    QString fileLocation;
+    if (!lua_isstring(L, 4) && !lua_isnoneornil(L, 4)) {
+        lua_pushfstring(L, "putHTTP: bad argument #4 type (file to send as string location expected, got %s!)", luaL_typename(L, 4));
+        return lua_error(L);
+    } else if (lua_isstring(L, 4)) {
+        fileLocation = QString::fromUtf8(lua_tostring(L, 4));
+    }
+
+    if (!fileLocation.isEmpty()) {
+        QFile file(fileLocation);
+        if (!file.open(QFile::ReadOnly)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "couldn't open \"%s\", is the location correct and do you have permissions to it?", fileLocation.toUtf8().constData());
+            return 2;
+        }
+
+        fileToUpload = file.readAll();
+        file.close();
+    }
+
+    host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
+    QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->put(request, fileToUpload.isEmpty() ?dataToPost.toUtf8() : fileToUpload);
+
+    if (mudlet::debugMode) {
+        TDebug(QColor(Qt::white), QColor(Qt::blue)) << "putHTTP: script is uploading data to " << reply->url().toString() << "\n" >> 0;
+    }
+
+    lua_pushboolean(L, true);
+    lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#postHTTP
+int TLuaInterpreter::postHTTP(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+
+    QString dataToPost;
+    if (!lua_isstring(L, 1) && !lua_isstring(L, 4)) {
+        lua_pushfstring(L, "postHTTP: bad argument #1 type (data to send as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else if (lua_isstring(L, 1)) {
+        dataToPost = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    QString urlString;
+    if (!lua_isstring(L, 2)) {
+        lua_pushfstring(L, "postHTTP: bad argument #2 type (remote url as string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    } else {
+        urlString = QString::fromUtf8(lua_tostring(L, 2));
+    }
+
+    QUrl url = QUrl::fromUserInput(urlString);
+
+    if (!url.isValid()) {
+        lua_pushnil(L);
+        lua_pushfstring(L,
+                        "postHTTP: bad argument #2 value (url is not deemed valid), validation\n"
+                        "produced the following error message:\n%s.",
+                        url.errorString().toUtf8().constData());
+        return 2;
+    }
+
+    QNetworkRequest request = QNetworkRequest(url);
+    mudlet::self()->setNetworkRequestDefaults(url, request);
+
+    if (!lua_istable(L, 3) && !lua_isnoneornil(L, 3)) {
+        lua_pushfstring(L, "postHTTP: bad argument #3 type (headers as a table expected, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
+    } else if (lua_istable(L, 3)) {
+        lua_pushnil(L);
+        while (lua_next(L, 3) != 0) {
+            // key at index -2 and value at index -1
+            if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
+                QString cmd = lua_tostring(L, -1);
+                request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
+            } else {
+                lua_pushfstring(L,
+                                "postHTTP: bad argument #3 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
+                                luaL_typename(L, -2),
+                                luaL_typename(L, -1));
+                return lua_error(L);
+            }
+            // removes value, but keeps key for next iteration
+            lua_pop(L, 1);
+        }
+    }
+
+    QByteArray fileToUpload;
+    QString fileLocation;
+    if (!lua_isstring(L, 4) && !lua_isnoneornil(L, 4)) {
+        lua_pushfstring(L, "postHTTP: bad argument #4 type (file to send as string location expected, got %s!)", luaL_typename(L, 4));
+        return lua_error(L);
+    } else if (lua_isstring(L, 4)) {
+            fileLocation = QString::fromUtf8(lua_tostring(L, 4));
+        }
+
+    if (!fileLocation.isEmpty()) {
+        QFile file(fileLocation);
+        if (!file.open(QFile::ReadOnly)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "couldn't open \"%s\", is the location correct and do you have permissions to it?", fileLocation.toUtf8().constData());
+            return 2;
+        }
+
+        fileToUpload = file.readAll();
+        file.close();
+    }
+
+    host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
+    QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->post(request, fileToUpload.isEmpty() ? dataToPost.toUtf8() : fileToUpload);
+
+    if (mudlet::debugMode) {
+        TDebug(QColor(Qt::white), QColor(Qt::blue)) << QStringLiteral("postHTTP: script is uploading data to %1\n").arg(reply->url().toString()) >> 0;
+    }
+
+    lua_pushboolean(L, true);
+    lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
+    return 2;
+}
+
+int TLuaInterpreter::deleteHTTP(lua_State *L)
+{
+    auto& host = getHostFromLua(L);
+
+    QString urlString;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "deleteHTTP: bad argument #1 type (remote url as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        urlString = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    QUrl url = QUrl::fromUserInput(urlString);
+
+    if (!url.isValid()) {
+        lua_pushnil(L);
+        lua_pushfstring(L,
+                        "deleteHTTP: bad argument #1 value (url is not deemed valid), validation\n"
+                        "produced the following error message:\n%s.",
+                        url.errorString().toUtf8().constData());
+        return 2;
+    }
+
+    QNetworkRequest request = QNetworkRequest(url);
+    mudlet::self()->setNetworkRequestDefaults(url, request);
+
+    if (!lua_istable(L, 2) && !lua_isnoneornil(L, 2)) {
+        lua_pushfstring(L, "postHTTP: bad argument #2 type (headers as a table expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    } else if (lua_istable(L, 2)) {
+        lua_pushnil(L);
+        while (lua_next(L, 2) != 0) {
+            // key at index -2 and value at index -1
+            if (lua_type(L, -1) == LUA_TSTRING && lua_type(L, -2) == LUA_TSTRING) {
+
+                QString cmd = lua_tostring(L, -1);
+                request.setRawHeader(QByteArray(lua_tostring(L, -2)), QByteArray(lua_tostring(L, -1)));
+            } else {
+                lua_pushfstring(L,
+                                "postHTTP: bad argument #2 type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
+                                luaL_typename(L, -2),
+                                luaL_typename(L, -1));
+                return lua_error(L);
+            }
+            // removes value, but keeps key for next iteration
+            lua_pop(L, 1);
+        }
+    }
+
+    host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
+    QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->deleteResource(request);
+
+    if (mudlet::debugMode) {
+        TDebug(QColor(Qt::white), QColor(Qt::blue)) << QStringLiteral("deleteHTTP: script is sending delete request for %1\n").arg(reply->url().toString()) >> 0;
+    }
+
+    lua_pushboolean(L, true);
+    lua_pushstring(L, reply->url().toString().toUtf8().constData()); // Returns the Url that was ACTUALLY used
+    return 2;
+}
+
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getConnectionInfo
+int TLuaInterpreter::getConnectionInfo(lua_State *L)
+{
+    Host& host = getHostFromLua(L);
+
+    auto [hostName, hostPort] = host.mTelnet.getConnectionInfo();
+    lua_pushstring(L, hostName.toUtf8().constData());
+    lua_pushnumber(L, hostPort);
+    return 2;
+}
+
 // No documentation available in wiki - internal function
 void TLuaInterpreter::set_lua_table(const QString& tableName, QStringList& variableList)
 {
@@ -15089,6 +15490,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getDictionaryWordList", TLuaInterpreter::getDictionaryWordList);
     lua_register(pGlobalLua, "getTextFormat", TLuaInterpreter::getTextFormat);
     lua_register(pGlobalLua, "getWindowsCodepage", TLuaInterpreter::getWindowsCodepage);
+    lua_register(pGlobalLua, "putHTTP", TLuaInterpreter::putHTTP);
+    lua_register(pGlobalLua, "postHTTP", TLuaInterpreter::postHTTP);
+    lua_register(pGlobalLua, "deleteHTTP", TLuaInterpreter::deleteHTTP);
+    lua_register(pGlobalLua, "getConnectionInfo", TLuaInterpreter::getConnectionInfo);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     // prepend profile path to package.path and package.cpath

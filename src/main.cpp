@@ -518,6 +518,9 @@ int main(int argc, char* argv[])
     mudlet::self()->show();
 
     mudlet::self()->mCMDLineURI = uri;
+
+    mudlet::self()->migratePasswordsToSecureStorage();
+
     mudlet::self()->startAutoLogin();
 
 #if defined(INCLUDE_UPDATER)

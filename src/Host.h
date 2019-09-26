@@ -126,8 +126,8 @@ public:
 
     void closingDown();
     bool isClosingDown();
-    const unsigned int assemblePath();
-    const bool checkForMappingScript();
+    unsigned int assemblePath();
+    bool checkForMappingScript();
 
     TriggerUnit* getTriggerUnit() { return &mTriggerUnit; }
     TimerUnit* getTimerUnit() { return &mTimerUnit; }
@@ -228,6 +228,14 @@ public:
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
+    const QFont& getDisplayFont() const { return mDisplayFont; }
+    std::pair<bool, QString> setDisplayFont(const QFont& font);
+    std::pair<bool, QString> setDisplayFont(const QString& fontName);
+    void setDisplayFontFromString(const QString& fontData);
+    void setDisplayFontSize(int size);
+    void setDisplayFontSpacing(const qreal spacing);
+    void setDisplayFontStyle(QFont::StyleStrategy s);
+    void setDisplayFontFixedPitch(bool enable);
     void updateProxySettings(QNetworkAccessManager* manager);
     std::unique_ptr<QNetworkProxy>& getConnectionProxy();
 
@@ -247,8 +255,8 @@ public:
     int mBorderTopHeight;
     QFont mCommandLineFont;
     QString mCommandSeparator;
-    QFont mDisplayFont;
     bool mEnableGMCP;
+    bool mEnableMSSP;
     bool mEnableMSDP;
     bool mServerMXPenabled;
     QTextStream mErrorLogStream;
@@ -450,7 +458,7 @@ private slots:
 
 private:
     void installPackageFonts(const QString &packageName);
-
+    QFont mDisplayFont;
     QStringList mModulesToSync;
 
     QScopedPointer<LuaInterface> mLuaInterface;
@@ -544,6 +552,8 @@ private:
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
     void updateModuleZips() const;
+    void updateConsolesFont();
+    void loadSecuredPassword();
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

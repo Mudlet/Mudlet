@@ -800,6 +800,9 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mFORCE_GA_OFF = (attributes().value("mFORCE_GA_OFF") == "yes");
     pHost->mFORCE_SAVE_ON_EXIT = (attributes().value("mFORCE_SAVE_ON_EXIT") == "yes");
     pHost->mEnableGMCP = (attributes().value("mEnableGMCP") == "yes");
+    if (attributes().hasAttribute(QLatin1String("mEnableMSSP"))) {
+        pHost->mEnableMSSP = (attributes().value(QStringLiteral("mEnableMSSP")) == "yes");
+    }
     pHost->mEnableMSDP = (attributes().value("mEnableMSDP") == "yes");
     pHost->mMapStrongHighlight = (attributes().value("mMapStrongHighlight") == "yes");
     pHost->mLogStatus = (attributes().value("mLogStatus") == "yes");
@@ -996,9 +999,9 @@ void XMLimport::readHostPackage(Host* pHost)
             } else if (name() == "mLightWhite") {
                 pHost->mLightWhite.setNamedColor(readElementText());
             } else if (name() == "mDisplayFont") {
-                pHost->mDisplayFont.fromString(readElementText());
+                pHost->setDisplayFontFromString(readElementText());
                 QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
-                pHost->mDisplayFont.setFixedPitch(true);
+                pHost->setDisplayFontFixedPitch(true);
             } else if (name() == "mCommandLineFont") {
                 pHost->mCommandLineFont.fromString(readElementText());
             } else if (name() == "commandSeperator") {

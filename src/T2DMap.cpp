@@ -940,7 +940,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             roomEnvironment = mpMap->envColors[roomEnvironment];
         } else {
             if (!mpMap->customEnvColors.contains(roomEnvironment)) {
-                roomEnvironment = 1;
+                roomColor = QColor(0, 164, 204, 255);
             }
         }
         switch (roomEnvironment) {

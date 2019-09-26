@@ -14,12 +14,36 @@
 ---   end
 ---   </pre>
 function table.is_empty(tbl)
-  if next(tbl) == nil then
-    return true else return false
-  end
+  assert(type(tbl) == "table", string.format("bad argument #1 type (table expected, got %s!)", type(currentValue)))
+  return next(tbl) == nil
 end
 
+-- The filter() method creates a new table with all elements that pass the test
+-- implemented by the provided function.
+function table.n_filter(t, cb)
+  local filtered = {}
+  for i, v in ipairs(t) do
+    if cb(v, i, t) then
+      filtered[#filtered + 1] = v
+    end
+  end
+  return filtered
+end
 
+-- The flatten() method creates a new table with all sub-table elements concatenated into it recursively.
+function table.n_flatten(input)
+  local flattened = {}
+  for _, element in ipairs(input) do
+    if type(element) == 'table' then
+      for _, v in ipairs(table.n_flatten(element)) do
+        flattened[#flattened + 1] = v
+      end
+    else
+      flattened[#flattened + 1] = element
+    end
+  end
+  return flattened
+end
 
 --- Lua debug function that prints the content of a Lua table on the screen, split up in keys and values.
 --- Useful if you want to see what the capture groups contain i. e. the Lua table "matches".

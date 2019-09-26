@@ -104,6 +104,7 @@ const char OPT_TERMINAL_TYPE = 24;
 const char OPT_EOR = 25;
 const char OPT_NAWS = 31;
 const char OPT_MSDP = 69; // http://tintin.sourceforge.net/msdp/
+const char OPT_MSSP = static_cast<char>(70); // https://tintin.sourceforge.io/protocols/mssp/
 const char OPT_COMPRESS = 85;
 const char OPT_COMPRESS2 = 86;
 const char OPT_MSP = 90;
@@ -111,6 +112,9 @@ const char OPT_MXP = 91;
 const char OPT_102 = 102;
 const char OPT_ATCP = static_cast<char>(200);
 const char OPT_GMCP = static_cast<char>(201);
+
+const char MSSP_VAR = 1;
+const char MSSP_VAL = 2;
 
 const char MSDP_VAR = 1;
 const char MSDP_VAL = 2;
@@ -135,6 +139,7 @@ public:
     bool sendData(QString& data);
     void setATCPVariables(const QByteArray&);
     void setGMCPVariables(const QByteArray&);
+    void setMSSPVariables(const QByteArray&);
     void atcpComposerCancel();
     void atcpComposerSave(QString);
     void setDisplayDimensions();
@@ -154,7 +159,7 @@ public:
     const QStringList & getEncodingsList() const { return mAcceptableEncodings; }
     const QStringList & getFriendlyEncodingsList() const { return mFriendlyEncodings; }
     const QString& getComputerEncoding(const QString& encoding);
-    const QString& getFriendlyEncoding();
+    const QString& getFriendlyEncoding() const;
     QAbstractSocket::SocketError error();
     QString errorString();
 #if !defined(QT_NO_SSL)
@@ -165,10 +170,12 @@ public:
     std::string encodeAndCookBytes(const std::string&);
     bool isATCPEnabled() const { return enableATCP; }
     bool isGMCPEnabled() const { return enableGMCP; }
+    bool isMSSPEnabled() const { return enableMSSP; }
     bool isChannel102Enabled() const { return enableChannel102; }
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
     QAbstractSocket::SocketState getConnectionState() const { return socket.state(); }
+    std::pair<QString, int> getConnectionInfo() const;
 
 
     QMap<int, bool> supportedTelnetOptions;
@@ -281,6 +288,7 @@ private:
     int lastTimeOffset;
     bool enableATCP;
     bool enableGMCP;
+    bool enableMSSP;
     bool enableChannel102;
     bool mDontReconnect;
     bool mAutoReconnect;
