@@ -41,6 +41,9 @@ public:
     QString readProfileData(const QString& profile, const QString& item) const;
     void accept() override;
 
+    void showWarningMessage(const QString& message);
+    void showInformationMessage(const QString& message);
+
 signals:
     void signal_load_profile(QString profile_name, bool alsoConnect);
 

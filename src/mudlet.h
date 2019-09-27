@@ -59,6 +59,7 @@
 #ifdef QT_GAMEPAD_LIB
 #include <QGamepad>
 #endif
+#include "dlgConnectionProfiles.h"
 #include "post_guard.h"
 
 #include <hunspell/hunspell.hxx>
@@ -181,6 +182,7 @@ public:
     static const QString scmMudletXmlDefaultVersion;
     static QPointer<TConsole> mpDebugConsole;
     static QPointer<QMainWindow> mpDebugArea;
+    QPointer<dlgConnectionProfiles> mpConnectionDialog;
     static bool debugMode;
     QMap<Host*, TConsole*> mConsoleMap;
     bool isGoingDown() { return mIsGoingDown; }
@@ -211,7 +213,9 @@ public:
     bool resetFormat(Host*, QString& name);
     bool moduleTableVisible();
     bool mWindowMinimized;
+    bool startAutoLogin();
     void doAutoLogin(const QString&);
+    void handleTelnetUri(const QString& telnetUri, bool openedProfiles);
     bool deselect(Host* pHost, const QString& name);
     void stopSounds();
     void playSound(const QString &s, int);
@@ -458,7 +462,6 @@ public slots:
     void slot_notes();
     void slot_reconnect();
     void slot_close_profile_requested(int);
-    void startAutoLogin();
     void slot_irc();
     void slot_discord();
     void slot_uninstall_package();

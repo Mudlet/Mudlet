@@ -422,6 +422,26 @@ void dlgConnectionProfiles::slot_update_name(const QString& newName)
     validateProfile();
 }
 
+void dlgConnectionProfiles::showWarningMessage(const QString& message)
+{
+    notificationArea->show();
+    notificationAreaIconLabelWarning->show();
+    notificationAreaIconLabelError->hide();
+    notificationAreaIconLabelInformation->hide();
+    notificationAreaMessageBox->show();
+    notificationAreaMessageBox->setText(message);
+}
+
+void dlgConnectionProfiles::showInformationMessage(const QString &message)
+{
+    notificationArea->show();
+    notificationAreaIconLabelWarning->hide();
+    notificationAreaIconLabelError->hide();
+    notificationAreaIconLabelInformation->show();
+    notificationAreaMessageBox->show();
+    notificationAreaMessageBox->setText(message);
+}
+
 void dlgConnectionProfiles::slot_save_name()
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
@@ -455,20 +475,10 @@ void dlgConnectionProfiles::slot_save_name()
         // CHECKME: previous code specified a path ending in a '/'
         QDir parentpath(mudlet::getMudletPath(mudlet::profilesPath));
         if (!parentpath.rename(currentProfileEditName, newProfileName)) {
-            notificationArea->show();
-            notificationAreaIconLabelWarning->show();
-            notificationAreaIconLabelError->hide();
-            notificationAreaIconLabelInformation->hide();
-            notificationAreaMessageBox->show();
-            notificationAreaMessageBox->setText(tr("Could not rename your profile data on the computer."));
+            showWarningMessage(tr("Could not rename your profile data on the computer."));
         }
     } else if (!dir.mkpath(mudlet::getMudletPath(mudlet::profileHomePath, newProfileName))) {
-        notificationArea->show();
-        notificationAreaIconLabelWarning->show();
-        notificationAreaIconLabelError->hide();
-        notificationAreaIconLabelInformation->hide();
-        notificationAreaMessageBox->show();
-        notificationAreaMessageBox->setText(tr("Could not create the new profile folder on your computer."));
+        showWarningMessage(tr("Could not create the new profile folder on your computer."));
     }
 
     // if this was a previously deleted profile, restore it

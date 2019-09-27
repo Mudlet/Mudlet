@@ -65,7 +65,7 @@ static void pcre_free_dbg(void* ptr)
 
 #endif // _DEBUG && _MSC_VER
 
-QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& action)
+QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& action, QString &telnetUri)
 {
     action = 0;
 
@@ -103,8 +103,14 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
                 break;
             }
 
-            if (tolower(argument) == 'q') {
+            if (tolower(argument) == 'q' && argv[i+1]) {
                 action |= 4;
+            }
+
+            if (tolower(argument) == 'u') {
+                action |= 8;
+
+                telnetUri = QString(argv[i+1]);
             }
         }
     }
@@ -184,6 +190,7 @@ int main(int argc, char* argv[])
 #endif // _MSC_VER && _DEBUG
     spDebugConsole = nullptr;
     unsigned int startupAction = 0;
+    QString telnetUri;
 
     // due to a Qt bug, this only safely works for both non- and HiDPI displays on 5.12+
     // 5.6 - 5.11 make the application blow up in size on non-HiDPI displays
@@ -191,7 +198,7 @@ int main(int argc, char* argv[])
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
 
-    QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction));
+    QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction, telnetUri));
     auto * app = qobject_cast<QApplication*>(initApp.data());
 
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
@@ -510,7 +517,9 @@ int main(int argc, char* argv[])
 
     mudlet::self()->migratePasswordsToSecureStorage();
 
-    mudlet::self()->startAutoLogin();
+    bool openedProfiles = mudlet::self()->startAutoLogin();
+
+    mudlet::self()->handleTelnetUri(telnetUri, openedProfiles);
 
 #if defined(INCLUDE_UPDATER)
     mudlet::self()->checkUpdatesOnStart();

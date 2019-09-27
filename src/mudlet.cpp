@@ -167,6 +167,7 @@ mudlet::mudlet()
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
 , mHunspell_sharedDictionary(nullptr)
+, mpConnectionDialog(nullptr)
 {
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     mpSettings = getQSettings();
@@ -3075,13 +3076,15 @@ void mudlet::writeSettings()
 
 void mudlet::slot_show_connection_dialog()
 {
-    auto pDlg = new dlgConnectionProfiles(this);
-    connect(pDlg, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connection_dlg_finished);
-    pDlg->fillout_form();
+    if (!mpConnectionDialog) {
+        mpConnectionDialog = new dlgConnectionProfiles(this);
+        connect(mpConnectionDialog, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connection_dlg_finished);
+    }
+    mpConnectionDialog->fillout_form();
 
-    connect(pDlg, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
-    pDlg->setAttribute(Qt::WA_DeleteOnClose);
-    pDlg->show();
+    connect(mpConnectionDialog, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
+    mpConnectionDialog->setAttribute(Qt::WA_DeleteOnClose);
+    mpConnectionDialog->show();
 }
 
 void mudlet::show_editor_dialog()
@@ -3606,7 +3609,7 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
 }
 
 // this slot is called via a timer in the constructor of mudlet::mudlet()
-void mudlet::startAutoLogin()
+bool mudlet::startAutoLogin()
 {
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     bool openedProfile = false;
@@ -3622,6 +3625,8 @@ void mudlet::startAutoLogin()
     if (!openedProfile) {
         slot_show_connection_dialog();
     }
+
+    return openedProfile;
 }
 
 // Ensure the debug area is attached to at least one Host
@@ -3699,6 +3704,51 @@ void mudlet::doAutoLogin(const QString& profile_name)
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, true);
     enableToolbarButtons();
+}
+
+void mudlet::handleTelnetUri(const QString &telnetUri, bool openedProfiles)
+{
+    QUrl url(telnetUri, QUrl::TolerantMode);
+
+    if (url.scheme() != QLatin1String("telnet")) {
+        return;
+    }
+
+    if (url.port() == -1) {
+        url.setPort(23);
+    }
+
+    QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+
+    int profilesFound {};
+    for (auto& host : hostList) {
+        QString hostUrl = readProfileData(host, QStringLiteral("url"));
+        int hostPort = readProfileData(host, QStringLiteral("port")).toInt();
+
+        if (url.host().compare(hostUrl, Qt::CaseInsensitive) == 0
+            && url.port() == hostPort) {
+            profilesFound++;
+        }
+    }
+
+    if (profilesFound == 0) {
+    } else if (profilesFound == 1) {
+    } else {
+        if (openedProfiles) {
+            slot_show_connection_dialog();
+        }
+        if (mpConnectionDialog) {
+            mpConnectionDialog->showInformationMessage(tr("%n maching profiles found for %1, which would you like to open?", "", profilesFound).arg(url.host()));
+        }
+
+    }
+
+//    qDebug() << url;
+//    qDebug() << url.scheme();
+//    qDebug() << url.host();
+//    qDebug() << url.port();
+//    qDebug() << url.userName();
+//    qDebug() << url.password();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
