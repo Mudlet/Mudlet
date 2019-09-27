@@ -843,6 +843,32 @@ void mudlet::migrateDebugConsole(Host* currentHost)
     mpDebugArea->close();
 }
 
+QString mudlet::addProfile(const QString &host, const int port, const QString &login, const QString &password)
+{
+    QString profile_name(host);
+    QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+
+    if (hostList.contains(profile_name)) {
+        generateUniqueProfileName(profile_name);
+    }
+
+    QString profilePath = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
+    QDir dir;
+    dir.mkpath(profilePath);
+
+    writeProfileData(profile_name, QStringLiteral("url"), host);
+    writeProfileData(profile_name, QStringLiteral("port"), QString::number(port));
+
+    if (!login.isEmpty()) {
+        writeProfileData(profile_name, QStringLiteral("login"), login);
+    }
+    if (!password.isEmpty()) {
+        writeProfileData(profile_name, QStringLiteral("password"), password);
+    }
+
+    return profile_name;
+}
+
 // As we are currently only using files from a resource file we only need to
 // analyse them once per application run - if we were loading from a user
 // selectable location, or even from a read-only part of their computer's
@@ -3585,12 +3611,29 @@ void mudlet::print(Host* pH, const QString& s)
     mConsoleMap[pH]->print(s);
 }
 
+QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QString& item, const QString& what)
+{
+    auto f = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item);
+    QFile file(f);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
+        QDataStream ofs(&file);
+        ofs << what;
+        file.close();
+    }
+
+    if (file.error() == QFile::NoError) {
+        return qMakePair(true, QString());
+    } else {
+        return qMakePair(false, file.errorString());
+    }
+}
+
 QString mudlet::readProfileData(const QString& profile, const QString& item)
 {
     QFile file(getMudletPath(profileDataItemPath, profile, item));
     file.open(QIODevice::ReadOnly);
     if (!file.exists()) {
-        return "";
+        return QString();
     }
 
     QDataStream ifs(&file);
@@ -3609,24 +3652,16 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
 }
 
 // this slot is called via a timer in the constructor of mudlet::mudlet()
-bool mudlet::startAutoLogin()
+void mudlet::startAutoLogin()
 {
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
-    bool openedProfile = false;
 
     for (auto& host : hostList) {
         QString val = readProfileData(host, QStringLiteral("autologin"));
         if (val.toInt() == Qt::Checked) {
             doAutoLogin(host);
-            openedProfile = true;
         }
     }
-
-    if (!openedProfile) {
-        slot_show_connection_dialog();
-    }
-
-    return openedProfile;
 }
 
 // Ensure the debug area is attached to at least one Host
@@ -3706,7 +3741,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     enableToolbarButtons();
 }
 
-void mudlet::handleTelnetUri(const QString &telnetUri, bool openedProfiles)
+void mudlet::handleTelnetUri(const QString &telnetUri)
 {
     QUrl url(telnetUri, QUrl::TolerantMode);
 
@@ -3721,6 +3756,7 @@ void mudlet::handleTelnetUri(const QString &telnetUri, bool openedProfiles)
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     int profilesFound {};
+    QString lastHostFound;
     for (auto& host : hostList) {
         QString hostUrl = readProfileData(host, QStringLiteral("url"));
         int hostPort = readProfileData(host, QStringLiteral("port")).toInt();
@@ -3728,27 +3764,34 @@ void mudlet::handleTelnetUri(const QString &telnetUri, bool openedProfiles)
         if (url.host().compare(hostUrl, Qt::CaseInsensitive) == 0
             && url.port() == hostPort) {
             profilesFound++;
+            lastHostFound = host;
         }
     }
 
     if (profilesFound == 0) {
+        const auto profile_name = addProfile(url.host().toLower(), url.port(), url.userName(), url.password());
+        doAutoLogin(profile_name);
     } else if (profilesFound == 1) {
+        doAutoLogin(lastHostFound);
     } else {
-        if (openedProfiles) {
+        if (!mpConnectionDialog) {
             slot_show_connection_dialog();
         }
         if (mpConnectionDialog) {
-            mpConnectionDialog->showInformationMessage(tr("%n maching profiles found for %1, which would you like to open?", "", profilesFound).arg(url.host()));
+            mpConnectionDialog->showInformationMessage(tr("%n matching profiles found for %1, which would you like to open?", "this message is shown when Mudlet is opened from a telnet:// link on a webpage, and more than one profile matches the game server/port - so the user needs to pick which of the available profiles they'd like to play with", profilesFound).arg(url.host()));
         }
 
     }
+}
 
-//    qDebug() << url;
-//    qDebug() << url.scheme();
-//    qDebug() << url.host();
-//    qDebug() << url.port();
-//    qDebug() << url.userName();
-//    qDebug() << url.password();
+// open the 'Connection' window if we haven't got any profiles loaded
+void mudlet::openConnectionsWindow()
+{
+    if (mpConnectionDialog || !mConsoleMap.empty()) {
+        return;
+    }
+
+    slot_show_connection_dialog();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -5426,4 +5469,24 @@ void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request
         request.setSslConfiguration(config);
     }
 #endif
+}
+
+void mudlet::generateUniqueProfileName(QString& profile_name)
+{
+    QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+
+    // prepend n+1 to end of the profile name
+    if (profile_name.at(profile_name.size() - 1).isDigit()) {
+        int i = 1;
+        do {
+            profile_name = profile_name.left(profile_name.size() - 1) + QString::number(profile_name.at(profile_name.size() - 1).digitValue() + i++);
+        } while (hostList.contains(profile_name));
+    } else {
+        int i = 1;
+        QString profile_name2;
+        do {
+            profile_name2 = profile_name + QString::number(i++);
+        } while (hostList.contains(profile_name2));
+        profile_name = profile_name2;
+    }
 }

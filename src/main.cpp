@@ -517,9 +517,11 @@ int main(int argc, char* argv[])
 
     mudlet::self()->migratePasswordsToSecureStorage();
 
-    bool openedProfiles = mudlet::self()->startAutoLogin();
+    mudlet::self()->startAutoLogin();
 
-    mudlet::self()->handleTelnetUri(telnetUri, openedProfiles);
+    mudlet::self()->handleTelnetUri(telnetUri);
+
+    mudlet::self()->openConnectionsWindow();
 
 #if defined(INCLUDE_UPDATER)
     mudlet::self()->checkUpdatesOnStart();

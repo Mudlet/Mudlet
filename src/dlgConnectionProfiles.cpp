@@ -2002,20 +2002,7 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
         return false;
     }
 
-    // prepend n+1 to end of the profile name
-    if (profile_name.at(profile_name.size() - 1).isDigit()) {
-        int i = 1;
-        do {
-            profile_name = profile_name.left(profile_name.size() - 1) + QString::number(profile_name.at(profile_name.size() - 1).digitValue() + i++);
-        } while (mProfileList.contains(profile_name));
-    } else {
-        int i = 1;
-        QString profile_name2;
-        do {
-            profile_name2 = profile_name + QString::number(i++);
-        } while (mProfileList.contains(profile_name2));
-        profile_name = profile_name2;
-    }
+    mudlet::self()->generateUniqueProfileName(profile_name);
 
     pItem = new QListWidgetItem(profile_name);
     if (!pItem) {

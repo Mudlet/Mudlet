@@ -165,6 +165,7 @@ public:
     std::tuple<bool, QString, int, int> getSelection(Host* pHost, const QString& name);
     void setFgColor(Host*, const QString& name, int, int, int);
     void setBgColor(Host*, const QString& name, int, int, int);
+    QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     QString readProfileData(const QString& profile, const QString& item);
     void deleteProfileData(const QString &profile, const QString &item);
     bool setWindowWrap(Host* pHost, const QString& name, int& wrap);
@@ -213,9 +214,10 @@ public:
     bool resetFormat(Host*, QString& name);
     bool moduleTableVisible();
     bool mWindowMinimized;
-    bool startAutoLogin();
+    void startAutoLogin();
     void doAutoLogin(const QString&);
-    void handleTelnetUri(const QString& telnetUri, bool openedProfiles);
+    void handleTelnetUri(const QString& telnetUri);
+    void openConnectionsWindow();
     bool deselect(Host* pHost, const QString& name);
     void stopSounds();
     void playSound(const QString &s, int);
@@ -229,6 +231,7 @@ public:
 #if defined(Q_OS_WIN32)
     void sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const;
 #endif
+    void generateUniqueProfileName(QString& profile_name);
 
     static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;
@@ -544,7 +547,7 @@ private:
     void loadTranslators(const QString &languageCode);
     void loadDictionaryLanguageMap();
     void migrateDebugConsole(Host* currentHost);
-
+    QString addProfile(const QString& host, const int port, const QString& login, const QString& password);
 
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
