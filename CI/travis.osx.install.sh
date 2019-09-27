@@ -50,6 +50,7 @@ for i in $BREWS; do
     fi
   done
 done
+gem install concurrent-ruby
 gem update cocoapods
 
 # create an alias to avoid the need to list the lua dir all the time
