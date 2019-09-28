@@ -50,6 +50,7 @@
 #include "VarUnit.h"
 
 #include "pre_guard.h"
+#include <chrono>
 #include <QtUiTools/quiloader.h>
 #include <QDesktopServices>
 #include <QDesktopWidget>
@@ -65,9 +66,10 @@
 #include <QTextStream>
 #include <QToolBar>
 #include <QVariantHash>
-
 #include <zip.h>
 #include "post_guard.h"
+
+using namespace std::chrono_literals;
 
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
@@ -545,8 +547,12 @@ mudlet::mudlet()
     mFontManager.addFonts();
     loadDictionaryLanguageMap();
 
-    // delete me after testing
-    openDefaultClientCheck();
+    // TODO change to 5s
+    QTimer::singleShot(1s, this, [this]() {
+        if (!mudletIsDefault()) {
+            openDefaultCheck();
+        }
+    });
 }
 
 QSettings* mudlet::getQSettings()
@@ -873,6 +879,12 @@ QString mudlet::addProfile(const QString &host, const int port, const QString &l
     return profile_name;
 }
 
+bool mudlet::mudletIsDefault()
+{
+    // TODO: implement me
+    return false;
+}
+
 // As we are currently only using files from a resource file we only need to
 // analyse them once per application run - if we were loading from a user
 // selectable location, or even from a read-only part of their computer's
@@ -1170,7 +1182,8 @@ void mudlet::slot_module_manager()
     mpModuleDlg->show();
 }
 
-void mudlet::openDefaultClientCheck()
+// open a dialog to prompt the user to set Mudlet as default
+void mudlet::openDefaultCheck()
 {
     if (!mpDefaultClientDlg) {
         QUiLoader loader;
@@ -1186,6 +1199,8 @@ void mudlet::openDefaultClientCheck()
         }
 
         auto buttonBox = mpDefaultClientDlg->findChild<QDialogButtonBox*>(QStringLiteral("buttonBox"));
+        auto checkBox_alwaysPerformCheck = mpDefaultClientDlg->findChild<QCheckBox*>(QStringLiteral("checkBox_alwaysPerformCheck"));
+
         buttonBox->clear();
 
         auto setAsDefault = new QPushButton(tr("Use Mudlet as my default client"), mpDefaultClientDlg);
@@ -1193,6 +1208,21 @@ void mudlet::openDefaultClientCheck()
 
         buttonBox->addButton(setAsDefault, QDialogButtonBox::AcceptRole);
         buttonBox->addButton(notNow, QDialogButtonBox::RejectRole);
+        connect(buttonBox, &QDialogButtonBox::accepted, mpDefaultClientDlg, &QDialog::accept);
+        connect(buttonBox, &QDialogButtonBox::rejected, mpDefaultClientDlg, &QDialog::reject);
+
+        checkBox_alwaysPerformCheck->setChecked(mudlet::self()->mAlwaysCheckDefault);
+        connect(checkBox_alwaysPerformCheck, &QCheckBox::stateChanged, this, [=](int state) {
+            if (state == Qt::Checked) {
+                mudlet::self()->mAlwaysCheckDefault = true;
+            } else {
+                mudlet::self()->mAlwaysCheckDefault = false;
+            }
+        });
+
+        connect(setAsDefault, &QAbstractButton::clicked, this, [=](){
+            setMudletAsDefault();
+        });
 
         mpDefaultClientDlg->setAttribute(Qt::WA_DeleteOnClose);
         mpDefaultClientDlg->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
@@ -1201,6 +1231,11 @@ void mudlet::openDefaultClientCheck()
     mpDefaultClientDlg->raise();
     mpDefaultClientDlg->show();
     mpDefaultClientDlg->move(mpDefaultClientDlg->x(), 0);
+}
+
+void mudlet::setMudletAsDefault()
+{
+    qDebug() << "set Mudlet as default :)";
 }
 
 bool mudlet::openWebPage(const QString& path)
