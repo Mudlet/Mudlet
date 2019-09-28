@@ -549,7 +549,7 @@ mudlet::mudlet()
 
     // TODO change to 5s
     QTimer::singleShot(1s, this, [this]() {
-        if (!mudletIsDefault()) {
+        if (mAlwaysCheckDefault && !mudletIsDefault()) {
             openDefaultCheck();
         }
     });
