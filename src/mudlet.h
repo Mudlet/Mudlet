@@ -252,6 +252,7 @@ public:
     QPointer<dlgAboutDialog> mpAboutDlg;
     QPointer<QDialog> mpModuleDlg;
     QPointer<QDialog> mpPackageManagerDlg;
+    QPointer<QDialog> mpDefaultClientDlg;
     QMap<Host*, QPointer<dlgProfilePreferences>> mpProfilePreferencesDlgMap;
     // More modern Desktop styles no longer include icons on the buttons in
     // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
@@ -551,6 +552,7 @@ private:
     void loadDictionaryLanguageMap();
     void migrateDebugConsole(Host* currentHost);
     QString addProfile(const QString& host, const int port, const QString& login, const QString& password);
+    void openDefaultClientCheck();
 
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;

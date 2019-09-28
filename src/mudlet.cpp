@@ -544,6 +544,9 @@ mudlet::mudlet()
     // load bundled fonts
     mFontManager.addFonts();
     loadDictionaryLanguageMap();
+
+    // delete me after testing
+    openDefaultClientCheck();
 }
 
 QSettings* mudlet::getQSettings()
@@ -1165,6 +1168,39 @@ void mudlet::slot_module_manager()
 
     mpModuleDlg->raise();
     mpModuleDlg->show();
+}
+
+void mudlet::openDefaultClientCheck()
+{
+    if (!mpDefaultClientDlg) {
+        QUiLoader loader;
+        QFile file(QStringLiteral(":/ui/check_default_client.ui"));
+        file.open(QFile::ReadOnly);
+        mpDefaultClientDlg = dynamic_cast<QDialog*>(loader.load(&file, this));
+        file.close();
+
+        if (!mpDefaultClientDlg) {
+            // don't need to print error message from loader as that is already in stdout
+            qWarning() << "mudlet::openDefaultClientCheck() error: failed to load dialog: " << loader.errorString();
+            return;
+        }
+
+        auto buttonBox = mpDefaultClientDlg->findChild<QDialogButtonBox*>(QStringLiteral("buttonBox"));
+        buttonBox->clear();
+
+        auto setAsDefault = new QPushButton(tr("Use Mudlet as my default client"), mpDefaultClientDlg);
+        auto notNow = new QPushButton(tr("Not now"), mpDefaultClientDlg);
+
+        buttonBox->addButton(setAsDefault, QDialogButtonBox::AcceptRole);
+        buttonBox->addButton(notNow, QDialogButtonBox::RejectRole);
+
+        mpDefaultClientDlg->setAttribute(Qt::WA_DeleteOnClose);
+        mpDefaultClientDlg->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
+    }
+
+    mpDefaultClientDlg->raise();
+    mpDefaultClientDlg->show();
+    mpDefaultClientDlg->move(mpDefaultClientDlg->x(), 0);
 }
 
 bool mudlet::openWebPage(const QString& path)
@@ -2853,6 +2889,10 @@ void mudlet::closeEvent(QCloseEvent* event)
 
     // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
     hide();
+
+    if (mpDefaultClientDlg) {
+        mpDefaultClientDlg->close();
+    }
 
     for (auto& hostName: mudlet::self()->getHostManager().getHostList()) {
         auto host = mHostManager.getHost(hostName);

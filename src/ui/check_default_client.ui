@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>check_default_client</class>
- <widget class="QWidget" name="check_default_client">
+ <widget class="QDialog" name="check_default_client">
   <property name="geometry">
    <rect>
     <x>0</x>
