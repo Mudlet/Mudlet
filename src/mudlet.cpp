@@ -71,16 +71,6 @@
 
 using namespace std::chrono_literals;
 
-bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
-{
-    if (event->type() == QEvent::Close) {
-        mudlet::debugMode = false;
-        return QObject::eventFilter(obj, event);
-    } else {
-        return QObject::eventFilter(obj, event);
-    }
-}
-
 // "mMudletXmlDefaultFormat" number represents a major (integer part) and minor
 // (1000ths, range 0 to 999) that is used as a "version" attribute number when
 // writing the <MudletPackage ...> element of all (but maps if I ever get around
@@ -553,6 +543,8 @@ mudlet::mudlet()
             openDefaultCheck();
         }
     });
+
+    QCoreApplication::instance()->installEventFilter(this);
 }
 
 QSettings* mudlet::getQSettings()
@@ -1207,6 +1199,7 @@ void mudlet::openDefaultCheck()
         auto notNow = new QPushButton(tr("Not now"), mpDefaultClientDlg);
 
         buttonBox->addButton(setAsDefault, QDialogButtonBox::AcceptRole);
+        setAsDefault->setAutoDefault(true);
         buttonBox->addButton(notNow, QDialogButtonBox::RejectRole);
         connect(buttonBox, &QDialogButtonBox::accepted, mpDefaultClientDlg, &QDialog::accept);
         connect(buttonBox, &QDialogButtonBox::rejected, mpDefaultClientDlg, &QDialog::reject);
@@ -3744,6 +3737,27 @@ void mudlet::startAutoLogin()
         if (val.toInt() == Qt::Checked) {
             doAutoLogin(host);
         }
+    }
+}
+
+bool mudlet::eventFilter(QObject* obj, QEvent* event)
+{
+    if (event->type() == QEvent::FileOpen) {
+        auto openEvent = static_cast<QFileOpenEvent *>(event);
+        qDebug() << "Open file" << openEvent->file();
+        qDebug() << "Open url" << openEvent->url();
+    }
+
+    return QMainWindow::eventFilter(obj, event);
+}
+
+bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
+{
+    if (event->type() == QEvent::Close) {
+        mudlet::debugMode = false;
+        return QObject::eventFilter(obj, event);
+    } else {
+        return QObject::eventFilter(obj, event);
     }
 }
 

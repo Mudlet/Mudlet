@@ -552,6 +552,7 @@ private:
     void loadDictionaryLanguageMap();
     void migrateDebugConsole(Host* currentHost);
     QString addProfile(const QString& host, const int port, const QString& login, const QString& password);
+    bool eventFilter(QObject *obj, QEvent *event) override;
     bool mudletIsDefault();
     void openDefaultCheck();
     void setMudletAsDefault();
