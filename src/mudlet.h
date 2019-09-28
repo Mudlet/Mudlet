@@ -217,7 +217,7 @@ public:
     void startAutoLogin();
     void doAutoLogin(const QString&);
     void handleTelnetUri(const QString& telnetUri);
-    void handleTelnetUri(QUrl& url);
+    void handleTelnetUri(const QUrl &telnetUri);
     void openConnectionsWindow();
     bool deselect(Host* pHost, const QString& name);
     void stopSounds();
