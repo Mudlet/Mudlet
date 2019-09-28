@@ -544,7 +544,9 @@ mudlet::mudlet()
         }
     });
 
+#if defined(Q_OS_MACOS)
     QCoreApplication::instance()->installEventFilter(this);
+#endif
 }
 
 QSettings* mudlet::getQSettings()
@@ -3740,16 +3742,20 @@ void mudlet::startAutoLogin()
     }
 }
 
+#if defined(Q_OS_MACOS)
+// an eventfilter to catch telnet:// opening in macOS which doesn't do it via CLI
 bool mudlet::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::FileOpen) {
         auto openEvent = static_cast<QFileOpenEvent *>(event);
-        qDebug() << "Open file" << openEvent->file();
-        qDebug() << "Open url" << openEvent->url();
+        handleTelnetUri(handleTelnetUri);
+
+        return true;
     }
 
     return QMainWindow::eventFilter(obj, event);
 }
+#endif
 
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
@@ -3838,10 +3844,15 @@ void mudlet::doAutoLogin(const QString& profile_name)
     enableToolbarButtons();
 }
 
-void mudlet::handleTelnetUri(const QString &telnetUri)
+void mudlet::handleTelnetUri(const QString& telnetUri)
 {
     QUrl url(telnetUri, QUrl::TolerantMode);
 
+    handleTelnetUri(url);
+}
+
+void mudlet::handleTelnetUri(QUrl &url)
+{
     if (url.scheme() != QLatin1String("telnet")) {
         return;
     }

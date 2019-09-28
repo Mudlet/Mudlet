@@ -217,6 +217,7 @@ public:
     void startAutoLogin();
     void doAutoLogin(const QString&);
     void handleTelnetUri(const QString& telnetUri);
+    void handleTelnetUri(QUrl& url);
     void openConnectionsWindow();
     bool deselect(Host* pHost, const QString& name);
     void stopSounds();
@@ -538,6 +539,9 @@ private slots:
     void slot_password_saved(QKeychain::Job *job);
 
 private:
+#if defined(Q_OS_MACOS)
+    bool eventFilter(QObject *obj, QEvent *event) override;
+#endif
     void initEdbee();
     void goingDown() { mIsGoingDown = true; }
     bool scanDictionaryFile(QFile&, int&, QHash<QString, unsigned int>&, QStringList&);
@@ -552,7 +556,6 @@ private:
     void loadDictionaryLanguageMap();
     void migrateDebugConsole(Host* currentHost);
     QString addProfile(const QString& host, const int port, const QString& login, const QString& password);
-    bool eventFilter(QObject *obj, QEvent *event) override;
     bool mudletIsDefault();
     void openDefaultCheck();
     void setMudletAsDefault();
