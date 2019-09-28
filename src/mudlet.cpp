@@ -1204,7 +1204,6 @@ void mudlet::openDefaultCheck()
         buttonBox->clear();
 
         auto setAsDefault = new QPushButton(tr("Use Mudlet as my default client"), mpDefaultClientDlg);
-        setAsDefault->setAutoDefault(true);
         auto notNow = new QPushButton(tr("Not now"), mpDefaultClientDlg);
 
         buttonBox->addButton(setAsDefault, QDialogButtonBox::AcceptRole);
@@ -1226,7 +1225,12 @@ void mudlet::openDefaultCheck()
         });
 
         mpDefaultClientDlg->setAttribute(Qt::WA_DeleteOnClose);
+#if defined(Q_OS_WIN32)
+        // framelooks really poor in Windows
+        mpDefaultClientDlg->setWindowFlags(Qt::Tool);
+#else
         mpDefaultClientDlg->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
+#end
     }
 
     mpDefaultClientDlg->raise();
