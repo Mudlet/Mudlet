@@ -1230,7 +1230,7 @@ void mudlet::openDefaultCheck()
         mpDefaultClientDlg->setWindowFlags(Qt::Tool);
 #else
         mpDefaultClientDlg->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
-#end
+#endif
     }
 
     mpDefaultClientDlg->raise();
