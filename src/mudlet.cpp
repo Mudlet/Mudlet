@@ -163,6 +163,7 @@ mudlet::mudlet()
 , mpToolBarReplay(nullptr)
 , moduleTable(nullptr)
 , mshowMapAuditErrors(false)
+, mAlwaysCheckDefault(true)
 , mCompactInputLine(false)
 , mTimeFormat(tr("hh:mm:ss",
                  "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
@@ -2956,6 +2957,7 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mCompactInputLine = settings.value("compactInputLine", QVariant(false)).toBool();
+    mAlwaysCheckDefault = settings.value("alwaysCheckDefault", QVariant(true)).toBool();
 
 
     resize(size);
@@ -3094,6 +3096,7 @@ void mudlet::writeSettings()
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
     settings.setValue("compactInputLine", mCompactInputLine);
+    settings.setValue("alwaysCheckDefault", mAlwaysCheckDefault);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);

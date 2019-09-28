@@ -96,6 +96,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     checkBox_showLineFeedsAndParagraphs->setChecked(pMudlet->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
 
     checkBox_reportMapIssuesOnScreen->setChecked(pMudlet->showMapAuditErrors());
+    checkBox_checkMudletDefault->setChecked(pMudlet->mAlwaysCheckDefault);
     checkBox_showIconsOnMenus->setCheckState(pMudlet->mShowIconsOnMenuCheckedState);
 
     MainIconSize->setValue(pMudlet->mToolbarIconSize);
@@ -2502,6 +2503,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pMudlet->setEnableFullScreenMode(checkBox_USE_SMALL_SCREEN->isChecked());
     pMudlet->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     pMudlet->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+    pMudlet->mAlwaysCheckDefault = checkBox_checkMudletDefault->isChecked();
     pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
 
     mudlet::self()->mDiscord.UpdatePresence();

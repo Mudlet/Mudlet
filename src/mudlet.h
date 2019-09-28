@@ -441,6 +441,9 @@ public:
     // the system
     bool mUsingMudletDictionaries;
 
+    // perform check on startup if Mudlet is the default application for handling telnet:// links
+    bool mAlwaysCheckDefault;
+
 public slots:
     void processEventLoopHack_timerRun();
     void slot_mapper();
