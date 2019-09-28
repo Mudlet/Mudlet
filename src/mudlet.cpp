@@ -3748,7 +3748,7 @@ bool mudlet::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::FileOpen) {
         auto openEvent = static_cast<QFileOpenEvent *>(event);
-        handleTelnetUri(handleTelnetUri);
+        handleTelnetUri(openEvent->url());
 
         return true;
     }
