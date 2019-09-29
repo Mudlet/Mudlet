@@ -63,8 +63,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mDisplayFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
 , mEnableGMCP(true)
 , mEnableMSSP(true)
+, mEnableMSP(true)
 , mEnableMSDP(false)
 , mServerMXPenabled(true)
+, mMSPSoundLocation(QString())
 , mFORCE_GA_OFF(false)
 , mFORCE_NO_COMPRESSION(false)
 , mFORCE_SAVE_ON_EXIT(false)
@@ -533,6 +535,22 @@ void Host::setMmpMapLocation(const QString& data)
 QString Host::getMmpMapLocation() const
 {
     return mpMap->getMmpMapLocation();
+}
+
+void Host::setMSPSoundLocation(const QString& soundUrl)
+{
+    QUrl url = QUrl(soundUrl);
+
+    if (!url.isValid()) {
+        return;
+    }
+
+    mMSPSoundLocation = soundUrl;
+}
+
+QString Host::getMSPSoundLocation() const
+{
+    return mMSPSoundLocation;
 }
 
 std::pair<bool, QString> Host::setDisplayFont(const QFont& font)

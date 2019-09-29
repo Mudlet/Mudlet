@@ -43,6 +43,7 @@
 #include <QMainWindow>
 #include <QMap>
 #include <QMediaPlayer>
+#include <QMediaPlaylist>
 #include <QPointer>
 #include <QProxyStyle>
 #include <QQueue>
@@ -215,6 +216,18 @@ public:
     bool deselect(Host* pHost, const QString& name);
     void stopSounds();
     void playSound(const QString &s, int);
+    QUrl parseMSPUrl(QString &soundFileName, QString &soundUrl);
+    bool isMSPValidUrl(QUrl &url);
+    bool isMSPFileRelative(QString &soundFileName);
+    QDir getMSPDir(QString &absoluteFolderPath);
+    QStringList parseMSPFileNameList(bool isSound, QString &soundFileName, QString soundType, QDir &dir);
+    QStringList getMSPFileNameList(bool isSound, QString &soundFileName, QString &soundType);
+    QUrl getMSPFileUrl(QString &soundFileName, QString &soundType);
+    bool downloadMSPFile(QString &soundFileName, QString &soundType, QString &absolutePathFileName);
+    QMediaPlayer* getMSPSoundMediaPlayer();
+    void playMSPSound(QString &soundFileName, int, int, int, QString &soundType, QString &soundUrl);
+    QMediaPlayer* getMSPMusicMediaPlayer(int, int, QString absolutePathFileName);
+    void playMSPMusic(QString &soundFileName, int, int, int, QString &soundType, QString &soundUrl);
     int getColumnCount(Host* pHost, QString& name);
     int getRowCount(Host* pHost, QString& name);
     QStringList getAvailableFonts();
@@ -314,6 +327,12 @@ public:
         // directory for that profile - does NOT end in a '/' unless the
         // supplied profle name does:
         profileHomePath,
+        // Takes one extra argument (profile name) that returns the directory
+        // for the profile game save sounds files - does NOT end in a '/'
+        profileSoundsPath,
+        // Takes two extra arguments (profile name, mapFileName) that returns
+        // the pathFile name for any sound file:
+        profileSoundPathFileName,
         // Takes one extra argument (profile name) that returns the directory
         // for the profile game save XML files - ends in a '/':
         profileXmlFilesPath,

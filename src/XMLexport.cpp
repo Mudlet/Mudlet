@@ -392,6 +392,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mFORCE_SAVE_ON_EXIT") = pHost->mFORCE_SAVE_ON_EXIT ? "yes" : "no";
     host.append_attribute("mEnableGMCP") = pHost->mEnableGMCP ? "yes" : "no";
     host.append_attribute("mEnableMSSP") = pHost->mEnableMSSP ? "yes" : "no";
+    host.append_attribute("mEnableMSP") = pHost->mEnableMSP ? "yes" : "no";
     host.append_attribute("mEnableMSDP") = pHost->mEnableMSDP ? "yes" : "no";
     host.append_attribute("mMapStrongHighlight") = pHost->mMapStrongHighlight ? "yes" : "no";
     host.append_attribute("mLogStatus") = pHost->mLogStatus ? "yes" : "no";

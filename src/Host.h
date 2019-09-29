@@ -228,6 +228,8 @@ public:
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
+    void setMSPSoundLocation(const QString& soundUrl);
+    QString getMSPSoundLocation() const;
     const QFont& getDisplayFont() const { return mDisplayFont; }
     std::pair<bool, QString> setDisplayFont(const QFont& font);
     std::pair<bool, QString> setDisplayFont(const QString& fontName);
@@ -257,8 +259,10 @@ public:
     QString mCommandSeparator;
     bool mEnableGMCP;
     bool mEnableMSSP;
+    bool mEnableMSP;
     bool mEnableMSDP;
     bool mServerMXPenabled;
+    QString mMSPSoundLocation;
     QTextStream mErrorLogStream;
     QMap<QString, QList<TScript*>> mEventHandlerMap;
     bool mFORCE_GA_OFF;
