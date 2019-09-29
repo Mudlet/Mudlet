@@ -3859,9 +3859,9 @@ void mudlet::handleTelnetUri(const QUrl &telnetUri)
 {
     QUrl url(std::move(telnetUri));
 
-    qDebug() << "handleTelnetUri url is" << url;
+    qWarning() << "handleTelnetUri url is" << url;
     if (!(url.scheme() == QLatin1String("telnet") || url.scheme() == QLatin1String("mudlet"))) {
-        qDebug() << url.scheme() << "url.scheme() isn't ours, quitting";
+        qWarning() << url.scheme() << "url.scheme() isn't ours, quitting";
         return;
     }
 
@@ -3884,7 +3884,7 @@ void mudlet::handleTelnetUri(const QUrl &telnetUri)
         }
     }
 
-    qDebug() << profilesFound << "profilesFound";
+    qWarning() << profilesFound << "profilesFound";
     if (profilesFound == 0) {
         const auto profile_name = addProfile(url.host().toLower(), url.port(), url.userName(), url.password());
         doAutoLogin(profile_name);
@@ -3895,8 +3895,10 @@ void mudlet::handleTelnetUri(const QUrl &telnetUri)
 
         mudlet::self()->setupPackagesToInstall(pHost);
         mudlet::self()->installDefaultPackages(pHost);
+        qWarning() <<"case 1";
     } else if (profilesFound == 1) {
         doAutoLogin(lastHostFound);
+        qWarning() <<"case 2";
     } else {
         if (!mpConnectionDialog) {
             slot_show_connection_dialog();
@@ -3905,6 +3907,7 @@ void mudlet::handleTelnetUri(const QUrl &telnetUri)
             mpConnectionDialog->showInformationMessage(tr("%n matching profiles found for %1, which would you like to open?", "this message is shown when Mudlet is opened from a telnet:// link on a webpage, and more than one profile matches the game server/port - so the user needs to pick which of the available profiles they'd like to play with", profilesFound).arg(url.host()));
         }
 
+        qWarning() <<"case 3";
     }
 }
 
