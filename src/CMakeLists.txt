@@ -62,6 +62,7 @@ set(mudlet_SRCS
     LuaInterface.cpp
     main.cpp
     mudlet.cpp
+    mudletapplication.cpp
     ScriptUnit.cpp
     T2DMap.cpp
     TAction.cpp
@@ -151,6 +152,7 @@ set(mudlet_MOC_HDRS
     exitstreewidget.h
     Host.h
     mudlet.h
+    mudletapplication.h
     T2DMap.h
     TCommandLine.h
     TConsole.h
