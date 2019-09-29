@@ -3706,19 +3706,17 @@ QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QStr
     }
 }
 
-QString mudlet::readProfileData(const QString& profile, const QString& item)
+QString mudlet::readProfileData(const QString& profile, const QString& item) const
 {
     QFile file(getMudletPath(profileDataItemPath, profile, item));
-    file.open(QIODevice::ReadOnly);
-    if (!file.exists()) {
-        return QString();
+    bool success = file.open(QIODevice::ReadOnly);
+    QString ret;
+    if (success) {
+        QDataStream ifs(&file);
+        ifs >> ret;
+        file.close();
     }
 
-    QDataStream ifs(&file);
-    QString ret;
-
-    ifs >> ret;
-    file.close();
     return ret;
 }
 

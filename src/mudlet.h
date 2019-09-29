@@ -166,7 +166,7 @@ public:
     void setFgColor(Host*, const QString& name, int, int, int);
     void setBgColor(Host*, const QString& name, int, int, int);
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
-    QString readProfileData(const QString& profile, const QString& item);
+    QString readProfileData(const QString& profile, const QString& item) const;
     void deleteProfileData(const QString &profile, const QString &item);
     bool setWindowWrap(Host* pHost, const QString& name, int& wrap);
     bool setWindowWrapIndent(Host* pHost, const QString& name, int& wrap);

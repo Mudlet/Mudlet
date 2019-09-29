@@ -37,8 +37,6 @@ public:
     Q_DISABLE_COPY(dlgConnectionProfiles)
     dlgConnectionProfiles(QWidget* parent = nullptr);
     void fillout_form();
-    QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
-    QString readProfileData(const QString& profile, const QString& item) const;
     void accept() override;
 
     void showWarningMessage(const QString& message);

@@ -251,7 +251,7 @@ void dlgConnectionProfiles::slot_update_description()
     if (pItem) {
         QString profile = pItem->text();
         QString description = mud_description_textedit->toPlainText();
-        writeProfileData(profile, QStringLiteral("description"), description);
+        mudlet::self()->writeProfileData(profile, QStringLiteral("description"), description);
 
         // don't display custom profile descriptions as a tooltip, as passwords could be stored in there
     }
@@ -262,7 +262,7 @@ void dlgConnectionProfiles::slot_update_website(const QString &url)
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     if (pItem) {
         QString profile = pItem->text();
-        writeProfileData(profile, QStringLiteral("website"), url);
+        mudlet::self()->writeProfileData(profile, QStringLiteral("website"), url);
     }
 }
 
@@ -310,7 +310,7 @@ void dlgConnectionProfiles::slot_update_login(const QString &login)
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     if (pItem) {
         QString profile = pItem->text();
-        writeProfileData(profile, QStringLiteral("login"), login);
+        mudlet::self()->writeProfileData(profile, QStringLiteral("login"), login);
     }
 }
 
@@ -329,7 +329,7 @@ void dlgConnectionProfiles::slot_update_url(const QString& url)
             return;
         }
         QString profile = pItem->text();
-        writeProfileData(profile, QStringLiteral("url"), host_name_entry->text());
+        mudlet::self()->writeProfileData(profile, QStringLiteral("url"), host_name_entry->text());
     }
 }
 
@@ -340,7 +340,7 @@ void dlgConnectionProfiles::slot_update_autologin(int state)
         return;
     }
     QString profile = pItem->text();
-    writeProfileData(profile, QStringLiteral("autologin"), QString::number(state));
+    mudlet::self()->writeProfileData(profile, QStringLiteral("autologin"), QString::number(state));
 }
 
 void dlgConnectionProfiles::slot_update_autoreconnect(int state)
@@ -350,7 +350,7 @@ void dlgConnectionProfiles::slot_update_autoreconnect(int state)
         return;
     }
     QString profile = pItem->text();
-    writeProfileData(profile, QStringLiteral("autoreconnect"), QString::number(state));
+    mudlet::self()->writeProfileData(profile, QStringLiteral("autoreconnect"), QString::number(state));
 }
 
 // This gets called when the QCheckBox that it is connect-ed to gets it's
@@ -362,7 +362,7 @@ void dlgConnectionProfiles::slot_update_discord_optin(int state)
         return;
     }
     QString profile = pItem->text();
-    writeProfileData(profile, QStringLiteral("discordserveroptin"), QString::number(state));
+    mudlet::self()->writeProfileData(profile, QStringLiteral("discordserveroptin"), QString::number(state));
 
     // in case the user is already connected, pull up stored GMCP data
     auto& hostManager = mudlet::self()->getHostManager();
@@ -401,7 +401,7 @@ void dlgConnectionProfiles::slot_update_port(const QString& ignoreBlank)
             return;
         }
         QString profile = pItem->text();
-        writeProfileData(profile, QStringLiteral("port"), port);
+        mudlet::self()->writeProfileData(profile, QStringLiteral("port"), port);
     }
 }
 
@@ -413,7 +413,7 @@ void dlgConnectionProfiles::slot_update_SSL_TSL_port(int state)
             return;
         }
         QString profile = pItem->text();
-        writeProfileData(profile, QStringLiteral("ssl_tsl"), QString::number(state));
+        mudlet::self()->writeProfileData(profile, QStringLiteral("ssl_tsl"), QString::number(state));
     }
 }
 
@@ -677,37 +677,6 @@ void dlgConnectionProfiles::slot_deleteProfile()
     delete_profile_dialog->raise();
 }
 
-QString dlgConnectionProfiles::readProfileData(const QString& profile, const QString& item) const
-{
-    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
-    bool success = file.open(QIODevice::ReadOnly);
-    QString ret;
-    if (success) {
-        QDataStream ifs(&file);
-        ifs >> ret;
-        file.close();
-    }
-
-    return ret;
-}
-
-QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile, const QString& item, const QString& what)
-{
-    auto f = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item);
-    QFile file(f);
-    if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-        QDataStream ofs(&file);
-        ofs << what;
-        file.close();
-    }
-
-    if (file.error() == QFile::NoError) {
-        return qMakePair(true, QString());
-    } else {
-        return qMakePair(false, file.errorString());
-    }
-}
-
 // Use the URL so we can use the same descriptions for user generated copies of
 // predefined MUDs - but also need the port number to disambiguate the 3K ones!
 QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quint16 port, const QString& profile_name) const
@@ -812,7 +781,7 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                  * -- end translation --
                  */
     } else {
-        return readProfileData(profile_name, QStringLiteral("description"));
+        return mudlet::self()->readProfileData(profile_name, QStringLiteral("description"));
     }
 }
 
@@ -830,7 +799,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
 
     QString profile = profile_name;
 
-    QString host_url = readProfileData(profile, QStringLiteral("url"));
+    QString host_url = mudlet::self()->readProfileData(profile, QStringLiteral("url"));
     if (host_url.isEmpty()) {
         // Host to connect to, see below for port
         if (profile_name == QStringLiteral("Avalon.de")) {
@@ -899,8 +868,8 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     }
     host_name_entry->setText(host_url);
 
-    QString host_port = readProfileData(profile, QStringLiteral("port"));
-    QString val = readProfileData(profile, QStringLiteral("ssl_tsl"));
+    QString host_port = mudlet::self()->readProfileData(profile, QStringLiteral("port"));
+    QString val = mudlet::self()->readProfileData(profile, QStringLiteral("ssl_tsl"));
     if (val.toInt() == Qt::Checked) {
         port_ssl_tsl->setChecked(true);
     } else {
@@ -1017,34 +986,34 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         if (!password.isEmpty()) {
             character_password_entry->setText(password);
         } else {
-            character_password_entry->setText(readProfileData(profile_name, QStringLiteral("password")));
+            character_password_entry->setText(mudlet::self()->readProfileData(profile_name, QStringLiteral("password")));
         }
     });
 
-    val = readProfileData(profile, QStringLiteral("login"));
+    val = mudlet::self()->readProfileData(profile, QStringLiteral("login"));
     login_entry->setText(val);
 
-    val = readProfileData(profile, QStringLiteral("autologin"));
+    val = mudlet::self()->readProfileData(profile, QStringLiteral("autologin"));
     if (val.toInt() == Qt::Checked) {
         autologin_checkBox->setChecked(true);
     } else {
         autologin_checkBox->setChecked(false);
     }
 
-    val = readProfileData(profile, QStringLiteral("autoreconnect"));
+    val = mudlet::self()->readProfileData(profile, QStringLiteral("autoreconnect"));
     if (!val.isEmpty() && val.toInt() == Qt::Checked) {
         auto_reconnect->setChecked(true);
     } else {
         auto_reconnect->setChecked(false);
     }
 
-    mDiscordApplicationId = readProfileData(profile, QStringLiteral("discordApplicationId"));
+    mDiscordApplicationId = mudlet::self()->readProfileData(profile, QStringLiteral("discordApplicationId"));
 
     // val will be null if this is the first time the profile has been read
     // since an update to a Mudlet version supporting Discord - so a toint()
     // will return 0 - which just happens to be Qt::Unchecked() but lets not
     // rely on that...
-    val = readProfileData(profile, QStringLiteral("discordserveroptin"));
+    val = mudlet::self()->readProfileData(profile, QStringLiteral("discordserveroptin"));
     if ((!val.isEmpty()) && val.toInt() == Qt::Checked) {
         discord_optin_checkBox->setChecked(true);
     } else {
@@ -1055,7 +1024,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
 
     mud_description_textedit->setPlainText(getDescription(host_url, host_port.toUInt(), profile_name));
 
-    val = readProfileData(profile, QStringLiteral("website"));
+    val = mudlet::self()->readProfileData(profile, QStringLiteral("website"));
     if (val.isEmpty()) {
         if (profile_name == QStringLiteral("Avalon.de")) {
             val = QStringLiteral("<center><a href='http://avalon.mud.de'>http://avalon.mud.de</a></center>");
@@ -2188,7 +2157,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 
         // This settings also need to be configured, note that the only time not to
         // save the setting is on profile loading:
-        pHost->mTelnet.setEncoding(readProfileData(profile_name, QLatin1String("encoding")), false);
+        pHost->mTelnet.setEncoding(mudlet::self()->readProfileData(profile_name, QLatin1String("encoding")), false);
         // Needed to ensure setting is correct on start-up:
         pHost->setWideAmbiguousEAsianGlyphs(pHost->getWideAmbiguousEAsianGlyphsControlState());
         pHost->setAutoReconnect(auto_reconnect->isChecked());
