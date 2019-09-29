@@ -2181,6 +2181,9 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
             mIsReplayRunFromLua = false;
         }
         replayStream.setDevice(&replayFile);
+        if (QVersionNumber::fromString(QString(qVersion())) >= QVersionNumber(5, 13, 0)) {
+            replayStream.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        }
         loadingReplay = true;
         if (mudlet::self()->replayStart()) {
             // TODO: consider moving to a QTimeLine based system...?

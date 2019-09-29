@@ -40,6 +40,10 @@
 
 #include "pre_guard.h"
 #include <QFlags>
+#ifdef QT_GAMEPAD_LIB
+#include <QGamepad>
+#endif
+#include <QKeySequence>
 #include <QMainWindow>
 #include <QMap>
 #include <QMediaPlayer>
@@ -48,17 +52,14 @@
 #include <QQueue>
 #include <QReadWriteLock>
 #include <QSettings>
+#include <QShortcut>
 #include <QTextOption>
 #include <QTime>
 #include <QTimer>
 #include <QToolButton>
+#include <QVersionNumber>
 #include "edbee/models/textautocompleteprovider.h"
 #include <../3rdparty/qtkeychain/keychain.h>
-#include <QShortcut>
-#include <QKeySequence>
-#ifdef QT_GAMEPAD_LIB
-#include <QGamepad>
-#endif
 #include "post_guard.h"
 
 #include <hunspell/hunspell.hxx>
@@ -227,6 +228,11 @@ public:
 #endif
 
     static const bool scmIsDevelopmentVersion;
+    static const QVersionNumber scmRunTimeQtVersion;
+    // A constant equivalent to QDataStream::Qt_5_12 needed in several places
+    // which can't be pulled from Qt as it is not going to be defined for older
+    // versions:
+    static const int scmQDataStreamFormat_5_12;
     QTime mReplayTime;
     int mReplaySpeed;
     QToolBar* mpMainToolBar;
