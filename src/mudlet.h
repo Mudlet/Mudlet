@@ -540,9 +540,6 @@ private slots:
     void slot_password_saved(QKeychain::Job *job);
 
 private:
-#if defined(Q_OS_MACOS)
-    bool eventFilter(QObject *obj, QEvent *event) override;
-#endif
     void initEdbee();
     void goingDown() { mIsGoingDown = true; }
     bool scanDictionaryFile(QFile&, int&, QHash<QString, unsigned int>&, QStringList&);

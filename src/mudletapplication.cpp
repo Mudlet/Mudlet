@@ -33,7 +33,6 @@ bool MudletApplication::event(QEvent *event)
         auto openEvent = static_cast<QFileOpenEvent*>(event);
         // macOS tends to send blank "" urls on launch
         if (openEvent->url().scheme() != QString()) {
-            qWarning() << "oh baby, myapplication is workin";
             mudlet::self()->handleTelnetUri(openEvent->url());
         }
         return true;

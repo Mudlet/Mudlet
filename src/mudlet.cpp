@@ -543,10 +543,6 @@ mudlet::mudlet()
             openDefaultCheck();
         }
     });
-
-//#if defined(Q_OS_MACOS)
-//    QCoreApplication::instance()->installEventFilter(this);
-//#endif
 }
 
 QSettings* mudlet::getQSettings()
@@ -3739,25 +3735,6 @@ void mudlet::startAutoLogin()
         }
     }
 }
-
-#if defined(Q_OS_MACOS)
-// an eventfilter to catch telnet:// opening in macOS which doesn't do it via CLI
-bool mudlet::eventFilter(QObject* obj, QEvent* event)
-{
-    if (event->type() == QEvent::FileOpen) {
-        auto openEvent = static_cast<QFileOpenEvent *>(event);
-
-        // macOS tends to send blank "" urls on launch
-        if (openEvent->url().scheme() != QString()) {
-            handleTelnetUri(openEvent->url());
-        }
-
-        return true;
-    }
-
-    return QMainWindow::eventFilter(obj, event);
-}
-#endif
 
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
