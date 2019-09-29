@@ -187,6 +187,7 @@ public:
     static bool debugMode;
     QMap<Host*, TConsole*> mConsoleMap;
     bool isGoingDown() { return mIsGoingDown; }
+    bool isGoingUp() { return mIsGoingUp; }
     int mToolbarIconSize;
     int mEditorTreeWidgetIconSize;
     void setToolBarIconSize(int);
@@ -569,6 +570,7 @@ private:
     QMap<Host*, QToolBar*> mUserToolbarMap;
     QMenu* restoreBar;
     bool mIsGoingDown;
+    bool mIsGoingUp {true};
     controlsVisibility mMenuBarVisibility;
     controlsVisibility mToolbarVisibility;
 

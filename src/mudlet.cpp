@@ -143,6 +143,7 @@ mudlet::mudlet()
 , mInterfaceLanguage(QStringLiteral("en_US"))
 , mUsingMudletDictionaries(false)
 , mIsGoingDown(false)
+, mIsGoingUp(true)
 , mMenuBarVisibility(visibleAlways)
 , mToolbarVisibility(visibleAlways)
 , mpActionReplaySpeedDown(nullptr)
@@ -543,6 +544,8 @@ mudlet::mudlet()
             openDefaultCheck();
         }
     });
+
+    mIsGoingUp = false;
 }
 
 QSettings* mudlet::getQSettings()
