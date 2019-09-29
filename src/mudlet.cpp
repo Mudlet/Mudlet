@@ -544,9 +544,9 @@ mudlet::mudlet()
         }
     });
 
-#if defined(Q_OS_MACOS)
-    QCoreApplication::instance()->installEventFilter(this);
-#endif
+//#if defined(Q_OS_MACOS)
+//    QCoreApplication::instance()->installEventFilter(this);
+//#endif
 }
 
 QSettings* mudlet::getQSettings()

@@ -23,6 +23,7 @@
 
 #include "HostManager.h"
 #include "mudlet.h"
+#include "mudletapplication.h"
 
 #include "pre_guard.h"
 #include <QDesktopWidget>
@@ -74,7 +75,7 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
 #if !(defined(Q_OS_LINUX) || defined(Q_OS_WIN32) || defined(Q_OS_MACOS) || defined(Q_OS_FREEBSD))
     // Handle other currently unconsidered OSs - what are they - by returning the
     // normal GUI type application handle.
-    return new QApplication(argc, argv);
+    return new MudletApplication(argc, argv);
 #endif
 
     for (int i = 1; i < argc; ++i) {
@@ -133,7 +134,7 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
         // Qt's OpenGL layer on Windows (QOpenGLFunctions)
         QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
 #endif
-        return new QApplication(argc, argv); // Normal course of events - (GUI), so: game on!
+        return new MudletApplication(argc, argv); // Normal course of events - (GUI), so: game on!
     }
 }
 

@@ -506,7 +506,8 @@ SOURCES += \
     TVar.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
-    XMLimport.cpp
+    XMLimport.cpp \
+    mudletapplication.cpp
 
 HEADERS += \
     ActionUnit.h \
@@ -542,6 +543,7 @@ HEADERS += \
     KeyUnit.h \
     LuaInterface.h \
     mudlet.h \
+    mudletapplication.h \
     pre_guard.h \
     post_guard.h \
     ScriptUnit.h \
