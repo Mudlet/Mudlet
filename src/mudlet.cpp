@@ -3837,7 +3837,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
 
     // This settings also need to be configured, note that the only time not to
     // save the setting is on profile loading:
-    pHost->mTelnet.setEncoding(readProfileData(profile_name, QLatin1String("encoding")), false);
+    pHost->mTelnet.setEncoding(readProfileData(profile_name, QStringLiteral("encoding")), false);
 
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     slot_connection_dlg_finished(profile_name, true);
@@ -3881,6 +3881,13 @@ void mudlet::handleTelnetUri(const QUrl &telnetUri)
     if (profilesFound == 0) {
         const auto profile_name = addProfile(url.host().toLower(), url.port(), url.userName(), url.password());
         doAutoLogin(profile_name);
+        auto pHost = getHostManager().getHost(profile_name);
+        if (!pHost) {
+            return;
+        }
+
+        mudlet::self()->setupPackagesToInstall(pHost);
+        mudlet::self()->installDefaultPackages(pHost);
     } else if (profilesFound == 1) {
         doAutoLogin(lastHostFound);
     } else {
@@ -3966,6 +3973,37 @@ void mudlet::hideMudletsVariables(Host* pHost)
     }
 }
 
+void mudlet::setupPackagesToInstall(Host* pHost)
+{
+    if (pHost->getUrl().contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive) || pHost->getUrl().contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)
+        || pHost->getUrl().contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)
+        || pHost->getUrl().contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)) {
+        mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-mapper.xml"));
+    } else if (pHost->getUrl().contains(QStringLiteral("3scapes.org"), Qt::CaseInsensitive) || pHost->getUrl().contains(QStringLiteral("3k.org"), Qt::CaseInsensitive)) {
+        mudlet::self()->packagesToInstallList.append(QStringLiteral(":/3k-mapper.xml"));
+    } else if (not pHost->getUrl().contains(QStringLiteral("mudlet.org"), Qt::CaseInsensitive)) {
+        mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
+    }
+    if (pHost->getUrl().contains(QStringLiteral("mudlet.org"), Qt::CaseInsensitive)) {
+        mudlet::self()->packagesToInstallList.append(QStringLiteral(":/run-tests.xml"));
+    } else {
+        mudlet::self()->packagesToInstallList.append(QStringLiteral(":/send-text-to-all-games.xml"));
+        mudlet::self()->packagesToInstallList.append(QStringLiteral(":/deleteOldProfiles.xml"));
+        mudlet::self()->packagesToInstallList.append(QStringLiteral(":/echo.xml"));
+    }
+
+    mudlet::self()->packagesToInstallList.append(QStringLiteral(":/run-lua-code-v4.xml"));
+}
+
+void mudlet::installDefaultPackages(Host* pHost)
+{
+    for (int i = 0; i < packagesToInstallList.size(); i++) {
+        pHost->installPackage(packagesToInstallList[i], 0);
+    }
+
+    packagesToInstallList.clear();
+}
+
 void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
 {
     Host* pHost = getHostManager().getHost(profile);
@@ -4003,12 +4041,7 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
         }
     }
 
-    // install default packages
-    for (int i = 0; i < packagesToInstallList.size(); i++) {
-        pHost->installPackage(packagesToInstallList[i], 0);
-    }
-
-    packagesToInstallList.clear();
+    installDefaultPackages(pHost);
 
     TEvent event {};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));

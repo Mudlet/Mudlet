@@ -233,6 +233,7 @@ public:
     void sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const;
 #endif
     void generateUniqueProfileName(QString& profile_name);
+    void setupPackagesToInstall(Host *pHost);
 
     static const bool scmIsDevelopmentVersion;
     QTime mReplayTime;
@@ -559,6 +560,7 @@ private:
     bool mudletIsDefault();
     void openDefaultCheck();
     void setMudletAsDefault();
+    void installDefaultPackages(Host *pHost);
 
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;

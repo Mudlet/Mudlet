@@ -2105,6 +2105,7 @@ void dlgConnectionProfiles::slot_connectToServer()
 {
     loadProfile(true);
 }
+
 void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 {
     QString profile_name = profile_name_entry->text().trimmed();
@@ -2127,7 +2128,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     if (hostManager.addHost(profile_name, port_entry->text().trimmed(), QString(), QString())) {
         pHost = hostManager.getHost(profile_name);
         if (!pHost) {
-            return ;
+            return;
         }
     } else {
         return;
@@ -2197,25 +2198,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     }
 
     if (needsGenericPackagesInstall) {
-        //install appropriate mapper script for the game
-        if (pHost->getUrl().contains(QStringLiteral("aetolia.com"), Qt::CaseInsensitive) || pHost->getUrl().contains(QStringLiteral("achaea.com"), Qt::CaseInsensitive)
-            || pHost->getUrl().contains(QStringLiteral("lusternia.com"), Qt::CaseInsensitive)
-            || pHost->getUrl().contains(QStringLiteral("imperian.com"), Qt::CaseInsensitive)) {
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-mapper.xml"));
-        } else if (pHost->getUrl().contains(QStringLiteral("3scapes.org"), Qt::CaseInsensitive) || pHost->getUrl().contains(QStringLiteral("3k.org"), Qt::CaseInsensitive)) {
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/3k-mapper.xml"));
-        } else if ( not pHost->getUrl().contains(QStringLiteral("mudlet.org"), Qt::CaseInsensitive) ) {
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
-        }
-        if (pHost->getUrl().contains(QStringLiteral("mudlet.org"), Qt::CaseInsensitive)) {
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/run-tests.xml"));
-        } else {
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/send-text-to-all-games.xml"));
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/deleteOldProfiles.xml"));
-            mudlet::self()->packagesToInstallList.append(QStringLiteral(":/echo.xml"));
-        }
-
-        mudlet::self()->packagesToInstallList.append(QStringLiteral(":/run-lua-code-v4.xml"));
+        mudlet::self()->setupPackagesToInstall(pHost);
     }
 
     emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());
