@@ -111,6 +111,10 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 //          codes would break or destroy the script that used it.
 const QString mudlet::scmMudletXmlDefaultVersion = QString::number(1.001f, 'f', 3);
 
+// The Qt runtime version is needed in various places but as it is a constant
+// during the application run it is easiest to define it as one once:
+const QVersionNumber mudlet::scmRunTimeQtVersion = QVersionNumber::fromString(QString(qVersion()));
+
 QPointer<TConsole> mudlet::mpDebugConsole = nullptr;
 QPointer<QMainWindow> mudlet::mpDebugArea = nullptr;
 bool mudlet::debugMode = false;
@@ -1725,6 +1729,9 @@ bool mudlet::saveWindowLayout()
 
         QByteArray layoutData = saveState();
         QDataStream ofs(&layoutFile);
+        if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+            ofs.setVersion(18);
+        }
         ofs << layoutData;
         layoutFile.close();
         mHasSavedLayout = true;
@@ -1751,6 +1758,9 @@ bool mudlet::loadWindowLayout()
 
             QByteArray layoutData;
             QDataStream ifs(&layoutFile);
+            if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+                ifs.setVersion(18);
+            }
             ifs >> layoutData;
             layoutFile.close();
 
@@ -3587,10 +3597,13 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
     QFile file(getMudletPath(profileDataItemPath, profile, item));
     file.open(QIODevice::ReadOnly);
     if (!file.exists()) {
-        return "";
+        return QString();
     }
 
     QDataStream ifs(&file);
+    if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ifs.setVersion(18);
+    }
     QString ret;
 
     ifs >> ret;
