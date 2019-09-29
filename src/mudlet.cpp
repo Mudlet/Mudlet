@@ -3855,7 +3855,8 @@ void mudlet::handleTelnetUri(const QUrl &telnetUri)
 {
     QUrl url(std::move(telnetUri));
 
-    if (url.scheme() != QLatin1String("telnet")) {
+    qDebug() "handleTelnetUri url is" << url;
+    if (url.scheme() != QLatin1String("telnet") || url.scheme() != QLatin1String("mudlet")) {
         return;
     }
 
@@ -3878,6 +3879,7 @@ void mudlet::handleTelnetUri(const QUrl &telnetUri)
         }
     }
 
+    qDebug() << profilesFound << "profilesFound";
     if (profilesFound == 0) {
         const auto profile_name = addProfile(url.host().toLower(), url.port(), url.userName(), url.password());
         doAutoLogin(profile_name);
