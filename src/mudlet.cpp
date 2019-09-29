@@ -3748,7 +3748,11 @@ bool mudlet::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::FileOpen) {
         auto openEvent = static_cast<QFileOpenEvent *>(event);
-        handleTelnetUri(openEvent->url());
+
+        // macOS tends to send blank "" urls on launch
+        if (openEvent->url().scheme() != QString()) {
+            handleTelnetUri(openEvent->url());
+        }
 
         return true;
     }
