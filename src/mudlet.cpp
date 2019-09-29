@@ -3856,7 +3856,8 @@ void mudlet::handleTelnetUri(const QUrl &telnetUri)
     QUrl url(std::move(telnetUri));
 
     qDebug() << "handleTelnetUri url is" << url;
-    if (url.scheme() != QLatin1String("telnet") || url.scheme() != QLatin1String("mudlet")) {
+    if (!(url.scheme() == QLatin1String("telnet") || url.scheme() == QLatin1String("mudlet"))) {
+        qDebug() << url.scheme() << "url.scheme() isn't ours, quitting";
         return;
     }
 
