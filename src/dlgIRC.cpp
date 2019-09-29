@@ -761,7 +761,7 @@ QString dlgIRC::readAppDefaultIrcNick()
     if (opened) {
         QDataStream ifs(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ifs.setVersion(18);
+            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         ifs >> rstr;
         file.close();
@@ -776,7 +776,7 @@ void dlgIRC::writeAppDefaultIrcNick(const QString& nick)
     if (opened) {
         QDataStream ofs(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ofs.setVersion(18);
+            ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         ofs << nick;
         file.close();

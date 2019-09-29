@@ -788,7 +788,7 @@ void TConsole::closeEvent(QCloseEvent* event)
             if (file_map.open(QIODevice::WriteOnly)) {
                 QDataStream out(&file_map);
                 if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-                    out.setVersion(18);
+                    out.setVersion(mudlet::scmQDataStreamFormat_5_12);
                 }
                 mpHost->mpMap->serialize(out);
                 file_map.close();
@@ -827,7 +827,7 @@ void TConsole::closeEvent(QCloseEvent* event)
                 if (file_map.open(QIODevice::WriteOnly)) {
                     QDataStream out(&file_map);
                     if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-                        out.setVersion(18);
+                        out.setVersion(mudlet::scmQDataStreamFormat_5_12);
                     }
                     mpHost->mpMap->serialize(out);
                     file_map.close();
@@ -1097,7 +1097,7 @@ void TConsole::slot_toggleReplayRecording()
         mReplayFile.setFileName(mLogFileName);
         mReplayFile.open(QIODevice::WriteOnly);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            mReplayStream.setVersion(QDataStream::Qt_5_12);
+            mReplayStream.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         mReplayStream.setDevice(&mReplayFile);
         mpHost->mTelnet.recordReplay();
@@ -1553,7 +1553,7 @@ bool TConsole::saveMap(const QString& location, int saveVersion)
     if (file_map.open(QIODevice::WriteOnly)) {
         QDataStream out(&file_map);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            out.setVersion(18);
+            out.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         mpHost->mpMap->serialize(out, saveVersion);
         file_map.close();

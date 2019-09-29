@@ -1365,7 +1365,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             // we want to force to be used but we cannot use the enum directly
             // because it will not be defined in older versions of the Qt
             // library when the code is compilated:
-            ifs.setVersion(18);
+            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         ifs >> mVersion;
         if (mVersion > mMaxVersion) {
@@ -1664,7 +1664,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     int otherProfileVersion = 0;
     QDataStream ifs(&file);
     if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(18);
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
     }
     ifs >> otherProfileVersion;
 

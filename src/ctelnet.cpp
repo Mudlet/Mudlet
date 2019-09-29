@@ -2182,7 +2182,7 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
         }
         replayStream.setDevice(&replayFile);
         if (QVersionNumber::fromString(QString(qVersion())) >= QVersionNumber(5, 13, 0)) {
-            replayStream.setVersion(18);
+            replayStream.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         loadingReplay = true;
         if (mudlet::self()->replayStart()) {

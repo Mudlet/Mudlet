@@ -115,6 +115,10 @@ const QString mudlet::scmMudletXmlDefaultVersion = QString::number(1.001f, 'f', 
 // during the application run it is easiest to define it as one once:
 const QVersionNumber mudlet::scmRunTimeQtVersion = QVersionNumber::fromString(QString(qVersion()));
 
+// This is equivalent to QDataStream::Qt_5_12 but it is needed when we are
+// compiling with versions older than that which do not have that enum value:
+const int mudlet::scmQDataStreamFormat_5_12 = 18;
+
 QPointer<TConsole> mudlet::mpDebugConsole = nullptr;
 QPointer<QMainWindow> mudlet::mpDebugArea = nullptr;
 bool mudlet::debugMode = false;
@@ -1730,7 +1734,7 @@ bool mudlet::saveWindowLayout()
         QByteArray layoutData = saveState();
         QDataStream ofs(&layoutFile);
         if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ofs.setVersion(18);
+            ofs.setVersion(scmQDataStreamFormat_5_12);
         }
         ofs << layoutData;
         layoutFile.close();
@@ -1759,7 +1763,7 @@ bool mudlet::loadWindowLayout()
             QByteArray layoutData;
             QDataStream ifs(&layoutFile);
             if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-                ifs.setVersion(18);
+                ifs.setVersion(scmQDataStreamFormat_5_12);
             }
             ifs >> layoutData;
             layoutFile.close();
@@ -3602,7 +3606,7 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
 
     QDataStream ifs(&file);
     if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-        ifs.setVersion(18);
+        ifs.setVersion(scmQDataStreamFormat_5_12);
     }
     QString ret;
 

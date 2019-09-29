@@ -1299,7 +1299,7 @@ QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& 
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ofs.setVersion(18);
+            ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         ofs << what;
         file.close();
@@ -1321,7 +1321,7 @@ QString Host::readProfileData(const QString& item)
     if (success) {
         QDataStream ifs(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ifs.setVersion(18);
+            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         ifs >> ret;
         file.close();
