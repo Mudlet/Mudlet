@@ -542,7 +542,8 @@ private:
     void loadUtf8Filenames();
 
 #endif
-    void insertColorTableEntry(lua_State*, const QColor&, const QString&);
+    void insertColorTableEntry(lua_State*, const QColor& color, const QString& table, const QString& name);
+    void insertColorTableEntry(lua_State*, const QColor& color, const QString& table, const int index);
 
     QNetworkAccessManager* mpFileDownloader;
     std::list<std::string> mCaptureGroupList;
