@@ -427,6 +427,9 @@ private:
 
     QScrollArea* mpScrollArea;
     QWidget* HpatternList;
+    // this widget holds the errors, trigger patterns, and all other widgets that aren't edbee
+    // in it, as a workaround for an extra splitter getting created by Qt below the error msg otherwise
+    QWidget *mpNonCodeWidgets;
     dlgTriggersMainArea* mpTriggersMainArea;
     dlgTimersMainArea* mpTimersMainArea;
     dlgSystemMessageArea* mpSystemMessageArea;

@@ -1354,6 +1354,19 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         }
 
         QDataStream ifs(&file);
+        // Is the RUN-TIME version of the Qt libraries equal to or more than
+        // Qt 5.13.0? Then force things to use the backwards compatible format
+        // - for us - of Qt 5.12.0 - this is needed because the way that the
+        // QFont class is stored in a binary format has changed at 5.13 and it
+        // causes crashes when a new version of the Qt libraries tries to read
+        // the older format:
+        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+            // 18 is the enum value corresponding to QDataStream::Qt_5_12 which
+            // we want to force to be used but we cannot use the enum directly
+            // because it will not be defined in older versions of the Qt
+            // library when the code is compilated:
+            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        }
         ifs >> mVersion;
         if (mVersion > mMaxVersion) {
             QString errMsg = tr("[ ERROR ] - Map file is too new, its file format (%1) is higher than this version of\n"
@@ -1650,6 +1663,9 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
     int otherProfileVersion = 0;
     QDataStream ifs(&file);
+    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+    }
     ifs >> otherProfileVersion;
 
     QString infoMsg = tr(R"([ INFO ]  - Checking map file: "%1", format version:%2...)").arg(file.fileName()).arg(otherProfileVersion);
