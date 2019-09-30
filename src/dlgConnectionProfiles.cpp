@@ -677,43 +677,6 @@ void dlgConnectionProfiles::slot_deleteProfile()
     delete_profile_dialog->raise();
 }
 
-QString dlgConnectionProfiles::readProfileData(const QString& profile, const QString& item) const
-{
-    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
-    bool success = file.open(QIODevice::ReadOnly);
-    QString ret;
-    if (success) {
-        QDataStream ifs(&file);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
-        ifs >> ret;
-        file.close();
-    }
-
-    return ret;
-}
-
-QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile, const QString& item, const QString& what)
-{
-    auto f = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item);
-    QFile file(f);
-    if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-        QDataStream ofs(&file);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
-        ofs << what;
-        file.close();
-    }
-
-    if (file.error() == QFile::NoError) {
-        return qMakePair(true, QString());
-    } else {
-        return qMakePair(false, file.errorString());
-    }
-}
-
 // Use the URL so we can use the same descriptions for user generated copies of
 // predefined MUDs - but also need the port number to disambiguate the 3K ones!
 QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quint16 port, const QString& profile_name) const
