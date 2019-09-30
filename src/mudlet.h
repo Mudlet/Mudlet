@@ -166,6 +166,7 @@ public:
     void setFgColor(Host*, const QString& name, int, int, int);
     void setBgColor(Host*, const QString& name, int, int, int);
     QString readProfileData(const QString& profile, const QString& item);
+    QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     void deleteProfileData(const QString &profile, const QString &item);
     bool setWindowWrap(Host* pHost, const QString& name, int& wrap);
     bool setWindowWrapIndent(Host* pHost, const QString& name, int& wrap);
@@ -388,7 +389,9 @@ public:
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     QPair<bool, QStringList> getLines(Host* pHost, const QString& windowName, const int lineFrom, const int lineTo);
     void setEnableFullScreenMode(const bool);
-    void migratePasswordsToSecureStorage();
+    bool migratePasswordsToProfileStorage();
+    bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
+    bool migratePasswordsToSecureStorage();
     static void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
 
     // Both of these revises the contents of the .aff file: the first will
@@ -502,6 +505,9 @@ signals:
     void signal_toolBarVisibilityChanged(const controlsVisibility);
     void signal_showIconsOnMenusChanged(const Qt::CheckState);
     void signal_guiLanguageChanged(const QString&);
+    void signal_passwordsMigratedToSecure();
+    void signal_passwordMigratedToSecure(const QString&);
+    void signal_passwordsMigratedToProfiles();
 
 
 private slots:
@@ -531,7 +537,8 @@ private slots:
     void slot_updateAvailable(const int);
 #endif
     void slot_toggle_compact_input_line();
-    void slot_password_saved(QKeychain::Job *job);
+    void slot_password_migrated_to_secure(QKeychain::Job *job);
+    void slot_password_migrated_to_profile(QKeychain::Job *job);
 
 private:
     void initEdbee();
@@ -547,7 +554,6 @@ private:
     void loadTranslators(const QString &languageCode);
     void loadDictionaryLanguageMap();
     void migrateDebugConsole(Host* currentHost);
-
 
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
@@ -663,6 +669,11 @@ private:
     QReadWriteLock mDictionaryReadWriteLock;
 
     QString mMudletDiscordInvite = QStringLiteral("https://discordapp.com/invite/kuYvMQ9");
+
+    // a list of profiles currently being migrated to secure or profile storage
+    QStringList mProfilePasswordsToMigrate {};
+
+    bool mStorePasswordsSecurely {true};
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
