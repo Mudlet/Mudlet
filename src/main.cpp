@@ -529,8 +529,10 @@ int main(int argc, char* argv[])
 #if defined(Q_OS_MACOS)
     // handle the telnet uri was used for launching Mudlet, and if no,
     // see if we passed the telnet uri as a CLI argument
-    if (!app->telnetUri.isEmpty()) {
-        mudlet::self()->handleTelnetUri(telnetUri);
+    qWarning() << "deferred telnetURI:" << app->deferredTelnetUri;
+    if (!app->deferredTelnetUri.isEmpty()) {
+        qWarning() << "loading deferred URI:" << app->deferredTelnetUri;
+        mudlet::self()->handleTelnetUri(app->deferredTelnetUri);
     } else if (!telnetUri.isEmpty()) {
         mudlet::self()->handleTelnetUri(telnetUri);
     }

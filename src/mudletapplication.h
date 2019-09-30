@@ -29,7 +29,7 @@ class MudletApplication : public QApplication
 
 public:
     MudletApplication(int &argc, char **argv);
-    QUrl telnetUri;
+    QUrl deferredTelnetUri;
 
 protected:
     bool event(QEvent *) override;

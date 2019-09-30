@@ -39,8 +39,8 @@ bool MudletApplication::event(QEvent *event)
             qWarning() << "MudletApplication::event inside event, too early?"  << mudlet::self();
             mudlet::self()->handleTelnetUri(openEvent->url());
         } else {
-            telnetUri = openEvent->url();
-            qWarning() << "MudletApplication::event too fuckin early, man. Saved" << telnetUri;
+            deferredTelnetUri = openEvent->url();
+            qWarning() << "MudletApplication::event too fuckin early, man. Saved" << deferredTelnetUri;
         }
         return true;
     }

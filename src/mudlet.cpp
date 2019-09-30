@@ -3858,7 +3858,10 @@ void mudlet::handleTelnetUri(const QUrl &telnetUri)
 
     qWarning() << "handleTelnetUri url is" << url;
     if (!(url.scheme() == QLatin1String("telnet") || url.scheme() == QLatin1String("mudlet"))) {
-        qWarning() << url.scheme() << "url.scheme() isn't ours, quitting";
+        // a blank URL can be passed in from the macOS launch handler
+        if (!url.scheme().isEmpty()) {
+            qWarning() << url.scheme() << "url.scheme() isn't ours, quitting";
+        }
         return;
     }
 
