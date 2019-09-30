@@ -3026,13 +3026,13 @@ void mudlet::readEarlySettings(const QSettings& settings)
 
 void mudlet::readLateSettings(const QSettings& settings)
 {
-    QPoint pos = settings.value("pos", QPoint(0, 0)).toPoint();
-    QSize size = settings.value("size", QSize(750, 550)).toSize();
+    QPoint pos = settings.value(QStringLiteral("pos"), QPoint(0, 0)).toPoint();
+    QSize size = settings.value(QStringLiteral("size"), QSize(750, 550)).toSize();
     // A sensible default has already been set up according to whether we are on
     // a netbook or not before this gets called so only change if there is a
     // setting stored:
-    if (settings.contains("mainiconsize")) {
-        setToolBarIconSize(settings.value("mainiconsize").toInt());
+    if (settings.contains(QStringLiteral("mainiconsize"))) {
+        setToolBarIconSize(settings.value(QStringLiteral("mainiconsize")).toInt());
     }
     setEditorTreeWidgetIconSize(settings.value("tefoldericonsize", QVariant(3)).toInt());
     // We have abandoned previous "showMenuBar" / "showToolBar" booleans
@@ -3046,6 +3046,7 @@ void mudlet::readLateSettings(const QSettings& settings)
     mshowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mCompactInputLine = settings.value("compactInputLine", QVariant(false)).toBool();
     mAlwaysCheckDefault = settings.value("alwaysCheckDefault", QVariant(true)).toBool();
+    mStorePasswordsSecurely = settings.value("storePasswordsSecurely", QVariant(true)).toBool();
 
 
     resize(size);
@@ -3185,6 +3186,7 @@ void mudlet::writeSettings()
     settings.setValue("reportMapIssuesToConsole", mshowMapAuditErrors);
     settings.setValue("compactInputLine", mCompactInputLine);
     settings.setValue("alwaysCheckDefault", mAlwaysCheckDefault);
+    settings.setValue("storePasswordsSecurely", mStorePasswordsSecurely);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
@@ -3734,6 +3736,23 @@ QString mudlet::readProfileData(const QString& profile, const QString& item) con
     }
 
     return ret;
+}
+
+QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QString& item, const QString& what)
+{
+    auto f = getMudletPath(mudlet::profileDataItemPath, profile, item);
+    QFile file(f);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
+        QDataStream ofs(&file);
+        ofs << what;
+        file.close();
+    }
+
+    if (file.error() == QFile::NoError) {
+        return qMakePair(true, QString());
+    } else {
+        return qMakePair(false, file.errorString());
+    }
 }
 
 void mudlet::deleteProfileData(const QString& profile, const QString& item)
@@ -5004,9 +5023,14 @@ void mudlet::setEnableFullScreenMode(const bool state)
     emit signal_enableFulScreenModeChanged(state);
 }
 
-
-void mudlet::migratePasswordsToSecureStorage()
+bool mudlet::migratePasswordsToSecureStorage()
 {
+    if (!mProfilePasswordsToMigrate.isEmpty()) {
+        qWarning() << "mudlet::migratePasswordsToSecureStorage() warning: password migration is already in progress, won't start another.";
+        return false;
+    }
+    mStorePasswordsSecurely = true;
+
     QStringList profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath))
                                    .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
@@ -5024,20 +5048,96 @@ void mudlet::migratePasswordsToSecureStorage()
         job->setTextData(password);
         job->setProperty("profile", profile);
 
-        connect(job, &QKeychain::WritePasswordJob::finished, this, &mudlet::slot_password_saved);
+        mProfilePasswordsToMigrate.append(profile);
+
+        connect(job, &QKeychain::WritePasswordJob::finished, this, &mudlet::slot_password_migrated_to_secure);
 
         job->start();
     }
 
-}
-
-void mudlet::slot_password_saved(QKeychain::Job *job)
-{
-    if (job->error()) {
-        qWarning() << "mudlet::slot_password_saved ERROR: couldn't migrate for" << job->property("profile") << "; error was:" << job->errorString();
+    if (mProfilePasswordsToMigrate.isEmpty()) {
+        QTimer::singleShot(0, this, [this]() {
+            emit signal_passwordsMigratedToProfiles();
+        });
     }
 
+    return true;
+}
+
+void mudlet::slot_password_migrated_to_secure(QKeychain::Job* job)
+{
+    const auto profileName = job->property("profile").toString();
+    if (job->error()) {
+        qWarning() << "mudlet::slot_password_saved ERROR: couldn't migrate for" << profileName << "; error was:" << job->errorString();
+    } else {
+        deleteProfileData(profileName, QStringLiteral("password"));
+    }
+    mProfilePasswordsToMigrate.removeAll(profileName);
     job->deleteLater();
+
+    if (mProfilePasswordsToMigrate.isEmpty()) {
+        emit signal_passwordsMigratedToSecure();
+    } else {
+        emit signal_passwordMigratedToSecure(profileName);
+    }
+}
+
+bool mudlet::migratePasswordsToProfileStorage()
+{
+    if (!mProfilePasswordsToMigrate.isEmpty()) {
+        qWarning() << "mudlet::migratePasswordsToProfileStorage() warning: password migration is already in progress, won't start another.";
+        return false;
+    }
+    mStorePasswordsSecurely = false;
+
+    QStringList profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+
+    for (const auto& profile : profiles) {
+        auto* job = new QKeychain::ReadPasswordJob(QStringLiteral("Mudlet profile"));
+        job->setAutoDelete(false);
+        job->setInsecureFallback(false);
+        job->setKey(profile);
+        job->setProperty("profile", profile);
+        mProfilePasswordsToMigrate.append(profile);
+
+        connect(job, &QKeychain::ReadPasswordJob::finished, this, &mudlet::slot_password_migrated_to_profile);
+        job->start();
+    }
+
+    if (mProfilePasswordsToMigrate.isEmpty()) {
+        QTimer::singleShot(0, this, [this]() {
+            emit signal_passwordsMigratedToProfiles();
+        });
+    }
+    return true;
+}
+
+void mudlet::slot_password_migrated_to_profile(QKeychain::Job* job)
+{
+    const auto profileName = job->property("profile").toString();
+
+    if (job->error()) {
+        const auto error = job->errorString();
+        if (error != QStringLiteral("Entry not found") && error != QStringLiteral("No match")) {
+            qWarning() << "mudlet::slot_password_migrated_to_profile ERROR: couldn't migrate for" << profileName << "; error was:" << error;
+        }
+    } else {
+        auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
+        writeProfileData(profileName, QStringLiteral("password"), readJob->textData());
+
+        // delete from secure storage
+        auto *job = new QKeychain::DeletePasswordJob(QStringLiteral("Mudlet profile"));
+        job->setAutoDelete(true);
+        job->setKey(profileName);
+        job->setProperty("profile", profileName);
+        job->start();
+    }
+    mProfilePasswordsToMigrate.removeAll(profileName);
+    job->deleteLater();
+
+    if (mProfilePasswordsToMigrate.isEmpty()) {
+        emit signal_passwordsMigratedToProfiles();
+    }
 }
 
 void mudlet::setShowMapAuditErrors(const bool state)

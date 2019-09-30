@@ -112,6 +112,8 @@ private:
     QString mDiscordApplicationId;
     const QStringList mDefaultGames;
     QAction* mpAction_revealPassword;
+    // true for the duration of the 'Copy profile' action
+    bool mCopyingProfile {};
 
 
 private slots:
