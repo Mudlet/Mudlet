@@ -526,12 +526,19 @@ int main(int argc, char* argv[])
 
     mudlet::self()->startAutoLogin();
 
-    // this is only used on macOS
+#if defined(Q_OS_MACOS)
+    // handle the telnet uri was used for launching Mudlet, and if no,
+    // see if we passed the telnet uri as a CLI argument
     if (!app->telnetUri.isEmpty()) {
         mudlet::self()->handleTelnetUri(telnetUri);
     } else if (!telnetUri.isEmpty()) {
         mudlet::self()->handleTelnetUri(telnetUri);
     }
+#else
+    if (!telnetUri.isEmpty()) {
+        mudlet::self()->handleTelnetUri(telnetUri);
+    }
+#endif
 
     mudlet::self()->openConnectionsWindow();
 
