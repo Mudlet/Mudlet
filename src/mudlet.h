@@ -332,8 +332,8 @@ public:
         // Takes two extra arguments (profile name, mapFileName) that returns
         // the pathFile name for any map file:
         profileMapPathFileName,
-        // Takes one extra argument (profile name) that returns the pathFile
-        // name for the downloaded IRE Server provided XML map:
+        // Takes one extra argument (profile name) that returns the file
+        // location for the downloaded MMP map:
         profileXmlMapPathFileName,
         // Takes two extra arguments (profile name, data item) that gives a
         // path file name for, typically a data item stored as a single item
