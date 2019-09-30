@@ -21,6 +21,7 @@
  ***************************************************************************/
 
 #include <QApplication>
+#include <QUrl>
 
 class MudletApplication : public QApplication
 {
@@ -28,6 +29,7 @@ class MudletApplication : public QApplication
 
 public:
     MudletApplication(int &argc, char **argv);
+    QUrl telnetUri;
 
 protected:
     bool event(QEvent *) override;

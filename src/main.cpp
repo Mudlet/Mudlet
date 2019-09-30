@@ -203,7 +203,7 @@ int main(int argc, char* argv[])
 #endif
 
     QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction, telnetUri));
-    auto * app = qobject_cast<QApplication*>(initApp.data());
+    auto * app = qobject_cast<MudletApplication*>(initApp.data());
 
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
@@ -526,7 +526,10 @@ int main(int argc, char* argv[])
 
     mudlet::self()->startAutoLogin();
 
-    if (!telnetUri.isEmpty()) {
+    // this is only used on macOS
+    if (!app->telnetUri.isEmpty()) {
+        mudlet::self()->handleTelnetUri(telnetUri);
+    } else if (!telnetUri.isEmpty()) {
         mudlet::self()->handleTelnetUri(telnetUri);
     }
 
