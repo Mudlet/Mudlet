@@ -520,7 +520,9 @@ int main(int argc, char* argv[])
 
     mudlet::self()->startAutoLogin();
 
-    mudlet::self()->handleTelnetUri(telnetUri);
+    if (!telnetUri.isEmpty()) {
+        mudlet::self()->handleTelnetUri(telnetUri);
+    }
 
     mudlet::self()->openConnectionsWindow();
 
