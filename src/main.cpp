@@ -150,6 +150,7 @@ void copyFont(const QString& externalPathName, const QString& resourcePathName, 
 
 int main(int argc, char* argv[])
 {
+    qWarning() << "hi. too early?" << mudlet::self()->isGoingUp() << mudlet::self();
     // print stdout to console if Mudlet is started in a console in Windows
     // credit to https://stackoverflow.com/a/41701133 for the workaround
 #ifdef Q_OS_WIN32
@@ -500,7 +501,10 @@ int main(int argc, char* argv[])
     }
 #endif
 
+    qWarning() << "done with the prelloadin stuff. too early?" << mudlet::self()->isGoingUp() << mudlet::self();
     mudlet::start();
+    qWarning() << "started up. too early?" << mudlet::self()->isGoingUp() << mudlet::self();
+
 
     if (first_launch) {
         // give Mudlet window decent size - most of the screen on non-HiDPI displays
@@ -513,6 +517,8 @@ int main(int argc, char* argv[])
     if (show_splash) {
         splash.finish(mudlet::self());
     }
+    qWarning() << "mudlet::self good to go, yo" << mudlet::self()->isGoingUp() << mudlet::self();
+
 
     mudlet::self()->show();
 

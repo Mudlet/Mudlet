@@ -29,10 +29,11 @@ MudletApplication::MudletApplication(int &argc, char **argv) :
 
 bool MudletApplication::event(QEvent *event)
 {
+    qWarning() << "too early?" << event << mudlet::self()->isGoingUp() << mudlet::self();
     if (event->type() == QEvent::FileOpen) {
         auto openEvent = static_cast<QFileOpenEvent*>(event);
         // macOS tends to send blank "" urls on launch
-        qWarning() << "too early?" << mudlet::self()->isGoingUp() << mudlet::self();
+        qWarning() << "inside event, too early?" << mudlet::self()->isGoingUp() << mudlet::self();
         mudlet::self()->handleTelnetUri(openEvent->url());
         return true;
     }
