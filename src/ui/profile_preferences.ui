@@ -2778,6 +2778,30 @@
           <string>Other Special options</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_debug">
+          <item row="1" column="1">
+           <widget class="QComboBox" name="comboBox_store_passwords_in">
+            <item>
+             <property name="text">
+              <string>the computer's password manager (secure)</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>plaintext with the profile (portable)</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QCheckBox" name="checkBox_expectCSpaceIdInColonLessMColorCode">
+            <property name="toolTip">
+             <string>&lt;p&gt;Some MUDs use a flawed interpretation of the ANSI Set Graphics Rendition (&lt;b&gt;SGR&lt;/b&gt;) code sequences for 16M color mode which only uses semi-colons and not colons to separate parameter elements i.e. instead of using a code in the form: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Unused&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance Color Space (0=CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;where the &lt;i&gt;Color Space Id&lt;/i&gt; is expected to be an empty string to specify the usual (default) case and all of the &lt;i&gt;Parameter Elements&lt;/i&gt; (the &quot;2&quot; and the values in the &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt;s) may, technically, be omitted; they use: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;or: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;/p&gt;&lt;p&gt;It is not possible to reliably detect the difference between these two so checking this option causes Mudlet to expect the last one with the additional (but empty!) parameter.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Expect Color Space Id in SGR...(3|4)8;2;...m codes</string>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="0">
            <widget class="QCheckBox" name="checkBox_showIconsOnMenus">
             <property name="text">
@@ -2794,13 +2818,22 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QCheckBox" name="checkBox_expectCSpaceIdInColonLessMColorCode">
-            <property name="toolTip">
-             <string>&lt;p&gt;Some MUDs use a flawed interpretation of the ANSI Set Graphics Rendition (&lt;b&gt;SGR&lt;/b&gt;) code sequences for 16M color mode which only uses semi-colons and not colons to separate parameter elements i.e. instead of using a code in the form: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Unused&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance Color Space (0=CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;where the &lt;i&gt;Color Space Id&lt;/i&gt; is expected to be an empty string to specify the usual (default) case and all of the &lt;i&gt;Parameter Elements&lt;/i&gt; (the &quot;2&quot; and the values in the &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt;s) may, technically, be omitted; they use: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;or: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;/p&gt;&lt;p&gt;It is not possible to reliably detect the difference between these two so checking this option causes Mudlet to expect the last one with the additional (but empty!) parameter.&lt;/p&gt;</string>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_store_passwords_in">
+            <property name="text">
+             <string>Store character login passwords in:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="2">
+           <widget class="QLabel" name="label_password_migration_notification">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
             </property>
             <property name="text">
-             <string>Expect Color Space Id in SGR...(3|4)8;2;...m codes</string>
+             <string>TextLabel</string>
             </property>
            </widget>
           </item>
@@ -5037,6 +5070,143 @@
  <tabstops>
   <tabstop>show_sent_text_checkbox</tabstop>
   <tabstop>command_separator_lineedit</tabstop>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>closeButton</tabstop>
+  <tabstop>MainIconSize</tabstop>
+  <tabstop>TEFolderIconSize</tabstop>
+  <tabstop>comboBox_menuBarVisibility</tabstop>
+  <tabstop>comboBox_toolBarVisibility</tabstop>
+  <tabstop>comboBox_guiLanguage</tabstop>
+  <tabstop>comboBox_encoding</tabstop>
+  <tabstop>mAlertOnNewData</tabstop>
+  <tabstop>mFORCE_SAVE_ON_EXIT</tabstop>
+  <tabstop>acceptServerGUI</tabstop>
+  <tabstop>mEnableGMCP</tabstop>
+  <tabstop>mEnableMSDP</tabstop>
+  <tabstop>mEnableMSSP</tabstop>
+  <tabstop>mIsToLogInHtml</tabstop>
+  <tabstop>mIsLoggingTimestamps</tabstop>
+  <tabstop>lineEdit_logFileFolder</tabstop>
+  <tabstop>pushButton_whereToLog</tabstop>
+  <tabstop>pushButton_resetLogDir</tabstop>
+  <tabstop>comboBox_logFileNameFormat</tabstop>
+  <tabstop>lineEdit_logFileName</tabstop>
+  <tabstop>USE_UNIX_EOL</tabstop>
+  <tabstop>auto_clear_input_line_checkbox</tabstop>
+  <tabstop>checkBox_runAllKeyBindings</tabstop>
+  <tabstop>commandLineMinimumHeight</tabstop>
+  <tabstop>checkBox_spellCheck</tabstop>
+  <tabstop>dictList</tabstop>
+  <tabstop>radioButton_userDictionary_profile</tabstop>
+  <tabstop>radioButton_userDictionary_common</tabstop>
+  <tabstop>fontComboBox</tabstop>
+  <tabstop>fontSize</tabstop>
+  <tabstop>mNoAntiAlias</tabstop>
+  <tabstop>topBorderHeight</tabstop>
+  <tabstop>leftBorderWidth</tabstop>
+  <tabstop>bottomBorderHeight</tabstop>
+  <tabstop>rightBorderWidth</tabstop>
+  <tabstop>wrap_at_spinBox</tabstop>
+  <tabstop>indent_wrapped_spinBox</tabstop>
+  <tabstop>doubleclick_ignore_lineedit</tabstop>
+  <tabstop>checkBox_USE_IRE_DRIVER_BUGFIX</tabstop>
+  <tabstop>checkBox_showSpacesAndTabs</tabstop>
+  <tabstop>checkBox_USE_SMALL_SCREEN</tabstop>
+  <tabstop>checkBox_showLineFeedsAndParagraphs</tabstop>
+  <tabstop>checkBox_echoLuaErrors</tabstop>
+  <tabstop>checkBox_useWideAmbiguousEastAsianGlyphs</tabstop>
+  <tabstop>checkBox_enableTextAnalyzer</tabstop>
+  <tabstop>timeEdit_timerDebugOutputMinimumInterval</tabstop>
+  <tabstop>code_editor_theme_selection_combobox</tabstop>
+  <tabstop>script_preview_combobox</tabstop>
+  <tabstop>checkBox_autocompleteLuaCode</tabstop>
+  <tabstop>pushButton_foreground_color</tabstop>
+  <tabstop>pushButton_background_color</tabstop>
+  <tabstop>pushButton_command_line_foreground_color</tabstop>
+  <tabstop>pushButton_command_line_background_color</tabstop>
+  <tabstop>pushButton_command_foreground_color</tabstop>
+  <tabstop>pushButton_command_background_color</tabstop>
+  <tabstop>pushButton_black</tabstop>
+  <tabstop>pushButton_lBlack</tabstop>
+  <tabstop>pushButton_red</tabstop>
+  <tabstop>pushButton_lRed</tabstop>
+  <tabstop>pushButton_green</tabstop>
+  <tabstop>pushButton_lGreen</tabstop>
+  <tabstop>pushButton_yellow</tabstop>
+  <tabstop>pushButton_lYellow</tabstop>
+  <tabstop>pushButton_blue</tabstop>
+  <tabstop>pushButton_lBlue</tabstop>
+  <tabstop>pushButton_magenta</tabstop>
+  <tabstop>pushButton_lMagenta</tabstop>
+  <tabstop>pushButton_cyan</tabstop>
+  <tabstop>pushButton_lCyan</tabstop>
+  <tabstop>pushButton_white</tabstop>
+  <tabstop>pushButton_lWhite</tabstop>
+  <tabstop>pushButton_resetColors</tabstop>
+  <tabstop>checkBox_allowServerToRedefineColors</tabstop>
+  <tabstop>pushButton_saveMap</tabstop>
+  <tabstop>pushButton_loadMap</tabstop>
+  <tabstop>checkBox_reportMapIssuesOnScreen</tabstop>
+  <tabstop>pushButton_chooseProfiles</tabstop>
+  <tabstop>pushButton_copyMap</tabstop>
+  <tabstop>comboBox_mapFileSaveFormatVersion</tabstop>
+  <tabstop>buttonDownloadMap</tabstop>
+  <tabstop>comboBox</tabstop>
+  <tabstop>mMapperUseAntiAlias</tabstop>
+  <tabstop>checkBox_showDefaultArea</tabstop>
+  <tabstop>fontComboBox_mapSymbols</tabstop>
+  <tabstop>checkBox_isOnlyMapSymbolFontToBeUsed</tabstop>
+  <tabstop>pushButton_showGlyphUsage</tabstop>
+  <tabstop>pushButton_foreground_color_2</tabstop>
+  <tabstop>pushButton_background_color_2</tabstop>
+  <tabstop>pushButton_black_2</tabstop>
+  <tabstop>pushButton_Lblack_2</tabstop>
+  <tabstop>pushButton_red_2</tabstop>
+  <tabstop>pushButton_Lred_2</tabstop>
+  <tabstop>pushButton_green_2</tabstop>
+  <tabstop>pushButton_Lgreen_2</tabstop>
+  <tabstop>pushButton_yellow_2</tabstop>
+  <tabstop>pushButton_Lyellow_2</tabstop>
+  <tabstop>pushButton_blue_2</tabstop>
+  <tabstop>pushButton_Lblue_2</tabstop>
+  <tabstop>pushButton_magenta_2</tabstop>
+  <tabstop>pushButton_Lmagenta_2</tabstop>
+  <tabstop>pushButton_cyan_2</tabstop>
+  <tabstop>pushButton_Lcyan_2</tabstop>
+  <tabstop>pushButton_white_2</tabstop>
+  <tabstop>pushButton_Lwhite_2</tabstop>
+  <tabstop>reset_colors_button_2</tabstop>
+  <tabstop>mFORCE_MCCP_OFF</tabstop>
+  <tabstop>mFORCE_GA_OFF</tabstop>
+  <tabstop>checkBox_mUSE_FORCE_LF_AFTER_PROMPT</tabstop>
+  <tabstop>mFORCE_MXP_NEGOTIATION_OFF</tabstop>
+  <tabstop>comboBox_discordLargeIconPrivacy</tabstop>
+  <tabstop>checkBox_discordServerAccessToDetail</tabstop>
+  <tabstop>comboBox_discordSmallIconPrivacy</tabstop>
+  <tabstop>checkBox_discordServerAccessToState</tabstop>
+  <tabstop>checkBox_discordServerAccessToPartyInfo</tabstop>
+  <tabstop>checkBox_discordServerAccessToTimerInfo</tabstop>
+  <tabstop>checkBox_discordLuaAPI</tabstop>
+  <tabstop>lineEdit_discordUserName</tabstop>
+  <tabstop>lineEdit_discordUserDiscriminator</tabstop>
+  <tabstop>ircHostName</tabstop>
+  <tabstop>ircHostPort</tabstop>
+  <tabstop>ircNick</tabstop>
+  <tabstop>ircChannels</tabstop>
+  <tabstop>checkbox_noAutomaticUpdates</tabstop>
+  <tabstop>search_engine_combobox</tabstop>
+  <tabstop>checkBox_showIconsOnMenus</tabstop>
+  <tabstop>checkBox_expectCSpaceIdInColonLessMColorCode</tabstop>
+  <tabstop>comboBox_store_passwords_in</tabstop>
+  <tabstop>groupBox_ssl</tabstop>
+  <tabstop>checkBox_self_signed</tabstop>
+  <tabstop>checkBox_expired</tabstop>
+  <tabstop>checkBox_ignore_all</tabstop>
+  <tabstop>groupBox_proxy</tabstop>
+  <tabstop>lineEdit_proxyAddress</tabstop>
+  <tabstop>lineEdit_proxyPort</tabstop>
+  <tabstop>lineEdit_proxyUsername</tabstop>
+  <tabstop>lineEdit_proxyPassword</tabstop>
  </tabstops>
  <resources>
   <include location="../mudlet.qrc"/>

@@ -1354,6 +1354,19 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         }
 
         QDataStream ifs(&file);
+        // Is the RUN-TIME version of the Qt libraries equal to or more than
+        // Qt 5.13.0? Then force things to use the backwards compatible format
+        // - for us - of Qt 5.12.0 - this is needed because the way that the
+        // QFont class is stored in a binary format has changed at 5.13 and it
+        // causes crashes when a new version of the Qt libraries tries to read
+        // the older format:
+        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+            // 18 is the enum value corresponding to QDataStream::Qt_5_12 which
+            // we want to force to be used but we cannot use the enum directly
+            // because it will not be defined in older versions of the Qt
+            // library when the code is compilated:
+            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        }
         ifs >> mVersion;
         if (mVersion > mMaxVersion) {
             QString errMsg = tr("[ ERROR ] - Map file is too new, its file format (%1) is higher than this version of\n"
@@ -1650,6 +1663,9 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
     int otherProfileVersion = 0;
     QDataStream ifs(&file);
+    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+    }
     ifs >> otherProfileVersion;
 
     QString infoMsg = tr(R"([ INFO ]  - Checking map file: "%1", format version:%2...)").arg(file.fileName()).arg(otherProfileVersion);
@@ -2173,7 +2189,11 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     }
 
     if (localFileName.isEmpty()) {
-        mLocalMapFileName = mudlet::getMudletPath(mudlet::profileXmlMapPathFileName, mProfileName);
+        if (url.toString().endsWith(QLatin1String("xml"))) {
+            mLocalMapFileName = mudlet::getMudletPath(mudlet::profileXmlMapPathFileName, mProfileName);
+        } else {
+            mLocalMapFileName = mudlet::getMudletPath(mudlet::profileMapPathFileName, mProfileName, QStringLiteral("map.dat"));
+        }
     } else {
         mLocalMapFileName = localFileName;
     }
@@ -2192,7 +2212,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     mpNetworkReply = mpNetworkAccessManager->get(request);
     // Using zero for both min and max values should cause the bar to oscillate
     // until the first update
-    mpProgressDialog = new QProgressDialog(tr("Downloading XML map file for use in %1...",
+    mpProgressDialog = new QProgressDialog(tr("Downloading map file for use in %1...",
                                               "%1 is the name of the current Mudlet profile")
                                               .arg(mProfileName), tr("Abort"), 0, 0);
     mpProgressDialog->setWindowTitle(tr("Map download", "This is a title of a progress window."));
@@ -2343,6 +2363,24 @@ void TMap::slot_downloadError(QNetworkReply::NetworkError error)
 
 void TMap::slot_replyFinished(QNetworkReply* reply)
 {
+    auto cleanup = [this, reply](){
+        reply->deleteLater();
+        mpNetworkReply = Q_NULLPTR;
+
+        // We don't delete the progress dialog until here as we now use it to inform
+        // about post-download operations
+
+        mpProgressDialog->deleteLater();
+        mpProgressDialog = Q_NULLPTR; // Must reset this so it can be reused
+
+        mLocalMapFileName.clear();
+        mExpectedFileSize = 0;
+
+        // We have finished with the XMLimporter so must release the lock on it
+        mXmlImportMutex.unlock();
+    };
+
+
     if (reply != mpNetworkReply) {
         qWarning() << "TMap::slot_replyFinished( QNetworkReply * ) ERROR - received argument was not the expected stored pointer.";
     }
@@ -2369,6 +2407,29 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
                 file.flush();
                 file.close();
 
+                if (!file.fileName().endsWith(QStringLiteral("xml"), Qt::CaseInsensitive)) {
+                    auto pHost = mpHost;
+                    if (!pHost) {
+                        cleanup();
+                        return;
+                    }
+
+                    QString infoMsg = tr("[ INFO ]  - ... map downloaded and stored, now parsing it...");
+                    postMessage(infoMsg);
+                    if (pHost->mpConsole->loadMap(file.fileName())) {
+                        TEvent mapDownloadEvent {};
+                        mapDownloadEvent.mArgumentList.append(QStringLiteral("sysMapDownloadEvent"));
+                        mapDownloadEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                        pHost->raiseEvent(mapDownloadEvent);
+                    } else {
+                        QString alertMsg = tr("[ ERROR ] - Map download problem, failure in parsing destination file:\n%1.").arg(file.fileName());
+                        postMessage(alertMsg);
+                    }
+
+                    cleanup();
+                    return;
+                }
+
                 if (file.open(QFile::ReadOnly | QFile::Text)) {
                     QString infoMsg = tr("[ INFO ]  - ... map downloaded and stored, now parsing it...");
                     postMessage(infoMsg);
@@ -2376,7 +2437,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
                     Host* pHost = mpHost;
                     if (!pHost) {
                         qWarning() << "TMap::slot_replyFinished( QNetworkReply * ) ERROR - NULL Host pointer - something is really wrong!";
-                        mXmlImportMutex.unlock();
+                        cleanup();
                         return;
                     }
 
@@ -2391,7 +2452,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
 
                     if (readXmlMapFile(file)) {
                         TEvent mapDownloadEvent {};
-                        mapDownloadEvent.mArgumentList.append(QLatin1String("sysMapDownloadEvent"));
+                        mapDownloadEvent.mArgumentList.append(QStringLiteral("sysMapDownloadEvent"));
                         mapDownloadEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
                         pHost->raiseEvent(mapDownloadEvent);
                     } else {
@@ -2407,20 +2468,8 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
             }
         }
     }
-    reply->deleteLater();
-    mpNetworkReply = Q_NULLPTR;
 
-    // We don't delete the progress dialog until here as we now use it to inform
-    // about post-download operations
-
-    mpProgressDialog->deleteLater();
-    mpProgressDialog = Q_NULLPTR; // Must reset this so it can be reused
-
-    mLocalMapFileName.clear();
-    mExpectedFileSize = 0;
-
-    // We have finished with the XMLimporter so must release the lock on it
-    mXmlImportMutex.unlock();
+    cleanup();
 }
 
 void TMap::reportStringToProgressDialog(const QString text)
