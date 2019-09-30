@@ -3738,23 +3738,6 @@ QString mudlet::readProfileData(const QString& profile, const QString& item) con
     return ret;
 }
 
-QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QString& item, const QString& what)
-{
-    auto f = getMudletPath(mudlet::profileDataItemPath, profile, item);
-    QFile file(f);
-    if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-        QDataStream ofs(&file);
-        ofs << what;
-        file.close();
-    }
-
-    if (file.error() == QFile::NoError) {
-        return qMakePair(true, QString());
-    } else {
-        return qMakePair(false, file.errorString());
-    }
-}
-
 void mudlet::deleteProfileData(const QString& profile, const QString& item)
 {
     if (!QFile::remove(getMudletPath(profileDataItemPath, profile, item))) {

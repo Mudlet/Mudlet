@@ -282,7 +282,7 @@ void dlgConnectionProfiles::slot_update_pass(const QString &pass)
     if (mudlet::self()->storingPasswordsSecurely()) {
         writeSecurePassword(profile, pass);
     } else {
-        writeProfileData(profile, QStringLiteral("password"), pass);
+        mudlet::self()->writeProfileData(profile, QStringLiteral("password"), pass);
     }
 }
 
