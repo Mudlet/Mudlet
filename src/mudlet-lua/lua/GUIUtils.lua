@@ -697,8 +697,13 @@ end
 
 
 
---- Prints out a formatted list of all available named colors, optional arg specifies number of columns to print in, defaults to 4
----
+--- Prints out a formatted list of all available named colors (EXCEPT FOR
+--- the 256 colors with names of form "ansi_###" where ### is 000 to 255),
+--- optional args specifies:
+--- * (number) number of columns to print in, defaults to 4;
+--- * (string) substring required to match to include in output, defaults to
+--- showing all if not supplied;
+--- * (boolean) whether to sort the output, defaults to false.
 --- @usage Print list in 4 columns by default.
 ---   <pre>
 ---   showColors()
@@ -730,9 +735,15 @@ function showColors(...)
 
   local colors = {}
   for k, v in pairs(color_table) do
-    table.insert(colors,k)
+    -- Ignore the ansi_### 256 colors entries
+    if not string.find(k, "ansi_%d%d%d") then
+      table.insert(colors,k)
+    end
   end
-  if sort then table.sort(colors) end
+
+  if sort then
+    table.sort(colors)
+  end
 
   local i = 1
   for _, k in ipairs(colors) do
