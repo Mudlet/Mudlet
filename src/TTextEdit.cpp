@@ -201,7 +201,7 @@ void TTextEdit::initDefaultSettings()
 {
     mFgColor = QColor(192, 192, 192);
     mBgColor = QColor(Qt::black);
-    mDisplayFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
+    mDisplayFont = QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal);
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
     int width = mScreenWidth * mFontWidth * 2;
     int height = mFontHeight * 2;
