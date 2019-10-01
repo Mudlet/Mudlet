@@ -753,7 +753,7 @@ function showColors(...)
       if calc_luminosity(v[1],v[2],v[3]) > 0.5 then
         fgc = "black"
       end
-      cechoLink(string.format('<%s:%s>%-23s<reset>  ',fgc,k,k), [[printCmdLine("]] .. k .. [[")]], table.concat(v, ", "), true)
+      cechoLink(string.format('<%s:%s> %-23s<reset> ',fgc,k,k), [[printCmdLine("]] .. k .. [[")]], table.concat(v, ", "), true)
       if i == cols then
         echo("\n")
         i = 1
@@ -779,7 +779,7 @@ end
 ---
 --- @see color_table
 function showAnsiColors(...)
-  local cols = 4
+  local cols = 8
   for _, val in ipairs(arg) do
     if type(val) == "number" then
       cols = val
@@ -803,7 +803,7 @@ function showAnsiColors(...)
     if calc_luminosity(v[1],v[2],v[3]) > 0.5 then
       fgc = "black"
     end
-    cechoLink(string.format('<%s:%s>%-23s<reset>  ',fgc,k,k), [[printCmdLine("]] .. k .. [[")]], table.concat(v, ", "), true)
+    cechoLink(string.format('<%s:%s> %8s <reset> ',fgc,k,k), [[printCmdLine("]] .. k .. [[")]], table.concat(v, ", "), true)
     if i == cols then
       echo("\n")
       i = 1
