@@ -765,7 +765,54 @@ function showColors(...)
   if i ~= 1 then echo("\n") end
 end
 
+--- Prints out a sorted, formatted list of the 256 colors with names of form
+--- "ansi_###" where ### is 000 to 255), optional arg specifies:
+--- * (number) number of columns to print in, defaults to 4;
+--- @usage Print list in 4 columns by default.
+---   <pre>
+---   showAnsiColors()
+---   </pre>
+--- @usage Print list in 2 columns.
+---   <pre>
+---   showAnsiColors(2)
+---   </pre>
+---
+--- @see color_table
+function showAnsiColors(...)
+  local cols = 4
+  for _, val in ipairs(arg) do
+    if type(val) == "number" then
+      cols = val
+    end
+  end
 
+  local colors = {}
+  for k, v in pairs(color_table) do
+    -- Only use the ansi_### 256 colors entries
+    if string.find(k, "ansi_%d%d%d") then
+      table.insert(colors,k)
+    end
+  end
+
+  table.sort(colors)
+
+  local i = 1
+  for _, k in ipairs(colors) do
+    local v = color_table[k]
+    local fgc = "white"
+    if calc_luminosity(v[1],v[2],v[3]) > 0.5 then
+      fgc = "black"
+    end
+    cechoLink(string.format('<%s:%s>%-23s<reset>  ',fgc,k,k), [[printCmdLine("]] .. k .. [[")]], table.concat(v, ", "), true)
+    if i == cols then
+      echo("\n")
+      i = 1
+    else
+      i = i + 1
+    end
+  end
+  if i ~= 1 then echo("\n") end
+end
 
 
 --- <b><u>TODO</u></b> resizeGauge(gaugeName, width, height)
