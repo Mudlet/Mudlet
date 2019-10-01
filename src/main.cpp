@@ -81,11 +81,7 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
 #endif
 
 
-    QString tempArgs;
     for (int i = 1; i < argc; ++i) {
-        tempArgs.append("argv: ");
-        tempArgs.append(QString(argv[i]));
-        tempArgs.append(" ");
         if (qstrcmp(argv[i], "--") == 0) {
             break; // Bail out on end of option type arguments
         }
@@ -101,26 +97,35 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
         }
 
         if (isOption) {
+            // --version
             if (tolower(argument) == 'v') {
                 action = 2; // Make this the only action to do and do it directly
                 break;
             }
 
+            // --help
             if (tolower(argument) == 'h' || argument == '?') {
                 action = 1; // Make this the only action to do and do it directly
                 break;
             }
 
+            // --quiet
             if (tolower(argument) == 'q' && argv[i+1]) {
                 action |= 4;
             }
 
+            // uri-handler
             if (tolower(argument) == 'u') {
                 action |= 8;
 
                 telnetUri = QString(argv[i+1]);
             }
         }
+    }
+
+    // if launched on Windows as a result of a telnet:// link, it will be appended to the CLI arguments
+    if (telnetUri.isEmpty() && argv[argc - 1]) {
+        telnetUri = argv[argc - 1];
     }
 
     if ((action) & (1 | 2)) {
@@ -208,17 +213,6 @@ int main(int argc, char* argv[])
 
     QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction, telnetUri));
     auto * app = qobject_cast<MudletApplication*>(initApp.data());
-
-    QString tempArgs;
-    for (int i = 1; i < argc; ++i) {
-        tempArgs.append("argv: ");
-        tempArgs.append(QString(argv[i]));
-        tempArgs.append(" ");
-    }
-
-
-    QMessageBox::information(nullptr, QStringLiteral("CLI arguments are..."), tempArgs);
-
 
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
