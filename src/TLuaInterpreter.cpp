@@ -16900,19 +16900,19 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
 
     // And insert the 6x6x6 RGB colours
     for (int i = 0; i < 216; ++i) {
-        int r = 51 * (i / 36);
-        int g = 51 * ((i - (r * 36)) / 6);
-        int b = 51 * ((i - (r * 36)) - (g * 6));
+        int r = i / 36;
+        int g = (i - (r * 36)) / 6;
+        int b = (i - (r * 36)) - (g * 6);
 
         lua_createtable(L, 3, 0);
 
-        lua_pushnumber(L, r);
+        lua_pushnumber(L, 51 * r);
         lua_rawseti(L, -2, 1);
 
-        lua_pushnumber(L, g);
+        lua_pushnumber(L, 51 * g);
         lua_rawseti(L, -2, 2);
 
-        lua_pushnumber(L, b);
+        lua_pushnumber(L, 51 * b);
         lua_rawseti(L, -2, 3);
 
         lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
