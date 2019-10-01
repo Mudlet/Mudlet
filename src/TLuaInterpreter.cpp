@@ -16900,19 +16900,19 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
 
     // And insert the 6x6x6 RGB colours
     for (int i = 0; i < 216; ++i) {
-        quint8 r = i / 36;
-        quint8 g = (i - (r * 36)) / 6;
-        quint8 b = (i - (r * 36)) - (g * 6);
+        int r = 51 * (i / 36);
+        int g = 51 * ((i - (r * 36)) / 6);
+        int b = 51 * ((i - (r * 36)) - (g * 6));
 
         lua_createtable(L, 3, 0);
 
-        lua_pushnumber(L, r * 51);
+        lua_pushnumber(L, r);
         lua_rawseti(L, -2, 1);
 
-        lua_pushnumber(L, g * 51);
+        lua_pushnumber(L, g);
         lua_rawseti(L, -2, 2);
 
-        lua_pushnumber(L, b * 51);
+        lua_pushnumber(L, b);
         lua_rawseti(L, -2, 3);
 
         lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
@@ -16960,7 +16960,7 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
             case 254:   value = 244; break; // 243.913
             case 255:   value = 255; break; // 255.000
             default:
-            Q_UNREACHABLE(); // We should not have a value outside of the range 232 to 255
+            Q_UNREACHABLE(); // We should not have a case outside of the range 232 to 255
         }
 
         lua_pushnumber(L, value);
