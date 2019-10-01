@@ -29,18 +29,15 @@ MudletApplication::MudletApplication(int &argc, char **argv) :
 
 bool MudletApplication::event(QEvent *event)
 {
-    qWarning() << "... received event" << event  << mudlet::self();
     if (event->type() == QEvent::FileOpen) {
         auto openEvent = static_cast<QFileOpenEvent*>(event);
 
         // if Mudlet is launched as a result of a telnet link, this event will fire
         // too early, the Mudlet class is initialised
         if (mudlet::self()) {
-            qWarning() << "MudletApplication::event inside event, too early?"  << mudlet::self();
             mudlet::self()->handleTelnetUri(openEvent->url());
         } else {
             deferredTelnetUri = openEvent->url();
-            qWarning() << "MudletApplication::event too fuckin early, man. Saved" << deferredTelnetUri;
         }
         return true;
     }

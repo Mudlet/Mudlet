@@ -80,7 +80,9 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
     return new MudletApplication(argc, argv);
 #endif
 
+
     for (int i = 1; i < argc; ++i) {
+        qDebug() << "argv:" << QString(argv[i]);
         if (qstrcmp(argv[i], "--") == 0) {
             break; // Bail out on end of option type arguments
         }
@@ -152,7 +154,6 @@ void copyFont(const QString& externalPathName, const QString& resourcePathName, 
 
 int main(int argc, char* argv[])
 {
-    qWarning() << "hi. too early?"  << mudlet::self();
     // print stdout to console if Mudlet is started in a console in Windows
     // credit to https://stackoverflow.com/a/41701133 for the workaround
 #ifdef Q_OS_WIN32
@@ -503,10 +504,7 @@ int main(int argc, char* argv[])
     }
 #endif
 
-    qWarning() << "done with the prelloadin stuff. too early?"  << mudlet::self();
     mudlet::start();
-    qWarning() << "started up. too early?"  << mudlet::self();
-
 
     if (first_launch) {
         // give Mudlet window decent size - most of the screen on non-HiDPI displays
@@ -519,7 +517,6 @@ int main(int argc, char* argv[])
     if (show_splash) {
         splash.finish(mudlet::self());
     }
-    qWarning() << "mudlet::self good to go, yo"  << mudlet::self();
 
 
     mudlet::self()->show();
@@ -529,9 +526,7 @@ int main(int argc, char* argv[])
 #if defined(Q_OS_MACOS)
     // handle the telnet uri was used for launching Mudlet, and if no,
     // see if we passed the telnet uri as a CLI argument
-    qWarning() << "deferred telnetURI:" << app->deferredTelnetUri;
     if (!app->deferredTelnetUri.isEmpty()) {
-        qWarning() << "loading deferred URI:" << app->deferredTelnetUri;
         mudlet::self()->handleTelnetUri(app->deferredTelnetUri);
     } else if (!telnetUri.isEmpty()) {
         mudlet::self()->handleTelnetUri(telnetUri);
