@@ -81,8 +81,11 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
 #endif
 
 
+    QString tempArgs;
     for (int i = 1; i < argc; ++i) {
-        qDebug() << "argv:" << QString(argv[i]);
+        tempArgs.append("argv: ");
+        tempArgs.append(QString(argv[i]));
+        tempArgs.append(" ");
         if (qstrcmp(argv[i], "--") == 0) {
             break; // Bail out on end of option type arguments
         }
@@ -205,6 +208,17 @@ int main(int argc, char* argv[])
 
     QScopedPointer<QCoreApplication> initApp(createApplication(argc, argv, startupAction, telnetUri));
     auto * app = qobject_cast<MudletApplication*>(initApp.data());
+
+    QString tempArgs;
+    for (int i = 1; i < argc; ++i) {
+        tempArgs.append("argv: ");
+        tempArgs.append(QString(argv[i]));
+        tempArgs.append(" ");
+    }
+
+
+    QMessageBox::information(nullptr, QStringLiteral("CLI arguments are..."), tempArgs);
+
 
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
