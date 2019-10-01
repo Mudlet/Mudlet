@@ -16741,7 +16741,7 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
 }
 
 // Internal function - helper for updateColorTable().
-void TLuaInterpreter::insertColorTableEntry(lua_State* L, const QColor& color, const QString& table, const QString& name)
+void TLuaInterpreter::insertColorTableEntry(lua_State* L, const QColor& color, const QString& name)
 {
     // Equivalent (when called from updateColorTable()) to Lua (where the
     // '<8-bit unsigned int, i.e. 0 to 255>'s are provided from the QColor):
@@ -16760,39 +16760,10 @@ void TLuaInterpreter::insertColorTableEntry(lua_State* L, const QColor& color, c
     lua_pushnumber(L, color.blue());
     lua_rawseti(L, -2, 3);
 
-    lua_getfield(L, LUA_GLOBALSINDEX, table.toUtf8().constData());
+    lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
     lua_insert(L, -2);
 
     lua_pushstring(L, name.toLatin1().constData());
-    lua_insert(L, -2);
-    lua_settable(L, -3);
-    lua_pop(L, 1);
-}
-
-// Internal function - helper for updateColorTable().
-void TLuaInterpreter::insertColorTableEntry(lua_State* L, const QColor& color, const QString& table, const int index)
-{
-    // Equivalent (when called from updateColorTable()) to Lua (where the
-    // '<8-bit unsigned int, i.e. 0 to 255>'s are provided from the QColor):
-    // ansi_color_table[index] = { <color.red()>, <color.green()>, <color.blue()> }
-
-    // Creates a new empty table on the stack with space preallocated for 3
-    // array elements and 0 non-array elements:
-    lua_createtable(L, 3, 0);
-
-    lua_pushnumber(L, color.red());
-    lua_rawseti(L, -2, 1);
-
-    lua_pushnumber(L, color.green());
-    lua_rawseti(L, -2, 2);
-
-    lua_pushnumber(L, color.blue());
-    lua_rawseti(L, -2, 3);
-
-    lua_getfield(L, LUA_GLOBALSINDEX, table.toUtf8().constData());
-    lua_insert(L, -2);
-
-    lua_pushnumber(L, index);
     lua_insert(L, -2);
     lua_settable(L, -3);
     lua_pop(L, 1);
@@ -16822,101 +16793,88 @@ void TLuaInterpreter::updateAnsi16ColorsInTable()
 
     // Now we can add/update the items we need to, though it is a bit repetative:
     QColor color = mpHost->mBlack;
-    QString tableName = QStringLiteral("color_table");
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansi_black"));
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansiBlack"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_000"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_black"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiBlack"));
 
     color = mpHost->mRed;
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansi_red"));
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansiRed"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_001"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_red"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiRed"));
 
     color = mpHost->mGreen;
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansi_green"));
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansiGreen"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_002"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_green"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiGreen"));
 
     color = mpHost->mYellow;
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansi_yellow"));
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansiYellow"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_003"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_yellow"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiYellow"));
 
     color = mpHost->mBlue;
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansi_blue"));
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansiBlue"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_004"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_blue"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiBlue"));
 
     color = mpHost->mMagenta;
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansi_magenta"));
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansiMagenta"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_005"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_magenta"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiMagenta"));
 
     color = mpHost->mCyan;
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansi_cyan"));
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansiCyan"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_006"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_cyan"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiCyan"));
 
     color = mpHost->mWhite;
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansi_white"));
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansiWhite"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_007"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_white"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiWhite"));
 
     color = mpHost->mLightBlack;
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansi_light_black"));
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansiLightBlack"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_008"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_light_black"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiLightBlack"));
 
     color = mpHost->mLightRed;
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansi_light_red"));
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansiLightRed"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_009"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_light_red"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiLightRed"));
 
     color = mpHost->mLightGreen;
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansi_light_green"));
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansiLightGreen"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_010"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_light_green"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiLightGreen"));
 
     color = mpHost->mLightYellow;
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansi_light_yellow"));
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansiLightYellow"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_011"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_light_yellow"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiLightYellow"));
 
     color = mpHost->mLightBlue;
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansi_light_blue"));
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansiLightBlue"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_012"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_light_blue"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiLightBlue"));
 
     color = mpHost->mLightMagenta;
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansi_light_magenta"));
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansiLightMagenta"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_013"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_light_magenta"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiLightMagenta"));
 
     color = mpHost->mLightCyan;
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansi_light_cyan"));
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansiLightCyan"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_014"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_light_cyan"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiLightCyan"));
 
     color = mpHost->mLightWhite;
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansi_light_white"));
-    insertColorTableEntry(L, color, tableName, QStringLiteral("ansiLightWhite"));
-
-    // Now do the same for the ansi_color_table:
-    lua_getfield(L, LUA_GLOBALSINDEX, "ansi_color_table");
-    if (!(lua_toboolean(L,-1))) {
-        // no it doesn't
-        lua_pop(L,1);
-        // So make it
-        lua_newtable(L);
-    }
-
-    lua_setfield(L, LUA_GLOBALSINDEX, "ansi_color_table");
-    tableName = QStringLiteral("ansi_color_table");
-    insertColorTableEntry(L, mpHost->mBlack, tableName, 0);
-    insertColorTableEntry(L, mpHost->mRed, tableName, 1);
-    insertColorTableEntry(L, mpHost->mGreen, tableName, 2);
-    insertColorTableEntry(L, mpHost->mYellow, tableName, 3);
-    insertColorTableEntry(L, mpHost->mBlue, tableName, 4);
-    insertColorTableEntry(L, mpHost->mMagenta, tableName, 5);
-    insertColorTableEntry(L, mpHost->mCyan, tableName, 6);
-    insertColorTableEntry(L, mpHost->mWhite, tableName, 7);
-    insertColorTableEntry(L, mpHost->mLightBlack, tableName, 8);
-    insertColorTableEntry(L, mpHost->mLightRed, tableName, 9);
-    insertColorTableEntry(L, mpHost->mLightGreen, tableName, 10);
-    insertColorTableEntry(L, mpHost->mLightYellow, tableName, 11);
-    insertColorTableEntry(L, mpHost->mLightBlue, tableName, 12);
-    insertColorTableEntry(L, mpHost->mLightMagenta, tableName, 13);
-    insertColorTableEntry(L, mpHost->mLightCyan, tableName, 14);
-    insertColorTableEntry(L, mpHost->mLightWhite, tableName, 15);
+    insertColorTableEntry(L, color, QStringLiteral("ansi_015"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_light_white"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiLightWhite"));
 }
 
 // Internal function - copies current profile's extended ANSI colors into the
-// Lua "ansi_color_table" - it might be feasible to do this entirely within an
+// Lua "color_table" - it might be feasible to do this entirely within an
 // external lua file ("GUIUtils.lua2) as we do not provide a means to vary
 // the ANSI colours 17 to 255 that this handles...
 void TLuaInterpreter::updateExtendedAnsiColorsInTable()
@@ -16926,11 +16884,10 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
         return;
     }
 
-    // Does the ansi_color_table already exist - it probably does as the keys
-    // for 0 to 15 are done by updateAnsi16ColorsInTable():
+    // Does the color_table already exist:
     // Equivalent to Lua:
-    // ansi_color_table = ansi_color_table or {}
-    lua_getfield(L, LUA_GLOBALSINDEX, "ansi_color_table");
+    // color_table = color_table or {}
+    lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
     if (!(lua_toboolean(L,-1))) {
         // no it doesn't
         lua_pop(L,1);
@@ -16939,21 +16896,38 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
     }
 
     // Okay so now we point ourselves at the wanted table:
-    lua_setfield(L, LUA_GLOBALSINDEX, "ansi_color_table");
+    lua_setfield(L, LUA_GLOBALSINDEX, "color_table");
 
     // And insert the 6x6x6 RGB colours
     for (int i = 0; i < 216; ++i) {
-        int r = i / 36;
-        int g = (i - (r * 36)) / 6;
-        int b = (i - (r * 36)) - (g * 6);
-        insertColorTableEntry(L,
-                              QColor(51 * r, 51 * g, 51 * b),
-                              QStringLiteral("ansi_color_table"),
-                              16 + i);
+        quint8 r = i / 36;
+        quint8 g = (i - (r * 36)) / 6;
+        quint8 b = (i - (r * 36)) - (g * 6);
+
+        lua_createtable(L, 3, 0);
+
+        lua_pushnumber(L, r * 51);
+        lua_rawseti(L, -2, 1);
+
+        lua_pushnumber(L, g * 51);
+        lua_rawseti(L, -2, 2);
+
+        lua_pushnumber(L, b * 51);
+        lua_rawseti(L, -2, 3);
+
+        lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
+        lua_insert(L, -2);
+
+        QString name = QStringLiteral("ansi_%1").arg(i + 16, 3, 10, QLatin1Char('0'));
+        lua_pushstring(L, name.toLatin1().constData());
+        lua_insert(L, -2);
+        lua_settable(L, -3);
+        lua_pop(L, 1);
     }
 
     // And insert the 24 Greyscale colours
     for (int i = 232; i < 256; ++i) {
+        lua_createtable(L, 3, 0);
 
         int value = 128;
         // Divide the range 0 to 255 into 23 + 1 values to give a 24 value
@@ -16986,9 +16960,25 @@ void TLuaInterpreter::updateExtendedAnsiColorsInTable()
             case 254:   value = 244; break; // 243.913
             case 255:   value = 255; break; // 255.000
             default:
-            Q_UNREACHABLE(); // We should not have a case outside of the range 232 to 255
+            Q_UNREACHABLE(); // We should not have a value outside of the range 232 to 255
         }
 
-        insertColorTableEntry(L, QColor(value, value, value), QStringLiteral("ansi_color_table"), i);
+        lua_pushnumber(L, value);
+        lua_rawseti(L, -2, 1);
+
+        lua_pushnumber(L, value);
+        lua_rawseti(L, -2, 2);
+
+        lua_pushnumber(L, value);
+        lua_rawseti(L, -2, 3);
+
+        lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
+        lua_insert(L, -2);
+
+        QString name = QStringLiteral("ansi_%1").arg(i, 3, 10, QLatin1Char('0'));
+        lua_pushstring(L, name.toLatin1().constData());
+        lua_insert(L, -2);
+        lua_settable(L, -3);
+        lua_pop(L, 1);
     }
 }

@@ -1880,7 +1880,11 @@ void Host::loadSecuredPassword()
     job->start();
 }
 
-// Only needed for places outside of this class:
+// Only needed for places outside of this class (currently believed to be):
+// TBuffer::decodeOSC(const QString&)
+// TBuffer::resetColors()
+// dlgProfilePreferences::resetColors()
+// dlgProfilePreferences::setColor(QPushButton*, QColor&)
 void Host::updateAnsi16ColorsInTable()
 {
     mLuaInterpreter.updateAnsi16ColorsInTable();
