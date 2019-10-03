@@ -74,9 +74,8 @@ public:
     void mouseMoveEvent(QMouseEvent*) override;
     void showEvent(QShowEvent* event) override;
     void updateScreenView();
-    void highlight();
+    void highlightSelection();
     void unHighlight();
-    void swap(QPoint& p1, QPoint& p2);
     void focusInEvent(QFocusEvent* event) override;
     int imageTopLine();
     int bufferScrollUp(int lines);
@@ -149,7 +148,9 @@ private:
     bool mCtrlSelecting {};
     int mCtrlDragStartY {};
     int mOldScrollPos;
+    // top-left point of the selection
     QPoint mPA;
+    // bottom-right point of the selection
     QPoint mPB;
     TBuffer* mpBuffer;
     TConsole* mpConsole;

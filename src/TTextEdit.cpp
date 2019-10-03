@@ -732,10 +732,15 @@ void TTextEdit::paintEvent(QPaintEvent* e)
     drawForeground(painter, rect);
 }
 
-
-void TTextEdit::highlight()
+// highlights the currently selected text.
+// mPA is the top-left point of the selection and mPB is the bottom-right point
+// of the selection, regardless of the way the user is selecting (top-down,
+// bottom-up, left-right, right-left)
+void TTextEdit::highlightSelection()
 {
     QRegion newRegion;
+    qDebug() << "top-left:" << mPA << "bottom-right:" << mPB;
+
     int lineDelta = abs(mPA.y() - mPB.y()) - 1;
     if (lineDelta > 0) {
         QRect rectFirstLine(mPA.x() * mFontWidth, (mPA.y() - imageTopLine()) * mFontHeight, mScreenWidth * mFontWidth, mFontHeight);
@@ -834,18 +839,13 @@ void TTextEdit::unHighlight()
     update();
 }
 
-void TTextEdit::swap(QPoint& p1, QPoint& p2)
-{
-    QPoint tmp = p1;
-    p1 = p2;
-    p2 = tmp;
-}
-
+// ensure that mPA is top-right and mPB is bottom-right
 void TTextEdit::normaliseSelection()
 {
     if (mPA.y() > mPB.y() || ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x()))) {
-        qDebug() << Q_FUNC_INFO <<"swapping A and B" << mPA << mPB;
-        swap(mPA, mPB);
+        std::swap(mPA, mPB);
+        qDebug() << Q_FUNC_INFO <<"swapped A and B" << mPA << mPB;
+
     }
 }
 
@@ -874,7 +874,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         return;
     }
 
-    QPoint PC(tCharIndex, lineIndex);
+    QPoint cursorLocation(tCharIndex, lineIndex);
 
     if (mCtrlSelecting) {
         handleCtrlSelection(lineIndex);
@@ -882,10 +882,11 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     }
 
     normaliseSelection();
-    QPoint p1 = mPA - PC;
-    QPoint p2 = mPB - PC;
+    QPoint p1 = mPA - cursorLocation;
+    QPoint p2 = mPB - cursorLocation;
     if ( (abs(p1.y()) < abs(p2.y()))
        ||((abs(p1.y()) == abs(p2.y()) && abs(p1.x()) < abs(p2.x())))) {
+        qDebug() << "first if";
         // The cursor position is nearer to the start than to the end of the existing selection:
 
         if (mPA.y() < lineIndex || (mPA.y() == lineIndex && mPA.x() < tCharIndex)) {
@@ -931,9 +932,11 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
             }
         }
 
-        mPA = PC;
+        qDebug() <<"mPA reset to PC, before:" << mPA << "now"<<cursorLocation << "mPB meanwhile" << mPB;
+        mPA = cursorLocation;
 
     } else {
+        qDebug() <<"second if";
         // The cursor position is nearer to or the same distance to the end than
         // to the start of the existing selection:
 
@@ -975,7 +978,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
             }
         }
 
-        mPB = PC;
+        mPB = cursorLocation;
     }
 
     normaliseSelection();
@@ -984,26 +987,30 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     // those first columns are being deselected but the highlight() below is not
     // including the portion of the display with the now deselected portion on
     // the left margin within the area that gets repainted...
-    highlight();
+    highlightSelection();
 }
 
 // hold Ctrl to select whole line(s) at once
 void TTextEdit::handleCtrlSelection(int lineIndex)
 {
-    int oldAY = mPA.y();
-    int oldBY = mPB.y();
+    const int oldAY = mPA.y();
+    const int oldBY = mPB.y();
 
+    // ensure that point A is at the top and point B is at the bottom
+    // regardless of the way selection is being made
     if (lineIndex == mCtrlDragStartY) {
+        // selection is on the same line as it started
         mPA.setY(lineIndex);
         mPB.setY(lineIndex);
     } else if (lineIndex < mCtrlDragStartY) {
+        // selecting bottom-up
         mPA.setY(lineIndex);
         mPB.setY(mCtrlDragStartY);
     } else if (lineIndex > mCtrlDragStartY) {
+        // selecting top-down
         mPA.setY(mCtrlDragStartY);
         mPB.setY(lineIndex);
     }
-    qDebug() << "lineIndex" << lineIndex << "mCtrlDragStartY" << mCtrlDragStartY << "oldAY" << oldAY << "mPA.y()" <<mPA.y() <<"oldBY" << oldBY <<"mPB.y()" <<mPB.y();
 
     if (oldAY < mPA.y()) {
         for (int yIndex = oldAY, total = mPA.y(); yIndex < total; ++yIndex) {
@@ -1023,7 +1030,7 @@ void TTextEdit::handleCtrlSelection(int lineIndex)
     mPA.setX(0);
     mPB.setX(static_cast<int>(mpBuffer->buffer[mPB.y()].size()) - 1);
 
-    highlight();
+    highlightSelection();
 }
 
 void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex)
@@ -1227,7 +1234,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                 mPA.setX(0);
             }
             mPA.setY(yind);
-            highlight();
+            highlightSelection();
             event->accept();
             return;
         } else {
@@ -1242,7 +1249,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                 mPB.setX(static_cast<int>(mpBuffer->buffer[y].size()) - 1);
                 mPB.setY(y);
                 mCtrlDragStartY = y;
-                highlight();
+                highlightSelection();
             } else {
                 mPA.setX(x);
                 mPA.setY(y);
@@ -1382,7 +1389,7 @@ void TTextEdit::slot_selectAll()
 {
     mPA = QPoint(0, 0);
     mPB = mpBuffer->getEndPos();
-    highlight();
+    highlightSelection();
     update();
 }
 
@@ -1578,7 +1585,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
 
     mPA = oldMpa;
     mPB = oldMpb;
-    highlight();
+    highlightSelection();
 
     // if we cut didn't finish painting the complete picture, trim the bottom of the image
     if (!result.first) {
