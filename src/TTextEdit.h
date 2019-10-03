@@ -147,7 +147,7 @@ private:
     int mLastRenderBottom;
     bool mMouseTracking;
     bool mCtrlSelecting {};
-    int mDragStartY {};
+    int mCtrlDragStartY {};
     int mOldScrollPos;
     QPoint mPA;
     QPoint mPB;
@@ -176,6 +176,8 @@ private:
     // would only be valid to change this by clearing the buffer first - so
     // making this a const value for the moment:
     const int mTimeStampWidth;
+    void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex);
+    void handleCtrlSelection(int lineIndex);
 };
 
 #endif // MUDLET_TTEXTEDIT_H

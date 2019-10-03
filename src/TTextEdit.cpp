@@ -46,6 +46,7 @@
 #include <QVersionNumber>
 #include "post_guard.h"
 #include <chrono>
+#include <dbg.h>
 
 
 TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLowerPane)
@@ -843,6 +844,7 @@ void TTextEdit::swap(QPoint& p1, QPoint& p2)
 void TTextEdit::normaliseSelection()
 {
     if (mPA.y() > mPB.y() || ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x()))) {
+        qDebug() << Q_FUNC_INFO <<"swapping A and B" << mPA << mPB;
         swap(mPA, mPB);
     }
 }
@@ -856,18 +858,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     int lineIndex = std::max(0, (event->y() / mFontHeight) + imageTopLine());
     int tCharIndex = convertMouseXToBufferX(event->x(), lineIndex);
 
-    if (lineIndex < static_cast<int>(mpBuffer->buffer.size())) {
-        if (tCharIndex < static_cast<int>(mpBuffer->buffer[lineIndex].size())) {
-            if (mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex()) {
-                setCursor(Qt::PointingHandCursor);
-                QStringList tooltip = mpBuffer->mHintStore[mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex()];
-                QToolTip::showText(event->globalPos(), tooltip.join("\n"));
-            } else {
-                setCursor(Qt::IBeamCursor);
-                QToolTip::hideText();
-            }
-        }
-    }
+    updateTextCursor(event, lineIndex, tCharIndex);
 
     if (!mMouseTracking) {
         return;
@@ -886,38 +877,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     QPoint PC(tCharIndex, lineIndex);
 
     if (mCtrlSelecting) {
-        int oldAY = mPA.y();
-        int oldBY = mPB.y();
-        if (lineIndex == mDragStartY) {
-            mPA.setY(lineIndex);
-            mPB.setY(lineIndex);
-        } else if (lineIndex < mDragStartY) {
-            mPA.setY(lineIndex);
-            mPB.setY(mDragStartY);
-        } else if (lineIndex > mDragStartY) {
-            mPA.setY(mDragStartY);
-            mPB.setY(lineIndex);
-        }
-
-        if (oldAY < mPA.y()) {
-            for (int yIndex = oldAY, total = mPA.y(); yIndex < total; ++yIndex) {
-                for (auto& TQchar : mpBuffer->buffer[yIndex]) {
-                    TQchar.deselect();
-                }
-            }
-        }
-        if (oldBY > mPB.y()) {
-            for (int yIndex = mPB.y() + 1; yIndex <= oldBY; ++yIndex) {
-                for (auto& TQchar : mpBuffer->buffer[yIndex]) {
-                    TQchar.deselect();
-                }
-            }
-        }
-
-        mPA.setX(0);
-        mPB.setX(static_cast<int>(mpBuffer->buffer[mPB.y()].size()) - 1);
-
-        highlight();
+        handleCtrlSelection(lineIndex);
         return;
     }
 
@@ -1025,6 +985,61 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     // including the portion of the display with the now deselected portion on
     // the left margin within the area that gets repainted...
     highlight();
+}
+
+// hold Ctrl to select whole line(s) at once
+void TTextEdit::handleCtrlSelection(int lineIndex)
+{
+    int oldAY = mPA.y();
+    int oldBY = mPB.y();
+
+    if (lineIndex == mCtrlDragStartY) {
+        mPA.setY(lineIndex);
+        mPB.setY(lineIndex);
+    } else if (lineIndex < mCtrlDragStartY) {
+        mPA.setY(lineIndex);
+        mPB.setY(mCtrlDragStartY);
+    } else if (lineIndex > mCtrlDragStartY) {
+        mPA.setY(mCtrlDragStartY);
+        mPB.setY(lineIndex);
+    }
+    qDebug() << "lineIndex" << lineIndex << "mCtrlDragStartY" << mCtrlDragStartY << "oldAY" << oldAY << "mPA.y()" <<mPA.y() <<"oldBY" << oldBY <<"mPB.y()" <<mPB.y();
+
+    if (oldAY < mPA.y()) {
+        for (int yIndex = oldAY, total = mPA.y(); yIndex < total; ++yIndex) {
+            for (auto& TQchar : mpBuffer->buffer[yIndex]) {
+                TQchar.deselect();
+            }
+        }
+    }
+    if (oldBY > mPB.y()) {
+        for (int yIndex = mPB.y() + 1; yIndex <= oldBY; ++yIndex) {
+            for (auto& TQchar : mpBuffer->buffer[yIndex]) {
+                TQchar.deselect();
+            }
+        }
+    }
+
+    mPA.setX(0);
+    mPB.setX(static_cast<int>(mpBuffer->buffer[mPB.y()].size()) - 1);
+
+    highlight();
+}
+
+void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex)
+{
+    if (lineIndex < static_cast<int>(mpBuffer->buffer.size())) {
+        if (tCharIndex < static_cast<int>(mpBuffer->buffer[lineIndex].size())) {
+            if (mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex()) {
+                setCursor(Qt::PointingHandCursor);
+                QStringList tooltip = mpBuffer->mHintStore[mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex()];
+                QToolTip::showText(event->globalPos(), tooltip.join("\n"));
+            } else {
+                setCursor(Qt::IBeamCursor);
+                QToolTip::hideText();
+            }
+        }
+    }
 }
 
 // Returns the index into the relevant TBuffer::lineBuffer of the FIRST QChar
@@ -1226,7 +1241,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                 mPA.setY(y);
                 mPB.setX(static_cast<int>(mpBuffer->buffer[y].size()) - 1);
                 mPB.setY(y);
-                mDragStartY = y;
+                mCtrlDragStartY = y;
                 highlight();
             } else {
                 mPA.setX(x);
