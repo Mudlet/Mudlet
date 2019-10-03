@@ -46,7 +46,6 @@
 #include <QVersionNumber>
 #include "post_guard.h"
 #include <chrono>
-#include <dbg.h>
 
 
 TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLowerPane)
@@ -739,7 +738,6 @@ void TTextEdit::paintEvent(QPaintEvent* e)
 void TTextEdit::highlightSelection()
 {
     QRegion newRegion;
-    qDebug() << "top-left:" << mPA << "bottom-right:" << mPB;
 
     int lineDelta = abs(mPA.y() - mPB.y()) - 1;
     if (lineDelta > 0) {
@@ -762,7 +760,7 @@ void TTextEdit::highlightSelection()
     }
 
     if (lineDelta < 0) {
-        QRect rectFirstLine(mPA.x() * mFontWidth, (mPA.y() - imageTopLine()) * mFontHeight, (mPB.x() - mPA.x()) * mFontWidth, mFontHeight);
+        QRect rectFirstLine(mPA.x() * mFontWidth, (mPA.y() - imageTopLine()) * mFontHeight, std::max(mPB.x() - mPA.x(), 1) * mFontWidth, mFontHeight);
         newRegion += rectFirstLine;
     }
 
@@ -844,7 +842,6 @@ void TTextEdit::normaliseSelection()
 {
     if (mPA.y() > mPB.y() || ((mPA.y() == mPB.y()) && (mPA.x() > mPB.x()))) {
         std::swap(mPA, mPB);
-        qDebug() << Q_FUNC_INFO <<"swapped A and B" << mPA << mPB;
 
     }
 }
@@ -884,11 +881,10 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     normaliseSelection();
     QPoint p1 = mPA - cursorLocation;
     QPoint p2 = mPB - cursorLocation;
-    if ( (abs(p1.y()) < abs(p2.y()))
-       ||((abs(p1.y()) == abs(p2.y()) && abs(p1.x()) < abs(p2.x())))) {
-        qDebug() << "first if";
+    if ((abs(p1.y()) < abs(p2.y()))
+       || ((abs(p1.y()) == abs(p2.y()) && abs(p1.x()) < abs(p2.x())))) {
+        // selecting bottom-up
         // The cursor position is nearer to the start than to the end of the existing selection:
-
         if (mPA.y() < lineIndex || (mPA.y() == lineIndex && mPA.x() < tCharIndex)) {
             // The old start of the selection is further from the end than the
             // current cursor position:
@@ -932,11 +928,10 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
             }
         }
 
-        qDebug() <<"mPA reset to PC, before:" << mPA << "now"<<cursorLocation << "mPB meanwhile" << mPB;
         mPA = cursorLocation;
 
     } else {
-        qDebug() <<"second if";
+        // selecting top-down
         // The cursor position is nearer to or the same distance to the end than
         // to the start of the existing selection:
 
@@ -978,6 +973,7 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
             }
         }
 
+        mPA = mDragStart;
         mPB = cursorLocation;
     }
 
@@ -1131,32 +1127,37 @@ void TTextEdit::slot_popupMenu()
     mpHost->mLuaInterpreter.compileAndExecuteScript(cmd);
 }
 
+void TTextEdit::raiseMousePressEvent(QMouseEvent *event)
+{
+    TEvent mudletEvent {};
+    mudletEvent.mArgumentList.append(QStringLiteral("sysWindowMousePressEvent"));
+    switch (event->button()) {
+    case Qt::LeftButton:
+        mudletEvent.mArgumentList.append(QString::number(1));
+        break;
+    case Qt::RightButton:
+        mudletEvent.mArgumentList.append(QString::number(2));
+        break;
+    case Qt::MidButton:
+        mudletEvent.mArgumentList.append(QString::number(3));
+        break;
+    default: // TODO: What about those of us with more than three mouse buttons?
+        mudletEvent.mArgumentList.append(QString());
+        break;
+    }
+    mudletEvent.mArgumentList.append(QString::number(event->x()));
+    mudletEvent.mArgumentList.append(QString::number(event->y()));
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mpHost->raiseEvent(mudletEvent);
+}
+
 void TTextEdit::mousePressEvent(QMouseEvent* event)
 {
     if (mpConsole->getType() & (TConsole::MainConsole|TConsole::Buffer)) {
-        TEvent mudletEvent {};
-        mudletEvent.mArgumentList.append(QLatin1String("sysWindowMousePressEvent"));
-        switch (event->button()) {
-        case Qt::LeftButton:
-            mudletEvent.mArgumentList.append(QString::number(1));
-            break;
-        case Qt::RightButton:
-            mudletEvent.mArgumentList.append(QString::number(2));
-            break;
-        case Qt::MidButton:
-            mudletEvent.mArgumentList.append(QString::number(3));
-            break;
-        default: // TODO: What about those of us with more than three mouse buttons?
-            mudletEvent.mArgumentList.append(QString());
-            break;
-        }
-        mudletEvent.mArgumentList.append(QString::number(event->x()));
-        mudletEvent.mArgumentList.append(QString::number(event->y()));
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        mpHost->raiseEvent(mudletEvent);
+        raiseMousePressEvent(event);
     }
 
     if (event->button() == Qt::LeftButton) {
@@ -1254,6 +1255,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                 mPA.setX(x);
                 mPA.setY(y);
                 mPB = mPA;
+                mDragStart = mPA;
             }
             event->accept();
             return;

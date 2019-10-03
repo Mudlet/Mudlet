@@ -132,6 +132,9 @@ private:
     int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool *isOverTimeStamp = nullptr) const;
     int getGraphemeWidth(uint unicode) const;
     void normaliseSelection();
+    void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex);
+    void handleCtrlSelection(int lineIndex);
+    void raiseMousePressEvent(QMouseEvent* event);
 
     int mFontHeight;
     int mFontWidth;
@@ -147,6 +150,7 @@ private:
     bool mMouseTracking;
     bool mCtrlSelecting {};
     int mCtrlDragStartY {};
+    QPoint mDragStart;
     int mOldScrollPos;
     // top-left point of the selection
     QPoint mPA;
@@ -177,8 +181,6 @@ private:
     // would only be valid to change this by clearing the buffer first - so
     // making this a const value for the moment:
     const int mTimeStampWidth;
-    void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex);
-    void handleCtrlSelection(int lineIndex);
 };
 
 #endif // MUDLET_TTEXTEDIT_H
