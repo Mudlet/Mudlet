@@ -166,7 +166,11 @@ end
 --- Sets the style sheet of the label
 -- @param css The style sheet string
 function Geyser.Label:setStyleSheet(css)
-  setLabelStyleSheet(self.name, css)
+  css = css or self.css
+  if css then
+    self.css = css
+    setLabelStyleSheet(self.name, css)
+  end
 end
 
 --- Returns the Geyser object associated with the label name

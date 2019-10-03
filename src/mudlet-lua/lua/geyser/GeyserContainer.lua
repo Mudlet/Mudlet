@@ -131,6 +131,17 @@ function Geyser.Container:reposition ()
   end
 end
 
+--- Responsible for reapplying any stored stylesheet which was previously applied to a Geyser Label using Label:setStyleSheet(css)
+-- Called on sysAppStyleSheetChange events so that Labels which have set their CSS do not have it overwritten by setAppStyleSheet()
+function Geyser.Container:restyle()
+  if self.setStyleSheet then self:setStyleSheet() end
+  for k,v in pairs(self.windowList) do
+    if k ~= self then
+      v:restyle()
+    end
+  end
+end
+
 --- Hides this window and all its contained windows.
 function Geyser.Container:hide (auto)
   if not (self.hidden or self.auto_hidden) then
