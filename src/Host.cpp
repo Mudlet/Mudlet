@@ -38,6 +38,7 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <chrono>
 #include <QtUiTools>
 #include <QNetworkProxy>
 #include <zip.h>
@@ -151,6 +152,8 @@ qint64 stopWatch::getElapsedMilliSeconds() const
 
 QString stopWatch::getElapsedDayTimeString() const
 {
+    using namespace std::chrono_literals;
+
     if (!mIsInitialised) {
         return QStringLiteral("+:0:0:0:0:000");
     }
@@ -168,14 +171,14 @@ QString stopWatch::getElapsedDayTimeString() const
         elapsed *= -1;
     }
 
-    qint64 days = elapsed / 86400000L;
-    qint64 remainder = elapsed - (days * 86400000L);
-    quint8 hours = static_cast<quint8>(remainder / 3600000L);
-    remainder = remainder - (hours * 3600000L);
-    quint8 minutes = static_cast<quint8>(remainder / 60000);
-    remainder = remainder - (minutes * 60000L);
-    quint8 seconds = static_cast<quint8>(remainder / 1000);
-    quint16 milliSeconds = static_cast<quint16>(remainder - (seconds * 1000));
+    qint64 days = elapsed / std::chrono::milliseconds(24h).count();
+    qint64 remainder = elapsed - (days * std::chrono::milliseconds(24h).count());
+    quint8 hours = static_cast<quint8>(remainder / std::chrono::milliseconds(1h).count());
+    remainder = remainder - (hours * std::chrono::milliseconds(1h).count());
+    quint8 minutes = static_cast<quint8>(remainder / std::chrono::milliseconds(1min).count());
+    remainder = remainder - (minutes * std::chrono::milliseconds(1min).count());
+    quint8 seconds = static_cast<quint8>(remainder / std::chrono::milliseconds(1s).count());
+    quint16 milliSeconds = static_cast<quint16>(remainder - (seconds * std::chrono::milliseconds(1s).count()));
     return QStringLiteral("%1:%2:%3:%4:%5:%6").arg((isNegative ? QLatin1String("-") : QLatin1String("+")), QString::number(days), QString::number(hours), QString::number(minutes), QString::number(seconds), QString::number(milliSeconds));
 }
 
@@ -1116,7 +1119,7 @@ QPair<bool, QString> Host::setStopWatchName(const QString& currentName, const QS
     int alreadyUsedId = 0;
     // we are looking BOTH for the current name and checking that any other
     // ones WITH names do not match the new name:
-    for (int index = 0, total = stopWatchIdList.size(); index < total; ++index) {
+    for (int index = 0; index < total; ++index) {
         auto currentId = stopWatchIdList.at(index);
         auto pCurrentStopWatch = mStopWatchMap.value(currentId);
         // This will also pick up the FIRST (lowest id) currently unnamed

@@ -544,8 +544,10 @@ private:
     void handleHttpOK(QNetworkReply*);
 #if defined(Q_OS_WIN32)
     void loadUtf8Filenames();
-
 #endif
+    // The last argument is only needed if the third one is true:
+    static void generateElapsedTimeTable(lua_State*, const QStringList&, const bool, const qint64 elapsedTimeMilliSeconds = 0);
+
 
     QNetworkAccessManager* mpFileDownloader;
     std::list<std::string> mCaptureGroupList;

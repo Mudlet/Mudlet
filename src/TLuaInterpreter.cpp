@@ -1866,7 +1866,7 @@ int TLuaInterpreter::getStopWatchTime(lua_State* L)
     QPair<bool, double> result;
     Host& host = getHostFromLua(L);
     if (lua_type(L, 1) == LUA_TNUMBER) {
-        watchId = lua_tointeger(L, 1);
+        watchId = static_cast<int>(lua_tointeger(L, 1));
         result = host.getStopWatchTime(watchId);
         if (!result.first) {
             lua_pushnil(L);
@@ -1933,9 +1933,9 @@ int TLuaInterpreter::stopStopWatch(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    qint64 watchId = 0;
+    int watchId = 0;
     if (lua_type(L, 1) == LUA_TNUMBER) {
-        watchId = lua_tointeger(L, 1);
+        watchId = static_cast<int>(lua_tointeger(L, 1));
         QPair<bool, QString> result = host.stopStopWatch(watchId);
         if (!result.first) {
             lua_pushnil(L);
@@ -1981,7 +1981,7 @@ int TLuaInterpreter::startStopWatch(lua_State* L)
     if (lua_type(L, 1) == LUA_TNUMBER) {
         // Flag (if true) to replicate previous (reset and start again from zero
         // if call is repeated without any other actions being carried out on
-        // stopwatch) behaviour if only a single NUMBERIC argument (ID) supplied:
+        // stopwatch) behaviour if only a single NUMERIC argument (ID) supplied:
         bool autoResetAndRestart = true;
         if (lua_gettop(L) > 1) {
             if (!lua_isboolean(L, 2)) {
@@ -1993,9 +1993,9 @@ int TLuaInterpreter::startStopWatch(lua_State* L)
 
         QPair<bool, QString> result;
         if (autoResetAndRestart) {
-            result = host.resetAndRestartStopWatch(lua_tointeger(L, 1));
+            result = host.resetAndRestartStopWatch(static_cast<int>(lua_tointeger(L, 1)));
         } else {
-            result = host.startStopWatch(lua_tointeger(L, 1));
+            result = host.startStopWatch(static_cast<int>(lua_tointeger(L, 1)));
         }
         if (!result.first) {
             lua_pushnil(L);
@@ -2028,7 +2028,7 @@ int TLuaInterpreter::resetStopWatch(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (lua_type(L, 1) == LUA_TNUMBER) {
-        QPair<bool, QString> result = host.resetStopWatch(lua_tointeger(L, 1));
+        QPair<bool, QString> result = host.resetStopWatch(static_cast<int>(lua_tointeger(L, 1)));
         if (!result.first) {
             lua_pushnil(L);
             lua_pushstring(L, result.second.toUtf8().constData());
@@ -2061,7 +2061,7 @@ int TLuaInterpreter::adjustStopWatch(lua_State* L)
     int watchId = 0;
     Host& host = getHostFromLua(L);
     if (lua_type(L, 1) == LUA_TNUMBER) {
-        watchId = lua_tointeger(L, 1);
+        watchId = static_cast<int>(lua_tointeger(L, 1));
     } else {
         QString name = QString::fromUtf8(lua_tostring(L, 1));
         // Using an empty string will return the first unnamed stopwatch:
@@ -2103,10 +2103,10 @@ int TLuaInterpreter::deleteStopWatch(lua_State* L)
         return lua_error(L);
     }
 
-    qint64 watchId = 0;
+    int watchId = 0;
     Host& host = getHostFromLua(L);
     if (lua_type(L, 1) == LUA_TNUMBER) {
-        watchId = lua_tointeger(L, 1);
+        watchId = static_cast<int>(lua_tointeger(L, 1));
     } else {
         QString name = QString::fromUtf8(lua_tostring(L, 1));
         // Using an empty string will return the first unnamed stopwatch:
@@ -2142,10 +2142,10 @@ int TLuaInterpreter::setStopWatchPersistence(lua_State* L)
         return lua_error(L);
     }
 
-    qint64 watchId = 0;
+    int watchId = 0;
     Host& host = getHostFromLua(L);
     if (lua_type(L, 1) == LUA_TNUMBER) {
-        watchId = lua_tointeger(L, 1);
+        watchId = static_cast<int>(lua_tointeger(L, 1));
     } else {
         QString name = QString::fromUtf8(lua_tostring(L, 1));
         // Using an empty string will return the first unnamed stopwatch:
@@ -2162,7 +2162,7 @@ int TLuaInterpreter::setStopWatchPersistence(lua_State* L)
     }
 
     if (!lua_isboolean(L, 2)) {
-        lua_pushfstring(L, "setStopWatchPersistence: bad argument #2 type (persistent {save between sessions} as boolean expected, got %s!)", luaL_typename(L, 2));
+        lua_pushfstring(L, "setStopWatchPersistence: bad argument #2 type (persistence as boolean expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
     bool isPersistent = lua_toboolean(L, 2);
@@ -2185,11 +2185,11 @@ int TLuaInterpreter::setStopWatchName(lua_State* L)
         return lua_error(L);
     }
 
-    qint64 watchId = 0;
+    int watchId = 0;
     Host& host = getHostFromLua(L);
     QString currentName;
     if (lua_type(L, 1) == LUA_TNUMBER) {
-        watchId = lua_tointeger(L, 1);
+        watchId = static_cast<int>(lua_tointeger(L, 1));
     } else {
         // Using an empty string will return the first unnamed stopwatch:
         currentName = QString::fromUtf8(lua_tostring(L, 1));
@@ -2219,6 +2219,43 @@ int TLuaInterpreter::setStopWatchName(lua_State* L)
     return 1;
 }
 
+// Documentation: none - internal helper for getStopWatchBrokenDownTime()/getStopWatches()
+void TLuaInterpreter::generateElapsedTimeTable(lua_State* L, const QStringList& elapsedTimeSplitString, const bool includeDecimalSeconds, const qint64 elapsedTimeMilliSeconds)
+{
+    lua_newtable(L);
+    lua_pushstring(L, "negative");
+    // Qt 5.7 seemed to not like comparing a QString with a QLatin1Char so
+    // use a QLatin1String instead even though it is only a single character:
+    lua_pushboolean(L, elapsedTimeSplitString.at(0) == QLatin1String("-"));
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "days");
+    lua_pushinteger(L, elapsedTimeSplitString.at(1).toInt());
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "hours");
+    lua_pushinteger(L, elapsedTimeSplitString.at(2).toInt());
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "minutes");
+    lua_pushinteger(L, elapsedTimeSplitString.at(3).toInt());
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "seconds");
+    lua_pushinteger(L, elapsedTimeSplitString.at(4).toInt());
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "milliSeconds");
+    lua_pushinteger(L, elapsedTimeSplitString.at(5).toInt());
+    lua_settable(L, -3);
+
+    if (includeDecimalSeconds) {
+        lua_pushstring(L, "decimalSeconds");
+        lua_pushnumber(L, elapsedTimeMilliSeconds / 1000.0);
+        lua_settable(L, -3);
+    }
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getStopWatchBrokenDownTime
 int TLuaInterpreter::getStopWatchBrokenDownTime(lua_State* L)
 {
@@ -2227,10 +2264,10 @@ int TLuaInterpreter::getStopWatchBrokenDownTime(lua_State* L)
         return lua_error(L);
     }
 
-    qint64 watchId = 0;
+    int watchId = 0;
     Host& host = getHostFromLua(L);
     if (lua_type(L, 1) == LUA_TNUMBER) {
-        watchId = lua_tointeger(L, 1);
+        watchId = static_cast<int>(lua_tointeger(L, 1));
     } else {
         QString name = QString::fromUtf8(lua_tostring(L, 1));
         // Using an empty string will return the first unnamed stopwatch:
@@ -2254,35 +2291,8 @@ int TLuaInterpreter::getStopWatchBrokenDownTime(lua_State* L)
         return 2;
     }
 
-    const QStringList elapsedTimeSplitString(result.second.split(QLatin1Char(':')));
-    lua_newtable(L);
-    {
-        lua_pushstring(L, "negative");
-        // Qt 5.7 seems to not like comparing a QString with a QLatin1Char so
-        // use a QLatin1String instead even though it is only a single character:
-        lua_pushboolean(L, elapsedTimeSplitString.at(0) == QLatin1String("-"));
-        lua_settable(L, -3);
-
-        lua_pushstring(L, "days");
-        lua_pushinteger(L, elapsedTimeSplitString.at(1).toInt());
-        lua_settable(L, -3);
-
-        lua_pushstring(L, "hours");
-        lua_pushinteger(L, elapsedTimeSplitString.at(2).toInt());
-        lua_settable(L, -3);
-
-        lua_pushstring(L, "minutes");
-        lua_pushinteger(L, elapsedTimeSplitString.at(3).toInt());
-        lua_settable(L, -3);
-
-        lua_pushstring(L, "seconds");
-        lua_pushinteger(L, elapsedTimeSplitString.at(4).toInt());
-        lua_settable(L, -3);
-
-        lua_pushstring(L, "milliSeconds");
-        lua_pushinteger(L, elapsedTimeSplitString.at(5).toInt());
-        lua_settable(L, -3);
-    }
+    const QStringList splitTimeString(result.second.split(QLatin1Char(':')));
+    generateElapsedTimeTable(L, splitTimeString, false);
     return 1;
 }
 
@@ -2310,43 +2320,9 @@ int TLuaInterpreter::getStopWatches(lua_State* L)
             lua_pushboolean(L, pStopWatch->persistent());
             lua_settable(L, -3);
 
-            const qint64 elapsedTimeInMilliseconds = pStopWatch->getElapsedMilliSeconds();
-            const QStringList elapsedTimeSplitString(pStopWatch->getElapsedDayTimeString().split(QLatin1Char(':')));
-
             lua_pushstring(L, "elapsedTime");
-            lua_newtable(L);
-            {
-                lua_pushstring(L, "negative");
-                // Qt 5.7 seems to not like comparing a QString with a
-                // QLatin1Char so use a QLatin1String instead even though it is
-                // only a single character:
-                lua_pushboolean(L, elapsedTimeSplitString.at(0) == QLatin1String("-"));
-                lua_settable(L, -3);
-
-                lua_pushstring(L, "days");
-                lua_pushinteger(L, elapsedTimeSplitString.at(1).toInt());
-                lua_settable(L, -3);
-
-                lua_pushstring(L, "hours");
-                lua_pushinteger(L, elapsedTimeSplitString.at(2).toInt());
-                lua_settable(L, -3);
-
-                lua_pushstring(L, "minutes");
-                lua_pushinteger(L, elapsedTimeSplitString.at(3).toInt());
-                lua_settable(L, -3);
-
-                lua_pushstring(L, "seconds");
-                lua_pushinteger(L, elapsedTimeSplitString.at(4).toInt());
-                lua_settable(L, -3);
-
-                lua_pushstring(L, "milliSeconds");
-                lua_pushinteger(L, elapsedTimeSplitString.at(5).toInt());
-                lua_settable(L, -3);
-
-                lua_pushstring(L, "decimalSeconds");
-                lua_pushnumber(L, elapsedTimeInMilliseconds / 1000.0);
-                lua_settable(L, -3);
-            }
+            const QStringList splitTimeString(pStopWatch->getElapsedDayTimeString().split(QLatin1Char(':')));
+            generateElapsedTimeTable(L, splitTimeString, true, pStopWatch->getElapsedMilliSeconds());
             lua_settable(L, -3);
         }
         lua_settable(L, -3);

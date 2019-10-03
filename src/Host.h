@@ -582,7 +582,7 @@ private:
 
     // To keep things simple for Lua the first stopwatch will be allocated a key
     // of 1 - and anything less that that will be rejected - and we force
-    // createStopWatch() to return 0 during script loading so that we do not got
+    // createStopWatch() to return 0 during script loading so that we do not get
     // superious stopwatches from being created then (when
     // mIsProfileLoadingSequence is true):
     QMap<int, stopWatch*> mStopWatchMap;
