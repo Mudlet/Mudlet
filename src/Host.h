@@ -545,6 +545,7 @@ private:
     void updateModuleZips() const;
     void loadSecuredPassword();
     void removeAllNonPersistentStopWatches();
+    void updateConsolesFont();
 
     QFont mDisplayFont;
     QStringList mModulesToSync;

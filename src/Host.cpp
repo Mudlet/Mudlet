@@ -196,9 +196,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBorderLeftWidth(0)
 , mBorderRightWidth(0)
 , mBorderTopHeight(0)
-, mCommandLineFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
-, mCommandSeparator(QLatin1String(";;"))
-, mDisplayFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
+, mCommandLineFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal))
+, mCommandSeparator(QStringLiteral(";;"))
+, mDisplayFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mEnableGMCP(true)
 , mEnableMSSP(true)
 , mEnableMSDP(false)
@@ -675,6 +675,20 @@ QString Host::getMmpMapLocation() const
 {
     return mpMap->getMmpMapLocation();
 }
+// error and debug consoles inherit font of the main console
+void Host::updateConsolesFont()
+{
+    if (mpEditorDialog) {
+        if (mpEditorDialog->mpErrorConsole) {
+            mpEditorDialog->mpErrorConsole->setMiniConsoleFont(mDisplayFont.family());
+            mpEditorDialog->mpErrorConsole->setMiniConsoleFontSize(mDisplayFont.pointSize());
+        }
+        if (mudlet::self()->mpDebugArea) {
+            mudlet::self()->mpDebugConsole->setMiniConsoleFont(mDisplayFont.family());
+            mudlet::self()->mpDebugConsole->setMiniConsoleFontSize(mDisplayFont.pointSize());
+        }
+    }
+}
 
 std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
 {
@@ -684,22 +698,27 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
     }
 
     mDisplayFont = font;
+    updateConsolesFont();
     return std::make_pair(true, QString());
 }
 
 std::pair<bool, QString> Host::setDisplayFont(const QString& fontName)
 {
-    return setDisplayFont(QFont(fontName));
+    const auto result = setDisplayFont(QFont(fontName));
+    updateConsolesFont();
+    return result;
 }
 
 void Host::setDisplayFontFromString(const QString& fontData)
 {
     mDisplayFont.fromString(fontData);
+    updateConsolesFont();
 }
 
 void Host::setDisplayFontSize(int size)
 {
     mDisplayFont.setPointSize(size);
+    updateConsolesFont();
 }
 
 // Now returns the total weight of the path
@@ -1714,6 +1733,9 @@ QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& 
     QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, getName(), item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
+        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+            ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        }
         ofs << what;
         file.close();
     }
@@ -1733,6 +1755,9 @@ QString Host::readProfileData(const QString& item)
     QString ret;
     if (success) {
         QDataStream ifs(&file);
+        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        }
         ifs >> ret;
         file.close();
     }
@@ -1915,7 +1940,7 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
     bool hasInvite = false;
     auto inviteUrl = discordInfo.value(QStringLiteral("inviteurl"));
     // Will be of form: "https://discord.gg/#####"
-    if (inviteUrl != QJsonValue::Undefined && !inviteUrl.toString().isEmpty()) {
+    if (inviteUrl != QJsonValue::Undefined && !inviteUrl.toString().isEmpty() && inviteUrl.toString() != QStringLiteral("0")) {
         hasInvite = true;
     }
 
@@ -1939,9 +1964,9 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
 
     if (hasInvite) {
         if (hasCustomAppID) {
-            qDebug() << "Game using a custom Discord server. Invite URL: " << inviteUrl.toString();
+            qDebug() << "Game using a custom Discord server. Invite URL:" << inviteUrl.toString();
         } else if (hasApplicationId) {
-            qDebug() << "Game using Mudlet's Discord server. Invite URL: " << inviteUrl.toString();
+            qDebug() << "Game using Mudlet's Discord server. Invite URL:" << inviteUrl.toString();
         } else {
             qDebug() << "Discord invite URL: " << inviteUrl.toString();
         }
