@@ -50,232 +50,231 @@ gaugesTable = {}
 -- @see fg
 -- @class function
 -- @name color_table
-color_table = {
-  alice_blue                = { 240, 248, 255 },
-  AliceBlue                 = { 240, 248, 255 },
-  antique_white             = { 250, 235, 215 },
-  AntiqueWhite              = { 250, 235, 215 },
-  aquamarine                = { 127, 255, 212 },
-  azure                     = { 240, 255, 255 },
-  beige                     = { 245, 245, 220 },
-  bisque                    = { 255, 228, 196 },
-  black                     = { 0, 0, 0 },
-  blanched_almond           = { 255, 235, 205 },
-  BlanchedAlmond            = { 255, 235, 205 },
-  blue                      = { 0, 0, 255 },
-  blue_violet               = { 138, 43, 226 },
-  BlueViolet                = { 138, 43, 226 },
-  brown                     = { 165, 42, 42 },
-  burlywood                 = { 222, 184, 135 },
-  cadet_blue                = { 95, 158, 160 },
-  CadetBlue                 = { 95, 158, 160 },
-  chartreuse                = { 127, 255, 0 },
-  chocolate                 = { 210, 105, 30 },
-  coral                     = { 255, 127, 80 },
-  cornflower_blue           = { 100, 149, 237 },
-  CornflowerBlue            = { 100, 149, 237 },
-  cornsilk                  = { 255, 248, 220 },
-  cyan                      = { 0, 255, 255 },
-  dark_goldenrod            = { 184, 134, 11 },
-  DarkGoldenrod             = { 184, 134, 11 },
-  dark_green                = { 0, 100, 0 },
-  DarkGreen                 = { 0, 100, 0 },
-  dark_khaki                = { 189, 183, 107 },
-  DarkKhaki                 = { 189, 183, 107 },
-  dark_olive_green          = { 85, 107, 47 },
-  DarkOliveGreen            = { 85, 107, 47 },
-  dark_orange               = { 255, 140, 0 },
-  DarkOrange                = { 255, 140, 0 },
-  dark_orchid               = { 153, 50, 204 },
-  DarkOrchid                = { 153, 50, 204 },
-  dark_salmon               = { 233, 150, 122 },
-  DarkSalmon                = { 233, 150, 122 },
-  dark_slate_blue           = { 72, 61, 139 },
-  dark_sea_green            = { 143, 188, 143 },
-  DarkSeaGreen              = { 143, 188, 143 },
-  DarkSlateBlue             = { 72, 61, 139 },
-  dark_slate_gray           = { 47, 79, 79 },
-  DarkSlateGray             = { 47, 79, 79 },
-  dark_slate_grey           = { 47, 79, 79 },
-  DarkSlateGrey             = { 47, 79, 79 },
-  dark_turquoise            = { 0, 206, 209 },
-  DarkTurquoise             = { 0, 206, 209 },
-  dark_violet               = { 148, 0, 211 },
-  DarkViolet                = { 148, 0, 211 },
-  deep_pink                 = { 255, 20, 147 },
-  DeepPink                  = { 255, 20, 147 },
-  deep_sky_blue             = { 0, 191, 255 },
-  DeepSkyBlue               = { 0, 191, 255 },
-  dodger_blue               = { 30, 144, 255 },
-  DodgerBlue                = { 30, 144, 255 },
-  dim_gray                  = { 105, 105, 105 },
-  DimGray                   = { 105, 105, 105 },
-  dim_grey                  = { 105, 105, 105 },
-  DimGrey                   = { 105, 105, 105 },
-  firebrick                 = { 178, 34, 34 },
-  floral_white              = { 255, 250, 240 },
-  FloralWhite               = { 255, 250, 240 },
-  forest_green              = { 34, 139, 34 },
-  ForestGreen               = { 34, 139, 34 },
-  gainsboro                 = { 220, 220, 220 },
-  ghost_white               = { 248, 248, 255 },
-  GhostWhite                = { 248, 248, 255 },
-  gold                      = { 255, 215, 0 },
-  goldenrod                 = { 218, 165, 32 },
-  gray                      = { 190, 190, 190 },
-  grey                      = { 190, 190, 190 },
-  green                     = { 0, 255, 0 },
-  green_yellow              = { 173, 255, 47 },
-  GreenYellow               = { 173, 255, 47 },
-  honeydew                  = { 240, 255, 240 },
-  hot_pink                  = { 255, 105, 180 },
-  HotPink                   = { 255, 105, 180 },
-  indian_red                = { 205, 92, 92 },
-  IndianRed                 = { 205, 92, 92 },
-  khaki                     = { 240, 230, 140 },
-  ivory                     = { 255, 255, 240 },
-  lavender                  = { 230, 230, 250 },
-  lavender_blush            = { 255, 240, 245 },
-  LavenderBlush             = { 255, 240, 245 },
-  lawn_green                = { 124, 252, 0 },
-  LawnGreen                 = { 124, 252, 0 },
-  lemon_chiffon             = { 255, 250, 205 },
-  LemonChiffon              = { 255, 250, 205 },
-  light_blue                = { 173, 216, 230 },
-  LightBlue                 = { 173, 216, 230 },
-  light_coral               = { 240, 128, 128 },
-  LightCoral                = { 240, 128, 128 },
-  light_cyan                = { 224, 255, 255 },
-  LightCyan                 = { 224, 255, 255 },
-  light_goldenrod           = { 238, 221, 130 },
-  LightGoldenrod            = { 238, 221, 130 },
-  light_goldenrod_yellow    = { 250, 250, 210 },
-  LightGoldenrodYellow      = { 250, 250, 210 },
-  light_gray                = { 211, 211, 211 },
-  LightGray                 = { 211, 211, 211 },
-  light_grey                = { 211, 211, 211 },
-  LightGrey                 = { 211, 211, 211 },
-  light_pink                = { 255, 182, 193 },
-  LightPink                 = { 255, 182, 193 },
-  light_salmon              = { 255, 160, 122 },
-  LightSalmon               = { 255, 160, 122 },
-  light_sea_green           = { 32, 178, 170 },
-  LightSeaGreen             = { 32, 178, 170 },
-  light_sky_blue            = { 135, 206, 250 },
-  LightSkyBlue              = { 135, 206, 250 },
-  light_slate_blue          = { 132, 112, 255 },
-  LightSlateBlue            = { 132, 112, 255 },
-  light_slate_gray          = { 119, 136, 153 },
-  LightSlateGray            = { 119, 136, 153 },
-  light_slate_grey          = { 119, 136, 153 },
-  LightSlateGrey            = { 119, 136, 153 },
-  light_steel_blue          = { 176, 196, 222 },
-  LightSteelBlue            = { 176, 196, 222 },
-  light_yellow              = { 255, 255, 224 },
-  LightYellow               = { 255, 255, 224 },
-  lime_green                = { 50, 205, 50 },
-  LimeGreen                 = { 50, 205, 50 },
-  linen                     = { 250, 240, 230 },
-  magenta                   = { 255, 0, 255 },
-  maroon                    = { 176, 48, 96 },
-  medium_aquamarine         = { 102, 205, 170 },
-  MediumAquamarine          = { 102, 205, 170 },
-  medium_blue               = { 0, 0, 205 },
-  MediumBlue                = { 0, 0, 205 },
-  medium_orchid             = { 186, 85, 211 },
-  MediumOrchid              = { 186, 85, 211 },
-  medium_purple             = { 147, 112, 219 },
-  MediumPurple              = { 147, 112, 219 },
-  medium_sea_green          = { 60, 179, 113 },
-  MediumSeaGreen            = { 60, 179, 113 },
-  medium_slate_blue         = { 123, 104, 238 },
-  MediumSlateBlue           = { 123, 104, 238 },
-  medium_spring_green       = { 0, 250, 154 },
-  MediumSpringGreen         = { 0, 250, 154 },
-  medium_turquoise          = { 72, 209, 204 },
-  MediumTurquoise           = { 72, 209, 204 },
-  medium_violet_red         = { 199, 21, 133 },
-  MediumVioletRed           = { 199, 21, 133 },
-  midnight_blue             = { 25, 25, 112 },
-  MidnightBlue              = { 25, 25, 112 },
-  mint_cream                = { 245, 255, 250 },
-  MintCream                 = { 245, 255, 250 },
-  misty_rose                = { 255, 228, 225 },
-  MistyRose                 = { 255, 228, 225 },
-  moccasin                  = { 255, 228, 181 },
-  navajo_white              = { 255, 222, 173 },
-  NavajoWhite               = { 255, 222, 173 },
-  navy                      = { 0, 0, 128 },
-  navy_blue                 = { 0, 0, 128 },
-  NavyBlue                  = { 0, 0, 128 },
-  old_lace                  = { 253, 245, 230 },
-  OldLace                   = { 253, 245, 230 },
-  olive_drab                = { 107, 142, 35 },
-  OliveDrab                 = { 107, 142, 35 },
-  orange                    = { 255, 165, 0 },
-  orange_red                = { 255, 69, 0 },
-  OrangeRed                 = { 255, 69, 0 },
-  orchid                    = { 218, 112, 214 },
-  pale_goldenrod            = { 238, 232, 170 },
-  PaleGoldenrod             = { 238, 232, 170 },
-  pale_green                = { 152, 251, 152 },
-  PaleGreen                 = { 152, 251, 152 },
-  pale_turquoise            = { 175, 238, 238 },
-  PaleTurquoise             = { 175, 238, 238 },
-  pale_violet_red           = { 219, 112, 147 },
-  PaleVioletRed             = { 219, 112, 147 },
-  papaya_whip               = { 255, 239, 213 },
-  PapayaWhip                = { 255, 239, 213 },
-  peach_puff                = { 255, 218, 185 },
-  PeachPuff                 = { 255, 218, 185 },
-  peru                      = { 205, 133, 63 },
-  pink                      = { 255, 192, 203 },
-  plum                      = { 221, 160, 221 },
-  powder_blue               = { 176, 224, 230 },
-  PowderBlue                = { 176, 224, 230 },
-  purple                    = { 160, 32, 240 },
-  royal_blue                = { 65, 105, 225 },
-  RoyalBlue                 = { 65, 105, 225 },
-  red                       = { 255, 0, 0 },
-  rosy_brown                = { 188, 143, 143 },
-  RosyBrown                 = { 188, 143, 143 },
-  saddle_brown              = { 139, 69, 19 },
-  SaddleBrown               = { 139, 69, 19 },
-  salmon                    = { 250, 128, 114 },
-  sandy_brown               = { 244, 164, 96 },
-  SandyBrown                = { 244, 164, 96 },
-  sea_green                 = { 46, 139, 87 },
-  SeaGreen                  = { 46, 139, 87 },
-  seashell                  = { 255, 245, 238 },
-  sienna                    = { 160, 82, 45 },
-  sky_blue                  = { 135, 206, 235 },
-  SkyBlue                   = { 135, 206, 235 },
-  slate_blue                = { 106, 90, 205 },
-  SlateBlue                 = { 106, 90, 205 },
-  slate_gray                = { 112, 128, 144 },
-  SlateGray                 = { 112, 128, 144 },
-  slate_grey                = { 112, 128, 144 },
-  SlateGrey                 = { 112, 128, 144 },
-  snow                      = { 255, 250, 250 },
-  steel_blue                = { 70, 130, 180 },
-  SteelBlue                 = { 70, 130, 180 },
-  spring_green              = { 0, 255, 127 },
-  SpringGreen               = { 0, 255, 127 },
-  tan                       = { 210, 180, 140 },
-  thistle                   = { 216, 191, 216 },
-  tomato                    = { 255, 99, 71 },
-  turquoise                 = { 64, 224, 208 },
-  violet_red                = { 208, 32, 144 },
-  VioletRed                 = { 208, 32, 144 },
-  violet                    = { 238, 130, 238 },
-  wheat                     = { 245, 222, 179 },
-  white                     = { 255, 255, 255 },
-  white_smoke               = { 245, 245, 245 },
-  WhiteSmoke                = { 245, 245, 245 },
-  yellow                    = { 255, 255, 0 },
-  yellow_green              = { 154, 205, 50 },
-  YellowGreen               = { 154, 205, 50 }
-}
+color_table = color_table or {}
+color_table["alice_blue"]             = { 240, 248, 255 }
+color_table["AliceBlue"]              = { 240, 248, 255 }
+color_table["antique_white"]          = { 250, 235, 215 }
+color_table["AntiqueWhite"]           = { 250, 235, 215 }
+color_table["aquamarine"]             = { 127, 255, 212 }
+color_table["azure"]                  = { 240, 255, 255 }
+color_table["beige"]                  = { 245, 245, 220 }
+color_table["bisque"]                 = { 255, 228, 196 }
+color_table["black"]                  = { 0, 0, 0 }
+color_table["blanched_almond"]        = { 255, 235, 205 }
+color_table["BlanchedAlmond"]         = { 255, 235, 205 }
+color_table["blue"]                   = { 0, 0, 255 }
+color_table["blue_violet"]            = { 138, 43, 226 }
+color_table["BlueViolet"]             = { 138, 43, 226 }
+color_table["brown"]                  = { 165, 42, 42 }
+color_table["burlywood"]              = { 222, 184, 135 }
+color_table["cadet_blue"]             = { 95, 158, 160 }
+color_table["CadetBlue"]              = { 95, 158, 160 }
+color_table["chartreuse"]             = { 127, 255, 0 }
+color_table["chocolate"]              = { 210, 105, 30 }
+color_table["coral"]                  = { 255, 127, 80 }
+color_table["cornflower_blue"]        = { 100, 149, 237 }
+color_table["CornflowerBlue"]         = { 100, 149, 237 }
+color_table["cornsilk"]               = { 255, 248, 220 }
+color_table["cyan"]                   = { 0, 255, 255 }
+color_table["dark_goldenrod"]         = { 184, 134, 11 }
+color_table["DarkGoldenrod"]          = { 184, 134, 11 }
+color_table["dark_green"]             = { 0, 100, 0 }
+color_table["DarkGreen"]              = { 0, 100, 0 }
+color_table["dark_khaki"]             = { 189, 183, 107 }
+color_table["DarkKhaki"]              = { 189, 183, 107 }
+color_table["dark_olive_green"]       = { 85, 107, 47 }
+color_table["DarkOliveGreen"]         = { 85, 107, 47 }
+color_table["dark_orange"]            = { 255, 140, 0 }
+color_table["DarkOrange"]             = { 255, 140, 0 }
+color_table["dark_orchid"]            = { 153, 50, 204 }
+color_table["DarkOrchid"]             = { 153, 50, 204 }
+color_table["dark_salmon"]            = { 233, 150, 122 }
+color_table["DarkSalmon"]             = { 233, 150, 122 }
+color_table["dark_slate_blue"]        = { 72, 61, 139 }
+color_table["dark_sea_green"]         = { 143, 188, 143 }
+color_table["DarkSeaGreen"]           = { 143, 188, 143 }
+color_table["DarkSlateBlue"]          = { 72, 61, 139 }
+color_table["dark_slate_gray"]        = { 47, 79, 79 }
+color_table["DarkSlateGray"]          = { 47, 79, 79 }
+color_table["dark_slate_grey"]        = { 47, 79, 79 }
+color_table["DarkSlateGrey"]          = { 47, 79, 79 }
+color_table["dark_turquoise"]         = { 0, 206, 209 }
+color_table["DarkTurquoise"]          = { 0, 206, 209 }
+color_table["dark_violet"]            = { 148, 0, 211 }
+color_table["DarkViolet"]             = { 148, 0, 211 }
+color_table["deep_pink"]              = { 255, 20, 147 }
+color_table["DeepPink"]               = { 255, 20, 147 }
+color_table["deep_sky_blue"]          = { 0, 191, 255 }
+color_table["DeepSkyBlue"]            = { 0, 191, 255 }
+color_table["dodger_blue"]            = { 30, 144, 255 }
+color_table["DodgerBlue"]             = { 30, 144, 255 }
+color_table["dim_gray"]               = { 105, 105, 105 }
+color_table["DimGray"]                = { 105, 105, 105 }
+color_table["dim_grey"]               = { 105, 105, 105 }
+color_table["DimGrey"]                = { 105, 105, 105 }
+color_table["firebrick"]              = { 178, 34, 34 }
+color_table["floral_white"]           = { 255, 250, 240 }
+color_table["FloralWhite"]            = { 255, 250, 240 }
+color_table["forest_green"]           = { 34, 139, 34 }
+color_table["ForestGreen"]            = { 34, 139, 34 }
+color_table["gainsboro"]              = { 220, 220, 220 }
+color_table["ghost_white"]            = { 248, 248, 255 }
+color_table["GhostWhite"]             = { 248, 248, 255 }
+color_table["gold"]                   = { 255, 215, 0 }
+color_table["goldenrod"]              = { 218, 165, 32 }
+color_table["gray"]                   = { 190, 190, 190 }
+color_table["grey"]                   = { 190, 190, 190 }
+color_table["green"]                  = { 0, 255, 0 }
+color_table["green_yellow"]           = { 173, 255, 47 }
+color_table["GreenYellow"]            = { 173, 255, 47 }
+color_table["honeydew"]               = { 240, 255, 240 }
+color_table["hot_pink"]               = { 255, 105, 180 }
+color_table["HotPink"]                = { 255, 105, 180 }
+color_table["indian_red"]             = { 205, 92, 92 }
+color_table["IndianRed"]              = { 205, 92, 92 }
+color_table["khaki"]                  = { 240, 230, 140 }
+color_table["ivory"]                  = { 255, 255, 240 }
+color_table["lavender"]               = { 230, 230, 250 }
+color_table["lavender_blush"]         = { 255, 240, 245 }
+color_table["LavenderBlush"]          = { 255, 240, 245 }
+color_table["lawn_green"]             = { 124, 252, 0 }
+color_table["LawnGreen"]              = { 124, 252, 0 }
+color_table["lemon_chiffon"]          = { 255, 250, 205 }
+color_table["LemonChiffon"]           = { 255, 250, 205 }
+color_table["light_blue"]             = { 173, 216, 230 }
+color_table["LightBlue"]              = { 173, 216, 230 }
+color_table["light_coral"]            = { 240, 128, 128 }
+color_table["LightCoral"]             = { 240, 128, 128 }
+color_table["light_cyan"]             = { 224, 255, 255 }
+color_table["LightCyan"]              = { 224, 255, 255 }
+color_table["light_goldenrod"]        = { 238, 221, 130 }
+color_table["LightGoldenrod"]         = { 238, 221, 130 }
+color_table["light_goldenrod_yellow"] = { 250, 250, 210 }
+color_table["LightGoldenrodYellow"]   = { 250, 250, 210 }
+color_table["light_gray"]             = { 211, 211, 211 }
+color_table["LightGray"]              = { 211, 211, 211 }
+color_table["light_grey"]             = { 211, 211, 211 }
+color_table["LightGrey"]              = { 211, 211, 211 }
+color_table["light_pink"]             = { 255, 182, 193 }
+color_table["LightPink"]              = { 255, 182, 193 }
+color_table["light_salmon"]           = { 255, 160, 122 }
+color_table["LightSalmon"]            = { 255, 160, 122 }
+color_table["light_sea_green"]        = { 32, 178, 170 }
+color_table["LightSeaGreen"]          = { 32, 178, 170 }
+color_table["light_sky_blue"]         = { 135, 206, 250 }
+color_table["LightSkyBlue"]           = { 135, 206, 250 }
+color_table["light_slate_blue"]       = { 132, 112, 255 }
+color_table["LightSlateBlue"]         = { 132, 112, 255 }
+color_table["light_slate_gray"]       = { 119, 136, 153 }
+color_table["LightSlateGray"]         = { 119, 136, 153 }
+color_table["light_slate_grey"]       = { 119, 136, 153 }
+color_table["LightSlateGrey"]         = { 119, 136, 153 }
+color_table["light_steel_blue"]       = { 176, 196, 222 }
+color_table["LightSteelBlue"]         = { 176, 196, 222 }
+color_table["light_yellow"]           = { 255, 255, 224 }
+color_table["LightYellow"]            = { 255, 255, 224 }
+color_table["lime_green"]             = { 50, 205, 50 }
+color_table["LimeGreen"]              = { 50, 205, 50 }
+color_table["linen"]                  = { 250, 240, 230 }
+color_table["magenta"]                = { 255, 0, 255 }
+color_table["maroon"]                 = { 176, 48, 96 }
+color_table["medium_aquamarine"]      = { 102, 205, 170 }
+color_table["MediumAquamarine"]       = { 102, 205, 170 }
+color_table["medium_blue"]            = { 0, 0, 205 }
+color_table["MediumBlue"]             = { 0, 0, 205 }
+color_table["medium_orchid"]          = { 186, 85, 211 }
+color_table["MediumOrchid"]           = { 186, 85, 211 }
+color_table["medium_purple"]          = { 147, 112, 219 }
+color_table["MediumPurple"]           = { 147, 112, 219 }
+color_table["medium_sea_green"]       = { 60, 179, 113 }
+color_table["MediumSeaGreen"]         = { 60, 179, 113 }
+color_table["medium_slate_blue"]      = { 123, 104, 238 }
+color_table["MediumSlateBlue"]        = { 123, 104, 238 }
+color_table["medium_spring_green"]    = { 0, 250, 154 }
+color_table["MediumSpringGreen"]      = { 0, 250, 154 }
+color_table["medium_turquoise"]       = { 72, 209, 204 }
+color_table["MediumTurquoise"]        = { 72, 209, 204 }
+color_table["medium_violet_red"]      = { 199, 21, 133 }
+color_table["MediumVioletRed"]        = { 199, 21, 133 }
+color_table["midnight_blue"]          = { 25, 25, 112 }
+color_table["MidnightBlue"]           = { 25, 25, 112 }
+color_table["mint_cream"]             = { 245, 255, 250 }
+color_table["MintCream"]              = { 245, 255, 250 }
+color_table["misty_rose"]             = { 255, 228, 225 }
+color_table["MistyRose"]              = { 255, 228, 225 }
+color_table["moccasin"]               = { 255, 228, 181 }
+color_table["navajo_white"]           = { 255, 222, 173 }
+color_table["NavajoWhite"]            = { 255, 222, 173 }
+color_table["navy"]                   = { 0, 0, 128 }
+color_table["navy_blue"]              = { 0, 0, 128 }
+color_table["NavyBlue"]               = { 0, 0, 128 }
+color_table["old_lace"]               = { 253, 245, 230 }
+color_table["OldLace"]                = { 253, 245, 230 }
+color_table["olive_drab"]             = { 107, 142, 35 }
+color_table["OliveDrab"]              = { 107, 142, 35 }
+color_table["orange"]                 = { 255, 165, 0 }
+color_table["orange_red"]             = { 255, 69, 0 }
+color_table["OrangeRed"]              = { 255, 69, 0 }
+color_table["orchid"]                 = { 218, 112, 214 }
+color_table["pale_goldenrod"]         = { 238, 232, 170 }
+color_table["PaleGoldenrod"]          = { 238, 232, 170 }
+color_table["pale_green"]             = { 152, 251, 152 }
+color_table["PaleGreen"]              = { 152, 251, 152 }
+color_table["pale_turquoise"]         = { 175, 238, 238 }
+color_table["PaleTurquoise"]          = { 175, 238, 238 }
+color_table["pale_violet_red"]        = { 219, 112, 147 }
+color_table["PaleVioletRed"]          = { 219, 112, 147 }
+color_table["papaya_whip"]            = { 255, 239, 213 }
+color_table["PapayaWhip"]             = { 255, 239, 213 }
+color_table["peach_puff"]             = { 255, 218, 185 }
+color_table["PeachPuff"]              = { 255, 218, 185 }
+color_table["peru"]                   = { 205, 133, 63 }
+color_table["pink"]                   = { 255, 192, 203 }
+color_table["plum"]                   = { 221, 160, 221 }
+color_table["powder_blue"]            = { 176, 224, 230 }
+color_table["PowderBlue"]             = { 176, 224, 230 }
+color_table["purple"]                 = { 160, 32, 240 }
+color_table["royal_blue"]             = { 65, 105, 225 }
+color_table["RoyalBlue"]              = { 65, 105, 225 }
+color_table["red"]                    = { 255, 0, 0 }
+color_table["rosy_brown"]             = { 188, 143, 143 }
+color_table["RosyBrown"]              = { 188, 143, 143 }
+color_table["saddle_brown"]           = { 139, 69, 19 }
+color_table["SaddleBrown"]            = { 139, 69, 19 }
+color_table["salmon"]                 = { 250, 128, 114 }
+color_table["sandy_brown"]            = { 244, 164, 96 }
+color_table["SandyBrown"]             = { 244, 164, 96 }
+color_table["sea_green"]              = { 46, 139, 87 }
+color_table["SeaGreen"]               = { 46, 139, 87 }
+color_table["seashell"]               = { 255, 245, 238 }
+color_table["sienna"]                 = { 160, 82, 45 }
+color_table["sky_blue"]               = { 135, 206, 235 }
+color_table["SkyBlue"]                = { 135, 206, 235 }
+color_table["slate_blue"]             = { 106, 90, 205 }
+color_table["SlateBlue"]              = { 106, 90, 205 }
+color_table["slate_gray"]             = { 112, 128, 144 }
+color_table["SlateGray"]              = { 112, 128, 144 }
+color_table["slate_grey"]             = { 112, 128, 144 }
+color_table["SlateGrey"]              = { 112, 128, 144 }
+color_table["snow"]                   = { 255, 250, 250 }
+color_table["steel_blue"]             = { 70, 130, 180 }
+color_table["SteelBlue"]              = { 70, 130, 180 }
+color_table["spring_green"]           = { 0, 255, 127 }
+color_table["SpringGreen"]            = { 0, 255, 127 }
+color_table["tan"]                    = { 210, 180, 140 }
+color_table["thistle"]                = { 216, 191, 216 }
+color_table["tomato"]                 = { 255, 99, 71 }
+color_table["turquoise"]              = { 64, 224, 208 }
+color_table["violet_red"]             = { 208, 32, 144 }
+color_table["VioletRed"]              = { 208, 32, 144 }
+color_table["violet"]                 = { 238, 130, 238 }
+color_table["wheat"]                  = { 245, 222, 179 }
+color_table["white"]                  = { 255, 255, 255 }
+color_table["white_smoke"]            = { 245, 245, 245 }
+color_table["WhiteSmoke"]             = { 245, 245, 245 }
+color_table["yellow"]                 = { 255, 255, 0 }
+color_table["yellow_green"]           = { 154, 205, 50 }
+color_table["YellowGreen"]            = { 154, 205, 50 }
 
 
 --- Move a custom gauge.
@@ -698,8 +697,13 @@ end
 
 
 
---- Prints out a formatted list of all available named colors, optional arg specifies number of columns to print in, defaults to 4
----
+--- Prints out a formatted list of all available named colors (EXCEPT FOR
+--- the 256 colors with names of form "ansi_###" where ### is 000 to 255),
+--- optional args specifies:
+--- * (number) number of columns to print in, defaults to 4;
+--- * (string) substring required to match to include in output, defaults to
+--- showing all if not supplied;
+--- * (boolean) whether to sort the output, defaults to false.
 --- @usage Print list in 4 columns by default.
 ---   <pre>
 ---   showColors()
@@ -731,9 +735,15 @@ function showColors(...)
 
   local colors = {}
   for k, v in pairs(color_table) do
-    table.insert(colors,k)
+    -- Ignore the ansi_### 256 colors entries
+    if not string.find(k, "ansi_%d%d%d") then
+      table.insert(colors,k)
+    end
   end
-  if sort then table.sort(colors) end
+
+  if sort then
+    table.sort(colors)
+  end
 
   local i = 1
   for _, k in ipairs(colors) do
@@ -743,7 +753,7 @@ function showColors(...)
       if calc_luminosity(v[1],v[2],v[3]) > 0.5 then
         fgc = "black"
       end
-      cechoLink(string.format('<%s:%s>%-23s<reset>  ',fgc,k,k), [[printCmdLine("]] .. k .. [[")]], table.concat(v, ", "), true)
+      cechoLink(string.format('<%s:%s> %-23s<reset> ',fgc,k,k), [[printCmdLine("]] .. k .. [[")]], table.concat(v, ", "), true)
       if i == cols then
         echo("\n")
         i = 1
@@ -755,7 +765,54 @@ function showColors(...)
   if i ~= 1 then echo("\n") end
 end
 
+--- Prints out a sorted, formatted list of the 256 colors with names of form
+--- "ansi_###" where ### is 000 to 255), optional arg specifies:
+--- * (number) number of columns to print in, defaults to 4;
+--- @usage Print list in 4 columns by default.
+---   <pre>
+---   showAnsiColors()
+---   </pre>
+--- @usage Print list in 2 columns.
+---   <pre>
+---   showAnsiColors(2)
+---   </pre>
+---
+--- @see color_table
+function showAnsiColors(...)
+  local cols = 8
+  for _, val in ipairs(arg) do
+    if type(val) == "number" then
+      cols = val
+    end
+  end
 
+  local colors = {}
+  for k, v in pairs(color_table) do
+    -- Only use the ansi_### 256 colors entries
+    if string.find(k, "ansi_%d%d%d") then
+      table.insert(colors,k)
+    end
+  end
+
+  table.sort(colors)
+
+  local i = 1
+  for _, k in ipairs(colors) do
+    local v = color_table[k]
+    local fgc = "white"
+    if calc_luminosity(v[1],v[2],v[3]) > 0.5 then
+      fgc = "black"
+    end
+    cechoLink(string.format('<%s:%s> %8s <reset> ',fgc,k,k), [[printCmdLine("]] .. k .. [[")]], table.concat(v, ", "), true)
+    if i == cols then
+      echo("\n")
+      i = 1
+    else
+      i = i + 1
+    end
+  end
+  if i ~= 1 then echo("\n") end
+end
 
 
 --- <b><u>TODO</u></b> resizeGauge(gaugeName, width, height)
@@ -796,8 +853,8 @@ if rex then
         rex.new [[<(?:([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?(?::(?=>))?(?::([0-9]{1,3}),([0-9]{1,3}),([0-9]{1,3}))?>]],
       },
       Color = {
-        [[(<[a-zA-Z_,:]+>)]],
-        rex.new [[<([a-zA-Z_]+)?(?:[:,](?=>))?(?:[:,]([a-zA-Z_]+))?>]],
+        [[(<[a-zA-Z0-9_,:]+>)]],
+        rex.new [[<([a-zA-Z0-9_]+)?(?:[:,](?=>))?(?:[:,]([a-zA-Z0-9_]+))?>]],
       },
       Ansi = {
         [[(<[0-9,:]+>)]],
@@ -1172,7 +1229,7 @@ if rex then
 
 
 else
-
+  -- NOT using rex module:
 
   -- NOT LUADOC
   -- See xEcho/another cecho for description.
