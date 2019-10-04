@@ -2987,6 +2987,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                         if (mudlet::self()->mConsoleMap.contains(pHost)) {
                             mudlet::self()->mConsoleMap[pHost]->changeColors();
                         }
+                        // Also need to update the Lua sub-system's "color_table"
+                        pHost->updateAnsi16ColorsInTable();
                     }
 
                 } else {
@@ -3044,6 +3046,9 @@ void TBuffer::resetColors()
     if (mudlet::self()->mConsoleMap.contains(pHost)) {
         mudlet::self()->mConsoleMap[pHost]->changeColors();
     }
+
+    // Also need to update the Lua sub-system's "color_table"
+    pHost->updateAnsi16ColorsInTable();
 }
 
 void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar format, int linkID)

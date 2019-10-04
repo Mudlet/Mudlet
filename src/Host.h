@@ -238,6 +238,7 @@ public:
     void setDisplayFontFixedPitch(bool enable);
     void updateProxySettings(QNetworkAccessManager* manager);
     std::unique_ptr<QNetworkProxy>& getConnectionProxy();
+    void updateAnsi16ColorsInTable();
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;

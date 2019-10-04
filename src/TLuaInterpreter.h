@@ -109,6 +109,8 @@ public:
     bool callEventHandler(const QString& function, const TEvent& pE, const QEvent* qE = nullptr);
     static QString dirToString(lua_State*, int);
     static int dirToNumber(lua_State*, int);
+    void updateAnsi16ColorsInTable();
+    void updateExtendedAnsiColorsInTable();
 
 
     QPair<int, QString> startTempTimer(double timeout, const QString& function, const bool repeating = false);
@@ -540,6 +542,7 @@ private:
     void loadUtf8Filenames();
 
 #endif
+    void insertColorTableEntry(lua_State*, const QColor&, const QString&);
 
     QNetworkAccessManager* mpFileDownloader;
     std::list<std::string> mCaptureGroupList;
