@@ -109,6 +109,8 @@ public:
     bool callEventHandler(const QString& function, const TEvent& pE, const QEvent* qE = nullptr);
     static QString dirToString(lua_State*, int);
     static int dirToNumber(lua_State*, int);
+    void updateAnsi16ColorsInTable();
+    void updateExtendedAnsiColorsInTable();
 
 
     QPair<int, QString> startTempTimer(double timeout, const QString& function, const bool repeating = false);
@@ -545,6 +547,7 @@ private:
 #if defined(Q_OS_WIN32)
     void loadUtf8Filenames();
 #endif
+    void insertColorTableEntry(lua_State*, const QColor&, const QString&);
     // The last argument is only needed if the third one is true:
     static void generateElapsedTimeTable(lua_State*, const QStringList&, const bool, const qint64 elapsedTimeMilliSeconds = 0);
 

@@ -1437,6 +1437,9 @@ void dlgProfilePreferences::resetColors()
     if (mudlet::self()->mConsoleMap.contains(pHost)) {
         mudlet::self()->mConsoleMap[pHost]->changeColors();
     }
+
+    // Copy across the colors to the Lua "color_table"
+    pHost->updateAnsi16ColorsInTable();
 }
 
 void dlgProfilePreferences::resetColors2()
@@ -1489,6 +1492,18 @@ void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
                 mudlet::self()->mConsoleMap[pHost]->mLowerPane->updateScreenView();
                 mudlet::self()->mConsoleMap[pHost]->mLowerPane->forceUpdate();
             }
+        }
+
+        if (b == pushButton_black || b == pushButton_lBlack
+                || b == pushButton_red || b == pushButton_lRed
+                || b == pushButton_green || b == pushButton_lGreen
+                || b == pushButton_yellow || b == pushButton_lYellow
+                || b == pushButton_blue || b == pushButton_lBlue
+                || b == pushButton_magenta || b == pushButton_lMagenta
+                || b == pushButton_cyan || b == pushButton_lCyan
+                || b == pushButton_white || b == pushButton_lWhite) {
+
+            pHost->updateAnsi16ColorsInTable();
         }
 
         // Also set a contrasting foreground color so text will always be visible

@@ -1487,7 +1487,7 @@ function map.setConfigs(key, val, sub_key)
             else
                 map.echo("Custom Exit config must be in the form of a table.", false, true)
             end
-        elseif map.configs[key] then
+        elseif map.configs[key] ~= nil then
             map.configs[key] = val
             map.echo(string.format("Config %s set to: %s", key, tostring(val)))
         else

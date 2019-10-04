@@ -3814,6 +3814,8 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     pHost->getScriptUnit()->compileAll();
     pHost->mIsProfileLoadingSequence = false;
 
+    pHost->updateAnsi16ColorsInTable();
+
     //do modules here
     QMapIterator<QString, int> it(pHost->mModulePriorities);
     QMap<int, QStringList> moduleOrder;
