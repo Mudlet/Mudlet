@@ -4122,7 +4122,7 @@ void mudlet::playSound(const QString& s, int soundVolume)
     pPlayer->play();
 }
 
-QUrl mudlet::parseMSPUrl(QString& soundFileName, QString& soundUrl)
+QUrl mudlet::parseMSPUrl(QString& soundFileName, const QString& soundUrl)
 {
     QUrl url;
     QPointer<Host> pHost = getActiveHost();
@@ -4173,7 +4173,7 @@ bool mudlet::isMSPFileRelative(QString& soundFileName)
     if (!QFileInfo(soundFileName).isRelative()) {
         qWarning() << QStringLiteral(
             "mudlet::isMSPFileRelative() WARNING - Attempt made to send an absolute path as a sound file name: %1.  Only relative paths are permitted.")
-                .arg(soundFileName);    
+                .arg(soundFileName);
     } else {
         isFileRelative = true;
     }
@@ -4192,7 +4192,7 @@ QDir mudlet::getMSPDir(QString& absoluteFolderPath)
     return mspDir;
 }
 
-QStringList mudlet::parseMSPFileNameList(bool isSound, QString& soundFileName, QString soundType, QDir& dir)
+QStringList mudlet::parseMSPFileNameList(bool isSound, QString& soundFileName, const QString& soundType, QDir& dir)
 {
     QStringList fileNameList;
     QPointer<Host> pHost = getActiveHost();
@@ -4226,7 +4226,7 @@ QStringList mudlet::parseMSPFileNameList(bool isSound, QString& soundFileName, Q
     return fileNameList;
 }
 
-QStringList mudlet::getMSPFileNameList(bool isSound, QString& soundFileName, QString &soundType)
+QStringList mudlet::getMSPFileNameList(bool isSound, QString& soundFileName, const QString &soundType)
 {
     QStringList fileNameList;
     QPointer<Host> pHost = getActiveHost();
@@ -4249,7 +4249,7 @@ QStringList mudlet::getMSPFileNameList(bool isSound, QString& soundFileName, QSt
                     qWarning() << QStringLiteral(
                         "mudlet::getMSPFileNameList() WARNING - Attempt made to create a directory failed: %1")
                             .arg(mudlet::getMudletPath(mudlet::profileSoundsPath, pHost->getName()), soundType);
-                    return fileNameList;                        
+                    return fileNameList;
                 }
 
                 fileNameList = mudlet::self()->parseMSPFileNameList(true, soundFileName, soundType, soundTypeDir);
@@ -4266,7 +4266,7 @@ QStringList mudlet::getMSPFileNameList(bool isSound, QString& soundFileName, QSt
     return fileNameList;
 }
 
-QUrl mudlet::getMSPFileUrl(QString& soundFileName, QString& soundType)
+QUrl mudlet::getMSPFileUrl(QString& soundFileName, const QString& soundType)
 {
     QUrl fileUrl;
     QPointer<Host> pHost = getActiveHost();
@@ -4285,14 +4285,14 @@ QUrl mudlet::getMSPFileUrl(QString& soundFileName, QString& soundType)
                 fileUrl = QUrl::fromUserInput(QStringLiteral("%1/%2").arg(pHost->getMSPSoundLocation(), soundFileName));
             } else {
                 fileUrl = QUrl::fromUserInput(QStringLiteral("%1%2").arg(pHost->getMSPSoundLocation(), soundFileName));
-            }       
+            }
         }
     }
 
     return fileUrl;
 }
 
-bool mudlet::downloadMSPFile(QString& soundFileName, QString& soundType, QString& absolutePathFileName)
+bool mudlet::downloadMSPFile(QString& soundFileName, const QString& soundType, QString& absolutePathFileName)
 {
     bool wasFileDownloaded = false;
     QPointer<Host> pHost = getActiveHost();
@@ -4347,9 +4347,7 @@ bool mudlet::downloadMSPFile(QString& soundFileName, QString& soundType, QString
                     file.close();
 
                     reply->deleteLater();
-                },
-                getReply)
-            );
+                }, getReply));
 
             wasFileDownloaded = true;
         }
@@ -4413,7 +4411,7 @@ QMediaPlayer* mudlet::getMSPSoundMediaPlayer()
     return pPlayer;
 }
 
-void mudlet::playMSPSound(QString& soundFileName, int soundVolume, int soundLength, int soundPriority, QString& soundType, QString& soundUrl)
+void mudlet::playMSPSound(QString& soundFileName, int soundVolume, int soundLength, int soundPriority, const QString& soundType, const QString& soundUrl)
 {
     QPointer<Host> pHost = getActiveHost();
 
@@ -4576,7 +4574,7 @@ QMediaPlayer* mudlet::getMSPMusicMediaPlayer(int soundLength, int musicContinue,
     return pPlayer;
 }
 
-void mudlet::playMSPMusic(QString& soundFileName, int soundVolume, int soundLength, int musicContinue, QString& soundType, QString& soundUrl)
+void mudlet::playMSPMusic(QString& soundFileName, int soundVolume, int soundLength, int musicContinue, const QString& soundType, const QString& soundUrl)
 {
     QPointer<Host> pHost = getActiveHost();
 
