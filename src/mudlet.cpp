@@ -4138,7 +4138,7 @@ QUrl mudlet::parseMSPUrl(QString& soundFileName, QString& soundUrl)
             if (!pHost->getMSPSoundLocation().isEmpty()) {
                 url = QUrl::fromUserInput(pHost->getMSPSoundLocation());
             } else {
-                url = QUrl::fromUserInput(QStringLiteral("https://www.%1/sounds/").arg(pHost->mUrl));
+                url = QUrl::fromUserInput(QStringLiteral("http://www.%1/sounds/").arg(pHost->mUrl));
             }
         } else {
             url = QUrl::fromUserInput(soundUrl);
@@ -4519,7 +4519,6 @@ QMediaPlayer* mudlet::getMSPMusicMediaPlayer(int soundLength, int musicContinue,
                             return pPlayer;
                         } else { // Continue playing the music, but add more instances below
                             pPlayer = pTestPlayer;
-                            return pPlayer;
                         }
                     }
                 }
