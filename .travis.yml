@@ -51,14 +51,14 @@ git:
 matrix:
   include:
   - os: osx
-    osx_image: xcode9.2
+    osx_image: xcode10.1
     compiler: clang
     env:
     - Q_OR_C_MAKE=qmake
       DEPLOY=deploy
 
   - os: osx
-    osx_image: xcode9.2
+    osx_image: xcode10.1
     compiler: clang
     env:
     - Q_OR_C_MAKE=cmake
