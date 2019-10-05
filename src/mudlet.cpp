@@ -4362,10 +4362,10 @@ QMediaPlayer* mudlet::getMSPSoundMediaPlayer()
     QPointer<Host> pHost = getActiveHost();
 
     if (pHost) {
-        QListIterator<QMediaPlayer*> itMusicBox2(mMusicBoxList);
+        QListIterator<QMediaPlayer*> itMusicBox(mMusicBoxList);
 
-        while (itMusicBox2.hasNext()) { // Find first available inactive QMediaPlayer
-            QMediaPlayer* pTestPlayer = itMusicBox2.next();
+        while (itMusicBox.hasNext()) { // Find first available inactive QMediaPlayer
+            QMediaPlayer* pTestPlayer = itMusicBox.next();
 
             if (pTestPlayer->state() != QMediaPlayer::PlayingState && pTestPlayer->mediaStatus() != QMediaPlayer::LoadingMedia) {
                 pPlayer = pTestPlayer;
