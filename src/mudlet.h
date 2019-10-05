@@ -217,7 +217,7 @@ public:
     void stopSounds();
     void playSound(const QString &s, int);
     QUrl parseMSPUrl(QString& soundFileName, const QString& soundUrl);
-    bool isMSPValidUrl(QUrl& url);
+    bool isMSPValidUrl(const QUrl& url);
     bool isMSPFileRelative(QString& soundFileName);
     QDir getMSPDir(QString& absoluteFolderPath);
     QStringList parseMSPFileNameList(bool isSound, QString& soundFileName, const QString &soundType, QDir &dir);

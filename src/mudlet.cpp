@@ -4148,7 +4148,7 @@ QUrl mudlet::parseMSPUrl(QString& soundFileName, const QString& soundUrl)
     return url;
 }
 
-bool mudlet::isMSPValidUrl(QUrl& url)
+bool mudlet::isMSPValidUrl(const QUrl& url)
 {
     bool isValid = false;
     QPointer<Host> pHost = getActiveHost();
