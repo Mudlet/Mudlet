@@ -4166,7 +4166,7 @@ bool mudlet::isMSPValidUrl(const QUrl& url)
     return isValid;
 }
 
-bool mudlet::isMSPFileRelative(QString& soundFileName)
+bool mudlet::isMSPFileRelative(QString soundFileName)
 {
     bool isFileRelative = false;
 
@@ -4181,7 +4181,7 @@ bool mudlet::isMSPFileRelative(QString& soundFileName)
     return isFileRelative;
 }
 
-QDir mudlet::getMSPDir(QString& absoluteFolderPath)
+QDir mudlet::getMSPDir(QString absoluteFolderPath)
 {
     QDir mspDir(absoluteFolderPath);
 
