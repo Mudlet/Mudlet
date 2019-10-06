@@ -695,6 +695,85 @@ function replaceWildcard(what, replacement)
   replace(replacement)
 end
 
+-- internal sorting function, sorts first by hue, then luminosity, then value
+local sortColorsByHue = function(lhs,rhs)
+  local lh,ll,lv = unpack(lhs.sort)
+  local rh,rl,rv = unpack(rhs.sort)
+  if lh < rh then
+    return true
+  elseif lh > rh then
+    return false
+  elseif ll < rl then
+    return true
+  elseif ll > rl then
+    return false
+  else
+    return lv < rv
+  end
+end
+
+-- internal sorting function, removes _ from snake_case and compares to camelCase
+local sortColorsByName = function(a,b)
+  local aname = string.gsub(string.lower(a.name), "_", "")
+  local bname = string.gsub(string.lower(b.name), "_", "")
+  return aname < bname
+end
+
+-- internal function, converts rgb to hsv
+-- found at https://github.com/EmmanuelOga/columns/blob/master/utils/color.lua#L89
+local rgbToHsv = function(r, g, b)
+  r, g, b = r / 255, g / 255, b / 255
+  local max, min = math.max(r, g, b), math.min(r, g, b)
+  local h, s, v
+  v = max
+  
+  local d = max - min
+  if max == 0 then 
+    s = 0 
+  else 
+    s = d / max 
+  end
+  
+  if max == min then
+    h = 0 -- achromatic
+  else
+    if max == r then
+      h = (g - b) / d
+      if g < b then h = h + 6 end
+    elseif max == g then 
+      h = (b - r) / d + 2
+    elseif max == b then 
+      h = (r - g) / d + 4
+    end
+    h = h / 6
+  end
+  
+  return h, s, v
+end
+
+-- internal stepping function, removes some of the noise for a more pleasing sort
+-- cribbed from the python on https://www.alanzucconi.com/2015/09/30/colour-sorting/
+local step = function(r,g,b)
+  local lum = math.sqrt( .241 * r + .691 * g + .068 * b )
+  local reps = 8
+  
+  local h, s, v = rgbToHsv(r,g,b)
+  
+  local h2 = math.floor(h * reps)
+  local v2 = math.floor(v * reps)
+  if h2 % 2 == 1 then 
+    v2 = reps - v2
+    lum = reps - lum
+  end
+  return h2, lum, v2
+end
+
+local function calc_luminosity(r,g,b)
+  r = r < 11 and r / (255 * 12.92) or ((0.055 + r / 255) / 1.055) ^ 2.4
+  g = g < 11 and g / (255 * 12.92) or ((0.055 + g / 255) / 1.055) ^ 2.4
+  b = b < 11 and b / (255 * 12.92) or ((0.055 + b / 255) / 1.055) ^ 2.4
+  return (0.2126 * r) + (0.7152 * g) + (0.0722 * b)
+end
 
 
 --- Prints out a formatted list of all available named colors (EXCEPT FOR
@@ -714,13 +793,6 @@ end
 ---   </pre>
 ---
 --- @see color_table
-local function calc_luminosity(r,g,b)
-  r = r < 11 and r / (255 * 12.92) or ((0.055 + r / 255) / 1.055) ^ 2.4
-  g = g < 11 and g / (255 * 12.92) or ((0.055 + g / 255) / 1.055) ^ 2.4
-  b = b < 11 and b / (255 * 12.92) or ((0.055 + b / 255) / 1.055) ^ 2.4
-  return (0.2126 * r) + (0.7152 * g) + (0.0722 * b)
-end
-
 function showColors(...)
   local cols, search, sort = 4, "", false
   for _, val in ipairs(arg) do
@@ -732,28 +804,32 @@ function showColors(...)
       sort = val
     end
   end
-
+  
   local colors = {}
   for k, v in pairs(color_table) do
-    -- Ignore the ansi_### 256 colors entries
+    local color = {}
+    color.rgb = v
+    color.name = k
+    color.sort = {step(unpack(v))}
     if not string.find(k, "ansi_%d%d%d") then
-      table.insert(colors,k)
+      table.insert(colors,color)
     end
   end
-
-  if sort then
-    table.sort(colors)
+  
+  if sort then 
+    table.sort(colors, sortColorsByName)
+  else
+    table.sort(colors,sortColorsByHue) 
   end
-
   local i = 1
   for _, k in ipairs(colors) do
-    if k:lower():find(search) then
-      local v = color_table[k]
+    if k.name:lower():find(search) then
+      local v = k.rgb
       local fgc = "white"
       if calc_luminosity(v[1],v[2],v[3]) > 0.5 then
         fgc = "black"
       end
-      cechoLink(string.format('<%s:%s> %-23s<reset> ',fgc,k,k), [[printCmdLine("]] .. k .. [[")]], table.concat(v, ", "), true)
+      cechoLink(string.format('<%s:%s> %-23s<reset> ',fgc,k.name,k.name), [[printCmdLine("]] .. k.name .. [[")]], table.concat(v, ", "), true)
       if i == cols then
         echo("\n")
         i = 1
