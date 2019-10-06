@@ -1709,26 +1709,79 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    std::string text;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L,
                         "feedTriggers: bad argument #1 type (imitation MUD server text as string\n"
                         "expected, got %s!)",
                         luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        text = lua_tostring(L, 1);
     }
 
-    QString previousEncoding = host.mTelnet.getEncoding();
-    if (previousEncoding.isEmpty()) {
-        previousEncoding = QStringLiteral("ASCII");
+    bool dataIsUtf8Encoded = true;
+    if (lua_gettop(L) > 1) {
+        if (!lua_isboolean(L, 2)) {
+            lua_pushfstring(L,
+                            "feedTriggers: bad argument #2 type (Utf8Encoded as boolean is optional, got %s!)",
+                            luaL_typename(L, 2));
+            return lua_error(L);
+        }
+        dataIsUtf8Encoded = lua_toboolean(L, 2);
     }
-    // ensure encoding is utf-8 because that is what the Lua subsystem works with
-    host.mTelnet.setEncoding(QStringLiteral("UTF-8"), false);
-    host.mpConsole->printOnDisplay(text);
-    host.mTelnet.setEncoding(previousEncoding);
-    return 0;
+    QByteArray data{lua_tostring(L, 1)};
+
+    QString currentEncoding = host.mTelnet.getEncoding();
+    if (dataIsUtf8Encoded) {
+        // We can convert the data from a QByteArray to a QString:
+        if (currentEncoding == QStringLiteral("UTF-8")) {
+            // Simple case: the encoding is already what we are using:
+            std::string dataStdString{data.toStdString()};
+            host.mpConsole->printOnDisplay(dataStdString);
+            lua_pushboolean(L, true);
+            return 1;
+        }
+        auto dataQString = QString::fromUtf8(data);
+        // else
+            // We need to transcode it from UTF-8 into the current Game Server
+            // encoding - this can fail if it includes any characters (as UTF-8)
+            // that the game encoding cannot convey:
+        auto* pDataCodec = QTextCodec::codecForName(currentEncoding.toLatin1().constData());
+        auto* pDataEncoder = pDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
+        if (!(currentEncoding.isEmpty() || currentEncoding == QStringLiteral("ASCII"))) {
+            if (! pDataCodec->canEncode(dataQString)) {
+                lua_pushnil(L);
+                lua_pushfstring(L, "cannot send \"%s\" as it contains one or more characters that cannot be conveyed in the current game server encoding of \"%s\"", data.constData(), currentEncoding.toLatin1().constData());
+                return 2;
+            }
+
+            std::string encodedText{pDataEncoder->fromUnicode(dataQString).toStdString()};
+            host.mpConsole->printOnDisplay(encodedText);
+            lua_pushboolean(L, true);
+            return 1;
+        }
+
+        // else plain, raw ASCII, we hope!
+        for (int i = 0, total = dataQString.size(); i < total; ++i) {
+            if (dataQString.at(i).row() || dataQString.at(i).cell() > 127) {
+                lua_pushnil(L);
+                lua_pushfstring(L, "cannot send \"%s\" as it contains one or more characters that cannot be conveyed in the current game server encoding of \"ASCII\"", data.constData());
+                return 2;
+            }
+        }
+
+        // It is safe to use the data directly now as we have already proved it
+        // to be plain ASCII
+        std::string dataStdString{dataQString.toStdString()};
+        host.mpConsole->printOnDisplay(dataStdString);
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    // else the user is assumed to have coded it themselves into the Game
+    // Server's current encoding - the backwards "compatible" form:
+    std::string dataStdString{data.toStdString()};
+    host.mpConsole->printOnDisplay(dataStdString);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isPrompt
