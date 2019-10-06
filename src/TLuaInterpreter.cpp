@@ -1631,7 +1631,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         return lua_error(L);
     }
 
-    bool dataIsUtf8Encoded = false;
+    bool dataIsUtf8Encoded = true;
     if (lua_gettop(L) > 1) {
         if (!lua_isboolean(L, 2)) {
             lua_pushfstring(L,
