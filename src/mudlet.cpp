@@ -5043,12 +5043,13 @@ bool mudlet::scanDictionaryFile(QFile& dict, int& oldWC, QHash<QString, unsigned
     } while (!ds.atEnd() && ds.status() == QTextStream::Ok);
 
     if (ds.status() != QTextStream::Ok) {
-        qWarning().nospace().noquote() << "mudlet::scanDictionaryFile(...) ERROR - failed to completely read dictionary file: \"" << dict.fileName() << "\" status: " << ds.status();
+        qWarning().nospace().noquote() << "mudlet::scanDictionaryFile(\"" << dict.fileName() << "\") ERROR - failed to completely read dictionary file, status: " << ds.status();
         return false;
     }
 
     dict.close();
 
+    qDebug().nospace().noquote() << "mudlet::scanDictionaryFile(\"" << dict.fileName() << "\") - INFO actual(recorded) word counts is(were): " << wl.count() << "(" << oldWC << ").";
     if (wl.count() > 1) {
         // This will use the system default locale - it might be better to use
         // the Mudlet one...
@@ -5076,11 +5077,11 @@ bool mudlet::overwriteDictionaryFile(QFile& dict, const QStringList& wl)
     }
 
     QTextStream ds(&dict);
-    // Ensure the number is at least 1:
-    ds << qMax(1, wl.count());
-    ds << QChar(QChar::LineFeed);
-    ds << wl.join(QChar::LineFeed).toUtf8();
-    ds << QChar(QChar::LineFeed);
+    ds << qMax(0, wl.count());
+    if (!wl.isEmpty()) {
+      ds << QChar(QChar::LineFeed);
+      ds << wl.join(QChar::LineFeed).toUtf8();
+    }
     ds.flush();
     if (dict.error() != QFile::NoError) {
         qWarning().nospace().noquote() << "mudlet::overwriteDictionaryFile(...) ERROR - failed to completely write dictionary file: \"" << dict.fileName() << "\" status: " << dict.errorString();
@@ -5100,6 +5101,7 @@ int mudlet::getDictionaryWordCount(QFile &dict)
 
     QTextStream ds(&dict);
     QString dictionaryLine;
+    // Read the header line containing the word count:
     ds.readLineInto(&dictionaryLine);
     bool isOk = false;
     int oldWordCount = dictionaryLine.toInt(&isOk);
@@ -5203,7 +5205,7 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
     QString affixPathFileName(getMudletPath(mudlet::profileDataItemPath, hostName, QStringLiteral("profile.aff")));
     QFile dictionary(dictionaryPathFileName);
     QFile affix(affixPathFileName);
-    int oldWordCount = 1;
+    int oldWordCount = 0;
     QStringList wordList;
     QHash<QString, unsigned int> graphemeCounts;
 
@@ -5266,7 +5268,7 @@ Hunhandle* mudlet::prepareSharedDictionary()
     QString affixPathFileName(getMudletPath(mudlet::mainDataItemPath, QStringLiteral("mudlet.aff")));
     QFile dictionary(dictionaryPathFileName);
     QFile affix(affixPathFileName);
-    int oldWordCount = 1;
+    int oldWordCount = 0;
     QStringList wordList;
     QHash<QString, unsigned int> graphemeCounts;
 
@@ -5282,7 +5284,6 @@ Hunhandle* mudlet::prepareSharedDictionary()
     int wordCount = wordList.count();
     if (wordCount > oldWordCount) {
         qDebug().nospace().noquote() << "  Considered an extra " << wordCount - oldWordCount << " words.";
-
     } else if (wordCount < oldWordCount) {
         qDebug().nospace().noquote() << "  Considered " << oldWordCount - wordCount << " fewer words.";
     } else {
