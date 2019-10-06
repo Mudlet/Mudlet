@@ -4945,6 +4945,9 @@ int TLuaInterpreter::searchRoom(lua_State* L)
         lua_newtable(L);
         QList<int> roomIdsFound;
         for (auto pR : roomList) {
+            if (!pR) {
+                continue;
+            }
             if (exactMatch) {
                 if (pR->name.compare(room, caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive) == 0) {
                     roomIdsFound.append(pR->getId());
@@ -4958,10 +4961,6 @@ int TLuaInterpreter::searchRoom(lua_State* L)
         if (!roomIdsFound.isEmpty()) {
             for (int i : roomIdsFound) {
                 TRoom* pR = host.mpMap->mpRoomDB->getRoom(i);
-                if (!pR) {
-                    continue;
-                }
-
                 QString name = pR->name;
                 int roomID = pR->getId();
                 lua_pushnumber(L, roomID);
