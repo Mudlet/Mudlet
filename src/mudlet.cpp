@@ -4181,17 +4181,6 @@ bool mudlet::isMSPFileRelative(QString soundFileName)
     return isFileRelative;
 }
 
-QDir mudlet::getMSPDir(QString absoluteFolderPath)
-{
-    QDir mspDir(absoluteFolderPath);
-
-    if (!mspDir.exists()) {
-        mspDir.mkdir(absoluteFolderPath);
-    }
-
-    return mspDir;
-}
-
 QStringList mudlet::parseMSPFileNameList(bool isSound, QString& soundFileName, const QString& soundType, QDir& dir)
 {
     QStringList fileNameList;
@@ -4233,9 +4222,9 @@ QStringList mudlet::getMSPFileNameList(bool isSound, QString& soundFileName, con
 
     if (pHost) {
         QString soundsPath = mudlet::getMudletPath(mudlet::profileSoundsPath, pHost->getName());
-        QDir soundDir = mudlet::self()->getMSPDir(soundsPath);
+        QDir soundDir(soundsPath);
 
-        if (soundDir.isEmpty()) {
+        if (!soundDir.mkpath(soundsPath)) {
             qWarning() << QStringLiteral(
                 "mudlet::getMSPFileNameList() WARNING - Attempt made to create a directory failed: %1")
                     .arg(mudlet::getMudletPath(mudlet::profileSoundsPath, pHost->getName()));
@@ -4244,9 +4233,9 @@ QStringList mudlet::getMSPFileNameList(bool isSound, QString& soundFileName, con
 
         if (!soundType.isEmpty()) {
             QString soundTypePath = QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileSoundsPath, pHost->getName()), soundType);
-            QDir soundTypeDir = mudlet::self()->getMSPDir(soundTypePath);
+            QDir soundTypeDir(soundTypePath);
 
-            if (soundTypeDir.isEmpty()) {
+            if (!soundTypeDir.mkpath(soundTypePath)) {
                 qWarning() << QStringLiteral(
                     "mudlet::getMSPFileNameList() WARNING - Attempt made to create a directory failed: %1")
                         .arg(mudlet::getMudletPath(mudlet::profileSoundsPath, pHost->getName()), soundType);
@@ -4427,14 +4416,14 @@ void mudlet::playMSPSound(QString& soundFileName, int soundVolume, int soundLeng
 
     QUrl url = mudlet::self()->parseMSPUrl(soundFileName, soundUrl);
 
-    if (soundFileName == "Off") { // Must be after parseMSPUrl.
-        return;
-    }
-
     if (!mudlet::self()->isMSPValidUrl(url)) {
         return;
     } else if (pHost->getMSPSoundLocation().isEmpty() || url.toString() != pHost->getMSPSoundLocation()) {
         pHost->setMSPSoundLocation(url.toString());
+    }
+
+    if (soundFileName == "Off") {
+        return;
     }
 
     // File wildcards "*" and "?" could return more than one sound so we process as QStringList.

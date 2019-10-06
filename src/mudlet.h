@@ -219,7 +219,6 @@ public:
     QUrl parseMSPUrl(QString& soundFileName, const QString& soundUrl);
     bool isMSPValidUrl(const QUrl& url);
     bool isMSPFileRelative(QString soundFileName);
-    QDir getMSPDir(QString absoluteFolderPath);
     QStringList parseMSPFileNameList(bool isSound, QString& soundFileName, const QString &soundType, QDir &dir);
     QStringList getMSPFileNameList(bool isSound, QString& soundFileName, const QString& soundType);
     QUrl getMSPFileUrl(QString& soundFileName, const QString& soundType);
