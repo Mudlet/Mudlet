@@ -1908,7 +1908,7 @@ int TLuaInterpreter::createStopWatch(lua_State* L)
     QString name;
     if (lua_gettop(L)) {
         if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "stopStopWatch: bad argument #1 type (name as string is optional, got %s!)", luaL_typename(L, 1));
+            lua_pushfstring(L, "createStopWatch: bad argument #1 type (name as string is optional, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         }
         name = QString::fromUtf8(lua_tostring(L, 1));
@@ -2022,7 +2022,7 @@ int TLuaInterpreter::startStopWatch(lua_State* L)
 int TLuaInterpreter::resetStopWatch(lua_State* L)
 {
     if (!(lua_isnumber(L, 1) || lua_isstring(L, 1))) {
-        lua_pushfstring(L, "startStopWatch: bad argument #1 type (stopwatch id as number or name as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "resetStopWatch: bad argument #1 type (stopwatch id as number or name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
 
