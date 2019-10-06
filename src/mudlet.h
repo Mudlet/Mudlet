@@ -42,6 +42,7 @@
 #include <QFlags>
 #include <QMainWindow>
 #include <QMap>
+#include <QAudio>
 #include <QMediaPlayer>
 #include <QMediaPlaylist>
 #include <QPointer>
@@ -216,7 +217,9 @@ public:
     bool deselect(Host* pHost, const QString& name);
     void stopSounds();
     void playSound(const QString &s, int);
-    QUrl parseMSPUrl(QString& soundFileName, const QString& soundUrl);
+    QString getMSPCustomAudioRole(bool isSound);
+    void stopMSP(const QString& customAudioRole);
+    QUrl parseMSPUrl(bool isSound, QString& soundFileName, const QString& soundUrl);
     bool isMSPValidUrl(const QUrl& url);
     bool isMSPFileRelative(QString soundFileName);
     QStringList parseMSPFileNameList(bool isSound, QString& soundFileName, const QString &soundType, QDir &dir);

@@ -4122,7 +4122,39 @@ void mudlet::playSound(const QString& s, int soundVolume)
     pPlayer->play();
 }
 
-QUrl mudlet::parseMSPUrl(QString& soundFileName, const QString& soundUrl)
+QString mudlet::getMSPCustomAudioRole(bool isSound) {
+    QString customAudioRole;
+    QPointer<Host> pHost = getActiveHost();
+
+    if (pHost) {
+        QString audioRole;
+
+        if (isSound) {
+            audioRole = "QAudio::GameRole";
+        } else {
+            audioRole = "QAudio::MusicRole";
+        }
+
+        customAudioRole = QStringLiteral("%1=%2").arg(audioRole, mudlet::getMudletPath(mudlet::profileSoundsPath, pHost->getName()));
+    }
+
+    return customAudioRole;
+}
+
+void mudlet::stopMSP(const QString& customAudioRole)
+{
+    QListIterator<QMediaPlayer*> itMusicBox(mMusicBoxList);
+
+    while (itMusicBox.hasNext()) {
+        QMediaPlayer* pPlayer = itMusicBox.next();
+
+        if (pPlayer->audioRole() == QAudio::CustomRole && pPlayer->customAudioRole() == customAudioRole) {
+            pPlayer->stop();
+        }
+    }
+}
+
+QUrl mudlet::parseMSPUrl(bool isSound, QString& soundFileName, const QString& soundUrl)
 {
     QUrl url;
     QPointer<Host> pHost = getActiveHost();
@@ -4130,7 +4162,7 @@ QUrl mudlet::parseMSPUrl(QString& soundFileName, const QString& soundUrl)
     if (pHost) {
         if (soundFileName == "Off") {
             if (soundUrl.isEmpty()) { // MSP is !!SOUND(Off) or !!MUSIC(Off)
-                mudlet::self()->stopSounds();
+                mudlet::self()->stopMSP(mudlet::self()->getMSPCustomAudioRole(isSound));
             } else { // MSP is !!SOUND(Off U=https://example.com/sounds) or !!MUSIC(Off U=https://example.com/sounds)
                 url = QUrl::fromUserInput(soundUrl);
             }
@@ -4414,7 +4446,7 @@ void mudlet::playMSPSound(QString& soundFileName, int soundVolume, int soundLeng
         return;
     }
 
-    QUrl url = mudlet::self()->parseMSPUrl(soundFileName, soundUrl);
+    QUrl url = mudlet::self()->parseMSPUrl(true, soundFileName, soundUrl); // true == !!SOUND
 
     if (!mudlet::self()->isMSPValidUrl(url)) {
         return;
@@ -4448,9 +4480,18 @@ void mudlet::playMSPSound(QString& soundFileName, int soundVolume, int soundLeng
     QMediaPlayer* pPlayer = mudlet::self()->getMSPSoundMediaPlayer();
 
     if (!pPlayer) { // It should be impossible to ever reach this.
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("mudlet::playMSPSound() WARNING - Unable to create new QMediaPlayer object\n") >> 0;
+        qWarning() << QStringLiteral("mudlet::playMSPSound() WARNING - Unable to create new QMediaPlayer object.");
         return;
     }
+
+    QString customAudioRole = mudlet::self()->getMSPCustomAudioRole(true); // true == !!SOUND
+
+    if (customAudioRole.isEmpty()) {
+        qWarning() << QStringLiteral("mudlet::playMSPSound() WARNING - Unable to create customAudioRole to apply to QMediaPlayer.");
+        return;
+    }
+
+    pPlayer->setCustomAudioRole(customAudioRole); // This needs set before we add any media.
 
     if (soundLength == 1) { // Play once
         if (fileNameList.size() > 1) {
@@ -4578,16 +4619,16 @@ void mudlet::playMSPMusic(QString& soundFileName, int soundVolume, int soundLeng
         return;
     }
 
-    QUrl url = mudlet::self()->parseMSPUrl(soundFileName, soundUrl);
-
-    if (soundFileName == "Off") { // Must be after parseMSPUrl.
-        return;
-    }
+    QUrl url = mudlet::self()->parseMSPUrl(false, soundFileName, soundUrl); // false == !!MUSIC
 
     if (!mudlet::self()->isMSPValidUrl(url)) {
         return;
     } else if (pHost->getMSPSoundLocation().isEmpty() || url.toString() != pHost->getMSPSoundLocation()) {
         pHost->setMSPSoundLocation(url.toString());
+    }
+
+    if (soundFileName == "Off") {
+        return;
     }
 
     // File wildcards "*" and "?" could return more than one sound so we process as QStringList.
@@ -4612,9 +4653,18 @@ void mudlet::playMSPMusic(QString& soundFileName, int soundVolume, int soundLeng
     QMediaPlayer* pPlayer = mudlet::self()->getMSPMusicMediaPlayer(soundLength, musicContinue, fileNameList.at(0));
 
     if (!pPlayer) { // It should be impossible to ever reach this.
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("mudlet::playMSPMusic() WARNING - Unable to create new QMediaPlayer object\n") >> 0;
+        qWarning() << QStringLiteral("mudlet::playMSPMusic() WARNING - Unable to create new QMediaPlayer object.");
         return;
     }
+
+    QString customAudioRole = mudlet::self()->getMSPCustomAudioRole(false); // false == !!MUSIC
+
+    if (customAudioRole.isEmpty()) {
+        qWarning() << QStringLiteral("mudlet::playMSPMusic() WARNING - Unable to create customAudioRole to apply to QMediaPlayer.");
+        return;
+    }
+
+    pPlayer->setCustomAudioRole(customAudioRole); // This needs set before we add any media.
 
     if (soundLength == 1) { // Play once
         if (fileNameList.size() > 1) {
