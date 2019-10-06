@@ -4199,7 +4199,7 @@ QStringList mudlet::parseMSPFileNameList(bool isSound, QString& soundFileName, c
 
     if (pHost) {
         // No more than one wildcard of each individual type
-        if ((soundFileName.contains('*') || soundFileName.contains('?')) && (soundFileName.count('*') < 2 && soundFileName.count('?') < 2)) {
+        if ((soundFileName.contains('*') || soundFileName.contains('?')) && soundFileName.count('*')) {
             dir.setNameFilters(QStringList() << soundFileName);
             QStringList fileNames(dir.entryList(QDir::Files | QDir::Readable, QDir::Name));
 
@@ -4240,26 +4240,26 @@ QStringList mudlet::getMSPFileNameList(bool isSound, QString& soundFileName, con
                 "mudlet::getMSPFileNameList() WARNING - Attempt made to create a directory failed: %1")
                     .arg(mudlet::getMudletPath(mudlet::profileSoundsPath, pHost->getName()));
             return fileNameList;
-        } else {
-            if (!soundType.isEmpty()) {
-                QString soundTypePath = QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileSoundsPath, pHost->getName()), soundType);
-                QDir soundTypeDir = mudlet::self()->getMSPDir(soundTypePath);
+        }
 
-                if (soundTypeDir.isEmpty()) {
-                    qWarning() << QStringLiteral(
-                        "mudlet::getMSPFileNameList() WARNING - Attempt made to create a directory failed: %1")
-                            .arg(mudlet::getMudletPath(mudlet::profileSoundsPath, pHost->getName()), soundType);
-                    return fileNameList;
-                }
+        if (!soundType.isEmpty()) {
+            QString soundTypePath = QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileSoundsPath, pHost->getName()), soundType);
+            QDir soundTypeDir = mudlet::self()->getMSPDir(soundTypePath);
 
-                fileNameList = mudlet::self()->parseMSPFileNameList(true, soundFileName, soundType, soundTypeDir);
+            if (soundTypeDir.isEmpty()) {
+                qWarning() << QStringLiteral(
+                    "mudlet::getMSPFileNameList() WARNING - Attempt made to create a directory failed: %1")
+                        .arg(mudlet::getMudletPath(mudlet::profileSoundsPath, pHost->getName()), soundType);
+                return fileNameList;
             }
 
-            // Enter this block if no soundType was specified.  Also, per the specification, if soundType was specified above, but we did not
-            // find anything in a soundType directory, fall back and search for the soundFileName in the root "sound" directory.
-            if (fileNameList.isEmpty()) {
-                fileNameList = mudlet::self()->parseMSPFileNameList(true, soundFileName, nullptr, soundDir);
-            }
+            fileNameList = mudlet::self()->parseMSPFileNameList(true, soundFileName, soundType, soundTypeDir);
+        }
+
+        // Enter this block if no soundType was specified.  Also, per the specification, if soundType was specified above, but we did not
+        // find anything in a soundType directory, fall back and search for the soundFileName in the root "sound" directory.
+        if (fileNameList.isEmpty()) {
+            fileNameList = mudlet::self()->parseMSPFileNameList(true, soundFileName, nullptr, soundDir);
         }
     }
 
@@ -4419,7 +4419,7 @@ void mudlet::playMSPSound(QString& soundFileName, int soundVolume, int soundLeng
         return;
     }
 
-    soundFileName.replace('\\', "/");
+    soundFileName.replace(QLatin1Char('\\'), QLatin1Char('/'));
 
     if (!mudlet::self()->isMSPFileRelative(soundFileName)) {
         return;
@@ -4517,13 +4517,14 @@ QMediaPlayer* mudlet::getMSPMusicMediaPlayer(int soundLength, int musicContinue,
                             return pPlayer;
                         } else { // Continue playing the music, but add more instances below
                             pPlayer = pTestPlayer;
+                            break;
                         }
                     }
                 }
             }
         }
 
-        if (pPlayer == nullptr) {
+        if (!pPlayer) {
             QListIterator<QMediaPlayer*> itMusicBox2(mMusicBoxList);
 
             while (itMusicBox2.hasNext()) { // Find first available inactive QMediaPlayer
@@ -4582,7 +4583,7 @@ void mudlet::playMSPMusic(QString& soundFileName, int soundVolume, int soundLeng
         return;
     }
 
-    soundFileName.replace('\\', "/");
+    soundFileName.replace(QLatin1Char('\\'), QLatin1Char('/')); // soundFileName.replace('\\', "/");
 
     if (!mudlet::self()->isMSPFileRelative(soundFileName)) {
         return;
@@ -4954,10 +4955,10 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         return QStringLiteral("%1/.config/mudlet/profiles/%2").arg(QDir::homePath(), extra1);
     case profileSoundsPath:
         // Takes one extra argument (profile name) that returns the directory
-        // for the profile game save sounds files - does NOT end in a '/'
+        // for the profile's cached sounds files - does NOT end in a '/'
         return QStringLiteral("%1/.config/mudlet/profiles/%2/sound").arg(QDir::homePath(), extra1);
     case profileSoundPathFileName:
-        // Takes two extra arguments (profile name, mapFileName) that returns
+        // Takes two extra arguments (profile name, soundFileName) that returns
         // the pathFile name for any sound file:
         return QStringLiteral("%1/.config/mudlet/profiles/%2/sound/%3").arg(QDir::homePath(), extra1, extra2);
     case profileXmlFilesPath:
