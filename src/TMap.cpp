@@ -515,11 +515,6 @@ void TMap::audit()
     }
 }
 
-
-void TMap::setView(float x, float y, float z, float zoom)
-{
-}
-
 void TMap::tidyMap(int areaID)
 {
 }
