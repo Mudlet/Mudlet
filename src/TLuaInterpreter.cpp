@@ -4964,12 +4964,6 @@ int TLuaInterpreter::getRoomHashByID(lua_State* L)
     return 2;
 }
 
-// Documentation: ? - public function missing documentation in wiki
-int TLuaInterpreter::solveRoomCollisions(lua_State* L)
-{
-    return 0;
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#roomLocked
 int TLuaInterpreter::roomLocked(lua_State* L)
 {
@@ -15733,7 +15727,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getRoomName", TLuaInterpreter::getRoomName);
     lua_register(pGlobalLua, "setGridMode", TLuaInterpreter::setGridMode);
     lua_register(pGlobalLua, "getGridMode", TLuaInterpreter::getGridMode);
-    lua_register(pGlobalLua, "solveRoomCollisions", TLuaInterpreter::solveRoomCollisions);
     lua_register(pGlobalLua, "addSpecialExit", TLuaInterpreter::addSpecialExit);
     lua_register(pGlobalLua, "removeSpecialExit", TLuaInterpreter::removeSpecialExit);
     lua_register(pGlobalLua, "getSpecialExits", TLuaInterpreter::getSpecialExits);
