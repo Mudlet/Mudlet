@@ -204,7 +204,6 @@ public:
     static int appendCmdLine(lua_State*);
     static int getCmdLine(lua_State* L);
     static int clearSpecialExits(lua_State*);
-    static int solveRoomCollisions(lua_State*);
     static int setGridMode(lua_State* L);
     static int getGridMode(lua_State* L);
     static int getCustomEnvColorTable(lua_State* L);
