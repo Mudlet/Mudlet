@@ -4708,47 +4708,6 @@ int TLuaInterpreter::showUserWindow(lua_State* L)
     return 1;
 }
 
-// xRot, yRot, zRot, zoom
-// Documentation: ? - public function missing documentation in wiki
-int TLuaInterpreter::setMapperView(lua_State* L)
-{
-    float x, y, z, zoom;
-
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "setMapperView: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        x = lua_tonumber(L, 1);
-    }
-
-    if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "setMapperView: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        y = lua_tonumber(L, 2);
-    }
-    if (!lua_isnumber(L, 3)) {
-        lua_pushstring(L, "setMapperView: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        z = lua_tonumber(L, 3);
-    }
-    if (!lua_isnumber(L, 4)) {
-        lua_pushstring(L, "setMapperView: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        zoom = lua_tonumber(L, 4);
-    }
-    Host& host = getHostFromLua(L);
-
-    host.mpMap->setView(x, y, z, zoom);
-    return 0;
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomEnv
 int TLuaInterpreter::setRoomEnv(lua_State* L)
 {
@@ -15739,7 +15698,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setRoomWeight", TLuaInterpreter::setRoomWeight);
     lua_register(pGlobalLua, "getRoomWeight", TLuaInterpreter::getRoomWeight);
     lua_register(pGlobalLua, "gotoRoom", TLuaInterpreter::gotoRoom);
-    lua_register(pGlobalLua, "setMapperView", TLuaInterpreter::setMapperView);
     lua_register(pGlobalLua, "getRoomExits", TLuaInterpreter::getRoomExits);
     lua_register(pGlobalLua, "lockRoom", TLuaInterpreter::lockRoom);
     lua_register(pGlobalLua, "createMapper", TLuaInterpreter::createMapper);
