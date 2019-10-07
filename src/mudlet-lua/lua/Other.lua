@@ -146,7 +146,7 @@ local group_creation_functions = {
     return not (permAlias(name, parent, "", "") == -1)
   end,
   key = function(name, parent)
-    return not (permKey(name, parent, 0, "") == -1)
+    return not (permKey(name, parent, -1, "") == -1)
   end
 }
 
