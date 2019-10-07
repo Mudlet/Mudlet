@@ -297,7 +297,6 @@ public:
     static int setRoomWeight(lua_State* L);
     static int getRoomWeight(lua_State* L);
     static int gotoRoom(lua_State* L);
-    static int setMapperView(lua_State* L);
     static int permKey(lua_State* L);
     static int tempKey(lua_State* L);
     static int enableKey(lua_State* L);
