@@ -144,6 +144,9 @@ local group_creation_functions = {
   end,
   alias = function(name, parent)
     return not (permAlias(name, parent, "", "") == -1)
+  end,
+  key = function(name, parent)
+    return not (permKey(name, parent, 0, "") == -1)
   end
 }
 
