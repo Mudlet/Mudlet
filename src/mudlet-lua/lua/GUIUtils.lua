@@ -595,10 +595,11 @@ end
 --- Replace the whole with a string you'd like.
 ---
 --- @see deleteLine
-function replaceLine(what)
+function replaceLine(text)
+  assert(type(text) == 'string', 'replaceLine: bad argument #1 type (expected string, got '..type(text)..'!)')
   selectString(line, 1)
   replace("")
-  insertText(what)
+  insertText(text)
 end
 
 
