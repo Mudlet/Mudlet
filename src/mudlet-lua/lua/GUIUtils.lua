@@ -639,7 +639,13 @@ end
 --- @see fg
 --- @see showColors
 function bg(console, colorName)
-  local colorName = colorName or console
+  assert(type(console) == 'string', 'bg: bad argument #1 type (expected string, got '..type(console)..'!)')
+  if type(colorName) == "nil" then
+    local colorName = console
+  else
+    assert(type(colorName) == 'string', 'bg: bad argument #2 type (expected string, got '..type(colorName)..'!)')
+  end 
+	
   if not color_table[colorName] then
     error(string.format("bg: '%s' color doesn't exist - see showColors()", colorName))
   end
@@ -663,7 +669,13 @@ end
 --- @see bg
 --- @see showColors
 function fg(console, colorName)
-  local colorName = colorName or console
+  assert(type(console) == 'string', 'fg: bad argument #1 type (expected string, got '..type(console)..'!)')
+  if type(colorName) == "nil" then
+    local colorName = console
+  else
+    assert(type(colorName) == 'string', 'fg: bad argument #2 type (expected string, got '..type(colorName)..'!)')
+  end 
+	
   if not color_table[colorName] then
     error(string.format("fg: '%s' color doesn't exist - see showColors()", colorName))
   end
