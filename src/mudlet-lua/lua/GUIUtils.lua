@@ -435,6 +435,9 @@ end
 ---   echo(red .. "." .. green .. "." .. blue )
 ---   </pre>
 function getRGB(colorName)
+  if not color_table[colorName] then
+    error(string.format("getRGB: '%s' color doesn't exist - see showColors()", colorName))
+  end
   local red = color_table[colorName][1]
   local green = color_table[colorName][2]
   local blue = color_table[colorName][3]
