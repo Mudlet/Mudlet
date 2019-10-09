@@ -9,7 +9,7 @@ fi
 
 # we deploy only certain builds
 if [ "${DEPLOY}" = "deploy" ]; then
-  git clone https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
+  git clone --branch DontSignSparkle https://github.com/Mudlet/installers.git "${TRAVIS_BUILD_DIR}/../installers"
 
   cd "${TRAVIS_BUILD_DIR}/../installers/osx"
 
