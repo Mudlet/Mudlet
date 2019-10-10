@@ -276,7 +276,6 @@ else()
 endif()
 
 find_package(ZIP REQUIRED)
-find_package(OpenGL REQUIRED)
 find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(PCRE REQUIRED)
@@ -284,6 +283,13 @@ find_package(YAJL REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44 COMPONENTS graph)
+
+if(USE_3DMAPPER)
+  if(POLICY CMP0072)
+    cmake_policy(SET CMP0072 NEW)
+  endif()
+  find_package(OpenGL REQUIRED)
+endif()
 
 # Enable leak detection for MSVC debug builds.
 if(MSVC)
@@ -345,7 +351,6 @@ target_compile_definitions(mudlet
 )
 
 target_link_libraries(mudlet
-    ${OPENGL_LIBRARIES}
     communi
     edbee-lib
     qt5keychain
@@ -379,6 +384,10 @@ endif(Qt5Gamepad_FOUND)
 if(USE_UPDATER)
   target_link_libraries(mudlet dblsqd)
 endif(USE_UPDATER)
+
+if(USE_3DMAPPER)
+  target_link_libraries(mudlet OpenGL::GLU)
+endif()
 
 if(WIN32)
     target_link_libraries(mudlet ws2_32
