@@ -216,17 +216,6 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_HDRS glwidget.h)
 endif(USE_3DMAPPER)
 
-if(MSVC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -MP") # parallel builds
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Zc:inline") # improve link times
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Zc:rvalueCast") # improve conformance
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4305") # '=' : truncation from 'double' to 'float'
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4309") # 'initializing' : truncation of constant value
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4996") # deprecation
-else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated")
-endif()
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -400,6 +389,23 @@ if(APPLE)
       "-framework AppKit"
       "-F${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
   endif(USE_UPDATER)
+endif()
+
+if(MSVC)
+  target_compile_options(mudlet
+    PRIVATE
+      -MP                 # parallel builds
+      -Zc:inline          # improve link times
+      -Zc:rvalueCast      # improve conformance
+      -wd4305             # '=' : truncation from 'double' to 'float'
+      -wd4309             # 'initializing' : truncation of constant value
+      -wd4996             # deprecation
+  )
+else()
+  target_compile_options(mudlet
+    PRIVATE
+      -Wno-deprecated
+    )
 endif()
 
 # *nix "make install" provision:
