@@ -1059,6 +1059,8 @@ void XMLimport::readHostPackage(Host* pHost)
                 // QDebug() error reporting associated with the following
                 // readUnknownHostElement() for "anything not otherwise parsed"
                 Q_UNUSED(readElementText());
+            } else if (name() == "stopwatches") {
+                readStopWatchMap();
             } else {
                 readUnknownHostElement();
             }
@@ -1755,6 +1757,40 @@ void XMLimport::remapColorsToAnsiNumber(QStringList & patternList, const QList<i
         } else {
             // Must advance the pattern interator if it isn't a colour pattern
             itPattern.next();
+        }
+    }
+}
+
+void XMLimport::readStopWatchMap()
+{
+    while (!atEnd()) {
+        readNext();
+
+        if (isEndElement()) {
+            break;
+        } else if (isStartElement()) {
+            if (name() == "stopwatch") {
+                int watchId = attributes().value("id").toInt();
+                auto pStopWatch = new stopWatch();
+                pStopWatch->setName(attributes().value("name").toString());
+                pStopWatch->mIsPersistent = true;
+                pStopWatch->mIsInitialised = true;
+                if (attributes().value("running") == "yes") {
+                    pStopWatch->mIsRunning = true;
+                    // The stored value is the point in epoch time that the
+                    // stopwatch appears to have been started so we need to
+                    // make that into a QDateTime that is the equivalent:
+                    pStopWatch->mEffectiveStartDateTime.setMSecsSinceEpoch(attributes().value("effectiveStartDateTimeEpochMSecs").toLongLong());
+                } else {
+                    pStopWatch->mIsRunning = false;
+                    pStopWatch->mElapsedTime = attributes().value("elapsedDateTimeMSecs").toLongLong();
+                }
+                mpHost->mStopWatchMap.insert(watchId, pStopWatch);
+                // A dummy read as there should not be any text for this element:
+                readElementText();
+            } else {
+                readUnknownHostElement();
+            }
         }
     }
 }
