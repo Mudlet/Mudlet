@@ -401,7 +401,6 @@ include_directories(
     ${Qt5UiTools_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIRS}
     ${LUA_INCLUDE_DIR}
-    ${YAJL_INCLUDE_DIR}
 )
 
 if(Qt5TextToSpeech_FOUND)
@@ -464,7 +463,6 @@ target_link_libraries(mudlet
     ${Boost_LIBRARIES}
     ${LUA_LIBRARIES}
     ${OPENGL_LIBRARIES}
-    ${YAJL_LIBRARIES}
     ${ZLIB_LIBRARIES}
     communi
     edbee-lib
@@ -472,6 +470,7 @@ target_link_libraries(mudlet
     HUNSPELL::HUNSPELL
     PCRE::PCRE
     PUGIXML::PUGIXML
+    YAJL::YAJL
 )
 
 if(Qt5TextToSpeech_FOUND)
