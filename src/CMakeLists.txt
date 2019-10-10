@@ -292,7 +292,6 @@ endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include_directories(
-    ${Boost_INCLUDE_DIRS}
     ${LUA_INCLUDE_DIR}
 )
 
@@ -349,12 +348,12 @@ target_compile_definitions(mudlet
 )
 
 target_link_libraries(mudlet
-    ${Boost_LIBRARIES}
     ${LUA_LIBRARIES}
     ${OPENGL_LIBRARIES}
     communi
     edbee-lib
     qt5keychain
+    Boost::graph
     HUNSPELL::HUNSPELL
     PCRE::PCRE
     PUGIXML::PUGIXML
