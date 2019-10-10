@@ -469,8 +469,8 @@ target_link_libraries(mudlet
     communi
     edbee-lib
     qt5keychain
-    HUNSPELL::SHARED
-    PCRE::SHARED
+    HUNSPELL::HUNSPELL
+    PCRE::PCRE
     PUGIXML::PUGIXML
 )
 
