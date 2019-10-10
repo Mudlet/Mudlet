@@ -233,28 +233,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(ZIP_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "ZIP install directory.")
 
-if(WIN32)
-  if(EXISTS "${PROJECT_SOURCE_DIR}/../include/zlib.h")
-    set(ZLIB_INCLUDE_DIR_TEMP "${PROJECT_SOURCE_DIR}/../include")
-    get_filename_component(ZLIB_INCLUDE_DIR ${ZLIB_INCLUDE_DIR_TEMP} ABSOLUTE CACHE)
-    set(ZLIB_ROOT "${PROJECT_SOURCE_DIR}/..")
-    if(EXISTS "${PROJECT_SOURCE_DIR}/../lib/zlibstat.lib")
-      set(ZLIB_LIBRARY_RELEASE_TEMP "${PROJECT_SOURCE_DIR}/../lib/zlibstat.lib")
-      get_filename_component(ZLIB_LIBRARY_RELEASE ${ZLIB_LIBRARY_RELEASE_TEMP} ABSOLUTE CACHE)
-    endif()
-    if(EXISTS "${PROJECT_SOURCE_DIR}/../lib/zlibstatd.lib")
-      set(ZLIB_LIBRARY_DEBUG_TEMP "${PROJECT_SOURCE_DIR}/../lib/zlibstatd.lib")
-      get_filename_component(ZLIB_LIBRARY_DEBUG ${ZLIB_LIBRARY_DEBUG_TEMP} ABSOLUTE CACHE)
-    endif()
-    if(ZLIB_LIBRARY_DEBUG AND ZLIB_LIBRARY_RELEASE)
-      set(ZLIB_LIBRARY optimized ${ZLIB_LIBRARY_RELEASE} debug ${ZLIB_LIBRARY_DEBUG} )
-    elseif(ZLIB_LIBRARY_RELEASE)
-      set(ZLIB_LIBRARY ${ZLIB_LIBRARY_RELEASE} )
-    elseif(ZLIB_LIBRARY_DEBUG)
-      set(ZLIB_LIBRARY ${ZLIB_LIBRARY_DEBUG} )
-    endif()
-  endif()
-endif()
 
 # Break each step into a separate command so any status message is output straight away
 if(APPLE)
@@ -413,7 +391,6 @@ target_link_libraries(mudlet
     ${Boost_LIBRARIES}
     ${LUA_LIBRARIES}
     ${OPENGL_LIBRARIES}
-    ${ZLIB_LIBRARIES}
     communi
     edbee-lib
     qt5keychain
@@ -428,6 +405,7 @@ target_link_libraries(mudlet
     Qt5::UiTools
     Qt5::Widgets
     YAJL::YAJL
+    ZLIB::ZLIB
 )
 
 if(Qt5TextToSpeech_FOUND)
