@@ -19,7 +19,8 @@ FIND_PATH(PCRE_INCLUDE_DIR pcre.h
     $ENV{PCRE_DIR}
     ${PC_PCRE_INCLUDE_DIRS}
   PATH_SUFFIXES
-    include/pcre include
+    include/pcre
+    include
   PATHS
     ~/Library/Frameworks
     /Library/Frameworks
@@ -92,7 +93,7 @@ ELSE()
 ENDIF()
 
 INCLUDE(FindPackageHandleStandardArgs)
-# handle the QUIETLY and REQUIRED arguments and set HUNSPELL_FOUND to TRUE if
+# handle the QUIETLY and REQUIRED arguments and set PCRE_FOUND to TRUE if
 # all listed variables are TRUE
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(PCRE
   REQUIRED_VARS

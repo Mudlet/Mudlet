@@ -402,7 +402,6 @@ include_directories(
     ${Boost_INCLUDE_DIRS}
     ${LUA_INCLUDE_DIR}
     ${YAJL_INCLUDE_DIR}
-    ${PUGIXML_INCLUDE_DIR}
 )
 
 if(Qt5TextToSpeech_FOUND)
@@ -467,12 +466,12 @@ target_link_libraries(mudlet
     ${OPENGL_LIBRARIES}
     ${YAJL_LIBRARIES}
     ${ZLIB_LIBRARIES}
-    ${PUGIXML_LIBRARIES}
     communi
     edbee-lib
+    qt5keychain
     HUNSPELL::SHARED
     PCRE::SHARED
-    qt5keychain
+    PUGIXML::PUGIXML
 )
 
 if(Qt5TextToSpeech_FOUND)
