@@ -236,41 +236,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(ZIP_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "ZIP install directory.")
-
-
-# Break each step into a separate command so any status message is output straight away
-if(APPLE)
-  # The include directory setup for Zip is unusual in that as well as e.g. /usr/include/zip.h
-  # we need the path to an interal header zipconf.h that it calls for using '<''>'s
-  # i.e. SYSTEM #include delimiters which are typically located at e.g. /usr/lib/libzip/include/zipconf.h
-  # and using pkg-config is the recommended way to get the details.
-  # Spotted recommendation to use pkg-config here https://github.com/Homebrew/homebrew/issues/13390
-  find_package(PkgConfig)
-  if(NOT(PKG_CONFIG_FOUND))
-    message(WARNING "Unable to use pkg_config - will possibly fail to find/use Zip library...")
-  endif()
-endif()
-
-if((APPLE) AND (PKG_CONFIG_FOUND))
-  PKG_SEARCH_MODULE(PC_ZIP zip libzip)
-  # Use a PC_ prefix to distinguish between what pkg-config finds and a direct use of find_package(ZIP)
-  # Package "zip" is called "libzip" at least on MY Linux box so look for BOTH
-  if(PC_ZIP_FOUND)
-    if(PC_ZIP_zip_FOUND)
-      message(STATUS "Using pkg_config, found \"zip\" version: ${PC_ZIP_zip_VERSION} with:")
-    elseif(PC_ZIP_libzip_FOUND)
-      message(STATUS "Using pkg_config, found \"libzip\" version: ${PC_ZIP_libzip_VERSION} with:")
-    else()
-      message(STATUS "Using pkg_config, found Zip version: ${PC_ZIP_VERSION} with:")
-    endif()
-    message(STATUS "  include directory(ies), ZIP_INCLUDE_DIRS: ${PC_ZIP_INCLUDE_DIRS} .")
-    message(STATUS "  library(ies): ZIP_LIBRARY_DIRS: ${PC_ZIP_LIBRARY_DIRS}; ZIP_LIBDIR: ${PC_ZIP_LIBDIR}. ")
-  else()
-    message(WARNING "Using pkg_config, failed to find any version of Zip library!")
-  endif()
-endif()
-
 find_package(Qt5 5.11 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools Widgets Concurrent)
 find_package(Qt5 COMPONENTS Gamepad QUIET)
 find_package(Qt5 COMPONENTS TextToSpeech QUIET)
@@ -310,9 +275,7 @@ else()
   message(STATUS "The 3D mapper code is excluded as it might not be supported on this platform")
 endif()
 
-if(NOT(PC_ZIP_FOUND))
-  find_package(ZIP REQUIRED)
-endif()
+find_package(ZIP REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
@@ -332,13 +295,6 @@ include_directories(
     ${Boost_INCLUDE_DIRS}
     ${LUA_INCLUDE_DIR}
 )
-
-# Need to use the plural variables as there can be more than ONE directory to specify:
-if(PC_ZIP_FOUND)
-  include_directories( ${PC_ZIP_INCLUDE_DIRS} )
-else()
-  include_directories( ${ZIP_INCLUDE_DIRS} )
-endif()
 
 if(WIN32)
   add_executable(mudlet WIN32
@@ -410,6 +366,7 @@ target_link_libraries(mudlet
     Qt5::UiTools
     Qt5::Widgets
     YAJL::YAJL
+    ZIP::ZIP
     ZLIB::ZLIB
 )
 
@@ -426,12 +383,6 @@ endif(Qt5Gamepad_FOUND)
 if(USE_UPDATER)
   target_link_libraries(mudlet dblsqd)
 endif(USE_UPDATER)
-
-if(PC_ZIP_FOUND)
-  target_link_libraries(mudlet ${PC_ZIP_LIBRARIES})
-else()
-  target_link_libraries(mudlet ${ZIP_LIBRARIES})
-endif()
 
 if(WIN32)
     target_link_libraries(mudlet ws2_32
