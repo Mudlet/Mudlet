@@ -26,6 +26,7 @@
 #include "ui_connection_profiles.h"
 #include "QDir"
 #include <pugixml.hpp>
+#include <../3rdparty/qtkeychain/keychain.h>
 #include "post_guard.h"
 
 class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
@@ -85,6 +86,11 @@ private:
     void loadCustomProfile(const QFont& font, const QString& profileName) const;
     void generateCustomProfile(const QFont& font, int i, const QString& profileName) const;
     void setCustomIcon(const QString& profileName, QListWidgetItem* profile) const;
+    template <typename L>
+    void loadSecuredPassword(const QString& profile, L callback);
+    void migrateSecuredPassword(const QString& oldProfile, const QString& newProfile);
+    void writeSecurePassword(const QString& profile, const QString& pass) const;
+    void deleteSecurePassword(const QString& profile) const;
 
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
@@ -104,11 +110,18 @@ private:
     QPushButton* delete_button;
     QString mDiscordApplicationId;
     const QStringList mDefaultGames;
+    QAction* mpAction_revealPassword;
+    // true for the duration of the 'Copy profile' action
+    bool mCopyingProfile {};
+
 
 private slots:
     void slot_profile_menu(QPoint pos);
     void slot_set_custom_icon();
     void slot_reset_custom_icon();
+    void slot_togglePasswordVisibility(const bool);
+    void slot_password_saved(QKeychain::Job* job);
+    void slot_password_deleted(QKeychain::Job* job);
 };
 
 

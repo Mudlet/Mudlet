@@ -31,6 +31,8 @@ Geyser.Gauge = Geyser.Container:new({
 -- @param maxValue Maximum numeric value.  Optionally nil, see above.
 -- @param text The text to display on the gauge, it is optional.
 function Geyser.Gauge:setValue (currentValue, maxValue, text)
+  assert(type(currentValue) == "number", string.format("bad argument #1 type (currentValue as number expected, got %s!)", type(currentValue)))
+  assert(maxValue == nil or type(maxValue) == "number", string.format("bad argument #2 type (optional maxValue as number expected, got %s!)", type(maxValue)))
   -- Use sensible defaults for missing parameters.
   if currentValue < 0 then
     currentValue = 0
@@ -85,10 +87,8 @@ end
 
 --- Sets the text on the gauge, overwrites inherited echo function.
 -- @param text The text to set.
-function Geyser.Gauge:echo (text)
-  if text then
-    self.text:echo(text)
-  end
+function Geyser.Gauge:echo(message, color, format)
+  self.text:echo(message, color, format)
 end
 
 -- Sets the style sheet for the gauge
@@ -137,17 +137,20 @@ function Geyser.Gauge:new (cons, container)
   -- Now create the Gauge using primitives and tastey classes
 
   -- Set up the constraints for the front label, the label that changes size to
-  -- indicated levels in the gauges.
+  -- indicated levels in the gauges. Message set to nil to avoid unwanted text
   local front = Geyser.copyTable(cons)
   front.name = me.name .. "_front"
   front.color = me.color
+  front.message = nil
   front.x, front.y, front.width, front.height = 0, 0, "100%", "100%"
 
   -- Set up the constraints for the back label, which is always the size of the gauge.
+  -- Message set to nil to avoid unwanted text
   local back = Geyser.copyTable(front)
   back.name = me.name .. "_back"
   local br, bg, bb = Geyser.Color.parse(me.color)
   back.color = Geyser.Color.hexa(br, bg, bb, 100)
+  back.message = nil
 
   -- Set up the constraints for the text label, which is also always the size of the gauge.
   -- We also set this label's color to 0,0,0,0 so it's black and full transparent.
@@ -168,6 +171,9 @@ function Geyser.Gauge:new (cons, container)
 
   -- Set clickthrough if included in constructor
   if cons.clickthrough then me:enableClickthrough() end
+
+  -- Echo text to the text label if 'message' constraint is set
+  if cons.message then me:echo(me.message) end
   
   --print("  New in " .. self.name .. " : " .. me.name)
   return me

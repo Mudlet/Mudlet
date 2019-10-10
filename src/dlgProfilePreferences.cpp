@@ -36,6 +36,7 @@
 #include "edbee/views/texteditorscrollarea.h"
 
 #include "pre_guard.h"
+#include <chrono>
 #include <QtConcurrent>
 #include <QColorDialog>
 #include <QFileDialog>
@@ -47,6 +48,7 @@
 #include <QUiLoader>
 #include "post_guard.h"
 
+using namespace std::chrono_literals;
 
 dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 : QDialog(pF)
@@ -315,6 +317,41 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
             comboBox_guiLanguage->addItem(QStringLiteral("No translations available!"));
         }
     }
+
+    setupPasswordsMigration();
+}
+
+void dlgProfilePreferences::setupPasswordsMigration()
+{
+    hidePasswordMigrationLabelTimer = std::make_unique<QTimer>(this);
+    hidePasswordMigrationLabelTimer->setSingleShot(true);
+
+    connect(hidePasswordMigrationLabelTimer.get(), &QTimer::timeout, this, &dlgProfilePreferences::hidePasswordMigrationLabel);
+
+    connect(mudlet::self(), &mudlet::signal_passwordsMigratedToSecure, [=]() {
+        label_password_migration_notification->setText(tr("Migrated all passwords to secure storage."));
+        comboBox_store_passwords_in->setEnabled(true);
+        hidePasswordMigrationLabelTimer->start(10s);
+    });
+
+    connect(mudlet::self(), &mudlet::signal_passwordMigratedToSecure, [=](const QString& profile) {
+        label_password_migration_notification->setText(
+                tr("Migrated %1...", "This notifies the user that progress is being made on profile migration by saying what profile was just migrated to store passwords securely").arg(profile));
+    });
+
+    connect(mudlet::self(), &mudlet::signal_passwordsMigratedToProfiles, [=]() {
+        label_password_migration_notification->setText(tr("Migrated all passwords to profile storage."));
+        comboBox_store_passwords_in->setEnabled(true);
+        hidePasswordMigrationLabelTimer->start(10s);
+    });
+
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        comboBox_store_passwords_in->setCurrentIndex(0);
+    } else {
+        comboBox_store_passwords_in->setCurrentIndex(1);
+    }
+
+    connect(comboBox_store_passwords_in, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_passwords_location_changed);
 }
 
 void dlgProfilePreferences::disableHostDetails()
@@ -366,6 +403,7 @@ void dlgProfilePreferences::disableHostDetails()
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
     comboBox_mapFileSaveFormatVersion->clear();
     label_mapFileActionResult->hide();
+    hidePasswordMigrationLabel();
     label_mapSymbolsFont->setEnabled(false);
     fontComboBox_mapSymbols->setEnabled(false);
     checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(false);
@@ -746,6 +784,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     // label to show on successful map file action
     label_mapFileActionResult->hide();
+
+    hidePasswordMigrationLabel();
 
     //doubleclick ignore
     QString ignore;
@@ -1151,6 +1191,8 @@ void dlgProfilePreferences::clearHostDetails()
 
     label_mapFileActionResult->hide();
 
+    hidePasswordMigrationLabel();
+
     doubleclick_ignore_lineedit->clear();
 
     comboBox_mapFileSaveFormatVersion->clear();
@@ -1194,6 +1236,7 @@ void dlgProfilePreferences::loadEditorTab()
     auto config = edbeePreviewWidget->config();
     config->beginChanges();
     config->setSmartTab(true);
+    config->setUseTabChar(false); // when you press Enter for a newline, pad with spaces and not tabs
     config->setCaretBlinkRate(200);
     config->setIndentSize(2);
     config->setThemeName(pHost->mEditorTheme);
@@ -1394,6 +1437,9 @@ void dlgProfilePreferences::resetColors()
     if (mudlet::self()->mConsoleMap.contains(pHost)) {
         mudlet::self()->mConsoleMap[pHost]->changeColors();
     }
+
+    // Copy across the colors to the Lua "color_table"
+    pHost->updateAnsi16ColorsInTable();
 }
 
 void dlgProfilePreferences::resetColors2()
@@ -1446,6 +1492,18 @@ void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
                 mudlet::self()->mConsoleMap[pHost]->mLowerPane->updateScreenView();
                 mudlet::self()->mConsoleMap[pHost]->mLowerPane->forceUpdate();
             }
+        }
+
+        if (b == pushButton_black || b == pushButton_lBlack
+                || b == pushButton_red || b == pushButton_lRed
+                || b == pushButton_green || b == pushButton_lGreen
+                || b == pushButton_yellow || b == pushButton_lYellow
+                || b == pushButton_blue || b == pushButton_lBlue
+                || b == pushButton_magenta || b == pushButton_lMagenta
+                || b == pushButton_cyan || b == pushButton_lCyan
+                || b == pushButton_white || b == pushButton_lWhite) {
+
+            pHost->updateAnsi16ColorsInTable();
         }
 
         // Also set a contrasting foreground color so text will always be visible
@@ -1940,6 +1998,31 @@ void dlgProfilePreferences::saveMap()
 void dlgProfilePreferences::hideActionLabel()
 {
     label_mapFileActionResult->hide();
+}
+
+void dlgProfilePreferences::hidePasswordMigrationLabel()
+{
+    label_password_migration_notification->hide();
+}
+
+void dlgProfilePreferences::slot_passwords_location_changed(int index)
+{
+    // index 0 = use secure storage, index 1 = use profile storage
+    if (index == 0) {
+        if (mudlet::self()->migratePasswordsToSecureStorage()) {
+            label_password_migration_notification->setText(tr("Migrating passwords to secure storage..."));
+            label_password_migration_notification->show();
+            comboBox_store_passwords_in->setDisabled(true);
+            hidePasswordMigrationLabelTimer->stop();
+        }
+    } else {
+        if (mudlet::self()->migratePasswordsToProfileStorage()) {
+            label_password_migration_notification->setText(tr("Migrating passwords to profiles..."));
+            label_password_migration_notification->show();
+            comboBox_store_passwords_in->setDisabled(true);
+            hidePasswordMigrationLabelTimer->stop();
+        }
+    }
 }
 
 void dlgProfilePreferences::copyMap()

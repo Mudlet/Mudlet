@@ -64,7 +64,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mCommandFgColor(QColor(213, 195, 0))
 , mConsoleName("main")
 , mDisplayFontName("Bitstream Vera Sans Mono")
-, mDisplayFontSize(10)
+, mDisplayFontSize(14)
 , mDisplayFont(QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal))
 , mFgColor(Qt::black)
 , mIndentCount(0)
@@ -410,7 +410,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     networkLatency->setPalette(basePalette);
     networkLatency->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
-
     QFont latencyFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
     int width;
     int maxWidth = 120;
@@ -570,6 +569,14 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         // absence of files for the first run in a new profile or from an older
         // Mudlet version:
         setProfileSpellDictionary();
+    }
+
+    // error and debug consoles inherit font of the main console
+    if (mType & (ErrorConsole | CentralDebugConsole)) {
+        mDisplayFont = mpHost->getDisplayFont();
+        mDisplayFontName = mDisplayFont.family();
+        mDisplayFontSize = mDisplayFont.pointSize();
+        refreshMiniConsole();
     }
 }
 
@@ -780,6 +787,9 @@ void TConsole::closeEvent(QCloseEvent* event)
             QFile file_map(filename_map);
             if (file_map.open(QIODevice::WriteOnly)) {
                 QDataStream out(&file_map);
+                if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+                    out.setVersion(mudlet::scmQDataStreamFormat_5_12);
+                }
                 mpHost->mpMap->serialize(out);
                 file_map.close();
             }
@@ -816,6 +826,9 @@ void TConsole::closeEvent(QCloseEvent* event)
                 QFile file_map(filename_map);
                 if (file_map.open(QIODevice::WriteOnly)) {
                     QDataStream out(&file_map);
+                    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+                        out.setVersion(mudlet::scmQDataStreamFormat_5_12);
+                    }
                     mpHost->mpMap->serialize(out);
                     file_map.close();
                 }
@@ -1083,6 +1096,9 @@ void TConsole::slot_toggleReplayRecording()
         }
         mReplayFile.setFileName(mLogFileName);
         mReplayFile.open(QIODevice::WriteOnly);
+        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+            mReplayStream.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        }
         mReplayStream.setDevice(&mReplayFile);
         mpHost->mTelnet.recordReplay();
         QString message = QString("Replay recording has started. File: ") + mReplayFile.fileName() + "\n";
@@ -1536,6 +1552,9 @@ bool TConsole::saveMap(const QString& location, int saveVersion)
     QFile file_map(filename_map);
     if (file_map.open(QIODevice::WriteOnly)) {
         QDataStream out(&file_map);
+        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+            out.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        }
         mpHost->mpMap->serialize(out, saveVersion);
         file_map.close();
     } else {
@@ -2056,6 +2075,8 @@ std::tuple<bool, QString, int, int> TConsole::getSelection()
 void TConsole::setLink(const QStringList& linkFunction, const QStringList& linkHint)
 {
     buffer.applyLink(P_begin, P_end, linkFunction, linkHint);
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 // Set or Reset ALL the specified (but not others)
@@ -2063,28 +2084,38 @@ void TConsole::setDisplayAttributes(const TChar::AttributeFlags attributes, cons
 {
     mFormatCurrent.setAllDisplayAttributes((mFormatCurrent.allDisplayAttributes() & ~(attributes)) | (b ? attributes : TChar::None));
     buffer.applyAttribute(P_begin, P_end, attributes, b);
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 void TConsole::setFgColor(int r, int g, int b)
 {
     setFgColor(QColor(r, g, b));
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 void TConsole::setBgColor(int r, int g, int b)
 {
     setBgColor(QColor(r, g, b));
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 void TConsole::setBgColor(const QColor& newColor)
 {
     mFormatCurrent.setBackground(newColor);
     buffer.applyBgColor(P_begin, P_end, newColor);
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 void TConsole::setFgColor(const QColor& newColor)
 {
     mFormatCurrent.setForeground(newColor);
     buffer.applyFgColor(P_begin, P_end, newColor);
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
 
 void TConsole::setScrollBarVisible(bool isVisible)

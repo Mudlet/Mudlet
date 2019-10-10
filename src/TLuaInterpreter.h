@@ -109,6 +109,8 @@ public:
     bool callEventHandler(const QString& function, const TEvent& pE, const QEvent* qE = nullptr);
     static QString dirToString(lua_State*, int);
     static int dirToNumber(lua_State*, int);
+    void updateAnsi16ColorsInTable();
+    void updateExtendedAnsiColorsInTable();
 
 
     QPair<int, QString> startTempTimer(double timeout, const QString& function, const bool repeating = false);
@@ -202,7 +204,6 @@ public:
     static int appendCmdLine(lua_State*);
     static int getCmdLine(lua_State* L);
     static int clearSpecialExits(lua_State*);
-    static int solveRoomCollisions(lua_State*);
     static int setGridMode(lua_State* L);
     static int getGridMode(lua_State* L);
     static int getCustomEnvColorTable(lua_State* L);
@@ -295,7 +296,6 @@ public:
     static int setRoomWeight(lua_State* L);
     static int getRoomWeight(lua_State* L);
     static int gotoRoom(lua_State* L);
-    static int setMapperView(lua_State* L);
     static int permKey(lua_State* L);
     static int tempKey(lua_State* L);
     static int enableKey(lua_State* L);
@@ -321,6 +321,12 @@ public:
     static int getStopWatchTime(lua_State*);
     static int startStopWatch(lua_State*);
     static int resetStopWatch(lua_State*);
+    static int adjustStopWatch(lua_State*);
+    static int deleteStopWatch(lua_State*);
+    static int setStopWatchPersistence(lua_State*);
+    static int getStopWatches(lua_State*);
+    static int setStopWatchName(lua_State*);
+    static int getStopWatchBrokenDownTime(lua_State*);
     static int createMiniConsole(lua_State*);
     static int createLabel(lua_State*);
     static int moveWindow(lua_State*);
@@ -509,6 +515,10 @@ public:
     static int getDictionaryWordList(lua_State*);
     static int getTextFormat(lua_State*);
     static int getWindowsCodepage(lua_State*);
+    static int putHTTP(lua_State* L);
+    static int postHTTP(lua_State* L);
+    static int deleteHTTP(lua_State* L);
+    static int getConnectionInfo(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
 
 
@@ -517,7 +527,7 @@ public:
     void encodingChanged(const QString&);
 
 public slots:
-    void slot_replyFinished(QNetworkReply*);
+    void slot_httpRequestFinished(QNetworkReply*);
     void slotPurge();
     void slotDeleteSender(int, QProcess::ExitStatus);
 
@@ -530,15 +540,21 @@ private:
     static std::pair<bool, QString> discordApiEnabled(lua_State* L, bool writeAccess = false);
     void setupLanguageData();
     QString readScriptFile(const QString& path) const;
+    static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
+    void handleHttpOK(QNetworkReply*);
 #if defined(Q_OS_WIN32)
     void loadUtf8Filenames();
 #endif
+    void insertColorTableEntry(lua_State*, const QColor&, const QString&);
+    // The last argument is only needed if the third one is true:
+    static void generateElapsedTimeTable(lua_State*, const QStringList&, const bool, const qint64 elapsedTimeMilliSeconds = 0);
+
 
     QNetworkAccessManager* mpFileDownloader;
-
     std::list<std::string> mCaptureGroupList;
     std::list<int> mCaptureGroupPosList;
     std::list<std::list<std::string>> mMultiCaptureGroupList;
+
     std::list<std::list<int>> mMultiCaptureGroupPosList;
 
     QMap<QNetworkReply*, QString> downloadMap;
@@ -552,7 +568,6 @@ private:
     };
 
     std::unique_ptr<lua_State, lua_state_deleter> pIndenterState;
-
     QPointer<Host> mpHost;
     int mHostID;
     QList<QObject*> objectsToDelete;
