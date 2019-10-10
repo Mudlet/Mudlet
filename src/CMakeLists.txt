@@ -372,12 +372,12 @@ target_link_libraries(mudlet
 )
 
 if(Qt5TextToSpeech_FOUND)
-  target_link_libraries(Qt5::TextToSpeech)
+  target_link_libraries(mudlet Qt5::TextToSpeech)
   message(STATUS "Using TextToSpeech module")
 endif(Qt5TextToSpeech_FOUND)
 
 if(Qt5Gamepad_FOUND)
-target_link_libraries(Qt5::Gamepad)
+target_link_libraries(mudlet Qt5::Gamepad)
   message(STATUS "Using Gamepad module")
 endif(Qt5Gamepad_FOUND)
 
