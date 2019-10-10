@@ -22,8 +22,7 @@
 set(mudlet_RCCS mudlet.qrc)
 
 if(USE_FONTS)
-  set(mudlet_fonts_RCCS mudlet_fonts.qrc)
-  add_definitions(-DINCLUDE_FONTS)
+  list(APPEND mudlet_RCCS mudlet_fonts.qrc)
 endif()
 
 set(mudlet_SRCS
@@ -123,7 +122,9 @@ set(mudlet_UIS
   ui/trigger_pattern_edit.ui
   ui/vars_main_area.ui)
 
-set(mudlet_MOC_HDRS
+set(mudlet_HDRS
+    ActionUnit.h
+    AliasUnit.h
     ctelnet.h
     discord.h
     dlgAboutDialog.h
@@ -149,72 +150,65 @@ set(mudlet_MOC_HDRS
     dlgVarsMainArea.h
     EAction.h
     exitstreewidget.h
-    Host.h
-    mudlet.h
-    T2DMap.h
-    TCommandLine.h
-    TConsole.h
-    TEasyButtonBar.h
-    TForkedProcess.h
-    TLabel.h
-    TLuaInterpreter.h
-    TMap.h
-    TSplitter.h
-    TSplitterHandle.h
-    TTextEdit.h
-    TToolBar.h
-    TTreeWidget.h
-    XMLexport.h
-)
-
-set(mudlet_HDRS
-    ActionUnit.h
-    AliasUnit.h
-    discord.h
     FontManager.h
+    Host.h
     HostManager.h
     ircmessageformatter.h
     KeyUnit.h
     LuaInterface.h
+    mudlet.h
     post_guard.h
     pre_guard.h
     ScriptUnit.h
+    T2DMap.h
     TAction.h
     TAlias.h
     TArea.h
     TAstar.h
     TBuffer.h
+    TCommandLine.h
+    TConsole.h
     TDebug.h
     TDockWidget.h
+    TEasyButtonBar.h
     testdbg.h
     TEvent.h
+    TForkedProcess.h
     TFlipButton.h
     TimerUnit.h
     TKey.h
+    TLabel.h
+    TLuaInterpreter.h
+    TMap.h
     TMatchState.h
     Tree.h
     TriggerUnit.h
     TRoom.h
     TRoomDB.h
     TScript.h
+    TSplitter.h
     TSplitterHandle.h
     TTabBar.h
+    TTextEdit.h
     TTimer.h
+    TToolBar.h
+    TTreeWidget.h
     TTrigger.h
     TVar.h
     VarUnit.h
     widechar_width.h
+    XMLexport.h
     XMLimport.h
 )
 
 if(USE_UPDATER)
   list(APPEND mudlet_SRCS updater.cpp)
-  list(APPEND mudlet_MOC_HDRS updater.h)
+  list(APPEND mudlet_HDRS updater.h)
 endif(USE_UPDATER)
 
 if(USE_3DMAPPER)
   list(APPEND mudlet_SRCS glwidget.cpp)
-  list(APPEND mudlet_MOC_HDRS glwidget.h)
+  list(APPEND mudlet_HDRS glwidget.h)
 endif(USE_3DMAPPER)
 
 if(MSVC)
@@ -404,32 +398,35 @@ endif()
 
 include_directories( ${ZLIB_INCLUDE_DIR} )
 
-QT5_WRAP_UI(mudlet_UIS_H ${mudlet_UIS})
-QT5_WRAP_CPP(mudlet_MOC_SRCS ${mudlet_MOC_HDRS})
-if(USE_FONTS)
-  QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS} ${mudlet_fonts_RCCS})
-else()
-  QT5_ADD_RESOURCES(mudlet_RCC_SRCS ${mudlet_RCCS})
-endif()
-
 if(WIN32)
   add_executable(mudlet WIN32
     ${mudlet_SRCS}
-    ${mudlet_MOC_SRCS}
-    ${mudlet_RCC_SRCS}
+    ${mudlet_RCCS}
     ${mudlet_HDRS}
-    ${mudlet_UIS_H}
-    ${mudlet_MOC_HDRS}
-    ${mudlet_LUA_FILES})
+    ${mudlet_LUA_FILES}
+    ${mudlet_UIS})
 else()
   add_executable(mudlet
     ${mudlet_SRCS}
-    ${mudlet_MOC_SRCS}
-    ${mudlet_RCC_SRCS}
+    ${mudlet_RCCS}
     ${mudlet_HDRS}
-    ${mudlet_UIS_H}
-    ${mudlet_MOC_HDRS}
-    ${mudlet_LUA_FILES})
+    ${mudlet_LUA_FILES}
+    ${mudlet_UIS})
+endif()
+
+set_target_properties(mudlet
+  PROPERTIES
+    AUTOMOC ON
+    AUTOUIC ON
+    AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"
+    AUTORCC ON
+)
+
+if(USE_FONTS)
+  target_compile_definitions(mudlet
+    PRIVATE
+      INCLUDE_FONTS
+  )
 endif()
 
 target_link_libraries(mudlet
