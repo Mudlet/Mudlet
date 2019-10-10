@@ -25,6 +25,11 @@ if(USE_FONTS)
   list(APPEND mudlet_RCCS mudlet_fonts.qrc)
 endif()
 
+if(WIN32)
+  list(APPEND mudlet_RCCS icons/mudlet_main_512x512_6XS_icon.ico)
+endif()
+
+
 set(mudlet_SRCS
     ActionUnit.cpp
     AliasUnit.cpp
@@ -305,11 +310,6 @@ else()
   message(STATUS "The 3D mapper code is excluded as it might not be supported on this platform")
 endif()
 
-if(WIN32)
-  set(mudlet_RC_ICONS = icons/mudlet_main_512x512_6XS_icon.ico)
-  QT5_ADD_RESOURCES(RC_ICONS ${mudlet_RC_ICONS})
-endif()
-
 if(NOT(PC_ZIP_FOUND))
   find_package(ZIP REQUIRED)
 endif()
@@ -320,21 +320,7 @@ find_package(PCRE REQUIRED)
 find_package(YAJL REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
-
 find_package(Boost 1.44 COMPONENTS graph)
-
-add_definitions(-DAPP_VERSION="${APP_VERSION}" -DAPP_BUILD="${APP_BUILD}" -DAPP_TARGET="${APP_TARGET}")
-
-if(UNIX)
-  set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
-  set(LCF_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua/lcf")
-endif(UNIX)
-
-# Define a preprocessor symbol with the default fallback location from which
-# to load installed mudlet lua files. Set LUA_DEFAULT_DIR to a
-# platform-specific value. If LUA_DEFAULT_DIR is unset, the root directory
-# will be used.
-add_definitions(-DLUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
 
 # Enable leak detection for MSVC debug builds.
 if(MSVC)
@@ -353,8 +339,6 @@ if(PC_ZIP_FOUND)
 else()
   include_directories( ${ZIP_INCLUDE_DIRS} )
 endif()
-
-include_directories( ${ZLIB_INCLUDE_DIR} )
 
 if(WIN32)
   add_executable(mudlet WIN32
@@ -386,6 +370,27 @@ if(USE_FONTS)
       INCLUDE_FONTS
   )
 endif()
+
+target_compile_definitions(mudlet
+  PRIVATE
+    APP_VERSION="${APP_VERSION}"
+    APP_BUILD="${APP_BUILD}"
+    APP_TARGET="${APP_TARGET}"
+)
+
+if(UNIX)
+  set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
+  set(LCF_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua/lcf")
+endif(UNIX)
+
+# Define a preprocessor symbol with the default fallback location from which
+# to load installed mudlet lua files. Set LUA_DEFAULT_DIR to a
+# platform-specific value. If LUA_DEFAULT_DIR is unset, the root directory
+# will be used.
+target_compile_definitions(mudlet
+  PRIVATE
+    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}"
+)
 
 target_link_libraries(mudlet
     ${Boost_LIBRARIES}
