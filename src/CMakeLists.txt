@@ -291,9 +291,6 @@ if(MSVC)
 endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-include_directories(
-    ${LUA_INCLUDE_DIR}
-)
 
 if(WIN32)
   add_executable(mudlet WIN32
@@ -348,13 +345,13 @@ target_compile_definitions(mudlet
 )
 
 target_link_libraries(mudlet
-    ${LUA_LIBRARIES}
     ${OPENGL_LIBRARIES}
     communi
     edbee-lib
     qt5keychain
     Boost::graph
     HUNSPELL::HUNSPELL
+    LUA51::LUA51
     PCRE::PCRE
     PUGIXML::PUGIXML
     Qt5::Concurrent
