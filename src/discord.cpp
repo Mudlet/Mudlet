@@ -23,9 +23,7 @@
 
 #include "pre_guard.h"
 #include <QtDebug>
-#include <QSet>
 #include <QHash>
-#include <ctime>
 #include <string.h>
 #include "post_guard.h"
 
@@ -465,8 +463,6 @@ QString Discord::deduceGameName(const QString& address)
             break;
         }
     }
-        qDebug().noquote().noquote() << "Discord::deduceGameName(\"" << address << "\") WARN - Unable to deduce MUD name from given address - even after discarding last element to consider just: \""
-                                     << otherName << "\".";
         otherName.clear();
         break;
     case 1:

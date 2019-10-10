@@ -46,12 +46,9 @@
 #include "pre_guard.h"
 #include <QDialog>
 #include <QFlag>
-#include <QFile>
-#include <QListWidget>
 #include <QListWidgetItem>
 #include <QScrollArea>
 #include <QTreeWidget>
-#include <QTreeWidgetItem>
 #include "post_guard.h"
 
 // Edbee editor includes
@@ -229,12 +226,16 @@ public slots:
     void slot_import();
     void slot_viewStatsAction();
     void slot_debug_mode();
+    void slot_next_section();
+    void slot_previous_section();
+    void slot_show_current();
     void slot_show_timers();
     void slot_show_triggers();
     void slot_show_scripts();
     void slot_show_aliases();
     void slot_show_actions();
     void slot_show_keys();
+    void slot_activateMainWindow();
     void slot_tree_selection_changed();
     void slot_trigger_selected(QTreeWidgetItem* pItem);
     void slot_timer_selected(QTreeWidgetItem* pItem);
@@ -283,6 +284,12 @@ public:
     bool mNeedUpdateData;
 
 private:
+    void populateTriggers();
+    void populateTimers();
+    void populateScripts();
+    void populateAliases();
+    void populateActions();
+    void populateKeys();
     void saveOpenChanges();
     void saveTrigger();
     void saveAlias();
@@ -373,7 +380,13 @@ private:
         pItem->setData(0, IndexRole, subInstance);
     }
 
-    // These were declared as "public slots" but they are not used as SLOTs...
+    void searchTriggers(const QString& s);
+    void searchAliases(const QString& s);
+    void searchScripts(const QString& s);
+    void searchActions(const QString& s);
+    void searchTimers(const QString& s);
+    void searchKeys(const QString& s);
+    void searchVariables(const QString& s);
     void recursiveSearchTriggers(TTrigger*, const QString&);
     void recursiveSearchAlias(TAlias*, const QString& s);
     void recursiveSearchScripts(TScript*, const QString& s);
@@ -414,6 +427,9 @@ private:
 
     QScrollArea* mpScrollArea;
     QWidget* HpatternList;
+    // this widget holds the errors, trigger patterns, and all other widgets that aren't edbee
+    // in it, as a workaround for an extra splitter getting created by Qt below the error msg otherwise
+    QWidget *mpNonCodeWidgets;
     dlgTriggersMainArea* mpTriggersMainArea;
     dlgTimersMainArea* mpTimersMainArea;
     dlgSystemMessageArea* mpSystemMessageArea;

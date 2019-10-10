@@ -24,13 +24,9 @@
 #include "Host.h"
 #include "TAlias.h"
 
-
-using namespace std;
-
-
 void AliasUnit::_uninstall(TAlias* pChild, const QString& packageName)
 {
-    list<TAlias*>* childrenList = pChild->mpMyChildrenList;
+    std::list<TAlias*>* childrenList = pChild->mpMyChildrenList;
     for (auto alias : *childrenList) {
         _uninstall(alias, packageName);
         uninstallList.append(alias);
@@ -258,13 +254,11 @@ void AliasUnit::reenableAllTriggers()
     }
 }
 
-TAlias* AliasUnit::findAlias(const QString& name)
+TAlias* AliasUnit::findFirstAlias(const QString& name)
 {
-    //TAlias * pT = 0;
     QMap<QString, TAlias*>::const_iterator it = mLookupTable.constFind(name);
-    while (it != mLookupTable.cend() && it.key() == name) {
-        TAlias* pT = it.value();
-        return pT;
+    if (it != mLookupTable.cend() && it.key() == name) {
+        return it.value();
     }
     return nullptr;
 }
@@ -315,7 +309,7 @@ bool AliasUnit::killAlias(const QString& name)
 
 void AliasUnit::_assembleReport(TAlias* pChild)
 {
-    list<TAlias*>* childrenList = pChild->mpMyChildrenList;
+    std::list<TAlias*>* childrenList = pChild->mpMyChildrenList;
     for (auto alias : *childrenList) {
         _assembleReport(alias);
         if (alias->isActive()) {
@@ -341,7 +335,7 @@ QString AliasUnit::assembleReport()
             statsTempAliases++;
         }
         statsAliasTotal++;
-        list<TAlias*>* childrenList = alias->mpMyChildrenList;
+        std::list<TAlias*>* childrenList = alias->mpMyChildrenList;
         for (auto childAlias : *childrenList) {
             _assembleReport(childAlias);
             if (childAlias->isActive()) {

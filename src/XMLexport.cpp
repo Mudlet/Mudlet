@@ -39,11 +39,8 @@
 #include "pre_guard.h"
 #include <QtConcurrent>
 #include <QFile>
-#include <fstream>
 #include <sstream>
 #include "post_guard.h"
-
-using namespace std;
 
 XMLexport::XMLexport( Host * pH )
 : mpHost( pH )
@@ -313,8 +310,8 @@ bool XMLexport::saveXml(const QString& fileName)
         return false;
     }
 
-    bool result = false;
-    if (!saveXmlFile(file)) {
+    bool result = saveXmlFile(file);
+    if (!result) {
         if (file.error() != QFile::NoError) {
             // Error reason was related to QFile:
             qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to save package, reason: " << file.errorString() << ".";
@@ -323,6 +320,7 @@ bool XMLexport::saveXml(const QString& fileName)
             qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to save package, reason: XML document preparation failure.";
         }
     }
+
     file.close();
     return result;
 }
@@ -334,7 +332,7 @@ bool XMLexport::saveXml(const QString& fileName)
 // TODO: Refactor dlgTriggerEditor::slot_export() {at least} to call this method instead of saveXml(const QString&)
 bool XMLexport::saveXmlFile(QFile& file)
 {
-    std::stringstream saveStringStream(ios::out);
+    std::stringstream saveStringStream(std::ios::out);
     // Remember, the mExportDoc is the data in the form of a pugi::xml_document
     // instance - the save method needs a stream that impliments the
     // std::ostream interface into which it can push the data:
@@ -355,7 +353,7 @@ bool XMLexport::saveXmlFile(QFile& file)
 
 QString XMLexport::saveXml()
 {
-    std::stringstream saveStringStream(ios::out);
+    std::stringstream saveStringStream(std::ios::out);
     std::string output;
 
     mExportDoc.save(saveStringStream);
@@ -393,6 +391,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mFORCE_GA_OFF") = pHost->mFORCE_GA_OFF ? "yes" : "no";
     host.append_attribute("mFORCE_SAVE_ON_EXIT") = pHost->mFORCE_SAVE_ON_EXIT ? "yes" : "no";
     host.append_attribute("mEnableGMCP") = pHost->mEnableGMCP ? "yes" : "no";
+    host.append_attribute("mEnableMSSP") = pHost->mEnableMSSP ? "yes" : "no";
     host.append_attribute("mEnableMSDP") = pHost->mEnableMSDP ? "yes" : "no";
     host.append_attribute("mMapStrongHighlight") = pHost->mMapStrongHighlight ? "yes" : "no";
     host.append_attribute("mLogStatus") = pHost->mLogStatus ? "yes" : "no";
@@ -413,14 +412,20 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mShowRoomIDs") = pHost->mShowRoomID ? "yes" : "no";
     host.append_attribute("mShowPanel") = pHost->mShowPanel ? "yes" : "no";
     host.append_attribute("mHaveMapperScript") = pHost->mHaveMapperScript ? "yes" : "no";
+    host.append_attribute("mEditorAutoComplete") = pHost->mEditorAutoComplete ? "yes" : "no";
     host.append_attribute("mEditorTheme") = pHost->mEditorTheme.toUtf8().constData();
     host.append_attribute("mEditorThemeFile") = pHost->mEditorThemeFile.toUtf8().constData();
     host.append_attribute("mThemePreviewItemID") = QString::number(pHost->mThemePreviewItemID).toUtf8().constData();
     host.append_attribute("mThemePreviewType") = pHost->mThemePreviewType.toUtf8().constData();
     host.append_attribute("mSearchEngineName") = pHost->mSearchEngineName.toUtf8().constData();
     host.append_attribute("mTimerSupressionInterval") = pHost->mTimerDebugOutputSuppressionInterval.toString(QLatin1String("HH:mm:ss.zzz")).toUtf8().constData();
-    host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";
+    host.append_attribute("mUseProxy") = pHost->mUseProxy ? "yes" : "no";
+    host.append_attribute("mProxyAddress") = pHost->mProxyAddress.toUtf8().constData();
+    host.append_attribute("mProxyPort") = QString::number(pHost->mProxyPort).toUtf8().constData();
+    host.append_attribute("mProxyUsername") = pHost->mProxyUsername.toUtf8().constData();
+    host.append_attribute("mProxyPassword") = pHost->mProxyPassword.toUtf8().constData();
     host.append_attribute("mAutoReconnect") = pHost->mAutoReconnect ? "yes" : "no";
+    host.append_attribute("mSslTsl") = pHost->mSslTsl ? "yes" : "no";
     host.append_attribute("mSslIgnoreExpired") = pHost->mSslIgnoreExpired ? "yes" : "no";
     host.append_attribute("mSslIgnoreSelfSigned") = pHost->mSslIgnoreSelfSigned ? "yes" : "no";
     host.append_attribute("mSslIgnoreAll") = pHost->mSslIgnoreAll ? "yes" : "no";
@@ -495,7 +500,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mLightMagenta").text().set(pHost->mLightMagenta.name().toUtf8().constData());
         host.append_child("mWhite").text().set(pHost->mWhite.name().toUtf8().constData());
         host.append_child("mLightWhite").text().set(pHost->mLightWhite.name().toUtf8().constData());
-        host.append_child("mDisplayFont").text().set(pHost->mDisplayFont.toString().toUtf8().constData());
+        host.append_child("mDisplayFont").text().set(pHost->getDisplayFont().toString().toUtf8().constData());
         host.append_child("mCommandLineFont").text().set(pHost->mCommandLineFont.toString().toUtf8().constData());
         // There was a mis-spelt duplicate commandSeperator above but it is now gone
         host.append_child("mCommandSeparator").text().set(pHost->mCommandSeparator.toUtf8().constData());
@@ -528,6 +533,27 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mRoomSize").text().set(QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData());
     }
 
+    {
+        auto stopwatches = host.append_child("stopwatches");
+        QListIterator<int> itStopWatchId(pHost->getStopWatchIds());
+        while (itStopWatchId.hasNext()) {
+            auto stopWatchId = itStopWatchId.next();
+            auto pStopWatch = pHost->getStopWatch(stopWatchId);
+            if (pStopWatch->persistent()) {
+                auto stopwatch = stopwatches.append_child("stopwatch");
+                // Three QStrings used here are purely numeric so can be expressed in Latin1 encoding:
+                stopwatch.append_attribute("id") = QString::number(stopWatchId).toLatin1().constData();
+                if (pStopWatch->running()) {
+                    stopwatch.append_attribute("running") = "yes";
+                    stopwatch.append_attribute("effectiveStartDateTimeEpochMSecs") = QString::number(QDateTime::currentMSecsSinceEpoch() - pStopWatch->getElapsedMilliSeconds()).toLatin1().constData();
+                } else {
+                    stopwatch.append_attribute("running") = "no";
+                    stopwatch.append_attribute("elapsedDateTimeMSecs") = QString::number(pStopWatch->getElapsedMilliSeconds()).toLatin1().constData();
+                }
+                stopwatch.append_attribute("name") = pStopWatch->name().toUtf8().constData();
+            }
+        }
+    }
     writeTriggerPackage(pHost, mudletPackage, true);
     writeTimerPackage(pHost, mudletPackage, true);
     writeAliasPackage(pHost, mudletPackage, true);

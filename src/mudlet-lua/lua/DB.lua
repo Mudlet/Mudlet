@@ -21,13 +21,7 @@ if not string.trim then
   require "StringUtils"
 end
 
--- TODO those funciton are already definde elsewhere
--- Tests if a table is empty: this is useful in situations where you find
--- yourself wanting to do 'if my_table == {}' and such.
-function table.is_empty(tbl)
-  return next(tbl) == nil
-end
-
+-- TODO those functions are already definde elsewhere
 function string.starts(String, Start)
   return string.sub(String, 1, string.len(Start)) == Start
 end

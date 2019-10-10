@@ -24,6 +24,9 @@
 
 #include "pre_guard.h"
 #include "ui_connection_profiles.h"
+#include "QDir"
+#include <pugixml.hpp>
+#include <../3rdparty/qtkeychain/keychain.h>
 #include "post_guard.h"
 
 class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
@@ -35,11 +38,11 @@ public:
     dlgConnectionProfiles(QWidget* parent = nullptr);
     void fillout_form();
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
-    QString readProfileData(const QString& profile, const QString& item);
+    QString readProfileData(const QString& profile, const QString& item) const;
     void accept() override;
 
 signals:
-    void signal_establish_connection(QString profile_name, int historyVersion);
+    void signal_load_profile(QString profile_name, bool alsoConnect);
 
 public slots:
     void slot_update_name(const QString&);
@@ -62,16 +65,36 @@ public slots:
     void slot_update_autoreconnect(int state);
     void slot_update_discord_optin(int state);
     void slot_connectToServer();
+    void slot_load();
     void slot_cancel();
     void slot_copy_profile();
+    void slot_copy_profilesettings_only();
 
 private:
     void copyFolder(const QString& sourceFolder, const QString& destFolder);
-    QString getDescription(const QString& hostUrl, quint16 port, const QString& profile_name);
+    QString getDescription(const QString& hostUrl, quint16 port, const QString& profile_name) const;
     bool validateConnect();
     void updateDiscordStatus();
     bool validateProfile();
+    void loadProfile(bool alsoConnect);
+    void copyProfileSettingsOnly(const QString& oldname, const QString& newname);
+    bool extractSettingsFromProfile(pugi::xml_document& newProfile, const QString& copySettingsFrom);
+    void saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const;
+    bool copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const;
+    bool hasCustomIcon(const QString& profileName) const;
+    void setProfileIcon(const QFont& font) const;
+    void loadCustomProfile(const QFont& font, const QString& profileName) const;
+    void generateCustomProfile(const QFont& font, int i, const QString& profileName) const;
+    void setCustomIcon(const QString& profileName, QListWidgetItem* profile) const;
+    template <typename L>
+    void loadSecuredPassword(const QString& profile, L callback);
+    void migrateSecuredPassword(const QString& oldProfile, const QString& newProfile);
+    void writeSecurePassword(const QString& profile, const QString& pass) const;
+    void deleteSecurePassword(const QString& profile) const;
 
+    // split into 3 properties so each one can be checked individually
+    // important for creation of a folder on disk, for example: name has
+    // to be valid, but other properties don't have to be
     bool validName;
     bool validUrl;
     bool validPort;
@@ -81,10 +104,25 @@ private:
     QPalette mOKPalette;
     QPalette mErrorPalette;
     QPalette mReadOnlyPalette;
+    QPushButton* offline_button;
     QPushButton* connect_button;
     QLineEdit* delete_profile_lineedit;
     QPushButton* delete_button;
     QString mDiscordApplicationId;
+    const QStringList mDefaultGames;
+    QAction* mpAction_revealPassword;
+    // true for the duration of the 'Copy profile' action
+    bool mCopyingProfile {};
+
+
+private slots:
+    void slot_profile_menu(QPoint pos);
+    void slot_set_custom_icon();
+    void slot_reset_custom_icon();
+    void slot_togglePasswordVisibility(const bool);
+    void slot_password_saved(QKeychain::Job* job);
+    void slot_password_deleted(QKeychain::Job* job);
 };
+
 
 #endif // MUDLET_DLGCONNECTIONPROFILES_H
