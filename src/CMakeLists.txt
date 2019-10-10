@@ -237,8 +237,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(YAJL_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "YAJL install directory.")
-
 set(ZIP_DIR "${PROJECT_SOURCE_DIR}/.." CACHE PATH "ZIP install directory.")
 
 if(EXISTS "${PROJECT_SOURCE_DIR}/../include/lua.h")
@@ -393,27 +391,9 @@ endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include_directories(
-    ${Qt5Core_INCLUDE_DIRS}
-    ${Qt5Widgets_INCLUDE_DIRS}
-    ${Qt5Network_INCLUDE_DIRS}
-    ${Qt5OpenGL_INCLUDE_DIRS}
-    ${Qt5Multimedia_INCLUDE_DIRS}
-    ${Qt5UiTools_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIRS}
     ${LUA_INCLUDE_DIR}
 )
-
-if(Qt5TextToSpeech_FOUND)
-  add_definitions(${Qt5TextToSpeech_DEFINITIONS})
-  include_directories(${Qt5TextToSpeech_INCLUDE_DIRS})
-  message(STATUS "Using TextToSpeech module")
-endif(Qt5TextToSpeech_FOUND)
-
-if(Qt5Gamepad_FOUND)
-  add_definitions(${Qt5Gamepad_DEFINITIONS})
-  include_directories(${Qt5Gamepad_INCLUDE_DIRS})
-  message(STATUS "Using Gamepad module")
-endif(Qt5Gamepad_FOUND)
 
 # Need to use the plural variables as there can be more than ONE directory to specify:
 if(PC_ZIP_FOUND)
@@ -453,13 +433,6 @@ else()
 endif()
 
 target_link_libraries(mudlet
-    ${Qt5Core_LIBRARIES}
-    ${Qt5Widgets_LIBRARIES}
-    ${Qt5Network_LIBRARIES}
-    ${Qt5Multimedia_LIBRARIES}
-    ${Qt5OpenGL_LIBRARIES}
-    ${Qt5UiTools_LIBRARIES}
-    ${Qt5Concurrent_LIBRARIES}
     ${Boost_LIBRARIES}
     ${LUA_LIBRARIES}
     ${OPENGL_LIBRARIES}
@@ -470,20 +443,29 @@ target_link_libraries(mudlet
     HUNSPELL::HUNSPELL
     PCRE::PCRE
     PUGIXML::PUGIXML
+    Qt5::Concurrent
+    Qt5::Core
+    Qt5::Network
+    Qt5::Multimedia
+    Qt5::OpenGL
+    Qt5::UiTools
+    Qt5::Widgets
     YAJL::YAJL
 )
 
 if(Qt5TextToSpeech_FOUND)
-  target_link_libraries(mudlet ${Qt5TextToSpeech_LIBRARIES})
+  target_link_libraries(Qt5::TextToSpeech)
+  message(STATUS "Using TextToSpeech module")
 endif(Qt5TextToSpeech_FOUND)
+
+if(Qt5Gamepad_FOUND)
+target_link_libraries(Qt5::Gamepad)
+  message(STATUS "Using Gamepad module")
+endif(Qt5Gamepad_FOUND)
 
 if(USE_UPDATER)
   target_link_libraries(mudlet dblsqd)
 endif(USE_UPDATER)
-
-if(Qt5Gamepad_FOUND)
-  target_link_libraries(mudlet ${Qt5Gamepad_LIBRARIES})
-endif(Qt5Gamepad_FOUND)
 
 if(PC_ZIP_FOUND)
   target_link_libraries(mudlet ${PC_ZIP_LIBRARIES})
