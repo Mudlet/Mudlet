@@ -5782,12 +5782,12 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2013"/>
       <source>Migrating passwords to secure storage...</source>
-      <translation type="unfinished"/>
+      <translation>Перенос паролей в безопасное хранилище...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2020"/>
       <source>Migrating passwords to profiles...</source>
-      <translation type="unfinished"/>
+      <translation>Перенос паролей в профили...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2052"/>
@@ -7725,7 +7725,9 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <source>This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.
 </source>
-      <translation type="unfinished"/>
+      <translation>Это бесплатное программное обеспечение: вы можете изменять и распространять его.
+НЕТ ГАРАНТИЙ в пределах, разрешенных законом.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="221"/>
@@ -10216,7 +10218,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="223"/>
       <source>Miscellaneous</source>
-      <translation type="unfinished"/>
+      <translation>Прочие</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="279"/>
@@ -10226,7 +10228,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="282"/>
       <source>Enable MSSP</source>
-      <translation type="unfinished"/>
+      <translation>Включить MSSP</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="468"/>
@@ -10286,7 +10288,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="689"/>
       <source>The selected font doesn&apos;t work with Mudlet, please pick another</source>
-      <translation type="unfinished"/>
+      <translation>Выбранный шрифт работает с Mudlet, пожалуйста, выберите другой</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="733"/>
@@ -10372,7 +10374,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1290"/>
       <source>Autocomplete Lua functions in code editor</source>
-      <translation type="unfinished"/>
+      <translation>Автозаполнение Lua функций в редакторе кода</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1333"/>
@@ -10664,12 +10666,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2785"/>
       <source>the computer&apos;s password manager (secure)</source>
-      <translation type="unfinished"/>
+      <translation>компьютерном менеджером паролей (безопасно)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2790"/>
       <source>plaintext with the profile (portable)</source>
-      <translation type="unfinished"/>
+      <translation>открытом текстом с профилем (портативно)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2798"/>
@@ -10684,7 +10686,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2824"/>
       <source>Store character login passwords in:</source>
-      <translation type="unfinished"/>
+      <translation>Хранить пароли входа в персонаж в:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2836"/>
@@ -10815,7 +10817,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="184"/>
       <source>&lt;p&gt;Can you help translate Mudlet?&lt;/p&gt;&lt;p&gt;If so, please visit: &lt;b&gt;https://www.mudlet.org/translate&lt;/b&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Можете ли вы помочь перевести Mudlet?&lt;/p&gt;&lt;p&gt;Если да, пожалуйста, посетите: &lt;b&gt;https://www.mudlet.org/translate&lt;/b&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1889"/>
