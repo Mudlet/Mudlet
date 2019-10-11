@@ -2147,7 +2147,7 @@ the file:
       <location filename="../src/TMap.cpp" line="2210"/>
       <source>Downloading map file for use in %1...</source>
       <comment>%1 is the name of the current Mudlet profile</comment>
-      <translation type="unfinished"/>
+      <translation>Lade Kartendatei für den Gebrauch in %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2240"/>
@@ -3697,7 +3697,7 @@ diese Version kann diese Datei nicht lesen. Du benötigst ein aktuelleres Mudlet
     <message>
       <location filename="../src/ui/about_dialog.ui" line="728"/>
       <source>Supporters</source>
-      <translation type="unfinished"/>
+      <translation>Unterstützer</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="757"/>
