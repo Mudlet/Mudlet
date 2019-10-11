@@ -5113,7 +5113,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="175"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>角色密码. 注意, 密码以明文存储存.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="481"/>
@@ -5535,7 +5535,7 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="279"/>
       <source>%1 (%2% done)</source>
       <comment>%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done.</comment>
-      <translation type="unfinished"/>
+      <translation>%1(%2已完成)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="332"/>
@@ -6944,7 +6944,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5566"/>
       <source>Command (down);</source>
-      <translation type="unfinished"/>
+      <translation>命令 (Down);</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5754"/>
@@ -9521,17 +9521,18 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="1333"/>
       <source>Cannot read file %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>无法读取文件 %1：
+%2。</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1326"/>
       <source>Import Mudlet Package</source>
-      <translation type="unfinished"/>
+      <translation>导入Mudlet包</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1333"/>
       <source>Import Mudlet Package:</source>
-      <translation type="unfinished"/>
+      <translation>导入Mudlet包:</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1667"/>
@@ -11767,7 +11768,7 @@ or LUA script</source>
       <location filename="../src/ui/triggers_main_area.ui" line="547"/>
       <source>&lt;p&gt;Sound file to play when the trigger fires.&lt;/p&gt;</source>
       <comment>This is the tooltip for the QLineEdit that shows - but does not permit changing - the sound file used for a trigger.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;触发触发器时要播放的声音文件. &lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="569"/>
