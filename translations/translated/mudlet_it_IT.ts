@@ -2135,7 +2135,7 @@ Consiglio di esaminare il report più recente nel file:
       <location filename="../src/TMap.cpp" line="2210"/>
       <source>Downloading map file for use in %1...</source>
       <comment>%1 is the name of the current Mudlet profile</comment>
-      <translation type="unfinished"/>
+      <translation>Download del file di mappa da utilizzare in %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2240"/>
@@ -3702,7 +3702,7 @@ per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="728"/>
       <source>Supporters</source>
-      <translation type="unfinished"/>
+      <translation>Sostenitori</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="757"/>
@@ -4807,13 +4807,13 @@ Utilizzi</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="200"/>
       <source>Contributed to the Lua API.</source>
       <comment>about:Carter Dewey</comment>
-      <translation type="unfinished"/>
+      <translation>Contribuito alle API Lua.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="203"/>
       <source>Developed the Vyzor GUI Manager for Mudlet.</source>
       <comment>about:Oneymus</comment>
-      <translation type="unfinished"/>
+      <translation>Sviluppato il Vyzor GUI Manager per Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="206"/>
@@ -4837,7 +4837,7 @@ Utilizzi</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="218"/>
       <source>Helped develop and debug the Lua API.</source>
       <comment>about:John Dahlström</comment>
-      <translation type="unfinished"/>
+      <translation>Ha contribuito a sviluppare e eseguire il debug delle API Lua.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="221"/>
@@ -4849,7 +4849,7 @@ Utilizzi</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="224"/>
       <source>The original author of our Windows installer.</source>
       <comment>about:Leigh Stillard</comment>
-      <translation type="unfinished"/>
+      <translation>L'autore originale del nostro programma di installazione per Windows.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="227"/>
@@ -5425,7 +5425,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgMapper.cpp" line="135"/>
       <source>3D mapper is not available in this version of Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Il mapper 3D non è disponibile in questa versione di Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="258"/>
@@ -5607,18 +5607,18 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="332"/>
       <source>Migrated all passwords to secure storage.</source>
-      <translation type="unfinished"/>
+      <translation>Migrazione di tutte le password nell'archivio sicuro completata.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="339"/>
       <source>Migrated %1...</source>
       <comment>This notifies the user that progress is being made on profile migration by saying what profile was just migrated to store passwords securely</comment>
-      <translation type="unfinished"/>
+      <translation>Migrato %1...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="343"/>
       <source>Migrated all passwords to profile storage.</source>
-      <translation type="unfinished"/>
+      <translation>Migrazione di tutte le password nell'archivio sicuro.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="722"/>
@@ -5750,12 +5750,12 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2013"/>
       <source>Migrating passwords to secure storage...</source>
-      <translation type="unfinished"/>
+      <translation>Migrazione delle password nell'archiviazione sicura...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2020"/>
       <source>Migrating passwords to profiles...</source>
-      <translation type="unfinished"/>
+      <translation>Migrazione delle password ai profili in corso...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2052"/>
@@ -10187,7 +10187,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="223"/>
       <source>Miscellaneous</source>
-      <translation type="unfinished"/>
+      <translation>Altre impostazioni</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="279"/>
@@ -10197,7 +10197,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="282"/>
       <source>Enable MSSP</source>
-      <translation type="unfinished"/>
+      <translation>Abilita MSSP</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="468"/>
@@ -10338,12 +10338,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1284"/>
       <source>Autocomplete</source>
-      <translation type="unfinished"/>
+      <translation>Completamento automatico</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1290"/>
       <source>Autocomplete Lua functions in code editor</source>
-      <translation type="unfinished"/>
+      <translation>Completamento automatico funzioni Lua nell'editor di codice</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1333"/>
@@ -10635,12 +10635,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2785"/>
       <source>the computer&apos;s password manager (secure)</source>
-      <translation type="unfinished"/>
+      <translation>il gestore di password del computer (sicuro)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2790"/>
       <source>plaintext with the profile (portable)</source>
-      <translation type="unfinished"/>
+      <translation>testo in chiaro nel profilo (portabile)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2798"/>
@@ -10655,7 +10655,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2824"/>
       <source>Store character login passwords in:</source>
-      <translation type="unfinished"/>
+      <translation>Memorizza le password di accesso in:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2836"/>
@@ -10665,7 +10665,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2866"/>
       <source>TLS/SSL secure connection</source>
-      <translation type="unfinished"/>
+      <translation>Connessione sicura TLS/SSL</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4894"/>
