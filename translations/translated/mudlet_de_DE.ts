@@ -5175,7 +5175,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="175"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>Das Passwort des Charakters. Beachte, dass das Kennwort nicht verschlüsselt gespeichert wird</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="481"/>
@@ -5597,7 +5597,7 @@ Nutzungen</translation>
       <location filename="../src/dlgProfilePreferences.cpp" line="279"/>
       <source>%1 (%2% done)</source>
       <comment>%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (%2% fertig)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="332"/>
@@ -10175,7 +10175,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="223"/>
       <source>Miscellaneous</source>
-      <translation type="unfinished"/>
+      <translation>Sonstiges</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="279"/>
