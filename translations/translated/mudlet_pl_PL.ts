@@ -4969,7 +4969,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="175"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>Hasło postaci. Uwaga, hasła nie są zapisywane zaszyfrowane</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="481"/>
