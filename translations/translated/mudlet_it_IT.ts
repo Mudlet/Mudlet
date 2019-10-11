@@ -5180,7 +5180,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="175"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>Password del personaggio. NOTA: la password è salvata in chiaro</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="481"/>
@@ -5602,7 +5602,7 @@ Utilizzi</translation>
       <location filename="../src/dlgProfilePreferences.cpp" line="279"/>
       <source>%1 (%2% done)</source>
       <comment>%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (%2% fatto)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="332"/>
