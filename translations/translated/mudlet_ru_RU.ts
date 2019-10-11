@@ -3738,7 +3738,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="728"/>
       <source>Supporters</source>
-      <translation type="unfinished"/>
+      <translation>Сторонники</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="757"/>
@@ -5212,7 +5212,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="175"/>
       <source>Characters password. Note that the password isn&apos;t encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>Пароль персонажа. Обратите внимание, что этот пароль не зашифрован в хранении</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="481"/>
@@ -5457,7 +5457,7 @@ Count</source>
     <message>
       <location filename="../src/dlgMapper.cpp" line="135"/>
       <source>3D mapper is not available in this version of Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>3Д маппер не поддерживается в этой версии Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="258"/>
@@ -5634,7 +5634,7 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="279"/>
       <source>%1 (%2% done)</source>
       <comment>%1 is the (not-translated so users of the language can read it!) language name, %2 is percentage done.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (%2% готово)</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="332"/>
@@ -10367,7 +10367,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1284"/>
       <source>Autocomplete</source>
-      <translation type="unfinished"/>
+      <translation>Автозаполнение</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1290"/>
@@ -10694,7 +10694,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2866"/>
       <source>TLS/SSL secure connection</source>
-      <translation type="unfinished"/>
+      <translation>Защищенное соединение</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4894"/>
