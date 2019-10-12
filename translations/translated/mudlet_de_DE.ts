@@ -5177,7 +5177,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="173"/>
       <source>Characters password, stored securely in the computer&apos;s credential manager</source>
-      <translation>Passwort des Charakters, sicher im Anmeldeinformations-Manager des Computers gespeichert</translation>
+      <translation>Kennwort des Charakters, sicher im Anmeldeinformations-Manager des Computers gespeichert</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="175"/>
@@ -5270,12 +5270,12 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2449"/>
       <source>&lt;p&gt;Click to hide the password; it will also hide if another profile is selected.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Klicke hier, um das Kennwort auszublenden. Es wird auch ausgeblendet, wenn ein anderes Profil ausgewählt wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2453"/>
       <source>&lt;p&gt;Click to reveal the password for this profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Klicke hier, um das Kennwort für dieses Profil einzublenden.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2323"/>
@@ -5427,7 +5427,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgMapper.cpp" line="135"/>
       <source>3D mapper is not available in this version of Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>3D-Mapper ist in dieser Version von Mudlet nicht verfügbar</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="258"/>
@@ -5609,18 +5609,18 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="332"/>
       <source>Migrated all passwords to secure storage.</source>
-      <translation type="unfinished"/>
+      <translation>Alle Kennwörter wurden in den sicheren Speicher migriert.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="339"/>
       <source>Migrated %1...</source>
       <comment>This notifies the user that progress is being made on profile migration by saying what profile was just migrated to store passwords securely</comment>
-      <translation type="unfinished"/>
+      <translation>%1 migriert...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="343"/>
       <source>Migrated all passwords to profile storage.</source>
-      <translation type="unfinished"/>
+      <translation>Alle Kennwörter wurden in den Profilspeicher migriert.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="722"/>
@@ -5752,12 +5752,12 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2013"/>
       <source>Migrating passwords to secure storage...</source>
-      <translation type="unfinished"/>
+      <translation>Alle Kennwörter werden in den sicheren Speicher migriert...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2020"/>
       <source>Migrating passwords to profiles...</source>
-      <translation type="unfinished"/>
+      <translation>Kennwörter werden in die Profile migriert...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2052"/>
