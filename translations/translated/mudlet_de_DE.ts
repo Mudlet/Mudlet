@@ -7697,7 +7697,9 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <source>This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.
 </source>
-      <translation type="unfinished"/>
+      <translation>Dies ist freie Software: Du darfst sie verändern und weiterverbreiten.
+Es gibt KEINE GARANTIE soweit gesetzlich zulässig.
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="221"/>
@@ -10660,7 +10662,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2866"/>
       <source>TLS/SSL secure connection</source>
-      <translation type="unfinished"/>
+      <translation>Sichere TLS/SSL-Verbindung</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4894"/>
