@@ -643,7 +643,7 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
             QDataStream ifs(&file);
             if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
                 ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-                }
+            }
             ifs >> ret;
             file.close();
         }
@@ -1007,16 +1007,16 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     // if we're currently copying a profile, don't blank and re-load the password,
     // because there isn't one in storage yet. It'll be copied over into the widget
     // by the copy method
-            if (!mCopyingProfile) {
-            character_password_entry->setText(QString());
-            loadSecuredPassword(profile, [this, profile_name](const QString& password) {
-                if (!password.isEmpty()) {
-                    character_password_entry->setText(password);
-                } else {
-                    character_password_entry->setText(readProfileData(profile_name, QStringLiteral("Password")));
-                }
-            });
-        }
+    if (!mCopyingProfile) {
+        character_password_entry->setText(QString());
+        loadSecuredPassword(profile, [this, profile_name](const QString& password) {
+            if (!password.isEmpty()) {
+                character_password_entry->setText(password);
+            } else {
+                character_password_entry->setText(readProfileData(profile_name, QStringLiteral("Password")));
+            }
+        });
+    }
 
     val = readProfileData(profile, QStringLiteral("Login"));
     login_entry->setText(val);
@@ -2351,7 +2351,7 @@ bool dlgConnectionProfiles::validateProfile()
     if (url.indexOf(QRegularExpression(QStringLiteral("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")), 0) != -1) {
         if (port_ssl_tsl->isChecked()) {
             notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(QStringLiteral("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Secure  connections require the URL of the Game server.\n\n%1").arg(check.errorString())));
+            notificationAreaMessageBox->setText(QStringLiteral("%1\n%2").arg(notificationAreaMessageBox->text(), tr("Secure connections require the URL of the Game server.\n\n%1").arg(check.errorString())));
             host_name_entry->setPalette(mErrorPalette);
             validUrl = false;
             valid = false;
