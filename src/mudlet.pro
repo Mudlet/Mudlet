@@ -109,7 +109,7 @@ BUILD = $$(MUDLET_VERSION_BUILD)
 isEmpty( BUILD ) {
 # Leave the value of the following empty for a release build
 # i.e. the line should be "BUILD =" without quotes
-   BUILD = ""
+   BUILD = "-dev"
 }
 
 # Changing BUILD and VERSION values affects: ctelnet.cpp, main.cpp, mudlet.cpp
