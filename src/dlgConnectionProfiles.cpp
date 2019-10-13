@@ -642,8 +642,8 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
         if (success) {
             QDataStream ifs(&file);
             if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            	ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        	}
+                ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+                }
             ifs >> ret;
             file.close();
         }
@@ -674,11 +674,11 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
         mCurrentQSettings->setValue(QStringLiteral("DiscordServerOptIn"), QString::number(discord_optin_checkBox->checkState()));
         mCurrentQSettings->setValue(QStringLiteral("Ssl_Tsl"), QString::number(port_ssl_tsl->checkState()));
 
-		if (mudlet::self()->storingPasswordsSecurely()) {
-		    writeSecurePassword(profile, pass);
-		} else {
-        	mCurrentQSettings->setValue(QStringLiteral("Password"), character_password_entry->text());
-		}
+        if (mudlet::self()->storingPasswordsSecurely()) {
+            writeSecurePassword(profile, character_password_entry->text());
+        } else {
+            mCurrentQSettings->setValue(QStringLiteral("Password"), character_password_entry->text());
+        }
     }
 
     if (mCurrentQSettings->status() == QSettings::NoError) {
@@ -1007,16 +1007,16 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
     // if we're currently copying a profile, don't blank and re-load the password,
     // because there isn't one in storage yet. It'll be copied over into the widget
     // by the copy method
-	    if (!mCopyingProfile) {    
-	    character_password_entry->setText(QString());
-	    loadSecuredPassword(profile, [this, profile_name](const QString& password) {
-	        if (!password.isEmpty()) {
-	            character_password_entry->setText(password);
-	        } else {
-	            character_password_entry->setText(readProfileData(profile_name, QStringLiteral("Password")));
-	        }
-	    });
-	}
+            if (!mCopyingProfile) {
+            character_password_entry->setText(QString());
+            loadSecuredPassword(profile, [this, profile_name](const QString& password) {
+                if (!password.isEmpty()) {
+                    character_password_entry->setText(password);
+                } else {
+                    character_password_entry->setText(readProfileData(profile_name, QStringLiteral("Password")));
+                }
+            });
+        }
 
     val = readProfileData(profile, QStringLiteral("Login"));
     login_entry->setText(val);
