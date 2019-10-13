@@ -10189,12 +10189,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="279"/>
       <source>&lt;p&gt;Enables MSSP - provides Mud Server Status Protocol information upon connection for supported games&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Aktiviert MSSP - bietet Informationen zum Mud-Server-Status-Protokoll bei Verbindung zu unterstützten Spielen&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="282"/>
       <source>Enable MSSP</source>
-      <translation type="unfinished"/>
+      <translation>Aktiviere MSSP</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="468"/>
@@ -10254,7 +10254,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="689"/>
       <source>The selected font doesn&apos;t work with Mudlet, please pick another</source>
-      <translation type="unfinished"/>
+      <translation>Die ausgewählte Schriftart funktioniert nicht mit Mudlet, bitte wähle eine andere</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="733"/>
@@ -10335,12 +10335,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1284"/>
       <source>Autocomplete</source>
-      <translation type="unfinished"/>
+      <translation>Autovervollständigung</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1290"/>
       <source>Autocomplete Lua functions in code editor</source>
-      <translation type="unfinished"/>
+      <translation>Vervollständige automatisch die Lua-Funktionen im Code-Editor</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1333"/>
@@ -10632,12 +10632,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2785"/>
       <source>the computer&apos;s password manager (secure)</source>
-      <translation type="unfinished"/>
+      <translation>im Kennwort-Manager des Computers (sicher)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2790"/>
       <source>plaintext with the profile (portable)</source>
-      <translation type="unfinished"/>
+      <translation>als Klartext mit dem Profil (protabel)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2798"/>
@@ -10652,7 +10652,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2824"/>
       <source>Store character login passwords in:</source>
-      <translation type="unfinished"/>
+      <translation>Kennwörter für Charakteranmeldung speichern in:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2836"/>
@@ -10783,7 +10783,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="184"/>
       <source>&lt;p&gt;Can you help translate Mudlet?&lt;/p&gt;&lt;p&gt;If so, please visit: &lt;b&gt;https://www.mudlet.org/translate&lt;/b&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Kannst du helfen, Mudlet zu übersetzen?&lt;/p&gt;&lt;p&gt;Falls ja, besuche bitte: &lt;b&gt;https://https://www.mudlet.org/translate&lt;/b&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1889"/>
