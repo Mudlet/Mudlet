@@ -82,7 +82,7 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
 msvc:QMAKE_CXXFLAGS += -MP
 
 # Mac specific flags.
-macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.12
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
 
 QT += network uitools multimedia gui concurrent
 qtHaveModule(gamepad) {

@@ -1487,7 +1487,7 @@ function map.setConfigs(key, val, sub_key)
             else
                 map.echo("Custom Exit config must be in the form of a table.", false, true)
             end
-        elseif map.configs[key] then
+        elseif map.configs[key] ~= nil then
             map.configs[key] = val
             map.echo(string.format("Config %s set to: %s", key, tostring(val)))
         else
@@ -2933,7 +2933,7 @@ function map.eventHandler(event, ...)
         elseif string.ends(file,"/generic_mapper.xml") then
             update_version()
         end
-    elseif event == "sysConnectionEvent" or event == "sysInstall" then
+    elseif event == "sysLoadEvent" or event == "sysInstall" then
         config()
     elseif event == "mapOpenEvent" then
         if not help_shown and not map.save.prompt_pattern[map.character or ""] then

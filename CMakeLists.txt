@@ -34,7 +34,7 @@
 # Should be called before PROJECT.
 cmake_minimum_required(VERSION 3.1)
 if(APPLE)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.12") # Qt 5.11.2 with which we build on OS X supports 10.11 and up, but some tools are not provided as bottles for that anymore.
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13") # Qt 5.11.2 with which we build on OS X supports 10.11 and up, but some tools are not provided as bottles for that anymore.
 endif()
 
 project(mudlet)

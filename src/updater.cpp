@@ -347,6 +347,9 @@ void Updater::recordUpdateTime() const
     }
 
     QDataStream ifs(&file);
+    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+    }
     ifs << QDateTime::currentDateTime().toMSecsSinceEpoch();
     file.close();
 }
@@ -363,6 +366,9 @@ void Updater::recordUpdatedVersion() const
     }
 
     QDataStream ifs(&file);
+    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+    }
     ifs << APP_VERSION;
     file.close();
 }
@@ -389,6 +395,9 @@ bool Updater::shouldShowChangelog()
         return false;
     }
     QDataStream ifs(&file);
+    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+    }
     ifs >> updateTimestamp;
     file.close();
 
@@ -414,6 +423,9 @@ QString Updater::getPreviousVersion() const
         return QString();
     }
     QDataStream ifs(&file);
+    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+    }
     ifs >> previousVersion;
     file.close();
     file.remove();

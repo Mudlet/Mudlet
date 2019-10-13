@@ -1438,7 +1438,9 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
                 mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
                 mpHost->updateProxySettings(mpDownloader);
-                QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
+                auto request = QNetworkRequest(QUrl(url));
+                mudlet::self()->setNetworkRequestDefaults(url, request);
+                QNetworkReply* reply = mpDownloader->get(request);
                 mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
                 connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
                 mpProgressDialog->show();
@@ -1787,7 +1789,9 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
 
         mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
         mpHost->updateProxySettings(mpDownloader);
-        QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
+        auto request = QNetworkRequest(QUrl(url));
+        mudlet::self()->setNetworkRequestDefaults(url, request);
+        QNetworkReply* reply = mpDownloader->get(request);
         mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
         connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
         mpProgressDialog->show();
@@ -2196,6 +2200,9 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
             mIsReplayRunFromLua = false;
         }
         replayStream.setDevice(&replayFile);
+        if (QVersionNumber::fromString(QString(qVersion())) >= QVersionNumber(5, 13, 0)) {
+            replayStream.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        }
         loadingReplay = true;
         if (mudlet::self()->replayStart()) {
             // TODO: consider moving to a QTimeLine based system...?

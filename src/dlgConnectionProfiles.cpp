@@ -171,6 +171,11 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     slot_togglePasswordVisibility(false);
 
     character_password_entry->addAction(mpAction_revealPassword, QLineEdit::TrailingPosition);
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        character_password_entry->setToolTip(tr("Characters password, stored securely in the computer's credential manager"));
+    } else {
+        character_password_entry->setToolTip(tr("Characters password. Note that the password isn't encrypted in storage"));
+    }
 
     connect(mpAction_revealPassword, &QAction::triggered, this, &dlgConnectionProfiles::slot_togglePasswordVisibility);
     connect(offline_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_load);
@@ -636,6 +641,9 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
         QString ret;
         if (success) {
             QDataStream ifs(&file);
+            if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+            	ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        	}
             ifs >> ret;
             file.close();
         }
@@ -659,13 +667,18 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
         mCurrentQSettings->setValue(QStringLiteral("Url"), host_name_entry->text());
         mCurrentQSettings->setValue(QStringLiteral("Port"), port_entry->text().trimmed());
         mCurrentQSettings->setValue(QStringLiteral("Login"), login_entry->text());
-        mCurrentQSettings->setValue(QStringLiteral("Password"), character_password_entry->text());
         mCurrentQSettings->setValue(QStringLiteral("Autologin"), QString::number(autologin_checkBox->checkState()));
         mCurrentQSettings->setValue(QStringLiteral("Description"), mud_description_textedit->toPlainText());
         mCurrentQSettings->setValue(QStringLiteral("Website"), website_entry->text());
         mCurrentQSettings->setValue(QStringLiteral("AutoReconnect"), QString::number(auto_reconnect->checkState()));
         mCurrentQSettings->setValue(QStringLiteral("DiscordServerOptIn"), QString::number(discord_optin_checkBox->checkState()));
         mCurrentQSettings->setValue(QStringLiteral("Ssl_Tsl"), QString::number(port_ssl_tsl->checkState()));
+
+		if (mudlet::self()->storingPasswordsSecurely()) {
+		    writeSecurePassword(profile, pass);
+		} else {
+        	mCurrentQSettings->setValue(QStringLiteral("Password"), character_password_entry->text());
+		}
     }
 
     if (mCurrentQSettings->status() == QSettings::NoError) {
@@ -991,14 +1004,19 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
 
     port_entry->setText(host_port);
 
-    character_password_entry->setText(QString());
-    loadSecuredPassword(profile, [this, profile_name](const QString& password) {
-        if (!password.isEmpty()) {
-            character_password_entry->setText(password);
-        } else {
-            character_password_entry->setText(readProfileData(profile_name, QStringLiteral("Password")));
-        }
-    });
+    // if we're currently copying a profile, don't blank and re-load the password,
+    // because there isn't one in storage yet. It'll be copied over into the widget
+    // by the copy method
+	    if (!mCopyingProfile) {    
+	    character_password_entry->setText(QString());
+	    loadSecuredPassword(profile, [this, profile_name](const QString& password) {
+	        if (!password.isEmpty()) {
+	            character_password_entry->setText(password);
+	        } else {
+	            character_password_entry->setText(readProfileData(profile_name, QStringLiteral("Password")));
+	        }
+	    });
+	}
 
     val = readProfileData(profile, QStringLiteral("Login"));
     login_entry->setText(val);
@@ -1775,10 +1793,10 @@ void dlgConnectionProfiles::loadSecuredPassword(const QString &profile, L callba
             if (error != QStringLiteral("Entry not found") && error != QStringLiteral("No match")) {
             qDebug() << "dlgConnectionProfiles::loadSecuredPassword ERROR: couldn't retrieve secure password for" << profile << ", error is:" << error;
             }
-        } else {
-            auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
-            callback(readJob->textData());
         }
+
+        auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
+        callback(readJob->textData());
 
         job->deleteLater();
     });
@@ -1924,16 +1942,22 @@ void dlgConnectionProfiles::slot_cancel()
 
 void dlgConnectionProfiles::slot_copy_profile()
 {
+    mCopyingProfile = true;
+
     QString profile_name;
     QString oldname;
     QListWidgetItem* pItem;
+    const auto oldPassword = character_password_entry->text();
+
     if (!copyProfileWidget(profile_name, oldname, pItem)) {
+        mCopyingProfile = false;
         return;
     }
 
     // copy the folder on-disk
     QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, oldname));
     if (!dir.exists()) {
+        mCopyingProfile = false;
         return;
     }
 
@@ -1945,6 +1969,13 @@ void dlgConnectionProfiles::slot_copy_profile()
     // one may have had it enabled does not mean we can assume the new one would
     // want it set:
     discord_optin_checkBox->setChecked(false);
+
+    // restore the password, which won't be copied by the disk copy if stored in the credential manager
+    character_password_entry->setText(oldPassword);
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        writeSecurePassword(profile_name, oldPassword);
+    }
+    mCopyingProfile = false;
 }
 
 void dlgConnectionProfiles::slot_copy_profilesettings_only()
