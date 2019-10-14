@@ -49,10 +49,10 @@ signals:
 
 public slots:
     QPair<bool, QString> writeProfileData(const QString& profile = QString());
-    void slot_validate_name(QString);
+    void slot_validate_name(const QString&);
     void slot_save_name();
     void slot_validate_url(const QString &);
-    void slot_validate_port(const QString);
+    void slot_validate_port(const QString&);
     void slot_deleteprofile_check(const QString& text);
 
     void slot_item_clicked(QListWidgetItem*);
@@ -60,7 +60,6 @@ public slots:
     void slot_deleteProfile();
     void slot_reallyDeleteProfile();
 
-    void slot_update_autoreconnect(int state);
     void slot_update_discord_optin(int state);
     void slot_connectToServer();
     void slot_load();
@@ -93,9 +92,9 @@ private:
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
     // to be valid, but other properties don't have to be
-    bool validName;
-    bool validUrl;
-    bool validPort;
+    bool mValidName;
+    bool mValidUrl;
+    bool mValidPort;
 
     QPointer<QSettings> mCurrentQSettings;
     QStringList mProfileList;
