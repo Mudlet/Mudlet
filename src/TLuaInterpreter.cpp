@@ -1959,13 +1959,31 @@ int TLuaInterpreter::getStopWatchTime(lua_State* L)
 int TLuaInterpreter::createStopWatch(lua_State* L)
 {
     QString name;
-    if (lua_gettop(L)) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "createStopWatch: bad argument #1 type (name as string is optional, got %s!)", luaL_typename(L, 1));
+    bool autoStart = true;
+    int n = lua_gettop(L);
+    int s = 0;
+    if (n) {
+        if (lua_type(L, ++s) == LUA_TBOOLEAN) {
+            autoStart = lua_toboolean(L, s);
+        } else if (lua_type(L, s) == LUA_TSTRING) {
+            autoStart = false;
+            name = QString::fromUtf8(lua_tostring(L, 1));
+        } else {
+            lua_pushfstring(L, "createStopWatch: bad argument #%d type (name as string or autostart as boolean are optional, got %s!)", luaL_typename(L, s));
             return lua_error(L);
         }
-        name = QString::fromUtf8(lua_tostring(L, 1));
+
+        if (n > 1) {
+            if (lua_type(L, ++s) == LUA_TBOOLEAN) {
+                autoStart = lua_toboolean(L, s);
+            } else {
+                lua_pushfstring(L, "createStopWatch: bad argument #%d type (autostart as boolean is optional, got %s!)", luaL_typename(L, s));
+                return lua_error(L);
+            }
+        }
     }
+
+
     Host& host = getHostFromLua(L);
     QPair<int, QString> result = host.createStopWatch(name);
     if (!result.first) {
@@ -1973,6 +1991,11 @@ int TLuaInterpreter::createStopWatch(lua_State* L)
         lua_pushfstring(L, result.second.toUtf8().constData());
         return 2;
     }
+
+    if (autoStart) {
+        host.startStopWatch(result.first);
+    }
+
     lua_pushnumber(L, result.first);
     return 1;
 }
