@@ -4735,7 +4735,7 @@ Utilizzi</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="148"/>
       <source>Original author, original project lead, Mudlet core coding, retired.</source>
       <comment>about:Heiko</comment>
-      <translation type="unfinished"/>
+      <translation>Primo autore, creatore del progetto, coder di Mudlet, ritirato.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="151"/>
@@ -4843,7 +4843,7 @@ Utilizzi</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="221"/>
       <source>Contributed several improvements and new features for Geyser.</source>
       <comment>about:Beliaar</comment>
-      <translation type="unfinished"/>
+      <translation>Ha contribuito a migliorare e aggiungere funzionalità per Geyser.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="224"/>
@@ -5273,7 +5273,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2453"/>
       <source>&lt;p&gt;Click to reveal the password for this profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Fare clic per mostrare la password di questo profilo.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2323"/>
@@ -10257,7 +10257,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="689"/>
       <source>The selected font doesn&apos;t work with Mudlet, please pick another</source>
-      <translation type="unfinished"/>
+      <translation>Il carattere selezionato non funziona con Mudlet, scegline un altro</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="733"/>
@@ -10660,7 +10660,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2836"/>
       <source>TextLabel</source>
-      <translation type="unfinished"/>
+      <translation>TextLabel</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2866"/>
