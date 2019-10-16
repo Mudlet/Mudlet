@@ -150,7 +150,7 @@ private:
     bool mMouseTracking;
     bool mCtrlSelecting {};
     int mCtrlDragStartY {};
-    QPoint mDragStart;
+    QPoint mDragStart, mDragSelectionEnd;
     int mOldScrollPos;
     // top-left point of the selection
     QPoint mPA;
