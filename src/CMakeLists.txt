@@ -275,11 +275,6 @@ if(USE_3DMAPPER)
   find_package(OpenGL REQUIRED)
 endif()
 
-# Enable leak detection for MSVC debug builds.
-if(MSVC)
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -FItestdbg.h")
-endif()
-
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 if(WIN32)
@@ -391,22 +386,10 @@ if(APPLE)
   endif(USE_UPDATER)
 endif()
 
-if(MSVC)
-  target_compile_options(mudlet
-    PRIVATE
-      -MP                 # parallel builds
-      -Zc:inline          # improve link times
-      -Zc:rvalueCast      # improve conformance
-      -wd4305             # '=' : truncation from 'double' to 'float'
-      -wd4309             # 'initializing' : truncation of constant value
-      -wd4996             # deprecation
+target_compile_options(mudlet
+  PRIVATE
+    -Wno-deprecated
   )
-else()
-  target_compile_options(mudlet
-    PRIVATE
-      -Wno-deprecated
-    )
-endif()
 
 # *nix "make install" provision:
 if(UNIX)
