@@ -881,110 +881,6 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
 
     QPoint cursorLocation(tCharIndex, lineIndex);
 
-/*    if (mCtrlSelecting) {
-        handleCtrlSelection(lineIndex);
-        return;
-    }*/
-
- //   normaliseSelection();
-/*    QPoint p1 = mDragStart - cursorLocation;
-    QPoint p2 = mDragSelectionEnd - cursorLocation;
-    if ((abs(cursorLocation.y()) < abs(mDragSelectionEnd.y()))
-       || ((abs(cursorLocation.y()) == abs(mDragSelectionEnd.y()) && abs(cursorLocation.x()) < abs(mDragSelectionEnd.x())))) {
-        // selecting bottom-up
-        // The cursor position is moving towards the upper left compared to the previous cursor position:
-        if (mDragStart.y() < lineIndex || (mDragStart.y() == lineIndex && mDragStart.x() < tCharIndex)) {
-            // The old start of the selection is further from the end than the
-            // current cursor position:
-
-            // So, starting on the line of the cursor and working towards the
-            // start of the buffer, deselect elements backward to the old
-            // selection start (mPA):
-            for (int yIndex = lineIndex, total = mDragStart.y(); yIndex >= total; --yIndex) {
-                if (yIndex >= static_cast<int>(mpBuffer->buffer.size()) || yIndex < 0) {
-                    // Abort if we are considering a line not in the buffer:
-                    break;
-                }
-
-                auto& bufferLine = mpBuffer->buffer.at(yIndex);
-                // We start on the last index in the line:
-                int xIndex = bufferLine.size() - 1;
-
-                if (yIndex == lineIndex) {
-                    // On the first line being processed - which contains the
-                    // cursor - so select the first element BEFORE it:
-                    xIndex = tCharIndex - 1;
-                    if (Q_UNLIKELY(xIndex >= static_cast<int>(bufferLine.size()))) {
-                        // Oops - that is past the end of the line - so clamp it
-                        // to the end of the line:
-                        xIndex = static_cast<int>(bufferLine.size()) - 1;
-                    }
-
-                    if (Q_UNLIKELY(xIndex < 0)) {
-                        // Oops - that is before the start of the line so abort
-                        // this line and go to the previous one:
-                        continue;
-                    }
-                }
-
-                for (; xIndex >=0; --xIndex) {
-                    if (bufferLine.at(xIndex).isSelected()) {
-                        bufferLine[xIndex].deselect();
-                        mpBuffer->dirty[yIndex] = true;
-                    }
-                }
-            }
-        }
-
-//        mPA = cursorLocation;
-
-    } else {
-        // selecting top-down
-        // The cursor position is nearer to or the same distance to the end than
-        // to the start of the existing selection:
-
-        if (mDragSelectionEnd.y() > lineIndex || (mDragSelectionEnd.y() == lineIndex && mDragSelectionEnd.x() > tCharIndex)) {
-            // The old end of the selection is further from the start than the
-            // current cursor position:
-
-            // So, starting on the line of the cursor and working towards the
-            // end of the buffer, deselect elements forwards to the old
-            // selection end (mPB):
-            for (int yIndex = lineIndex, total = mDragSelectionEnd.y(); yIndex <= total; ++yIndex) {
-                if (yIndex >= static_cast<int>(mpBuffer->buffer.size()) || yIndex < 0) {
-                    // Abort if we are considering a line not in the buffer:
-                    break;
-                }
-
-                // We start at the first index in the line:
-                int xIndex = 0;
-                if (yIndex == lineIndex) {
-                    // Oh, this is the line containing the cursor so adjust the
-                    // start to be there:
-                    QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, mpBuffer->lineBuffer.at(yIndex));
-                    graphemeFinder.setPosition(tCharIndex);
-                    xIndex = graphemeFinder.toNextBoundary();
-                    if (xIndex == -1) {
-                        // There is no grapheme after the given one so nothing
-                        // to do on this line
-                        continue;
-                    }
-                }
-
-                auto& bufferLine = mpBuffer->buffer.at(yIndex);
-                for (; xIndex < static_cast<int>(bufferLine.size()); ++xIndex) {
-                    if (bufferLine.at(xIndex).isSelected()) {
-                        bufferLine[xIndex].deselect();
-                        mpBuffer->dirty[yIndex] = true;
-                    }
-                }
-            }
-        }
-
-//        mPA = mDragStart;
-        mDragSelectionEnd = cursorLocation;
-    }
-*/
     if((mDragSelectionEnd.y() < cursorLocation.y()||
         (mDragSelectionEnd.y() == cursorLocation.y() && mDragSelectionEnd.x() < cursorLocation.x()))) {
         mPA = mDragSelectionEnd;
@@ -1005,33 +901,15 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
             break;
         }
 
-        // We start at the first index in the line:
-        int xIndex = 0;
-/*        if (yIndex == lineIndex) {
-            // Oh, this is the line containing the cursor so adjust the
-            // start to be there:
-            QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, mpBuffer->lineBuffer.at(yIndex));
-            graphemeFinder.setPosition(tCharIndex);
-            xIndex = graphemeFinder.toNextBoundary();
-            if (xIndex == -1) {
-                // There is no grapheme after the given one so nothing
-                // to do on this line
-                continue;
-            }
-        }
-        if(yIndex == lineIndex) {
-
-        }*/
-
         auto& bufferLine = mpBuffer->buffer.at(yIndex);
-        for (; xIndex < static_cast<int>(bufferLine.size()); ++xIndex) {
+        for (int xIndex = 0; xIndex < static_cast<int>(bufferLine.size()); ++xIndex) {
             if (bufferLine.at(xIndex).isSelected()) {
                 bufferLine[xIndex].deselect();
                 mpBuffer->dirty[yIndex] = true;
             }
         }
     }
-   // normaliseSelection();
+
     if((mDragStart.y() < cursorLocation.y()||
         (mDragStart.y() == cursorLocation.y() && mDragStart.x() < cursorLocation.x()))) {
         mPA = mDragStart;
@@ -1052,49 +930,6 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     // the left margin within the area that gets repainted...
     highlightSelection();
     mDragSelectionEnd = cursorLocation;
-}
-
-// hold Ctrl to select whole line(s) at once
-void TTextEdit::handleCtrlSelection(int lineIndex)
-{
-    const int oldAY = mPA.y();
-    const int oldBY = mPB.y();
-
-    // ensure that point A is at the top and point B is at the bottom
-    // regardless of the way selection is being made
-    if (lineIndex == mCtrlDragStartY) {
-        // selection is on the same line as it started
-        mPA.setY(lineIndex);
-        mPB.setY(lineIndex);
-    } else if (lineIndex < mCtrlDragStartY) {
-        // selecting bottom-up
-        mPA.setY(lineIndex);
-        mPB.setY(mCtrlDragStartY);
-    } else if (lineIndex > mCtrlDragStartY) {
-        // selecting top-down
-        mPA.setY(mCtrlDragStartY);
-        mPB.setY(lineIndex);
-    }
-
-    if (oldAY < mPA.y()) {
-        for (int yIndex = oldAY, total = mPA.y(); yIndex < total; ++yIndex) {
-            for (auto& TQchar : mpBuffer->buffer[yIndex]) {
-                TQchar.deselect();
-            }
-        }
-    }
-    if (oldBY > mPB.y()) {
-        for (int yIndex = mPB.y() + 1; yIndex <= oldBY; ++yIndex) {
-            for (auto& TQchar : mpBuffer->buffer[yIndex]) {
-                TQchar.deselect();
-            }
-        }
-    }
-
-    mPA.setX(0);
-    mPB.setX(static_cast<int>(mpBuffer->buffer[mPB.y()].size()) - 1);
-
-    highlightSelection();
 }
 
 void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex)
