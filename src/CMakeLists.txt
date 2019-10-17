@@ -363,6 +363,10 @@ endif(Qt5Gamepad_FOUND)
 
 if(USE_UPDATER)
   target_link_libraries(mudlet dblsqd)
+  target_compile_definitions(mudlet
+    PRIVATE
+      INCLUDE_UPDATER
+  )
 endif(USE_UPDATER)
 
 if(USE_3DMAPPER)
