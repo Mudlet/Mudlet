@@ -225,7 +225,6 @@ elseif()
 endif()
 
 if(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/qtkeychain/CMakeLists.txt")
-  add_definitions(-DQTKEYCHAIN_NO_EXPORT)
   add_subdirectory(3rdparty/qtkeychain)
 elseif()
   message(FATAL_ERROR "Cannot locate QtKeychain submodule source code, build abandoned!")
