@@ -309,13 +309,6 @@ if(USE_FONTS)
   )
 endif()
 
-target_compile_definitions(mudlet
-  PRIVATE
-    APP_VERSION="${APP_VERSION}"
-    APP_BUILD="${APP_BUILD}"
-    APP_TARGET="${APP_TARGET}"
-)
-
 if(UNIX)
   set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
   set(LCF_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua/lcf")
@@ -327,7 +320,11 @@ endif(UNIX)
 # will be used.
 target_compile_definitions(mudlet
   PRIVATE
+    APP_VERSION="${APP_VERSION}"
+    APP_BUILD="${APP_BUILD}"
+    APP_TARGET="${APP_TARGET}"
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}"
+    QTKEYCHAIN_NO_EXPORT
 )
 
 target_link_libraries(mudlet
