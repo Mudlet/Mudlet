@@ -367,6 +367,10 @@ endif(USE_UPDATER)
 
 if(USE_3DMAPPER)
   target_link_libraries(mudlet OpenGL::GLU)
+  target_compile_definitions(mudlet
+    PRIVATE
+      INCLUDE_3DMAPPER
+  )
 endif()
 
 if(WIN32)
