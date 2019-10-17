@@ -266,7 +266,7 @@ find_package(PCRE REQUIRED)
 find_package(YAJL REQUIRED)
 find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
-find_package(Boost 1.44 COMPONENTS graph)
+find_package(Boost 1.44)
 
 if(USE_3DMAPPER)
   if(POLICY CMP0072)
@@ -334,7 +334,7 @@ target_link_libraries(mudlet
     communi
     edbee-lib
     qt5keychain
-    Boost::graph
+    Boost::boost
     HUNSPELL::HUNSPELL
     LUA51::LUA51
     PCRE::PCRE
