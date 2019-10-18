@@ -1,126 +1,79 @@
 # Locate PCRE library
+# This module exports the following targets
+#
+# PCRE::PCRE
+#
 # This module defines
-#  PCRE_FOUND, if false, do not try to link to PCRE 
+#  PCRE_FOUND, if false, do not try to link to PCRE
 #  PCRE_LIBRARIES
-#  PCRE_INCLUDE_DIR, where to find pcre.h 
+#  PCRE_INCLUDE_DIR, where to find pcre.h
 
+FIND_PACKAGE(PkgConfig)
+
+PKG_SEARCH_MODULE(PC_PCRE pcre libpcre)
 
 FIND_PATH(PCRE_INCLUDE_DIR pcre.h
   HINTS
-  ${PCRE_DIR} $ENV{PCRE_DIR}
-  PATH_SUFFIXES include/pcre include
+    ${PCRE_DIR}
+    $ENV{PCRE_DIR}
+    ${PC_PCRE_INCLUDE_DIRS}
+  PATH_SUFFIXES
+    include/pcre
+    include
   PATHS
-  ~/Library/Frameworks
-  /Library/Frameworks
-  /usr/local
-  /usr
-  /sw # Fink
-  /opt/local # DarwinPorts
-  /opt/csw # Blastwave
-  /opt
+    ~/Library/Frameworks
+    /Library/Frameworks
+    /usr/local
+    /usr
+    /sw # Fink
+    /opt/local # DarwinPorts
+    /opt/csw # Blastwave
+    /opt
 )
 
-FIND_LIBRARY(PCRE_LIBRARY_RELEASE 
-  NAMES pcre
+FIND_LIBRARY(PCRE_LIBRARY_RELEASE
+  NAMES
+    pcre
   HINTS
-  ${PCRE_DIR} $ENV{PCRE_DIR}
-  PATH_SUFFIXES lib64 lib
+    ${PCRE_DIR}
+    $ENV{PCRE_DIR}
+    ${PC_PCRE_LIBRARY_DIRS}
+    ${PC_PCRE_LIBRARY_DIR}
+  PATH_SUFFIXES
+    lib64
+    lib
   PATHS
-  ~/Library/Frameworks
-  /Library/Frameworks
-  /usr/local
-  /usr
-  /sw
-  /opt/local
-  /opt/csw
-  /opt
+    ~/Library/Frameworks
+    /Library/Frameworks
+    /usr/local
+    /usr
+    /sw
+    /opt/local
+    /opt/csw
+    /opt
 )
 
-FIND_LIBRARY(PCRE_LIBRARY_DEBUG 
-  NAMES pcred
+FIND_LIBRARY(PCRE_LIBRARY_DEBUG
+  NAMES
+    pcred
   HINTS
-  ${PCRE_DIR} $ENV{PCRE_DIR}
-  PATH_SUFFIXES lib64 lib
+    ${PCRE_DIR}
+    $ENV{PCRE_DIR}
+    ${PC_PCRE_LIBRARY_DIRS}
+    ${PC_PCRE_LIBRARY_DIR}
+  PATH_SUFFIXES
+    lib64
+    lib
   PATHS
-  ~/Library/Frameworks
-  /Library/Frameworks
-  /usr/local
-  /usr
-  /sw
-  /opt/local
-  /opt/csw
-  /opt
+    ~/Library/Frameworks
+    /Library/Frameworks
+    /usr/local
+    /usr
+    /sw
+    /opt/local
+    /opt/csw
+    /opt
 )
-
-FIND_LIBRARY(PCRECPP_LIBRARY_RELEASE 
-  NAMES pcrecpp
-  HINTS
-  ${PCRE_DIR} $ENV{PCRE_DIR}
-  PATH_SUFFIXES lib64 lib
-  PATHS
-  ~/Library/Frameworks
-  /Library/Frameworks
-  /usr/local
-  /usr
-  /sw
-  /opt/local
-  /opt/csw
-  /opt
-)
-
-FIND_LIBRARY(PCRECPP_LIBRARY_DEBUG 
-  NAMES pcrecppd
-  HINTS
-  ${PCRE_DIR} $ENV{PCRE_DIR}
-  PATH_SUFFIXES lib64 lib
-  PATHS
-  ~/Library/Frameworks
-  /Library/Frameworks
-  /usr/local
-  /usr
-  /sw
-  /opt/local
-  /opt/csw
-  /opt
-)
-
-FIND_LIBRARY(PCREPOSIX_LIBRARY_RELEASE 
-  NAMES pcreposix
-  HINTS
-  ${PCRE_DIR} $ENV{PCRE_DIR}
-  PATH_SUFFIXES lib64 lib
-  PATHS
-  ~/Library/Frameworks
-  /Library/Frameworks
-  /usr/local
-  /usr
-  /sw
-  /opt/local
-  /opt/csw
-  /opt
-)
-
-FIND_LIBRARY(PCREPOSIX_LIBRARY_DEBUG 
-  NAMES pcreposixd
-  HINTS
-  ${PCRE_DIR} $ENV{PCRE_DIR}
-  PATH_SUFFIXES lib64 lib
-  PATHS
-  ~/Library/Frameworks
-  /Library/Frameworks
-  /usr/local
-  /usr
-  /sw
-  /opt/local
-  /opt/csw
-  /opt
-)
-
-SET( PCRE_STATIC OFF CACHE BOOL "Use PCRE static libraries.")
-
-IF(PCRE_STATIC)
-  ADD_DEFINITIONS(-DPCRE_STATIC)
-ENDIF(PCRE_STATIC)
 
 IF(PCRE_LIBRARY_DEBUG AND PCRE_LIBRARY_RELEASE)
   SET(PCRE_LIBRARY optimized ${PCRE_LIBRARY_RELEASE} debug ${PCRE_LIBRARY_DEBUG} )
@@ -130,27 +83,48 @@ ELSEIF(PCRE_LIBRARY_DEBUG)
   SET(PCRE_LIBRARY ${PCRE_LIBRARY_DEBUG} )
 ENDIF()
 
-IF(PCRECPP_LIBRARY_DEBUG AND PCRECPP_LIBRARY_RELEASE)
-  SET(PCRECPP_LIBRARY optimized ${PCRECPP_LIBRARY_RELEASE} debug ${PCRECPP_LIBRARY_DEBUG} )
-ELSEIF(PCRECPP_LIBRARY_RELEASE)
-  SET(PCRECPP_LIBRARY ${PCRECPP_LIBRARY_RELEASE} )
-ELSEIF(PCRECPP_LIBRARY_DEBUG)
-  SET(PCRECPP_LIBRARY ${PCRECPP_LIBRARY_DEBUG} )
+IF(PC_PCRE_pcre_FOUND)
+  SET(PCRE_VERSION ${PC_PCRE_pcre_VERSION})
+ELSEIF(PC_PCRE_libpcre_FOUND)
+  SET(PCRE_VERSION ${PC_PCRE_libpcre_VERSION})
+ELSE()
+  SET(PCRE_VERSION ${PC_PCRE_VERSION})
 ENDIF()
-
-IF(PCREPOSIX_LIBRARY_DEBUG AND PCREPOSIX_LIBRARY_RELEASE)
-  SET(PCREPOSIX_LIBRARY optimized ${PCREPOSIX_LIBRARY_RELEASE} debug ${PCREPOSIX_LIBRARY_DEBUG} )
-ELSEIF(PCREPOSIX_LIBRARY_RELEASE)
-  SET(PCREPOSIX_LIBRARY ${PCREPOSIX_LIBRARY_RELEASE} )
-ELSEIF(PCREPOSIX_LIBRARY_DEBUG)
-  SET(PCREPOSIX_LIBRARY ${PCREPOSIX_LIBRARY_DEBUG} )
-ENDIF()
-
-SET( PCRE_LIBRARIES "${PCRE_LIBRARY};${PCRECPP_LIBRARY};${PCREPOSIX_LIBRARY}" CACHE STRING "PCRE Libraries")
 
 INCLUDE(FindPackageHandleStandardArgs)
-# handle the QUIETLY and REQUIRED arguments and set PCRE_FOUND to TRUE if 
+# handle the QUIETLY and REQUIRED arguments and set PCRE_FOUND to TRUE if
 # all listed variables are TRUE
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(PCRE  DEFAULT_MSG  PCRE_LIBRARIES PCRE_INCLUDE_DIR)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(PCRE
+  REQUIRED_VARS
+    PCRE_LIBRARY
+    PCRE_INCLUDE_DIR
+  VERSION_VAR
+    PCRE_VERSION
+)
 
-MARK_AS_ADVANCED(PCRE_INCLUDE_DIR PCRE_LIBRARIES PCRE_LIBRARY PCRE_LIBRARY_RELEASE PCRE_LIBRARY_DEBUG PCRECPP_LIBRARY PCRECPP_LIBRARY_RELEASE PCRECPP_LIBRARY_DEBUG PCREPOSIX_LIBRARY PCREPOSIX_LIBRARY_RELEASE PCREPOSIX_LIBRARY_DEBUG)
+MARK_AS_ADVANCED(PCRE_INCLUDE_DIR PCRE_LIBRARY PCRE_LIBRARY_RELEASE PCRE_LIBRARY_DEBUG)
+
+GET_FILENAME_COMPONENT(PCRE_FILENAME ${PCRE_LIBRARY} NAME_WE)
+STRING(FIND ${PCRE_FILENAME} .a PCRE_STATIC)
+
+IF(PCRE_FOUND AND NOT TARGET PCRE::PCRE)
+  if(PCRE_STATIC EQUAL -1)
+    ADD_LIBRARY(PCRE::PCRE SHARED IMPORTED)
+    SET_TARGET_PROPERTIES(PCRE::PCRE PROPERTIES
+      IMPORTED_LOCATION
+        "${PCRE_LIBRARY}"
+      INTERFACE_INCLUDE_DIRECTORIES
+        "${PCRE_INCLUDE_DIR}"
+    )
+  ELSE()
+    ADD_LIBRARY(PCRE::PCRE STATIC IMPORTED)
+    SET_TARGET_PROPERTIES(PCRE::PCRE PROPERTIES
+      INTERFACE_COMPILE_DEFINITIONS
+        PCRE_STATIC
+      IMPORTED_LOCATION
+        "${PCRE_LIBRARY}"
+      INTERFACE_INCLUDE_DIRECTORIES
+        "${PCRE_INCLUDE_DIR}"
+    )
+  ENDIF()
+ENDIF()
