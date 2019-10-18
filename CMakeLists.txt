@@ -145,71 +145,41 @@ else()
   # and it is not obvious that there is a demand to do this currenly.
 endif()
 
-if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/edbee-lib/CMakeLists.txt")
-  # The above CMakeList.txt is the top level one - we actually use the one
-  # another level down in 3rdparty/edbee-lib/edbee-lib/CMakeLists.txt
-  message(STATUS "git submodule for required edbee-lib editor widget missing from source code, will attempt to get it...")
-  execute_process(COMMAND git submodule update --init 3rdparty/edbee-lib
-    TIMEOUT 30
-    WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
-    OUTPUT_VARIABLE output_text
-    ERROR_VARIABLE error_text)
-  if(output_text OR error_text)
-    message(STATUS ${output_text} ${error_text})
-  endif()
-endif()
+include(InitGitSubmodule)
 
-if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/qtkeychain/CMakeLists.txt")
-  message(STATUS "git submodule for required QtKeychain missing from source code, will attempt to get it...")
-  execute_process(COMMAND git submodule update --init 3rdparty/qtkeychain
-          TIMEOUT 30
-          WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
-          OUTPUT_VARIABLE output_text
-          ERROR_VARIABLE error_text)
-  if(output_text OR error_text)
-    message(STATUS ${output_text} ${error_text})
-  endif()
-endif()
+git_submodule_init(
+  CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt"
+  SUBMODULE_PATH "3rdparty/edbee-lib"
+  READABLE_NAME "edbee-lib editor widget"
+)
 
-if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/lcf/lcf-scm-1.rockspec")
-  message(STATUS "git submodule for required lua code formatter source code missing, will attempt to get it...")
-  execute_process(COMMAND git submodule update --init 3rdparty/lcf
-    TIMEOUT 30
-    WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
-    OUTPUT_VARIABLE output_text
-    ERROR_VARIABLE error_text)
-  if(output_text OR error_text)
-    message(STATUS ${output_text} ${error_text})
-  endif()
-endif()
+git_submodule_init(
+  CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt"
+  SUBMODULE_PATH "3rdparty/qtkeychain"
+  READABLE_NAME "QtKeychain"
+)
+
+git_submodule_init(
+  CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec"
+  SUBMODULE_PATH "3rdparty/lcf"
+  READABLE_NAME "lua code formatter source code"
+)
 
 if(USE_UPDATER)
-  if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/dblsqd/CMakeLists.txt")
-    message(STATUS "git submodule for optional but wanted DBLSQD updater missing from source code, will attempt to get it...")
-    execute_process(COMMAND git submodule update --init 3rdparty/dblsqd
-      TIMEOUT 30
-      WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
-      OUTPUT_VARIABLE output_text
-      ERROR_VARIABLE error_text)
-    if(output_text OR error_text)
-      message(STATUS ${output_text} ${error_text})
-    endif()
-  endif()
+  git_submodule_init(
+    CHECK_FILE "3rdparty/dblsqd/CMakeLists.txt"
+    SUBMODULE_PATH "3rdparty/dblsqd"
+    READABLE_NAME "DBLSQD updater"
+ )
 endif()
 
 if(APPLE)
   if(USE_UPDATER)
-    if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/sparkle-glue/CMakeLists.txt")
-      message(STATUS "git submodule for optional but wanted Sparkle glue for updater missing from source code, will attempt to get it...")
-      execute_process(COMMAND git submodule update --init 3rdparty/sparkle-glue
-        TIMEOUT 30
-        WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
-        OUTPUT_VARIABLE output_text
-        ERROR_VARIABLE error_text)
-      if(output_text OR error_text)
-        message(STATUS ${output_text} ${error_text})
-      endif()
-    endif()
+    git_submodule_init(
+      CHECK_FILE "3rdparty/sparkle-glue/CMakeLists.txt"
+      SUBMODULE_PATH "3rdparty/sparkle-glue"
+      READABLE_NAME "Sparkle glue for updater"
+    )
 
     if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
       message(STATUS "Sparkle CocoaPod is missing, running 'pod install' to get it...")
