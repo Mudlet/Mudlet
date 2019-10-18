@@ -251,21 +251,13 @@ endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-if(WIN32)
-  add_executable(mudlet WIN32
-    ${mudlet_SRCS}
-    ${mudlet_RCCS}
-    ${mudlet_HDRS}
-    ${mudlet_LUA_FILES}
-    ${mudlet_UIS})
-else()
-  add_executable(mudlet
-    ${mudlet_SRCS}
-    ${mudlet_RCCS}
-    ${mudlet_HDRS}
-    ${mudlet_LUA_FILES}
-    ${mudlet_UIS})
-endif()
+
+add_executable(mudlet
+  ${mudlet_SRCS}
+  ${mudlet_RCCS}
+  ${mudlet_HDRS}
+  ${mudlet_UIS}
+)
 
 set_target_properties(mudlet
   PROPERTIES
@@ -348,7 +340,10 @@ if(USE_3DMAPPER)
 endif()
 
 if(WIN32)
-    target_link_libraries(mudlet ws2_32
+    target_link_libraries(mudlet ws2_32)
+    set_target_properties(mudlet
+      PROPERTIES
+        WIN32_EXECUTABLE ON
     )
 endif()
 
