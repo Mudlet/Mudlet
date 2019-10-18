@@ -63,18 +63,22 @@ macro(include_optional_module)
         # The specific tested for value was seen so set the option "no don't
         # include the module"
         set(OPTIONAL_MODULE_OPTION_VALUE OFF)
+        message(STATUS "Excluding optional ${OPTIONAL_MODULE_READABLE_NAME} module explicitly")
       else()
         # Any other value was seen so ignore it and set "yes, include the module"
         set(OPTIONAL_MODULE_OPTION_VALUE ON)
+        message(STATUS "Including optional ${OPTIONAL_MODULE_READABLE_NAME} module explicitly")
       endif()
     else()
       # An environmental variable not detected, apply platform default of "yes, include the module"
       set(OPTIONAL_MODULE_OPTION_VALUE ON)
+      message(STATUS "Including optional ${OPTIONAL_MODULE_READABLE_NAME} module")
     endif()
     option(${OPTIONAL_MODULE_OPTION_VARIABLE} "Include optional ${OPTIONAL_MODULE_READABLE_NAME} module" ${OPTIONAL_MODULE_OPTION_VALUE})
   else()
     # Don't offer option to enable the module since it's not supported on this platform
     set(${OPTIONAL_MODULE_OPTION_VARIABLE} OFF)
+    message(STATUS "Excluding optional ${OPTIONAL_MODULE_READABLE_NAME} module as it is not supported on this platform")
   endif()
 
 endmacro(include_optional_module)
