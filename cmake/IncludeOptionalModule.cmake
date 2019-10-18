@@ -24,7 +24,7 @@
 #
 #  Usage:
 #    include_optional_module(
-#      ENVORINMENT_VARIABLE ENVIRONMENT_VARIABLE
+#      ENVIRONMENT_VARIABLE ENVIRONMENT_VARIABLE
 #      OPTION_VARIABLE OPTION_VARIABLE
 #      READABLE_NAME "option name"
 #      [ SUPPORTED_SYSTEMS "List" "Of" "Systems"]
@@ -35,7 +35,7 @@ macro(include_optional_module)
 
   # parse readable arguments
   set(OPTIONAL_MODULE_OPTIONS "") # not used
-  set(OPTIONAL_MODULE_ONE_VALUE_ARGS ENVORINMENT_VARIABLE OPTION_VARIABLE READABLE_NAME)
+  set(OPTIONAL_MODULE_ONE_VALUE_ARGS ENVIRONMENT_VARIABLE OPTION_VARIABLE READABLE_NAME)
   set(OPTIONAL_MODULE_MULTI_VALUE_ARGS SUPPORTED_SYSTEMS)
   cmake_parse_arguments(OPTIONAL_MODULE
     "${OPTIONAL_MODULE_OPTIONS}"
@@ -45,8 +45,8 @@ macro(include_optional_module)
   )
 
   # check arguments for existence
-  if(NOT OPTIONAL_MODULE_ENVORINMENT_VARIABLE)
-    message(FATAL_ERROR "Macro include_optional_module(): Required argument 'ENVORINMENT_VARIABLE' missing.")
+  if(NOT OPTIONAL_MODULE_ENVIRONMENT_VARIABLE)
+    message(FATAL_ERROR "Macro include_optional_module(): Required argument 'ENVIRONMENT_VARIABLE' missing.")
   endif()
   if(NOT OPTIONAL_MODULE_OPTION_VARIABLE)
     message(FATAL_ERROR "Macro include_optional_module(): Required argument 'OPTION_VARIABLE' missing.")
@@ -55,7 +55,7 @@ macro(include_optional_module)
     message(FATAL_ERROR "Macro include_optional_module(): Required argument 'READABLE_NAME' missing.")
   endif()
 
-  set(OPTIONAL_MODULE_TEST $ENV{${OPTIONAL_MODULE_ENVORINMENT_VARIABLE}})
+  set(OPTIONAL_MODULE_TEST $ENV{${OPTIONAL_MODULE_ENVIRONMENT_VARIABLE}})
   if((NOT OPTIONAL_MODULE_SUPPORTED_SYSTEMS) OR (CMAKE_SYSTEM_NAME IN_LIST OPTIONAL_MODULE_SUPPORTED_SYSTEMS))
     if(DEFINED OPTIONAL_MODULE_TEST)
       string(TOUPPER ${OPTIONAL_MODULE_TEST} OPTIONAL_MODULE_TEST)
