@@ -4551,7 +4551,7 @@ void mudlet::playMSPMusic(QString& soundFileName, int soundVolume, int soundLeng
         return;
     }
 
-    soundFileName.replace(QLatin1Char('\\'), QLatin1Char('/')); // soundFileName.replace('\\', "/");
+    soundFileName.replace(QLatin1Char('\\'), QLatin1Char('/'));
 
     if (!mudlet::self()->isMSPFileRelative(soundFileName)) {
         return;
