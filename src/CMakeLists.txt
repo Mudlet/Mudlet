@@ -311,7 +311,6 @@ endif()
 
 if(UNIX)
   set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
-  set(LCF_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua/lcf")
 endif(UNIX)
 
 # Define a preprocessor symbol with the default fallback location from which
@@ -400,30 +399,24 @@ target_compile_options(mudlet
 if(UNIX)
   # CMAKE_INSTALL_PREFIX is automagically set on Unix to DESTDIR environment
   # variable and is prefixed onto relative DESTINATION values
-  foreach(lua_file ${lua_files})
-    get_filename_component(lua_file_name ${lua_file} NAME)
-    get_filename_component(lua_file_path ${lua_file} DIRECTORY)
-    install(FILES "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/lua/${lua_file}"
-      DESTINATION "share/mudlet/lua/${lua_file_path}"
-      PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-      CONFIGURATIONS Debug Release)
-  endforeach()
-  foreach(lua_test_file ${lua_test_files})
-    get_filename_component(lua_test_file_name ${lua_test_file} NAME)
-    get_filename_component(lua_test_file_path ${lua_test_file} DIRECTORY)
-    install(FILES "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/tests/${lua_test_file}"
-      DESTINATION "share/mudlet/tests/${lua_test_file_path}"
-      PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-      CONFIGURATIONS Debug Release)
-  endforeach()
-  foreach(lcf_file ${lcf_files})
-    get_filename_component(lcf_file_name ${lcf_file} NAME)
-    get_filename_component(lcf_file_path ${lcf_file} DIRECTORY)
-    install(FILES "${CMAKE_HOME_DIRECTORY}/3rdparty/${lcf_file}"
-      DESTINATION "share/mudlet/lua/${lcf_file_path}"
-      PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-      CONFIGURATIONS Debug Release)
-  endforeach(lcf_file)
+  install(
+    DIRECTORY "mudlet-lua/lua"
+    DESTINATION "share/mudlet"
+    FILES_MATCHING PATTERN "*.lua"
+    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+  )
+  install(
+    DIRECTORY "mudlet-lua/tests"
+    DESTINATION "share/mudlet"
+    FILES_MATCHING PATTERN "*.lua"
+    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+  )
+  install(
+    DIRECTORY "../3rdparty/lcf"
+    DESTINATION "share/mudlet/lua"
+    PATTERN ".git" EXCLUDE
+    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+  )
   install(TARGETS mudlet
     RUNTIME
     DESTINATION "bin"
