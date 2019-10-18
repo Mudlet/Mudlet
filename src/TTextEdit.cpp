@@ -739,8 +739,6 @@ void TTextEdit::highlightSelection()
 {
     QRegion newRegion;
 
-//    normaliseSelection();
-
     int lineDelta = abs(mPA.y() - mPB.y()) - 1;
     if (lineDelta > 0) {
         QRect rectFirstLine(mPA.x() * mFontWidth, (mPA.y() - imageTopLine()) * mFontHeight, mScreenWidth * mFontWidth, mFontHeight);
@@ -815,26 +813,15 @@ void TTextEdit::unHighlight()
     }
     for (int y = y1, total = mPB.y(); y <= total; ++y) {
         int x = 0;
-        if (y == y1) {
-            x = mPA.x();
-        }
 
         if (y >= static_cast<int>(mpBuffer->buffer.size())) {
             break;
         }
 
-        for (;; ++x) {
-            if ((y == mPB.y()) && (x > mPB.x())) {
-                break;
-            }
-            if (x < static_cast<int>(mpBuffer->buffer.at(y).size())) {
-                if (mpBuffer->buffer.at(y).at(x).isSelected()) {
-                    mpBuffer->buffer.at(y).at(x).deselect();
-                    mpBuffer->dirty[y] = true;
-                }
-            } else {
-                break;
-            }
+        for (;x < static_cast<int>(mpBuffer->buffer.at(y).size()); ++x)
+            if (mpBuffer->buffer.at(y).at(x).isSelected()) {
+                mpBuffer->buffer.at(y).at(x).deselect();
+                mpBuffer->dirty[y] = true;
         }
     }
     mForceUpdate = true;
@@ -1159,8 +1146,6 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             mDragStart.setX(x);
             mDragStart.setY(y);
             mDragSelectionEnd = mDragStart;
-            if (mCtrlSelecting)
-                highlightSelection();
             event->accept();
             return;
         }
