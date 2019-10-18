@@ -4591,10 +4591,8 @@ void mudlet::playMSPMusic(QString& soundFileName, int soundVolume, int soundLeng
     QMediaPlayer* pPlayer = mudlet::self()->matchMSPMediaPlayer(false, fileNameList.at(0)); // false == !!MUSIC
 
     if (pPlayer != nullptr) { // Same music is already playing
-        if (musicContinue == 1) { // Continue playing it
-            if (soundLength == 1) { // Don't add more iterations of it
-                return; // Nothing more to do
-            }
+        if (musicContinue == 1 && soundLength == 1) { // Continue playing it && Don't add more iterations of it
+            return; // Nothing more to do
         }
     } else {
         pPlayer = mudlet::self()->getMSPMediaPlayer(false); // false == !!MUSIC
