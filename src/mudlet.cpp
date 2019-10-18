@@ -4601,7 +4601,7 @@ void mudlet::playMSPMusic(QString& soundFileName, int soundVolume, int soundLeng
     }
 
     // It should be impossible to ever reach this.
-    if (!pPlayer) { 
+    if (!pPlayer) {
         qWarning() << QStringLiteral("mudlet::playMSPMusic() WARNING - Unable to create new QMediaPlayer object.");
         return;
     }
