@@ -42,7 +42,6 @@
 #include <QFlags>
 #include <QMainWindow>
 #include <QMap>
-#include <QAudio>
 #include <QMediaPlayer>
 #include <QMediaPlaylist>
 #include <QPointer>
@@ -217,8 +216,7 @@ public:
     bool deselect(Host* pHost, const QString& name);
     void stopSounds();
     void playSound(const QString &s, int);
-    QString getMSPCustomAudioRole(bool isSound);
-    void stopMSP(const QString& customAudioRole);
+    void stopMSP(bool isSound);
     QUrl parseMSPUrl(bool isSound, QString& soundFileName, const QString& soundUrl);
     bool isMSPValidUrl(const QUrl& url);
     bool isMSPFileRelative(QString soundFileName);
@@ -226,9 +224,9 @@ public:
     QStringList getMSPFileNameList(bool isSound, QString& soundFileName, const QString& soundType);
     QUrl getMSPFileUrl(QString& soundFileName, const QString& soundType);
     bool downloadMSPFile(QString& soundFileName, const QString& soundType, QString& absolutePathFileName);
-    QMediaPlayer* getMSPSoundMediaPlayer();
+    QMediaPlayer* getMSPMediaPlayer(bool isSound);
     void playMSPSound(QString& soundFileName, int, int, int, const QString& soundType, const QString& soundUrl);
-    QMediaPlayer* getMSPMusicMediaPlayer(int, int, QString absolutePathFileName);
+    QMediaPlayer* matchMSPMediaPlayer(bool isSound, QString absolutePathFileName);
     void playMSPMusic(QString &soundFileName, int, int, int, const QString& soundType, const QString& soundUrl);
     int getColumnCount(Host* pHost, QString& name);
     int getRowCount(Host* pHost, QString& name);
@@ -250,6 +248,8 @@ public:
     QPointer<Host> mpCurrentActiveHost;
     bool mAutolog;
     QList<QMediaPlayer*> mMusicBoxList;
+    QList<QMediaPlayer*> mMSPSoundList;
+    QList<QMediaPlayer*> mMSPMusicList;
     TTabBar* mpTabBar;
     QStringList packagesToInstallList;
     bool mIsLoadingLayout;

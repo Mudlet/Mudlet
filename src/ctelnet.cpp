@@ -1899,7 +1899,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     }
 
     if (transcodedMsg == "Off") {
-        mudlet::self()->stopMSP(mudlet::self()->getMSPCustomAudioRole(isSound));
+        mudlet::self()->stopMSP(isSound);
         return;
     }
 
