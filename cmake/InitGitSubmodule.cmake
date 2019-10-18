@@ -1,4 +1,23 @@
-###############################################
+###########################################################################
+#   Copyright (C) 2019 Florian Scheel - keneanung@gmail.com               #
+#                                                                         #
+#   This program is free software; you can redistribute it and/or modify  #
+#   it under the terms of the GNU General Public License as published by  #
+#   the Free Software Foundation; either version 2 of the License, or     #
+#   (at your option) any later version.                                   #
+#                                                                         #
+#   This program is distributed in the hope that it will be useful,       #
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of        #
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         #
+#   GNU General Public License for more details.                          #
+#                                                                         #
+#   You should have received a copy of the GNU General Public License     #
+#   along with this program; if not, write to the                         #
+#   Free Software Foundation, Inc.,                                       #
+#   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
+###########################################################################
+
+###########################################################################
 #
 #  Exports a function to initialize a git
 #  submodule if it is not there yet.
@@ -9,7 +28,7 @@
 #      SUBMODULE_PATH "path/to/submodule"
 #      READABLE_NAME "submodule name"
 #    )
-#################################################
+###########################################################################
 
 find_package(Git REQUIRED QUIET)
 
@@ -21,7 +40,7 @@ function(git_submodule_init)
   set(MULTI_VALUE_ARGS "") # not used
   cmake_parse_arguments(GIT_SM "${OPTIONS}" "${ONE_VALUE_ARGS}" "${MULTI_VALUE_ARGS}" ${ARGN})
 
-  # check arguments for existance
+  # check arguments for existence
   if(NOT GIT_SM_CHECK_FILE)
     message(FATAL_ERROR "Function git_submodule_init(): Required argument 'CHECK_FILE' missing.")
   endif()
