@@ -145,11 +145,6 @@ else()
   # and it is not obvious that there is a demand to do this currenly.
 endif()
 
-if(APPLE)
-  # Needed (just) on MacOs as an #include in luazip.h:
-  add_subdirectory(3rdparty/luazip)
-endif()
-
 if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/edbee-lib/CMakeLists.txt")
   # The above CMakeList.txt is the top level one - we actually use the one
   # another level down in 3rdparty/edbee-lib/edbee-lib/CMakeLists.txt
@@ -215,36 +210,6 @@ if(APPLE)
         message(STATUS ${output_text} ${error_text})
       endif()
     endif()
-  endif()
-endif()
-
-if(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/edbee-lib/CMakeLists.txt")
-  add_subdirectory(3rdparty/edbee-lib/edbee-lib)
-elseif()
-  message(FATAL_ERROR "Cannot locate edbee-lib editor widget submodule source code, build abandoned!")
-endif()
-
-if(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/qtkeychain/CMakeLists.txt")
-  add_definitions(-DQTKEYCHAIN_NO_EXPORT)
-  add_subdirectory(3rdparty/qtkeychain)
-elseif()
-  message(FATAL_ERROR "Cannot locate QtKeychain submodule source code, build abandoned!")
-endif()
-
-if(USE_UPDATER)
-  if(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/dblsqd/CMakeLists.txt")
-    add_subdirectory(3rdparty/dblsqd)
-    add_definitions(-DINCLUDE_UPDATER)
-  else()
-    message(FATAL_ERROR "Cannot locate DBLSQD updater submodule source code, build abandoned!")
-  endif()
-
-  if(APPLE)
-    if(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/sparkle-glue/CMakeLists.txt")
-      add_subdirectory(3rdparty/sparkle-glue)
-    else()
-      message(FATAL_ERROR "Cannot locate Sparkle glue for updater submodule source code, build abandoned!")
-    endif()
 
     if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
       message(STATUS "Sparkle CocoaPod is missing, running 'pod install' to get it...")
@@ -255,17 +220,27 @@ if(USE_UPDATER)
   endif()
 endif()
 
-if(USE_3DMAPPER)
-    add_definitions(-DINCLUDE_3DMAPPER)
-endif()
-
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif(CCACHE_FOUND)
 
-add_subdirectory(src)
+add_subdirectory(3rdparty/edbee-lib/edbee-lib)
+add_subdirectory(3rdparty/qtkeychain)
 add_subdirectory(3rdparty/communi)
 add_subdirectory(translations/translated)
+add_subdirectory(src)
 
+if(APPLE)
+  add_subdirectory(3rdparty/luazip)
+endif()
+
+if(USE_UPDATER)
+  add_subdirectory(3rdparty/dblsqd)
+
+  if(APPLE)
+    add_subdirectory(3rdparty/sparkle-glue)
+  endif()
+
+endif()

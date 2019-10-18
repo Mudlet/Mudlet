@@ -309,13 +309,6 @@ if(USE_FONTS)
   )
 endif()
 
-target_compile_definitions(mudlet
-  PRIVATE
-    APP_VERSION="${APP_VERSION}"
-    APP_BUILD="${APP_BUILD}"
-    APP_TARGET="${APP_TARGET}"
-)
-
 if(UNIX)
   set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
 endif(UNIX)
@@ -326,7 +319,11 @@ endif(UNIX)
 # will be used.
 target_compile_definitions(mudlet
   PRIVATE
+    APP_VERSION="${APP_VERSION}"
+    APP_BUILD="${APP_BUILD}"
+    APP_TARGET="${APP_TARGET}"
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}"
+    QTKEYCHAIN_NO_EXPORT
 )
 
 target_link_libraries(mudlet
@@ -362,10 +359,18 @@ endif(Qt5Gamepad_FOUND)
 
 if(USE_UPDATER)
   target_link_libraries(mudlet dblsqd)
+  target_compile_definitions(mudlet
+    PRIVATE
+      INCLUDE_UPDATER
+  )
 endif(USE_UPDATER)
 
 if(USE_3DMAPPER)
   target_link_libraries(mudlet OpenGL::GLU)
+  target_compile_definitions(mudlet
+    PRIVATE
+      INCLUDE_3DMAPPER
+  )
 endif()
 
 if(WIN32)

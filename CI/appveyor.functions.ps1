@@ -22,7 +22,7 @@ function SetQtBaseDir([string] $logFile) {
     }
     catch
     {
-      $Env:QT_BASE_DIR = "C:\Qt\5.12.3\mingw73_32"
+      $Env:QT_BASE_DIR = "C:\Qt\5.13.0\mingw73_32"
     }
   }
   Write-Output "Using $Env:QT_BASE_DIR as QT base directory." | Tee-Object -File "$logFile" -Append
@@ -229,7 +229,7 @@ function InstallPython() {
 }
 
 function InstallOpenssl() {
-  DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.0.2s-win32.zip" "openssl-win32.zip"
+  DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.1.1d-win32.zip" "openssl-win32.zip"
   ExtractZip "openssl-win32.zip" "openssl"
   Step "installing"
   exec "XCOPY" @("/S", "/I", "/Q", "openssl", "$Env:MINGW_BASE_DIR\bin")
@@ -449,7 +449,7 @@ function CheckAndInstallPython(){
 }
 
 function CheckAndInstallOpenSSL(){
-    CheckAndInstall "openssl" "$Env:MINGW_BASE_DIR\bin\ssleay32.dll" { InstallOpenssl }
+    CheckAndInstall "openssl" "$Env:MINGW_BASE_DIR\bin\libssl-1_1.dll" { InstallOpenssl }
 }
 
 function CheckAndInstallHunspell(){
