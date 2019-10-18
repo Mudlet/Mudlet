@@ -1670,7 +1670,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
 
     if (otherProfileVersion > mDefaultVersion) {
-        if (QByteArray(APP_BUILD).isEmpty()) {
+        if (!mudlet::scmIsDevelopmentVersion) {
             // This is a release version - should not support any map file versions higher that it was built for
             if (fileVersion) {
                 *fileVersion = otherProfileVersion;

@@ -229,6 +229,8 @@ public:
 #endif
 
     static const bool scmIsDevelopmentVersion;
+    static const bool scmIsPublicTestVersion;
+    static const bool scmIsReleaseVersion;
     static const QVersionNumber scmRunTimeQtVersion;
     // A constant equivalent to QDataStream::Qt_5_12 needed in several places
     // which can't be pulled from Qt as it is not going to be defined for older

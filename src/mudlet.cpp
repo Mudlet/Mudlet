@@ -122,7 +122,11 @@ const int mudlet::scmQDataStreamFormat_5_12 = 18;
 QPointer<TConsole> mudlet::mpDebugConsole = nullptr;
 QPointer<QMainWindow> mudlet::mpDebugArea = nullptr;
 bool mudlet::debugMode = false;
-const bool mudlet::scmIsDevelopmentVersion = !QByteArray(APP_BUILD).isEmpty();
+
+const bool mudlet::scmIsDevelopmentVersion = !(QByteArray(APP_BUILD).isEmpty() && QByteArray(APP_BUILD).compare("-public-test-build"));
+const bool mudlet::scmIsReleaseVersion = QByteArray(APP_BUILD).isEmpty();
+const bool mudlet::scmIsPublicTestVersion = QByteArray(APP_BUILD) == QStringLiteral("-public-test-build");
+
 QVariantHash mudlet::mLuaFunctionNames;
 
 QPointer<mudlet> mudlet::_self = nullptr;
