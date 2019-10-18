@@ -32,7 +32,7 @@
 ############################################################################
 
 # Should be called before PROJECT.
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.3)
 if(APPLE)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13") # Qt 5.11.2 with which we build on OS X supports 10.11 and up, but some tools are not provided as bottles for that anymore.
 endif()
@@ -52,6 +52,10 @@ enable_testing()
 
 if(POLICY CMP0020)
   cmake_policy(SET CMP0020 NEW)
+endif()
+
+if(POLICY CMP0057)
+  cmake_policy(SET CMP0057 NEW)
 endif()
 
 if(WIN32)
@@ -84,66 +88,27 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
-# Set the environment variable WITH_UPDATER=NO to disable the built-in updater
-set(UPDATER_TEST $ENV{WITH_UPDATER})
-if((CMAKE_SYSTEM_NAME STREQUAL "Linux") OR (CMAKE_SYSTEM_NAME STREQUAL "Windows") OR (CMAKE_SYSTEM_NAME STREQUAL "Darwin"))
-  # We are on one of the supported platforms
-  if(DEFINED UPDATER_TEST)
-    string(TOUPPER ${UPDATER_TEST} UPDATER_TEST)
-    if(UPDATER_TEST STREQUAL "NO")
-      # The specific tested for value was seen so set the option "no don't
-      # include the updater"
-      option(USE_UPDATER "Include libraries and code to allow release versions to be updated on demand" OFF)
-    else()
-      # Any other value was seen so ignore it and set "yes, include the updater"
-      option(USE_UPDATER "Include libraries and code to allow release versions to be updated on demand" ON)
-    endif()
-  else()
-    # An environmental variable not detected, apply platform default of "yes, include the updater"
-    option(USE_UPDATER "Include libraries and code to allow release versions to be updated on demand" ON)
-  endif()
-else()
-  # Option not available for other platforms
-  set(USE_UPDATER NO)
-endif()
+include(IncludeOptionalModule)
 
-# Set the environment variable WITH_3DMAPPER=NO to disable the built-in 3D mapper
-set(3DMAPPER_TEST $ENV{WITH_3DMAPPER})
-if(DEFINED 3DMAPPER_TEST)
-  string(TOUPPER ${3DMAPPER_TEST} 3DMAPPER_TEST)
-  if(3DMAPPER_TEST STREQUAL "NO")
-    option(USE_3DMAPPER "Include 3D mapper" OFF)
-  else()
-    option(USE_3DMAPPER "Include 3D mapper" ON)
-  endif()
-else()
-  # An environmental variable not detected, apply platform default of "yes, include the 3D mapper"
-  option(USE_3DMAPPER "Include 3D mapper" ON)
-endif()
-
-# Set the environment variable WITH_FONTS=NO to disable including built-in fonts
-set(FONT_TEST $ENV{WITH_FONTS})
-if(DEFINED FONT_TEST)
-  string(TOUPPER ${FONT_TEST} FONT_TEST)
-else()
-  # Set the CMake variable to the default if it (as a result of WITH_FONTS not
-  # existing) has not been defined, without the if(DEFINED ...) string(...)
-  # errors out - and so may further tests on the variable...
-  set(FONT_TEST "YES")
-endif()
-if(FONT_TEST STREQUAL "NO")
-  option(USE_FONTS "Include Deja Vu and Ubuntu fonts in the executable" OFF)
-else()
-  option(USE_FONTS "Include Deja Vu and Ubuntu fonts in the executable" ON)
-  # Can download and extract latest Unbuntu font files (currently X.YY is
-  # 0.83) from:
-  # https://launchpad.net/ubuntu/+archive/primary/+files/ubuntu-font-family-sources_X.YY.orig.tar.gz
-  # It would be nice if we could automate the download and extraction of all
-  # the font and associate documentation (but NOT the "sources" sub-directory)
-  # contents into the ./src/fonts/ directory structure only if this option is
-  # set to ON; however that would be plaform specific and add more complexity
-  # and it is not obvious that there is a demand to do this currenly.
-endif()
+include_optional_module(
+  ENVIRONMENT_VARIABLE WITH_UPDATER
+  OPTION_VARIABLE USE_UPDATER
+  READABLE_NAME "updater"
+  SUPPORTED_SYSTEMS
+    "Linux"
+    "Windows"
+    "Darwin"
+)
+include_optional_module(
+  ENVIRONMENT_VARIABLE WITH_FONTS
+  OPTION_VARIABLE USE_FONTS
+  READABLE_NAME "fonts"
+)
+include_optional_module(
+  ENVIRONMENT_VARIABLE WITH_3DMAPPER
+  OPTION_VARIABLE USE_3DMAPPER
+  READABLE_NAME "3D mapper"
+)
 
 include(InitGitSubmodule)
 
