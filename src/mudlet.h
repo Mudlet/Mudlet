@@ -228,7 +228,13 @@ public:
     void sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const;
 #endif
 
+    // used by developers in everyday coding
     static const bool scmIsDevelopmentVersion;
+    // unofficial "nightly" build - still a type of a release
+    static const bool scmIsPublicTestVersion;
+    // final, official release
+    static const bool scmIsReleaseVersion;
+
     static const QVersionNumber scmRunTimeQtVersion;
     // A constant equivalent to QDataStream::Qt_5_12 needed in several places
     // which can't be pulled from Qt as it is not going to be defined for older

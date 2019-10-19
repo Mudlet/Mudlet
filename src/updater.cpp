@@ -198,7 +198,7 @@ void Updater::setupOnLinux()
     // Setup to automatically download the new release when an update is available
     QObject::connect(feed, &dblsqd::Feed::ready, this, [=]() {
 
-        // only update release builds to prevent auto-update from overwriting your
+        // don't update development builds to prevent auto-update from overwriting your
         // compiled binary while in development
         if (mudlet::scmIsDevelopmentVersion) {
             return;
