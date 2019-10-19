@@ -122,7 +122,11 @@ const int mudlet::scmQDataStreamFormat_5_12 = 18;
 QPointer<TConsole> mudlet::mpDebugConsole = nullptr;
 QPointer<QMainWindow> mudlet::mpDebugArea = nullptr;
 bool mudlet::debugMode = false;
-const bool mudlet::scmIsDevelopmentVersion = !QByteArray(APP_BUILD).isEmpty();
+
+const bool mudlet::scmIsReleaseVersion = QByteArray(APP_BUILD).isEmpty();
+const bool mudlet::scmIsPublicTestVersion = QByteArray(APP_BUILD) == QStringLiteral("-public-test-build");
+const bool mudlet::scmIsDevelopmentVersion = !mudlet::scmIsReleaseVersion && !mudlet::scmIsPublicTestVersion;
+
 QVariantHash mudlet::mLuaFunctionNames;
 
 QPointer<mudlet> mudlet::_self = nullptr;
@@ -474,8 +478,8 @@ mudlet::mudlet()
     // Hide the update menu item if the code is not included
     dactionUpdate->setVisible(false);
 #else
-    // Also, only show it if this is a release version
-    dactionUpdate->setVisible(!scmIsDevelopmentVersion);
+    // Also, only show it if this is a release/public test version
+    dactionUpdate->setVisible(scmIsReleaseVersion || scmIsPublicTestVersion);
 #endif
     connect(dactionPackageManager, &QAction::triggered, this, &mudlet::slot_package_manager);
     connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_package_exporter);
@@ -4576,9 +4580,9 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
 #if defined(INCLUDE_UPDATER)
 void mudlet::checkUpdatesOnStart()
 {
-    if (!scmIsDevelopmentVersion) {
+    if (scmIsReleaseVersion || scmIsPublicTestVersion) {
         // Only try and create an updater (which checks for updates online) if
-        // this is a release version:
+        // this is a release/public test version:
         updater->checkUpdatesOnStart();
     }
 }
