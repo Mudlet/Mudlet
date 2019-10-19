@@ -1383,11 +1383,11 @@ local err_tag = "&lt;255,0,0&gt;(&lt;178,34,34&gt;error&lt;255,0,0&gt;): &lt;255
 
 
 local function parse_help_text(text)
-  text = text:gsub("%$ROOM_NAME_STATUS", (map.currentName and map.currentName ~= "") and '✔' or '❌')
+  text = text:gsub("%$ROOM_NAME_STATUS", (map.currentName and map.currentName ~= "") and '✔️' or '❌')
   text = text:gsub("%$ROOM_NAME", map.currentName or '')
 
-  text = text:gsub("%$ROOM_EXITS_STATUS", table.is_empty(map.currentExits) and '❌' or '✔️')
-  text = text:gsub("%$ROOM_EXITS", table.concat(map.currentExits, ' '))
+  text = text:gsub("%$ROOM_EXITS_STATUS", (not map.currentExits or table.is_empty(map.currentExits)) and '❌' or '✔️')
+  text = text:gsub("%$ROOM_EXITS", map.currentExits and table.concat(map.currentExits, ' ') or '')
 
   return text
 end
@@ -2948,6 +2948,7 @@ function map.eventHandler(event, ...)
 end
 
 registerAnonymousEventHandler("sysDownloadDone", "map.eventHandler")
+registerAnonymousEventHandler("sysLoadEvent", "map.eventHandler")
 registerAnonymousEventHandler("sysConnectionEvent", "map.eventHandler")
 registerAnonymousEventHandler("sysInstall", "map.eventHandler")
 registerAnonymousEventHandler("sysDataSendRequest", "map.eventHandler")
