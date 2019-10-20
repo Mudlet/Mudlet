@@ -545,6 +545,7 @@ private slots:
     void slot_toggle_compact_input_line();
     void slot_password_migrated_to_secure(QKeychain::Job *job);
     void slot_password_migrated_to_profile(QKeychain::Job *job);
+    void slot_report_issue();
 
 private:
     void initEdbee();

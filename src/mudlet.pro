@@ -109,9 +109,9 @@ BUILD = $$(MUDLET_VERSION_BUILD)
 isEmpty( BUILD ) {
 # Possible values are:
 # "-dev" for the development build
-# "-public-test-beta" for the public test build
+# "-public-test-build" for the public test build
 # "" for the release build
-   BUILD = "-public-test-beta"
+   BUILD = "-public-test-build"
 }
 
 # Changing BUILD and VERSION values affects: ctelnet.cpp, main.cpp, mudlet.cpp

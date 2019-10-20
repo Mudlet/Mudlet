@@ -480,6 +480,7 @@ mudlet::mudlet()
 #else
     // Also, only show it if this is a release/public test version
     dactionUpdate->setVisible(scmIsReleaseVersion || scmIsPublicTestVersion);
+    dactionReportIssue->setVisible(scmIsPublicTestVersion);
 #endif
     connect(dactionPackageManager, &QAction::triggered, this, &mudlet::slot_package_manager);
     connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_package_exporter);
@@ -524,6 +525,7 @@ mudlet::mudlet()
     readLateSettings(*mpSettings);
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
+    connect(dactionReportIssue, &QAction::triggered, this, &mudlet::slot_report_issue);
 
 #if defined(INCLUDE_UPDATER)
     updater = new Updater(this, mpSettings);
@@ -4590,6 +4592,11 @@ void mudlet::checkUpdatesOnStart()
 void mudlet::slot_check_manual_update()
 {
     updater->manuallyCheckUpdates();
+}
+
+void mudlet::slot_report_issue()
+{
+    QDesktopServices::openUrl(QUrl(QStringLiteral("https://github.com/Mudlet/Mudlet/issues/new")));
 }
 
 // Means to turn-off the hard coded popup delay in QActions provided by:
