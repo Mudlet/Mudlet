@@ -624,6 +624,7 @@ private:
     QPointer<QAction> mpActionKeys;
     QPointer<QAction> mpActionMapper;
     QPointer<QAction> mpActionMultiView;
+    QPointer<QAction> mpActionReportIssue;
     QPointer<QAction> mpActionNotes;
     QPointer<QAction> mpActionOptions;
     QPointer<QToolButton> mpButtonPackageManagers;
