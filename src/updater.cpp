@@ -47,7 +47,7 @@ Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent)
     this->settings = settings;
 
     feed = new dblsqd::Feed(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"),
-                            mudlet::scmIsPublicTestVersion ? QStringLiteral("public-test-beta") : QStringLiteral("release"));
+                            mudlet::scmIsPublicTestVersion ? QStringLiteral("public-test-build") : QStringLiteral("release"));
 }
 Updater::~Updater()
 {
