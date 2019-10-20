@@ -65,7 +65,7 @@
 #include <QTextStream>
 #include <QToolBar>
 #include <QVariantHash>
-
+#include <QRandomGenerator>
 #include <zip.h>
 #include "post_guard.h"
 
@@ -405,6 +405,17 @@ mudlet::mudlet()
     mpActionMultiView->setObjectName(QStringLiteral("multiview_action"));
     mpMainToolBar->widgetForAction(mpActionMultiView)->setObjectName(mpActionMultiView->objectName());
 
+    if (mudlet::scmIsPublicTestVersion) {
+        mpActionReportIssue = new QAction(tr("Report issue"), this);
+        QStringList issueReportIcons {"face-uncertain.png", "face-surprise.png", "face-smile.png", "face-sad.png", "face-plain.png"};
+        auto randomIcon = QRandomGenerator::global()->bounded(issueReportIcons.size());
+        mpActionReportIssue->setIcon(QIcon(QStringLiteral(":/icons/%1").arg(issueReportIcons.at(randomIcon))));
+        mpActionReportIssue->setToolTip(tr("Report an issue about the Mudlet Public Test Build"));
+        mpMainToolBar->addAction(mpActionReportIssue);
+        mpActionReportIssue->setObjectName(QStringLiteral("reportissue_action"));
+        mpMainToolBar->widgetForAction(mpActionReportIssue)->setObjectName(mpActionReportIssue->objectName());
+    }
+
     mpActionAbout = new QAction(QIcon(QStringLiteral(":/icons/mudlet_information.png")), tr("About"), this);
     mpActionAbout->setToolTip(tr("<p>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</p>",
                                  // Intentional comment
@@ -459,6 +470,10 @@ mudlet::mudlet()
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_package_exporter);
 
+    if (mudlet::scmIsPublicTestVersion) {
+        connect(mpActionReportIssue.data(), &QAction::triggered, this, &mudlet::slot_report_issue);
+    }
+
     // PLACEMARKER: Save for later restoration (1 of 2) (by adding a "Close" (profile) option to first menu on menu bar:
     // QAction* mactionCloseProfile = new QAction(tr("Close"), this);
 
@@ -480,6 +495,7 @@ mudlet::mudlet()
 #else
     // Also, only show it if this is a release/public test version
     dactionUpdate->setVisible(scmIsReleaseVersion || scmIsPublicTestVersion);
+    dactionReportIssue->setVisible(scmIsPublicTestVersion);
 #endif
     connect(dactionPackageManager, &QAction::triggered, this, &mudlet::slot_package_manager);
     connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_package_exporter);
@@ -524,6 +540,7 @@ mudlet::mudlet()
     readLateSettings(*mpSettings);
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
+    connect(dactionReportIssue, &QAction::triggered, this, &mudlet::slot_report_issue);
 
 #if defined(INCLUDE_UPDATER)
     updater = new Updater(this, mpSettings);
@@ -4590,6 +4607,11 @@ void mudlet::checkUpdatesOnStart()
 void mudlet::slot_check_manual_update()
 {
     updater->manuallyCheckUpdates();
+}
+
+void mudlet::slot_report_issue()
+{
+    QDesktopServices::openUrl(QUrl(QStringLiteral("https://github.com/Mudlet/Mudlet/issues/new")));
 }
 
 // Means to turn-off the hard coded popup delay in QActions provided by:
