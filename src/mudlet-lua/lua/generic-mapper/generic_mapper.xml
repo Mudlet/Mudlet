@@ -2268,7 +2268,7 @@ function map.clear_moves()
 end
 
 function map.show_moves()
-    map.echo("Moves: "..(move_queue and table.concat(move_queue, ', ' or 'none')))
+    map.echo("Moves: "..(move_queue and table.concat(move_queue, ', ') or '(queue empty)'))
 end
 
 function map.set_area(name)
