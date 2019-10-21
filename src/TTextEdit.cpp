@@ -1705,6 +1705,7 @@ int TTextEdit::bufferScrollUp(int lines)
 {
     if (Q_UNLIKELY((mpBuffer->mCursorY - lines) >= mScreenHeight)) {
         mpBuffer->mCursorY -= lines;
+        mpConsole->mpScrollBar->setValue(mpConsole->mpScrollBar->value() - lines);
         return lines;
 
     } else {
@@ -1712,6 +1713,7 @@ int TTextEdit::bufferScrollUp(int lines)
         if (mCursorY < 0) {
             int delta = mCursorY;
             mpBuffer->mCursorY = 0;
+            mpConsole->mpScrollBar->setValue(mpConsole->mpScrollBar->value() - lines);
             return delta;
 
         } else {
@@ -1735,6 +1737,7 @@ int TTextEdit::bufferScrollDown(int lines)
             mpBuffer->mCursorY += lines;
             mIsTailMode = false;
         }
+        mpConsole->mpScrollBar->setValue(mpConsole->mpScrollBar->value() + lines);
         return lines;
 
     } else if (mpBuffer->mCursorY >= static_cast<int>(mpBuffer->size() - 1)) {
@@ -1756,6 +1759,7 @@ int TTextEdit::bufferScrollDown(int lines)
             mpBuffer->mCursorY += lines;
             mIsTailMode = false;
         }
+        mpConsole->mpScrollBar->setValue(mpConsole->mpScrollBar->value() + lines);
 
         return lines;
     }
