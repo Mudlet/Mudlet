@@ -1,7 +1,7 @@
 cd $Env:APPVEYOR_BUILD_FOLDER
 
 if ($Env:APPVEYOR_REPO_TAG -eq "false") {
-  # The only scheduled builds are public test builds
+  # The only scheduled Appveyor builds are public test builds
   if ($Env:APPVEYOR_SCHEDULED_BUILD -ne "false") {
     $Env:MUDLET_VERSION_BUILD = "-public-test-build"
   } else {
