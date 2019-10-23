@@ -5,7 +5,8 @@ set -e
 # we deploy only certain builds
 if [ "${DEPLOY}" = "deploy" ]; then
 
-  if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
+  if [ "${TRAVIS_EVENT_TYPE}" == "cron" ] \
+    && [ "${CC}" = "gcc" ] && [ "${Q_OR_C_MAKE}" = "qmake" ]; then
     # instead of deployment, we upload to coverity for cron jobs
     cd build
     tar czf Mudlet.tgz cov-int
@@ -82,7 +83,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
     bash "${HOME}/git-archive-all.sh" "Mudlet-${VERSION}.tar"
     xz "Mudlet-${VERSION}.tar"
     scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "keneanung@mudlet.org:${DEPLOY_PATH}"
-    
+
     # generate and deploy geyser documentation
     luarocks install --local ldoc
     cd "${TRAVIS_BUILD_DIR}/src/mudlet-lua"
