@@ -10,8 +10,9 @@ YAJL_PATH="$(pkg-config --variable=libdir yajl)"
 echo "Setting search path to $YAJL_PATH"
 luarocks install --local lua-yajl YAJL_LIBDIR="${YAJL_PATH}"
 
-if [ "${TRAVIS_EVENT_TYPE}" = "cron" ]; then
-  # download coverity tool only for cron jobs
+if [ "${TRAVIS_EVENT_TYPE}" == "cron" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] \
+  && [ "${CC}" = "gcc" ] && [ "${Q_OR_C_MAKE}" = "qmake" ]; then
+  # download coverity tool only for linux cron qmake/gcc jobs
   mkdir coverity
   cd coverity
   wget https://scan.coverity.com/download/linux64 --post-data "token=${COVERITY_SCAN_TOKEN}&project=Mudlet%2FMudlet" -O coverity_tool.tgz
