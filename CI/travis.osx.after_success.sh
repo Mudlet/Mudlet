@@ -2,7 +2,8 @@
 
 set -e
 
-if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
+if [ "${TRAVIS_EVENT_TYPE}" == "cron" ] \
+  && [ "${CC}" != "clang" ] && [ "${Q_OR_C_MAKE}" != "qmake" ]; then
   echo Job not executed under cron run
   exit
 fi
