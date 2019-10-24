@@ -749,7 +749,7 @@ public:
         int soundPriorityOrMusicContinue,
         QString soundType,
         QString soundUrl,
-        QString absolutePathFileName) : 
+        QString absolutePathFileName) :
         mIsSound(isSound),
         mSoundFileName(soundFileName),
         mSoundVolume(soundVolume),
