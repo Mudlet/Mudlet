@@ -4304,7 +4304,7 @@ QUrl mudlet::getMSPFileUrl(QString& soundFileName, const QString& soundType)
 
 void mudlet::writeMSPFile(QNetworkReply* reply)
 {
-    Host* pHost = getActiveHost();;
+    QPointer<Host> pHost = getActiveHost();
 
     if (!pHost) {
         return;
