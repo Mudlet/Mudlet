@@ -685,7 +685,7 @@ private:
     QStringList mProfilePasswordsToMigrate {};
 
     bool mStorePasswordsSecurely {true};
-    
+
     QNetworkAccessManager* fileManagerMSP;
     QMap<QNetworkReply*, FileMSP> downloadMSP;
 };
