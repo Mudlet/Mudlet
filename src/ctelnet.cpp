@@ -1870,8 +1870,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
     transcodedMsg.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
 
-    bool isSound = false;
-    bool isMusic = false;
+    bool isSound = true;
     QString soundFileName;
     int soundVolume = 50;
     int soundLength = 1;
@@ -1879,6 +1878,8 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     int musicContinue = 1;
     QString soundType;
     QString soundUrl;
+
+    qDebug() << transcodedMsg;
 
     if (!transcodedMsg.endsWith(QStringLiteral(")"))) {
         return;
@@ -1891,7 +1892,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
         isSound = true;
         transcodedMsg.remove(QStringLiteral("!!SOUND("));
     } else if (transcodedMsg.startsWith(QStringLiteral("!!MUSIC("))) {
-        isMusic = true;
+        isSound = false;
         transcodedMsg.remove(QStringLiteral("!!MUSIC("));
     } else {
         // Does not meet the MSP standard.
@@ -1947,10 +1948,10 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     }
 
     if (isSound) {
-        mudlet::self()->playMSPSound(soundFileName, soundVolume, soundLength, soundPriority, soundType, soundUrl);
-    } else if (isMusic) {
-        mudlet::self()->playMSPMusic(soundFileName, soundVolume, soundLength, musicContinue, soundType, soundUrl);
+        mudlet::self()->playMSP(isSound, soundFileName, soundVolume, soundLength, soundPriority, soundType, soundUrl);
     }
+
+    mudlet::self()->playMSP(isSound, soundFileName, soundVolume, soundLength, musicContinue, soundType, soundUrl);
 }
 
 void cTelnet::setChannel102Variables(const QString& msg)
