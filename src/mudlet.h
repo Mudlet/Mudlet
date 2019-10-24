@@ -681,6 +681,11 @@ private:
 
     QString mMudletDiscordInvite = QStringLiteral("https://discordapp.com/invite/kuYvMQ9");
 
+    // a list of profiles currently being migrated to secure or profile storage
+    QStringList mProfilePasswordsToMigrate {};
+
+    bool mStorePasswordsSecurely {true};
+    
     QNetworkAccessManager* fileManagerMSP;
     QMap<QNetworkReply*, FileMSP> downloadMSP;
 };
