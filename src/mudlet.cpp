@@ -405,7 +405,8 @@ mudlet::mudlet()
     mpActionMultiView->setObjectName(QStringLiteral("multiview_action"));
     mpMainToolBar->widgetForAction(mpActionMultiView)->setObjectName(mpActionMultiView->objectName());
 
-    if (mudlet::scmIsPublicTestVersion) {
+#if defined(INCLUDE_UPDATER)
+    if (scmIsPublicTestVersion) {
         mpActionReportIssue = new QAction(tr("Report issue"), this);
         QStringList issueReportIcons {"face-uncertain.png", "face-surprise.png", "face-smile.png", "face-sad.png", "face-plain.png"};
         auto randomIcon = QRandomGenerator::global()->bounded(issueReportIcons.size());
@@ -415,6 +416,7 @@ mudlet::mudlet()
         mpActionReportIssue->setObjectName(QStringLiteral("reportissue_action"));
         mpMainToolBar->widgetForAction(mpActionReportIssue)->setObjectName(mpActionReportIssue->objectName());
     }
+#endif
 
     mpActionAbout = new QAction(QIcon(QStringLiteral(":/icons/mudlet_information.png")), tr("About"), this);
     mpActionAbout->setToolTip(tr("<p>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</p>",
@@ -470,10 +472,6 @@ mudlet::mudlet()
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_package_exporter);
 
-    if (mudlet::scmIsPublicTestVersion) {
-        connect(mpActionReportIssue.data(), &QAction::triggered, this, &mudlet::slot_report_issue);
-    }
-
     // PLACEMARKER: Save for later restoration (1 of 2) (by adding a "Close" (profile) option to first menu on menu bar:
     // QAction* mactionCloseProfile = new QAction(tr("Close"), this);
 
@@ -489,13 +487,27 @@ mudlet::mudlet()
     connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
     connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_discord);
     connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_irc);
-#if !defined(INCLUDE_UPDATER)
-    // Hide the update menu item if the code is not included
-    dactionUpdate->setVisible(false);
-#else
-    // Also, only show it if this is a release/public test version
+#if defined(INCLUDE_UPDATER)
+    // Show the update option if the code is present AND if this is a
+    // release OR a public test version:
     dactionUpdate->setVisible(scmIsReleaseVersion || scmIsPublicTestVersion);
-    dactionReportIssue->setVisible(scmIsPublicTestVersion);
+    // Show the report issue option if the updater code is present (as it is
+    // less likely to be for: {Linux} distribution packaged versions of Mudlet
+    // - or people hacking their own versions and neither of those types are
+    // going to want the updater to change things for them) AND only for a
+    // public test version:
+    if (scmIsPublicTestVersion) {
+        dactionReportIssue->setVisible(true);
+        connect(mpActionReportIssue.data(), &QAction::triggered, this, &mudlet::slot_report_issue);
+        connect(dactionReportIssue, &QAction::triggered, this, &mudlet::slot_report_issue);
+    } else {
+        dactionReportIssue->setVisible(false);
+    }
+#else
+    // Unconditionally hide the update and report bug menu items if the updater
+    // code is not included:
+    dactionUpdate->setVisible(false);
+    dactionReportIssue->setVisible(false);
 #endif
     connect(dactionPackageManager, &QAction::triggered, this, &mudlet::slot_package_manager);
     connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_package_exporter);
@@ -540,7 +552,6 @@ mudlet::mudlet()
     readLateSettings(*mpSettings);
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
-    connect(dactionReportIssue, &QAction::triggered, this, &mudlet::slot_report_issue);
 
 #if defined(INCLUDE_UPDATER)
     updater = new Updater(this, mpSettings);

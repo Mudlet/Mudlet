@@ -541,11 +541,12 @@ private slots:
 #if defined(INCLUDE_UPDATER)
     void slot_update_installed();
     void slot_updateAvailable(const int);
+    void slot_report_issue();
 #endif
     void slot_toggle_compact_input_line();
     void slot_password_migrated_to_secure(QKeychain::Job *job);
     void slot_password_migrated_to_profile(QKeychain::Job *job);
-    void slot_report_issue();
+
 
 private:
     void initEdbee();
