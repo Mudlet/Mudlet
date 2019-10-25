@@ -803,10 +803,8 @@ void TTextEdit::highlightSelection()
 
 void TTextEdit::unHighlight()
 {
-    int y1;
-
     normaliseSelection();
-    y1 = mPA.y();
+    int y1 = mPA.y();
 
     if (y1 < 0) {
         return;
@@ -1299,8 +1297,6 @@ void TTextEdit::slot_copySelectionToClipboard()
 
 void TTextEdit::slot_copySelectionToClipboardHTML()
 {
-//    normaliseSelection();
-
     QString title;
     if (mpConsole->getType() == TConsole::CentralDebugConsole) {
         title = tr("Mudlet, debug console extract");
@@ -1412,8 +1408,6 @@ void TTextEdit::slot_copySelectionToClipboardImage()
 
     // if selection was made backwards swap
     // right to left
-//    normaliseSelection();
-
     if (mFontWidth <= 0 || mFontHeight <= 0) {
         return;
     }
@@ -1483,17 +1477,12 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         return;
     }
 
- //   auto oldMpa = mPA;
- //   auto oldMpb = mPB;
-
     // deselect to prevent inverted colours in image
     unHighlight();
     mSelectedRegion = QRegion(0, 0, 0, 0);
 
     auto result = drawTextForClipboard(painter, rect, lineOffset);
 
-//    mPA = oldMpa;
-//    mPB = oldMpb;
     highlightSelection();
 
     // if we cut didn't finish painting the complete picture, trim the bottom of the image
