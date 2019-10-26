@@ -64,10 +64,10 @@ void TMedia::playMedia(TMediaData& mediaData)
         if (!mediaData.getMediaFileName().contains('.')) {
             switch (mediaData.getMediaCategory()) {
                 case TMediaData::MediaCategorySound:
-                    mediaData.getMediaFileName().append(".wav");
+                    mediaData.setMediaFileName(mediaData.getMediaFileName().append(".wav"));
                     break;
                 case TMediaData::MediaCategoryMusic:
-                    mediaData.getMediaFileName().append(".mid");
+                    mediaData.setMediaFileName(mediaData.getMediaFileName().append(".mid"));
                     break;
             }
         }
@@ -80,10 +80,11 @@ void TMedia::playMedia(TMediaData& mediaData)
                 .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName());
         }
 
-        QFile soundFile(absolutePathFileName);
+        mediaData.setMediaAbsolutePathFileName(absolutePathFileName);
 
-        if (!soundFile.exists()) {
-            mediaData.setMediaAbsolutePathFileName(absolutePathFileName);
+        QFile mediaFile(absolutePathFileName);
+
+        if (!mediaFile.exists()) {
             TMedia::downloadFile(mediaData);
             return;
         }
@@ -188,6 +189,17 @@ QStringList TMedia::parseFileNameList(TMediaData& mediaData, QDir &dir)
             }
         }
     } else {
+        if (!mediaData.getMediaFileName().contains('.')) {
+            switch (mediaData.getMediaCategory()) {
+                case TMediaData::MediaCategorySound:
+                    mediaData.setMediaFileName(mediaData.getMediaFileName().append(".wav"));
+                    break;
+                case TMediaData::MediaCategoryMusic:
+                    mediaData.setMediaFileName(mediaData.getMediaFileName().append(".mid"));
+                    break;
+            }
+        }
+
         if (!mediaData.getMediaType().isEmpty()) {
             fileNameList << QStringLiteral("%1/%2/%3")
                 .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaType(), mediaData.getMediaFileName());
