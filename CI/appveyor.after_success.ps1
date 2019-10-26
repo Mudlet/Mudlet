@@ -42,10 +42,9 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false") {
   if ($Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build'))
     # allow public test builds to be installed side by side with the release builds
     (Get-Content C:\projects\installers\windows\mudlet.nuspec).replace('<id>Mudlet</id>', '<id>Mudlet.PublicTestBuild</id>') | Set-Content C:\projects\installers\windows\mudlet.nuspec
-    nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
-  } else {
-    nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
   }
+  nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
+
   Write-Output "=== Creating installers from Nuget package ==="
   .\squirrel.windows\tools\Squirrel --releasify C:\projects\squirrel-packaging-prep\Mudlet.$($Env:VERSION).nupkg --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-2x.png --no-msi --setupIcon C:\projects\installers\windows\mudlet_main_48px.ico -n "/a /f C:\projects\installers\windows\code-signing-certificate.p12 /p $Env:signing_password /fd sha256 /tr http://timestamp.digicert.com /td sha256"
   Write-Output "=== Removing old directory content of release folder ==="
