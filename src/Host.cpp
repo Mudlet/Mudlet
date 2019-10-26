@@ -30,6 +30,7 @@
 #include "TCommandLine.h"
 #include "TEvent.h"
 #include "TMap.h"
+#include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
 #include "XMLimport.h"
@@ -66,7 +67,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mEnableMSP(true)
 , mEnableMSDP(false)
 , mServerMXPenabled(true)
-, mMSPSoundLocation(QString())
+, mMediaLocation(QString())
 , mFORCE_GA_OFF(false)
 , mFORCE_NO_COMPRESSION(false)
 , mFORCE_SAVE_ON_EXIT(false)
@@ -83,6 +84,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mNoAntiAlias(false)
 , mpEditorDialog(nullptr)
 , mpMap(new TMap(this, hostname))
+, mpMedia(new TMedia(this, hostname))
 , mpNotePad(nullptr)
 , mPrintCommand(true)
 , mIsRemoteEchoingActive(false)
@@ -537,20 +539,20 @@ QString Host::getMmpMapLocation() const
     return mpMap->getMmpMapLocation();
 }
 
-void Host::setMSPSoundLocation(const QString& soundUrl)
+void Host::setMediaLocation(const QString& mediaUrl)
 {
-    QUrl url = QUrl(soundUrl);
+    QUrl url = QUrl(mediaUrl);
 
     if (!url.isValid()) {
         return;
     }
 
-    mMSPSoundLocation = soundUrl;
+    mMediaLocation = mediaUrl;
 }
 
-QString Host::getMSPSoundLocation() const
+QString Host::getMediaLocation() const
 {
-    return mMSPSoundLocation;
+    return mMediaLocation;
 }
 
 std::pair<bool, QString> Host::setDisplayFont(const QFont& font)

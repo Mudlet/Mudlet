@@ -34,6 +34,7 @@
 #include "TConsole.h"
 #include "TEvent.h"
 #include "TMap.h"
+#include "TMedia.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
@@ -1900,7 +1901,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     }
 
     if (transcodedMsg == "Off") {
-        mudlet::self()->stopMSP(isSound);
+        mpHost->mpMedia->stopMedia(isSound ? TMediaData::MediaCategorySound : TMediaData::MediaCategoryMusic);
         return;
     }
 
@@ -1948,10 +1949,15 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     }
 
     if (isSound) {
-        mudlet::self()->playMSP(isSound, soundFileName, soundVolume, soundLength, soundPriority, soundType, soundUrl);
+        TMediaData mediaData = TMediaData(TMediaData::MediaCategorySound, soundFileName, soundVolume, soundLength, soundType, soundUrl);
+        mediaData.setSoundPriority(soundPriority);
+        mpHost->mpMedia->playMedia(mediaData);
+        return;
     }
 
-    mudlet::self()->playMSP(isSound, soundFileName, soundVolume, soundLength, musicContinue, soundType, soundUrl);
+    TMediaData mediaData = TMediaData(TMediaData::MediaCategoryMusic, soundFileName, soundVolume, soundLength, soundType, soundUrl);
+    mediaData.setMusicContinue(musicContinue);
+    mpHost->mpMedia->playMedia(mediaData);
 }
 
 void cTelnet::setChannel102Variables(const QString& msg)

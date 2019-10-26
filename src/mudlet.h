@@ -91,7 +91,6 @@ class dlgAboutDialog;
 class dlgProfilePreferences;
 
 class translation;
-class FileMSP;
 
 class mudlet : public QMainWindow, public Ui::main_window
 {
@@ -218,19 +217,6 @@ public:
     void stopSounds();
     void playSound(const QString &s, int);
     void stopMSP(bool isSound);
-    QUrl parseMSPUrl(bool isSound, QString& soundFileName, const QString& soundUrl);
-    bool isMSPValidUrl(const QUrl& url);
-    bool isMSPFileRelative(QString soundFileName);
-    QStringList parseMSPFileNameList(bool isSound, QString& soundFileName, const QString &soundType, QDir &dir);
-    QStringList getMSPFileNameList(bool isSound, QString& soundFileName, const QString& soundType);
-    QUrl getMSPFileUrl(QString& soundFileName, const QString& soundType);
-    void writeMSPFile(QNetworkReply* reply);
-    void downloadMSPFile(FileMSP& fileMSP);
-    QMediaPlayer* getMSPMediaPlayer(bool isSound);
-    void playMSPSound(QString& soundFileName, int, int, int, const QString& soundType, const QString& soundUrl);
-    QMediaPlayer* matchMSPMediaPlayer(bool isSound, QString absolutePathFileName);
-    void playMSPMusic(QString& soundFileName, int, int, int, const QString& soundType, const QString& soundUrl);
-    void playMSP(bool isSound, QString& soundFileName, int, int, int, const QString& soundType, const QString& soundUrl);
     int getColumnCount(Host* pHost, QString& name);
     int getRowCount(Host* pHost, QString& name);
     QStringList getAvailableFonts();
@@ -251,8 +237,6 @@ public:
     QPointer<Host> mpCurrentActiveHost;
     bool mAutolog;
     QList<QMediaPlayer*> mMusicBoxList;
-    QList<QMediaPlayer*> mMSPSoundList;
-    QList<QMediaPlayer*> mMSPMusicList;
     TTabBar* mpTabBar;
     QStringList packagesToInstallList;
     bool mIsLoadingLayout;
@@ -333,11 +317,11 @@ public:
         // supplied profle name does:
         profileHomePath,
         // Takes one extra argument (profile name) that returns the directory
-        // for the profile game save sounds files - does NOT end in a '/'
-        profileSoundsPath,
-        // Takes two extra arguments (profile name, mapFileName) that returns
-        // the pathFile name for any sound file:
-        profileSoundPathFileName,
+        // for the profile game save media files - does NOT end in a '/'
+        profileMediaPath,
+        // Takes two extra arguments (profile name, mediaFileName) that returns
+        // the pathFile name for any media file:
+        profileMediaPathFileName,
         // Takes one extra argument (profile name) that returns the directory
         // for the profile game save XML files - ends in a '/':
         profileXmlFilesPath,
@@ -685,9 +669,6 @@ private:
     QStringList mProfilePasswordsToMigrate {};
 
     bool mStorePasswordsSecurely {true};
-
-    QNetworkAccessManager* fileManagerMSP;
-    QMap<QNetworkReply*, FileMSP> downloadMSP;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
@@ -741,47 +722,6 @@ private:
     // Further items like the above pair may be needed should some of the
     // separate libraries with a textual content have their own translations
     // that we do not provide ourselves.
-};
-
-class FileMSP
-{
-public:
-    FileMSP() {}
-    FileMSP(bool isSound,
-        QString soundFileName,
-        int soundVolume,
-        int soundLength,
-        int soundPriorityOrMusicContinue,
-        QString soundType,
-        QString soundUrl,
-        QString absolutePathFileName) :
-        mIsSound(isSound),
-        mSoundFileName(soundFileName),
-        mSoundVolume(soundVolume),
-        mSoundLength(soundLength),
-        mSoundPriorityOrMusicContinue(soundPriorityOrMusicContinue),
-        mSoundType(soundType),
-        mSoundUrl(soundUrl),
-        mAbsolutePathFileName(absolutePathFileName) {}
-
-    bool getIsSound() const { return mIsSound; }
-    const QString getSoundFileName() const { return mSoundFileName; }
-    const int getSoundVolume() const { return mSoundVolume; }
-    const int getSoundLength() const { return mSoundLength; }
-    const int getSoundPriorityOrMusicContinue() const { return mSoundPriorityOrMusicContinue; }
-    const QString getSoundType() const { return mSoundType; }
-    const QString getSoundUrl() const { return mSoundUrl; }
-    const QString getAbsolutePathFileName() const { return mAbsolutePathFileName; }
-
-private:
-    bool mIsSound;
-    QString mSoundFileName;
-    int mSoundVolume;
-    int mSoundLength;
-    int mSoundPriorityOrMusicContinue;
-    QString mSoundType;
-    QString mSoundUrl;
-    QString mAbsolutePathFileName;
 };
 
 #endif // MUDLET_MUDLET_H
