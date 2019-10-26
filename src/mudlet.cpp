@@ -4410,7 +4410,7 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         // for the profile's cached media files - does NOT end in a '/'
         return QStringLiteral("%1/.config/mudlet/profiles/%2/media").arg(QDir::homePath(), extra1);
     case profileMediaPathFileName:
-        // Takes two extra arguments (profile name, soundFileName) that returns
+        // Takes two extra arguments (profile name, mediaFileName) that returns
         // the pathFile name for any media file:
         return QStringLiteral("%1/.config/mudlet/profiles/%2/media/%3").arg(QDir::homePath(), extra1, extra2);
     case profileXmlFilesPath:
