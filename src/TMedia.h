@@ -37,7 +37,7 @@ public:
         MediaCategoryVideo = 3
     };
 
-	enum MediaVolume {
+    enum MediaVolume {
         MediaVolumeMax = 100,
         MediaVolumeHigh = 75,
         MediaVolumeDefault = 50,
@@ -117,8 +117,8 @@ class TMedia: public QObject
 
 public:
     Q_DISABLE_COPY(TMedia)
-	TMedia(Host* pHost, const QString& profileName);
-	~TMedia();
+    TMedia(Host* pHost, const QString& profileName);
+    ~TMedia();
 
     void playMedia(TMediaData& mediaData);
     void stopMedia(TMediaData::MediaCategory mediaCategory);
@@ -142,10 +142,10 @@ private:
     QPointer<Host> mpHost;
     QString mProfileName;
 
-	QList<QMediaPlayer*> mSoundList;
-	QList<QMediaPlayer*> mMusicList;
+    QList<QMediaPlayer*> mSoundList;
+    QList<QMediaPlayer*> mMusicList;
 
-	QNetworkAccessManager* mpNetworkAccessManager;
+    QNetworkAccessManager* mpNetworkAccessManager;
     QMap<QNetworkReply*, TMediaData> mMediaDownloads;
 };
 #endif // MUDLET_TMEDIA_H

@@ -25,17 +25,17 @@
 // Public
 TMedia::TMedia(Host* pHost, const QString& profileName)
 {
-	mpHost = pHost;
-	mProfileName = profileName;
+    mpHost = pHost;
+    mProfileName = profileName;
 
-	mpNetworkAccessManager = new QNetworkAccessManager(this);
+    mpNetworkAccessManager = new QNetworkAccessManager(this);
     connect(mpNetworkAccessManager, &QNetworkAccessManager::finished, this, &TMedia::writeFile);
 }
 
 TMedia::~TMedia()
 {
-	TMedia::stopSound();
-	TMedia::stopMusic();
+    TMedia::stopSound();
+    TMedia::stopMusic();
 }
 
 void TMedia::playMedia(TMediaData& mediaData)
@@ -83,7 +83,7 @@ void TMedia::playMedia(TMediaData& mediaData)
         QFile soundFile(absolutePathFileName);
 
         if (!soundFile.exists()) {
-        	mediaData.setMediaAbsolutePathFileName(absolutePathFileName);
+            mediaData.setMediaAbsolutePathFileName(absolutePathFileName);
             TMedia::downloadFile(mediaData);
             return;
         }
@@ -149,7 +149,7 @@ bool TMedia::isValidUrl(QUrl& url)
 
     if (!url.isValid()) {
         qWarning() << QStringLiteral("TMedia::validUrl() WARNING - Attempt made to reference an invalid URL: %1 and the error message was:\"%2\".")
-        	.arg(url.toString(), url.errorString());
+            .arg(url.toString(), url.errorString());
     } else {
         isValid = true;
     }
@@ -163,7 +163,7 @@ bool TMedia::isFileRelative(TMediaData& mediaData)
 
     if (!QFileInfo(mediaData.getMediaFileName()).isRelative()) {
         qWarning() << QStringLiteral("TMedia::isFileRelative() WARNING - Attempt made to send an absolute path as a media file name: %1.  Only relative paths are permitted.")
-    		.arg(mediaData.getMediaFileName());
+            .arg(mediaData.getMediaFileName());
     } else {
         isFileRelative = true;
     }
@@ -228,7 +228,7 @@ QStringList TMedia::getFileNameList(TMediaData& mediaData)
     // Enter this block if no mediaType was specified.  Also, per the specification, if mediaType was specified above, but we did not
     // find anything in a mediaType directory, fall back and search for the mediaFileName in the root "media" directory.
     if (fileNameList.isEmpty()) {
-    	mediaData.setMediaType(QString());
+        mediaData.setMediaType(QString());
         fileNameList = TMedia::parseFileNameList(mediaData, soundDir);
     }
 
@@ -262,7 +262,7 @@ QUrl TMedia::getFileUrl(TMediaData& mediaData)
 
 void TMedia::writeFile(QNetworkReply* reply)
 {
-	TEvent event {};
+    TEvent event {};
     TMediaData mediaData = mMediaDownloads.value(reply);
     mMediaDownloads.remove(reply);
 
