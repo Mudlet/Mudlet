@@ -1,3 +1,8 @@
+# New to Git?
+If you don't have previous Git experience, we highly recommend downloading and installing
+the free [Github for Desktop](https://desktop.github.com) app to contribute code to Mudlet 🌟
+
+
 # Coding guidelines
 
 If you're a first-timer, you're excluded, we'll go easy on you :wink:
