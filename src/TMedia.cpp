@@ -40,9 +40,9 @@ TMedia::~TMedia()
 
 void TMedia::playMedia(TMediaData& mediaData)
 {
-    mediaData.getMediaFileName().replace(QLatin1Char('\\'), QLatin1Char('/'));
+    mediaData.setMediaFileName(mediaData.getMediaFileName().replace(QLatin1Char('\\'), QLatin1Char('/')));
 
-    if (!TMedia::isFileRelative(mediaData)) {
+    if (!TMedia::isFileRelative(mediaData) || mediaData.getMediaType().contains("..")) { // Security
         return;
     }
 
