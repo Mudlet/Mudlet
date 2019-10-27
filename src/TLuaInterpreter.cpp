@@ -6286,7 +6286,7 @@ int TLuaInterpreter::receiveMSP(lua_State* L)
     }
 
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "receiveMSP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L,1));
+        lua_pushfstring(L, "receiveMSP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L, 1));
         return lua_error(L);
     }
 
