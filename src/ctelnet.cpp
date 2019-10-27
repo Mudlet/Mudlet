@@ -1825,6 +1825,10 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
     if (packageMessage.startsWith(QLatin1String("External.Discord.Status"))
         || packageMessage.startsWith(QLatin1String("External.Discord.Info"))) {
         mpHost->processDiscordGMCP(packageMessage, data);
+    } else if (mpHost->mEnableMSP && transcodedMsg.startsWith(QStringLiteral("Client.Sound"))) {
+        mpHost->mpMedia->parseGMCP(TMediaData::MediaCategorySound, data);
+    } else if (mpHost->mEnableMSP && transcodedMsg.startsWith(QStringLiteral("Client.Music"))) {
+        mpHost->mpMedia->parseGMCP(TMediaData::MediaCategoryMusic, data);
     }
 
     mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);

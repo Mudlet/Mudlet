@@ -120,6 +120,7 @@ public:
     TMedia(Host* pHost, const QString& profileName);
     ~TMedia();
 
+    void parseGMCP(TMediaData::MediaCategory mediaCategory, QString& gmcp);
     void playMedia(TMediaData& mediaData);
     void stopMedia(TMediaData::MediaCategory mediaCategory);
 

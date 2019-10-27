@@ -38,8 +38,141 @@ TMedia::~TMedia()
     TMedia::stopMusic();
 }
 
+// Client.Sound { "name": "Off", "url": "https://www.stickmud.com/sounds/" }
+//      Sets the URL where media files will be downloaded, "Off" is a reserved keyword
+// Client.Sound { "name": "cow.wav", "volume": "100", "length": "1" }
+//      Play cow.wav, max volume, one time
+// Client.Sound { "name": "wow", "volume": "75", "length": "1" }
+//      Play wow.wav, high volume, one time, .wav added for sound when not specified
+// Client.Sound { "name": "?ow.wav", "volume": "50", "length": "5" }
+//      Play cow.wav and wow.wav, default volume, five times randomly
+// Client.Sound { "name": "co*", "volume": "25", "length": "-1", "type": "animals" }
+//      Play cow.wav, low volume, repeat indefinitely from animals subdirectory
+// Client.Sound { "name": "Off" }
+//      Turn off all sound for this profile, "Off" is a reserved keyword
+//
+// Client.Music { "name": "Off", "url": "https://www.stickmud.com/sounds/" }
+//      Sets the URL where media files will be downloaded, "Off" is a reserved keyword
+// Client.Music { "name": "rain", "volume": "50", "length": "2", "continue": "1" }
+//      Play rain.mid, default volume, two times, continue if already playing
+// Client.Music { "name": "city.wav", "volume": "25", "length": "1", "continue": "0" }
+//      Play city.wav, low volume, one times, restart if already playing
+// Client.Music { "name": "Off" }
+//      Turn off all music for this profile, "Off" is a reserved keyword
+void TMedia::parseGMCP(TMediaData::MediaCategory mediaCategory, QString& gmcp)
+{
+    if (!mpHost->mEnableMSP) {
+        return;
+    }
+
+    auto document = QJsonDocument::fromJson(gmcp.toUtf8());
+
+    if (!document.isObject()) {
+        return;
+    }
+
+    // This is JSON
+    auto json = document.object();
+
+    if (json.isEmpty()) {
+        return;
+    }
+
+    QString mediaFileName;
+
+    auto mediaFileNameJSON = json.value(QStringLiteral("name")); // Required!
+
+    if (mediaFileNameJSON != QJsonValue::Undefined && !mediaFileNameJSON.toString().isEmpty()) {
+        mediaFileName = mediaFileNameJSON.toString();
+    } else {
+        qWarning() << QStringLiteral("TMedia::parseGMCP() WARNING - GMCP missing the required [ name ] parameter to process media.");
+        return;
+    }
+
+    auto mediaVolumeJSON = json.value(QStringLiteral("volume"));
+    auto mediaLengthJSON = json.value(QStringLiteral("length"));
+    auto soundPriorityJSON = json.value(QStringLiteral("priority"));
+    auto musicContinueJSON = json.value(QStringLiteral("continue"));
+    auto mediaTypeJSON = json.value(QStringLiteral("type"));
+    auto mediaUrlJSON = json.value(QStringLiteral("url"));
+
+    if (mediaVolumeJSON == QJsonValue::Undefined
+        && mediaLengthJSON == QJsonValue::Undefined
+        && soundPriorityJSON == QJsonValue::Undefined
+        && musicContinueJSON == QJsonValue::Undefined
+        && mediaTypeJSON == QJsonValue::Undefined
+        && mediaFileName == "Off") {
+        mpHost->mpMedia->stopMedia(mediaCategory);
+        return;
+    }
+
+    int mediaVolume;
+    int mediaLength;
+    int soundPriority;
+    int musicContinue;
+    QString mediaType;
+    QString mediaUrl;
+
+    if (mediaVolumeJSON != QJsonValue::Undefined && mediaVolumeJSON.isString() && !mediaVolumeJSON.toString().isEmpty()) {
+        mediaVolume = mediaVolumeJSON.toString().toInt();
+    } else if (mediaVolumeJSON != QJsonValue::Undefined && mediaVolumeJSON.toInt()) {
+        mediaVolume = mediaVolumeJSON.toInt();
+    } else {
+        mediaVolume = TMediaData::MediaVolumeDefault;
+    }
+
+    if (mediaLengthJSON != QJsonValue::Undefined && mediaLengthJSON.isString() && !mediaLengthJSON.toString().isEmpty()) {
+        mediaLength = mediaLengthJSON.toString().toInt();
+    } else if (mediaLengthJSON != QJsonValue::Undefined && mediaLengthJSON.toInt()) {
+        mediaLength = mediaLengthJSON.toInt();
+    } else {
+        mediaLength = TMediaData::MediaLengthDefault;
+    }
+
+    if (soundPriorityJSON != QJsonValue::Undefined && soundPriorityJSON.isString() && !soundPriorityJSON.toString().isEmpty()) {
+        soundPriority = soundPriorityJSON.toString().toInt();
+    } else if (soundPriorityJSON != QJsonValue::Undefined && soundPriorityJSON.toInt()) {
+        soundPriority = soundPriorityJSON.toInt();
+    } else {
+        soundPriority = TMediaData::MediaPriorityDefault;
+    }
+
+    if (musicContinueJSON != QJsonValue::Undefined && musicContinueJSON.isString() && !musicContinueJSON.toString().isEmpty()) {
+        musicContinue = musicContinueJSON.toString().toInt();
+    } else if (musicContinueJSON != QJsonValue::Undefined && musicContinueJSON.toInt()) {
+        musicContinue = musicContinueJSON.toInt();
+    } else {
+        musicContinue = TMediaData::MediaContinueDefault;
+    }
+
+    if (mediaTypeJSON != QJsonValue::Undefined && !mediaTypeJSON.toString().isEmpty()) {
+        mediaType = mediaTypeJSON.toString();
+    }
+
+    if (mediaUrlJSON != QJsonValue::Undefined && !mediaUrlJSON.toString().isEmpty()) {
+        mediaUrl = mediaUrlJSON.toString();
+    }
+
+    TMediaData mediaData = TMediaData(mediaCategory, mediaFileName, mediaVolume, mediaLength, mediaType, mediaUrl);
+
+    switch (mediaCategory) {
+        case TMediaData::MediaCategorySound:
+            mediaData.setSoundPriority(soundPriority);
+            break;
+        case TMediaData::MediaCategoryMusic:
+            mediaData.setMusicContinue(musicContinue);
+            break;
+    }
+
+    TMedia::playMedia(mediaData);
+}
+
 void TMedia::playMedia(TMediaData& mediaData)
 {
+    if (!mpHost->mEnableMSP) {
+        return;
+    }
+
     mediaData.setMediaFileName(mediaData.getMediaFileName().replace(QLatin1Char('\\'), QLatin1Char('/')));
 
     if (!TMedia::isFileRelative(mediaData) || mediaData.getMediaType().contains("..")) { // Security
@@ -517,11 +650,15 @@ QMediaPlayer* TMedia::matchMediaPlayer(TMediaData& mediaData, QString absolutePa
 
 void TMedia::playSound(TMediaData& soundData)
 {
+    if (!mpHost->mEnableMSP) {
+        return;
+    }
+
      // File wildcards "*" and "?" could return more than one sound so we process as QStringList.
     QStringList fileNameList = TMedia::getFileNameList(soundData);
 
     if (fileNameList.isEmpty()) { // This should not happen.
-        qWarning() << QStringLiteral("TMedia::playSound() WARNING - Could not generate a list of sound file names.");
+        qWarning() << QStringLiteral("TMedia::playSound() WARNING - Could not generate a list of media file names.");
         return;
     }
 
@@ -579,10 +716,14 @@ void TMedia::stopSound()
 
 void TMedia::playMusic(TMediaData& musicData)
 {
+    if (!mpHost->mEnableMSP) {
+        return;
+    }
+
     QStringList fileNameList = TMedia::getFileNameList(musicData);
 
     if (fileNameList.isEmpty()) { // This should not happen.
-        qWarning() << QStringLiteral("TMedia::playMusic() WARNING - Could not generate a list of sound file names.");
+        qWarning() << QStringLiteral("TMedia::playMusic() WARNING - Could not generate a list of media file names.");
         return;
     }
 
