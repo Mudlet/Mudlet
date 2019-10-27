@@ -216,7 +216,6 @@ public:
     bool deselect(Host* pHost, const QString& name);
     void stopSounds();
     void playSound(const QString &s, int);
-    void stopMSP(bool isSound);
     int getColumnCount(Host* pHost, QString& name);
     int getRowCount(Host* pHost, QString& name);
     QStringList getAvailableFonts();

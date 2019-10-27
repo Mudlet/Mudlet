@@ -56,7 +56,7 @@ TMedia::~TMedia()
 // Client.Music { "name": "rain", "volume": "50", "length": "2", "continue": "1" }
 //      Play rain.mid, default volume, two times, continue if already playing
 // Client.Music { "name": "city.wav", "volume": "25", "length": "1", "continue": "0" }
-//      Play city.wav, low volume, one times, restart if already playing
+//      Play city.wav, low volume, one time, restart if already playing
 // Client.Music { "name": "Off" }
 //      Turn off all music for this profile, "Off" is a reserved keyword
 void TMedia::parseGMCP(TMediaData::MediaCategory mediaCategory, QString& gmcp)
