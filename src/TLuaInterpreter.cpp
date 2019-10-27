@@ -6273,6 +6273,30 @@ int TLuaInterpreter::sendATCP(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#receiveMSP
+int TLuaInterpreter::receiveMSP(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    std::string msg;
+
+    if (!host.mTelnet.isMSPEnabled()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "MSP is not currently enabled");
+        return 2;
+    }
+
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "receiveMSP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L,1));
+        return lua_error(L);
+    }
+
+    msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
+    host.mTelnet.setMSPVariables(QByteArray(msg.c_str(), msg.length()));
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendGMCP
 int TLuaInterpreter::sendGMCP(lua_State* L)
 {
