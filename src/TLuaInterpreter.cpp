@@ -14340,6 +14340,8 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
 
 // No documentation available in wiki - internal function
 // src is in Mud Server encoding and may need transcoding
+// Includes MSDP code originally from recv_sb_msdp(...) in TinTin++'s telopt.c,
+// https://tintin.sourceforge.io:
 void TLuaInterpreter::msdp2Lua(const char* src)
 {
     Host& host = getHostFromLua(pGlobalLua);
