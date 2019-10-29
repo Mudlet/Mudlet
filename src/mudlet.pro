@@ -107,8 +107,10 @@ VERSION = 4.1.2
 # the qmake BUILD variable is NOT built-in
 BUILD = $$(MUDLET_VERSION_BUILD)
 isEmpty( BUILD ) {
-# Leave the value of the following empty for a release build
-# i.e. the line should be "BUILD =" without quotes
+# Possible values are:
+# "-dev" for the development build
+# "-public-test-build" for the public test build
+# "" for the release build
    BUILD = "-dev"
 }
 

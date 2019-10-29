@@ -285,9 +285,15 @@ int main(int argc, char* argv[])
     // Turn the cursor into the waiting one during startup, so something shows
     // activity even if the quiet, no splashscreen startup has been used
     app->setOverrideCursor(QCursor(Qt::WaitCursor));
-    app->setOrganizationName("Mudlet");
-    app->setApplicationName("Mudlet");
+    app->setOrganizationName(QStringLiteral("Mudlet"));
     app->setApplicationVersion(APP_VERSION);
+
+    if (mudlet::scmIsPublicTestVersion) {
+        app->setApplicationName(QStringLiteral("Mudlet Public Test Build"));
+    } else {
+        app->setApplicationName(QStringLiteral("Mudlet"));
+    }
+
 
     bool show_splash = !(startupAction & 4); // Not --quiet.
 

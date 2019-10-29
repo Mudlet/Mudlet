@@ -65,7 +65,7 @@
 #include <QTextStream>
 #include <QToolBar>
 #include <QVariantHash>
-
+#include <QRandomGenerator>
 #include <zip.h>
 #include "post_guard.h"
 
@@ -122,7 +122,11 @@ const int mudlet::scmQDataStreamFormat_5_12 = 18;
 QPointer<TConsole> mudlet::mpDebugConsole = nullptr;
 QPointer<QMainWindow> mudlet::mpDebugArea = nullptr;
 bool mudlet::debugMode = false;
-const bool mudlet::scmIsDevelopmentVersion = !QByteArray(APP_BUILD).isEmpty();
+
+const bool mudlet::scmIsReleaseVersion = QByteArray(APP_BUILD).isEmpty();
+const bool mudlet::scmIsPublicTestVersion = QByteArray(APP_BUILD) == QStringLiteral("-public-test-build");
+const bool mudlet::scmIsDevelopmentVersion = !mudlet::scmIsReleaseVersion && !mudlet::scmIsPublicTestVersion;
+
 QVariantHash mudlet::mLuaFunctionNames;
 
 QPointer<mudlet> mudlet::_self = nullptr;
@@ -401,6 +405,19 @@ mudlet::mudlet()
     mpActionMultiView->setObjectName(QStringLiteral("multiview_action"));
     mpMainToolBar->widgetForAction(mpActionMultiView)->setObjectName(mpActionMultiView->objectName());
 
+#if defined(INCLUDE_UPDATER)
+    if (scmIsPublicTestVersion) {
+        mpActionReportIssue = new QAction(tr("Report issue"), this);
+        QStringList issueReportIcons {"face-uncertain.png", "face-surprise.png", "face-smile.png", "face-sad.png", "face-plain.png"};
+        auto randomIcon = QRandomGenerator::global()->bounded(issueReportIcons.size());
+        mpActionReportIssue->setIcon(QIcon(QStringLiteral(":/icons/%1").arg(issueReportIcons.at(randomIcon))));
+        mpActionReportIssue->setToolTip(tr("Report an issue about the Mudlet Public Test Build"));
+        mpMainToolBar->addAction(mpActionReportIssue);
+        mpActionReportIssue->setObjectName(QStringLiteral("reportissue_action"));
+        mpMainToolBar->widgetForAction(mpActionReportIssue)->setObjectName(mpActionReportIssue->objectName());
+    }
+#endif
+
     mpActionAbout = new QAction(QIcon(QStringLiteral(":/icons/mudlet_information.png")), tr("About"), this);
     mpActionAbout->setToolTip(tr("<p>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</p>",
                                  // Intentional comment
@@ -470,12 +487,27 @@ mudlet::mudlet()
     connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
     connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_discord);
     connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_irc);
-#if !defined(INCLUDE_UPDATER)
-    // Hide the update menu item if the code is not included
-    dactionUpdate->setVisible(false);
+#if defined(INCLUDE_UPDATER)
+    // Show the update option if the code is present AND if this is a
+    // release OR a public test version:
+    dactionUpdate->setVisible(scmIsReleaseVersion || scmIsPublicTestVersion);
+    // Show the report issue option if the updater code is present (as it is
+    // less likely to be for: {Linux} distribution packaged versions of Mudlet
+    // - or people hacking their own versions and neither of those types are
+    // going to want the updater to change things for them) AND only for a
+    // public test version:
+    if (scmIsPublicTestVersion) {
+        dactionReportIssue->setVisible(true);
+        connect(mpActionReportIssue.data(), &QAction::triggered, this, &mudlet::slot_report_issue);
+        connect(dactionReportIssue, &QAction::triggered, this, &mudlet::slot_report_issue);
+    } else {
+        dactionReportIssue->setVisible(false);
+    }
 #else
-    // Also, only show it if this is a release version
-    dactionUpdate->setVisible(!scmIsDevelopmentVersion);
+    // Unconditionally hide the update and report bug menu items if the updater
+    // code is not included:
+    dactionUpdate->setVisible(false);
+    dactionReportIssue->setVisible(false);
 #endif
     connect(dactionPackageManager, &QAction::triggered, this, &mudlet::slot_package_manager);
     connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_package_exporter);
@@ -4576,9 +4608,9 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
 #if defined(INCLUDE_UPDATER)
 void mudlet::checkUpdatesOnStart()
 {
-    if (!scmIsDevelopmentVersion) {
+    if (scmIsReleaseVersion || scmIsPublicTestVersion) {
         // Only try and create an updater (which checks for updates online) if
-        // this is a release version:
+        // this is a release/public test version:
         updater->checkUpdatesOnStart();
     }
 }
@@ -4586,6 +4618,11 @@ void mudlet::checkUpdatesOnStart()
 void mudlet::slot_check_manual_update()
 {
     updater->manuallyCheckUpdates();
+}
+
+void mudlet::slot_report_issue()
+{
+    QDesktopServices::openUrl(QUrl(QStringLiteral("https://github.com/Mudlet/Mudlet/issues/new")));
 }
 
 // Means to turn-off the hard coded popup delay in QActions provided by:
