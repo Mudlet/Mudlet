@@ -160,13 +160,13 @@ set(mudlet_MOC_HDRS
     TLabel.h
     TLuaInterpreter.h
     TMap.h
-    TMedia.h
     TSplitter.h
     TSplitterHandle.h
     TTextEdit.h
     TToolBar.h
     TTreeWidget.h
     XMLexport.h
+    TMedia.h
 )
 
 set(mudlet_HDRS
