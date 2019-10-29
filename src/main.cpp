@@ -25,6 +25,7 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <chrono>
 #include <QDesktopWidget>
 #include <QDir>
 #if defined(Q_OS_WIN32) && ! defined(INCLUDE_UPDATER)
@@ -34,6 +35,7 @@
 #include <QSplashScreen>
 #include "post_guard.h"
 
+using namespace std::chrono_literals;
 
 #if defined(_MSC_VER) && defined(_DEBUG)
 // Enable leak detection for MSVC debug builds. _DEBUG is MSVC specific and
@@ -211,7 +213,7 @@ int main(int argc, char* argv[])
         texts << QCoreApplication::translate("main", "Copyright © 2008-%1  Mudlet developers\n").arg(QStringLiteral(__DATE__).mid(7, 4));
         texts << QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html\n");
         texts << QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
-                                                     "There is NO WARRANTY, to the extent permitted by law.");
+                                                     "There is NO WARRANTY, to the extent permitted by law.\n");
         std::cout << texts.join(QString()).toStdString();
         return 0;
     } else if (startupAction & 1) {
@@ -283,9 +285,15 @@ int main(int argc, char* argv[])
     // Turn the cursor into the waiting one during startup, so something shows
     // activity even if the quiet, no splashscreen startup has been used
     app->setOverrideCursor(QCursor(Qt::WaitCursor));
-    app->setOrganizationName("Mudlet");
-    app->setApplicationName("Mudlet");
+    app->setOrganizationName(QStringLiteral("Mudlet"));
     app->setApplicationVersion(APP_VERSION);
+
+    if (mudlet::scmIsPublicTestVersion) {
+        app->setApplicationName(QStringLiteral("Mudlet Public Test Build"));
+    } else {
+        app->setApplicationName(QStringLiteral("Mudlet"));
+    }
+
 
     bool show_splash = !(startupAction & 4); // Not --quiet.
 
@@ -508,8 +516,6 @@ int main(int argc, char* argv[])
 
     mudlet::self()->show();
 
-    mudlet::self()->migratePasswordsToSecureStorage();
-
     mudlet::self()->startAutoLogin();
 
 #if defined(INCLUDE_UPDATER)
@@ -520,7 +526,11 @@ int main(int argc, char* argv[])
 #endif // Q_OS_LINUX
 #endif // INCLUDE_UPDATER
 
-    QTimer::singleShot(2 * 1000, qApp, []() {
+    QTimer::singleShot(2s, qApp, []() {
+        if (mudlet::self()->storingPasswordsSecurely()) {
+            mudlet::self()->migratePasswordsToSecureStorage();
+        }
+
         mudlet::self()->updateMudletDiscordInvite();
     });
 

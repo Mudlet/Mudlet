@@ -561,6 +561,13 @@ end</script>
 				<regex>^add portal (.*)$</regex>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
+				<name>Show Moves Alias</name>
+				<script>map.show_moves()</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^show moves$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
 				<name>Clear Moves Alias</name>
 				<script>map.clear_moves()</script>
 				<command></command>
@@ -639,7 +646,7 @@ end</script>
 			<packageName></packageName>
 			<script>-- Jor'Mox's Generic Map Script
 -- 11/07/2018
-local version = "2.0.15"
+local version = "2.0.16"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -1203,7 +1210,7 @@ map.help.quick_start = [[
     ----------------------------------------
 
     Mudlet Mapper works in tandem with a script, and this generic mapper script needs
-    to know 2 things to work: 
+    to know 2 things to work:
       - &lt;dim_grey&gt;room name&lt;reset&gt; $ROOM_NAME_STATUS ($ROOM_NAME)
       - &lt;dim_grey&gt;exits&lt;reset&gt;     $ROOM_EXITS_STATUS ($ROOM_EXITS)
 
@@ -1214,7 +1221,7 @@ map.help.quick_start = [[
        Room name or exits aren't recognised? Try this command then. It will make
        the script start looking for a prompt using several standard prompt
        patterns. If a prompt is found, you will be notified, if not, you will
-       need to set a prompt pattern yourself using &lt;link: prompt&gt;map prompt&lt;/link&gt;. 
+       need to set a prompt pattern yourself using &lt;link: prompt&gt;map prompt&lt;/link&gt;.
        Reach out to the &lt;urllink: https://discord.gg/kuYvMQ9&gt;Mudlet community&lt;/urllink&gt; for help, we'd be happy to help
        you figure it out!
     3. &lt;link: debug&gt;map debug&lt;/link&gt;
@@ -1271,7 +1278,7 @@ map.defaults = {
         northwest = 'northwest', up = 'up', down = 'down',
     },
     debug = false,
-    download_path = "https://raw.githubusercontent.com/JorMox/Mudlet/development/src/mudlet-lua/lua/generic-mapper",
+    download_path = "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/mudlet-lua/lua/generic-mapper",
 }
 
 local move_queue, lines = {}, {}
@@ -1303,6 +1310,10 @@ local function config()
         coordmap[count] = {v[3],v[4],v[5]}
         stubmap[count] = v[1]
         stubmap[v[1]] = count
+    end
+    -- update to the current download path
+    if map.configs.download_path == "https://raw.githubusercontent.com/JorMox/Mudlet/development/src/mudlet-lua/lua/generic-mapper" then
+        map.configs.download_path = "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/mudlet-lua/lua/generic-mapper"
     end
 
     -- setup metatable to store sensitive values
@@ -1379,11 +1390,11 @@ local err_tag = "&lt;255,0,0&gt;(&lt;178,34,34&gt;error&lt;255,0,0&gt;): &lt;255
 
 
 local function parse_help_text(text)
-  text = text:gsub("%$ROOM_NAME_STATUS", (map.currentName and map.currentName ~= "") and '✔' or '❌')
+  text = text:gsub("%$ROOM_NAME_STATUS", (map.currentName and map.currentName ~= "") and '✔️' or '❌')
   text = text:gsub("%$ROOM_NAME", map.currentName or '')
 
-  text = text:gsub("%$ROOM_EXITS_STATUS", table.is_empty(map.currentExits) and '❌' or '✔️')
-  text = text:gsub("%$ROOM_EXITS", table.concat(map.currentExits, ' '))
+  text = text:gsub("%$ROOM_EXITS_STATUS", (not map.currentExits or table.is_empty(map.currentExits)) and '❌' or '✔️')
+  text = text:gsub("%$ROOM_EXITS", map.currentExits and table.concat(map.currentExits, ' ') or '')
 
   return text
 end
@@ -1403,8 +1414,8 @@ function map.show_help(cmd)
         local url, target = rex.match(w, [[&lt;(url)?link: ([^&gt;]+)&gt;]])
         -- lrexlib returns a non-capture as 'false', so determine which variable the capture went into
         if target == nil then target = url end
-        if target then        
-            local before, linktext, _, link, _, after, ok = rex.match(w, 
+        if target then
+            local before, linktext, _, link, _, after, ok = rex.match(w,
                           [[(.*)&lt;((url)?link): [^&gt;]+&gt;(.*)&lt;\/(url)?link&gt;(.*)]], 0, 'm')
             -- could not get rex.match to capture the newline - fallback to string.match
             local _, _, after = w:match("(.*)&lt;u?r?l?link: [^&gt;]+&gt;(.*)&lt;/u?r?l?link&gt;(.*)")
@@ -1483,7 +1494,7 @@ function map.setConfigs(key, val, sub_key)
             else
                 map.echo("Custom Exit config must be in the form of a table.", false, true)
             end
-        elseif map.configs[key] then
+        elseif map.configs[key] ~= nil then
             map.configs[key] = val
             map.echo(string.format("Config %s set to: %s", key, tostring(val)))
         else
@@ -1940,6 +1951,7 @@ local function capture_move_cmd(dir,priority)
         end
     end
 end
+
 local function deduplicate_exits(exits)
   local deduplicated_exits = {}
   for _, v in ipairs(exits) do
@@ -1968,8 +1980,8 @@ local function capture_room_info(name, exits)
                 table.insert(map.currentExits,w)
             end
         end
-	undupeExits = deduplicate_exits(map.currentExits)
-	map.set("currentExits", undupeExits)
+    undupeExits = deduplicate_exits(map.currentExits)
+    map.set("currentExits", undupeExits)
         map.echo(string.format("Exits Captured: %s (%s)",exits, table.concat(map.currentExits, " ")),true)
         move_map()
     elseif vision_fail then
@@ -2250,8 +2262,13 @@ function map.stop_mapping()
 end
 
 function map.clear_moves()
+    local commands_in_queue = #move_queue
     move_queue = {}
     map.echo("Move queue cleared, "..commands_in_queue.." commands removed.")
+end
+
+function map.show_moves()
+    map.echo("Moves: "..(move_queue and table.concat(move_queue, ', ') or '(queue empty)'))
 end
 
 function map.set_area(name)
@@ -2928,12 +2945,12 @@ function map.eventHandler(event, ...)
         elseif string.ends(file,"/generic_mapper.xml") then
             update_version()
         end
-    elseif event == "sysConnectionEvent" or event == "sysInstall" then
+    elseif event == "sysLoadEvent" or event == "sysInstall" then
         config()
     elseif event == "mapOpenEvent" then
         if not help_shown and not map.save.prompt_pattern[map.character or ""] then
             send("look", true)
-            tempTimer(3, function() map.show_help("quick_start"); help_shown = true end)            
+            tempTimer(3, function() map.show_help("quick_start"); help_shown = true end)
         end
     elseif event == "mapStop" then
         map.set("mapping", false)
@@ -2943,6 +2960,7 @@ function map.eventHandler(event, ...)
 end
 
 registerAnonymousEventHandler("sysDownloadDone", "map.eventHandler")
+registerAnonymousEventHandler("sysLoadEvent", "map.eventHandler")
 registerAnonymousEventHandler("sysConnectionEvent", "map.eventHandler")
 registerAnonymousEventHandler("sysInstall", "map.eventHandler")
 registerAnonymousEventHandler("sysDataSendRequest", "map.eventHandler")

@@ -163,6 +163,19 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 
     welcome_message->setDocument(pWelcome_document);
 
+    mpAction_revealPassword = new QAction(this);
+    mpAction_revealPassword->setCheckable(true);
+    mpAction_revealPassword->setObjectName(QStringLiteral("mpAction_revealPassword"));
+    slot_togglePasswordVisibility(false);
+
+    character_password_entry->addAction(mpAction_revealPassword, QLineEdit::TrailingPosition);
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        character_password_entry->setToolTip(tr("Characters password, stored securely in the computer's credential manager"));
+    } else {
+        character_password_entry->setToolTip(tr("Characters password. Note that the password isn't encrypted in storage"));
+    }
+
+    connect(mpAction_revealPassword, &QAction::triggered, this, &dlgConnectionProfiles::slot_togglePasswordVisibility);
     connect(offline_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_load);
     connect(connect_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::accept);
     connect(abort, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_cancel);
@@ -265,7 +278,12 @@ void dlgConnectionProfiles::slot_update_pass(const QString &pass)
         return;
     }
 
-    writeSecurePassword(pItem->text(), pass);
+    const auto profile = pItem->text();
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        writeSecurePassword(profile, pass);
+    } else {
+        writeProfileData(profile, QStringLiteral("password"), pass);
+    }
 }
 
 void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QString& pass) const
@@ -666,6 +684,9 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
     QString ret;
     if (success) {
         QDataStream ifs(&file);
+        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        }
         ifs >> ret;
         file.close();
     }
@@ -679,6 +700,9 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
     QFile file(f);
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
+        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+            ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        }
         ofs << what;
         file.close();
     }
@@ -804,6 +828,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         return;
     }
 
+    slot_togglePasswordVisibility(false);
 
     QString profile_name = pItem->text();
 
@@ -993,14 +1018,19 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
 
     port_entry->setText(host_port);
 
-    character_password_entry->setText(QString());
-    loadSecuredPassword(profile, [this, profile_name](const QString& password) {
-        if (!password.isEmpty()) {
-            character_password_entry->setText(password);
-        } else {
-            character_password_entry->setText(readProfileData(profile_name, QStringLiteral("password")));
-        }
-    });
+    // if we're currently copying a profile, don't blank and re-load the password,
+    // because there isn't one in storage yet. It'll be copied over into the widget
+    // by the copy method
+    if (!mCopyingProfile) {
+        character_password_entry->setText(QString());
+        loadSecuredPassword(profile, [this, profile_name](const QString& password) {
+            if (!password.isEmpty()) {
+                character_password_entry->setText(password);
+            } else {
+                character_password_entry->setText(readProfileData(profile_name, QStringLiteral("password")));
+            }
+        });
+    }
 
     val = readProfileData(profile, QStringLiteral("login"));
     login_entry->setText(val);
@@ -1219,7 +1249,8 @@ void dlgConnectionProfiles::updateDiscordStatus()
 }
 
 // (re-)creates the dialogs profile list
-void dlgConnectionProfiles::fillout_form() {
+void dlgConnectionProfiles::fillout_form()
+{
     profiles_tree_widget->clear();
     profile_name_entry->clear();
     host_name_entry->clear();
@@ -1776,10 +1807,10 @@ void dlgConnectionProfiles::loadSecuredPassword(const QString &profile, L callba
             if (error != QStringLiteral("Entry not found") && error != QStringLiteral("No match")) {
             qDebug() << "dlgConnectionProfiles::loadSecuredPassword ERROR: couldn't retrieve secure password for" << profile << ", error is:" << error;
             }
-        } else {
-            auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
-            callback(readJob->textData());
         }
+
+        auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
+        callback(readJob->textData());
 
         job->deleteLater();
     });
@@ -1919,16 +1950,22 @@ void dlgConnectionProfiles::slot_cancel()
 
 void dlgConnectionProfiles::slot_copy_profile()
 {
+    mCopyingProfile = true;
+
     QString profile_name;
     QString oldname;
     QListWidgetItem* pItem;
+    const auto oldPassword = character_password_entry->text();
+
     if (!copyProfileWidget(profile_name, oldname, pItem)) {
+        mCopyingProfile = false;
         return;
     }
 
     // copy the folder on-disk
     QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, oldname));
     if (!dir.exists()) {
+        mCopyingProfile = false;
         return;
     }
 
@@ -1940,6 +1977,13 @@ void dlgConnectionProfiles::slot_copy_profile()
     // one may have had it enabled does not mean we can assume the new one would
     // want it set:
     discord_optin_checkBox->setChecked(false);
+
+    // restore the password, which won't be copied by the disk copy if stored in the credential manager
+    character_password_entry->setText(oldPassword);
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        writeSecurePassword(profile_name, oldPassword);
+    }
+    mCopyingProfile = false;
 }
 
 void dlgConnectionProfiles::slot_copy_profilesettings_only()
@@ -2382,5 +2426,30 @@ void dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QStrin
         QString srcName = sourceFolder + QDir::separator() + files[i];
         QString destName = destFolder + QDir::separator() + files[i];
         copyFolder(srcName, destName);
+    }
+}
+
+// As it is wired to the triggered() signal it is only called that way when
+// the user clicks on the action, and not when setChecked() is used.
+void dlgConnectionProfiles::slot_togglePasswordVisibility(const bool showPassword)
+{
+    if (mpAction_revealPassword->isChecked() != showPassword) {
+        // This will only be reached and needed by a call NOT prompted by the
+        // user clicking on the icon - i.e. either when a different profile is
+        // selected or when called from the constructor:
+        mpAction_revealPassword->setChecked(showPassword);
+    }
+
+    if (mpAction_revealPassword->isChecked()) {
+        character_password_entry->setEchoMode(QLineEdit::Normal);
+        // In practice I could not get the icon to change based upon supplying
+        // different QPixmaps for the QIcon for different states - so lets do it
+        // directly:
+        mpAction_revealPassword->setIcon(QIcon::fromTheme(QStringLiteral("password-show-on"), QIcon(QStringLiteral(":/icons/password-show-on.png"))));
+        mpAction_revealPassword->setToolTip(tr("<p>Click to hide the password; it will also hide if another profile is selected.</p>"));
+    } else {
+        character_password_entry->setEchoMode(QLineEdit::Password);
+        mpAction_revealPassword->setIcon(QIcon::fromTheme(QStringLiteral("password-show-off"), QIcon(QStringLiteral(":/icons/password-show-off.png"))));
+        mpAction_revealPassword->setToolTip(tr("<p>Click to reveal the password for this profile.</p>"));
     }
 }

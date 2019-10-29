@@ -227,11 +227,26 @@ public:
     void disableKey(const QString&);
     bool killTimer(const QString&);
     bool killTrigger(const QString&);
-    double stopStopWatch(int);
-    bool resetStopWatch(int);
-    bool startStopWatch(int);
-    double getStopWatchTime(int);
-    int createStopWatch();
+
+    QPair<int, QString> createStopWatch(const QString&);
+    bool destroyStopWatch(const int);
+    bool adjustStopWatch(const int, const qint64 milliSeconds);
+    QList<int> getStopWatchIds() const;
+    QPair<bool, double> getStopWatchTime(const int) const;
+    QPair<bool, QString> getBrokenDownStopWatchTime(const int) const;
+    bool makeStopWatchPersistent(const int, const bool);
+    QPair<bool, QString> resetStopWatch(const int);
+    QPair<bool, QString> resetStopWatch(const QString&);
+    QPair<bool, QString> startStopWatch(const int);
+    QPair<bool, QString> startStopWatch(const QString&);
+    QPair<bool, QString> stopStopWatch(const int);
+    QPair<bool, QString> stopStopWatch(const QString&);
+    stopWatch* getStopWatch(const int id) const { return mStopWatchMap.value(id); }
+    int findStopWatchId(const QString&) const;
+    QPair<bool, QString> setStopWatchName(const int, const QString&);
+    QPair<bool, QString> setStopWatchName(const QString&, const QString&);
+    QPair<bool, QString> resetAndRestartStopWatch(const int);
+
     void startSpeedWalk();
     void saveModules(int sync, bool backup = true);
     void reloadModule(const QString& reloadModuleName);
@@ -303,6 +318,7 @@ public:
     void setDisplayFontFixedPitch(bool enable);
     void updateProxySettings(QNetworkAccessManager* manager);
     std::unique_ptr<QNetworkProxy>& getConnectionProxy();
+    void updateAnsi16ColorsInTable();
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
@@ -312,6 +328,10 @@ public:
     bool mAlertOnNewData;
     bool mAllowToSendCommand;
     bool mAutoClearCommandLineAfterSend;
+    // Set in constructor and used in (bool) TScript::setScript(const QString&)
+    // to prevent compilation of the script that was being set therein, cleared
+    // after the main TConsole for a new profile has been created during the
+    // period when mIsProfileLoadingSequence has been set:
     bool mBlockScriptCompile;
     bool mEchoLuaErrors;
     int mBorderBottomHeight;
@@ -526,9 +546,15 @@ private slots:
 
 private:
     void installPackageFonts(const QString &packageName);
+    void processGMCPDiscordStatus(const QJsonObject& discordInfo);
+    void processGMCPDiscordInfo(const QJsonObject& discordInfo);
+    void updateModuleZips() const;
+    void loadSecuredPassword();
+    void removeAllNonPersistentStopWatches();
+    void updateConsolesFont();
+
     QFont mDisplayFont;
     QStringList mModulesToSync;
-
     QScopedPointer<LuaInterface> mLuaInterface;
 
     TriggerUnit mTriggerUnit;
@@ -561,7 +587,12 @@ private:
 
     QString mUserDefinedName;
 
-    QMap<int, QTime> mStopWatchMap;
+    // To keep things simple for Lua the first stopwatch will be allocated a key
+    // of 1 - and anything less that that will be rejected - and we force
+    // createStopWatch() to return 0 during script loading so that we do not get
+    // superious stopwatches from being created then (when
+    // mIsProfileLoadingSequence is true):
+    QMap<int, stopWatch*> mStopWatchMap;
 
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
 
@@ -616,10 +647,6 @@ private:
     // looked up directly by that class:
     bool mEnableUserDictionary;
     bool mUseSharedDictionary;
-
-    void processGMCPDiscordStatus(const QJsonObject& discordInfo);
-    void processGMCPDiscordInfo(const QJsonObject& discordInfo);
-    void updateModuleZips() const;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

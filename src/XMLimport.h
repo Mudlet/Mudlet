@@ -86,6 +86,7 @@ private:
     void readUnknownKeyElement();
 
     void readHostPackage(Host*);
+    void readStopWatchMap();
     int readTriggerGroup(TTrigger*);
     int readTimerGroup(TTimer*);
     int readAliasGroup(TAlias*);

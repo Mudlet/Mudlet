@@ -416,12 +416,16 @@ void cTelnet::handle_socket_signal_error()
 
 void cTelnet::slot_send_login()
 {
-    sendData(mpHost->getLogin());
+    if (!mpHost->getLogin().isEmpty()) {
+        sendData(mpHost->getLogin());
+    }
 }
 
 void cTelnet::slot_send_pass()
 {
-    sendData(mpHost->getPass());
+    if (!mpHost->getLogin().isEmpty() && !mpHost->getPass().isEmpty()) {
+        sendData(mpHost->getPass());
+    }
 }
 
 void cTelnet::handle_socket_signal_connected()
@@ -443,10 +447,8 @@ void cTelnet::handle_socket_signal_connected()
     QString nothing = "";
     mpHost->mLuaInterpreter.call(func, nothing);
     mConnectionTime.start();
-    if ((mpHost->getLogin().size() > 0) && (mpHost->getPass().size() > 0)) {
-        mTimerLogin->start(2000);
-        mTimerPass->start(3000);
-    }
+    mTimerLogin->start(2000);
+    mTimerPass->start(3000);
 
     emit signal_connected(mpHost);
 
@@ -869,6 +871,15 @@ QString cTelnet::decodeOption(const unsigned char ch) const
     case 255:   return QLatin1String("EXTENDED_OPTIONS_LIST (255)");
     default:
         return QStringLiteral("UNKNOWN (%1)").arg(ch, 3);
+    }
+}
+
+std::pair<QString, int> cTelnet::getConnectionInfo() const
+{
+    if (hostName.isEmpty() && hostPort == 0) {
+        return {mpHost->getUrl(), mpHost->getPort()};
+    } else {
+        return {hostName, hostPort};
     }
 }
 
@@ -1442,7 +1453,9 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
                 mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
                 mpHost->updateProxySettings(mpDownloader);
-                QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
+                auto request = QNetworkRequest(QUrl(url));
+                mudlet::self()->setNetworkRequestDefaults(url, request);
+                QNetworkReply* reply = mpDownloader->get(request);
                 mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
                 connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
                 mpProgressDialog->show();
@@ -1807,7 +1820,9 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
 
         mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
         mpHost->updateProxySettings(mpDownloader);
-        QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
+        auto request = QNetworkRequest(QUrl(url));
+        mudlet::self()->setNetworkRequestDefaults(url, request);
+        QNetworkReply* reply = mpDownloader->get(request);
         mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
         connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
         mpProgressDialog->show();
@@ -2329,6 +2344,9 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
             mIsReplayRunFromLua = false;
         }
         replayStream.setDevice(&replayFile);
+        if (QVersionNumber::fromString(QString(qVersion())) >= QVersionNumber(5, 13, 0)) {
+            replayStream.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        }
         loadingReplay = true;
         if (mudlet::self()->replayStart()) {
             // TODO: consider moving to a QTimeLine based system...?
