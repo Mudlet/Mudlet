@@ -52,11 +52,75 @@ class dlgTriggerEditor;
 class TEvent;
 class TArea;
 class LuaInterface;
-class TMap;
 class TMedia;
 class TRoom;
 class TConsole;
 class dlgNotepad;
+class TMap;
+
+class stopWatch {
+    friend class XMLimport;
+
+public:
+    stopWatch();
+
+    bool start();
+    bool stop();
+    bool reset();
+    bool running() const {return mIsRunning;}
+    void adjustMilliSeconds(const qint64);
+    qint64 getElapsedMilliSeconds() const;
+    QString getElapsedDayTimeString() const;
+    void setPersistent(const bool state) {mIsPersistent = state;}
+    bool persistent() const {return mIsPersistent;}
+    void setName(const QString& name) {mName = name;}
+    const QString& name() const {return mName;}
+
+#ifndef QT_NO_DEBUG_STREAM
+    // Only used for debugging:
+    bool initialised() const {return mIsInitialised;}
+    qint64 elapsed() const {return mElapsedTime;}
+    QDateTime effectiveStartDateTime() const {return mEffectiveStartDateTime;}
+#endif // QT_NO_DEBUG_STREAM
+
+private:
+    // true once started the first time - but provides some code short cuts if
+    // prior to that:
+    bool mIsInitialised;
+    // true when RUNNING, false when STOPPED:
+    bool mIsRunning;
+    // If true this stopwatch is saved with the profile and reloaded - if it is
+    // running when saved it will seem to continue to run - so can be used to
+    // track real time events outside of the profile, it is intended that the
+    // parent Host class that makes use of it will save and restore the id
+    // number that that class assigns the stopwatch:
+    bool mIsPersistent;
+    // When RUNNING this contains the effective point in time when the stop
+    // watch was started - so that taking a difference between then and
+    // "now" gives the total elapsed time:
+    QDateTime mEffectiveStartDateTime;
+    // When STOPPED this contains the cumulative elasped time in milliSeconds:
+    qint64 mElapsedTime;
+    // As the id is generated according to what other ones have been created but
+    // persists between saves it is useful for the user or script writer to be
+    // able to name a particular stop watch for identification later:
+    QString mName;
+};
+
+#ifndef QT_NO_DEBUG_STREAM
+inline QDebug& operator<<(QDebug& debug, const stopWatch& stopwatch)
+{
+    QDebugStateSaver saver(debug);
+    Q_UNUSED(saver);
+    debug.nospace() << QStringLiteral("stopwatch(mIsRunning: %1 mInitialised: %2 mIsPersistent: %3 mEffectiveStartDateTime: %4 mElapsedTime: %5)")
+                       .arg((stopwatch.running() ? QLatin1String("true") : QLatin1String("false")),
+                            (stopwatch.initialised() ? QLatin1String("true") : QLatin1String("false")),
+                            (stopwatch.persistent() ? QLatin1String("true") : QLatin1String("false")),
+                            stopwatch.effectiveStartDateTime().toString(),
+                            QString::number(stopwatch.elapsed()));
+    return debug;
+}
+#endif // QT_NO_DEBUG_STREAM
 
 class Host : public QObject
 {
