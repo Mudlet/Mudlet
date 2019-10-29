@@ -80,6 +80,7 @@ set(mudlet_SRCS
     TLabel.cpp
     TLuaInterpreter.cpp
     TMap.cpp
+    TMedia.cpp
     TriggerUnit.cpp
     TRoom.cpp
     TRoomDB.cpp
@@ -159,6 +160,7 @@ set(mudlet_MOC_HDRS
     TLabel.h
     TLuaInterpreter.h
     TMap.h
+    TMedia.h
     TSplitter.h
     TSplitterHandle.h
     TTextEdit.h
