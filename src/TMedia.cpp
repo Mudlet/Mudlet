@@ -38,27 +38,7 @@ TMedia::~TMedia()
     TMedia::stopMusic();
 }
 
-// Client.Sound { "name": "Off", "url": "https://www.stickmud.com/sounds/" }
-//      Sets the URL where media files will be downloaded, "Off" is a reserved keyword
-// Client.Sound { "name": "cow.wav", "volume": "100", "length": "1" }
-//      Play cow.wav, max volume, one time
-// Client.Sound { "name": "wow", "volume": "75", "length": "1" }
-//      Play wow.wav, high volume, one time, .wav added for sound when not specified
-// Client.Sound { "name": "?ow.wav", "volume": "50", "length": "5" }
-//      Play cow.wav and wow.wav, default volume, five times randomly
-// Client.Sound { "name": "co*", "volume": "25", "length": "-1", "type": "animals" }
-//      Play cow.wav, low volume, repeat indefinitely from animals subdirectory
-// Client.Sound { "name": "Off" }
-//      Turn off all sound for this profile, "Off" is a reserved keyword
-//
-// Client.Music { "name": "Off", "url": "https://www.stickmud.com/sounds/" }
-//      Sets the URL where media files will be downloaded, "Off" is a reserved keyword
-// Client.Music { "name": "rain", "volume": "50", "length": "2", "continue": "1" }
-//      Play rain.mid, default volume, two times, continue if already playing
-// Client.Music { "name": "city.wav", "volume": "25", "length": "1", "continue": "0" }
-//      Play city.wav, low volume, one time, restart if already playing
-// Client.Music { "name": "Off" }
-//      Turn off all music for this profile, "Off" is a reserved keyword
+// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#MSP
 void TMedia::parseGMCP(TMediaData::MediaCategory mediaCategory, QString& gmcp)
 {
     if (!mpHost->mEnableMSP) {
