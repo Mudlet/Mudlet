@@ -1078,6 +1078,17 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             x = convertMouseXToBufferX(event->x(), y);
         }
 
+        if(mCtrlSelecting) {
+            unHighlight();
+            mDragStart.setX(0);
+            mDragStart.setY(y);
+            mDragSelectionEnd.setX(mpBuffer->buffer[y].size());
+            mDragSelectionEnd.setY(y);
+            normaliseSelection();
+            highlightSelection();
+            return;
+        }
+
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
             if (x < static_cast<int>(mpBuffer->buffer[y].size())) {
                 if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
