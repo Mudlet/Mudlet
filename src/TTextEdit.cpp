@@ -1132,6 +1132,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                 mDragStart.setX(0);
             }
             mDragStart.setY(yind);
+            normaliseSelection();
             highlightSelection();
             event->accept();
             return;
