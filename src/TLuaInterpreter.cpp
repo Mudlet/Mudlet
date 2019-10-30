@@ -15734,6 +15734,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "denyCurrentSend", TLuaInterpreter::denyCurrentSend);
     lua_register(pGlobalLua, "tempBeginOfLineTrigger", TLuaInterpreter::tempBeginOfLineTrigger);
     lua_register(pGlobalLua, "tempExactMatchTrigger", TLuaInterpreter::tempExactMatchTrigger);
+    lua_register(pGlobalLua, "receiveMSP", TLuaInterpreter::receiveMSP);
     lua_register(pGlobalLua, "sendGMCP", TLuaInterpreter::sendGMCP);
     lua_register(pGlobalLua, "roomExists", TLuaInterpreter::roomExists);
     lua_register(pGlobalLua, "addRoom", TLuaInterpreter::addRoom);
