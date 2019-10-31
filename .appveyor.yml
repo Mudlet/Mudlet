@@ -26,8 +26,8 @@ environment:
 
 install:
 - cmd: dir C:\msys64
-- cmd: echo "Bitness is set to %BUILD_BITNESS% and the base folder where we are working will be %APPVEYOR_BUILD_FOLDER%, current path is: %path% "
-- cmd: C:\msys64\msys2_shell.cmd -mingw%BUILD_BITNESS% -where %APPVEYOR_BUILD_FOLDER%\CI "appveyor.install.sh"
+  cmd: echo "Bitness is set to %BUILD_BITNESS% and the base folder where we are working will be %APPVEYOR_BUILD_FOLDER%, current path is: %path% "
+  cmd: C:\msys64\msys2_shell.cmd -mingw%BUILD_BITNESS% -where %APPVEYOR_BUILD_FOLDER%\CI "appveyor.install.sh"
 
 build_script:
 - C:\msys64\msys2_shell.cmd -mingw%BUILD_BITNESS% -where %APPVEYOR_BUILD_FOLDER%\CI "appveyor.build.sh"
