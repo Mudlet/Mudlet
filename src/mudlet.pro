@@ -1363,6 +1363,7 @@ DISTFILES += \
     ../CI/appveyor.build.old.ps1 \
     ../CI/appveyor.build.sh \
     ../CI/appveyor.functions.old.ps1 \
+    ../CI/appveyor.install.cmd \
     ../CI/appveyor.install.old.ps1 \
     ../CI/appveyor.install.sh \
     ../CI/appveyor.set-build-info.old.ps1 \
