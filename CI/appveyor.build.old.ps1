@@ -1,11 +1,11 @@
 cd "$Env:APPVEYOR_BUILD_FOLDER"
 
-. CI\appveyor.functions.ps1
+. CI\appveyor.functions.old.ps1
 SetQtBaseDir "C:\src\verbose_output.log"
 SetMingwBaseDir "C:\src\verbose_output.log"
 SetLuarocksPath "C:\src\verbose_output.log"
 
-. CI\appveyor.set-build-info.ps1
+. CI\appveyor.set-build-info.old.ps1
 
 cd "$Env:APPVEYOR_BUILD_FOLDER\src"
 
@@ -22,4 +22,4 @@ if("$LastExitCode" -ne "0"){
 
 cd "$Env:APPVEYOR_BUILD_FOLDER"
 
-.\CI\appveyor.after_success.ps1
+.\CI\appveyor.after_success.old.ps1

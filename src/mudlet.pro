@@ -1359,6 +1359,13 @@ unix:!macx {
 
 
 DISTFILES += \
+    ../CI/appveyor.after_success.old.ps1 \
+    ../CI/appveyor.build.old.ps1 \
+    ../CI/appveyor.build.sh \
+    ../CI/appveyor.functions.old.ps1 \
+    ../CI/appveyor.install.old.ps1 \
+    ../CI/appveyor.install.sh \
+    ../CI/appveyor.set-build-info.old.ps1 \
     CMakeLists.txt \
     .clang-format \
     ../CMakeLists.txt \
@@ -1379,11 +1386,6 @@ DISTFILES += \
     ../CI/travis.linux.after_success.sh \
     ../CI/travis.osx.after_success.sh \
     ../.appveyor.yml \
-    ../CI/appveyor.after_success.ps1 \
-    ../CI/appveyor.install.ps1 \
-    ../CI/appveyor.set-build-info.ps1 \
-    ../CI/appveyor.functions.ps1 \
-    ../CI/appveyor.build.ps1 \
     mudlet-lua/lua/ldoc.css \
     mudlet-lua/genDoc.sh \
     mudlet-lua/tests/README.md \
