@@ -142,6 +142,8 @@ void TMedia::parseGMCP(TMediaData::MediaCategory mediaCategory, QString& gmcp)
         case TMediaData::MediaCategoryMusic:
             mediaData.setMusicContinue(musicContinue);
             break;
+        case TMediaData::MediaCategoryVideo:
+            return;
     }
 
     TMedia::playMedia(mediaData);
@@ -210,6 +212,8 @@ void TMedia::playMedia(TMediaData& mediaData)
         case TMediaData::MediaCategoryMusic:
             TMedia::playMusic(mediaData);
             break;
+        case TMediaData::MediaCategoryVideo:
+            return;
     }
 }
 
@@ -222,6 +226,8 @@ void TMedia::stopMedia(TMediaData::MediaCategory mediaCategory)
         case TMediaData::MediaCategoryMusic:
             TMedia::stopMusic();
             break;
+        case TMediaData::MediaCategoryVideo:
+            return;
     }
 }
 // End Public
