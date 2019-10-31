@@ -1890,7 +1890,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
     transcodedMsg.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
 
-    bool isSound = true;
+    TMediaData::MediaCategory mediaCategory;
     QString soundFileName;
     int soundVolume = 50;
     int soundLength = 1;
@@ -1909,10 +1909,10 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     }
 
     if (transcodedMsg.startsWith(QStringLiteral("!!SOUND("))) {
-        isSound = true;
+        mediaCategory = TMediaData::MediaCategorySound;
         transcodedMsg.remove(QStringLiteral("!!SOUND("));
     } else if (transcodedMsg.startsWith(QStringLiteral("!!MUSIC("))) {
-        isSound = false;
+        mediaCategory = TMediaData::MediaCategoryMusic;
         transcodedMsg.remove(QStringLiteral("!!MUSIC("));
     } else {
         // Does not meet the MSP standard.
@@ -1920,7 +1920,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     }
 
     if (transcodedMsg == "Off") {
-        mpHost->mpMedia->stopMedia(isSound ? TMediaData::MediaCategorySound : TMediaData::MediaCategoryMusic);
+        mpHost->mpMedia->stopMedia(mediaCategory);
         return;
     }
 
@@ -1967,16 +1967,22 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
         }
     }
 
-    if (isSound) {
-        TMediaData mediaData = TMediaData(TMediaData::MediaCategorySound, soundFileName, soundVolume, soundLength, soundType, soundUrl);
-        mediaData.setSoundPriority(soundPriority);
-        mpHost->mpMedia->playMedia(mediaData);
-        return;
-    }
+    TMediaData mediaData;
 
-    TMediaData mediaData = TMediaData(TMediaData::MediaCategoryMusic, soundFileName, soundVolume, soundLength, soundType, soundUrl);
-    mediaData.setMusicContinue(musicContinue);
-    mpHost->mpMedia->playMedia(mediaData);
+    switch (mediaCategory) {
+        case TMediaData::MediaCategorySound:
+            mediaData = TMediaData(TMediaData::MediaCategorySound, soundFileName, soundVolume, soundLength, soundType, soundUrl);
+            mediaData.setSoundPriority(soundPriority);
+            mpHost->mpMedia->playMedia(mediaData);
+            break;
+        case TMediaData::MediaCategoryMusic:
+            mediaData = TMediaData(TMediaData::MediaCategoryMusic, soundFileName, soundVolume, soundLength, soundType, soundUrl);
+            mediaData.setMusicContinue(musicContinue);
+            mpHost->mpMedia->playMedia(mediaData);
+            break;
+        case TMediaData::MediaCategoryVideo: // Future
+            return;
+    }
 }
 
 void cTelnet::setChannel102Variables(const QString& msg)
