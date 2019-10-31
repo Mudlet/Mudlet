@@ -24,10 +24,10 @@ environment:
   - MINGW_BASE_DIR: C:\msys64\mingw64
     BUILD_BITNESS: 64
 install:
-- cmd: C:\msys64\msys2_shell.cmd -mingw%BUILD_BITNESS% -where %APPVEYOR_BUILD_FOLDER%\CI "appveyor.install.sh"
+- C:\msys64\msys2_shell.cmd -mingw%BUILD_BITNESS% -where %APPVEYOR_BUILD_FOLDER%\CI "appveyor.install.sh"
 
 build_script:
-- cmd: C:\msys64\msys2_shell.cmd -mingw%BUILD_BITNESS% -where %APPVEYOR_BUILD_FOLDER%\CI "appveyor.build.sh"
+- C:\msys64\msys2_shell.cmd -mingw%BUILD_BITNESS% -where %APPVEYOR_BUILD_FOLDER%\CI "appveyor.build.sh"
 
 on_failure:
 - cd C:\src
