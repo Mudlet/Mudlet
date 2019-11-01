@@ -32,4 +32,8 @@ else
 fi
 
 echo "Installing needed luarocks..."
-luarocks install luafilesystem lua-yajl luautf8 luazip lrexlib-pcre luasql-sqlite3
+# For some reason we cannot write into the location for the system tree so
+# we have to use the local (user) one - remember this when we need to pull
+# the modules into the final package (we have to get them from a different
+# place):
+luarocks --local install luafilesystem lua-yajl luautf8 luazip lrexlib-pcre luasql-sqlite3
