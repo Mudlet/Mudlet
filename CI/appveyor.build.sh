@@ -23,13 +23,15 @@ echo " "
 echo "MSYSTEM is now: ${MSYSTEM}"
 
 echo " "
-echo "Moving to project directory: $(/usr/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER})"
+echo "Project directory is: $(/usr/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER})"
 cd $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER})
-echo "  containing:"
-ls -l
-echo " creating './build' directory"
-mkdir ./build
+echo "  which contains:"
+/usr/bin/ls -l
+echo "  creating './build' sub-directory and moving to it"
+/usr/bin/mkdir ./build
 cd ./build
+echo "  it contains:"
+/usr/bin/ls -l
 
 if [ ${APPVEYOR_REPO_TAG} == "false" ] ; then
     MUDLET_VERSION_BUILD="-${BUILD_BITNESS}bit-testing"
@@ -42,7 +44,8 @@ if [ ${APPVEYOR_REPO_TAG} == "false" ] ; then
     fi
 fi
 
-echo "Building MUDLET${MUDLET_VERSION_BUILD} ..."
+echo " "
+echo "Now building MUDLET${MUDLET_VERSION_BUILD} ..."
 
 # We could support debug builds in the future by adding as an argument to the qmake call:
 # CONFIG+=debug
@@ -55,27 +58,27 @@ echo " "
 echo "Running qmake:"
 ${MINGW_INTERNAL_BASE_DIR}/bin/qmake CONFIG+=release ../src/mudlet.pro
 echo " "
-echo "Running mingw${BUILD_BITNESS}-make on individual oversized qrc_mudlet_fonts_windows file first:"
+echo "Running mingw32-make on individual oversized qrc_mudlet_fonts_windows file first:"
 # Change the referred to makefile if we switch to a debug build:
 ${MINGW_INTERNAL_BASE_DIR}/bin/mingw32-make -f Makefile.Release release/qrc_mudlet_fonts_windows.o
 echo " "
-echo "Running mingw${BUILD_BITNESS}-make with 'keep-going' option for a dual core VM:"
+echo "Running mingw32-make with 'keep-going' option for a dual core VM:"
 ${MINGW_INTERNAL_BASE_DIR}/bin/mingw32-make -k -j 3
 echo " "
 echo "mingw32-make finished!"
 echo " "
 echo "Project directory: ${APPVEYOR_BUILD_FOLDER}"
 echo "  now contains:"
-ls -al ${APPVEYOR_BUILD_FOLDER}
+/usr/bin/ls -al ${APPVEYOR_BUILD_FOLDER}
 echo " "
 
-# Note that the APPVEYOR_BUILD_FOLDER variable ùses '\' (a single backslash)
+# Note that the APPVEYOR_BUILD_FOLDER variable uses '\' (a single backslash)
 # as the directory separator but that is not usable in commands (it needs doubling)
 # or changing to forward slashes to work for them:
 echo "Project build directory: ${APPVEYOR_BUILD_FOLDER}\build"
 echo "  now contains:"
-ls -al $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/build)
+/usr/bin/ls -al $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/build)
 echo " "
 echo "Project build sub-directory: ${APPVEYOR_BUILD_FOLDER}\build\release"
 echo "  now contains:"
-ls -al $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/build/release)
+/usr/bin/ls -al $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/build/release)

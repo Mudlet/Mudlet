@@ -16,7 +16,7 @@ export MSYSTEM=MINGW${BUILD_BITNESS}
 export MINGW_BASE_DIR=C:/msys64/mingw${BUILD_BITNESS}
 # For use within sh scripts as it does not include a DRIVE element
 export MINGW_INTERNAL_BASE_DIR=/mingw${BUILD_BITNESS}
-export PATH=/${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}
+export PATH=${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}
 echo "It is now:"
 echo ${PATH}
 echo " "
@@ -31,7 +31,7 @@ echo " "
 echo "Updating MSYS2 packages..."
 
 # Clear this to use system luarocks
-ROCKTYPE=--local
+ROCKOPTARGS=--local
 if [ ${BUILD_BITNESS} == "32" ] ; then
     BUILDCOMPONENT="i686"
 else
@@ -49,21 +49,11 @@ if [ ! -f ${MINGW_INTERNAL_BASE_DIR}/include/lua5.1/lua.h ] ; then
 fi
 
 echo " "
-# Compile this simple lua program into bytecode (luac.out) to get around not being able to
-# run the interactive interpreter in a non-interactive shell script:
-echo "print(\"Lua configuaration details:\n  package.path is: \" .. package.path .. \"\n\n package.cpath is: \" .. package.cpath .. \"\n\npackage.config is: \" .. package.config .. \"\n\n\")" | ${MINGW_INTERNAL_BASE_DIR}/bin/luac5.1 -
-# Now run it and (try to!) display the output:
-echo "$(${MINGW_INTERNAL_BASE_DIR}/bin/lua5.1 ./luac.out)"
-
-echo " "
 echo "Installing needed luarocks..."
 
 echo "  Configuration files are (system): $(${ROCKCOMMAND} config --system-config) echo and (user): $(${ROCKCOMMAND} config --user-config)"
-echo "  containing:"
+echo "  The system one contains:"
 /usr/bin/cat $(${ROCKCOMMAND} config --system-config)
-echo "  and:"
-echo "  containing:"
-/usr/bin/cat $(${ROCKCOMMAND} config --user-config)
 
 # For some reason we cannot write into the location for the system tree so
 # we have to use the local (user) one - remember this when we need to pull
@@ -72,21 +62,21 @@ echo "  containing:"
 # Temporarily do each one individually to see which is causing problems
 echo " "
 echo "    luafilesystem"
-${ROCKCOMMAND} ${rockoptargs} install luafilesystem
+${ROCKCOMMAND} ${ROCKOPTARGS} install luafilesystem
 echo " "
 echo "    lua-yajl"
-${ROCKCOMMAND} ${rockoptargs} install lua-yajl
+${ROCKCOMMAND} ${ROCKOPTARGS} install lua-yajl
 echo " "
 echo "    luautf8"
-${ROCKCOMMAND} ${rockoptargs} install luautf8
+${ROCKCOMMAND} ${ROCKOPTARGS} install luautf8
 echo " "
 echo "    luazip"
-${ROCKCOMMAND} ${rockoptargs} install luazip
+${ROCKCOMMAND} ${ROCKOPTARGS} install luazip
 echo " "
 echo "    lrexlib-pcre"
-${ROCKCOMMAND} ${rockoptargs} install lrexlib-pcre
+${ROCKCOMMAND} ${ROCKOPTARGS} install lrexlib-pcre
 echo " "
 echo "    luasql-sqlite3"
-${ROCKCOMMAND} ${rockoptargs} install luasql-sqlite3
+${ROCKCOMMAND} ${ROCKOPTARGS} install luasql-sqlite3
 echo " "
 echo "    ... all done"
