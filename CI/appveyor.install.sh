@@ -38,7 +38,7 @@ fi
 
 ROCKCOMMAND=${MINGW_INTERNAL_BASE_DIR}/bin/luarocks
 
-pacman -S --needed --noconfirm base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-${BUILDCOMPONENT}-toolchain mingw-w64-i686-qt5 mingw-w64-${BUILDCOMPONENT}-libzip mingw-w64-${BUILDCOMPONENT}-pugixml mingw-w64-${BUILDCOMPONENT}-lua51 mingw-w64-${BUILDCOMPONENT}-lua51-lpeg mingw-w64-${BUILDCOMPONENT}-lua51-lsqlite3 mingw-w64-${BUILDCOMPONENT}-lua51-luarocks mingw-w64-${BUILDCOMPONENT}-hunspell mingw-w64-${BUILDCOMPONENT}-zlib mingw-w64-${BUILDCOMPONENT}-boost
+/bin/pacman -S --needed --noconfirm base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-${BUILDCOMPONENT}-toolchain mingw-w64-i686-qt5 mingw-w64-${BUILDCOMPONENT}-libzip mingw-w64-${BUILDCOMPONENT}-pugixml mingw-w64-${BUILDCOMPONENT}-lua51 mingw-w64-${BUILDCOMPONENT}-lua51-lpeg mingw-w64-${BUILDCOMPONENT}-lua51-lsqlite3 mingw-w64-${BUILDCOMPONENT}-lua51-luarocks mingw-w64-${BUILDCOMPONENT}-hunspell mingw-w64-${BUILDCOMPONENT}-zlib mingw-w64-${BUILDCOMPONENT}-boost
 
 # FIX THINGS HERE: This test does seem to pass but the luarocks build/installs do not seem to see the header file?
 if [ ! -f ${MINGW_INTERNAL_BASE_DIR}/include/lua5.1/lua.h ] ; then
@@ -47,14 +47,12 @@ if [ ! -f ${MINGW_INTERNAL_BASE_DIR}/include/lua5.1/lua.h ] ; then
 fi
 
 echo " "
-echo "Lua Configuration details - default package.path:"
-${MINGW_INTERNAL_BASE_DIR}/bin/lua5.1 -e "print(package.path)"
-echo " "
-echo "Lua Configuration details - default package.cpath:"
-${MINGW_INTERNAL_BASE_DIR}/bin/lua5.1 -e "print(package.cpath)"
-echo " "
-echo "Lua Configuration details - default package.config:"
-${MINGW_INTERNAL_BASE_DIR}/bin/lua5.1 -e "print(package.config)"
+# Compile this simple lua program into bytecode (luac.out) to get around not being able to
+# run the interactive interpreter in a non-interactive shell script:
+echo "print(\"Lua configuaration details:\n  package.path is: \" .. package.path .. \"\n\n package.cpath is: \" .. package.cpath .. \"\n\npackage.config is: \" .. package.config .. \"\n\n\")" | luac5.1 -
+# Now run it and display the output
+echo "$(${MINGW_INTERNAL_BASE_DIR}/bin/lua5.1 /luac.out)"
+
 echo " "
 echo "Installing needed luarocks..."
 

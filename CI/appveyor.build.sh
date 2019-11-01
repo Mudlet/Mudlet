@@ -10,19 +10,21 @@ fi
 echo "Initial MSYSTEM is: ${MSYSTEM}"
 echo "Initial PATH is:"
 echo ${PATH}
+echo " "
 echo "Fixing things for ${BUILD_BITNESS}-bit builds:"
 export MSYSTEM=MINGW${BUILD_BITNESS}
 export MINGW_BASE_DIR=C:/msys64/mingw${BUILD_BITNESS}
 export MINGW_INTERNAL_BASE_DIR=/mingw${BUILD_BITNESS}
 export PATH=/${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}
-echo "It is now:"
+echo " "
+echo "PATH is now:"
 echo ${PATH}
 echo " "
 echo "MSYSTEM is now: ${MSYSTEM}"
 
 echo " "
-echo "Moving to project directory: ${APPVEYOR_BUILD_FOLDER}"
-cd ${APPVEYOR_BUILD_FOLDER}
+echo "Moving to project directory: $(/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER})"
+cd $(/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER})
 echo "  containing:"
 ls -l
 echo " creating './build' directory"
@@ -72,8 +74,8 @@ echo " "
 # or changing to forward slashes to work for them:
 echo "Project build directory: ${APPVEYOR_BUILD_FOLDER}\build"
 echo "  now contains:"
-ls -al ${APPVEYOR_BUILD_FOLDER}/build
+ls -al $(/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/build)
 echo " "
 echo "Project build sub-directory: ${APPVEYOR_BUILD_FOLDER}\build\release"
 echo "  now contains:"
-ls -al ${APPVEYOR_BUILD_FOLDER}/build/release
+ls -al $(/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/build/release)
