@@ -21,21 +21,24 @@ environment:
   DBLSQD_PASS:
     secure: Bm5PLJjC39XmRC55RPGVP9c5CFxvWu2VorAAmu5QS38=
   matrix:
-  - MINGW_BASE_DIR: C:\msys64\mingw32
+  - MINGW_BASE_DIR: C:/msys64/mingw32
     BUILD_BITNESS: 32
     # was QT_BASE_DIR: C:\Qt\5.13.0\mingw73_32 and MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32 for old system and no BUILD_BITNESS
-  - MINGW_BASE_DIR: C:\msys64\mingw64
+  - MINGW_BASE_DIR: C:/msys64/mingw64
     BUILD_BITNESS: 64
 
+# Without a prefix commands are "MSDOS" batch file ones
+# With cmd: prefix they are run by cmd.exe
+# With ps: prefix they are run by PowerShell
 install:
-- cmd: C:\projects\mudlet\CI\appveyor.install.cmd
+- C:\msys64\usr\bin\sh.exe -c C:\projects\mudlet\CI\appveyor.install.sh
 
 build_script:
-- C:\msys64\msys2_shell.cmd -mingw%BUILD_BITNESS% -where %APPVEYOR_BUILD_FOLDER%\CI "appveyor.build.sh"
+- C:\msys64\usr\bin\sh.exe -c C:\projects\mudlet\CI\appveyor.build.sh
 
 on_failure:
 - cd C:\src
-- bash -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
+- C:\msys64\usr\bin\sh.exe -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
 
 #cache:
 #  - '%MINGW_BASE_DIR% -> CI\appveyor.install.old.ps1, CI\appveyor.functions.old.ps1'

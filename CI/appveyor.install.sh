@@ -1,14 +1,23 @@
 #!/bin/sh
 
+echo "Running appveyor.build.sh shell script..."
+
 if [[ ${BUILD_BITNESS} != "32" -a ${BUILD_BITNESS} != "64" ]]; then
     echo "Requires environmental variable BUILD_BITNESS to exist and be set to \"32\" or \"64\" to specify bitness of target to be built."
     exit -1
 fi
 
-echo "Predefined PATH is:"
+echo "Initial PATH is:"
 echo ${PATH}
-
-# Put stuff here to clean up path
+if [[ ${BUILD_BITNESS} == "32"]]; then
+    echo "Fixing it for 32-bit builds:"
+    export PATH=/mingw32/bin:/usr/bin:${PATH}
+else
+    echo "Fixing it for 64-bit builds:"
+    export PATH=/mingw64/bin:/usr/bin:${PATH}
+fi
+echo "It is now:"
+echo ${PATH}
 
 # Options:
 # --Syu = Sync, refresh and do a sysupgrade as well as installing the specified packages

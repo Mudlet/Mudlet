@@ -87,11 +87,11 @@ macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
 QT += network uitools multimedia gui concurrent
 qtHaveModule(gamepad) {
     QT += gamepad
-    message("Using Gamepad module")
+    !build_pass:message("Using Gamepad module")
 }
 qtHaveModule(texttospeech) {
     QT += texttospeech
-    message("Using TextToSpeech module")
+    !build_pass:message("Using TextToSpeech module")
 }
 
 TEMPLATE = app
@@ -257,7 +257,6 @@ unix:!macx {
         -lyajl \
         -lpugixml \
         -lWs2_32
-    INCLUDEPATH += "C:\\Libraries\\boost_1_70_0"
     !isEmpty(MINGW_BASE_DIR) {
         INCLUDEPATH += \
             $$(MINGW_BASE_DIR)/include/lua5.1 \
@@ -1360,6 +1359,7 @@ unix:!macx {
 
 DISTFILES += \
     ../CI/appveyor.after_success.old.ps1 \
+    ../CI/appveyor.build.cmd \
     ../CI/appveyor.build.old.ps1 \
     ../CI/appveyor.build.sh \
     ../CI/appveyor.functions.old.ps1 \
