@@ -60,7 +60,8 @@ if [ ${BUILD_BITNESS} == "32" ] ; then
     /mingw32/bin/qmake CONFIG+=release ../src/mudlet.pro
     echo " "
     echo "Running mingw32-make on individual oversized qrc_mudlet_fonts file first:"
-    /mingw32/bin/mingw32-make release/qrc_mudlet_fonts.o
+    # Change the referred to makefile if we switch to a debug build:
+    /mingw32/bin/mingw32-make -f Makefile.Release release/qrc_mudlet_fonts.o
     echo " "
     echo "Running mingw32-make with 'keep-going' option for a dual core VM:"
     /mingw32/bin/mingw32-make -k -j 3
@@ -72,8 +73,9 @@ else
     echo "Running qmake:"
     /mingw64/bin/qmake CONFIG+=release ../src/mudlet.pro
     echo " "
+    # Change the referred to makefile if we switch to a debug build:
     echo "Running mingw32-make on individual oversized qrc_mudlet_fonts file first:"
-    /mingw64/bin/mingw32-make release/qrc_mudlet_fonts.o
+    /mingw64/bin/mingw32-make -f Makefile.Release release/qrc_mudlet_fonts.o
     echo " "
     echo "Running mingw32-make with 'keep-going' option for a dual core VM:"
     /mingw64/bin/mingw32-make -k -j 3
@@ -87,6 +89,9 @@ echo "  now contains:"
 ls -al ${APPVEYOR_BUILD_FOLDER}
 echo " "
 echo "Project build directory: ${APPVEYOR_BUILD_FOLDER}/build"
-cd ${APPVEYOR_BUILD_FOLDER}
 echo "  now contains:"
 ls -al ${APPVEYOR_BUILD_FOLDER}/build
+echo " "
+echo "Project build sub-directory: ${APPVEYOR_BUILD_FOLDER}/build/release"
+echo "  now contains:"
+ls -al ${APPVEYOR_BUILD_FOLDER}/build/release
