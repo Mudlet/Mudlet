@@ -139,7 +139,7 @@ void TMedia::parseGMCP(TMediaData::MediaCategory mediaCategory, QString& gmcp)
         //   1) Matches Client.GUI and Client.Map GMCP in format.
         //   2) By setting "Off" as mediaFileName, enables TMedia module to conform to the MSP specification
         mediaFileName = "Off";
-    } else if (mediaFileNameJSON == QJsonValue::Undefined || !mediaFileNameJSON.isString() && mediaFileNameJSON.toString().isEmpty()) {
+    } else if (mediaFileNameJSON == QJsonValue::Undefined || !mediaFileNameJSON.isString() || mediaFileNameJSON.toString().isEmpty()) {
         qWarning() << QStringLiteral("TMedia::parseGMCP() WARNING - GMCP missing the required [ name ] parameter to process media.");
         return;
     }
