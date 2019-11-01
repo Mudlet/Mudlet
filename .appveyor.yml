@@ -18,7 +18,7 @@ environment:
   DBLSQD_PASS:
     secure: Bm5PLJjC39XmRC55RPGVP9c5CFxvWu2VorAAmu5QS38=
   matrix:
-  - QT_BASE_DIR: C:\Qt\5.13.0\mingw73_32
+  - QT_BASE_DIR: C:\Qt\5.12.3\mingw73_32
     MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32
 install:
 - cd "%APPVEYOR_BUILD_FOLDER%\CI"
