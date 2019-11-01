@@ -1080,6 +1080,8 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             mDragSelectionEnd.setY(y);
             normaliseSelection();
             highlightSelection();
+            mMouseTracking = true;
+            event->accept();
             return;
         }
 
