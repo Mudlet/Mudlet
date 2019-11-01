@@ -26,9 +26,9 @@ echo ${PATH}
 
 echo "Updating MSYS2 packages..."
 if [ ${BUILD_BITNESS} == "32" ] ; then
-    pacman -S --needed --noconfirm --noprogressbar base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-i686-toolchain mingw-w64-i686-qt5 mingw-w64-i686-libzip mingw-w64-i686-pugixml mingw-w64-i686-lua51 mingw-w64-i686-lua51-lpeg mingw-w64-i686-lua51-lsqlite3 mingw-w64-i686-lua51-luarocks mingw-w64-i686-hunspell mingw-w64-i686-zlib mingw-w64-i686-boost
+    pacman -S --needed --noconfirm base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-i686-toolchain mingw-w64-i686-qt5 mingw-w64-i686-libzip mingw-w64-i686-pugixml mingw-w64-i686-lua51 mingw-w64-i686-lua51-lpeg mingw-w64-i686-lua51-lsqlite3 mingw-w64-i686-lua51-luarocks mingw-w64-i686-hunspell mingw-w64-i686-zlib mingw-w64-i686-boost
 else
-    pacman -S --needed --noconfirm --noprogressbar base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-x86_64-toolchain mingw-w64-x86_64-qt5 mingw-w64-x86_64-libzip mingw-w64-x86_64-pugixml mingw-w64-x86_64-lua51 mingw-w64-x86_64-lua51-lpeg mingw-w64-x86_64-lua51-lsqlite3 mingw-w64-x86_64-lua51-luarocks mingw-w64-x86_64-hunspell mingw-w64-x86_64-zlib mingw-w64-x86_64-boost
+    pacman -S --needed --noconfirm base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-x86_64-toolchain mingw-w64-x86_64-qt5 mingw-w64-x86_64-libzip mingw-w64-x86_64-pugixml mingw-w64-x86_64-lua51 mingw-w64-x86_64-lua51-lpeg mingw-w64-x86_64-lua51-lsqlite3 mingw-w64-x86_64-lua51-luarocks mingw-w64-x86_64-hunspell mingw-w64-x86_64-zlib mingw-w64-x86_64-boost
 fi
 
 echo "Installing needed luarocks..."
@@ -36,4 +36,17 @@ echo "Installing needed luarocks..."
 # we have to use the local (user) one - remember this when we need to pull
 # the modules into the final package (we have to get them from a different
 # place):
-luarocks --local install luafilesystem lua-yajl luautf8 luazip lrexlib-pcre luasql-sqlite3
+# Temporarily do each one individually to see which is causing problems
+echo "    luafilesystem"
+luarocks --local install luafilesystem
+echo "    lua-yajl"
+luarocks --local install lua-yajl
+echo "    luautf8"
+luarocks --local install luautf8
+echo "    luazip"
+luarocks --local install luazip
+echo "    lrexlib-pcre"
+luarocks --local install lrexlib-pcre
+echo "    luasql-sqlite3"
+luarocks --local install luasql-sqlite3
+echo "    ... all done"
