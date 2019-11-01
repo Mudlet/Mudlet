@@ -708,7 +708,7 @@ void TMedia::playSound(TMediaData& soundData)
 
     QString absolutePathFileName;
 
-    if (soundData.getMediaLength() == TMediaData::MediaLengthDefault) { // Play once        
+    if (soundData.getMediaLength() == TMediaData::MediaLengthDefault) { // Play once
         if (fileNameList.size() > 1) {
             absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
         } else {
