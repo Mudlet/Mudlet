@@ -51,6 +51,25 @@ if [ ${BUILD_BITNESS} == "32" ] ; then
     echo "  containing:"
     /bin/cat $(/mingw32/bin/luarocks config --user-config)
 
+    # For some reason we cannot write into the location for the system tree so
+    # we have to use the local (user) one - remember this when we need to pull
+    # the modules into the final package (we have to get them from a different
+    # place):
+    # Temporarily do each one individually to see which is causing problems
+    echo " "
+    echo "    luafilesystem"
+    /mingw32/bin/luarocks --local install luafilesystem
+    echo "    lua-yajl"
+    /mingw32/bin/luarocks --local install lua-yajl
+    echo "    luautf8"
+    /mingw32/bin/luarocks --local install luautf8
+    echo "    luazip"
+    /mingw32/bin/luarocks --local install luazip
+    echo "    lrexlib-pcre"
+    /mingw32/bin/luarocks --local install lrexlib-pcre
+    echo "    luasql-sqlite3"
+    /mingw32/bin/luarocks --local install luasql-sqlite3
+
 else
     pacman -S --needed --noconfirm base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-x86_64-toolchain mingw-w64-x86_64-qt5 mingw-w64-x86_64-libzip mingw-w64-x86_64-pugixml mingw-w64-x86_64-lua51 mingw-w64-x86_64-lua51-lpeg mingw-w64-x86_64-lua51-lsqlite3 mingw-w64-x86_64-lua51-luarocks mingw-w64-x86_64-hunspell mingw-w64-x86_64-zlib mingw-w64-x86_64-boost
     if [ ! -f /mingw64/include/lua5.1/lua.h ] ; then
@@ -66,24 +85,25 @@ else
     echo "  containing:"
     /bin/cat $(/mingw64/bin/luarocks config --user-config)
 
+    # For some reason we cannot write into the location for the system tree so
+    # we have to use the local (user) one - remember this when we need to pull
+    # the modules into the final package (we have to get them from a different
+    # place):
+    # Temporarily do each one individually to see which is causing problems
+    echo " "
+    echo "    luafilesystem"
+    /mingw64/bin/luarocks --local install luafilesystem
+    echo "    lua-yajl"
+    /mingw64/bin/luarocks --local install lua-yajl
+    echo "    luautf8"
+    /mingw64/bin/luarocks --local install luautf8
+    echo "    luazip"
+    /mingw64/bin/luarocks --local install luazip
+    echo "    lrexlib-pcre"
+    /mingw64/bin/luarocks --local install lrexlib-pcre
+    echo "    luasql-sqlite3"
+    /mingw64/bin/luarocks --local install luasql-sqlite3
+
 fi
 
-# For some reason we cannot write into the location for the system tree so
-# we have to use the local (user) one - remember this when we need to pull
-# the modules into the final package (we have to get them from a different
-# place):
-# Temporarily do each one individually to see which is causing problems
-echo " "
-echo "    luafilesystem"
-luarocks --local install luafilesystem
-echo "    lua-yajl"
-luarocks --local install lua-yajl
-echo "    luautf8"
-luarocks --local install luautf8
-echo "    luazip"
-luarocks --local install luazip
-echo "    lrexlib-pcre"
-luarocks --local install lrexlib-pcre
-echo "    luasql-sqlite3"
-luarocks --local install luasql-sqlite3
 echo "    ... all done"
