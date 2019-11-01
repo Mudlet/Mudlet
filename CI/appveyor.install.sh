@@ -35,10 +35,10 @@ if [ ${BUILD_BITNESS} == "32" ] ; then
     echo "Installing needed luarocks..."
     echo "  Configuration files are (system): $(luarocks config --system-config)"
     echo "  containing:"
-    /bin/cat $(luarocks config --system-config)
-    echo "  and (user): $(luarocks config --user-config)"
+    /bin/cat $(/mingw32/bin/luarocks config --system-config)
+    echo "  and (user): $(/mingw32/bin/luarocks config --user-config)"
     echo "  containing:"
-    /bin/cat $(luarocks config --user-config)
+    /bin/cat $(/mingw32/bin/luarocks config --user-config)
 
 else
     pacman -S --needed --noconfirm base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-x86_64-toolchain mingw-w64-x86_64-qt5 mingw-w64-x86_64-libzip mingw-w64-x86_64-pugixml mingw-w64-x86_64-lua51 mingw-w64-x86_64-lua51-lpeg mingw-w64-x86_64-lua51-lsqlite3 mingw-w64-x86_64-lua51-luarocks mingw-w64-x86_64-hunspell mingw-w64-x86_64-zlib mingw-w64-x86_64-boost
@@ -50,10 +50,10 @@ else
     echo "Installing needed luarocks..."
     echo "  Configuration files are (system): $(luarocks config --system-config)"
     echo "  containing:"
-    /bin/cat $(luarocks config --system-config)
-    echo "  and (user): $(luarocks config --user-config)"
+    /bin/cat $(/mingw64/bin/luarocks config --system-config)
+    echo "  and (user): $(/mingw64/bin/luarocks config --user-config)"
     echo "  containing:"
-    /bin/cat $(luarocks config --user-config)
+    /bin/cat $(/mingw64/bin/luarocks config --user-config)
 
 fi
 

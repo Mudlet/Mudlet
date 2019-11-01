@@ -20,10 +20,13 @@ echo "It is now:"
 echo ${PATH}
 
 echo " "
-echo "Moving to project build directory: ${APPVEYOR_BUILD_FOLDER}"
-echo "  containing:"
+echo "Moving to project directory: ${APPVEYOR_BUILD_FOLDER}"
 cd ${APPVEYOR_BUILD_FOLDER}
+echo "  containing:"
 ls -l
+echo " creating './build' directory"
+mkdir ./build
+cd ./build
 
 if [ ${APPVEYOR_REPO_TAG} == "false" ] ; then
     MUDLET_VERSION_BUILD="-${BUILD_BITNESS}bit-testing"
@@ -36,7 +39,7 @@ if [ ${APPVEYOR_REPO_TAG} == "false" ] ; then
     fi
 fi
 
-echo "BUILDING MUDLET${MUDLET_VERSION_BUILD} ..."
+echo "Building MUDLET${MUDLET_VERSION_BUILD} ..."
 
 # We could support debug builds in the future by adding as an argument to the qmake call:
 # CONFIG+=debug
@@ -44,9 +47,9 @@ if [ ${BUILD_BITNESS} == "32" ] ; then
     # Should be already defined in environment: MINGW_BASE_DIR=C:/msys64/mingw32
     echo " "
     echo "Running qmake:"
-    /mingw32/bin/qmake CONFIG+=release ../../src/mudlet.pro
+    /mingw32/bin/qmake CONFIG+=release ../src/mudlet.pro
     echo " "
-    echo "Running mingw32-make:"
+    echo "Running mingw32-make with 'keep-going' option:"
     /mingw32/bin/mingw32-make -k
 else
     # Should be already defined in environment: MINGW_BASE_DIR=C:/msys64/mingw64
@@ -54,9 +57,9 @@ else
     WITH_UPDATER=NO
     echo " "
     echo "Running qmake:"
-    /mingw64/bin/qmake CONFIG+=release ../../src/mudlet.pro
+    /mingw64/bin/qmake CONFIG+=release ../src/mudlet.pro
     echo " "
-    echo "Running mingw32-make:"
+    echo "Running mingw32-make with 'keep-going' option:"
     /mingw64/bin/mingw32-make -k
 fi
 
