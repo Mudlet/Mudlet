@@ -23,8 +23,8 @@ echo " "
 echo "MSYSTEM is now: ${MSYSTEM}"
 
 echo " "
-echo "Moving to project directory: $(/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER})"
-cd $(/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER})
+echo "Moving to project directory: $(/usr/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER})"
+cd $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER})
 echo "  containing:"
 ls -l
 echo " creating './build' directory"
@@ -74,8 +74,8 @@ echo " "
 # or changing to forward slashes to work for them:
 echo "Project build directory: ${APPVEYOR_BUILD_FOLDER}\build"
 echo "  now contains:"
-ls -al $(/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/build)
+ls -al $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/build)
 echo " "
 echo "Project build sub-directory: ${APPVEYOR_BUILD_FOLDER}\build\release"
 echo "  now contains:"
-ls -al $(/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/build/release)
+ls -al $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/build/release)
