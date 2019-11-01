@@ -19,8 +19,11 @@ fi
 echo "It is now:"
 echo ${PATH}
 
-echo "\nMoving to project build directory: ${APPVEYOR_BUILD_FOLDER}"
+echo " "
+echo "Moving to project build directory: ${APPVEYOR_BUILD_FOLDER}"
+echo "  containing:"
 cd ${APPVEYOR_BUILD_FOLDER}
+ls -l
 
 if [ ${APPVEYOR_REPO_TAG} == "false" ] ; then
     MUDLET_VERSION_BUILD="-${BUILD_BITNESS}bit-testing"
@@ -39,12 +42,23 @@ echo "BUILDING MUDLET${MUDLET_VERSION_BUILD} ..."
 # CONFIG+=debug
 if [ ${BUILD_BITNESS} == "32" ] ; then
     # Should be already defined in environment: MINGW_BASE_DIR=C:/msys64/mingw32
+    echo " "
+    echo "Running qmake:"
     /mingw32/bin/qmake CONFIG+=release ../../src/mudlet.pro
+    echo " "
+    echo "Running mingw32-make:"
     /mingw32/bin/mingw32-make -k
 else
     # Should be already defined in environment: MINGW_BASE_DIR=C:/msys64/mingw64
     # Remove the following once we have the infrastructure for 64 Bit window builds sorted:
     WITH_UPDATER=NO
+    echo " "
+    echo "Running qmake:"
     /mingw64/bin/qmake CONFIG+=release ../../src/mudlet.pro
+    echo " "
+    echo "Running mingw32-make:"
     /mingw64/bin/mingw32-make -k
 fi
+
+echo " "
+echo "mingw32-make finished!"
