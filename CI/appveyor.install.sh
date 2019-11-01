@@ -20,15 +20,15 @@ echo "It is now:"
 echo ${PATH}
 
 # Options:
-# --Syu = Sync, refresh and do a sysupgrade as well as installing the specified packages
+# --Sy = Sync, refresh as well as installing the specified packages
 # --noconfirm = do not ask for user intervention
 # --noprogressbar = do not show progress bars as they are not useful in scripts
 
 echo "Updating MSYS2 packages..."
 if [ ${BUILD_BITNESS} == "32" ] ; then
-    pacman -U --needed --noconfirm --noprogressbar base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-i686-toolchain mingw-w64-i686-qt5 mingw-w64-i686-libzip mingw-w64-i686-pugixml mingw-w64-i686-lua51 mingw-w64-i686-lua51-lpeg mingw-w64-i686-lua51-lsqlite3 mingw-w64-i686-lua51-luarocks mingw-w64-i686-hunspell mingw-w64-i686-zlib mingw-w64-i686-boost
-els
-    pacman -U --needed --noconfirm --noprogressbar base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-x86_64-toolchain mingw-w64-x86_64-qt5 mingw-w64-x86_64-libzip mingw-w64-x86_64-pugixml mingw-w64-x86_64-lua51 mingw-w64-x86_64-lua51-lpeg mingw-x86_64-lua51-lsqlite3 mingw-x86_64-lua51-luarocks mingw-w64-x86_64-hunspell mingw-w64-x86_64-zlib mingw-x86_64-boost
+    pacman -Sy --needed --noconfirm --noprogressbar base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-i686-toolchain mingw-w64-i686-qt5 mingw-w64-i686-libzip mingw-w64-i686-pugixml mingw-w64-i686-lua51 mingw-w64-i686-lua51-lpeg mingw-w64-i686-lua51-lsqlite3 mingw-w64-i686-lua51-luarocks mingw-w64-i686-hunspell mingw-w64-i686-zlib mingw-w64-i686-boost
+else
+    pacman -Sy --needed --noconfirm --noprogressbar base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-x86_64-toolchain mingw-w64-x86_64-qt5 mingw-w64-x86_64-libzip mingw-w64-x86_64-pugixml mingw-w64-x86_64-lua51 mingw-w64-x86_64-lua51-lpeg mingw-x86_64-lua51-lsqlite3 mingw-x86_64-lua51-luarocks mingw-w64-x86_64-hunspell mingw-w64-x86_64-zlib mingw-x86_64-boost
 fi
 
 echo "Installing needed luarocks..."
