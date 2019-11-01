@@ -1894,7 +1894,6 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     QString mediaFileName;
     int mediaVolume = TMediaData::MediaVolumeDefault;
     int mediaLength = TMediaData::MediaLengthDefault;
-    int mediaSuppression = TMediaData::MediaSuppressionDefault;
     int soundPriority = TMediaData::MediaPriorityDefault;
     int musicContinue = TMediaData::MediaContinueDefault;
     QString mediaType;
@@ -1953,10 +1952,8 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
                     mediaVolume = mspVAL.toInt();
                 } else if (mspVAR == "L") {
                     mediaLength = mspVAL.toInt();
-                } else if (mspVAR == "S") {
-                    mediaSuppression = mspVAL.toInt();
                 } else if (mspVAR == "P") {
-                    soundPriority = mspVAL.toInt(); // Not implemented.
+                    soundPriority = mspVAL.toInt(); // TMediaData::MediaPriorityMax (100) suppresses other sounds (i.e. for combat).
                 } else if (mspVAR == "C") {
                     musicContinue = mspVAL.toInt();
                 } else if (mspVAR == "T") {
@@ -1974,12 +1971,13 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
 
     switch (mediaCategory) {
         case TMediaData::MediaCategorySound:
-            mediaData = TMediaData(TMediaData::MediaCategorySound, mediaFileName, mediaVolume, mediaLength, mediaSuppression, mediaType, mediaUrl);
+            mediaData = TMediaData(TMediaData::MediaCategorySound, mediaFileName, mediaVolume, mediaLength, mediaType, mediaUrl);
             mediaData.setSoundPriority(soundPriority);
             mpHost->mpMedia->playMedia(mediaData);
             break;
         case TMediaData::MediaCategoryMusic:
-            mediaData = TMediaData(TMediaData::MediaCategoryMusic, mediaFileName, mediaVolume, mediaLength, mediaSuppression, mediaType, mediaUrl);
+            mediaData = TMediaData(TMediaData::MediaCategoryMusic, mediaFileName, mediaVolume, mediaLength, mediaType, mediaUrl);
+            mediaData.setSoundPriority(soundPriority);
             mediaData.setMusicContinue(musicContinue);
             mpHost->mpMedia->playMedia(mediaData);
             break;
