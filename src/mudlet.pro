@@ -618,8 +618,17 @@ FORMS += \
 RESOURCES = mudlet.qrc \
             ../translations/translated/qm.qrc
 
+# Windows cannot use the Noto Color Font and the 32-Bit builds on MSYS2
+# crash because it needs more than 4GB to compile the reasource file
+win32 {
+    RESOURCES += mudlet_fonts_windows.qrc
+} else {
+    RESOURCES += mudlet_fonts_linux.qrc
+}
+
+
 contains(DEFINES, INCLUDE_FONTS) {
-    RESOURCES += mudlet_fonts.qrc
+    RESOURCES +=
     !build_pass{
         # On windows or on platforms that support CONFIG having debug_and_release"
         # then there can be three passes through this file and we only want the

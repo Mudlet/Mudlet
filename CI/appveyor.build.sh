@@ -59,9 +59,9 @@ if [ ${BUILD_BITNESS} == "32" ] ; then
     echo "Running qmake:"
     /mingw32/bin/qmake CONFIG+=release ../src/mudlet.pro
     echo " "
-    echo "Running mingw32-make on individual oversized qrc_mudlet_fonts file first:"
+    echo "Running mingw32-make on individual oversized qrc_mudlet_fonts_windows file first:"
     # Change the referred to makefile if we switch to a debug build:
-    /mingw32/bin/mingw32-make -f Makefile.Release release/qrc_mudlet_fonts.o
+    /mingw32/bin/mingw32-make -f Makefile.Release release/qrc_mudlet_fonts_windows.o
     echo " "
     echo "Running mingw32-make with 'keep-going' option for a dual core VM:"
     /mingw32/bin/mingw32-make -k -j 3
@@ -74,8 +74,8 @@ else
     /mingw64/bin/qmake CONFIG+=release ../src/mudlet.pro
     echo " "
     # Change the referred to makefile if we switch to a debug build:
-    echo "Running mingw32-make on individual oversized qrc_mudlet_fonts file first:"
-    /mingw64/bin/mingw32-make -f Makefile.Release release/qrc_mudlet_fonts.o
+    echo "Running mingw32-make on individual oversized qrc_mudlet_fonts_windows file first:"
+    /mingw64/bin/mingw32-make -f Makefile.Release release/qrc_mudlet_fonts_windows.o
     echo " "
     echo "Running mingw32-make with 'keep-going' option for a dual core VM:"
     /mingw64/bin/mingw32-make -k -j 3
@@ -88,10 +88,13 @@ echo "Project directory: ${APPVEYOR_BUILD_FOLDER}"
 echo "  now contains:"
 ls -al ${APPVEYOR_BUILD_FOLDER}
 echo " "
-echo "Project build directory: ${APPVEYOR_BUILD_FOLDER}/build"
+# Note that the APPVEYOR_BUILD_FOLDER variable ùses '\' (a single backslash)
+# as the directory separator but that is not usable in commands (it needs doubling)
+# or changing to forward slashes to work for them:
+echo "Project build directory: ${APPVEYOR_BUILD_FOLDER}\build"
 echo "  now contains:"
 ls -al ${APPVEYOR_BUILD_FOLDER}/build
 echo " "
-echo "Project build sub-directory: ${APPVEYOR_BUILD_FOLDER}/build/release"
+echo "Project build sub-directory: ${APPVEYOR_BUILD_FOLDER}\build\release"
 echo "  now contains:"
 ls -al ${APPVEYOR_BUILD_FOLDER}/build/release
