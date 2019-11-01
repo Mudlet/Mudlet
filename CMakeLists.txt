@@ -165,7 +165,6 @@ add_subdirectory(3rdparty/edbee-lib/edbee-lib)
 add_subdirectory(3rdparty/qtkeychain)
 add_subdirectory(3rdparty/communi)
 add_subdirectory(translations/translated)
-add_subdirectory(src)
 
 if(APPLE)
   add_subdirectory(3rdparty/luazip)
@@ -175,7 +174,9 @@ if(USE_UPDATER)
   add_subdirectory(3rdparty/dblsqd)
 
   if(APPLE)
+    add_subdirectory(3rdparty/cocoapods)
     add_subdirectory(3rdparty/sparkle-glue)
   endif()
 
 endif()
+add_subdirectory(src)
