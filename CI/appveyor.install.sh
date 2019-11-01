@@ -27,8 +27,16 @@ echo ${PATH}
 echo "Updating MSYS2 packages..."
 if [ ${BUILD_BITNESS} == "32" ] ; then
     pacman -S --needed --noconfirm base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-i686-toolchain mingw-w64-i686-qt5 mingw-w64-i686-libzip mingw-w64-i686-pugixml mingw-w64-i686-lua51 mingw-w64-i686-lua51-lpeg mingw-w64-i686-lua51-lsqlite3 mingw-w64-i686-lua51-luarocks mingw-w64-i686-hunspell mingw-w64-i686-zlib mingw-w64-i686-boost
+    if [ ! -e /mingw32/include/lua5.1/lua.h ] ; then
+        echo "Lua system failure, failed to install needed /mingw32/include/lua5.1/lua.h file!"
+        exit -2
+    fi
 else
     pacman -S --needed --noconfirm base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-x86_64-toolchain mingw-w64-x86_64-qt5 mingw-w64-x86_64-libzip mingw-w64-x86_64-pugixml mingw-w64-x86_64-lua51 mingw-w64-x86_64-lua51-lpeg mingw-w64-x86_64-lua51-lsqlite3 mingw-w64-x86_64-lua51-luarocks mingw-w64-x86_64-hunspell mingw-w64-x86_64-zlib mingw-w64-x86_64-boost
+    if [ ! -e /mingw64/include/lua5.1/lua.h ] ; then
+        echo "Lua system failure, failed to install needed /mingw64/include/lua5.1/lua.h file!"
+        exit -2
+    fi
 fi
 
 echo "Installing needed luarocks..."
@@ -37,16 +45,16 @@ echo "Installing needed luarocks..."
 # the modules into the final package (we have to get them from a different
 # place):
 # Temporarily do each one individually to see which is causing problems
-echo "    luafilesystem"
+echo "\n    luafilesystem"
 luarocks --local install luafilesystem
-echo "    lua-yajl"
+echo "\n    lua-yajl"
 luarocks --local install lua-yajl
-echo "    luautf8"
+echo "\n    luautf8"
 luarocks --local install luautf8
-echo "    luazip"
+echo "\n    luazip"
 luarocks --local install luazip
-echo "    lrexlib-pcre"
+echo "\n    lrexlib-pcre"
 luarocks --local install lrexlib-pcre
-echo "    luasql-sqlite3"
+echo "\n    luasql-sqlite3"
 luarocks --local install luasql-sqlite3
-echo "    ... all done"
+echo "\n    ... all done"
