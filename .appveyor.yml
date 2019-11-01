@@ -31,10 +31,10 @@ environment:
 # With cmd: prefix they are run by cmd.exe
 # With ps: prefix they are run by PowerShell
 install:
-- C:\msys64\usr\bin\sh.exe -c C:/projects/mudlet/CI/appveyor.install.sh
+- C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.install.sh
 
 build_script:
-- C:\msys64\usr\bin\sh.exe -c C:/projects/mudlet/CI/appveyor.build.sh
+- C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.build.sh
 
 on_failure:
 - cd C:\src
