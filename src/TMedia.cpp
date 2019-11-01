@@ -66,7 +66,7 @@ void TMedia::parseGMCP(TMediaData::MediaCategory mediaCategory, QString& gmcp)
     }
 
     auto mediaVolumeJSON = json.value(QStringLiteral("volume"));
-    int mediaVolume;    
+    int mediaVolume;
 
     if (mediaVolumeJSON != QJsonValue::Undefined && mediaVolumeJSON.isString() && !mediaVolumeJSON.toString().isEmpty()) {
         mediaVolume = mediaVolumeJSON.toString().toInt();
