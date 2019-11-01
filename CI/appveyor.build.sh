@@ -38,12 +38,12 @@ echo "BUILDING MUDLET ${MUDLET_VERSION_BUILD} ..."
 # CONFIG+=debug
 if [ ${BUILD_BITNESS} == "32" ] ; then
     # Should be already defined in environment: MINGW_BASE_DIR=C:/msys64/mingw32
-    /msys64/mingw32/bin/qmake CONFIG+=release ../src/mudlet.pro
-    /msys64/mingw32/bin/mingw32-make -k
+    /mingw32/bin/qmake CONFIG+=release ../src/mudlet.pro
+    /mingw32/bin/mingw32-make -k
 else
     # Should be already defined in environment: MINGW_BASE_DIR=C:/msys64/mingw64
     # Remove the following once we have the infrastructure for 64 Bit window builds sorted:
     WITH_UPDATER=NO
-    /msys64/mingw64/bin/qmake CONFIG+=release ../src/mudlet.pro
-    /msys64/mingw64/bin/mingw32-make -k
+    /mingw64/bin/qmake CONFIG+=release ../src/mudlet.pro
+    /mingw64/bin/mingw32-make -k
 fi

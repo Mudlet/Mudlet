@@ -31,30 +31,49 @@ if [ ${BUILD_BITNESS} == "32" ] ; then
         echo "Lua system failure, failed to install needed /mingw32/include/lua5.1/lua.h file!"
         exit -2
     fi
+    echo "Installing needed luarocks..."
+    echo " Configuration files are:"
+    luarocks config --system-config
+    echo "  containing:"
+    more $(luarocks config --system-config)
+    echo "\n and:"
+    luarocks config --user-config
+    echo "  containing:"
+    more $(luarocks config --user-config)
+
 else
     pacman -S --needed --noconfirm base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-x86_64-toolchain mingw-w64-x86_64-qt5 mingw-w64-x86_64-libzip mingw-w64-x86_64-pugixml mingw-w64-x86_64-lua51 mingw-w64-x86_64-lua51-lpeg mingw-w64-x86_64-lua51-lsqlite3 mingw-w64-x86_64-lua51-luarocks mingw-w64-x86_64-hunspell mingw-w64-x86_64-zlib mingw-w64-x86_64-boost
     if [ ! -e /mingw64/include/lua5.1/lua.h ] ; then
         echo "Lua system failure, failed to install needed /mingw64/include/lua5.1/lua.h file!"
         exit -2
     fi
+    echo "Installing needed luarocks..."
+    echo " Configuration files are:"
+    luarocks config --system-config
+    echo "  containing:"
+    more $(luarocks config --system-config)
+    echo "\n and:"
+    luarocks config --user-config
+    echo "  containing:"
+    more $(luarocks config --user-config)
+
 fi
 
-echo "Installing needed luarocks..."
 # For some reason we cannot write into the location for the system tree so
 # we have to use the local (user) one - remember this when we need to pull
 # the modules into the final package (we have to get them from a different
 # place):
 # Temporarily do each one individually to see which is causing problems
-echo "\n    luafilesystem"
+echo "/n    luafilesystem"
 luarocks --local install luafilesystem
-echo "\n    lua-yajl"
+echo "/n    lua-yajl"
 luarocks --local install lua-yajl
-echo "\n    luautf8"
+echo "/n    luautf8"
 luarocks --local install luautf8
-echo "\n    luazip"
+echo "/n    luazip"
 luarocks --local install luazip
-echo "\n    lrexlib-pcre"
+echo "/n    lrexlib-pcre"
 luarocks --local install lrexlib-pcre
-echo "\n    luasql-sqlite3"
+echo "/n    luasql-sqlite3"
 luarocks --local install luasql-sqlite3
-echo "\n    ... all done"
+echo "/n    ... all done"
