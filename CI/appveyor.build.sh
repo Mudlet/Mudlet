@@ -7,27 +7,18 @@ if [ ${BUILD_BITNESS} != "32" -a ${BUILD_BITNESS} != "64" ] ; then
     exit -1
 fi
 
+echo "Initial MSYSTEM is: ${MSYSTEM}"
 echo "Initial PATH is:"
 echo ${PATH}
-if [ ${BUILD_BITNESS} == "32" ] ; then
-    echo "Fixing it for 32-bit builds:"
-    export PATH=/mingw32/bin:/usr/bin:${PATH}
-else
-    echo "Fixing it for 64-bit builds:"
-    export PATH=/mingw64/bin:/usr/bin:${PATH}
-fi
+echo "Fixing things for ${BUILD_BITNESS}-bit builds:"
+export MSYSTEM=MINGW${BUILD_BITNESS}
+export MINGW_BASE_DIR=C:/msys64/mingw${BUILD_BITNESS}
+export MINGW_INTERNAL_BASE_DIR=/mingw${BUILD_BITNESS}
+export PATH=/${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}
 echo "It is now:"
 echo ${PATH}
 echo " "
-echo "Initial MSYSTEM is: ${MSYSTEM}"
-if [ ${BUILD_BITNESS} == "32" ] ; then
-    echo "Fixing it for 32-bit builds:"
-    export MSYSTEM=MINGW32
-else
-    echo "Fixing it for 64-bit builds:"
-    export MSYSTEM=MINGW64
-fi
-echo "It is now: ${MSYSTEM}"
+echo "MSYSTEM is now: ${MSYSTEM}"
 
 echo " "
 echo "Moving to project directory: ${APPVEYOR_BUILD_FOLDER}"
@@ -53,34 +44,21 @@ echo "Building MUDLET${MUDLET_VERSION_BUILD} ..."
 
 # We could support debug builds in the future by adding as an argument to the qmake call:
 # CONFIG+=debug
-if [ ${BUILD_BITNESS} == "32" ] ; then
-    # Should be already defined in environment: MINGW_BASE_DIR=C:/msys64/mingw32
-    echo " "
-    echo "Running qmake:"
-    /mingw32/bin/qmake CONFIG+=release ../src/mudlet.pro
-    echo " "
-    echo "Running mingw32-make on individual oversized qrc_mudlet_fonts_windows file first:"
-    # Change the referred to makefile if we switch to a debug build:
-    /mingw32/bin/mingw32-make -f Makefile.Release release/qrc_mudlet_fonts_windows.o
-    echo " "
-    echo "Running mingw32-make with 'keep-going' option for a dual core VM:"
-    /mingw32/bin/mingw32-make -k -j 3
-else
-    # Should be already defined in environment: MINGW_BASE_DIR=C:/msys64/mingw64
-    # Remove the following once we have the infrastructure for 64 Bit window builds sorted:
+# Remove the following once we have the infrastructure for 64 Bit window builds sorted:
+if [ ${BUILD_BITNESS} == "64" ] ; then
     WITH_UPDATER=NO
-    echo " "
-    echo "Running qmake:"
-    /mingw64/bin/qmake CONFIG+=release ../src/mudlet.pro
-    echo " "
-    # Change the referred to makefile if we switch to a debug build:
-    echo "Running mingw32-make on individual oversized qrc_mudlet_fonts_windows file first:"
-    /mingw64/bin/mingw32-make -f Makefile.Release release/qrc_mudlet_fonts_windows.o
-    echo " "
-    echo "Running mingw32-make with 'keep-going' option for a dual core VM:"
-    /mingw64/bin/mingw32-make -k -j 3
 fi
 
+echo " "
+echo "Running qmake:"
+${MINGW_INTERNAL_BASE_DIR}/bin/qmake CONFIG+=release ../src/mudlet.pro
+echo " "
+echo "Running mingw${BUILD_BITNESS}-make on individual oversized qrc_mudlet_fonts_windows file first:"
+# Change the referred to makefile if we switch to a debug build:
+${MINGW_INTERNAL_BASE_DIR}/bin/mingw32-make -f Makefile.Release release/qrc_mudlet_fonts_windows.o
+echo " "
+echo "Running mingw${BUILD_BITNESS}-make with 'keep-going' option for a dual core VM:"
+${MINGW_INTERNAL_BASE_DIR}/bin/mingw32-make -k -j 3
 echo " "
 echo "mingw32-make finished!"
 echo " "
@@ -88,6 +66,7 @@ echo "Project directory: ${APPVEYOR_BUILD_FOLDER}"
 echo "  now contains:"
 ls -al ${APPVEYOR_BUILD_FOLDER}
 echo " "
+
 # Note that the APPVEYOR_BUILD_FOLDER variable ùses '\' (a single backslash)
 # as the directory separator but that is not usable in commands (it needs doubling)
 # or changing to forward slashes to work for them:

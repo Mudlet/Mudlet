@@ -7,27 +7,18 @@ if [ ${BUILD_BITNESS} != "32" -a ${BUILD_BITNESS} != "64" ] ; then
     exit -1
 fi
 
+echo "Initial MSYSTEM is: ${MSYSTEM}"
 echo "Initial PATH is:"
 echo ${PATH}
-if [ ${BUILD_BITNESS} == "32" ] ; then
-    echo "Fixing it for 32-bit builds:"
-    export PATH=/mingw32/bin:/usr/bin:${PATH}
-else
-    echo "Fixing it for 64-bit builds:"
-    export PATH=/mingw64/bin:/usr/bin:${PATH}
-fi
+echo "Fixing things for ${BUILD_BITNESS}-bit builds:"
+export MSYSTEM=MINGW${BUILD_BITNESS}
+export MINGW_BASE_DIR=C:/msys64/mingw${BUILD_BITNESS}
+export MINGW_INTERNAL_BASE_DIR=/mingw${BUILD_BITNESS}
+export PATH=/${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}
 echo "It is now:"
 echo ${PATH}
 echo " "
-echo "Initial MSYSTEM is: ${MSYSTEM}"
-if [ ${BUILD_BITNESS} == "32" ] ; then
-    echo "Fixing it for 32-bit builds:"
-    export MSYSTEM=MINGW32
-else
-    echo "Fixing it for 64-bit builds:"
-    export MSYSTEM=MINGW64
-fi
-echo "It is now: ${MSYSTEM}"
+echo "MSYSTEM is now: ${MSYSTEM}"
 
 # Options:
 # --Sy = Sync, refresh as well as installing the specified packages
@@ -36,74 +27,66 @@ echo "It is now: ${MSYSTEM}"
 
 echo " "
 echo "Updating MSYS2 packages..."
+
+# Clear this to use system luarocks
+ROCKTYPE=--local
 if [ ${BUILD_BITNESS} == "32" ] ; then
-    pacman -S --needed --noconfirm base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-i686-toolchain mingw-w64-i686-qt5 mingw-w64-i686-libzip mingw-w64-i686-pugixml mingw-w64-i686-lua51 mingw-w64-i686-lua51-lpeg mingw-w64-i686-lua51-lsqlite3 mingw-w64-i686-lua51-luarocks mingw-w64-i686-hunspell mingw-w64-i686-zlib mingw-w64-i686-boost
-    if [ ! -f /mingw32/include/lua5.1/lua.h ] ; then
-        echo "Lua system failure, failed to install needed /mingw32/include/lua5.1/lua.h file!"
-        exit -2
-    fi
-    echo " "
-    echo "Installing needed luarocks..."
-    echo "  Configuration files are (system): $(luarocks config --system-config)"
-    echo "  containing:"
-    /bin/cat $(/mingw32/bin/luarocks config --system-config)
-    echo "  and (user): $(/mingw32/bin/luarocks config --user-config)"
-    echo "  containing:"
-    /bin/cat $(/mingw32/bin/luarocks config --user-config)
-
-    # For some reason we cannot write into the location for the system tree so
-    # we have to use the local (user) one - remember this when we need to pull
-    # the modules into the final package (we have to get them from a different
-    # place):
-    # Temporarily do each one individually to see which is causing problems
-    echo " "
-    echo "    luafilesystem"
-    /mingw32/bin/luarocks --local install luafilesystem
-    echo "    lua-yajl"
-    /mingw32/bin/luarocks --local install lua-yajl
-    echo "    luautf8"
-    /mingw32/bin/luarocks --local install luautf8
-    echo "    luazip"
-    /mingw32/bin/luarocks --local install luazip
-    echo "    lrexlib-pcre"
-    /mingw32/bin/luarocks --local install lrexlib-pcre
-    echo "    luasql-sqlite3"
-    /mingw32/bin/luarocks --local install luasql-sqlite3
-
+    BUILDCOMPONENT="i686"
 else
-    pacman -S --needed --noconfirm base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-x86_64-toolchain mingw-w64-x86_64-qt5 mingw-w64-x86_64-libzip mingw-w64-x86_64-pugixml mingw-w64-x86_64-lua51 mingw-w64-x86_64-lua51-lpeg mingw-w64-x86_64-lua51-lsqlite3 mingw-w64-x86_64-lua51-luarocks mingw-w64-x86_64-hunspell mingw-w64-x86_64-zlib mingw-w64-x86_64-boost
-    if [ ! -f /mingw64/include/lua5.1/lua.h ] ; then
-        echo "Lua system failure, failed to install needed /mingw64/include/lua5.1/lua.h file!"
-        exit -2
-    fi
-    echo " "
-    echo "Installing needed luarocks..."
-    echo "  Configuration files are (system): $(luarocks config --system-config)"
-    echo "  containing:"
-    /bin/cat $(/mingw64/bin/luarocks config --system-config)
-    echo "  and (user): $(/mingw64/bin/luarocks config --user-config)"
-    echo "  containing:"
-    /bin/cat $(/mingw64/bin/luarocks config --user-config)
-
-    # For some reason we cannot write into the location for the system tree so
-    # we have to use the local (user) one - remember this when we need to pull
-    # the modules into the final package (we have to get them from a different
-    # place):
-    # Temporarily do each one individually to see which is causing problems
-    echo " "
-    echo "    luafilesystem"
-    /mingw64/bin/luarocks --local install luafilesystem
-    echo "    lua-yajl"
-    /mingw64/bin/luarocks --local install lua-yajl
-    echo "    luautf8"
-    /mingw64/bin/luarocks --local install luautf8
-    echo "    luazip"
-    /mingw64/bin/luarocks --local install luazip
-    echo "    lrexlib-pcre"
-    /mingw64/bin/luarocks --local install lrexlib-pcre
-    echo "    luasql-sqlite3"
-    /mingw64/bin/luarocks --local install luasql-sqlite3
-
+    BUILDCOMPONENT="x86_64"
 fi
 
+ROCKCOMMAND=${MINGW_INTERNAL_BASE_DIR}/bin/luarocks
+
+pacman -S --needed --noconfirm base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-${BUILDCOMPONENT}-toolchain mingw-w64-i686-qt5 mingw-${BUILDCOMPONENT}-i686-libzip mingw-w64-${BUILDCOMPONENT}-pugixml mingw-w64-${BUILDCOMPONENT}-lua51 mingw-w64-${BUILDCOMPONENT}-lua51-lpeg mingw-w64-${BUILDCOMPONENT}-lua51-lsqlite3 mingw-w64-${BUILDCOMPONENT}-lua51-luarocks mingw-w64-${BUILDCOMPONENT}-hunspell mingw-w64-${BUILDCOMPONENT}-zlib mingw-${BUILDCOMPONENT}-i686-boost
+
+# FIX THINGS HERE: This test does seem to pass but the luarocks build/installs do not seem to see the header file?
+if [ ! -f ${MINGW_INTERNAL_BASE_DIR}/include/lua5.1/lua.h ] ; then
+    echo "Lua system failure, failed to install needed ${MINGW_INTERNAL_BASE_DIR}/include/lua5.1/lua.h file!"
+    exit -2
+fi
+
+echo " "
+echo "Lua Configuration details - default package.path:"
+${MINGW_INTERNAL_BASE_DIR}/bin/lua5.1 -e "print(package.path)"
+echo " "
+echo "Lua Configuration details - default package.cpath:"
+${MINGW_INTERNAL_BASE_DIR}/bin/lua5.1 -e "print(package.cpath)"
+echo " "
+echo "Lua Configuration details - default package.config:"
+${MINGW_INTERNAL_BASE_DIR}/bin/lua5.1 -e "print(package.config)"
+echo " "
+echo "Installing needed luarocks..."
+
+echo "  Configuration files are (system): $(${ROCKCOMMAND} config --system-config) echo and (user): $(${ROCKCOMMAND} config --user-config)"
+echo "  containing:"
+/bin/cat $(${ROCKCOMMAND} config --system-config)
+echo "  and:"
+echo "  containing:"
+/bin/cat $(${ROCKCOMMAND} config --user-config)
+
+# For some reason we cannot write into the location for the system tree so
+# we have to use the local (user) one - remember this when we need to pull
+# the modules into the final package (we have to get them from a different
+# place):
+# Temporarily do each one individually to see which is causing problems
+echo " "
+echo "    luafilesystem"
+${ROCKCOMMAND} ${rockoptargs} luafilesystem
+echo " "
+echo "    lua-yajl"
+${ROCKCOMMAND} ${rockoptargs} install lua-yajl
+echo " "
+echo "    luautf8"
+${ROCKCOMMAND} ${rockoptargs} install luautf8
+echo " "
+echo "    luazip"
+${ROCKCOMMAND} ${rockoptargs} install luazip
+echo " "
+echo "    lrexlib-pcre"
+${ROCKCOMMAND} ${rockoptargs} install lrexlib-pcre
+echo " "
+echo "    luasql-sqlite3"
+${ROCKCOMMAND} ${rockoptargs} install luasql-sqlite3
+echo " "
 echo "    ... all done"

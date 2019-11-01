@@ -15934,6 +15934,7 @@ void TLuaInterpreter::initLuaGlobals()
 #elif defined(Q_OS_WIN32)
 #if defined(MINGW_BASE_DIR)
     if (! QStringLiteral(MINGW_BASE_DIR).isEmpty()) {
+        // Perhaps using single backslashes only work here because they are inside [[..]]s
         luaL_dostring(pGlobalLua, "package.cpath = package.cpath .. [[;" MINGW_BASE_DIR "\lib\lua\5.1\?.dll]]");
     }
 #endif // defined(MINGW_BASE_DIR)
