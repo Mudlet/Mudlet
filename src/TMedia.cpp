@@ -87,6 +87,17 @@ void TMedia::parseGMCP(TMediaData::MediaCategory mediaCategory, QString& gmcp)
         mediaLength = TMediaData::MediaLengthDefault;
     }
 
+    auto mediaSuppressionJSON = json.value(QStringLiteral("suppression"));
+    int mediaSuppression;
+
+    if (mediaSuppressionJSON != QJsonValue::Undefined && mediaSuppressionJSON.isString() && !mediaSuppressionJSON.toString().isEmpty()) {
+        mediaSuppression = mediaSuppressionJSON.toString().toInt();
+    } else if (mediaSuppressionJSON != QJsonValue::Undefined && mediaSuppressionJSON.toInt()) {
+        mediaSuppression = mediaSuppressionJSON.toInt();
+    } else {
+        mediaSuppression = TMediaData::MediaSuppressionDefault;
+    }
+
     auto soundPriorityJSON = json.value(QStringLiteral("priority"));
     int soundPriority;
 
@@ -125,6 +136,7 @@ void TMedia::parseGMCP(TMediaData::MediaCategory mediaCategory, QString& gmcp)
 
     if (mediaVolumeJSON == QJsonValue::Undefined
         && mediaLengthJSON == QJsonValue::Undefined
+        && mediaSuppressionJSON == QJsonValue::Undefined
         && soundPriorityJSON == QJsonValue::Undefined
         && musicContinueJSON == QJsonValue::Undefined
         && mediaTypeJSON == QJsonValue::Undefined
@@ -144,7 +156,7 @@ void TMedia::parseGMCP(TMediaData::MediaCategory mediaCategory, QString& gmcp)
         return;
     }
 
-    TMediaData mediaData = TMediaData(mediaCategory, mediaFileName, mediaVolume, mediaLength, mediaType, mediaUrl);
+    TMediaData mediaData = TMediaData(mediaCategory, mediaFileName, mediaVolume, mediaLength, mediaSuppression, mediaType, mediaUrl);
 
     switch (mediaCategory) {
         case TMediaData::MediaCategorySound:
@@ -645,6 +657,34 @@ QMediaPlayer* TMedia::matchMediaPlayer(TMediaData& mediaData, QString absolutePa
     return pPlayer;
 }
 
+void TMedia::suppressOtherMedia(TMediaData& mediaData, QString absolutePathFileName)
+{
+    QMediaPlayer* pPlayer = nullptr;
+    QList<QMediaPlayer*> mQMediaPlayerList;
+
+    switch (mediaData.getMediaCategory()) {
+        case TMediaData::MediaCategorySound:
+            mQMediaPlayerList = mSoundList;
+            break;
+        case TMediaData::MediaCategoryMusic:
+            mQMediaPlayerList = mMusicList;
+            break;
+    }
+
+    QListIterator<QMediaPlayer*> itQMediaPlayer(mQMediaPlayerList);
+
+    while (itQMediaPlayer.hasNext()) {
+        QMediaPlayer* pTestPlayer = itQMediaPlayer.next();
+
+        if (pTestPlayer->state() == QMediaPlayer::PlayingState && pTestPlayer->mediaStatus() != QMediaPlayer::LoadingMedia) {
+            if (!pTestPlayer->media().canonicalUrl().toString().endsWith(absolutePathFileName)) { // Is it a different sound or music than specified?
+                pPlayer = pTestPlayer;
+                pPlayer->stop();
+            }
+        }
+    }
+}
+
 void TMedia::playSound(TMediaData& soundData)
 {
     if (!mpHost->mEnableMSP) {
@@ -666,29 +706,49 @@ void TMedia::playSound(TMediaData& soundData)
         return;
     }
 
-    if (soundData.getMediaLength() == TMediaData::MediaLengthDefault) { // Play once
+    QString absolutePathFileName;
+
+    if (soundData.getMediaLength() == TMediaData::MediaLengthDefault) { // Play once        
         if (fileNameList.size() > 1) {
-            pPlayer->setMedia(QUrl::fromLocalFile(fileNameList.at(qrand() % fileNameList.size())));
+            absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
         } else {
-            pPlayer->setMedia(QUrl::fromLocalFile(fileNameList.at(0)));
+            absolutePathFileName = fileNameList.at(0);
         }
+
+        if (soundData.getMediaSuppression() == TMediaData::MediaSuppressionEnabled) { // Filter out other sound
+            TMedia::suppressOtherMedia(soundData, absolutePathFileName);
+        }
+
+        pPlayer->setMedia(QUrl::fromLocalFile(absolutePathFileName));
     } else {
         QMediaPlaylist* playlist = new QMediaPlaylist;
 
         if (soundData.getMediaLength() == TMediaData::MediaLengthRepeat) { // Repeat indefinitely
             if (fileNameList.size() > 1) {
-                playlist->addMedia(QUrl::fromLocalFile(fileNameList.at(qrand() % fileNameList.size())));
+                absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
             } else {
-                playlist->addMedia(QUrl::fromLocalFile(fileNameList.at(0)));
+                absolutePathFileName = fileNameList.at(0);
             }
+
+            if (soundData.getMediaSuppression() == TMediaData::MediaSuppressionEnabled) { // Filter out other sound
+                TMedia::suppressOtherMedia(soundData, absolutePathFileName);
+            }
+
+            playlist->addMedia(QUrl::fromLocalFile(absolutePathFileName));
             playlist->setPlaybackMode(QMediaPlaylist::Loop);
         } else {
             for (int k = 0; k < soundData.getMediaLength(); k++) { // Repeat a finite number of times
                 if (fileNameList.size() > 1) {
-                    playlist->addMedia(QUrl::fromLocalFile(fileNameList.at(qrand() % fileNameList.size())));
+                    absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
                 } else {
-                    playlist->addMedia(QUrl::fromLocalFile(fileNameList.at(0)));
+                    absolutePathFileName = fileNameList.at(0);
                 }
+
+                if (k < 1 && soundData.getMediaSuppression() == TMediaData::MediaSuppressionEnabled) { // Filter out other sound, once
+                    TMedia::suppressOtherMedia(soundData, absolutePathFileName);
+                }
+
+                playlist->addMedia(QUrl::fromLocalFile(absolutePathFileName));
             }
         }
 
@@ -740,21 +800,35 @@ void TMedia::playMusic(TMediaData& musicData)
         return;
     }
 
+    QString absolutePathFileName;
+
     if (musicData.getMediaLength() == TMediaData::MediaLengthDefault) { // Play once
         if (fileNameList.size() > 1) {
-            pPlayer->setMedia(QUrl::fromLocalFile(fileNameList.at(qrand() % fileNameList.size())));
+            absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
         } else {
-            pPlayer->setMedia(QUrl::fromLocalFile(fileNameList.at(0)));
+            absolutePathFileName = fileNameList.at(0);
         }
+
+        if (musicData.getMediaSuppression() == TMediaData::MediaSuppressionEnabled) { // Filter out other music
+            TMedia::suppressOtherMedia(musicData, absolutePathFileName);
+        }
+
+        pPlayer->setMedia(QUrl::fromLocalFile(absolutePathFileName));
     } else {
         QMediaPlaylist* playlist = new QMediaPlaylist;
 
         if (musicData.getMediaLength() == TMediaData::MediaLengthRepeat) { // Repeat indefinitely
             if (fileNameList.size() > 1) {
-                playlist->addMedia(QUrl::fromLocalFile(fileNameList.at(qrand() % fileNameList.size())));
+                absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
             } else {
-                playlist->addMedia(QUrl::fromLocalFile(fileNameList.at(0)));
+                absolutePathFileName = fileNameList.at(0);
             }
+
+            if (musicData.getMediaSuppression() == TMediaData::MediaSuppressionEnabled) { // Filter out other music
+                TMedia::suppressOtherMedia(musicData, absolutePathFileName);
+            }
+
+            playlist->addMedia(QUrl::fromLocalFile(absolutePathFileName));
             playlist->setPlaybackMode(QMediaPlaylist::Loop);
         } else {
             if (musicData.getMusicContinue() == TMediaData::MediaContinueDefault) {
@@ -763,10 +837,16 @@ void TMedia::playMusic(TMediaData& musicData)
 
             for (int k = 0; k < musicData.getMediaLength(); k++) { // Repeat a finite number of times
                 if (fileNameList.size() > 1) {
-                    playlist->addMedia(QUrl::fromLocalFile(fileNameList.at(qrand() % fileNameList.size())));
+                    absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
                 } else {
-                    playlist->addMedia(QUrl::fromLocalFile(fileNameList.at(0)));
+                    absolutePathFileName = fileNameList.at(0);
                 }
+
+                if (k < 1 && musicData.getMediaSuppression() == TMediaData::MediaSuppressionEnabled) { // Filter out other music, once
+                    TMedia::suppressOtherMedia(musicData, absolutePathFileName);
+                }
+
+                playlist->addMedia(QUrl::fromLocalFile(absolutePathFileName));
             }
         }
 

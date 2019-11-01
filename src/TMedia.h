@@ -61,21 +61,28 @@ public:
         MediaContinueRestart = 0
     };
 
+    enum MediaSuppression {
+        MediaSuppressionDefault = 0,
+        MediaSuppressionEnabled = 1
+    };
+
     TMediaData()
     {
         mMediaVolume = MediaVolumeDefault;
         mMediaLength = MediaLengthDefault;
         mSoundPriority = MediaPriorityDefault;
+        mMediaSuppression = MediaSuppressionDefault;
         mMusicContinue = MediaContinueDefault;
     }
 
     TMediaData(int mediaCategory, QString mediaFileName, int mediaVolume = MediaVolumeDefault, int mediaLength = MediaLengthDefault,
-        QString mediaType = QString(), QString mediaUrl = QString())
+        int mediaSuppression = MediaSuppressionDefault, QString mediaType = QString(), QString mediaUrl = QString())
     {
         mMediaCategory = mediaCategory;
         mMediaFileName = mediaFileName;
         mMediaVolume = mediaVolume;
         mMediaLength = mediaLength;
+        mMediaSuppression = mediaSuppression;
         mMediaType = mediaType;
         mMediaUrl = mediaUrl;
     }
@@ -88,6 +95,8 @@ public:
     void setMediaVolume(int mediaVolume) { mMediaVolume = mediaVolume; }
     int getMediaLength() { return mMediaLength; }
     void setMediaLength(int mediaLength) { mMediaLength = mediaLength; }
+    int getMediaSuppression() { return mMediaSuppression; }
+    void setMediaSuppression(int mediaSuppression) { mMediaSuppression = mediaSuppression; }
     int getSoundPriority() { return mSoundPriority; }
     void setSoundPriority(int soundPriority) { mSoundPriority = soundPriority; }
     int getMusicContinue() { return mMusicContinue; }
@@ -104,9 +113,10 @@ private:
     QString mMediaFileName;
     int mMediaVolume;
     int mMediaLength;
-    QString mMediaType;
+    int mMediaSuppression;
     int mSoundPriority;
     int mMusicContinue;
+    QString mMediaType;
     QString mMediaUrl;
     QString mMediaAbsolutePathFileName;
 };
@@ -135,6 +145,7 @@ private:
     void downloadFile(TMediaData& mediaData);
     QMediaPlayer* getMediaPlayer(TMediaData& mediaData);
     QMediaPlayer* matchMediaPlayer(TMediaData& mediaData, QString absolutePathFileName);
+    void suppressOtherMedia(TMediaData& mediaData, QString absolutePathFileName);
     void playSound(TMediaData& soundData);
     void stopSound();
     void playMusic(TMediaData& musicData);

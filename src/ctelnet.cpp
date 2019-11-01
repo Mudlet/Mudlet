@@ -1891,13 +1891,14 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     transcodedMsg.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
 
     TMediaData::MediaCategory mediaCategory;
-    QString soundFileName;
-    int soundVolume = 50;
-    int soundLength = 1;
-    int soundPriority = 50;
-    int musicContinue = 1;
-    QString soundType;
-    QString soundUrl;
+    QString mediaFileName;
+    int mediaVolume = TMediaData::MediaVolumeDefault;
+    int mediaLength = TMediaData::MediaLengthDefault;
+    int mediaSuppression = TMediaData::MediaSuppressionDefault;
+    int soundPriority = TMediaData::MediaPriorityDefault;
+    int musicContinue = TMediaData::MediaContinueDefault;
+    QString mediaType;
+    QString mediaUrl;
 
     qDebug() << transcodedMsg;
 
@@ -1929,7 +1930,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     if (argumentList.size() > 0) {
         for (int i = 0; i < argumentList.size(); i++) {
             if (i < 1) {
-                soundFileName = argumentList[i];
+                mediaFileName = argumentList[i];
             } else {
                 QStringList payloadList = argumentList[i].split('=');
 
@@ -1949,17 +1950,19 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
                 }
 
                 if (mspVAR == "V") {
-                    soundVolume = mspVAL.toInt();
+                    mediaVolume = mspVAL.toInt();
                 } else if (mspVAR == "L") {
-                    soundLength = mspVAL.toInt();
+                    mediaLength = mspVAL.toInt();
+                } else if (mspVAR == "S") {
+                    mediaSuppression = mspVAL.toInt();
                 } else if (mspVAR == "P") {
                     soundPriority = mspVAL.toInt(); // Not implemented.
                 } else if (mspVAR == "C") {
                     musicContinue = mspVAL.toInt();
                 } else if (mspVAR == "T") {
-                    soundType = mspVAL;
+                    mediaType = mspVAL;
                 } else if (mspVAR == "U") {
-                    soundUrl = mspVAL;
+                    mediaUrl = mspVAL;
                 } else {
                     return; // Invalid MSP.
                 }
@@ -1971,12 +1974,12 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
 
     switch (mediaCategory) {
         case TMediaData::MediaCategorySound:
-            mediaData = TMediaData(TMediaData::MediaCategorySound, soundFileName, soundVolume, soundLength, soundType, soundUrl);
+            mediaData = TMediaData(TMediaData::MediaCategorySound, mediaFileName, mediaVolume, mediaLength, mediaSuppression, mediaType, mediaUrl);
             mediaData.setSoundPriority(soundPriority);
             mpHost->mpMedia->playMedia(mediaData);
             break;
         case TMediaData::MediaCategoryMusic:
-            mediaData = TMediaData(TMediaData::MediaCategoryMusic, soundFileName, soundVolume, soundLength, soundType, soundUrl);
+            mediaData = TMediaData(TMediaData::MediaCategoryMusic, mediaFileName, mediaVolume, mediaLength, mediaSuppression, mediaType, mediaUrl);
             mediaData.setMusicContinue(musicContinue);
             mpHost->mpMedia->playMedia(mediaData);
             break;
