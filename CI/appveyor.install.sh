@@ -18,12 +18,23 @@ else
 fi
 echo "It is now:"
 echo ${PATH}
+echo " "
+echo "Initial MSYSTEM is: ${MSYSTEM}"
+if [ ${BUILD_BITNESS} == "32" ] ; then
+    echo "Fixing it for 32-bit builds:"
+    export MSYSTEM=MINGW32
+else
+    echo "Fixing it for 64-bit builds:"
+    export MSYSTEM=MINGW64
+fi
+echo "It is now: ${MSYSTEM}"
 
 # Options:
 # --Sy = Sync, refresh as well as installing the specified packages
 # --noconfirm = do not ask for user intervention
 # --noprogressbar = do not show progress bars as they are not useful in scripts
 
+echo " "
 echo "Updating MSYS2 packages..."
 if [ ${BUILD_BITNESS} == "32" ] ; then
     pacman -S --needed --noconfirm base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-i686-toolchain mingw-w64-i686-qt5 mingw-w64-i686-libzip mingw-w64-i686-pugixml mingw-w64-i686-lua51 mingw-w64-i686-lua51-lpeg mingw-w64-i686-lua51-lsqlite3 mingw-w64-i686-lua51-luarocks mingw-w64-i686-hunspell mingw-w64-i686-zlib mingw-w64-i686-boost

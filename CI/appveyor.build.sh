@@ -18,6 +18,16 @@ else
 fi
 echo "It is now:"
 echo ${PATH}
+echo " "
+echo "Initial MSYSTEM is: ${MSYSTEM}"
+if [ ${BUILD_BITNESS} == "32" ] ; then
+    echo "Fixing it for 32-bit builds:"
+    export MSYSTEM=MINGW32
+else
+    echo "Fixing it for 64-bit builds:"
+    export MSYSTEM=MINGW64
+fi
+echo "It is now: ${MSYSTEM}"
 
 echo " "
 echo "Moving to project directory: ${APPVEYOR_BUILD_FOLDER}"
@@ -49,8 +59,11 @@ if [ ${BUILD_BITNESS} == "32" ] ; then
     echo "Running qmake:"
     /mingw32/bin/qmake CONFIG+=release ../src/mudlet.pro
     echo " "
-    echo "Running mingw32-make with 'keep-going' option:"
-    /mingw32/bin/mingw32-make -k
+    echo "Running mingw32-make on individual oversized qrc_mudlet_fonts file first:"
+    /mingw32/bin/mingw32-make release/qrc_mudlet_fonts.o
+    echo " "
+    echo "Running mingw32-make with 'keep-going' option for a dual core VM:"
+    /mingw32/bin/mingw32-make -k -j 3
 else
     # Should be already defined in environment: MINGW_BASE_DIR=C:/msys64/mingw64
     # Remove the following once we have the infrastructure for 64 Bit window builds sorted:
@@ -59,9 +72,21 @@ else
     echo "Running qmake:"
     /mingw64/bin/qmake CONFIG+=release ../src/mudlet.pro
     echo " "
-    echo "Running mingw32-make with 'keep-going' option:"
-    /mingw64/bin/mingw32-make -k
+    echo "Running mingw32-make on individual oversized qrc_mudlet_fonts file first:"
+    /mingw64/bin/mingw32-make release/qrc_mudlet_fonts.o
+    echo " "
+    echo "Running mingw32-make with 'keep-going' option for a dual core VM:"
+    /mingw64/bin/mingw32-make -k -j 3
 fi
 
 echo " "
 echo "mingw32-make finished!"
+echo " "
+echo "Project directory: ${APPVEYOR_BUILD_FOLDER}"
+echo "  now contains:"
+ls -al ${APPVEYOR_BUILD_FOLDER}
+echo " "
+echo "Project build directory: ${APPVEYOR_BUILD_FOLDER}/build"
+cd ${APPVEYOR_BUILD_FOLDER}
+echo "  now contains:"
+ls -al ${APPVEYOR_BUILD_FOLDER}/build
