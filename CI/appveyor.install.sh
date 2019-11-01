@@ -31,13 +31,11 @@ if [ ${BUILD_BITNESS} == "32" ] ; then
         echo "Lua system failure, failed to install needed /mingw32/include/lua5.1/lua.h file!"
         exit -2
     fi
-    echo "Installing needed luarocks..."
-    echo " Configuration files are:"
-    luarocks config --system-config
+    echo "\nInstalling needed luarocks..."
+    echo "  Configuration files are (system): $(luarocks config --system-config)"
     echo "  containing:"
     more $(luarocks config --system-config)
-    echo "\n and:"
-    luarocks config --user-config
+    echo "\n  and (user): $(luarocks config --user-config)"
     echo "  containing:"
     more $(luarocks config --user-config)
 
@@ -47,13 +45,11 @@ else
         echo "Lua system failure, failed to install needed /mingw64/include/lua5.1/lua.h file!"
         exit -2
     fi
-    echo "Installing needed luarocks..."
-    echo " Configuration files are:"
-    luarocks config --system-config
+    echo "\nInstalling needed luarocks..."
+    echo "  Configuration files are (system): $(luarocks config --system-config)"
     echo "  containing:"
     more $(luarocks config --system-config)
-    echo "\n and:"
-    luarocks config --user-config
+    echo "\n  and (user): $(luarocks config --user-config)"
     echo "  containing:"
     more $(luarocks config --user-config)
 
