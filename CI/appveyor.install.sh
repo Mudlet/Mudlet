@@ -38,7 +38,7 @@ fi
 
 ROCKCOMMAND=${MINGW_INTERNAL_BASE_DIR}/bin/luarocks
 
-pacman -S --needed --noconfirm base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-${BUILDCOMPONENT}-toolchain mingw-w64-i686-qt5 mingw-${BUILDCOMPONENT}-i686-libzip mingw-w64-${BUILDCOMPONENT}-pugixml mingw-w64-${BUILDCOMPONENT}-lua51 mingw-w64-${BUILDCOMPONENT}-lua51-lpeg mingw-w64-${BUILDCOMPONENT}-lua51-lsqlite3 mingw-w64-${BUILDCOMPONENT}-lua51-luarocks mingw-w64-${BUILDCOMPONENT}-hunspell mingw-w64-${BUILDCOMPONENT}-zlib mingw-${BUILDCOMPONENT}-i686-boost
+pacman -S --needed --noconfirm base-devel git mercurial cvs wget ruby zip p7zip python2 mingw-w64-${BUILDCOMPONENT}-toolchain mingw-w64-i686-qt5 mingw-w64-${BUILDCOMPONENT}-libzip mingw-w64-${BUILDCOMPONENT}-pugixml mingw-w64-${BUILDCOMPONENT}-lua51 mingw-w64-${BUILDCOMPONENT}-lua51-lpeg mingw-w64-${BUILDCOMPONENT}-lua51-lsqlite3 mingw-w64-${BUILDCOMPONENT}-lua51-luarocks mingw-w64-${BUILDCOMPONENT}-hunspell mingw-w64-${BUILDCOMPONENT}-zlib mingw-w64-${BUILDCOMPONENT}-boost
 
 # FIX THINGS HERE: This test does seem to pass but the luarocks build/installs do not seem to see the header file?
 if [ ! -f ${MINGW_INTERNAL_BASE_DIR}/include/lua5.1/lua.h ] ; then

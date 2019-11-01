@@ -34,9 +34,9 @@ install:
 build_script:
 - C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.build.sh
 
-on_failure:
-- cd C:\src
-- C:\msys64\usr\bin\sh.exe -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
+#on_failure:
+#- cd C:\src
+#- C:\msys64\usr\bin\sh.exe -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
 
 cache:
 - C:\msys64\var\cache\pacman\pkg
