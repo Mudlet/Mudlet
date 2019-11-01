@@ -58,23 +58,70 @@ void TMedia::parseGMCP(TMediaData::MediaCategory mediaCategory, QString& gmcp)
         return;
     }
 
+    auto mediaFileNameJSON = json.value(QStringLiteral("name"));
     QString mediaFileName;
-
-    auto mediaFileNameJSON = json.value(QStringLiteral("name")); // Required!
 
     if (mediaFileNameJSON != QJsonValue::Undefined && !mediaFileNameJSON.toString().isEmpty()) {
         mediaFileName = mediaFileNameJSON.toString();
-    } else {
-        qWarning() << QStringLiteral("TMedia::parseGMCP() WARNING - GMCP missing the required [ name ] parameter to process media.");
-        return;
     }
 
     auto mediaVolumeJSON = json.value(QStringLiteral("volume"));
+    int mediaVolume;    
+
+    if (mediaVolumeJSON != QJsonValue::Undefined && mediaVolumeJSON.isString() && !mediaVolumeJSON.toString().isEmpty()) {
+        mediaVolume = mediaVolumeJSON.toString().toInt();
+    } else if (mediaVolumeJSON != QJsonValue::Undefined && mediaVolumeJSON.toInt()) {
+        mediaVolume = mediaVolumeJSON.toInt();
+    } else {
+        mediaVolume = TMediaData::MediaVolumeDefault;
+    }
+
     auto mediaLengthJSON = json.value(QStringLiteral("length"));
+    int mediaLength;
+
+    if (mediaLengthJSON != QJsonValue::Undefined && mediaLengthJSON.isString() && !mediaLengthJSON.toString().isEmpty()) {
+        mediaLength = mediaLengthJSON.toString().toInt();
+    } else if (mediaLengthJSON != QJsonValue::Undefined && mediaLengthJSON.toInt()) {
+        mediaLength = mediaLengthJSON.toInt();
+    } else {
+        mediaLength = TMediaData::MediaLengthDefault;
+    }
+
     auto soundPriorityJSON = json.value(QStringLiteral("priority"));
+    int soundPriority;
+
+    if (soundPriorityJSON != QJsonValue::Undefined && soundPriorityJSON.isString() && !soundPriorityJSON.toString().isEmpty()) {
+        soundPriority = soundPriorityJSON.toString().toInt();
+    } else if (soundPriorityJSON != QJsonValue::Undefined && soundPriorityJSON.toInt()) {
+        soundPriority = soundPriorityJSON.toInt();
+    } else {
+        soundPriority = TMediaData::MediaPriorityDefault;
+    }
+
     auto musicContinueJSON = json.value(QStringLiteral("continue"));
+    int musicContinue;
+
+    if (musicContinueJSON != QJsonValue::Undefined && musicContinueJSON.isString() && !musicContinueJSON.toString().isEmpty()) {
+        musicContinue = musicContinueJSON.toString().toInt();
+    } else if (musicContinueJSON != QJsonValue::Undefined && musicContinueJSON.toInt()) {
+        musicContinue = musicContinueJSON.toInt();
+    } else {
+        musicContinue = TMediaData::MediaContinueDefault;
+    }
+
     auto mediaTypeJSON = json.value(QStringLiteral("type"));
+    QString mediaType;
+
+    if (mediaTypeJSON != QJsonValue::Undefined && !mediaTypeJSON.toString().isEmpty()) {
+        mediaType = mediaTypeJSON.toString();
+    }
+
     auto mediaUrlJSON = json.value(QStringLiteral("url"));
+    QString mediaUrl;
+
+    if (mediaUrlJSON != QJsonValue::Undefined && !mediaUrlJSON.toString().isEmpty()) {
+        mediaUrl = mediaUrlJSON.toString();
+    }
 
     if (mediaVolumeJSON == QJsonValue::Undefined
         && mediaLengthJSON == QJsonValue::Undefined
@@ -86,51 +133,15 @@ void TMedia::parseGMCP(TMediaData::MediaCategory mediaCategory, QString& gmcp)
         return;
     }
 
-    int mediaVolume;
-    int mediaLength;
-    int soundPriority;
-    int musicContinue;
-    QString mediaType;
-    QString mediaUrl;
-
-    if (mediaVolumeJSON != QJsonValue::Undefined && mediaVolumeJSON.isString() && !mediaVolumeJSON.toString().isEmpty()) {
-        mediaVolume = mediaVolumeJSON.toString().toInt();
-    } else if (mediaVolumeJSON != QJsonValue::Undefined && mediaVolumeJSON.toInt()) {
-        mediaVolume = mediaVolumeJSON.toInt();
-    } else {
-        mediaVolume = TMediaData::MediaVolumeDefault;
-    }
-
-    if (mediaLengthJSON != QJsonValue::Undefined && mediaLengthJSON.isString() && !mediaLengthJSON.toString().isEmpty()) {
-        mediaLength = mediaLengthJSON.toString().toInt();
-    } else if (mediaLengthJSON != QJsonValue::Undefined && mediaLengthJSON.toInt()) {
-        mediaLength = mediaLengthJSON.toInt();
-    } else {
-        mediaLength = TMediaData::MediaLengthDefault;
-    }
-
-    if (soundPriorityJSON != QJsonValue::Undefined && soundPriorityJSON.isString() && !soundPriorityJSON.toString().isEmpty()) {
-        soundPriority = soundPriorityJSON.toString().toInt();
-    } else if (soundPriorityJSON != QJsonValue::Undefined && soundPriorityJSON.toInt()) {
-        soundPriority = soundPriorityJSON.toInt();
-    } else {
-        soundPriority = TMediaData::MediaPriorityDefault;
-    }
-
-    if (musicContinueJSON != QJsonValue::Undefined && musicContinueJSON.isString() && !musicContinueJSON.toString().isEmpty()) {
-        musicContinue = musicContinueJSON.toString().toInt();
-    } else if (musicContinueJSON != QJsonValue::Undefined && musicContinueJSON.toInt()) {
-        musicContinue = musicContinueJSON.toInt();
-    } else {
-        musicContinue = TMediaData::MediaContinueDefault;
-    }
-
-    if (mediaTypeJSON != QJsonValue::Undefined && !mediaTypeJSON.toString().isEmpty()) {
-        mediaType = mediaTypeJSON.toString();
-    }
-
-    if (mediaUrlJSON != QJsonValue::Undefined && !mediaUrlJSON.toString().isEmpty()) {
-        mediaUrl = mediaUrlJSON.toString();
+    // Support Client.Sound { url: "<valid URL>" } and Client.Sound { url: "<valid URL>" }
+    if (mediaFileNameJSON == QJsonValue::Undefined && !mediaUrl.isEmpty()) {
+        // ONLY in this scenario, Automtically add the "Off" parameter for mediaFileName.  Benefits:
+        //   1) Matches Client.GUI and Client.Map GMCP in format.
+        //   2) By setting "Off" as mediaFileName, enables TMedia module to conform to the MSP specification
+        mediaFileName = "Off";
+    } else if (mediaFileNameJSON == QJsonValue::Undefined || !mediaFileNameJSON.isString() && mediaFileNameJSON.toString().isEmpty()) {
+        qWarning() << QStringLiteral("TMedia::parseGMCP() WARNING - GMCP missing the required [ name ] parameter to process media.");
+        return;
     }
 
     TMediaData mediaData = TMediaData(mediaCategory, mediaFileName, mediaVolume, mediaLength, mediaType, mediaUrl);
