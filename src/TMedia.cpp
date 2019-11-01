@@ -133,7 +133,7 @@ void TMedia::parseGMCP(TMediaData::MediaCategory mediaCategory, QString& gmcp)
         return;
     }
 
-    // Support Client.Sound { url: "<valid URL>" } and Client.Sound { url: "<valid URL>" }
+    // Support Client.Sound { url: "<valid URL>" } and Client.Music { url: "<valid URL>" }
     if (mediaFileNameJSON == QJsonValue::Undefined && !mediaUrl.isEmpty()) {
         // ONLY in this scenario, Automtically add the "Off" parameter for mediaFileName.  Benefits:
         //   1) Matches Client.GUI and Client.Map GMCP in format.
