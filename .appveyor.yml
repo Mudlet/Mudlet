@@ -42,6 +42,14 @@ cache:
 - C:\msys64\var\cache\pacman\pkg
 #  - '%MINGW_BASE_DIR% -> CI\appveyor.install.old.ps1, CI\appveyor.functions.old.ps1'
 
+# Temporary marking of files to (temporarily) save after build for later examination off the
+# AppVeyor site - believed to be relative to project directory - e.g. C:\projects\mudlet :
+artifacts:
+  # For (current) release builds
+  - path: build\release\mudlet.exe
+  # For, if we get around to it, debug builds
+  - path: build\debug\mudlet.exe
+
 notifications:
 - provider: Webhook
   url: https://webhooks.gitter.im/e/2d6f7bea328a9dd60769

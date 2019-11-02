@@ -15933,7 +15933,7 @@ void TLuaInterpreter::initLuaGlobals()
     luaL_dostring(pGlobalLua, QStringLiteral("package.path = package.path .. ';%1/?.lua'").arg(QCoreApplication::applicationDirPath()).toUtf8().constData());
 #elif defined(Q_OS_WIN32)
 #if defined(MINGW_BASE_DIR)
-    if (! QStringLiteral(MINGW_BASE_DIR).isEmpty()) {
+    if (!QStringLiteral(MINGW_BASE_DIR).isEmpty()) {
         // Perhaps using single backslashes only work here because they are inside [[..]]s
         luaL_dostring(pGlobalLua, "package.cpath = package.cpath .. [[;" MINGW_BASE_DIR "\lib\lua\5.1\?.dll]]");
     }

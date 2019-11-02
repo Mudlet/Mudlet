@@ -454,7 +454,10 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-R.ttf"));
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
 
-#if ! defined (Q_OS_WIN32)
+#if !defined (Q_OS_WIN32)
+    // Windows 10 - even the latest (March 2019) cannot handle the Noto Color
+    // Emoji font in anything other than the Chromium or Edge web-browsers...
+    // see: https://github.com/googlefonts/noto-emoji#using-notocoloremoji
     copyFont(notoFontDirectory, QStringLiteral("fonts/notocoloremoji-unhinted-2018-04-24-pistol-update"), QStringLiteral("NotoColorEmoji.ttf"));
     copyFont(notoFontDirectory, QStringLiteral("fonts/notocoloremoji-unhinted-2018-04-24-pistol-update"), QStringLiteral("LICENSE_OFL.txt"));
 #endif // NOT defined(Q_OS_WINDOWS)

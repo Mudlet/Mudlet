@@ -1368,14 +1368,8 @@ unix:!macx {
 
 DISTFILES += \
     ../CI/appveyor.after_success.old.ps1 \
-    ../CI/appveyor.build.cmd \
-    ../CI/appveyor.build.old.ps1 \
     ../CI/appveyor.build.sh \
-    ../CI/appveyor.functions.old.ps1 \
-    ../CI/appveyor.install.cmd \
-    ../CI/appveyor.install.old.ps1 \
     ../CI/appveyor.install.sh \
-    ../CI/appveyor.set-build-info.old.ps1 \
     CMakeLists.txt \
     .clang-format \
     ../CMakeLists.txt \
@@ -1416,5 +1410,4 @@ DISTFILES += \
     ../CI/mudlet-deploy-key.enc \
     ../CI/copy-non-qt-win-dependencies.ps1 \
     ../CI/mudlet-deploy-key-windows.ppk \
-    ../CI/qt-silent-install.qs \
     ../CI/travis.compile.sh

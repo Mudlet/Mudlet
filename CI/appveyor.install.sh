@@ -2,9 +2,9 @@
 
 echo "Running appveyor.build.sh shell script..."
 
-if [ ${BUILD_BITNESS} != "32" -a ${BUILD_BITNESS} != "64" ] ; then
+if [ ${BUILD_BITNESS} != "32" ] && [ ${BUILD_BITNESS} != "64" ] ; then
     echo "Requires environmental variable BUILD_BITNESS to exist and be set to \"32\" or \"64\" to specify bitness of target to be built."
-    exit -1
+    exit 1
 fi
 
 echo "Initial MSYSTEM is: ${MSYSTEM}"
@@ -32,7 +32,7 @@ echo "Updating MSYS2 packages..."
 
 # Clear this to use system luarocks
 # ROCKOPTARGS=--local
-if [ ${BUILD_BITNESS} == "32" ] ; then
+if [ ${BUILD_BITNESS} = "32" ] ; then
     BUILDCOMPONENT="i686"
 else
     BUILDCOMPONENT="x86_64"
@@ -42,7 +42,7 @@ ROCKCOMMAND=${MINGW_INTERNAL_BASE_DIR}/bin/luarocks
 
 /usr/bin/pacman -S --needed --noconfirm base-devel coreutils msys2-runtime git mercurial cvs wget ruby zip p7zip python2 mingw-w64-${BUILDCOMPONENT}-toolchain mingw-w64-${BUILDCOMPONENT}-qt5 mingw-w64-${BUILDCOMPONENT}-libzip mingw-w64-${BUILDCOMPONENT}-pugixml mingw-w64-${BUILDCOMPONENT}-lua51 mingw-w64-${BUILDCOMPONENT}-lua51-lpeg mingw-w64-${BUILDCOMPONENT}-lua51-lsqlite3 mingw-w64-${BUILDCOMPONENT}-lua51-luarocks mingw-w64-${BUILDCOMPONENT}-hunspell mingw-w64-${BUILDCOMPONENT}-zlib mingw-w64-${BUILDCOMPONENT}-boost mingw-w64-${BUILDCOMPONENT}-yajl
 
-if [ ${BUILD_BITNESS} == "32" ] ; then
+if [ ${BUILD_BITNESS} = "32" ] ; then
     # The site_config.lua file for the MINGW32 case has so many wrong values
     # it prevents luarocks from working - however it can be repaired by some
     # editing:
@@ -51,9 +51,10 @@ if [ ${BUILD_BITNESS} == "32" ] ; then
 
     # Also need to change one thing in the config-5.1.lua file:
     cp /mingw32/etc/luarocks/config-5.1.lua /mingw32/etc/luarocks/config-5.1.lua.orig
-    /usr/bin/sed "s|/mingw32|c:/msys64/mingw32|g" /mingw32/etc/luarocks/config-5.1.lua.oirg > /mingw32/etc/luarocks/config-5.1.lua
+    /usr/bin/sed "s|/mingw32|c:/msys64/mingw32|g" /mingw32/etc/luarocks/config-5.1.lua.orig > /mingw32/etc/luarocks/config-5.1.lua
 fi
-echo " MSYS2 Package installation completed."
+echo " "
+echo "    .... MSYS2 Package installation completed."
 echo " "
 echo " Lua configuration files are: (system): $(${ROCKCOMMAND} config --system-config)"
 echo "                            and (user): $(${ROCKCOMMAND} config --user-config)"
@@ -63,17 +64,11 @@ echo "   The system one contains:"
 
 echo " "
 echo "Installing needed luarocks..."
-# For some reason we cannot write into the location for the system tree so
-# we have to use the local (user) one - remember this when we need to pull
-# the modules into the final package (we have to get them from a different
-# place):
-# Temporarily do each one individually to see which is causing problems
 echo " "
 echo "    luafilesystem"
 ${ROCKCOMMAND} ${ROCKOPTARGS} install luafilesystem
 echo " "
 echo "    lua-yajl"
-# may need to add  YAJL_DIR=${MINGW_INTERNAL_BASE_DIR}/include to end of this:
 ${ROCKCOMMAND} ${ROCKOPTARGS} install lua-yajl
 echo " "
 echo "    luautf8"
@@ -88,4 +83,5 @@ echo " "
 echo "    luasql-sqlite3"
 ${ROCKCOMMAND} ${ROCKOPTARGS} install luasql-sqlite3
 echo " "
-echo "    ... all done"
+echo "    ... luarocks installation done"
+echo " "

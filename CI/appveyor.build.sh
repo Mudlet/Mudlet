@@ -2,9 +2,9 @@
 
 echo "Running appveyor.build.sh shell script..."
 
-if [ ${BUILD_BITNESS} != "32" -a ${BUILD_BITNESS} != "64" ] ; then
+if [ ${BUILD_BITNESS} != "32" ] && [ ${BUILD_BITNESS} != "64" ] ; then
     echo "Requires environmental variable BUILD_BITNESS to exist and be set to \"32\" or \"64\" to specify bitness of target to be built."
-    exit -1
+    exit 1
 fi
 
 echo "Initial MSYSTEM is: ${MSYSTEM}"
@@ -33,7 +33,7 @@ cd ./build
 echo "  it contains:"
 /usr/bin/ls -l
 
-if [ ${APPVEYOR_REPO_TAG} == "false" ] ; then
+if [ ${APPVEYOR_REPO_TAG} = "false" ] ; then
     MUDLET_VERSION_BUILD="-${BUILD_BITNESS}bit-testing"
     if [ -p ${APPVEYOR_PULL_REQUEST_NUMBER} ] ; then
         COMMIT="$(git rev-parse --short ${APPVEYOR_PULL_REQUEST_HEAD_COMMIT})"
@@ -48,9 +48,9 @@ echo " "
 echo "Now building MUDLET${MUDLET_VERSION_BUILD} ..."
 
 # We could support debug builds in the future by adding as an argument to the qmake call:
-# CONFIG+=debug
+# CONFIG+=debug and changing references to "release" sub-directories to "debug"...
 # Remove the following once we have the infrastructure for 64 Bit window builds sorted:
-if [ ${BUILD_BITNESS} == "64" ] ; then
+if [ ${BUILD_BITNESS} = "64" ] ; then
     WITH_UPDATER=NO
 fi
 
@@ -75,10 +75,10 @@ echo " "
 # Note that the APPVEYOR_BUILD_FOLDER variable uses '\' (a single backslash)
 # as the directory separator but that is not usable in commands (it needs doubling)
 # or changing to forward slashes to work for them:
-echo "Project build directory: ${APPVEYOR_BUILD_FOLDER}\build"
+echo "Project build directory: ${APPVEYOR_BUILD_FOLDER}\\build"
 echo "  now contains:"
 /usr/bin/ls -al $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/build)
 echo " "
-echo "Project build sub-directory: ${APPVEYOR_BUILD_FOLDER}\build\release"
+echo "Project build sub-directory: ${APPVEYOR_BUILD_FOLDER}\\build\\release"
 echo "  now contains:"
 /usr/bin/ls -al $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/build/release)
