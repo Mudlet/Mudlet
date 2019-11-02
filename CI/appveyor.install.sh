@@ -31,7 +31,7 @@ echo " "
 echo "Updating MSYS2 packages..."
 
 # Clear this to use system luarocks
-ROCKOPTARGS=--local
+# ROCKOPTARGS=--local
 if [ ${BUILD_BITNESS} == "32" ] ; then
     BUILDCOMPONENT="i686"
 else
@@ -40,18 +40,25 @@ fi
 
 ROCKCOMMAND=${MINGW_INTERNAL_BASE_DIR}/bin/luarocks
 
-/usr/bin/pacman -S --needed --noconfirm base-devel coreutils msys2-runtime git mercurial cvs wget ruby zip p7zip python2 mingw-w64-${BUILDCOMPONENT}-toolchain mingw-w64-i686-qt5 mingw-w64-${BUILDCOMPONENT}-libzip mingw-w64-${BUILDCOMPONENT}-pugixml mingw-w64-${BUILDCOMPONENT}-lua51 mingw-w64-${BUILDCOMPONENT}-lua51-lpeg mingw-w64-${BUILDCOMPONENT}-lua51-lsqlite3 mingw-w64-${BUILDCOMPONENT}-lua51-luarocks mingw-w64-${BUILDCOMPONENT}-hunspell mingw-w64-${BUILDCOMPONENT}-zlib mingw-w64-${BUILDCOMPONENT}-boost
+/usr/bin/pacman -S --needed --noconfirm base-devel coreutils msys2-runtime git mercurial cvs wget ruby zip p7zip python2 mingw-w64-${BUILDCOMPONENT}-toolchain mingw-w64-${BUILDCOMPONENT}-qt5 mingw-w64-${BUILDCOMPONENT}-libzip mingw-w64-${BUILDCOMPONENT}-pugixml mingw-w64-${BUILDCOMPONENT}-lua51 mingw-w64-${BUILDCOMPONENT}-lua51-lpeg mingw-w64-${BUILDCOMPONENT}-lua51-lsqlite3 mingw-w64-${BUILDCOMPONENT}-lua51-luarocks mingw-w64-${BUILDCOMPONENT}-hunspell mingw-w64-${BUILDCOMPONENT}-zlib mingw-w64-${BUILDCOMPONENT}-boost
 
-# FIX THINGS HERE: This test does seem to pass but the luarocks build/installs do not seem to see the header file?
-if [ ! -f ${MINGW_INTERNAL_BASE_DIR}/include/lua5.1/lua.h ] ; then
-    echo "Lua system failure, failed to install needed ${MINGW_INTERNAL_BASE_DIR}/include/lua5.1/lua.h file!"
-    exit -2
+if [ ${BUILD_BITNESS} == "32" -a -f /mingw64/share/lua/5.1/luarocks/site_config.lua ] ; then
+    # The site_config.lua file for the MINGW32 case has so many wrong values
+    # it prevents luarocks from working - however it can be replaced by an
+    # edited copy of the MINGW64 one - provided the latter is installed
+    # first:
+    /usr/bin/sed 's\C:/msys64/mingw64\C:/msys64/mingw32\g' /mingw64/share/lua/5.1/luarocks/site_config.lua | sed 's/MINGW64/MINGW32/g' > /mingw32/share/lua/5.1/luarocks/site_config.lua
+    # Also need to change one thing in the config-5.1.lua file:
+    cp /mingw32/etc/luarocks/config-5.1.lua /mingw32/etc/luarocks/config-5.1.lua.orig
+    /usr/bin/sed 's\/mingw32\c:/msys64/mingw32/g' /mingw32/etc/luarocks/config-5.1.lua.oirg > /mingw32/etc/luarocks/config-5.1.lua
 fi
 
 echo " "
 echo "Installing needed luarocks..."
 
-echo "  Configuration files are (system): $(${ROCKCOMMAND} config --system-config) echo and (user): $(${ROCKCOMMAND} config --user-config)"
+echo "  Configuration files are: (system): $(${ROCKCOMMAND} config --system-config)"
+echo "                         and (user): $(${ROCKCOMMAND} config --user-config)"
+echo " "
 echo "  The system one contains:"
 /usr/bin/cat $(${ROCKCOMMAND} config --system-config)
 
@@ -65,6 +72,7 @@ echo "    luafilesystem"
 ${ROCKCOMMAND} ${ROCKOPTARGS} install luafilesystem
 echo " "
 echo "    lua-yajl"
+# may need to add  YAJL_DIR=${MINGW_INTERNAL_BASE_DIR}/include to end of this:
 ${ROCKCOMMAND} ${ROCKOPTARGS} install lua-yajl
 echo " "
 echo "    luautf8"
