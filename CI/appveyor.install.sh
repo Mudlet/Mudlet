@@ -1,6 +1,6 @@
 #!/bin/sh
 
-echo "Running appveyor.build.sh shell script..."
+echo "Running appveyor.install.sh shell script..."
 
 if [ ${BUILD_BITNESS} != "32" ] && [ ${BUILD_BITNESS} != "64" ] ; then
     echo "Requires environmental variable BUILD_BITNESS to exist and be set to \"32\" or \"64\" to specify bitness of target to be built."
@@ -63,7 +63,7 @@ echo "   The system one contains:"
 /usr/bin/cat $(${ROCKCOMMAND} config --system-config)
 
 echo " "
-echo "Installing needed luarocks..."
+echo "  Installing needed luarocks..."
 echo " "
 echo "    luafilesystem"
 ${ROCKCOMMAND} ${ROCKOPTARGS} install luafilesystem
@@ -84,4 +84,6 @@ echo "    luasql-sqlite3"
 ${ROCKCOMMAND} ${ROCKOPTARGS} install luasql-sqlite3
 echo " "
 echo "    ... luarocks installation done"
+echo " "
+echo "  ... appveyor.install.sh shell script finished!"
 echo " "

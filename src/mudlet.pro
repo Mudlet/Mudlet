@@ -1368,6 +1368,7 @@ unix:!macx {
 
 DISTFILES += \
     ../CI/appveyor.after_success.old.ps1 \
+    ../CI/appveyor.after_success.sh \
     ../CI/appveyor.build.sh \
     ../CI/appveyor.install.sh \
     CMakeLists.txt \
