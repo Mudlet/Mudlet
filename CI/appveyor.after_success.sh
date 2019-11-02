@@ -58,9 +58,9 @@ echo " "
 
 echo "Copying discord-rpc library in..."
 if [ ${BUILD_BITNESS} = "32" ] ; then
-    cp -v -p $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/3rdparty/discord bin/libgcc_s_dw2-1.dll)  .
+    cp -v -p $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/3rdparty/discord/rpc/lib/discord-rpc32.dll)  .
 else
-    cp -v -p ${APPVEYOR_BUILD_FOLDER}/bin/libgcc_s_seh-1.dll .
+    cp -v -p $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/3rdparty/discord/rpc/lib/discord-rpc64.dll)  .
 fi
 echo " "
 
@@ -80,11 +80,62 @@ mkdir ./luasql
 cp -v -p ${MINGW_INTERNAL_BASE_DIR}/lib/lua/5.1/luasql/sqlite3.dll ./luasql/sqlite3.dll
 echo " "
 
-echo "Copying Mudlet & Geyser Lua files in..."
-# TODO:
+echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
+# Using the '/./' notation provides the point at which rsync reproduces the
+# directory structure from the source into the target and avoids the need
+# to change directory before and after the rsync call:
+
+# As written it copies every file but it should be polished up to skip unneeded
+# ones:
+rsync -avR $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER})/./src/mudlet-lua/* $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package/mudlet-lua/)
+echo " "
+
+echo "Copying Lua code formatter Lua files in..."
+# As written it copies every file but it should be polished up to skip unneeded
+# ones:
+rsync -avR $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER})/3rdparty/./lcf/* $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package/lcf/)
 echo " "
 
 echo "Copying Hunspell dictionaries in..."
-# TODO:
+cp -v -p -t . \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_AT_frami.aff) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_AT_frami.dic) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_CH_frami.aff) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_CH_frami.dic) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_DE_frami.aff) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/de_DE_frami.dic) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/el_GR.aff) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/el_GR.dic) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/en_GB.aff) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/en_GB.dic) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/en_US.aff) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/en_US.dic) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/es_ES.aff) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/es_ES.dic) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/fr.aff) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/fr.dic) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/it_IT.aff) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/it_IT.dic) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/nl_NL.aff) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/nl_NL.dic) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pl_PL.aff) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pl_PL.dic) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pt_BR.aff) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pt_BR.dic) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pt_PT.aff) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/pt_PT.dic) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/ru_RU.aff) \
+  $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/src/ru_RU.dic)
+
 echo " "
 
+echo "Compressing all files into an archive file for distribution..."
+/usr/bin/zip -rv9 mudlet *
+echo " "
+
+echo "The recursive contents of the Project build sub-directory: $(/usr/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER}/build/package):"
+/usr/bin/ls -al $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/build/package)
+echo " "
+
+echo "   ... appveyor.after_success.sh shell script finished!"
+echo " "
