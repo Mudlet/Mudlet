@@ -15,7 +15,7 @@ echo "Fixing things for ${BUILD_BITNESS}-bit builds:"
 export MSYSTEM=MINGW${BUILD_BITNESS}
 export MINGW_BASE_DIR=C:/msys64/mingw${BUILD_BITNESS}
 export MINGW_INTERNAL_BASE_DIR=/mingw${BUILD_BITNESS}
-export PATH=/${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}
+export PATH=${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}
 echo " "
 echo "PATH is now:"
 echo ${PATH}

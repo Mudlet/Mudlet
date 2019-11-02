@@ -42,12 +42,27 @@ ROCKCOMMAND=${MINGW_INTERNAL_BASE_DIR}/bin/luarocks
 
 /usr/bin/pacman -S --needed --noconfirm base-devel coreutils msys2-runtime git mercurial cvs wget ruby zip p7zip python2 mingw-w64-${BUILDCOMPONENT}-toolchain mingw-w64-${BUILDCOMPONENT}-qt5 mingw-w64-${BUILDCOMPONENT}-libzip mingw-w64-${BUILDCOMPONENT}-pugixml mingw-w64-${BUILDCOMPONENT}-lua51 mingw-w64-${BUILDCOMPONENT}-lua51-lpeg mingw-w64-${BUILDCOMPONENT}-lua51-lsqlite3 mingw-w64-${BUILDCOMPONENT}-lua51-luarocks mingw-w64-${BUILDCOMPONENT}-hunspell mingw-w64-${BUILDCOMPONENT}-zlib mingw-w64-${BUILDCOMPONENT}-boost
 
-if [ ${BUILD_BITNESS} == "32" -a -f /mingw64/share/lua/5.1/luarocks/site_config.lua ] ; then
+if [ ${BUILD_BITNESS} == "32" ] ; then
     # The site_config.lua file for the MINGW32 case has so many wrong values
-    # it prevents luarocks from working - however it can be replaced by an
-    # edited copy of the MINGW64 one - provided the latter is installed
-    # first:
-    /usr/bin/sed 's\C:/msys64/mingw64\C:/msys64/mingw32\g' /mingw64/share/lua/5.1/luarocks/site_config.lua | sed 's/MINGW64/MINGW32/g' > /mingw32/share/lua/5.1/luarocks/site_config.lua
+    # it prevents luarocks from working - however it can be replaced by this
+    # corrected copy here:
+    /mingw64/share/lua/5.1/luarocks/site_config.lua << EOF
+local site_config = {}
+site_config.LUAROCKS_PREFIX=[[C:/msys64/mingw32]]
+site_config.LUA_INCDIR=[[C:/msys64/mingw32/include/lua5.1]]
+site_config.LUA_LIBDIR=[[C:/msys64/mingw32/lib]]
+site_config.LUA_BINDIR=[[C:/msys64/mingw32/bin]]
+site_config.LUA_INTERPRETER=[[lua5.1.exe]]
+site_config.LUAROCKS_SYSCONFDIR=[[C:/msys64/mingw32/etc/luarocks]]
+site_config.LUAROCKS_ROCKS_TREE=[[C:/msys64/mingw32]]
+site_config.LUAROCKS_ROCKS_SUBDIR=[[/lib/luarocks/rocks-5.1]]
+site_config.LUAROCKS_UNAME_S=[[MINGW32_NT-6.1]]
+site_config.LUAROCKS_UNAME_M=[[x86_64]]
+site_config.LUAROCKS_DOWNLOADER=[[curl]]
+site_config.LUAROCKS_MD5CHECKER=[[md5sum]]
+return site_config
+EOF
+
     # Also need to change one thing in the config-5.1.lua file:
     cp /mingw32/etc/luarocks/config-5.1.lua /mingw32/etc/luarocks/config-5.1.lua.orig
     /usr/bin/sed 's\/mingw32\c:/msys64/mingw32/g' /mingw32/etc/luarocks/config-5.1.lua.oirg > /mingw32/etc/luarocks/config-5.1.lua

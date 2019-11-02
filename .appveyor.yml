@@ -22,8 +22,8 @@ environment:
     secure: Bm5PLJjC39XmRC55RPGVP9c5CFxvWu2VorAAmu5QS38=
   matrix:
   # was QT_BASE_DIR: C:\Qt\5.13.0\mingw73_32 and MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32 for old system and no BUILD_BITNESS
-  - BUILD_BITNESS: 64 # This one provides a file needed by the other one - so must be first
   - BUILD_BITNESS: 32
+  - BUILD_BITNESS: 64
 
 # Without a prefix commands are "MSDOS" batch file ones
 # With cmd: prefix they are run by cmd.exe
