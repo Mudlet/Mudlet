@@ -40,14 +40,39 @@ fi
 
 ROCKCOMMAND=${MINGW_INTERNAL_BASE_DIR}/bin/luarocks
 
-/usr/bin/pacman -S --needed --noconfirm base-devel coreutils msys2-runtime git mercurial cvs wget ruby zip p7zip python2 rsync mingw-w64-${BUILDCOMPONENT}-toolchain mingw-w64-${BUILDCOMPONENT}-qt5 mingw-w64-${BUILDCOMPONENT}-libzip mingw-w64-${BUILDCOMPONENT}-pugixml mingw-w64-${BUILDCOMPONENT}-lua51 mingw-w64-${BUILDCOMPONENT}-lua51-lpeg mingw-w64-${BUILDCOMPONENT}-lua51-lsqlite3 mingw-w64-${BUILDCOMPONENT}-lua51-luarocks mingw-w64-${BUILDCOMPONENT}-hunspell mingw-w64-${BUILDCOMPONENT}-zlib mingw-w64-${BUILDCOMPONENT}-boost mingw-w64-${BUILDCOMPONENT}-yajl
+/usr/bin/pacman -S --needed --noconfirm \
+    base-devel \
+    coreutils \
+    msys2-runtime \
+    git \
+    mercurial \
+    cvs \
+    wget \
+    ruby \
+    zip \
+    p7zip \
+    python2 \
+    rsync \
+    mingw-w64-${BUILDCOMPONENT}-toolchain \
+    mingw-w64-${BUILDCOMPONENT}-qt5 \
+    mingw-w64-${BUILDCOMPONENT}-libzip \
+    mingw-w64-${BUILDCOMPONENT}-pugixml \
+    mingw-w64-${BUILDCOMPONENT}-lua51 \
+    mingw-w64-${BUILDCOMPONENT}-lua51-lpeg \
+    mingw-w64-${BUILDCOMPONENT}-lua51-lsqlite3 \
+    mingw-w64-${BUILDCOMPONENT}-lua51-luarocks \
+    mingw-w64-${BUILDCOMPONENT}-hunspell \
+    mingw-w64-${BUILDCOMPONENT}-zlib \
+    mingw-w64-${BUILDCOMPONENT}-boost \
+    mingw-w64-${BUILDCOMPONENT}-yajl
 
 if [ ${BUILD_BITNESS} = "32" ] ; then
     # The site_config.lua file for the MINGW32 case has so many wrong values
     # it prevents luarocks from working - however it can be repaired by some
     # editing:
     cp /mingw32/share/lua/5.1/luarocks/site_config.lua /mingw32/share/lua/5.1/luarocks/site_config.lua.orig
-    /usr/bin/sed "s|/mingw32|c:/msys64/mingw32|g" /mingw32/share/lua/5.1/luarocks/site_config.lua.orig | /usr/bin/sed "s|/lib/luarocks/rocks|/lib/luarocks/rocks-5.1|" > /mingw32/share/lua/5.1/luarocks/site_config.lua
+    /usr/bin/sed "s|/mingw32|c:/msys64/mingw32|g" /mingw32/share/lua/5.1/luarocks/site_config.lua.orig \
+      | /usr/bin/sed "s|/lib/luarocks/rocks|/lib/luarocks/rocks-5.1|" > /mingw32/share/lua/5.1/luarocks/site_config.lua
 
     # Also need to change one thing in the config-5.1.lua file:
     cp /mingw32/etc/luarocks/config-5.1.lua /mingw32/etc/luarocks/config-5.1.lua.orig

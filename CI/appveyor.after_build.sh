@@ -1,6 +1,6 @@
 #!/bin/sh
 
-echo "Running appveyor.after_success.sh shell script..."
+echo "Running appveyor.after_build.sh shell script..."
 
 if [ ${APPVEYOR_REPO_NAME} != "Mudlet/Mudlet" ] ; then
     # Only run this code on the main Mudlet Github repository - do nothing otherwise:
@@ -87,13 +87,13 @@ echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
 
 # As written it copies every file but it should be polished up to skip unneeded
 # ones:
-rsync -avR $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER})/./src/mudlet-lua/* $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package/mudlet-lua/)
+rsync -avR $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER})/src/mudlet-lua/./* $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package/mudlet-lua/)
 echo " "
 
 echo "Copying Lua code formatter Lua files in..."
 # As written it copies every file but it should be polished up to skip unneeded
 # ones:
-rsync -avR $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER})/3rdparty/./lcf/* $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package/lcf/)
+rsync -avR $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER})/3rdparty/lcf/./* $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package/lcf/)
 echo " "
 
 echo "Copying Hunspell dictionaries in..."
@@ -133,9 +133,9 @@ echo "Compressing all files into an archive file for distribution..."
 /usr/bin/zip -rv9 mudlet *
 echo " "
 
-echo "The recursive contents of the Project build sub-directory: $(/usr/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER}/build/package):"
-/usr/bin/ls -al $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/build/package)
+echo "The recursive contents of the Project build sub-directory $(/usr/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER}/build/package):"
+/usr/bin/ls -aRl
 echo " "
 
-echo "   ... appveyor.after_success.sh shell script finished!"
+echo "   ... appveyor.after_build.sh shell script finished!"
 echo " "

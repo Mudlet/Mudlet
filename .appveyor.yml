@@ -34,20 +34,14 @@ install:
 build_script:
 - C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.build.sh
 
-# on successful build:
-on_success:
-- C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.after_success.sh
-
-#on_failure:
-#- cd C:\src
-#- C:\msys64\usr\bin\sh.exe -c "curl --upload-file ./verbose_output.log https://transfer.sh/verbose_output.log"
+# on successful build - actually use the after_build stage as we need to do it
+# then in order to have the produced be made available as a "artifact":
+after_build:
+- C:\msys64\usr\bin\sh.exe -c C:\\projects\\mudlet\\CI\\appveyor.after_build.sh
 
 cache:
 - C:\msys64\var\cache\pacman\pkg
-#  - '%MINGW_BASE_DIR% -> CI\appveyor.install.old.ps1, CI\appveyor.functions.old.ps1'
 
-# Temporary marking of files to (temporarily) save after build for later examination off the
-# AppVeyor site - believed to be relative to project directory - e.g. C:\projects\mudlet :
 artifacts:
   # The current end-point of the build: an archive containing everything to run the Mudlet application
   - path: package\mudlet.zip

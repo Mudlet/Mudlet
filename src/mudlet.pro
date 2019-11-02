@@ -1367,8 +1367,8 @@ unix:!macx {
 
 
 DISTFILES += \
+    ../CI/appveyor.after_build.sh \
     ../CI/appveyor.after_success.old.ps1 \
-    ../CI/appveyor.after_success.sh \
     ../CI/appveyor.build.sh \
     ../CI/appveyor.install.sh \
     CMakeLists.txt \
@@ -1409,6 +1409,5 @@ DISTFILES += \
     ../.gitmodules \
     ../translations/translated/updateqm.pri \
     ../CI/mudlet-deploy-key.enc \
-    ../CI/copy-non-qt-win-dependencies.ps1 \
     ../CI/mudlet-deploy-key-windows.ppk \
     ../CI/travis.compile.sh
