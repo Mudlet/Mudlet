@@ -54,7 +54,12 @@ fi
 # until the executable actually starts to run. Alternatively running
 # ldd ./mudlet.exe | grep "/mingw32" {for the 32 bit case, use "64" for
 # the other one} inside an Mingw32 (or 64) shell as appropriate will
-# produce all the libraries that are likely to be needed below:
+# produce the libraries that are likely to be needed below. Unfortunetly
+# this process is a little recursive in that you may have to repeat the
+# process for individual librarys. For ones used by lua modules this
+# can manifest as being unable to "require" the library within lua
+# and doing the above "ldd" check revealed that "zip.dll" needed
+# "libzzip-0-13.dll" and "luasql/sqlite3.dll" needed "libsqlite3-0.dll"!
 cp -v -p -t . \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libstdc++-6.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libpugixml.dll \
@@ -71,6 +76,8 @@ cp -v -p -t . \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libgraphite2.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libintl-8.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libiconv-2.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libsqlite3-0.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libzzip-0-13.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libhunspell-1.7-0.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libpcre-1.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libwinpthread-1.dll \

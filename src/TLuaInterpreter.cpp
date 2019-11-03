@@ -15967,7 +15967,7 @@ void TLuaInterpreter::initLuaGlobals()
         if (lua_isstring(pGlobalLua, -1)) {
             e = tr("Lua error: %1.").arg(lua_tostring(pGlobalLua, -1));
         }
-        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module %1.%2\n%3",
+        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module '%1'.%2\n%3",
                                // Intentional comment to separate arguments
                                "%1 is the name of the module. "
                                "%2 can be an optional additional message about the expected effect. "
@@ -15988,7 +15988,7 @@ void TLuaInterpreter::initLuaGlobals()
         if (lua_isstring(pGlobalLua, -1)) {
             e = tr("Lua error: %1.").arg(lua_tostring(pGlobalLua, -1));
         }
-        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module %1.%2\n%3",
+        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module '%1'.%2\n%3",
                                // Intentional comment to separate arguments
                                "%1 is the name of the module. "
                                "%2 can be an optional additional message about the expected effect. "
@@ -16008,7 +16008,7 @@ void TLuaInterpreter::initLuaGlobals()
         if (lua_isstring(pGlobalLua, -1)) {
             e = tr("Lua error: %1.").arg(lua_tostring(pGlobalLua, -1));
         }
-        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module %1.%2\n%3",
+        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module '%1'.%2\n%3",
                                // Intentional comment to separate arguments
                                "%1 is the name of the module. "
                                "%2 can be an optional additional message about the expected effect. "
@@ -16028,7 +16028,7 @@ void TLuaInterpreter::initLuaGlobals()
         if (lua_isstring(pGlobalLua, -1)) {
             e = tr("Lua error: %1.").arg(lua_tostring(pGlobalLua, -1));
         }
-        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module %1.%2\n%3",
+        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module '%1'.%2\n%3",
                                // Intentional comment to separate arguments
                                "%1 is the name of the module. "
                                "%2 can be an optional additional message about the expected effect. "
@@ -16048,7 +16048,7 @@ void TLuaInterpreter::initLuaGlobals()
         if (lua_isstring(pGlobalLua, -1)) {
             e = tr("Lua error: %1.").arg(lua_tostring(pGlobalLua, -1));
         }
-        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module %1.%2\n%3",
+        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module '%1'.%2\n%3",
                                // Intentional comment to separate arguments
                                "%1 is the name of the module. "
                                "%2 can be an optional additional message about the expected effect. "
