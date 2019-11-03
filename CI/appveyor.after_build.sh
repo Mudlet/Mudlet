@@ -169,7 +169,8 @@ if [ ${APPVEYOR_REPO_TAG} = "false" ] ; then
 else
     # TODO - create sh script equivalent of part of the powershell script
     # appveyor.after_success.old.ps1 that produces the squirrel update package
-
+    # the following is a dummy command to keep the shell happy:
+    true
 
 fi
 
