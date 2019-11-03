@@ -35,19 +35,22 @@ cd ./build
 # echo "  it contains:"
 # /usr/bin/ls -l
 
+# MUDLET_VERSION_BUILD may be already be set in the environment by package
+# creators on some OSes:
 if [ ${APPVEYOR_REPO_TAG} = "false" ] ; then
-    MUDLET_VERSION_BUILD="-${BUILD_BITNESS}bit-testing"
     if [ -p ${APPVEYOR_PULL_REQUEST_NUMBER} ] ; then
         COMMIT="$(git rev-parse --short ${APPVEYOR_PULL_REQUEST_HEAD_COMMIT})"
-        MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${APPVEYOR_PULL_REQUEST_NUMBER}-${COMMIT}"
+        REPORT_VERSION="${MUDLET_VERSION_BUILD}-testing-PR${APPVEYOR_PULL_REQUEST_NUMBER}-${COMMIT}"
     else
         COMMIT="$(git rev-parse --short HEAD)"
-        MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${COMMIT}"
+        REPORT_VERSION="${MUDLET_VERSION_BUILD}-testing-${COMMIT}"
     fi
+else
+    REPORT_VERSION="${MUDLET_VERSION_BUILD}"
 fi
 
 echo " "
-echo "Now building a ${BUILD_BITNESS} bit MUDLET${MUDLET_VERSION_BUILD} ..."
+echo "Now building a ${BUILD_BITNESS} bit Mudlet ${REPORT_VERSION}..."
 
 # We could support debug builds in the future by adding as an argument to the qmake call:
 # CONFIG+=debug and changing references to "release" sub-directories to "debug"...
@@ -107,17 +110,6 @@ mkdir $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package)
 echo " "
 echo "Copying mudlet executable to it:"
 cp $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/build/release/mudlet.exe) $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package)
-echo " "
-
-cd $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package)
-
-echo "Creating 'name' file:"
-if [ -n "${MUDLET_VERSION_BUILD}" ] ; then
-    echo "${MUDLET_VERSION_BUILD}" > name
-else
-    # Create an empty file if there are no name details (for an official Mudlet release)
-    touch "name"
-fi
 echo " "
 
 echo "   ... appveyor.build.sh shell script finished!"

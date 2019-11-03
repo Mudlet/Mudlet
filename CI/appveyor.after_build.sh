@@ -152,8 +152,27 @@ cp -v -p -t . \
 
 echo " "
 
-echo "Compressing all files into an archive file for distribution..."
-/usr/bin/zip -rv9 mudlet ./*
+if [ ${APPVEYOR_REPO_TAG} = "false" ] ; then
+    echo "Compressing all files into an archive file for distribution..."
+    if [ -p ${APPVEYOR_PULL_REQUEST_NUMBER} ] ; then
+        COMMIT="$(git rev-parse --short ${APPVEYOR_PULL_REQUEST_HEAD_COMMIT})"
+        REPORT_VERSION="${MUDLET_VERSION_BUILD}-testing-PR${APPVEYOR_PULL_REQUEST_NUMBER}-${COMMIT}"
+    else
+        COMMIT="$(git rev-parse --short HEAD)"
+        REPORT_VERSION="${MUDLET_VERSION_BUILD}-testing-${COMMIT}"
+    fi
+    /usr/bin/zip -rv9 Mudlet-${VERSION}${REPORT_VERSION}-win{$BUILD_BITNESS}.zip ./*
+
+    # TODO - find the way to squirt the file to:
+    # https://make.mudlet.org/snapshots/Mudlet-${VERSION}${REPORT_VERSION}-win{$BUILD_BITNESS}.zip
+
+else
+    # TODO - create sh script equivalent of part of the powershell script
+    # appveyor.after_success.old.ps1 that produces the squirrel update package
+
+
+fi
+
 echo " "
 
 echo "The recursive contents of the Project build sub-directory $(/usr/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER}/build/package):"

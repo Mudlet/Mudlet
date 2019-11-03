@@ -44,7 +44,7 @@ cache:
 
 artifacts:
   # The current end-point of the build: an archive containing everything to run the Mudlet application
-  - path: package\mudlet.zip
+  - path: package\Mudlet*.zip
 
 notifications:
 - provider: Webhook
