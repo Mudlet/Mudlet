@@ -41,7 +41,9 @@ public:
         MediaVolumeMax = 100,
         MediaVolumeHigh = 75,
         MediaVolumeDefault = 50,
-        MediaVolumeLow = 25
+        MediaVolumeLow = 25,
+        MediaVolumeMin = 1,
+        MediaVolumePreload = 0
     };
 
     enum MediaLength {
@@ -53,7 +55,8 @@ public:
         MediaPriorityMax = 100,
         MediaPriorityHigh = 75,
         MediaPriorityDefault = 50,
-        MediaPriorityLow = 25
+        MediaPriorityLow = 25,
+        MediaPriorityMin = 1
     };
 
     enum MediaContinue {

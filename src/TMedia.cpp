@@ -70,6 +70,14 @@ void TMedia::parseGMCP(TMediaData::MediaCategory mediaCategory, QString& gmcp)
         mediaVolume = mediaVolumeJSON.toString().toInt();
     } else if (mediaVolumeJSON != QJsonValue::Undefined && mediaVolumeJSON.toInt()) {
         mediaVolume = mediaVolumeJSON.toInt();
+
+        if (mediaVolume == TMediaData::MediaVolumePreload) {
+            ; // Volume of 0 supports preloading 
+        } else if (mediaVolume > TMediaData::MediaVolumeMax) {
+            mediaVolume = TMediaData::MediaVolumeMax;
+        } else if (mediaVolume < TMediaData::MediaVolumeMin) {
+            mediaVolume = TMediaData::MediaVolumeMin;
+        }
     } else {
         mediaVolume = TMediaData::MediaVolumeDefault;
     }
@@ -81,6 +89,10 @@ void TMedia::parseGMCP(TMediaData::MediaCategory mediaCategory, QString& gmcp)
         mediaLength = mediaLengthJSON.toString().toInt();
     } else if (mediaLengthJSON != QJsonValue::Undefined && mediaLengthJSON.toInt()) {
         mediaLength = mediaLengthJSON.toInt();
+
+        if (mediaLength < TMediaData::MediaLengthRepeat || mediaLength == 0) {
+            mediaLength = TMediaData::MediaLengthDefault;
+        }
     } else {
         mediaLength = TMediaData::MediaLengthDefault;
     }
@@ -92,6 +104,12 @@ void TMedia::parseGMCP(TMediaData::MediaCategory mediaCategory, QString& gmcp)
         mediaPriority = mediaPriorityJSON.toString().toInt();
     } else if (mediaPriorityJSON != QJsonValue::Undefined && mediaPriorityJSON.toInt()) {
         mediaPriority = mediaPriorityJSON.toInt();
+
+        if (mediaPriority > TMediaData::MediaPriorityMax) {
+            mediaPriority = TMediaData::MediaPriorityMax;
+        } else if (mediaPriority < TMediaData::MediaPriorityMin) {
+            mediaPriority = TMediaData::MediaPriorityMin;
+        }
     } else {
         mediaPriority = TMediaData::MediaPriorityDefault;
     }
@@ -103,6 +121,10 @@ void TMedia::parseGMCP(TMediaData::MediaCategory mediaCategory, QString& gmcp)
         musicContinue = musicContinueJSON.toString().toInt();
     } else if (musicContinueJSON != QJsonValue::Undefined && musicContinueJSON.toInt()) {
         musicContinue = musicContinueJSON.toInt();
+
+        if (musicContinue != TMediaData::MediaContinueDefault && musicContinue != TMediaData::MediaContinueRestart) {
+            musicContinue = TMediaData::MediaContinueDefault;
+        }
     } else {
         musicContinue = TMediaData::MediaContinueDefault;
     }
@@ -111,7 +133,7 @@ void TMedia::parseGMCP(TMediaData::MediaCategory mediaCategory, QString& gmcp)
     QString mediaType;
 
     if (mediaTypeJSON != QJsonValue::Undefined && !mediaTypeJSON.toString().isEmpty()) {
-        mediaType = mediaTypeJSON.toString();
+        mediaType = mediaTypeJSON.toString().toLower(); // To provide case insensitivity of MSP specification
     }
 
     auto mediaUrlJSON = json.value(QStringLiteral("url"));

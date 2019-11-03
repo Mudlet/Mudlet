@@ -1950,12 +1950,34 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
 
                 if (mspVAR == "V") {
                     mediaVolume = mspVAL.toInt();
+
+                    if (mediaVolume == TMediaData::MediaVolumePreload) {
+                        continue; // Support preloading 
+                    } else if (mediaVolume > TMediaData::MediaVolumeMax) {
+                        mediaVolume = TMediaData::MediaVolumeMax;
+                    } else if (mediaVolume < TMediaData::MediaVolumeMin) {
+                        mediaVolume = TMediaData::MediaVolumeMin;
+                    }
                 } else if (mspVAR == "L") {
                     mediaLength = mspVAL.toInt();
+
+                    if (mediaLength < TMediaData::MediaLengthRepeat || mediaLength == 0) {
+                        mediaLength = TMediaData::MediaLengthDefault;
+                    }
                 } else if (mspVAR == "P") {
                     mediaPriority = mspVAL.toInt();
+
+                    if (mediaPriority > TMediaData::MediaPriorityMax) {
+                        mediaPriority = TMediaData::MediaPriorityMax;
+                    } else if (mediaPriority < TMediaData::MediaPriorityMin) {
+                        mediaPriority = TMediaData::MediaPriorityMin;
+                    }
                 } else if (mspVAR == "C") {
                     musicContinue = mspVAL.toInt();
+
+                    if (musicContinue != TMediaData::MediaContinueDefault && musicContinue != TMediaData::MediaContinueRestart) {
+                        musicContinue = TMediaData::MediaContinueDefault;
+                    }
                 } else if (mspVAR == "T") {
                     mediaType = mspVAL.toLower(); // To provide case insensitivity of MSP spec
                 } else if (mspVAR == "U") {
