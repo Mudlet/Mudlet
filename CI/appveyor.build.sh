@@ -2,10 +2,11 @@
 
 echo "Running appveyor.build.sh shell script..."
 
-if [ ${BUILD_BITNESS} != "32" ] && [ ${BUILD_BITNESS} != "64" ] ; then
-    echo "Requires environmental variable BUILD_BITNESS to exist and be set to \"32\" or \"64\" to specify bitness of target to be built."
-    exit 1
-fi
+# Probably not required as already tested for in appveyor.install.sh
+# if [ ${BUILD_BITNESS} != "32" ] && [ ${BUILD_BITNESS} != "64" ] ; then
+#    echo "Requires environmental variable BUILD_BITNESS to exist and be set to \"32\" or \"64\" to specify bitness of target to be built."
+#    exit 1
+# fi
 
 # Commenting out things only needed for failure post-mortems
 # echo "Initial MSYSTEM is: ${MSYSTEM}"
@@ -59,7 +60,7 @@ echo " "
 echo "Running qmake:"
 ${MINGW_INTERNAL_BASE_DIR}/bin/qmake CONFIG+=release ../src/mudlet.pro
 exit_status=$?
-if [ ${exit_status} -neq 0 ]; then
+if [ ${exit_status} -ne 0 ]; then
     exit ${exit_status}
 fi
 echo " "
@@ -67,14 +68,14 @@ echo "Running mingw32-make on individual oversized qrc_mudlet_fonts_windows file
 # Change the referred to makefile if we switch to a debug build:
 ${MINGW_INTERNAL_BASE_DIR}/bin/mingw32-make -f Makefile.Release release/qrc_mudlet_fonts_windows.o
 exit_status=$?
-if [ ${exit_status} -neq 0 ]; then
+if [ ${exit_status} -ne 0 ]; then
     exit ${exit_status}
 fi
 echo " "
 echo "Running mingw32-make with 'keep-going' option for a dual core VM:"
 ${MINGW_INTERNAL_BASE_DIR}/bin/mingw32-make -k -j 3
 exit_status=$?
-if [ ${exit_status} -neq 0 ]; then
+if [ ${exit_status} -ne 0 ]; then
     exit ${exit_status}
 fi
 echo " "
@@ -111,7 +112,7 @@ echo " "
 cd $(/usr/bin/cygpath --unix ${APPVEYOR_BUILD_FOLDER}/package)
 
 echo "Creating 'name' file:"
-if [ -n ${MUDLET_VERSION_BUILD} ] ; then
+if [ -n "${MUDLET_VERSION_BUILD}" ] ; then
     echo "${MUDLET_VERSION_BUILD}" > name
 else
     # Create an empty file if there are no name details (for an official Mudlet release)

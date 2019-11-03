@@ -9,10 +9,11 @@ if [ ${APPVEYOR_REPO_NAME} != "Mudlet/Mudlet" ] ; then
     exit 0
 fi
 
-if [ ${BUILD_BITNESS} != "32" ] && [ ${BUILD_BITNESS} != "64" ] ; then
-    echo "Requires environmental variable BUILD_BITNESS to exist and be set to \"32\" or \"64\" to specify bitness of target to be built."
-    exit 1
-fi
+# Probably not required as already tested for in appveyor.install.sh
+# if [ ${BUILD_BITNESS} != "32" ] && [ ${BUILD_BITNESS} != "64" ] ; then
+#    echo "Requires environmental variable BUILD_BITNESS to exist and be set to \"32\" or \"64\" to specify bitness of target to be built."
+#    exit 1
+# fi
 
 # Commented out things only needed for failure post-mortems:
 # echo "Initial MSYSTEM is: ${MSYSTEM}"
@@ -130,7 +131,7 @@ cp -v -p -t . \
 echo " "
 
 echo "Compressing all files into an archive file for distribution..."
-/usr/bin/zip -rv9 mudlet *
+/usr/bin/zip -rv9 mudlet ./*
 echo " "
 
 echo "The recursive contents of the Project build sub-directory $(/usr/bin/cygpath --windows ${APPVEYOR_BUILD_FOLDER}/build/package):"
