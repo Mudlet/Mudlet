@@ -53,12 +53,12 @@ fi
 # and adding in the libraries to the same directory and repeating that
 # until the executable actually starts to run. Alternatively running
 # ldd ./mudlet.exe | grep "/mingw32" {for the 32 bit case, use "64" for
-# the other one} inside an Mingw32 (or 64) shell will produce all the
-# libraries that are likely to be needed below:
+# the other one} inside an Mingw32 (or 64) shell as appropriate will
+# produce all the libraries that are likely to be needed below:
 cp -v -p -t . \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libstdc++-6.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libpuguxml.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libdouble-conversion.dll.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libpugixml.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libdouble-conversion.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libicuin64.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libicuuc64.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libharfbuzz-0.dll \
@@ -161,10 +161,10 @@ if [ ${APPVEYOR_REPO_TAG} = "false" ] ; then
         COMMIT="$(git rev-parse --short HEAD)"
         REPORT_VERSION="${MUDLET_VERSION_BUILD}-testing-${COMMIT}"
     fi
-    /usr/bin/zip -rv9 Mudlet-${VERSION}${REPORT_VERSION}-win{$BUILD_BITNESS}.zip ./*
+    /usr/bin/zip -rv9 Mudlet-${VERSION}${REPORT_VERSION}-win${BUILD_BITNESS}.zip ./*
 
     # TODO - find the way to squirt the file to:
-    # https://make.mudlet.org/snapshots/Mudlet-${VERSION}${REPORT_VERSION}-win{$BUILD_BITNESS}.zip
+    # https://make.mudlet.org/snapshots/Mudlet-${VERSION}${REPORT_VERSION}-win${BUILD_BITNESS}.zip
 
 else
     # TODO - create sh script equivalent of part of the powershell script

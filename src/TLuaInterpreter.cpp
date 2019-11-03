@@ -15941,147 +15941,132 @@ void TLuaInterpreter::initLuaGlobals()
 #endif // defined(Q_OS_WIN32)
 
     error = luaL_dostring(pGlobalLua, "require \"rex_pcre\"");
-    if (error != 0) {
-        QString e = tr("no error message available from Lua");
+    if (error) {
+        QString e = tr("No error message available from Lua.");
         if (lua_isstring(pGlobalLua, -1)) {
-            e = tr("Lua error:");
-            e += lua_tostring(pGlobalLua, -1);
+            e = tr("Lua error: %1.").arg(lua_tostring(pGlobalLua, -1));
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.\n"
-                         "%2",
-                         // Intentional comment to separate arguments
-                         "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QStringLiteral("rex_pcre"),
-                 QStringLiteral("\n%1\n"))
-            .arg(tr("Some functions may not be available."));
-        msg.append(e);
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module '%1'.%2\n%3",
+                               // Intentional comment to separate arguments
+                               "%1 is the name of the module. "
+                               "%2 can be an optional additional message about the expected effect. "
+                               "%3 is a message from the Lua subsystem about the error.")
+                            .arg(QLatin1String("rex_pcre"),
+                                 QStringLiteral("\n%1").arg(tr("Some functions may not be available.")),
+                                 e));
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
-            "%1 is the name of the module.")
-            .arg(QStringLiteral("rex_pcre"));
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[  OK  ]  - Lua module %1 loaded.",
+                               // Intentional comment to separate arguments
+                               "%1 is the name of the module.")
+                            .arg(QLatin1String("rex_pcre")));
     }
 
     error = luaL_dostring(pGlobalLua, "require \"zip\"");
-    if (error != 0) {
-        QString e = tr("no error message available from Lua");
+    if (error) {
+        QString e = tr("No error message available from Lua.");
         if (lua_isstring(pGlobalLua, -1)) {
-            e = tr("Lua error:");
-            e += lua_tostring(pGlobalLua, -1);
+            e = tr("Lua error: %1.").arg(lua_tostring(pGlobalLua, -1));
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.\n"
-                         "%2",
-                         // Intentional comment to separate arguments,
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QLatin1String("zip"),
-                 QString());
-        msg.append(e);
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module %1.%2\n%3",
+                               // Intentional comment to separate arguments
+                               "%1 is the name of the module. "
+                               "%2 can be an optional additional message about the expected effect. "
+                               "%3 is a message from the Lua subsystem about the error.")
+                            .arg(QLatin1String("zip"),
+                                 QString(),
+                                 e));
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
-            "%1 is the name of the module.")
-            .arg(QLatin1String("zip"));
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[  OK  ]  - Lua module %1 loaded.",
+                               // Intentional comment to separate arguments,
+                               "%1 is the name of the module.")
+                            .arg(QLatin1String("zip")));
     }
 
     error = luaL_dostring(pGlobalLua, "require \"lfs\"");
-    if (error != 0) {
-        QString e = tr("no error message available from Lua");
+    if (error) {
+        QString e = tr("No error message available from Lua.");
         if (lua_isstring(pGlobalLua, -1)) {
-            e = tr("Lua error:");
-            e += lua_tostring(pGlobalLua, -1);
+            e = tr("Lua error: %1.").arg(lua_tostring(pGlobalLua, -1));
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.\n"
-                         "%2",
-                         // Intentional comment to separate arguments,
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QLatin1String("lfs (Lua File System)"),
-                 QLatin1String("\n%1\n"))
-            .arg(tr("Probably will not be able to access Mudlet Lua code."));
-        msg.append(e);
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module %1.%2\n%3",
+                               // Intentional comment to separate arguments
+                               "%1 is the name of the module. "
+                               "%2 can be an optional additional message about the expected effect. "
+                               "%3 is a message from the Lua subsystem about the error.")
+                            .arg(QLatin1String("lfs (Lua File System)"),
+                                 QStringLiteral("\n%1").arg(tr("Probably will not be able to access Mudlet Lua code.")),
+                                 e));
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
-            "%1 is the name of the module.")
-            .arg(QLatin1String("lfs"));
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[  OK  ]  - Lua module %1 loaded.",
+                               "%1 is the name of the module.")
+                            .arg(QLatin1String("lfs")));
     }
 
     error = luaL_dostring(pGlobalLua, "luasql = require \"luasql.sqlite3\"");
-    if (error != 0) {
-        QString e = tr("no error message available from Lua");
+    if (error) {
+        QString e = tr("No error message available from Lua.");
         if (lua_isstring(pGlobalLua, -1)) {
-            e = tr("Lua error:");
-            e += lua_tostring(pGlobalLua, -1);
+            e = tr("Lua error: %1.").arg(lua_tostring(pGlobalLua, -1));
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.\n"
-                         "%2",
-                         // Intentional comment to separate arguments,
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QLatin1String("luasql.sqlite3"),
-                 QLatin1String("\n%1\n"))
-            .arg(tr("Database support will not be available."));
-        msg.append(e);
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module %1.%2\n%3",
+                               // Intentional comment to separate arguments
+                               "%1 is the name of the module. "
+                               "%2 can be an optional additional message about the expected effect. "
+                               "%3 is a message from the Lua subsystem about the error.")
+                            .arg(QLatin1String("luasql.sqlite3"),
+                                 QStringLiteral("\n%1").arg(tr("Database support will not be available.")),
+                                 e));
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
-            "%1 is the name of the module.")
-            .arg(QLatin1String("sqlite3"));
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[  OK  ]  - Lua module %1 loaded.",
+                               "%1 is the name of the module.")
+                            .arg(QLatin1String("luasql.sqlite3")));
     }
 
-    error = luaL_dostring(pGlobalLua, R"(utf8 = require "lua-utf8")");
-    if (error != 0) {
-        QString e = tr("no error message available from Lua");
+    error = luaL_dostring(pGlobalLua, "utf8 = require \"lua-utf8\"");
+    if (error) {
+        QString e = tr("No error message available from Lua.");
         if (lua_isstring(pGlobalLua, -1)) {
-            e = tr("Lua error:");
-            e += lua_tostring(pGlobalLua, -1);
+            e = tr("Lua error: %1.").arg(lua_tostring(pGlobalLua, -1));
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.\n"
-                         "%2",
-                         // Intentional comment to separate arguments,
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QLatin1String("utf8"),
-                 QLatin1String("\n%1\n"))
-            .arg(tr("utf8.* Lua functions won't be available."));
-        msg.append(e);
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module %1.%2\n%3",
+                               // Intentional comment to separate arguments
+                               "%1 is the name of the module. "
+                               "%2 can be an optional additional message about the expected effect. "
+                               "%3 is a message from the Lua subsystem about the error.")
+                            .arg(QLatin1String("utf8"),
+                                 QStringLiteral("%1\n").arg(tr("utf8.* Lua functions won't be available.")),
+                                 e));
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
-            "%1 is the name of the module.")
-            .arg(QLatin1String("utf8"));
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[  OK  ]  - Lua module %1 loaded.",
+                               "%1 is the name of the module.")
+                            .arg(QLatin1String("utf8")));
     }
 
-    error = luaL_dostring(pGlobalLua, R"(yajl = require "yajl")");
-    if (error != 0) {
-        QString e = tr("no error message available from Lua");
+    error = luaL_dostring(pGlobalLua, "yajl = require \"yajl\"");
+    if (error) {
+        QString e = tr("No error message available from Lua.");
         if (lua_isstring(pGlobalLua, -1)) {
-            e = tr("Lua error:");
-            e += lua_tostring(pGlobalLua, -1);
+            e = tr("Lua error: %1.").arg(lua_tostring(pGlobalLua, -1));
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.\n"
-                         "%2",
-                         // Intentional comment to separate arguments,
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
-            .arg(QLatin1String("yajl"),
-                 QLatin1String("\n%1\n"))
-            .arg(tr("yajl.* Lua functions won't be available."));
-        msg.append(e);
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[ ERROR ] - Cannot find Lua module %1.%2\n%3",
+                               // Intentional comment to separate arguments
+                               "%1 is the name of the module. "
+                               "%2 can be an optional additional message about the expected effect. "
+                               "%3 is a message from the Lua subsystem about the error.")
+                            .arg(QLatin1String("yajl"),
+                                 QStringLiteral("%1\n").arg(tr("yajl.* Lua functions won't be available.")),
+                                 e));
     } else {
-        QString msg = tr("[  OK  ]  - Lua module %1 loaded.",
-            "%1 is the name of the module.")
-            .arg(QLatin1String("yajl"));
-        mpHost->postMessage(msg);
+        mpHost->postMessage(tr("[  OK  ]  - Lua module %1 loaded.",
+                               "%1 is the name of the module.")
+                            .arg(QLatin1String("yajl")));
     }
 
-    QString tn = "atcp";
+    QString tn = QStringLiteral("atcp");
     QStringList args;
     set_lua_table(tn, args);
 
-    tn = "channel102";
+    tn = QStringLiteral("channel102");
     set_lua_table(tn, args);
 
     lua_pop(pGlobalLua, lua_gettop(pGlobalLua));
