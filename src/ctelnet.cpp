@@ -1894,7 +1894,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     QString mediaFileName;
     int mediaVolume = TMediaData::MediaVolumeDefault;
     int mediaLength = TMediaData::MediaLengthDefault;
-    int soundPriority = TMediaData::MediaPriorityDefault;
+    int mediaPriority = TMediaData::MediaPriorityDefault;
     int musicContinue = TMediaData::MediaContinueDefault;
     QString mediaType;
     QString mediaUrl;
@@ -1953,11 +1953,11 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
                 } else if (mspVAR == "L") {
                     mediaLength = mspVAL.toInt();
                 } else if (mspVAR == "P") {
-                    soundPriority = mspVAL.toInt(); // TMediaData::MediaPriorityMax (100) suppresses other sounds (i.e. for combat).
+                    mediaPriority = mspVAL.toInt();
                 } else if (mspVAR == "C") {
                     musicContinue = mspVAL.toInt();
                 } else if (mspVAR == "T") {
-                    mediaType = mspVAL;
+                    mediaType = mspVAL.toLower(); // To provide case insensitivity of MSP spec
                 } else if (mspVAR == "U") {
                     mediaUrl = mspVAL;
                 } else {
@@ -1971,13 +1971,11 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
 
     switch (mediaCategory) {
         case TMediaData::MediaCategorySound:
-            mediaData = TMediaData(TMediaData::MediaCategorySound, mediaFileName, mediaVolume, mediaLength, mediaType, mediaUrl);
-            mediaData.setSoundPriority(soundPriority);
+            mediaData = TMediaData(TMediaData::MediaCategorySound, mediaFileName, mediaVolume, mediaLength, mediaPriority, mediaType, mediaUrl);
             mpHost->mpMedia->playMedia(mediaData);
             break;
         case TMediaData::MediaCategoryMusic:
-            mediaData = TMediaData(TMediaData::MediaCategoryMusic, mediaFileName, mediaVolume, mediaLength, mediaType, mediaUrl);
-            mediaData.setSoundPriority(soundPriority);
+            mediaData = TMediaData(TMediaData::MediaCategoryMusic, mediaFileName, mediaVolume, mediaLength, mediaPriority, mediaType, mediaUrl);
             mediaData.setMusicContinue(musicContinue);
             mpHost->mpMedia->playMedia(mediaData);
             break;

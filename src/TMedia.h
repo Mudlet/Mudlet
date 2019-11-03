@@ -65,17 +65,18 @@ public:
     {
         mMediaVolume = MediaVolumeDefault;
         mMediaLength = MediaLengthDefault;
-        mSoundPriority = MediaPriorityDefault;
+        mMediaPriority = MediaPriorityDefault;
         mMusicContinue = MediaContinueDefault;
     }
 
     TMediaData(int mediaCategory, QString mediaFileName, int mediaVolume = MediaVolumeDefault, int mediaLength = MediaLengthDefault,
-        QString mediaType = QString(), QString mediaUrl = QString())
+        int mediaPriority = MediaPriorityDefault, QString mediaType = QString(), QString mediaUrl = QString())
     {
         mMediaCategory = mediaCategory;
         mMediaFileName = mediaFileName;
         mMediaVolume = mediaVolume;
         mMediaLength = mediaLength;
+        mMediaPriority = mediaPriority;
         mMediaType = mediaType;
         mMediaUrl = mediaUrl;
     }
@@ -88,8 +89,8 @@ public:
     void setMediaVolume(int mediaVolume) { mMediaVolume = mediaVolume; }
     int getMediaLength() { return mMediaLength; }
     void setMediaLength(int mediaLength) { mMediaLength = mediaLength; }
-    int getSoundPriority() { return mSoundPriority; }
-    void setSoundPriority(int soundPriority) { mSoundPriority = soundPriority; }
+    int getMediaPriority() { return mMediaPriority; }
+    void setMediaPriority(int mediaPriority) { mMediaPriority = mediaPriority; }
     int getMusicContinue() { return mMusicContinue; }
     void setMusicContinue(int musicContinue) { mMusicContinue = musicContinue; }
     QString getMediaType() { return mMediaType; }
@@ -104,11 +105,40 @@ private:
     QString mMediaFileName;
     int mMediaVolume;
     int mMediaLength;
-    int mSoundPriority;
+    int mMediaPriority;
     int mMusicContinue;
     QString mMediaType;
     QString mMediaUrl;
     QString mMediaAbsolutePathFileName;
+};
+
+class TMediaPlayer
+{
+public:
+    TMediaPlayer() {}
+
+    ~TMediaPlayer()
+    {
+        if (mMediaPlayer != nullptr) {
+            mMediaPlayer->stop();
+        }
+    }
+
+    TMediaPlayer(Host* pHost, TMediaData& mediaData)
+    {
+        mpHost = pHost;
+        mMediaPlayer = new QMediaPlayer(pHost);
+        mMediaData = mediaData;
+    }
+
+    TMediaData getMediaData() { return mMediaData; }
+    void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
+    QMediaPlayer* getMediaPlayer() { return mMediaPlayer; }
+
+private:
+    QPointer<Host> mpHost;
+    TMediaData mMediaData;
+    QMediaPlayer* mMediaPlayer;
 };
 
 class TMedia: public QObject
@@ -133,9 +163,9 @@ private:
     QUrl getFileUrl(TMediaData& mediaData);
     void writeFile(QNetworkReply* reply);
     void downloadFile(TMediaData& mediaData);
-    QMediaPlayer* getMediaPlayer(TMediaData& mediaData);
-    QMediaPlayer* matchMediaPlayer(TMediaData& mediaData, QString absolutePathFileName);
-    void suppressOtherMedia(TMediaData& mediaData, QString absolutePathFileName);
+    TMediaPlayer* getMediaPlayer(TMediaData& mediaData);
+    TMediaPlayer* matchMediaPlayer(TMediaData& mediaData, QString absolutePathFileName);
+    bool doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolutePathFileName);
     void playSound(TMediaData& soundData);
     void stopSound();
     void playMusic(TMediaData& musicData);
@@ -144,8 +174,8 @@ private:
     QPointer<Host> mpHost;
     QString mProfileName;
 
-    QList<QMediaPlayer*> mSoundList;
-    QList<QMediaPlayer*> mMusicList;
+    QList<TMediaPlayer*> mSoundList;
+    QList<TMediaPlayer*> mMusicList;
 
     QNetworkAccessManager* mpNetworkAccessManager;
     QMap<QNetworkReply*, TMediaData> mMediaDownloads;
