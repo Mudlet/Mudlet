@@ -15947,8 +15947,10 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
-            "%1 is the name of the module. %2 can be an additional message about the expected effect.")
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.\n"
+                         "%2",
+                         // Intentional comment to separate arguments
+                         "%1 is the name of the module. %2 can be an additional message about the expected effect.")
             .arg(QStringLiteral("rex_pcre"),
                  QStringLiteral("\n%1\n"))
             .arg(tr("Some functions may not be available."));
@@ -15968,7 +15970,9 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.\n"
+                         "%2",
+                         // Intentional comment to separate arguments,
             "%1 is the name of the module. %2 can be an additional message about the expected effect.")
             .arg(QLatin1String("zip"),
                  QString());
@@ -15988,7 +15992,9 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.\n"
+                         "%2",
+                         // Intentional comment to separate arguments,
             "%1 is the name of the module. %2 can be an additional message about the expected effect.")
             .arg(QLatin1String("lfs (Lua File System)"),
                  QLatin1String("\n%1\n"))
@@ -16009,7 +16015,9 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.\n"
+                         "%2",
+                         // Intentional comment to separate arguments,
             "%1 is the name of the module. %2 can be an additional message about the expected effect.")
             .arg(QLatin1String("luasql.sqlite3"),
                  QLatin1String("\n%1\n"))
@@ -16030,7 +16038,9 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.\n"
+                         "%2",
+                         // Intentional comment to separate arguments,
             "%1 is the name of the module. %2 can be an additional message about the expected effect.")
             .arg(QLatin1String("utf8"),
                  QLatin1String("\n%1\n"))
@@ -16051,7 +16061,9 @@ void TLuaInterpreter::initLuaGlobals()
             e = tr("Lua error:");
             e += lua_tostring(pGlobalLua, -1);
         }
-        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.%2",
+        QString msg = tr("[ ERROR ] - Cannot find Lua module %1.\n"
+                         "%2",
+                         // Intentional comment to separate arguments,
             "%1 is the name of the module. %2 can be an additional message about the expected effect.")
             .arg(QLatin1String("yajl"),
                  QLatin1String("\n%1\n"))

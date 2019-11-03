@@ -48,7 +48,29 @@ else
     cp -v -p ${MINGW_INTERNAL_BASE_DIR}/bin/libgcc_s_seh-1.dll .
 fi
 
+# To determine which system libraries have to be copied in it requires
+# continually trying to run the executable on the target type system
+# and adding in the libraries to the same directory and repeating that
+# until the executable actually starts to run. Alternatively running
+# ldd ./mudlet.exe | grep "/mingw32" {for the 32 bit case, use "64" for
+# the other one} inside an Mingw32 (or 64) shell will produce all the
+# libraries that are likely to be needed below:
 cp -v -p -t . \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libstdc++-6.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libpuguxml.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libdouble-conversion.dll.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libicuin64.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libicuuc64.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libharfbuzz-0.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libpng16-16.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libpcre2-16-0.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libbz2-1.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libicudt64.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libfreetype-6.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libglib-2.0-0.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libgraphite2.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libintl-8.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libiconv-2.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libhunspell-1.7-0.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libpcre-1.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libwinpthread-1.dll \
