@@ -64,7 +64,8 @@ ROCKCOMMAND=${MINGW_INTERNAL_BASE_DIR}/bin/luarocks
     mingw-w64-${BUILDCOMPONENT}-hunspell \
     mingw-w64-${BUILDCOMPONENT}-zlib \
     mingw-w64-${BUILDCOMPONENT}-boost \
-    mingw-w64-${BUILDCOMPONENT}-yajl
+    mingw-w64-${BUILDCOMPONENT}-yajl \
+    mingw-w64-${BUILDCOMPONENT}-SDL2
 
 if [ ${BUILD_BITNESS} = "32" ] ; then
     # The site_config.lua file for the MINGW32 case has so many wrong values

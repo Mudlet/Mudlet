@@ -61,31 +61,52 @@ fi
 # and doing the above "ldd" check revealed that "zip.dll" needed
 # "libzzip-0-13.dll" and "luasql/sqlite3.dll" needed "libsqlite3-0.dll"!
 cp -v -p -t . \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libstdc++-6.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libpugixml.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libdouble-conversion.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libicuin64.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libicuuc64.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libharfbuzz-0.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libpng16-16.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libpcre2-16-0.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libbz2-1.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libicudt64.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libdouble-conversion.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libfreetype-6.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libglib-2.0-0.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libgraphite2.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libintl-8.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libiconv-2.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libsqlite3-0.dll \
-    ${MINGW_INTERNAL_BASE_DIR}/bin/libzzip-0-13.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libharfbuzz-0.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libhunspell-1.7-0.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libiconv-2.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libicudt64.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libicuin64.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libicuuc64.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libintl-8.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libjasper-4.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libjpeg-8.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/liblzma-5.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libpcre-1.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libpcre2-16-0.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libpng16-16.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libpugixml.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libsqlite3-0.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libstdc++-6.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libtiff-5.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libwebp-7.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libwebpdemux-2.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libwinpthread-1.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libyajl.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/libzip.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libzstd.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/libzzip-0-13.dll \
+    ${MINGW_INTERNAL_BASE_DIR}/bin/SDL2.dll \
     ${MINGW_INTERNAL_BASE_DIR}/bin/zlib1.dll
-echo " "
 
+# The openSSL libraries has a different name depending on the bitness:
+if [ ${BUILD_BITNESS} = "32" ] ; then
+    cp -v -p -t . \
+        ${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-1_1.dll \
+        ${MINGW_INTERNAL_BASE_DIR}/bin/libssl-1_1.dll
+
+else
+    cp -v -p -t . \
+        ${MINGW_INTERNAL_BASE_DIR}/bin/libcrypto-1_1-x64.dll \
+        ${MINGW_INTERNAL_BASE_DIR}/bin/libssl-1_1-x64.dll
+
+fi
+
+echo " "
 echo "Copying discord-rpc library in..."
 if [ ${BUILD_BITNESS} = "32" ] ; then
     cp -v -p $(cygpath --unix ${APPVEYOR_BUILD_FOLDER}/3rdparty/discord/rpc/lib/discord-rpc32.dll)  .
