@@ -1952,7 +1952,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
                     mediaVolume = mspVAL.toInt();
 
                     if (mediaVolume == TMediaData::MediaVolumePreload) {
-                        continue; // Support preloading 
+                        continue; // Support preloading
                     } else if (mediaVolume > TMediaData::MediaVolumeMax) {
                         mediaVolume = TMediaData::MediaVolumeMax;
                     } else if (mediaVolume < TMediaData::MediaVolumeMin) {
