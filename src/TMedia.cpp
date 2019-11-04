@@ -704,7 +704,7 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolute
                 TMedia::stopSound();
                 break;
             case TMediaData::MediaCategoryMusic:
-                TMedia::stopSound();
+                TMedia::stopMusic();
                 break;
         }
     }
