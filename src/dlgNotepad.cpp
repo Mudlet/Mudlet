@@ -70,7 +70,6 @@ void dlgNotepad::save()
     file.close();
 
     mNeedToSave = false;
-    qDebug()<<"saved";
 }
 
 void dlgNotepad::restore()
