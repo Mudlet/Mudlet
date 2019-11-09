@@ -90,7 +90,8 @@ void dlgNotepad::slot_text_written()
     mNeedToSave = true;
 }
 
-void dlgNotepad::timerEvent(QTimerEvent *event) {
+void dlgNotepad::timerEvent(QTimerEvent* event)
+{
     Q_UNUSED(event);
 
     if (!mNeedToSave) {

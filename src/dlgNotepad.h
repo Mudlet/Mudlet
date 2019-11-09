@@ -50,7 +50,7 @@ private:
     QPointer<Host> mpHost;
     bool mNeedToSave{};
 
-    void timerEvent(QTimerEvent *event);
+    void timerEvent(QTimerEvent *event) override;
 };
 
 #endif // MUDLET_DLGNOTEPAD_H
