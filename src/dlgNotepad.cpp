@@ -81,7 +81,9 @@ void dlgNotepad::restore()
     QTextStream fileStream;
     fileStream.setDevice(&file);
     QString txt = fileStream.readAll();
+    notesEdit->blockSignals(true);
     notesEdit->setPlainText(txt);
+    notesEdit->blockSignals(false);
     file.close();
 }
 
