@@ -399,6 +399,7 @@ void Host::resetProfile_phase1()
 
 void Host::resetProfile_phase2()
 {
+    getAliasUnit()->removeAllTempAliases();
     getTimerUnit()->removeAllTempTimers();
     getTriggerUnit()->removeAllTempTriggers();
     getKeyUnit()->removeAllTempKeys();
