@@ -6,6 +6,7 @@ branches:
   - /^Mudlet-.+/   # build release tags (yes, the option also applies to tags)
 init:
 - cmd: mkdir C:\src\
+image: Previous Visual Studio 2015
 environment:
   signing_password:
     secure: gOKqBtIvfDuGkEeaHGaguMmafynYAG06iVuD6Krem7M=
