@@ -99,7 +99,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.2.1
+VERSION = 4.3.0
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -111,7 +111,7 @@ isEmpty( BUILD ) {
 # "-dev" for the development build
 # "-public-test-build" for the public test build
 # "" for the release build
-   BUILD = "-dev"
+   BUILD = ""
 }
 
 # Changing BUILD and VERSION values affects: ctelnet.cpp, main.cpp, mudlet.cpp
