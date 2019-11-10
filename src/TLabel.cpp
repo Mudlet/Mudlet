@@ -214,15 +214,20 @@ bool TLabel::forwardEventToMapper(QEvent* event)
         QWidget* qw = qApp->widgetAt(wheelEvent->globalPos());
 
         if (qw && parentWidget()->findChild<QWidget*>(QStringLiteral("mapper")) && parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw)) {
+            // Have switched to the latest QWheelEvent as that handles both X
+            // and Y wheels at the same time whereas previously we said the
+            // event was a vertical one - even if it wasn't! Additionally we
+            // pass on the source of the Qt event - and whether the delta values
+            // are inverted:
             QWheelEvent newEvent(qw->mapFromGlobal(wheelEvent->globalPos()),
                                  wheelEvent->globalPos(),
                                  wheelEvent->pixelDelta(),
                                  wheelEvent->angleDelta(),
-                                 wheelEvent->angleDelta().y() / 8,
-                                 Qt::Vertical,
                                  wheelEvent->buttons(),
                                  wheelEvent->modifiers(),
-                                 wheelEvent->phase());
+                                 wheelEvent->phase(),
+                                 wheelEvent->inverted(),
+                                 wheelEvent->source());
             qApp->sendEvent(qw, &newEvent);
             return true;
         }
