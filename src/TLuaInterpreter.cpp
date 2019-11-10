@@ -14527,8 +14527,11 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
             break;
         // These are all QMouseEvents
         case (QEvent::MouseButtonPress):
+            [[fallthrough]];
         case (QEvent::MouseButtonDblClick):
+            [[fallthrough]];
         case (QEvent::MouseButtonRelease):
+            [[fallthrough]];
         case (QEvent::MouseMove): {
             auto qME = static_cast<const QMouseEvent*>(qE);
             lua_newtable(L);
@@ -14647,8 +14650,9 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
             break;
         }
         }
-    } else
+    } else {
         error = lua_pcall(L, pE.mArgumentList.size(), LUA_MULTRET, 0);
+    }
 
     if (error) {
         std::string err = "";
