@@ -533,27 +533,6 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mRoomSize").text().set(QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData());
     }
 
-    {
-        auto stopwatches = host.append_child("stopwatches");
-        QListIterator<int> itStopWatchId(pHost->getStopWatchIds());
-        while (itStopWatchId.hasNext()) {
-            auto stopWatchId = itStopWatchId.next();
-            auto pStopWatch = pHost->getStopWatch(stopWatchId);
-            if (pStopWatch->persistent()) {
-                auto stopwatch = stopwatches.append_child("stopwatch");
-                // Three QStrings used here are purely numeric so can be expressed in Latin1 encoding:
-                stopwatch.append_attribute("id") = QString::number(stopWatchId).toLatin1().constData();
-                if (pStopWatch->running()) {
-                    stopwatch.append_attribute("running") = "yes";
-                    stopwatch.append_attribute("effectiveStartDateTimeEpochMSecs") = QString::number(QDateTime::currentMSecsSinceEpoch() - pStopWatch->getElapsedMilliSeconds()).toLatin1().constData();
-                } else {
-                    stopwatch.append_attribute("running") = "no";
-                    stopwatch.append_attribute("elapsedDateTimeMSecs") = QString::number(pStopWatch->getElapsedMilliSeconds()).toLatin1().constData();
-                }
-                stopwatch.append_attribute("name") = pStopWatch->name().toUtf8().constData();
-            }
-        }
-    }
     writeTriggerPackage(pHost, mudletPackage, true);
     writeTimerPackage(pHost, mudletPackage, true);
     writeAliasPackage(pHost, mudletPackage, true);
