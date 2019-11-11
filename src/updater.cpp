@@ -46,7 +46,8 @@ Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent)
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
     this->settings = settings;
 
-    feed = new dblsqd::Feed(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"), QStringLiteral("release"));
+    feed = new dblsqd::Feed(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"),
+                            mudlet::scmIsPublicTestVersion ? QStringLiteral("public-test-build") : QStringLiteral("release"));
 }
 Updater::~Updater()
 {
@@ -198,7 +199,7 @@ void Updater::setupOnLinux()
     // Setup to automatically download the new release when an update is available
     QObject::connect(feed, &dblsqd::Feed::ready, this, [=]() {
 
-        // only update release builds to prevent auto-update from overwriting your
+        // don't update development builds to prevent auto-update from overwriting your
         // compiled binary while in development
         if (mudlet::scmIsDevelopmentVersion) {
             return;

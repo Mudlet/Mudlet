@@ -232,7 +232,13 @@ public:
     void sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const;
 #endif
 
+    // used by developers in everyday coding
     static const bool scmIsDevelopmentVersion;
+    // unofficial "nightly" build - still a type of a release
+    static const bool scmIsPublicTestVersion;
+    // final, official release
+    static const bool scmIsReleaseVersion;
+
     static const QVersionNumber scmRunTimeQtVersion;
     // A constant equivalent to QDataStream::Qt_5_12 needed in several places
     // which can't be pulled from Qt as it is not going to be defined for older
@@ -414,6 +420,8 @@ public:
     QSet<QString> getWordSet();
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
+    void layoutModules();
+    void startAutoLogin();
 
 
 #if defined(INCLUDE_UPDATER)
@@ -473,7 +481,6 @@ public slots:
     void slot_notes();
     void slot_reconnect();
     void slot_close_profile_requested(int);
-    void startAutoLogin();
     void slot_irc();
     void slot_discord();
     void slot_uninstall_package();
@@ -483,7 +490,6 @@ public slots:
     void slot_uninstall_module();
     void slot_install_module();
     void slot_module_manager();
-    void layoutModules();
     void slot_help_module();
 #if defined(INCLUDE_UPDATER)
     void slot_check_manual_update();
@@ -543,10 +549,12 @@ private slots:
 #if defined(INCLUDE_UPDATER)
     void slot_update_installed();
     void slot_updateAvailable(const int);
+    void slot_report_issue();
 #endif
     void slot_toggle_compact_input_line();
     void slot_password_migrated_to_secure(QKeychain::Job *job);
     void slot_password_migrated_to_profile(QKeychain::Job *job);
+
 
 private:
     void initEdbee();
@@ -624,6 +632,7 @@ private:
     QPointer<QAction> mpActionKeys;
     QPointer<QAction> mpActionMapper;
     QPointer<QAction> mpActionMultiView;
+    QPointer<QAction> mpActionReportIssue;
     QPointer<QAction> mpActionNotes;
     QPointer<QAction> mpActionOptions;
     QPointer<QToolButton> mpButtonPackageManagers;

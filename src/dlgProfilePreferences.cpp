@@ -2650,7 +2650,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     }
 
 #if defined(INCLUDE_UPDATER)
-    if (!mudlet::scmIsDevelopmentVersion) {
+    if (mudlet::scmIsReleaseVersion || mudlet::scmIsPublicTestVersion) {
         pMudlet->updater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
     }
 #endif

@@ -32,7 +32,7 @@
 ############################################################################
 
 # Should be called before PROJECT.
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.3)
 if(APPLE)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13") # Qt 5.11.2 with which we build on OS X supports 10.11 and up, but some tools are not provided as bottles for that anymore.
 endif()
@@ -52,6 +52,10 @@ enable_testing()
 
 if(POLICY CMP0020)
   cmake_policy(SET CMP0020 NEW)
+endif()
+
+if(POLICY CMP0057)
+  cmake_policy(SET CMP0057 NEW)
 endif()
 
 if(WIN32)
@@ -75,7 +79,7 @@ endif()
 # To insure consistency please ensure the SAME of the first two values are also
 # assigned to the "VERSION" and "BUILD" variables in the native qmake project
 # file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 4.1.2)
+set(APP_VERSION 4.3.0)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
   set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
@@ -84,132 +88,63 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
-# Set the environment variable WITH_UPDATER=NO to disable the built-in updater
-set(UPDATER_TEST $ENV{WITH_UPDATER})
-if((CMAKE_SYSTEM_NAME STREQUAL "Linux") OR (CMAKE_SYSTEM_NAME STREQUAL "Windows") OR (CMAKE_SYSTEM_NAME STREQUAL "Darwin"))
-  # We are on one of the supported platforms
-  if(DEFINED UPDATER_TEST)
-    string(TOUPPER ${UPDATER_TEST} UPDATER_TEST)
-    if(UPDATER_TEST STREQUAL "NO")
-      # The specific tested for value was seen so set the option "no don't
-      # include the updater"
-      option(USE_UPDATER "Include libraries and code to allow release versions to be updated on demand" OFF)
-    else()
-      # Any other value was seen so ignore it and set "yes, include the updater"
-      option(USE_UPDATER "Include libraries and code to allow release versions to be updated on demand" ON)
-    endif()
-  else()
-    # An environmental variable not detected, apply platform default of "yes, include the updater"
-    option(USE_UPDATER "Include libraries and code to allow release versions to be updated on demand" ON)
-  endif()
-else()
-  # Option not available for other platforms
-  set(USE_UPDATER NO)
-endif()
+include(IncludeOptionalModule)
 
-# Set the environment variable WITH_3DMAPPER=NO to disable the built-in 3D mapper
-set(3DMAPPER_TEST $ENV{WITH_3DMAPPER})
-if(DEFINED 3DMAPPER_TEST)
-  string(TOUPPER ${3DMAPPER_TEST} 3DMAPPER_TEST)
-  if(3DMAPPER_TEST STREQUAL "NO")
-    option(USE_3DMAPPER "Include 3D mapper" OFF)
-  else()
-    option(USE_3DMAPPER "Include 3D mapper" ON)
-  endif()
-else()
-  # An environmental variable not detected, apply platform default of "yes, include the 3D mapper"
-  option(USE_3DMAPPER "Include 3D mapper" ON)
-endif()
+include_optional_module(
+  ENVIRONMENT_VARIABLE WITH_UPDATER
+  OPTION_VARIABLE USE_UPDATER
+  READABLE_NAME "updater"
+  SUPPORTED_SYSTEMS
+    "Linux"
+    "Windows"
+    "Darwin"
+)
+include_optional_module(
+  ENVIRONMENT_VARIABLE WITH_FONTS
+  OPTION_VARIABLE USE_FONTS
+  READABLE_NAME "fonts"
+)
+include_optional_module(
+  ENVIRONMENT_VARIABLE WITH_3DMAPPER
+  OPTION_VARIABLE USE_3DMAPPER
+  READABLE_NAME "3D mapper"
+)
 
-# Set the environment variable WITH_FONTS=NO to disable including built-in fonts
-set(FONT_TEST $ENV{WITH_FONTS})
-if(DEFINED FONT_TEST)
-  string(TOUPPER ${FONT_TEST} FONT_TEST)
-else()
-  # Set the CMake variable to the default if it (as a result of WITH_FONTS not
-  # existing) has not been defined, without the if(DEFINED ...) string(...)
-  # errors out - and so may further tests on the variable...
-  set(FONT_TEST "YES")
-endif()
-if(FONT_TEST STREQUAL "NO")
-  option(USE_FONTS "Include Deja Vu and Ubuntu fonts in the executable" OFF)
-else()
-  option(USE_FONTS "Include Deja Vu and Ubuntu fonts in the executable" ON)
-  # Can download and extract latest Unbuntu font files (currently X.YY is
-  # 0.83) from:
-  # https://launchpad.net/ubuntu/+archive/primary/+files/ubuntu-font-family-sources_X.YY.orig.tar.gz
-  # It would be nice if we could automate the download and extraction of all
-  # the font and associate documentation (but NOT the "sources" sub-directory)
-  # contents into the ./src/fonts/ directory structure only if this option is
-  # set to ON; however that would be plaform specific and add more complexity
-  # and it is not obvious that there is a demand to do this currenly.
-endif()
+include(InitGitSubmodule)
 
-if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/edbee-lib/CMakeLists.txt")
-  # The above CMakeList.txt is the top level one - we actually use the one
-  # another level down in 3rdparty/edbee-lib/edbee-lib/CMakeLists.txt
-  message(STATUS "git submodule for required edbee-lib editor widget missing from source code, will attempt to get it...")
-  execute_process(COMMAND git submodule update --init 3rdparty/edbee-lib
-    TIMEOUT 30
-    WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
-    OUTPUT_VARIABLE output_text
-    ERROR_VARIABLE error_text)
-  if(output_text OR error_text)
-    message(STATUS ${output_text} ${error_text})
-  endif()
-endif()
+git_submodule_init(
+  CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt"
+  SUBMODULE_PATH "3rdparty/edbee-lib"
+  READABLE_NAME "edbee-lib editor widget"
+)
 
-if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/qtkeychain/CMakeLists.txt")
-  message(STATUS "git submodule for required QtKeychain missing from source code, will attempt to get it...")
-  execute_process(COMMAND git submodule update --init 3rdparty/qtkeychain
-          TIMEOUT 30
-          WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
-          OUTPUT_VARIABLE output_text
-          ERROR_VARIABLE error_text)
-  if(output_text OR error_text)
-    message(STATUS ${output_text} ${error_text})
-  endif()
-endif()
+git_submodule_init(
+  CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt"
+  SUBMODULE_PATH "3rdparty/qtkeychain"
+  READABLE_NAME "QtKeychain"
+)
 
-if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/lcf/lcf-scm-1.rockspec")
-  message(STATUS "git submodule for required lua code formatter source code missing, will attempt to get it...")
-  execute_process(COMMAND git submodule update --init 3rdparty/lcf
-    TIMEOUT 30
-    WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
-    OUTPUT_VARIABLE output_text
-    ERROR_VARIABLE error_text)
-  if(output_text OR error_text)
-    message(STATUS ${output_text} ${error_text})
-  endif()
-endif()
+git_submodule_init(
+  CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec"
+  SUBMODULE_PATH "3rdparty/lcf"
+  READABLE_NAME "lua code formatter source code"
+)
 
 if(USE_UPDATER)
-  if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/dblsqd/CMakeLists.txt")
-    message(STATUS "git submodule for optional but wanted DBLSQD updater missing from source code, will attempt to get it...")
-    execute_process(COMMAND git submodule update --init 3rdparty/dblsqd
-      TIMEOUT 30
-      WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
-      OUTPUT_VARIABLE output_text
-      ERROR_VARIABLE error_text)
-    if(output_text OR error_text)
-      message(STATUS ${output_text} ${error_text})
-    endif()
-  endif()
+  git_submodule_init(
+    CHECK_FILE "3rdparty/dblsqd/CMakeLists.txt"
+    SUBMODULE_PATH "3rdparty/dblsqd"
+    READABLE_NAME "DBLSQD updater"
+ )
 endif()
 
 if(APPLE)
   if(USE_UPDATER)
-    if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/sparkle-glue/CMakeLists.txt")
-      message(STATUS "git submodule for optional but wanted Sparkle glue for updater missing from source code, will attempt to get it...")
-      execute_process(COMMAND git submodule update --init 3rdparty/sparkle-glue
-        TIMEOUT 30
-        WORKING_DIRECTORY ${CMAKE_HOME_DIRECTORY}
-        OUTPUT_VARIABLE output_text
-        ERROR_VARIABLE error_text)
-      if(output_text OR error_text)
-        message(STATUS ${output_text} ${error_text})
-      endif()
-    endif()
+    git_submodule_init(
+      CHECK_FILE "3rdparty/sparkle-glue/CMakeLists.txt"
+      SUBMODULE_PATH "3rdparty/sparkle-glue"
+      READABLE_NAME "Sparkle glue for updater"
+    )
 
     if(NOT EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
       message(STATUS "Sparkle CocoaPod is missing, running 'pod install' to get it...")
@@ -219,46 +154,6 @@ if(APPLE)
     endif()
   endif()
 endif()
-
-file(GLOB_RECURSE lua_files RELATIVE "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/lua/" "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/lua/*.lua")
-list(LENGTH lua_files lua_file_count)
-if(lua_file_count EQUAL 28)
-  message(STATUS "Found Mudlet & Geyser lua files")
-else()
-  message(WARNING "Found ${lua_file_count} Mudlet & Geyser lua files but 28 were expected:")
-  foreach(lua_file ${lua_files})
-    message(STATUS "    ${lua_file}")
-  endforeach(lua_file)
-endif()
-
-file(GLOB_RECURSE lua_test_files RELATIVE "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/tests/" "${CMAKE_HOME_DIRECTORY}/src/mudlet-lua/tests/*.lua")
-list(LENGTH lua_test_files lua_test_file_count)
-if(lua_test_file_count EQUAL 5)
-  message(STATUS "Found Mudlet Lua test files")
-else()
-  message(WARNING "Found ${lua_test_file_count} Mudlet Lua test files but 5 were expected:")
-  foreach(lua_test_file ${lua_test_files})
-    message(STATUS "    ${lua_test_file}")
-  endforeach()
-endif()
-
-if(EXISTS "${CMAKE_HOME_DIRECTORY}/3rdparty/lcf/lcf-scm-1.rockspec")
-  file(GLOB_RECURSE lcf_files RELATIVE "${CMAKE_HOME_DIRECTORY}/3rdparty/" "${CMAKE_HOME_DIRECTORY}/3rdparty/lcf/*")
-  list(REMOVE_ITEM lcf_files "lcf/.git")
-  list(LENGTH lcf_files lcf_file_count)
-  if(lcf_file_count EQUAL 275)
-    message(STATUS "Found Lua Code Formatter files")
-  else()
-    message(WARNING "Found ${lcf_file_count} Lua Code Formatter files but 275 were expected:")
-    foreach(lcf_file ${lcf_files})
-      message(STATUS "    ${lcf_file}")
-    endforeach(lcf_file)
-  endif()
-elseif()
-  message(FATAL_ERROR "Cannot locate lua code formatter submodule source code, build abandoned!")
-endif()
-
-
 
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)

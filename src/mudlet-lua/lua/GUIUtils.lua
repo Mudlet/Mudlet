@@ -829,7 +829,7 @@ function showColors(...)
       if calc_luminosity(v[1],v[2],v[3]) > 0.5 then
         fgc = "black"
       end
-      cechoLink(string.format('<%s:%s> %-23s<reset> ',fgc,k.name,k.name), [[printCmdLine("]] .. k.name .. [[")]], table.concat(v, ", "), true)
+      cechoLink(string.format('<%s:%s> %-23s<reset> ',fgc,k.name,k.name), [[appendCmdLine("]] .. k.name .. [[")]], table.concat(v, ", "), true)
       if i == cols then
         echo("\n")
         i = 1
