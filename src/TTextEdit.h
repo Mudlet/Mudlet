@@ -74,9 +74,8 @@ public:
     void mouseMoveEvent(QMouseEvent*) override;
     void showEvent(QShowEvent* event) override;
     void updateScreenView();
-    void highlight();
+    void highlightSelection();
     void unHighlight();
-    void swap(QPoint& p1, QPoint& p2);
     void focusInEvent(QFocusEvent* event) override;
     int imageTopLine();
     int bufferScrollUp(int lines);
@@ -133,6 +132,8 @@ private:
     int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool *isOverTimeStamp = nullptr) const;
     int getGraphemeWidth(uint unicode) const;
     void normaliseSelection();
+    void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex);
+    void raiseMousePressEvent(QMouseEvent* event);
 
     int mFontHeight;
     int mFontWidth;
@@ -147,9 +148,12 @@ private:
     int mLastRenderBottom;
     bool mMouseTracking;
     bool mCtrlSelecting {};
-    int mDragStartY {};
+    int mCtrlDragStartY {};
+    QPoint mDragStart, mDragSelectionEnd;
     int mOldScrollPos;
+    // top-left point of the selection
     QPoint mPA;
+    // bottom-right point of the selection
     QPoint mPB;
     TBuffer* mpBuffer;
     TConsole* mpConsole;

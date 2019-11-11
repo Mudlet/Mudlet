@@ -1120,7 +1120,7 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
             }
         }
 
-        int length = s.size();
+        int length = QString::fromStdString(s).size();
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::white), QColor(Qt::red)) << "selectCaptureGroup(" << begin << ", " << length << ")\n" >> 0;
         }
@@ -1709,26 +1709,79 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    std::string text;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L,
                         "feedTriggers: bad argument #1 type (imitation MUD server text as string\n"
                         "expected, got %s!)",
                         luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        text = lua_tostring(L, 1);
     }
 
-    QString previousEncoding = host.mTelnet.getEncoding();
-    if (previousEncoding.isEmpty()) {
-        previousEncoding = QStringLiteral("ASCII");
+    bool dataIsUtf8Encoded = true;
+    if (lua_gettop(L) > 1) {
+        if (!lua_isboolean(L, 2)) {
+            lua_pushfstring(L,
+                            "feedTriggers: bad argument #2 type (Utf8Encoded as boolean is optional, got %s!)",
+                            luaL_typename(L, 2));
+            return lua_error(L);
+        }
+        dataIsUtf8Encoded = lua_toboolean(L, 2);
     }
-    // ensure encoding is utf-8 because that is what the Lua subsystem works with
-    host.mTelnet.setEncoding(QStringLiteral("UTF-8"), false);
-    host.mpConsole->printOnDisplay(text);
-    host.mTelnet.setEncoding(previousEncoding);
-    return 0;
+    QByteArray data{lua_tostring(L, 1)};
+
+    QString currentEncoding = host.mTelnet.getEncoding();
+    if (dataIsUtf8Encoded) {
+        // We can convert the data from a QByteArray to a QString:
+        if (currentEncoding == QStringLiteral("UTF-8")) {
+            // Simple case: the encoding is already what we are using:
+            std::string dataStdString{data.toStdString()};
+            host.mpConsole->printOnDisplay(dataStdString);
+            lua_pushboolean(L, true);
+            return 1;
+        }
+        auto dataQString = QString::fromUtf8(data);
+        // else
+            // We need to transcode it from UTF-8 into the current Game Server
+            // encoding - this can fail if it includes any characters (as UTF-8)
+            // that the game encoding cannot convey:
+        auto* pDataCodec = QTextCodec::codecForName(currentEncoding.toLatin1().constData());
+        auto* pDataEncoder = pDataCodec->makeEncoder(QTextCodec::IgnoreHeader);
+        if (!(currentEncoding.isEmpty() || currentEncoding == QStringLiteral("ASCII"))) {
+            if (! pDataCodec->canEncode(dataQString)) {
+                lua_pushnil(L);
+                lua_pushfstring(L, "cannot send \"%s\" as it contains one or more characters that cannot be conveyed in the current game server encoding of \"%s\"", data.constData(), currentEncoding.toLatin1().constData());
+                return 2;
+            }
+
+            std::string encodedText{pDataEncoder->fromUnicode(dataQString).toStdString()};
+            host.mpConsole->printOnDisplay(encodedText);
+            lua_pushboolean(L, true);
+            return 1;
+        }
+
+        // else plain, raw ASCII, we hope!
+        for (int i = 0, total = dataQString.size(); i < total; ++i) {
+            if (dataQString.at(i).row() || dataQString.at(i).cell() > 127) {
+                lua_pushnil(L);
+                lua_pushfstring(L, "cannot send \"%s\" as it contains one or more characters that cannot be conveyed in the current game server encoding of \"ASCII\"", data.constData());
+                return 2;
+            }
+        }
+
+        // It is safe to use the data directly now as we have already proved it
+        // to be plain ASCII
+        std::string dataStdString{dataQString.toStdString()};
+        host.mpConsole->printOnDisplay(dataStdString);
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    // else the user is assumed to have coded it themselves into the Game
+    // Server's current encoding - the backwards "compatible" form:
+    std::string dataStdString{data.toStdString()};
+    host.mpConsole->printOnDisplay(dataStdString);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isPrompt
@@ -4255,47 +4308,6 @@ int TLuaInterpreter::showUserWindow(lua_State* L)
     return 1;
 }
 
-// xRot, yRot, zRot, zoom
-// Documentation: ? - public function missing documentation in wiki
-int TLuaInterpreter::setMapperView(lua_State* L)
-{
-    float x, y, z, zoom;
-
-    if (!lua_isnumber(L, 1)) {
-        lua_pushstring(L, "setMapperView: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        x = lua_tonumber(L, 1);
-    }
-
-    if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "setMapperView: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        y = lua_tonumber(L, 2);
-    }
-    if (!lua_isnumber(L, 3)) {
-        lua_pushstring(L, "setMapperView: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        z = lua_tonumber(L, 3);
-    }
-    if (!lua_isnumber(L, 4)) {
-        lua_pushstring(L, "setMapperView: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        zoom = lua_tonumber(L, 4);
-    }
-    Host& host = getHostFromLua(L);
-
-    host.mpMap->setView(x, y, z, zoom);
-    return 0;
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomEnv
 int TLuaInterpreter::setRoomEnv(lua_State* L)
 {
@@ -4550,12 +4562,6 @@ int TLuaInterpreter::getRoomHashByID(lua_State* L)
     lua_pushnil(L);
     lua_pushfstring(L, "no hash for room %d", id);
     return 2;
-}
-
-// Documentation: ? - public function missing documentation in wiki
-int TLuaInterpreter::solveRoomCollisions(lua_State* L)
-{
-    return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#roomLocked
@@ -4945,6 +4951,9 @@ int TLuaInterpreter::searchRoom(lua_State* L)
         lua_newtable(L);
         QList<int> roomIdsFound;
         for (auto pR : roomList) {
+            if (!pR) {
+                continue;
+            }
             if (exactMatch) {
                 if (pR->name.compare(room, caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive) == 0) {
                     roomIdsFound.append(pR->getId());
@@ -4958,10 +4967,6 @@ int TLuaInterpreter::searchRoom(lua_State* L)
         if (!roomIdsFound.isEmpty()) {
             for (int i : roomIdsFound) {
                 TRoom* pR = host.mpMap->mpRoomDB->getRoom(i);
-                if (!pR) {
-                    continue;
-                }
-
                 QString name = pR->name;
                 int roomID = pR->getId();
                 lua_pushnumber(L, roomID);
@@ -13935,6 +13940,8 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
 
 // No documentation available in wiki - internal function
 // src is in Mud Server encoding and may need transcoding
+// Includes MSDP code originally from recv_sb_msdp(...) in TinTin++'s telopt.c,
+// https://tintin.sourceforge.io:
 void TLuaInterpreter::msdp2Lua(const char* src)
 {
     Host& host = getHostFromLua(pGlobalLua);
@@ -15281,7 +15288,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setRoomWeight", TLuaInterpreter::setRoomWeight);
     lua_register(pGlobalLua, "getRoomWeight", TLuaInterpreter::getRoomWeight);
     lua_register(pGlobalLua, "gotoRoom", TLuaInterpreter::gotoRoom);
-    lua_register(pGlobalLua, "setMapperView", TLuaInterpreter::setMapperView);
     lua_register(pGlobalLua, "getRoomExits", TLuaInterpreter::getRoomExits);
     lua_register(pGlobalLua, "lockRoom", TLuaInterpreter::lockRoom);
     lua_register(pGlobalLua, "createMapper", TLuaInterpreter::createMapper);
@@ -15317,7 +15323,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getRoomName", TLuaInterpreter::getRoomName);
     lua_register(pGlobalLua, "setGridMode", TLuaInterpreter::setGridMode);
     lua_register(pGlobalLua, "getGridMode", TLuaInterpreter::getGridMode);
-    lua_register(pGlobalLua, "solveRoomCollisions", TLuaInterpreter::solveRoomCollisions);
     lua_register(pGlobalLua, "addSpecialExit", TLuaInterpreter::addSpecialExit);
     lua_register(pGlobalLua, "removeSpecialExit", TLuaInterpreter::removeSpecialExit);
     lua_register(pGlobalLua, "getSpecialExits", TLuaInterpreter::getSpecialExits);
@@ -16725,4 +16730,247 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
     }
 
     return 1;
+}
+
+// Internal function - helper for updateColorTable().
+void TLuaInterpreter::insertColorTableEntry(lua_State* L, const QColor& color, const QString& name)
+{
+    // Equivalent (when called from updateColorTable()) to Lua (where the
+    // '<8-bit unsigned int, i.e. 0 to 255>'s are provided from the QColor):
+    // color_table["name"] = { <color.red()>, <color.green()>, <color.blue()> }
+
+    // Creates a new empty table on the stack with space preallocated for 3
+    // array elements and 0 non-array elements:
+    lua_createtable(L, 3, 0);
+
+    lua_pushnumber(L, color.red());
+    lua_rawseti(L, -2, 1);
+
+    lua_pushnumber(L, color.green());
+    lua_rawseti(L, -2, 2);
+
+    lua_pushnumber(L, color.blue());
+    lua_rawseti(L, -2, 3);
+
+    lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
+    lua_insert(L, -2);
+
+    lua_pushstring(L, name.toLatin1().constData());
+    lua_insert(L, -2);
+    lua_settable(L, -3);
+    lua_pop(L, 1);
+}
+
+// Internal function - copies current profile's 16 ANSI colors into the Lua "color_table"
+void TLuaInterpreter::updateAnsi16ColorsInTable()
+{
+    lua_State* L = pGlobalLua;
+    if (!L) {
+        return;
+    }
+
+    // Does the color_table already exist:
+    // Equivalent to Lua:
+    // color_table = color_table or {}
+    lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
+    if (!(lua_toboolean(L,-1))) {
+        // no it doesn't
+        lua_pop(L,1);
+        // So make it
+        lua_newtable(L);
+    }
+
+    // Okay so now we point ourselves at the wanted table:
+    lua_setfield(L, LUA_GLOBALSINDEX, "color_table");
+
+    // Now we can add/update the items we need to, though it is a bit repetative:
+    QColor color = mpHost->mBlack;
+    insertColorTableEntry(L, color, QStringLiteral("ansi_000"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_black"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiBlack"));
+
+    color = mpHost->mRed;
+    insertColorTableEntry(L, color, QStringLiteral("ansi_001"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_red"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiRed"));
+
+    color = mpHost->mGreen;
+    insertColorTableEntry(L, color, QStringLiteral("ansi_002"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_green"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiGreen"));
+
+    color = mpHost->mYellow;
+    insertColorTableEntry(L, color, QStringLiteral("ansi_003"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_yellow"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiYellow"));
+
+    color = mpHost->mBlue;
+    insertColorTableEntry(L, color, QStringLiteral("ansi_004"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_blue"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiBlue"));
+
+    color = mpHost->mMagenta;
+    insertColorTableEntry(L, color, QStringLiteral("ansi_005"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_magenta"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiMagenta"));
+
+    color = mpHost->mCyan;
+    insertColorTableEntry(L, color, QStringLiteral("ansi_006"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_cyan"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiCyan"));
+
+    color = mpHost->mWhite;
+    insertColorTableEntry(L, color, QStringLiteral("ansi_007"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_white"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiWhite"));
+
+    color = mpHost->mLightBlack;
+    insertColorTableEntry(L, color, QStringLiteral("ansi_008"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_light_black"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiLightBlack"));
+
+    color = mpHost->mLightRed;
+    insertColorTableEntry(L, color, QStringLiteral("ansi_009"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_light_red"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiLightRed"));
+
+    color = mpHost->mLightGreen;
+    insertColorTableEntry(L, color, QStringLiteral("ansi_010"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_light_green"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiLightGreen"));
+
+    color = mpHost->mLightYellow;
+    insertColorTableEntry(L, color, QStringLiteral("ansi_011"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_light_yellow"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiLightYellow"));
+
+    color = mpHost->mLightBlue;
+    insertColorTableEntry(L, color, QStringLiteral("ansi_012"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_light_blue"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiLightBlue"));
+
+    color = mpHost->mLightMagenta;
+    insertColorTableEntry(L, color, QStringLiteral("ansi_013"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_light_magenta"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiLightMagenta"));
+
+    color = mpHost->mLightCyan;
+    insertColorTableEntry(L, color, QStringLiteral("ansi_014"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_light_cyan"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiLightCyan"));
+
+    color = mpHost->mLightWhite;
+    insertColorTableEntry(L, color, QStringLiteral("ansi_015"));
+    insertColorTableEntry(L, color, QStringLiteral("ansi_light_white"));
+    insertColorTableEntry(L, color, QStringLiteral("ansiLightWhite"));
+}
+
+// Internal function - copies current profile's extended ANSI colors into the
+// Lua "color_table" - it might be feasible to do this entirely within an
+// external lua file ("GUIUtils.lua2) as we do not provide a means to vary
+// the ANSI colours 17 to 255 that this handles...
+void TLuaInterpreter::updateExtendedAnsiColorsInTable()
+{
+    lua_State* L = pGlobalLua;
+    if (!L) {
+        return;
+    }
+
+    // Does the color_table already exist:
+    // Equivalent to Lua:
+    // color_table = color_table or {}
+    lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
+    if (!(lua_toboolean(L,-1))) {
+        // no it doesn't
+        lua_pop(L,1);
+        // So make it
+        lua_newtable(L);
+    }
+
+    // Okay so now we point ourselves at the wanted table:
+    lua_setfield(L, LUA_GLOBALSINDEX, "color_table");
+
+    // And insert the 6x6x6 RGB colours
+    for (int i = 0; i < 216; ++i) {
+        int r = i / 36;
+        int g = (i - (r * 36)) / 6;
+        int b = (i - (r * 36)) - (g * 6);
+
+        lua_createtable(L, 3, 0);
+
+        lua_pushnumber(L, 51 * r);
+        lua_rawseti(L, -2, 1);
+
+        lua_pushnumber(L, 51 * g);
+        lua_rawseti(L, -2, 2);
+
+        lua_pushnumber(L, 51 * b);
+        lua_rawseti(L, -2, 3);
+
+        lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
+        lua_insert(L, -2);
+
+        QString name = QStringLiteral("ansi_%1").arg(i + 16, 3, 10, QLatin1Char('0'));
+        lua_pushstring(L, name.toLatin1().constData());
+        lua_insert(L, -2);
+        lua_settable(L, -3);
+        lua_pop(L, 1);
+    }
+
+    // And insert the 24 Greyscale colours
+    for (int i = 232; i < 256; ++i) {
+        lua_createtable(L, 3, 0);
+
+        int value = 128;
+        // Divide the range 0 to 255 into 23 + 1 values to give a 24 value
+        // greyscale - this is lifted from TBuffer::decodeSGR{3|4}8() - and
+        // we really ought to refactor things so we only have this in one common
+        // place:
+        switch (i) {
+            case 232:   value =   0; break; //   0.000
+            case 233:   value =  11; break; //  11.087
+            case 234:   value =  22; break; //  22.174
+            case 235:   value =  33; break; //  33.261
+            case 236:   value =  44; break; //  44.348
+            case 237:   value =  55; break; //  55.435
+            case 238:   value =  67; break; //  66.522
+            case 239:   value =  78; break; //  77.609
+            case 240:   value =  89; break; //  88.696
+            case 241:   value = 100; break; //  99.783
+            case 242:   value = 111; break; // 110.870
+            case 243:   value = 122; break; // 121.957
+            case 244:   value = 133; break; // 133.043
+            case 245:   value = 144; break; // 144.130
+            case 246:   value = 155; break; // 155.217
+            case 247:   value = 166; break; // 166.304
+            case 248:   value = 177; break; // 177.391
+            case 249:   value = 188; break; // 188.478
+            case 250:   value = 200; break; // 199.565
+            case 251:   value = 211; break; // 210.652
+            case 252:   value = 222; break; // 221.739
+            case 253:   value = 233; break; // 232.826
+            case 254:   value = 244; break; // 243.913
+            case 255:   value = 255; break; // 255.000
+            default:
+            Q_UNREACHABLE(); // We should not have a case outside of the range 232 to 255
+        }
+
+        lua_pushnumber(L, value);
+        lua_rawseti(L, -2, 1);
+
+        lua_pushnumber(L, value);
+        lua_rawseti(L, -2, 2);
+
+        lua_pushnumber(L, value);
+        lua_rawseti(L, -2, 3);
+
+        lua_getfield(L, LUA_GLOBALSINDEX, "color_table");
+        lua_insert(L, -2);
+
+        QString name = QStringLiteral("ansi_%1").arg(i, 3, 10, QLatin1Char('0'));
+        lua_pushstring(L, name.toLatin1().constData());
+        lua_insert(L, -2);
+        lua_settable(L, -3);
+        lua_pop(L, 1);
+    }
 }

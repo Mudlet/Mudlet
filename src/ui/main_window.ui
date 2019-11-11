@@ -87,7 +87,7 @@
      <x>0</x>
      <y>0</y>
      <width>750</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEditor">
@@ -127,6 +127,7 @@
     </property>
     <addaction name="dactionAbout"/>
     <addaction name="dactionUpdate"/>
+    <addaction name="dactionReportIssue"/>
    </widget>
    <widget class="QMenu" name="menuGames">
     <property name="title">
@@ -303,6 +304,17 @@
   <action name="dactionDiscord">
    <property name="text">
     <string>Discord help channel</string>
+   </property>
+  </action>
+  <action name="dactionReportIssue">
+   <property name="text">
+    <string>Report an issue</string>
+   </property>
+   <property name="iconText">
+    <string>Report an issue</string>
+   </property>
+   <property name="toolTip">
+    <string>Report an issue about the public test build</string>
    </property>
   </action>
  </widget>

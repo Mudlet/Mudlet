@@ -109,6 +109,8 @@ public:
     bool callEventHandler(const QString& function, const TEvent& pE, const QEvent* qE = nullptr);
     static QString dirToString(lua_State*, int);
     static int dirToNumber(lua_State*, int);
+    void updateAnsi16ColorsInTable();
+    void updateExtendedAnsiColorsInTable();
 
 
     QPair<int, QString> startTempTimer(double timeout, const QString& function, const bool repeating = false);
@@ -202,7 +204,6 @@ public:
     static int appendCmdLine(lua_State*);
     static int getCmdLine(lua_State* L);
     static int clearSpecialExits(lua_State*);
-    static int solveRoomCollisions(lua_State*);
     static int setGridMode(lua_State* L);
     static int getGridMode(lua_State* L);
     static int getCustomEnvColorTable(lua_State* L);
@@ -295,7 +296,6 @@ public:
     static int setRoomWeight(lua_State* L);
     static int getRoomWeight(lua_State* L);
     static int gotoRoom(lua_State* L);
-    static int setMapperView(lua_State* L);
     static int permKey(lua_State* L);
     static int tempKey(lua_State* L);
     static int enableKey(lua_State* L);
@@ -540,6 +540,7 @@ private:
     void loadUtf8Filenames();
 
 #endif
+    void insertColorTableEntry(lua_State*, const QColor&, const QString&);
 
     QNetworkAccessManager* mpFileDownloader;
     std::list<std::string> mCaptureGroupList;

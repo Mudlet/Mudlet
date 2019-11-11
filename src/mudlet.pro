@@ -82,7 +82,7 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
 msvc:QMAKE_CXXFLAGS += -MP
 
 # Mac specific flags.
-macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.12
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
 
 QT += network uitools multimedia gui concurrent
 qtHaveModule(gamepad) {
@@ -99,7 +99,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.1.2
+VERSION = 4.3.0
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -107,8 +107,10 @@ VERSION = 4.1.2
 # the qmake BUILD variable is NOT built-in
 BUILD = $$(MUDLET_VERSION_BUILD)
 isEmpty( BUILD ) {
-# Leave the value of the following empty for a release build
-# i.e. the line should be "BUILD =" without quotes
+# Possible values are:
+# "-dev" for the development build
+# "-public-test-build" for the public test build
+# "" for the release build
    BUILD = "-dev"
 }
 
