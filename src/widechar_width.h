@@ -1,5 +1,5 @@
 /**
- * widechar_width.h, generated on 2019-05-13.
+ * widechar_width.h, generated on 2019-10-30.
  * See https://github.com/ridiculousfish/widecharwidth/
  *
  * SHA1 file hashes:
@@ -508,12 +508,12 @@ static const struct widechar_range widechar_widened_table[] = {
 template<typename Collection>
 bool widechar_in_table(const Collection &arr, int32_t c) {
     auto where = std::lower_bound(std::begin(arr), std::end(arr), c,
-        [](widechar_range p, wchar_t c) { return p.hi < c; });
+        [](widechar_range p, int32_t c) { return p.hi < c; });
     return where != std::end(arr) && where->lo <= c;
 }
 
 /* Return the width of character c, or a special negative value. */
-int widechar_wcwidth(wchar_t c) {
+int widechar_wcwidth(int32_t c) {
     if (widechar_in_table(widechar_ascii_table, c))
         return 1;
     if (widechar_in_table(widechar_private_table, c))
