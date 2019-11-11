@@ -1548,6 +1548,9 @@ QString TTextEdit::getSelectedText(char newlineChar)
 
     QString text;
 
+    if(!mpBuffer->buffer[0].size()) {
+        return text;
+    }
     // for each selected line
     bool isSingleLine = (mPA.y() == mPB.y());
     // CHECKME: the <= together with the +1 in the test looks suspecious:
