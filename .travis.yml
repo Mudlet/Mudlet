@@ -1,12 +1,13 @@
 language: cpp
+version: ~> 1.0
 if: branch = development OR branch =~ ^release OR tag IS present
 cache:
   timeout: 600
   ccache: true
   directories:
     - $HOME/Library/Caches/Homebrew
+os: linux # this gets overwritten in the jobs definition below.
 dist: xenial
-sudo: false
 addons:
   apt:
     sources: &add-sources
@@ -48,7 +49,7 @@ env:
   - secure: YB0wWZIslcOqCZBzP6KSjRwOhmji0LbyYPhNZ55MXv/SqUhYNxKRJUTuUokY5CNOSlHT4qKtam+pV7ydSUqWqCQvgTq6Gc57Qn9eDwYBwa/3As65AtDnfNSTrhKDOE4Ml3RkALlKiRIN3w8zpyuBnsovNWaTm1LdduyING3en4A=
 git:
   submodules: false # We selectively pull in the wanted submodules ourselves now
-matrix:
+jobs:
   include:
   - os: osx
     osx_image: xcode10.1
@@ -158,4 +159,4 @@ notifications:
       - https://webhooks.gitter.im/e/4ed233d9013d611a1568
     on_success: always  # options: [always|never|change] default: always
     on_failure: always  # options: [always|never|change] default: always
-    on_start: false     # default: false
+    on_start: never     # default: never
