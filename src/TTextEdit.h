@@ -133,7 +133,6 @@ private:
     int getGraphemeWidth(uint unicode) const;
     void normaliseSelection();
     void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex);
-    void handleCtrlSelection(int lineIndex);
     void raiseMousePressEvent(QMouseEvent* event);
 
     int mFontHeight;
@@ -150,7 +149,7 @@ private:
     bool mMouseTracking;
     bool mCtrlSelecting {};
     int mCtrlDragStartY {};
-    QPoint mDragStart;
+    QPoint mDragStart, mDragSelectionEnd;
     int mOldScrollPos;
     // top-left point of the selection
     QPoint mPA;

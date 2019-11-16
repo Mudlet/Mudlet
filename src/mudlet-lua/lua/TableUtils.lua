@@ -14,7 +14,7 @@
 ---   end
 ---   </pre>
 function table.is_empty(tbl)
-  assert(type(tbl) == "table", string.format("bad argument #1 type (table expected, got %s!)", type(currentValue)))
+  assert(type(tbl) == "table", string.format("table.is_empty: bad argument #1 type (table expected, got %s!)", type(currentValue)))
   return next(tbl) == nil
 end
 
