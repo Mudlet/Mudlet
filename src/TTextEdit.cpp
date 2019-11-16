@@ -1566,8 +1566,12 @@ QString TTextEdit::getSelectedText(char newlineChar)
         // if the selection started on this line
         if (y == mPA.y()) {
             // start from the column where the selection started
-            if (!mpBuffer->buffer.at(y).at(0).isSelected()) {
-                x = mPA.x();
+            if (mpBuffer->buffer.size() <= y) { //Check if the index will be in range first
+                if (mpBuffer->buffer.at(y).size() >= 0) { //Check if the index will be in range first
+                    if (!mpBuffer->buffer.at(y).at(0).isSelected()) {
+                        x = mPA.x();
+                    }
+                }
             }
             if (!isSingleLine) {
                 // insert the number of spaces to push the first line to the right
@@ -1577,20 +1581,22 @@ QString TTextEdit::getSelectedText(char newlineChar)
             }
         }
         // while we are not at the end of the buffer line
-        while (x < static_cast<int>(mpBuffer->buffer[y].size())) {
-            if (mpBuffer->buffer.at(y).at(x).isSelected()) {
-                text.append(mpBuffer->lineBuffer[y].at(x));
-            }
-            // if the selection ended on this line
-            if (y >= mPB.y()) {
-                // stop if the selection ended on this column or the buffer line is ending
-                if (x >= static_cast<int>(mpBuffer->buffer[y].size() - 1)) {
-                    mSelectedRegion = QRegion(0, 0, 0, 0);
-                    forceUpdate();
-                    return text;
+        if (mpBuffer->buffer.size() <= y) { //Check if the index will be in range first
+            while (x < static_cast<int>(mpBuffer->buffer[y].size())) {
+                if (mpBuffer->buffer.at(y).at(x).isSelected()) {
+                    text.append(mpBuffer->lineBuffer[y].at(x));
                 }
+                // if the selection ended on this line
+                if (y >= mPB.y()) {
+                    // stop if the selection ended on this column or the buffer line is ending
+                    if (x >= static_cast<int>(mpBuffer->buffer[y].size() - 1)) {
+                        mSelectedRegion = QRegion(0, 0, 0, 0);
+                        forceUpdate();
+                        return text;
+                    }
+                }
+                x++;
             }
-            x++;
         }
         // we never append the last character of a buffer line se we set our own
         text.append(newlineChar);
