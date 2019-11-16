@@ -28,6 +28,8 @@
 #include <QDir>
 #include "post_guard.h"
 
+using namespace std::chrono;
+
 dlgNotepad::dlgNotepad(Host* pH)
 : mpHost(pH)
 {
@@ -36,6 +38,10 @@ dlgNotepad::dlgNotepad(Host* pH)
     if (mpHost) {
         restore();
     }
+
+    connect(notesEdit, &QPlainTextEdit::textChanged, this, &dlgNotepad::slot_text_written);
+
+    startTimer(2min);
 }
 
 dlgNotepad::~dlgNotepad()
@@ -62,6 +68,8 @@ void dlgNotepad::save()
     fileStream.setDevice(&file);
     fileStream << notesEdit->toPlainText();
     file.close();
+
+    mNeedToSave = false;
 }
 
 void dlgNotepad::restore()
@@ -73,6 +81,24 @@ void dlgNotepad::restore()
     QTextStream fileStream;
     fileStream.setDevice(&file);
     QString txt = fileStream.readAll();
+    notesEdit->blockSignals(true);
     notesEdit->setPlainText(txt);
+    notesEdit->blockSignals(false);
     file.close();
+}
+
+void dlgNotepad::slot_text_written()
+{
+    mNeedToSave = true;
+}
+
+void dlgNotepad::timerEvent(QTimerEvent* event)
+{
+    Q_UNUSED(event);
+
+    if (!mNeedToSave) {
+        return;
+    }
+
+    save();
 }
