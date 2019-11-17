@@ -6,7 +6,7 @@
     <message>
       <location filename="../src/discord.cpp" line="132"/>
       <source>via Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>via Mudlet</translation>
     </message>
   </context>
   <context>
@@ -14,17 +14,17 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="273"/>
       <source>Too many redirects.</source>
-      <translation type="unfinished"/>
+      <translation>Muitos redirecionamentos.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="282"/>
       <source>No data received from server</source>
-      <translation type="unfinished"/>
+      <translation>Nenhum dado recebido do servidor</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="293"/>
       <source>Could not verify download integrity.</source>
-      <translation type="unfinished"/>
+      <translation>Não foi possível verificar a integridade do download.</translation>
     </message>
   </context>
   <context>
@@ -34,31 +34,35 @@
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Desempacotando o modulo:
+&quot;%1&quot;
+Por favor aguarde...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1391"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Desempacotando pacote:
+&quot;%1&quot;
+Por favor aguarde...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1395"/>
       <source>Unpacking</source>
-      <translation type="unfinished"/>
+      <translation>Desempacotando</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2002"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>Jogando %1</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2004"/>
       <location filename="../src/Host.cpp" line="2010"/>
       <source>%1 at %2:%3</source>
       <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
-      <translation type="unfinished"/>
+      <translation>%1 de %2:%3</translation>
     </message>
   </context>
   <context>
@@ -71,22 +75,22 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="143"/>
       <source>! %1 is away (%2)</source>
-      <translation type="unfinished"/>
+      <translation>! %1 está ausente (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="144"/>
       <source>! %1 is back</source>
-      <translation type="unfinished"/>
+      <translation>! %1 está de volta</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="150"/>
       <source>! invited %1 to %2</source>
-      <translation type="unfinished"/>
+      <translation>! convidado %1 para %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="152"/>
       <source>! %2 invited to %3</source>
-      <translation type="unfinished"/>
+      <translation>! %2 convidado para %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="158"/>
