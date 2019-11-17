@@ -1006,7 +1006,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3014"/>
       <source>Delete line</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Apagar linha</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3015"/>
@@ -1025,13 +1025,13 @@ the highlighted room (%1) to:</source>
       <location filename="../src/T2DMap.cpp" line="3505"/>
       <source>OK</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3510"/>
       <source>Cancel</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation type="unfinished"/>
+      <translation>Cancelar</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3599"/>
