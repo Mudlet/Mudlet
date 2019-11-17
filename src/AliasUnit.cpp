@@ -138,6 +138,16 @@ void AliasUnit::removeAliasRootNode(TAlias* pT)
     mAliasRootNodeList.remove(pT);
 }
 
+void AliasUnit::removeAllTempAliases()
+{
+    for (auto alias : mAliasRootNodeList) {
+        if (alias->isTemporary()) {
+            alias->setIsActive(false);
+            markCleanup(alias);
+        }
+    }
+}
+
 TAlias* AliasUnit::getAlias(int id)
 {
     QMutexLocker locker(&mAliasUnitLock);
