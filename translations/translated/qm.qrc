@@ -13,5 +13,6 @@
         <file>mudlet_en_US.qm</file>
         <file>mudlet_el_GR.qm</file>
         <file>mudlet_pt_PT.qm</file>
+        <file>mudlet_pt_BR.qm</file>
     </qresource>
 </RCC>
