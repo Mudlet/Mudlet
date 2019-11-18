@@ -4881,7 +4881,7 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="224"/>
       <source>The original author of our Windows installer.</source>
       <comment>about:Leigh Stillard</comment>
-      <translation type="unfinished"/>
+      <translation>Оригинальный автор нашего инсталлятора для Windows.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="227"/>
@@ -10223,7 +10223,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="279"/>
       <source>&lt;p&gt;Enables MSSP - provides Mud Server Status Protocol information upon connection for supported games&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Включает MSSP - предоставляет информацию о статусе сервера при подключении для поддерживаемых игр&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="282"/>
