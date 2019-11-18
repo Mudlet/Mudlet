@@ -387,6 +387,7 @@ void Host::reloadModule(const QString& reloadModuleName)
 
 void Host::resetProfile_phase1()
 {
+    mAliasUnit.stopAllTriggers();
     mTriggerUnit.stopAllTriggers();
     mTimerUnit.stopAllTriggers();
     mKeyUnit.stopAllTriggers();
@@ -399,10 +400,12 @@ void Host::resetProfile_phase1()
 
 void Host::resetProfile_phase2()
 {
+    getAliasUnit()->removeAllTempAliases();
     getTimerUnit()->removeAllTempTimers();
     getTriggerUnit()->removeAllTempTriggers();
     getKeyUnit()->removeAllTempKeys();
 
+    mAliasUnit.doCleanup();
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
     mKeyUnit.doCleanup();
@@ -421,6 +424,7 @@ void Host::resetProfile_phase2()
     // All the Timers are NOT compiled here;
     mResetProfile = false;
 
+    mAliasUnit.reenableAllTriggers();
     mTimerUnit.reenableAllTriggers();
     mTriggerUnit.reenableAllTriggers();
     mKeyUnit.reenableAllTriggers();
