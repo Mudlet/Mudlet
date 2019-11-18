@@ -533,7 +533,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2382"/>
       <source>no text</source>
       <comment>Default text if a label is created in mapper with no text</comment>
-      <translation type="unfinished"/>
+      <translation>nenhum texto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="142"/>
@@ -580,92 +580,98 @@ it with a new symbol for this room:</source>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when ONE room is selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the selected Room.</comment>
-      <translation type="unfinished"/>
+      <translation>Sala%1ID:%1%2 Posição%1oN%1Mapa: (%3,%4,%5) ‑%1sala selecionada
+</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="2282"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected; %1 is the room number for which %2-%4 are the x,y and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Sala%1ID:%1%2 Posição%1 on %1 Mapa: (%3,%4,%5) ‑%1 sala selecionada
+</numerusform>
+        <numerusform>Sala% 1ID: %1%2 Posição %1on%1 Mapa: (%3,%4,%5) ‑%1 sala selecionada
+</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2308"/>
       <source>render time: %1S mO: (%2,%3,%4)</source>
       <comment>This is debug information that is not expected to be seen in release versions, %1 is a decimal time period and %2-%4 are the x,y and z coordinates at the center of the view (but y will be negative compared to previous room related ones as it represents the real coordinate system for this widget which has y increasing in a downward direction!)</comment>
-      <translation type="unfinished"/>
+      <translation>tempo de renderização: %1S mO: (%2,%3,%4)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2372"/>
       <source>Text label or image label?</source>
       <comment>2D Mapper create label dialog text</comment>
-      <translation type="unfinished"/>
+      <translation>Etiqueta de texto ou etiqueta de imagem?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2373"/>
       <source>Text Label</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Etiqueta de texto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2374"/>
       <source>Image Label</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Etiqueta de imagem</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2378"/>
       <source>Enter label text.</source>
       <comment>2D Mapper create label dialog title/text</comment>
-      <translation type="unfinished"/>
+      <translation>Entrar texto da etiqueta.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2385"/>
       <source>Background color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Cor de fundo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2386"/>
       <source>Foreground color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Cor do primeiro plano</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2390"/>
       <source>Select image</source>
       <comment>2D Mapper create label file dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Selecionar Imagem</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2397"/>
       <source>Draw label as background or on top of everything?</source>
       <comment>2D Mapper create label dialog text</comment>
-      <translation type="unfinished"/>
+      <translation>Desenhar etiqueta como fundo ou em cima de tudo?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2398"/>
       <source>Background</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Plano de Fundo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2399"/>
       <source>Foreground</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Primeiro Plano</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2643"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
-      <translation type="unfinished"/>
+      <translation>Arraste para selecionar múltiplos espaços ou etiquetas, solte para terminar...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2793"/>
       <source>Undo</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>Desfazer</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2794"/>
