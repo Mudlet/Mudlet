@@ -4771,7 +4771,7 @@ Utilizzi</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="177"/>
       <source>Contributions to the Travis integration, CMake and Visual C++ build, a lot of code quality and memory management improvements.</source>
       <comment>about:ahmedcharles</comment>
-      <translation type="unfinished"/>
+      <translation>Ha contribuito all'integrazione con Travis, CMake e il compilatore Visual C++, ha ottimizzato molte parti del codice e migliorato la gestione della memoria.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="181"/>
@@ -4831,7 +4831,7 @@ Utilizzi</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="214"/>
       <source>Contributed the Geyser layout manager for Mudlet in March 2010. It is written in Lua and aims at simplifying user GUI scripting.</source>
       <comment>about:James Younquist</comment>
-      <translation type="unfinished"/>
+      <translation>Ha contribuito al gestore di finestre Geyser per Mudlet nel marzo 2010. È scritto in Lua e serve a semplificare la creazione dell'interfaccia utente.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="218"/>
