@@ -505,7 +505,7 @@ Por favor aguarde...</translation>
 delete this to clear the symbol or replace
 it with a new symbol for this room:</source>
       <comment>This is for when applying a new room symbol to one room. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation>O símbolo é "% 1". na sala selecionada,
+      <translation>O símbolo é &quot;%1&quot; na sala selecionada,
 exclua-o para limpar o símbolo ou substituir
 com um novo símbolo para esta sala:</translation>
     </message>
@@ -513,23 +513,23 @@ com um novo símbolo para esta sala:</translation>
       <location filename="../src/T2DMap.cpp" line="3657"/>
       <source>%1 {count:%2}</source>
       <comment>Everything after the first parameter (the &apos;%1&apos;) will be removed by processing it as a QRegularExpression programmatically, ensure the translated text has ` {` immediately after the &apos;%1&apos;, and &apos;}&apos; as the very last character, so that the right portion can be extracted if the user clicks on this item when it is shown in the QComboBox it is put in.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 {contagem:%2}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3781"/>
       <source>Delete color</source>
       <comment>Deletes an environment colour</comment>
-      <translation type="unfinished"/>
+      <translation>Excluir cor</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3799"/>
       <source>Define new color</source>
-      <translation type="unfinished"/>
+      <translation>Definir nova cor</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4113"/>
       <source>%1 {count:%2}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {contagem:%2}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="858"/>
@@ -555,7 +555,7 @@ com um novo símbolo para esta sala:</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="144"/>
       <source>&lt;p&gt;Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Clique em uma linha para selecionar ou cancelar a seleção desse número da sala (com o nome dado se as salas forem nomeadas) para incluir ou remover a sala da seleção.  Clique no cabeçalho relevante para classificar por esse método.  Observe que a coluna do nome mostrará apenas se pelo menos um dos espaços tem um nome.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1045"/>
@@ -1142,12 +1142,12 @@ used is:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4111"/>
       <source>%1 {count:%2, default}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {contagem:%2, padrão}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4119"/>
       <source>1 {count 0, default}</source>
-      <translation type="unfinished"/>
+      <translation>! {contador 0, padrão}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4123"/>
@@ -1165,7 +1165,7 @@ rooms:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4172"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Carregar mapa do Mudlet</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4174"/>
