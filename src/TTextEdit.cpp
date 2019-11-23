@@ -1566,12 +1566,8 @@ QString TTextEdit::getSelectedText(char newlineChar)
         // if the selection started on this line
         if (y == mPA.y()) {
             // start from the column where the selection started
-            if (mpBuffer->buffer.size() > y) { //Check if the index will be in range first
-                if (mpBuffer->buffer.at(y).size() >= 0) { //Check if the index will be in range first
-                    if (!mpBuffer->buffer.at(y).at(0).isSelected()) {
-                        x = mPA.x();
-                    }
-                }
+            if (!mpBuffer->buffer.at(y).at(0).isSelected()) {
+                x = mPA.x();
             }
             if (!isSingleLine) {
                 // insert the number of spaces to push the first line to the right
@@ -1580,12 +1576,7 @@ QString TTextEdit::getSelectedText(char newlineChar)
                 text.append(QStringLiteral(" ").repeated(x));
             }
         }
-        // while we are not at the end of the buffer line
-        if (mpBuffer->buffer.size() <= y) { //Check if the index will be in range first
-            mSelectedRegion = QRegion(0, 0, 0, 0);
-            forceUpdate();
-            return text;
-        }
+
         while (x < static_cast<int>(mpBuffer->buffer[y].size())) {
             if (mpBuffer->buffer.at(y).at(x).isSelected()) {
                 text.append(mpBuffer->lineBuffer[y].at(x));
