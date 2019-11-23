@@ -1576,7 +1576,7 @@ QString TTextEdit::getSelectedText(char newlineChar)
                 text.append(QStringLiteral(" ").repeated(x));
             }
         }
-
+        // while we are not at the end of the buffer line
         while (x < static_cast<int>(mpBuffer->buffer[y].size())) {
             if (mpBuffer->buffer.at(y).at(x).isSelected()) {
                 text.append(mpBuffer->lineBuffer[y].at(x));
