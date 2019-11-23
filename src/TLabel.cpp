@@ -232,6 +232,7 @@ bool TLabel::forwardEventToMapper(QEvent* event)
         QWidget* qw = qApp->widgetAt(wheelEvent->globalPos());
 
         if (qw && parentWidget()->findChild<QWidget*>(QStringLiteral("mapper")) && parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw)) {
+#if (QT_VERSION >= QT_VERSION_CHECK(5,12, 0))
             // Have switched to the latest QWheelEvent as that handles both X
             // and Y wheels at the same time whereas previously we said the
             // event was a vertical one - even if it wasn't! Additionally we
@@ -246,6 +247,26 @@ bool TLabel::forwardEventToMapper(QEvent* event)
                                  wheelEvent->phase(),
                                  wheelEvent->inverted(),
                                  wheelEvent->source());
+#else
+            // Unfortunately it was only introduced in Qt 5.12 and Qt didn't
+            // document that initially... see
+            // https://bugreports.qt.io/browse/QTBUG-80088 !
+            // Anyhow QWheelEvent::delta() and QWheelEvent::orientation() are
+            // Qt4 relics and have been declared obsolete for new code, but we
+            // can still use them for older Qt versions:
+            QWheelEvent newEvent(qw->mapFromGlobal(wheelEvent->globalPos()),
+                                 wheelEvent->globalPos(),
+                                 wheelEvent->pixelDelta(),
+                                 wheelEvent->angleDelta(),
+                                 wheelEvent->delta(),
+                                 wheelEvent->orientation(),
+                                 wheelEvent->buttons(),
+                                 wheelEvent->modifiers(),
+                                 wheelEvent->phase(),
+                                 wheelEvent->source(),
+                                 wheelEvent->inverted());
+#endif
+
             qApp->sendEvent(qw, &newEvent);
             return true;
         }
