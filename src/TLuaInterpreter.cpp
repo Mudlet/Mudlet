@@ -2126,6 +2126,31 @@ int TLuaInterpreter::resetStopWatch(lua_State* L)
     return 1;
 }
 
+// No documentation available in wiki - internal helper
+// to get ID of stopwatch from either a (numeric) ID argument or a (string) name
+// - used to refactor the same code out of four separate stop-watch functions:
+std::tuple<bool, int> TLuaInterpreter::getWatchId(lua_State* L, Host& h)
+{
+    if (lua_type(L, 1) == LUA_TNUMBER) {
+        return std::make_tuple(true, static_cast<int>(lua_tointeger(L, 1)));
+    }
+
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
+    // Using an empty string will return the first unnamed stopwatch:
+    int watchId = h.findStopWatchId(name);
+    if (!watchId) {
+        lua_pushnil(L);
+        if (name.isEmpty()) {
+            lua_pushstring(L, "no unnamed stopwatches found");
+        } else {
+            lua_pushfstring(L, "stopwatch with name \"%s\" not found", name.toUtf8().constData());
+        }
+        return std::make_tuple(false, 0);
+    }
+
+    return std::make_tuple(true, watchId);
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#adjustStopWatch
 int TLuaInterpreter::adjustStopWatch(lua_State* L)
 {
@@ -2134,23 +2159,10 @@ int TLuaInterpreter::adjustStopWatch(lua_State* L)
         return lua_error(L);
     }
 
-    int watchId = 0;
     Host& host = getHostFromLua(L);
-    if (lua_type(L, 1) == LUA_TNUMBER) {
-        watchId = static_cast<int>(lua_tointeger(L, 1));
-    } else {
-        QString name = QString::fromUtf8(lua_tostring(L, 1));
-        // Using an empty string will return the first unnamed stopwatch:
-        watchId = host.findStopWatchId(name);
-        if (!watchId) {
-            lua_pushnil(L);
-            if (name.isEmpty()) {
-                lua_pushstring(L, "no unnamed stopwatches found");
-            } else {
-                lua_pushfstring(L, "stopwatch with name \"%s\" not found", name.toUtf8().constData());
-            }
-            return 2;
-        }
+    auto [success, watchId] = getWatchId(L, host);
+    if (!success) {
+        return 2;
     }
 
     if (!lua_isnumber(L, 2)) {
@@ -2179,23 +2191,10 @@ int TLuaInterpreter::deleteStopWatch(lua_State* L)
         return lua_error(L);
     }
 
-    int watchId = 0;
     Host& host = getHostFromLua(L);
-    if (lua_type(L, 1) == LUA_TNUMBER) {
-        watchId = static_cast<int>(lua_tointeger(L, 1));
-    } else {
-        QString name = QString::fromUtf8(lua_tostring(L, 1));
-        // Using an empty string will return the first unnamed stopwatch:
-        watchId = host.findStopWatchId(name);
-        if (!watchId) {
-            lua_pushnil(L);
-            if (name.isEmpty()) {
-                lua_pushstring(L, "no unnamed stopwatches found");
-            } else {
-                lua_pushfstring(L, "stopwatch with name \"%s\" not found", name.toUtf8().constData());
-            }
-            return 2;
-        }
+    auto [success, watchId] = getWatchId(L, host);
+    if (!success) {
+        return 2;
     }
 
     bool result = host.destroyStopWatch(watchId);
@@ -2218,23 +2217,10 @@ int TLuaInterpreter::setStopWatchPersistence(lua_State* L)
         return lua_error(L);
     }
 
-    int watchId = 0;
     Host& host = getHostFromLua(L);
-    if (lua_type(L, 1) == LUA_TNUMBER) {
-        watchId = static_cast<int>(lua_tointeger(L, 1));
-    } else {
-        QString name = QString::fromUtf8(lua_tostring(L, 1));
-        // Using an empty string will return the first unnamed stopwatch:
-        watchId = host.findStopWatchId(name);
-        if (!watchId) {
-            lua_pushnil(L);
-            if (name.isEmpty()) {
-                lua_pushstring(L, "no unnamed stopwatches found");
-            } else {
-                lua_pushfstring(L, "stopwatch with name \"%s\" not found", name.toUtf8().constData());
-            }
-            return 2;
-        }
+    auto [success, watchId] = getWatchId(L, host);
+    if (!success) {
+        return 2;
     }
 
     if (!lua_isboolean(L, 2)) {
@@ -2340,23 +2326,10 @@ int TLuaInterpreter::getStopWatchBrokenDownTime(lua_State* L)
         return lua_error(L);
     }
 
-    int watchId = 0;
     Host& host = getHostFromLua(L);
-    if (lua_type(L, 1) == LUA_TNUMBER) {
-        watchId = static_cast<int>(lua_tointeger(L, 1));
-    } else {
-        QString name = QString::fromUtf8(lua_tostring(L, 1));
-        // Using an empty string will return the first unnamed stopwatch:
-        watchId = host.findStopWatchId(name);
-        if (!watchId) {
-            lua_pushnil(L);
-            if (name.isEmpty()) {
-                lua_pushstring(L, "no unnamed stopwatches found");
-            } else {
-                lua_pushfstring(L, "stopwatch with name \"%s\" not found", name.toUtf8().constData());
-            }
-            return 2;
-        }
+    auto [success, watchId] = getWatchId(L, host);
+    if (!success) {
+        return 2;
     }
 
     QPair<bool, QString> result = host.getBrokenDownStopWatchTime(watchId);
