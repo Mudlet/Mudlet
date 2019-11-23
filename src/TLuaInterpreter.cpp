@@ -15970,7 +15970,7 @@ QPair<int, QString> TLuaInterpreter::startTempTimer(double timeout, const QStrin
         // Apparently this will call the TTimer::unregisterTimer(...) method:
         delete pT;
         return qMakePair(-1, QStringLiteral("unable to compile \"%1\", reason: %2").arg(function, errMsg));
-    };
+    }
 
     int id = pT->getID();
     pT->setIsActive(true);

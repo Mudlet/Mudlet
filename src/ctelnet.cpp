@@ -743,7 +743,7 @@ void cTelnet::sendTelnetOption(char type, char option)
         break;
     default:
         _type = "ERROR wrong telnet type";
-    };
+    }
 
     qDebug().noquote().nospace() << "WE send telnet IAC " << _type << " " << decodeOption(option);
 #endif
@@ -913,7 +913,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
         break;
     default:
         _type = QString::number((quint8)ch);
-    };
+    }
     if (command.size() > 2) {
         qDebug() << "SERVER sent telnet (" << command.size() << " bytes):" << _type << " + " << decodeOption(command[2]);
     } else {
@@ -1550,10 +1550,10 @@ void cTelnet::processTelnetCommand(const std::string& command)
         }
         //other cmds should not arrive, as they were not negotiated.
         //if they do, they are merely ignored
-        }; //end switch 2
+        } //end switch 2
         //other commands are simply ignored (NOP and such, see .h file for list)
     }
-    }; //end switch 1
+    } //end switch 1
 
     // raise sysTelnetEvent for all unhandled protocols
     // EXCEPT TN_GA / TN_EOR, which come at the end of every transmission, for performance reaons
