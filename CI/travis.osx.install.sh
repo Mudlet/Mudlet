@@ -13,6 +13,7 @@ OUTDATED_BREWS=$(brew outdated)
 
 for i in $BREWS; do
   for RETRIES in $(seq 1 3); do
+    echo " "
     echo "Considering whether to upgrade: ${i}"
     #Added the -w (whole-word) option so that the grep will NOT match for pcre2
     #when we are considering pcre:
@@ -20,7 +21,6 @@ for i in $BREWS; do
     STATUS="$?"
     if [ "${STATUS}" -ne 0 ]; then
       echo "Already up to date or not installed."
-      echo " "
       break
     fi
 
@@ -40,8 +40,8 @@ for i in $BREWS; do
 done
 for i in $BREWS; do
   for RETRIES in $(seq 1 3); do
-    echo "Installing ${i}"
     echo " "
+    echo "Installing ${i}"
     #Added the -w (whole-word) option so that the grep will NOT match for pcre2
     #when we are considering pcre:
     brew list | grep -w -q $i || brew install $i
