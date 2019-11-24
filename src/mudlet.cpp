@@ -5394,7 +5394,7 @@ QPair<bool, bool> mudlet::addWordToSet(const QString& word)
             mWordSet_shared.insert(word);
             qDebug().noquote().nospace() << "mudlet::addWordToSet(\"" << word << "\") INFO - word added to shared mWordSet.";
             isAdded = true;
-        };
+        }
         mDictionaryReadWriteLock.unlock();
         return qMakePair(true, isAdded);
     }
@@ -5413,7 +5413,7 @@ QPair<bool, bool> mudlet::removeWordFromSet(const QString& word)
         if (mWordSet_shared.remove(word)) {
             qDebug().noquote().nospace() << "mudlet::removeWordFromSet(\"" << word << "\") INFO - word removed from shared mWordSet.";
             isRemoved = true;
-        };
+        }
         mDictionaryReadWriteLock.unlock();
         return qMakePair(true, isRemoved);
     }
