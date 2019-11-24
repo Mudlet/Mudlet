@@ -9,9 +9,7 @@ shopt -s expand_aliases
 #Removed boost as first item as a temporary workaroud to prevent trying to
 #upgrade to boost version 1.68.0 which has not been bottled yet...
 BREWS="cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl ccache pugixml luarocks"
-echo "When updating the formulae, found the following out of date brews:"
 OUTDATED_BREWS=$(brew outdated)
-echo "${OUTDATED_BREWS}"
 
 for i in $BREWS; do
   for RETRIES in $(seq 1 3); do
@@ -22,10 +20,11 @@ for i in $BREWS; do
     STATUS="$?"
     if [ "${STATUS}" -ne 0 ]; then
       echo "Already up to date or not installed."
+      echo " "
       break
     fi
 
-    brew --verbose upgrade $i
+    brew upgrade $i
     STATUS="$?"
     if [ "${STATUS}" -eq 0 ]; then
       break
@@ -42,6 +41,7 @@ done
 for i in $BREWS; do
   for RETRIES in $(seq 1 3); do
     echo "Installing ${i}"
+    echo " "
     #Added the -w (whole-word) option so that the grep will NOT match for pcre2
     #when we are considering pcre:
     brew list | grep -w -q $i || brew install $i
