@@ -10,7 +10,7 @@ shopt -s expand_aliases
 #upgrade to boost version 1.68.0 which has not been bottled yet...
 BREWS="cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl ccache pugixml luarocks"
 echo "Updating formulae"
-brew --verbose outdated
+brew outdated
 STATUS="$?"
 if [ "${STATUS}" -ne 0 ]; then
   echo "Failed to update - aborting."
