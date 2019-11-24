@@ -9,16 +9,16 @@ shopt -s expand_aliases
 #Removed boost as first item as a temporary workaroud to prevent trying to
 #upgrade to boost version 1.68.0 which has not been bottled yet...
 BREWS="cmake hunspell libzip libzzip lua51 pcre pkg-config qt5 yajl ccache pugixml luarocks"
+echo "Updating formulae"
+brew --verbose
+STATUS="$?"
+if [ "${STATUS}" -ne 0 ]; then
+  echo "Failed to update - aborting."
+  exit 1
+fi
 for i in $BREWS; do
+  echo "Considering ${i} ..."
   for RETRIES in $(seq 1 3); do
-    echo "Upgrading ${i}"
-    brew --verbose outdated | grep -q $i
-    STATUS="$?"
-    if [ "${STATUS}" -ne 0 ]; then
-      echo "Already up to date or not installed."
-      break
-    fi
-
     brew --verbose upgrade $i
     STATUS="$?"
     if [ "${STATUS}" -eq 0 ]; then
