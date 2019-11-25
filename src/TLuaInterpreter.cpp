@@ -2114,47 +2114,40 @@ int TLuaInterpreter::moveCursor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setConsoleBufferSize
 int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
 {
-    int s = 1;
+    int s = 0;
     int n = lua_gettop(L);
-    std::string a1;
+    QString windowName = QStringLiteral("main");
     if (n > 2) {
-        if (!lua_isstring(L, s)) {
-            lua_pushstring(L, "setConsoleBufferSize: wrong argument type");
-            lua_error(L);
-            return 1;
-        } else {
-            a1 = lua_tostring(L, s);
-            s++;
+        if (!lua_isstring(L, ++s)) {
+            lua_pushfstring(L, "setConsoleBufferSize: bad argument #%d type (console name as string is optional, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
         }
-    }
-    int luaFrom;
-    if (!lua_isnumber(L, s)) {
-        lua_pushstring(L, "setConsoleBufferSize: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaFrom = lua_tointeger(L, s);
-        s++;
+        windowName = QString::fromUtf8(lua_tostring(L, s));
     }
 
-    int luaTo;
-    if (!lua_isnumber(L, s)) {
-        lua_pushstring(L, "setConsoleBufferSize: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaTo = lua_tointeger(L, s);
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "setConsoleBufferSize: bad argument #%d type (maximum line count as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
     }
+    int limit = lua_tointeger(L, s);
+
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "setConsoleBufferSize: bad argument #%d type (delete line count as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    }
+    int chunkSize = lua_tointeger(L, s);
 
     Host& host = getHostFromLua(L);
-
-    if (a1 == "main" || n < 3) {
-        host.mpConsole->buffer.setBufferSize(luaFrom, luaTo);
-    } else {
-        QString windowName = a1.c_str();
-        mudlet::self()->setConsoleBufferSize(&host, windowName, luaFrom, luaTo);
+    if (!windowName.compare(QLatin1String("main"))) {
+        host.mpConsole->buffer.setBufferSize(limit, chunkSize);
+    } else if (!mudlet::self()->setConsoleBufferSize(&host, windowName, limit, chunkSize)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "window \"%s\" not found", windowName.toUtf8().constData());
+        return 2;
     }
-    return 0;
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableScrollBar
