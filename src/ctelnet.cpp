@@ -1028,7 +1028,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
             output = TN_IAC;
             output += TN_SB;
             output += OPT_GMCP;
-            output += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1", "External.Discord 1"])";
+            output += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1", "External.Discord 1", "Client.Media 1"])";
             output += TN_IAC;
             output += TN_SE;
             socketOutRaw(output);
@@ -1840,10 +1840,10 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
     if (packageMessage.startsWith(QLatin1String("External.Discord.Status"))
         || packageMessage.startsWith(QLatin1String("External.Discord.Info"))) {
         mpHost->processDiscordGMCP(packageMessage, data);
-    } else if (mpHost->mEnableMSP && transcodedMsg.startsWith(QStringLiteral("Client.Sound"))) {
-        mpHost->mpMedia->parseGMCP(TMediaData::MediaCategorySound, data);
-    } else if (mpHost->mEnableMSP && transcodedMsg.startsWith(QStringLiteral("Client.Music"))) {
-        mpHost->mpMedia->parseGMCP(TMediaData::MediaCategoryMusic, data);
+    }
+
+    if (mpHost->mAcceptServerMedia && transcodedMsg.startsWith(QStringLiteral("Client.Media"))) {
+        mpHost->mpMedia->parseGMCP(packageMessage, data);
     }
 
     mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
@@ -1890,13 +1890,13 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
     transcodedMsg.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
 
-    TMediaData::MediaCategory mediaCategory;
+    TMediaData::MediaType mediaType;
     QString mediaFileName;
     int mediaVolume = TMediaData::MediaVolumeDefault;
-    int mediaLength = TMediaData::MediaLengthDefault;
-    int mediaPriority = TMediaData::MediaPriorityDefault;
-    int musicContinue = TMediaData::MediaContinueDefault;
-    QString mediaType;
+    int mediaLoops = TMediaData::MediaLoopsDefault;
+    int mediaPriority = TMediaData::MediaPriorityNotSet;
+    int musicContinue = TMediaData::MusicContinueDefault;
+    QString mediaTag;
     QString mediaUrl;
 
     qDebug() << transcodedMsg;
@@ -1908,11 +1908,15 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
         transcodedMsg.chop(1);
     }
 
+    TMediaData mediaData;
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolMSP);
+
     if (transcodedMsg.startsWith(QStringLiteral("!!SOUND("))) {
-        mediaCategory = TMediaData::MediaCategorySound;
+        mediaData.setMediaType(TMediaData::MediaTypeSound);
         transcodedMsg.remove(QStringLiteral("!!SOUND("));
     } else if (transcodedMsg.startsWith(QStringLiteral("!!MUSIC("))) {
-        mediaCategory = TMediaData::MediaCategoryMusic;
+        mediaData.setMediaType(TMediaData::MediaTypeMusic);
         transcodedMsg.remove(QStringLiteral("!!MUSIC("));
     } else {
         // Does not meet the MSP standard.
@@ -1920,7 +1924,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     }
 
     if (transcodedMsg == "Off") {
-        mpHost->mpMedia->stopMedia(mediaCategory);
+        mpHost->mpMedia->stopMedia(mediaData);
         return;
     }
 
@@ -1929,7 +1933,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     if (argumentList.size() > 0) {
         for (int i = 0; i < argumentList.size(); i++) {
             if (i < 1) {
-                mediaFileName = argumentList[i];
+                mediaData.setMediaFileName(argumentList[i]);
             } else {
                 QStringList payloadList = argumentList[i].split('=');
 
@@ -1949,39 +1953,39 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
                 }
 
                 if (mspVAR == "V") {
-                    mediaVolume = mspVAL.toInt();
+                    mediaData.setMediaVolume(mspVAL.toInt());
 
-                    if (mediaVolume == TMediaData::MediaVolumePreload) {
+                    if (mediaData.getMediaVolume() == TMediaData::MediaVolumePreload) {
                         continue; // Support preloading
-                    } else if (mediaVolume > TMediaData::MediaVolumeMax) {
-                        mediaVolume = TMediaData::MediaVolumeMax;
-                    } else if (mediaVolume < TMediaData::MediaVolumeMin) {
-                        mediaVolume = TMediaData::MediaVolumeMin;
+                    } else if (mediaData.getMediaVolume() > TMediaData::MediaVolumeMax) {
+                        mediaData.setMediaVolume(TMediaData::MediaVolumeMax);
+                    } else if (mediaData.getMediaVolume() < TMediaData::MediaVolumeMin) {
+                        mediaData.setMediaVolume(TMediaData::MediaVolumeMin);
                     }
                 } else if (mspVAR == "L") {
-                    mediaLength = mspVAL.toInt();
+                    mediaData.setMediaLoops(mspVAL.toInt());
 
-                    if (mediaLength < TMediaData::MediaLengthRepeat || mediaLength == 0) {
-                        mediaLength = TMediaData::MediaLengthDefault;
+                    if (mediaData.getMediaLoops() < TMediaData::MediaLoopsRepeat || mediaData.getMediaLoops() == 0) {
+                        mediaData.setMediaLoops(TMediaData::MediaLoopsDefault);
                     }
                 } else if (mspVAR == "P") {
-                    mediaPriority = mspVAL.toInt();
+                    mediaData.setMediaPriority(mspVAL.toInt());
 
-                    if (mediaPriority > TMediaData::MediaPriorityMax) {
-                        mediaPriority = TMediaData::MediaPriorityMax;
-                    } else if (mediaPriority < TMediaData::MediaPriorityMin) {
-                        mediaPriority = TMediaData::MediaPriorityMin;
+                    if (mediaData.getMediaPriority() > TMediaData::MediaPriorityMax) {
+                        mediaData.setMediaPriority(TMediaData::MediaPriorityMax);
+                    } else if (mediaData.getMediaPriority() < TMediaData::MediaPriorityMin) {
+                        mediaData.setMediaPriority(TMediaData::MediaPriorityMin);
                     }
                 } else if (mspVAR == "C") {
-                    musicContinue = mspVAL.toInt();
+                    mediaData.setMusicContinue(mspVAL.toInt());
 
-                    if (musicContinue != TMediaData::MediaContinueDefault && musicContinue != TMediaData::MediaContinueRestart) {
-                        musicContinue = TMediaData::MediaContinueDefault;
+                    if (mediaData.getMusicContinue() != TMediaData::MusicContinueDefault && mediaData.getMusicContinue() != TMediaData::MusicContinueRestart) {
+                        mediaData.setMusicContinue(TMediaData::MusicContinueDefault);
                     }
                 } else if (mspVAR == "T") {
-                    mediaType = mspVAL.toLower(); // To provide case insensitivity of MSP spec
+                    mediaData.setMediaTag(mspVAL.toLower()); // To provide case insensitivity of MSP spec
                 } else if (mspVAR == "U") {
-                    mediaUrl = mspVAL;
+                    mediaData.setMediaUrl(mspVAL);
                 } else {
                     return; // Invalid MSP.
                 }
@@ -1989,21 +1993,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
         }
     }
 
-    TMediaData mediaData;
-
-    switch (mediaCategory) {
-        case TMediaData::MediaCategorySound:
-            mediaData = TMediaData(TMediaData::MediaCategorySound, mediaFileName, mediaVolume, mediaLength, mediaPriority, mediaType, mediaUrl);
-            mpHost->mpMedia->playMedia(mediaData);
-            break;
-        case TMediaData::MediaCategoryMusic:
-            mediaData = TMediaData(TMediaData::MediaCategoryMusic, mediaFileName, mediaVolume, mediaLength, mediaPriority, mediaType, mediaUrl);
-            mediaData.setMusicContinue(musicContinue);
-            mpHost->mpMedia->playMedia(mediaData);
-            break;
-        case TMediaData::MediaCategoryVideo: // Future
-            return;
-    }
+    mpHost->mpMedia->playMedia(mediaData);
 }
 
 void cTelnet::setChannel102Variables(const QString& msg)
