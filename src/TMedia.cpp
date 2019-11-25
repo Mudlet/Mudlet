@@ -946,17 +946,17 @@ int TMedia::parseJSONByMediaVolume(QJsonObject& json)
         mediaVolume = mediaVolumeJSON.toString().toInt();
 
         if (mediaVolume == TMediaData::MediaVolumePreload) {
-            ; // Volume of 0 supports preloading 
+            {} // Volume of 0 supports preloading
         } else if (mediaVolume > TMediaData::MediaVolumeMax) {
             mediaVolume = TMediaData::MediaVolumeMax;
         } else if (mediaVolume < TMediaData::MediaVolumeMin) {
               mediaVolume = TMediaData::MediaVolumeMin;
-        }         
+        }
     } else if (mediaVolumeJSON != QJsonValue::Undefined && mediaVolumeJSON.toInt()) {
         mediaVolume = mediaVolumeJSON.toInt();
 
         if (mediaVolume == TMediaData::MediaVolumePreload) {
-            ; // Volume of 0 supports preloading 
+            {} // Volume of 0 supports preloading
         } else if (mediaVolume > TMediaData::MediaVolumeMax) {
             mediaVolume = TMediaData::MediaVolumeMax;
         } else if (mediaVolume < TMediaData::MediaVolumeMin) {
