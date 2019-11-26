@@ -138,11 +138,6 @@ TMap::~TMap()
     }
 }
 
-void TMap::initialiseMembersFromHost()
-{
-    mpHost->getPlayerRoomStyleDetails(mPlayerRoomStyle, mPlayerRoomOuterDiameterPercentage, mPlayerRoomInnerDiameterPercentage, mPlayerRoomOuterColor, mPlayerRoomInnerColor);
-}
-
 void TMap::mapClear()
 {
     mpRoomDB->clearMapDB();
