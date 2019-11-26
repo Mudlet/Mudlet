@@ -174,6 +174,7 @@ private:
     QUrl getFileUrl(TMediaData& mediaData);
     void writeFile(QNetworkReply* reply);
     void downloadFile(TMediaData& mediaData);
+    QList<TMediaPlayer*> getMediaPlayerList(TMediaData& mediaData);
     TMediaPlayer* getMediaPlayer(TMediaData& mediaData);
     TMediaPlayer* matchMediaPlayer(TMediaData& mediaData, QString absolutePathFileName);
     bool doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolutePathFileName);

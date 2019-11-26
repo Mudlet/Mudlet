@@ -516,9 +516,8 @@ void TMedia::downloadFile(TMediaData& mediaData)
     }
 }
 
-TMediaPlayer* TMedia::getMediaPlayer(TMediaData& mediaData)
+QList<TMediaPlayer*> TMedia::getMediaPlayerList(TMediaData& mediaData)
 {
-    TMediaPlayer* pPlayer = nullptr;
     QList<TMediaPlayer*> mTMediaPlayerList;
 
     switch (mediaData.getMediaProtocol()) {
@@ -548,6 +547,13 @@ TMediaPlayer* TMedia::getMediaPlayer(TMediaData& mediaData)
             break;
     }
 
+    return mTMediaPlayerList;
+}
+
+TMediaPlayer* TMedia::getMediaPlayer(TMediaData& mediaData)
+{
+    TMediaPlayer* pPlayer = nullptr;
+    QList<TMediaPlayer*> mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
     QListIterator<TMediaPlayer*> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) { // Find first available inactive QMediaPlayer
@@ -621,35 +627,7 @@ TMediaPlayer* TMedia::getMediaPlayer(TMediaData& mediaData)
 TMediaPlayer* TMedia::matchMediaPlayer(TMediaData& mediaData, QString absolutePathFileName)
 {
     TMediaPlayer* pPlayer = nullptr;
-    QList<TMediaPlayer*> mTMediaPlayerList;
-
-    switch (mediaData.getMediaProtocol()) {
-        case TMediaData::MediaProtocolMSP:
-            switch (mediaData.getMediaType()) {
-                case TMediaData::MediaTypeSound:
-                    mTMediaPlayerList = mMSPSoundList;
-                    break;
-                case TMediaData::MediaTypeMusic:
-                    mTMediaPlayerList = mMSPMusicList;
-                    break;
-            }
-            break;
-
-        case TMediaData::MediaProtocolGMCP:
-            switch (mediaData.getMediaType()) {
-                case TMediaData::MediaTypeSound:
-                    mTMediaPlayerList = mGMCPSoundList;
-                    break;
-                case TMediaData::MediaTypeMusic:
-                    mTMediaPlayerList = mGMCPMusicList;
-                    break;
-                case TMediaData::MediaTypeVideo:
-                    mTMediaPlayerList = mGMCPVideoList;
-                    break;
-            }
-            break;
-    }
-
+    QList<TMediaPlayer*> mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
     QListIterator<TMediaPlayer*> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) {
@@ -673,37 +651,9 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolute
     bool doesMediaHavePriorityToPlay = true;
 
     if (mediaData.getMediaPriority() != TMediaData::MediaPriorityNotSet) {
-        QList<TMediaPlayer*> mTMediaPlayerList;
-
-        switch (mediaData.getMediaProtocol()) {
-            case TMediaData::MediaProtocolMSP:
-                switch (mediaData.getMediaType()) {
-                    case TMediaData::MediaTypeSound:
-                        mTMediaPlayerList = mMSPSoundList;
-                        break;
-                    case TMediaData::MediaTypeMusic:
-                        mTMediaPlayerList = mMSPMusicList;
-                        break;
-                }
-                break;
-
-            case TMediaData::MediaProtocolGMCP:
-                switch (mediaData.getMediaType()) {
-                    case TMediaData::MediaTypeSound:
-                        mTMediaPlayerList = mGMCPSoundList;
-                        break;
-                    case TMediaData::MediaTypeMusic:
-                        mTMediaPlayerList = mGMCPMusicList;
-                        break;
-                    case TMediaData::MediaTypeVideo:
-                        mTMediaPlayerList = mGMCPVideoList;
-                        break;
-                }
-                break;
-        }
-
         int maxMediaPriority = 0;
 
+        QList<TMediaPlayer*> mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
         QListIterator<TMediaPlayer*> itTMediaPlayer(mTMediaPlayerList);
 
         while (itTMediaPlayer.hasNext()) { // Find the maximum priority of all playing sounds
