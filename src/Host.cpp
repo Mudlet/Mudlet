@@ -205,7 +205,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mEnableMSP(true)
 , mEnableMSDP(false)
 , mServerMXPenabled(true)
-, mMediaLocation(QString())
+, mMediaLocationGMCP(QString())
+, mMediaLocationMSP(QString())
 , mFORCE_GA_OFF(false)
 , mFORCE_NO_COMPRESSION(false)
 , mFORCE_SAVE_ON_EXIT(false)
@@ -298,6 +299,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mServerGUI_Package_version(QLatin1String("-1"))
 , mServerGUI_Package_name(QLatin1String("nothing"))
 , mAcceptServerGUI(true)
+, mAcceptServerMedia(true)
 , mCommandLineFgColor(Qt::darkGray)
 , mCommandLineBgColor(Qt::black)
 , mMapperUseAntiAlias(true)
@@ -703,7 +705,7 @@ void Host::updateConsolesFont()
     }
 }
 
-void Host::setMediaLocation(const QString& mediaUrl)
+void Host::setMediaLocationGMCP(const QString& mediaUrl)
 {
     QUrl url = QUrl(mediaUrl);
 
@@ -711,12 +713,28 @@ void Host::setMediaLocation(const QString& mediaUrl)
         return;
     }
 
-    mMediaLocation = mediaUrl;
+    mMediaLocationGMCP = mediaUrl;
 }
 
-QString Host::getMediaLocation() const
+QString Host::getMediaLocationGMCP() const
 {
-    return mMediaLocation;
+    return mMediaLocationGMCP;
+}
+
+void Host::setMediaLocationMSP(const QString& mediaUrl)
+{
+    QUrl url = QUrl(mediaUrl);
+
+    if (!url.isValid()) {
+        return;
+    }
+
+    mMediaLocationMSP = mediaUrl;
+}
+
+QString Host::getMediaLocationMSP() const
+{
+    return mMediaLocationMSP;
 }
 
 std::pair<bool, QString> Host::setDisplayFont(const QFont& font)

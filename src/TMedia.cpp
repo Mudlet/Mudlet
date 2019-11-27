@@ -54,7 +54,9 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
         return;
     }
 
-    if (packageMessage == "Client.Media.Load") {
+    if (packageMessage == "Client.Media") {
+        TMedia::parseJSONForMedia(json);
+    } else if (packageMessage == "Client.Media.Load") {
         TMedia::parseJSONForMediaLoad(json);
     } else if (packageMessage == "Client.Media.Play") {
         TMedia::parseJSONForMediaPlay(json);
@@ -79,12 +81,8 @@ void TMedia::playMedia(TMediaData& mediaData)
         return;
     }
 
-    QUrl url = TMedia::parseUrl(mediaData);
-
-    if (!TMedia::isValidUrl(url)) {
+    if (!TMedia::processUrl(mediaData)) {
         return;
-    } else if (mpHost->getMediaLocation().isEmpty() || url.toString() != mpHost->getMediaLocation()) {
-        mpHost->setMediaLocation(url.toString());
     }
 
     if (mediaData.getMediaFileName() == "Off") {
@@ -207,7 +205,7 @@ void TMedia::stopMedia(TMediaData& mediaData)
             }
 
             if (mediaData.getMediaPriority() != TMediaData::MediaPriorityNotSet && pPlayer->getMediaData().getMediaPriority() != TMediaData::MediaPriorityNotSet
-                && pPlayer->getMediaData().getMediaPriority() <= mediaData.getMediaPriority()) {
+                && pPlayer->getMediaData().getMediaPriority() < mediaData.getMediaPriority()) {
                 continue;
             }
         }
@@ -222,15 +220,17 @@ QUrl TMedia::parseUrl(TMediaData& mediaData)
 {
     QUrl url;
 
-    if (mediaData.getMediaFileName() == "Off") {
+    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && mediaData.getMediaFileName() == "Off") {
         if (mediaData.getMediaUrl().isEmpty()) { // MSP is !!SOUND(Off) or !!MUSIC(Off)
             mpHost->mpMedia->stopMedia(mediaData);
         } else { // MSP is !!SOUND(Off U=https://example.com/sounds) or !!MUSIC(Off U=https://example.com/sounds)
             url = QUrl::fromUserInput(mediaData.getMediaUrl());
         }
     } else if (mediaData.getMediaUrl().isEmpty()) {
-        if (!mpHost->getMediaLocation().isEmpty()) {
-            url = QUrl::fromUserInput(mpHost->getMediaLocation());
+        if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->getMediaLocationMSP().isEmpty()) {
+            url = QUrl::fromUserInput(mpHost->getMediaLocationMSP());
+        } else if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->getMediaLocationGMCP().isEmpty()) {
+            url = QUrl::fromUserInput(mpHost->getMediaLocationGMCP());
         } else {
             url = QUrl::fromUserInput(QStringLiteral("https://www.%1/media/").arg(mpHost->mUrl));
         }
@@ -286,7 +286,7 @@ QStringList TMedia::parseFileNameList(TMediaData& mediaData, QDir &dir)
             }
         }
     } else {
-        if (!mediaData.getMediaFileName().contains('.')) {
+        if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mediaData.getMediaFileName().contains('.')) {
             switch (mediaData.getMediaType()) {
                 case TMediaData::MediaTypeSound:
                     mediaData.setMediaFileName(mediaData.getMediaFileName().append(".wav"));
@@ -348,25 +348,67 @@ QUrl TMedia::getFileUrl(TMediaData& mediaData)
 {
     QUrl fileUrl;
 
-    if (!mpHost->getMediaLocation().isEmpty()) {
-        bool endsWithSlash = mpHost->getMediaLocation().endsWith('/');
+    QString mediaLocation = QString();
+
+    switch (mediaData.getMediaProtocol()) {
+        case TMediaData::MediaProtocolMSP:
+            mediaLocation = mpHost->getMediaLocationMSP();
+            break;
+
+         case TMediaData::MediaProtocolGMCP:
+            mediaLocation = mpHost->getMediaLocationGMCP();
+            break;
+    }
+
+    if (!mediaLocation.isEmpty()) {
+        bool endsWithSlash = mediaLocation.endsWith('/');
 
         if (!mediaData.getMediaTag().isEmpty()) {
             if (!endsWithSlash) {
-                fileUrl = QUrl::fromUserInput(QStringLiteral("%1/%2/%3").arg(mpHost->getMediaLocation(), mediaData.getMediaTag(), mediaData.getMediaFileName()));
+                fileUrl = QUrl::fromUserInput(QStringLiteral("%1/%2/%3").arg(mediaLocation, mediaData.getMediaTag(), mediaData.getMediaFileName()));
             } else {
-                fileUrl = QUrl::fromUserInput(QStringLiteral("%1%2/%3").arg(mpHost->getMediaLocation(), mediaData.getMediaTag(), mediaData.getMediaFileName()));
+                fileUrl = QUrl::fromUserInput(QStringLiteral("%1%2/%3").arg(mediaLocation, mediaData.getMediaTag(), mediaData.getMediaFileName()));
             }
         } else {
             if (!endsWithSlash) {
-                fileUrl = QUrl::fromUserInput(QStringLiteral("%1/%2").arg(mpHost->getMediaLocation(), mediaData.getMediaFileName()));
+                fileUrl = QUrl::fromUserInput(QStringLiteral("%1/%2").arg(mediaLocation, mediaData.getMediaFileName()));
             } else {
-                fileUrl = QUrl::fromUserInput(QStringLiteral("%1%2").arg(mpHost->getMediaLocation(), mediaData.getMediaFileName()));
+                fileUrl = QUrl::fromUserInput(QStringLiteral("%1%2").arg(mediaLocation, mediaData.getMediaFileName()));
             }
         }
     }
 
     return fileUrl;
+}
+
+bool TMedia::processUrl(TMediaData& mediaData)
+{
+    bool continueProcessing = true;
+
+    QUrl url = TMedia::parseUrl(mediaData);
+
+    if (!TMedia::isValidUrl(url)) {
+        continueProcessing = false;
+    } else {
+        switch (mediaData.getMediaProtocol()) {
+            case TMediaData::MediaProtocolMSP:
+                if (mpHost->getMediaLocationMSP().isEmpty() || url.toString() != mpHost->getMediaLocationMSP()) {
+                    mpHost->setMediaLocationMSP(url.toString());
+                }
+                break;
+
+            case TMediaData::MediaProtocolGMCP:
+                if (mpHost->getMediaLocationGMCP().isEmpty() || url.toString() != mpHost->getMediaLocationGMCP()) {
+                    mpHost->setMediaLocationGMCP(url.toString());
+                }
+                break;
+
+            default:
+                continueProcessing = false;
+        }
+    }
+
+    return continueProcessing;
 }
 
 void TMedia::writeFile(QNetworkReply* reply)
@@ -675,6 +717,7 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolute
             TMediaData stopMediaData;
             stopMediaData.setMediaProtocol(mediaData.getMediaProtocol());
             stopMediaData.setMediaType(mediaData.getMediaType());
+            stopMediaData.setMediaPriority(mediaData.getMediaPriority());
             mpHost->mpMedia->stopMedia(stopMediaData); // If we have the highest priority, stop everything else.
         }
     }
@@ -1038,6 +1081,16 @@ QString TMedia::parseJSONByMediaKey(QJsonObject& json)
     return mediaKey;
 }
 
+void TMedia::parseJSONForMedia(QJsonObject& json)
+{
+    TMediaData mediaData;
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolGMCP);
+    mediaData.setMediaUrl(TMedia::parseJSONByMediaUrl(json));
+
+    TMedia::processUrl(mediaData);
+}
+
 void TMedia::parseJSONForMediaLoad(QJsonObject& json)
 {
     TMediaData mediaData;
@@ -1054,12 +1107,8 @@ void TMedia::parseJSONForMediaLoad(QJsonObject& json)
         return;
     }
 
-    QUrl url = TMedia::parseUrl(mediaData);
-
-    if (!TMedia::isValidUrl(url)) {
+    if (!TMedia::processUrl(mediaData)) {
         return;
-    } else if (mpHost->getMediaLocation().isEmpty() || url.toString() != mpHost->getMediaLocation()) {
-        mpHost->setMediaLocation(url.toString());
     }
 
     QString absolutePathFileName;

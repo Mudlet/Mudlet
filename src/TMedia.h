@@ -172,6 +172,7 @@ private:
     QStringList parseFileNameList(TMediaData& mediaData, QDir &dir);
     QStringList getFileNameList(TMediaData& mediaData);
     QUrl getFileUrl(TMediaData& mediaData);
+    bool processUrl(TMediaData& mediaData);
     void writeFile(QNetworkReply* reply);
     void downloadFile(TMediaData& mediaData);
     QList<TMediaPlayer*> getMediaPlayerList(TMediaData& mediaData);
@@ -190,6 +191,7 @@ private:
     QString parseJSONByMediaTarget(QJsonObject& json);
     QString parseJSONByMediaUrl(QJsonObject& json);
     QString parseJSONByMediaKey(QJsonObject& json);
+    void parseJSONForMedia(QJsonObject& json);
     void parseJSONForMediaLoad(QJsonObject& json);
     void parseJSONForMediaPlay(QJsonObject& json);
     void parseJSONForMediaStop(QJsonObject& json);
