@@ -913,6 +913,8 @@ int TMedia::parseJSONByMediaVolume(QJsonObject& json)
             mediaVolume = TMediaData::MediaVolumeMin;
         }
     }
+
+    return mediaVolume;
 }
 
 int TMedia::parseJSONByMediaPriority(QJsonObject& json)
