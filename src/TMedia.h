@@ -199,11 +199,11 @@ private:
     QPointer<Host> mpHost;
     QString mProfileName;
 
-    QList<TMediaPlayer*> mMSPSoundList;
-    QList<TMediaPlayer*> mMSPMusicList;
-    QList<TMediaPlayer*> mGMCPSoundList;
-    QList<TMediaPlayer*> mGMCPMusicList;
-    QList<TMediaPlayer*> mGMCPVideoList;
+    QList<TMediaPlayer*> mMSPSoundList = {};
+    QList<TMediaPlayer*> mMSPMusicList = {};
+    QList<TMediaPlayer*> mGMCPSoundList = {};
+    QList<TMediaPlayer*> mGMCPMusicList = {};
+    QList<TMediaPlayer*> mGMCPVideoList = {};
 
     QNetworkAccessManager* mpNetworkAccessManager;
     QMap<QNetworkReply*, TMediaData> mMediaDownloads;

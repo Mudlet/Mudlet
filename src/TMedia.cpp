@@ -85,14 +85,14 @@ void TMedia::playMedia(TMediaData& mediaData)
         return;
     }
 
-    if (mediaData.getMediaFileName() == "Off") {
+    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && mediaData.getMediaFileName() == "Off") {
         return;
     }
 
     QString absolutePathFileName;
 
     if (!mediaData.getMediaFileName().contains('*') && !mediaData.getMediaFileName().contains('?')) { // File path wildcards are * and ?
-        if (!mediaData.getMediaFileName().contains('.')) {
+        if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mediaData.getMediaFileName().contains('.')) {
             switch (mediaData.getMediaType()) {
                 case TMediaData::MediaTypeSound:
                     mediaData.setMediaFileName(mediaData.getMediaFileName().append(".wav"));
