@@ -175,6 +175,7 @@ private:
     bool processUrl(TMediaData& mediaData);
     void writeFile(QNetworkReply* reply);
     void downloadFile(TMediaData& mediaData);
+    QString setupMediaAbsolutePathFileName(TMediaData& mediaData);
     QList<TMediaPlayer*> getMediaPlayerList(TMediaData& mediaData);
     TMediaPlayer* getMediaPlayer(TMediaData& mediaData);
     TMediaPlayer* matchMediaPlayer(TMediaData& mediaData, QString absolutePathFileName);

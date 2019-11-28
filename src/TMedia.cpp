@@ -89,8 +89,6 @@ void TMedia::playMedia(TMediaData& mediaData)
         return;
     }
 
-    QString absolutePathFileName;
-
     if (!mediaData.getMediaFileName().contains('*') && !mediaData.getMediaFileName().contains('?')) { // File path wildcards are * and ?
         if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mediaData.getMediaFileName().contains('.')) {
             switch (mediaData.getMediaType()) {
@@ -103,15 +101,7 @@ void TMedia::playMedia(TMediaData& mediaData)
             }
         }
 
-        if (!mediaData.getMediaTag().isEmpty()) {
-            absolutePathFileName = QStringLiteral("%1/%2/%3")
-                .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaTag(), mediaData.getMediaFileName());
-        } else {
-            absolutePathFileName = QStringLiteral("%1/%2")
-                .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName());
-        }
-
-        mediaData.setMediaAbsolutePathFileName(absolutePathFileName);
+        QString absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
 
         QFile mediaFile(absolutePathFileName);
 
@@ -559,6 +549,23 @@ void TMedia::downloadFile(TMediaData& mediaData)
             getReply->deleteLater();
         });
     }
+}
+
+QString TMedia::setupMediaAbsolutePathFileName(TMediaData& mediaData)
+{
+    QString absolutePathFileName;
+
+    if (!mediaData.getMediaTag().isEmpty()) {
+        absolutePathFileName = QStringLiteral("%1/%2/%3")
+            .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaTag(), mediaData.getMediaFileName());
+    } else {
+        absolutePathFileName = QStringLiteral("%1/%2")
+            .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName());
+    }
+
+    mediaData.setMediaAbsolutePathFileName(absolutePathFileName);
+
+    return absolutePathFileName;
 }
 
 QList<TMediaPlayer*> TMedia::getMediaPlayerList(TMediaData& mediaData)
@@ -1164,17 +1171,7 @@ void TMedia::parseJSONForMediaLoad(QJsonObject& json)
         return;
     }
 
-    QString absolutePathFileName;
-
-    if (!mediaData.getMediaTag().isEmpty()) {
-        absolutePathFileName = QStringLiteral("%1/%2/%3")
-            .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaTag(), mediaData.getMediaFileName());
-    } else {
-        absolutePathFileName = QStringLiteral("%1/%2")
-            .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName());
-    }
-
-    mediaData.setMediaAbsolutePathFileName(absolutePathFileName);
+    QString absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
 
     QFile mediaFile(absolutePathFileName);
 
