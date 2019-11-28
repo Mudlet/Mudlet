@@ -179,6 +179,7 @@ private:
     TMediaPlayer* getMediaPlayer(TMediaData& mediaData);
     TMediaPlayer* matchMediaPlayer(TMediaData& mediaData, QString absolutePathFileName);
     bool doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolutePathFileName);
+    void checkMediaKeyConstraints(TMediaData& mediaData, QString absolutePathFileName);
     void playSound(TMediaData& soundData);
     void playMusic(TMediaData& musicData);
     TMediaData::MediaType parseJSONByMediaType(QJsonObject& json);
@@ -199,11 +200,11 @@ private:
     QPointer<Host> mpHost;
     QString mProfileName;
 
-    QList<TMediaPlayer*> mMSPSoundList = {};
-    QList<TMediaPlayer*> mMSPMusicList = {};
-    QList<TMediaPlayer*> mGMCPSoundList = {};
-    QList<TMediaPlayer*> mGMCPMusicList = {};
-    QList<TMediaPlayer*> mGMCPVideoList = {};
+    QList<TMediaPlayer*> mMSPSoundList;
+    QList<TMediaPlayer*> mMSPMusicList;
+    QList<TMediaPlayer*> mGMCPSoundList;
+    QList<TMediaPlayer*> mGMCPMusicList;
+    QList<TMediaPlayer*> mGMCPVideoList;
 
     QNetworkAccessManager* mpNetworkAccessManager;
     QMap<QNetworkReply*, TMediaData> mMediaDownloads;
