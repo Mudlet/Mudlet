@@ -96,7 +96,9 @@ end
 --- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.trim
 function string.trim(s)
   if s then
-    return string.gsub(s, "^%s*(.-)%s*$", "%1")
+    -- return only the trimmed string, and not the # of replacements done as well
+    local trimmed = string.gsub(s, "^%s*(.-)%s*$", "%1")
+    return trimmed
   else
     return s
   end

@@ -74,9 +74,8 @@ public:
     void mouseMoveEvent(QMouseEvent*) override;
     void showEvent(QShowEvent* event) override;
     void updateScreenView();
-    void highlight();
+    void highlightSelection();
     void unHighlight();
-    void swap(QPoint& p1, QPoint& p2);
     void focusInEvent(QFocusEvent* event) override;
     int imageTopLine();
     int bufferScrollUp(int lines);
@@ -106,11 +105,11 @@ public:
     QRegion mSelectedRegion;
     bool mShowTimeStamps;
     int mWrapAt;
-    int mWrapIndentCount;
+    int mWrapIndentCount {};
     qreal mLetterSpacing;
 
 public slots:
-    void slot_toggleTimeStamps();
+    void slot_toggleTimeStamps(const bool);
     void slot_copySelectionToClipboard();
     void slot_selectAll();
     void slot_scrollBarMoved(int);
@@ -130,6 +129,11 @@ private:
     static QString convertWhitespaceToVisual(const QChar& first, const QChar& second = QChar::Null);
     static QString byteToLuaCodeOrChar(const char*);
     std::pair<bool, int> drawTextForClipboard(QPainter& p, QRect r, int lineOffset) const;
+    int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool *isOverTimeStamp = nullptr) const;
+    int getGraphemeWidth(uint unicode) const;
+    void normaliseSelection();
+    void updateTextCursor(const QMouseEvent* event, int lineIndex, int tCharIndex);
+    void raiseMousePressEvent(QMouseEvent* event);
 
     int mFontHeight;
     int mFontWidth;
@@ -143,10 +147,13 @@ private:
     // last line offset rendered
     int mLastRenderBottom;
     bool mMouseTracking;
-    bool mCtrlSelecting;
-    int mDragStartY;
+    bool mCtrlSelecting {};
+    int mCtrlDragStartY {};
+    QPoint mDragStart, mDragSelectionEnd;
     int mOldScrollPos;
+    // top-left point of the selection
     QPoint mPA;
+    // bottom-right point of the selection
     QPoint mPB;
     TBuffer* mpBuffer;
     TConsole* mpConsole;
@@ -164,6 +171,15 @@ private:
     // Set in constructor for run-time Qt versions less than 5.11 which only
     // supports up to Unicode 8.0:
     bool mUseOldUnicode8;
+    // How many "normal" width "characters" are each tab stop apart, whilst
+    // there is no current mechanism to adjust this, sensible values will
+    // probably be 1 (so that a tab is just treated as a space), 2, 4 and 8,
+    // in the past it was typically 8 and this is what we'll use at present:
+    int mTabStopwidth;
+    // How many normal width characters that are used for the time stamps; it
+    // would only be valid to change this by clearing the buffer first - so
+    // making this a const value for the moment:
+    const int mTimeStampWidth;
 };
 
 #endif // MUDLET_TTEXTEDIT_H

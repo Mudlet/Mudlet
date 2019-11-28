@@ -37,8 +37,14 @@
 #include "dlgComposer.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
+#if defined(INCLUDE_3DMAPPER)
+#include "glwidget.h"
+#endif
 
 #include "pre_guard.h"
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QNetworkProxy>
 #include <QProgressDialog>
 #include <QTextCodec>
 #include <QSslError>
@@ -48,8 +54,6 @@
 // suboptions - change the value to 2 to get a bit more detail about the sizes
 // of the messages
 #define DEBUG_TELNET 1
-
-using namespace std;
 
 char loadBuffer[100001];
 int loadedBytes;
@@ -83,15 +87,17 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , lastTimeOffset()
 , enableATCP(false)
 , enableGMCP(false)
+, enableMSSP(false)
 , enableChannel102(false)
 , mAutoReconnect(false)
 , loadingReplay(false)
 , mIsReplayRunFromLua(false)
 , mEncodingWarningIssued(false)
+, mConnectViaProxy(false)
 {
     mIsTimerPosting = false;
     mNeedDecompression = false;
-    mDontReconnect  = false;
+    mDontReconnect = false;
 
     // initialize encoding to a sensible default - needs to be a different value
     // than that in the initialisation list so that it is processed as a change
@@ -128,17 +134,18 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 
     // initialize the socket after the Host initialisation is complete so we can access mSslTsl
     QTimer::singleShot(0, this, [this]() {
-        qDebug() << mProfileName;
+#if !defined(QT_NO_SSL)
         if (mpHost->mSslTsl) {
             connect(&socket, &QSslSocket::encrypted, this, &cTelnet::handle_socket_signal_connected);
         } else {
             connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
         }
+        connect(&socket, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::handle_socket_signal_sslError);
+#else
+        connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
+#endif
         connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::handle_socket_signal_disconnected);
         connect(&socket, &QIODevice::readyRead, this, &cTelnet::handle_socket_signal_readyRead);
-#if !defined(QT_NO_SSL)
-        connect(&socket, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::handle_socket_signal_sslError);
-#endif
     });
 
 
@@ -282,30 +289,29 @@ QString cTelnet::errorString()
 }
 
 // returns the human-friendly one ("ISO 8859-5 (Cyrillic)") given a computer encoding name ("ISO 8859-5")
-const QString& cTelnet::getFriendlyEncoding()
+const QString& cTelnet::getFriendlyEncoding() const
 {
     int index = mAcceptableEncodings.indexOf(mEncoding);
     return mFriendlyEncodings.at(index);
 }
 
-// Need to set the encoding at the start but it does not need to be written out
-// then. Return values are for Lua subsystem...!
 // newEncoding must be EITHER: one of the FIXED non-translatable values in
 // cTelnet::csmAcceptableEncodings
 // OR "ASCII"
 // OR an empty string (which means the same as the ASCII).
-QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool isToStore)
+// saveValue: if true, record this setting, otherwise it is ephemereal for this session
+QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool saveValue)
 {
     QString reportedEncoding = newEncoding;
     if (newEncoding.isEmpty() || newEncoding == QLatin1String("ASCII")) {
         reportedEncoding = QStringLiteral("ASCII");
         if (!mEncoding.isEmpty()) {
-            // This will disable trancoding on:
+            // This will disable transcoding on:
             // input in TBuffer::translateToPlainText(...)
             // incoming OOB in TLuaInterpreter::encodeBytes(...)
             // output in cTelnet::sendData(...)
             mEncoding.clear();
-            if (isToStore) {
+            if (saveValue) {
                 mpHost->writeProfileData(QStringLiteral("encoding"), reportedEncoding);
             }
         }
@@ -317,7 +323,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QString& newEncoding, const bool
                                  % QLatin1String(R"(".)"));
     } else if (mEncoding != newEncoding) {
         encodingChanged(newEncoding);
-        if (isToStore) {
+        if (saveValue) {
             mpHost->writeProfileData(QStringLiteral("encoding"), mEncoding);
         }
     }
@@ -329,11 +335,11 @@ void cTelnet::requestDiscordInfo()
 {
     mudlet* pMudlet = mudlet::self();
     if (pMudlet->mDiscord.libraryLoaded()) {
-        string data;
+        std::string data;
         data = TN_IAC;
         data += TN_SB;
         data += OPT_GMCP;
-        data += string("External.Discord.Get");
+        data += std::string("External.Discord.Get");
         data += TN_IAC;
         data += TN_SE;
 
@@ -346,11 +352,19 @@ void cTelnet::requestDiscordInfo()
 
 void cTelnet::connectIt(const QString& address, int port)
 {
-    // wird an dieser Stelle gesetzt
     if (mpHost) {
         mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
         mLF_ON_GA = mpHost->mLF_ON_GA;
         mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
+
+        if (mpHost->mUseProxy && !mpHost->mProxyAddress.isEmpty() && mpHost->mProxyPort != 0) {
+            auto& proxy = mpHost->getConnectionProxy();
+            socket.setProxy(*proxy);
+            mConnectViaProxy = true;
+        } else {
+            socket.setProxy(QNetworkProxy::DefaultProxy);
+            mConnectViaProxy = false;
+        }
     }
 
     if (socket.state() != QAbstractSocket::UnconnectedState) {
@@ -363,12 +377,21 @@ void cTelnet::connectIt(const QString& address, int port)
 
     hostName = address;
     hostPort = port;
-    QString server = tr("[ INFO ]  - Looking up the IP address of server:") + address + ":" + QString::number(port) + " ...";
-    postMessage(server);
+    postMessage(tr("[ INFO ]  - Looking up the IP address of server: %1:%2 ...").arg(address, QString::number(port)));
     // don't use a compile-time slot for this: https://bugreports.qt.io/browse/QTBUG-67646
     QHostInfo::lookupHost(address, this, SLOT(handle_socket_signal_hostFound(QHostInfo)));
 }
 
+void cTelnet::reconnect()
+{
+    // if we've connected offline and wish to reconnect, the last
+    // connection parameters aren't yet set
+    if (hostName.isEmpty() && hostPort == 0) {
+        connectIt(mpHost->getUrl(), mpHost->getPort());
+    } else {
+        connectIt(hostName, hostPort);
+    }
+}
 
 void cTelnet::disconnectIt()
 {
@@ -391,12 +414,16 @@ void cTelnet::handle_socket_signal_error()
 
 void cTelnet::slot_send_login()
 {
-    sendData(mpHost->getLogin());
+    if (!mpHost->getLogin().isEmpty()) {
+        sendData(mpHost->getLogin());
+    }
 }
 
 void cTelnet::slot_send_pass()
 {
-    sendData(mpHost->getPass());
+    if (!mpHost->getLogin().isEmpty() && !mpHost->getPass().isEmpty()) {
+        sendData(mpHost->getPass());
+    }
 }
 
 void cTelnet::handle_socket_signal_connected()
@@ -418,10 +445,8 @@ void cTelnet::handle_socket_signal_connected()
     QString nothing = "";
     mpHost->mLuaInterpreter.call(func, nothing);
     mConnectionTime.start();
-    if ((mpHost->getLogin().size() > 0) && (mpHost->getPass().size() > 0)) {
-        mTimerLogin->start(2000);
-        mTimerPass->start(3000);
-    }
+    mTimerLogin->start(2000);
+    mTimerPass->start(3000);
 
     emit signal_connected(mpHost);
 
@@ -540,7 +565,11 @@ void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
     if (!hostInfo.addresses().isEmpty()) {
         mHostAddress = hostInfo.addresses().constFirst();
         postMessage(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2\n").arg(hostName, mHostAddress.toString()));
-        postMessage(tr("[ INFO ]  - Trying to connect to %1: %2 ...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
+        if (!mConnectViaProxy) {
+            postMessage(tr("[ INFO ]  - Trying to connect to %1:%2 ...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
+        } else {
+            postMessage(tr("[ INFO ]  - Trying to connect to %1:%2 via proxy...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
+        }
         socket.connectToHost(mHostAddress, hostPort);
     } else {
         socket.connectToHost(hostInfo.hostName(), hostPort);
@@ -567,7 +596,7 @@ bool cTelnet::sendData(QString& data)
     mpHost->raiseEvent(event);
 
     if (mpHost->mAllowToSendCommand) {
-        string outData;
+        std::string outData;
         auto errorMsgTemplate = "[ WARN ]  - Invalid characters in outgoing data, one or more characters cannot\n"
             "be encoded into the range that is acceptable for the character\n"
             "encoding that is currently set {\"%1\"} for the game server.\n"
@@ -576,7 +605,7 @@ bool cTelnet::sendData(QString& data)
             "the encoding is changed.";
         if (!mEncoding.isEmpty()) {
             if ((! mEncodingWarningIssued) && (! outgoingDataCodec->canEncode(data))) {
-                QString errorMsg = tr(errorMsgTemplate, 
+                QString errorMsg = tr(errorMsgTemplate,
                                       "%1 is the name of the encoding currently set.").arg(mEncoding);
                 postMessage(errorMsg);
                 mEncodingWarningIssued = true;
@@ -587,7 +616,7 @@ bool cTelnet::sendData(QString& data)
             // Plain, raw ASCII, we hope!
             for (int i = 0, total = data.size(); i < total; ++i) {
                 if ((! mEncodingWarningIssued) && (data.at(i).row() || data.at(i).cell() > 127)){
-                QString errorMsg = tr(errorMsgTemplate, 
+                QString errorMsg = tr(errorMsgTemplate,
                                       "%1 is the name of the encoding currently set.").arg(QStringLiteral("ASCII"));
                     postMessage(errorMsg);
                     mEncodingWarningIssued = true;
@@ -618,7 +647,7 @@ bool cTelnet::sendData(QString& data)
 // Data is *expected* to be in the required MUD Server encoding on entry,
 // of course plain ASCII *is* valid for all encodings including Big-5 and GBK,
 // as we do NOT handle the weirdly different EBDIC!!!
-bool cTelnet::socketOutRaw(string& data)
+bool cTelnet::socketOutRaw(std::string& data)
 {
     // We were using socket.iswritable() but it was not clear that that was a
     // suitable way to check for an open, usable connection - whereas isvalid()
@@ -662,7 +691,7 @@ void cTelnet::setDisplayDimensions()
     int x = mpHost->mWrapAt;
     int y = mpHost->mScreenHeight;
     if (myOptionState[static_cast<size_t>(OPT_NAWS)]) {
-        string s;
+        std::string s;
         s = TN_IAC;
         s += TN_SB;
         s += OPT_NAWS;
@@ -714,11 +743,11 @@ void cTelnet::sendTelnetOption(char type, char option)
         break;
     default:
         _type = "ERROR wrong telnet type";
-    };
+    }
 
     qDebug().noquote().nospace() << "WE send telnet IAC " << _type << " " << decodeOption(option);
 #endif
-    string output;
+    std::string output;
     output += TN_IAC;
     output += type;
     output += option;
@@ -843,7 +872,16 @@ QString cTelnet::decodeOption(const unsigned char ch) const
     }
 }
 
-void cTelnet::processTelnetCommand(const string& command)
+std::pair<QString, int> cTelnet::getConnectionInfo() const
+{
+    if (hostName.isEmpty() && hostPort == 0) {
+        return {mpHost->getUrl(), mpHost->getPort()};
+    } else {
+        return {hostName, hostPort};
+    }
+}
+
+void cTelnet::processTelnetCommand(const std::string& command)
 {
     char ch = command[1];
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET > 1)
@@ -875,7 +913,7 @@ void cTelnet::processTelnetCommand(const string& command)
         break;
     default:
         _type = QString::number((quint8)ch);
-    };
+    }
     if (command.size() > 2) {
         qDebug() << "SERVER sent telnet (" << command.size() << " bytes):" << _type << " + " << decodeOption(command[2]);
     } else {
@@ -907,7 +945,7 @@ void cTelnet::processTelnetCommand(const string& command)
 
         if (option == OPT_MSDP) {
             //MSDP support
-            string output;
+            std::string output;
             if (!mpHost->mEnableMSDP) {
                 output += TN_IAC;
                 output += TN_DONT;
@@ -952,7 +990,7 @@ void cTelnet::processTelnetCommand(const string& command)
             enableATCP = true;
             sendTelnetOption(TN_DO, OPT_ATCP);
 
-            string output;
+            std::string output;
             output += TN_IAC;
             output += TN_SB;
             output += OPT_ATCP;
@@ -975,7 +1013,7 @@ void cTelnet::processTelnetCommand(const string& command)
             sendTelnetOption(TN_DO, OPT_GMCP);
             qDebug() << "GMCP enabled";
 
-            string output;
+            std::string output;
             output = TN_IAC;
             output += TN_SB;
             output += OPT_GMCP;
@@ -1005,6 +1043,18 @@ void cTelnet::processTelnetCommand(const string& command)
             }
 
             raiseProtocolEvent("sysProtocolEnabled", "GMCP");
+            break;
+        }
+
+        if (option == OPT_MSSP) {
+            if (!mpHost->mEnableMSSP) {
+                break;
+            }
+
+            enableMSSP = true;
+            sendTelnetOption(TN_DO, OPT_MSSP);
+            qDebug() << "MSSP enabled";
+            raiseProtocolEvent("sysProtocolEnabled", "MSSP");
             break;
         }
 
@@ -1106,6 +1156,12 @@ void cTelnet::processTelnetCommand(const string& command)
                 raiseProtocolEvent("sysProtocolDisabled", "GMCP");
             }
 
+            if (option == OPT_MSSP) {
+                // MSSP got turned off
+                enableMSSP = false;
+                raiseProtocolEvent("sysProtocolDisabled", "MSSP");
+            }
+
             if (option == OPT_MXP) {
                 // MXP got turned off
                 mpHost->mServerMXPenabled = false;
@@ -1169,6 +1225,14 @@ void cTelnet::processTelnetCommand(const string& command)
             enableGMCP = true;
             sendTelnetOption(TN_WILL, OPT_GMCP);
             raiseProtocolEvent("sysProtocolEnabled", "GMCP");
+            break;
+        }
+
+        if (option == OPT_MSSP && mpHost->mEnableMSSP) {
+            // MSSP support
+            enableMSSP = true;
+            sendTelnetOption(TN_WILL, OPT_MSSP);
+            raiseProtocolEvent("sysProtocolEnabled", "MSSP");
             break;
         }
 
@@ -1245,6 +1309,12 @@ void cTelnet::processTelnetCommand(const string& command)
             raiseProtocolEvent("sysProtocolDisabled", "GMCP");
         }
 
+        if (option == OPT_MSSP) {
+            // MSSP got turned off
+            enableMSSP = false;
+            raiseProtocolEvent("sysProtocolDisabled", "MSSP");
+        }
+
         if (option == OPT_MXP) {
             // MXP got turned off
             raiseProtocolEvent("sysProtocolDisabled", "MXP");
@@ -1294,7 +1364,7 @@ void cTelnet::processTelnetCommand(const string& command)
             setATCPVariables(payload);
 
             if (payload.startsWith(QByteArray("Auth.Request"))) {
-                string output;
+                std::string output;
                 output += TN_IAC;
                 output += TN_SB;
                 output += OPT_ATCP;
@@ -1348,8 +1418,10 @@ void cTelnet::processTelnetCommand(const string& command)
                 }
 
                 mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
-
-                QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
+                mpHost->updateProxySettings(mpDownloader);
+                auto request = QNetworkRequest(QUrl(url));
+                mudlet::self()->setNetworkRequestDefaults(url, request);
+                QNetworkReply* reply = mpDownloader->get(request);
                 mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
                 connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
                 mpProgressDialog->show();
@@ -1376,6 +1448,22 @@ void cTelnet::processTelnetCommand(const string& command)
             return;
         }
 
+        // MSSP
+        if (option == OPT_MSSP) {
+            QByteArray payload = command.c_str();
+            if (payload.size() < 6) {
+                return;
+            }
+            // payload is in the Mud Server's encoding, trim off the Telnet suboption
+            // bytes from beginning (3) and end (2):
+            payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
+
+            // strip first 3 characters to get rid of <IAC><SB><201>
+            // and strip the last 2 characters to get rid of <IAC><TN_SE>
+            setMSSPVariables(payload);
+            return;
+        }
+
         if (option == OPT_102) {
             QByteArray payload = command.c_str();
             if (payload.size() < 6) {
@@ -1397,7 +1485,7 @@ void cTelnet::processTelnetCommand(const string& command)
                 //send anything, as we do not request anything, but there are
                 //so many servers out there, that you can never be sure...)
                 // FIXME: This is damaged at the moment as we do not properly take care of the bits for the protocols that we manage ourselves e.g. ATCP/GMCP/MSDP/MXP etc...
-                string cmd;
+                std::string cmd;
                 cmd += TN_IAC;
                 cmd += TN_SB;
                 cmd += OPT_STATUS;
@@ -1437,7 +1525,7 @@ void cTelnet::processTelnetCommand(const string& command)
                 if (myOptionState[static_cast<size_t>(OPT_TERMINAL_TYPE)]) {
                     //server wants us to send terminal type; he can send his own type
                     //too, but we just ignore it, as we have no use for it...
-                    string cmd;
+                    std::string cmd;
                     cmd += TN_IAC;
                     cmd += TN_SB;
                     cmd += OPT_TERMINAL_TYPE;
@@ -1462,10 +1550,10 @@ void cTelnet::processTelnetCommand(const string& command)
         }
         //other cmds should not arrive, as they were not negotiated.
         //if they do, they are merely ignored
-        }; //end switch 2
+        } //end switch 2
         //other commands are simply ignored (NOP and such, see .h file for list)
     }
-    }; //end switch 1
+    } //end switch 1
 
     // raise sysTelnetEvent for all unhandled protocols
     // EXCEPT TN_GA / TN_EOR, which come at the end of every transmission, for performance reaons
@@ -1553,8 +1641,12 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
     if (var.startsWith(QLatin1String("RoomNum"))) {
         if (mpHost->mpMap) {
             mpHost->mpMap->mRoomIdHash[mProfileName] = arg.toInt();
-            if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
+#if defined(INCLUDE_3DMAPPER)
+            if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper) {
                 mpHost->mpMap->mpM->update();
+            }
+#endif
+            if (mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
                 mpHost->mpMap->mpMapper->mp2dMap->update();
             }
         }
@@ -1593,13 +1685,60 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
             return;
         }
 
-        QString version = transcodedMsg.section(QChar::LineFeed, 0);
-        // Cannot use QLatin1String(...) as that is only introduced in Qt 5.11:
-        version.remove(QStringLiteral("Client.GUI "));
-        version.replace(QChar::LineFeed, QChar::Space);
-        version = version.section(QChar::Space, 0, 0);
+        // Mudlet supports two formats for parsing data associated with
+        // Client.GUI package:
+        //
+        // JSON:       Client.GUI {"version": "39", "url": "https://www.example.com/example.mpackage"}
+        // Raw Telnet: Client.GUI <version>\n<url>
+        //
+        // If the data does not parse as JSON, we'll try Raw telnet.
 
-        QString url = transcodedMsg.section(QChar::LineFeed, 1);
+        QString version;
+        QString url;
+
+        auto document = QJsonDocument::fromJson(data.toUtf8());
+
+        if (!document.isObject()) {
+            // This is raw telnet, not JSON
+            version = transcodedMsg.section(QChar::LineFeed, 0);
+            version.remove(QLatin1String("Client.GUI "));
+            version.replace(QChar::LineFeed, QChar::Space);
+            version = version.section(QChar::Space, 0, 0);
+
+            if (version.isEmpty()) {
+                return;
+            }
+
+            url = transcodedMsg.section(QChar::LineFeed, 1);
+
+            if (url.isEmpty()) {
+                return;
+            }
+        } else {
+            // This is JSON
+            auto json = document.object();
+
+            if (json.isEmpty()) {
+                return;
+            }
+
+            auto versionJSON = json.value(QStringLiteral("version"));
+
+            if (versionJSON != QJsonValue::Undefined && !versionJSON.toString().isEmpty()) {
+                version = versionJSON.toString();
+            } else {
+                return;
+            }
+
+            auto urlJSON = json.value(QStringLiteral("url"));
+
+            if (urlJSON != QJsonValue::Undefined && !urlJSON.toString().isEmpty()) {
+                url = urlJSON.toString();
+            } else {
+                return;
+            }
+        }
+
         QString packageName = url.section(QLatin1Char('/'), -1);
         QString fileName = packageName;
         // As this is a file name it must be handled case insensitively to allow
@@ -1612,6 +1751,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         packageName.remove(QLatin1Char('\\'));
         packageName.remove(QLatin1Char('.'));
 
+        // If the client does not have the GUI or the current version it will be downloaded from the url.
         if (mpHost->mServerGUI_Package_version != version) {
             postMessage(tr("[ INFO ]  - The server wants to upgrade the GUI to new version '%1'.\n"
                            "Uninstalling old version '%2'.")
@@ -1629,8 +1769,10 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         }
 
         mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
-
-        QNetworkReply* reply = mpDownloader->get(QNetworkRequest(QUrl(url)));
+        mpHost->updateProxySettings(mpDownloader);
+        auto request = QNetworkRequest(QUrl(url));
+        mudlet::self()->setNetworkRequestDefaults(url, request);
+        QNetworkReply* reply = mpDownloader->get(request);
         mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
         connect(reply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
         mpProgressDialog->show();
@@ -1651,6 +1793,27 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
     }
 
     mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
+}
+
+void cTelnet::setMSSPVariables(const QByteArray& msg)
+{
+    QString transcodedMsg;
+
+    if (mpOutOfBandDataIncomingCodec) {
+        // Message is encoded
+        transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
+    } else {
+        // Message is in ASCII (though this can handle Utf-8):
+        transcodedMsg = QString::fromUtf8(msg);
+    }
+
+    transcodedMsg.remove(QChar::LineFeed);
+    // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
+    transcodedMsg.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
+    // remove \r's from the data, as yajl doesn't like it
+    transcodedMsg.remove(QChar::CarriageReturn);
+
+    mpHost->mLuaInterpreter.setMSSPTable(transcodedMsg);
 }
 
 void cTelnet::setChannel102Variables(const QString& msg)
@@ -1679,7 +1842,7 @@ void cTelnet::atcpComposerCancel()
     mpComposer->close();
     mpComposer = nullptr;
     // This will be unaffected by Mud Server encoding:
-    string output = "*q\nno\n";
+    std::string output = "*q\nno\n";
     socketOutRaw(output);
 }
 
@@ -1688,7 +1851,7 @@ void cTelnet::atcpComposerSave(QString txt)
     if (!mpHost->mEnableGMCP) {
         if (enableATCP) {
             //olesetbuf \n <text>
-            string output;
+            std::string output;
             output += TN_IAC;
             output += TN_SB;
             output += OPT_ATCP;
@@ -1704,7 +1867,7 @@ void cTelnet::atcpComposerSave(QString txt)
         }
 
     } else if (enableGMCP) {
-        string output;
+        std::string output;
         output += TN_IAC;
         output += TN_SB;
         output += OPT_GMCP;
@@ -1854,7 +2017,7 @@ void cTelnet::postMessage(QString msg)
 //forward data for further processing
 
 
-void cTelnet::gotPrompt(string& mud_data)
+void cTelnet::gotPrompt(std::string& mud_data)
 {
     mpPostingTimer->stop();
     mMudData += mud_data;
@@ -1896,14 +2059,14 @@ void cTelnet::gotPrompt(string& mud_data)
     mIsTimerPosting = false;
 }
 
-void cTelnet::gotRest(string& mud_data)
+void cTelnet::gotRest(std::string& mud_data)
 {
     if (mud_data.empty()) {
         return;
     }
     if (!mGA_Driver) {
         size_t i = mud_data.rfind('\n');
-        if (i != string::npos) {
+        if (i != std::string::npos) {
             mMudData += mud_data.substr(0, i + 1);
             postData();
             mpPostingTimer->start();
@@ -2018,6 +2181,9 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
             mIsReplayRunFromLua = false;
         }
         replayStream.setDevice(&replayFile);
+        if (QVersionNumber::fromString(QString(qVersion())) >= QVersionNumber(5, 13, 0)) {
+            replayStream.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        }
         loadingReplay = true;
         if (mudlet::self()->replayStart()) {
             // TODO: consider moving to a QTimeLine based system...?
@@ -2077,7 +2243,7 @@ void cTelnet::loadReplayChunk()
 void cTelnet::slot_processReplayChunk()
 {
     int datalen = loadedBytes;
-    string cleandata = "";
+    std::string cleandata = "";
     recvdGA = false;
     for (int i = 0; i < datalen; i++) {
         char ch = loadBuffer[i];
@@ -2196,7 +2362,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
         return;
     }
 
-    string cleandata = "";
+    std::string cleandata = "";
     int datalen;
     do {
         datalen = amount;

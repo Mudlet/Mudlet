@@ -40,7 +40,8 @@ dlgSourceEditorArea::dlgSourceEditorArea(QWidget* pF) : QWidget(pF)
 
     config->beginChanges();
 
-    config->setSmartTab(true); // I'm not fully sure what this does, but it says "Smart" so it must be good
+    config->setSmartTab(true); // enable the automatic addition of indents when inserting a newline
+    config->setUseTabChar(false); // when you press Enter for a newline, pad with spaces and not tabs
     config->setCaretBlinkRate(200);
 
     config->setIndentSize(2); // 2 spaces is the Lua default

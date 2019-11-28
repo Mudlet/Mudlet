@@ -64,7 +64,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
     scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}-linux-x64.AppImage.tar" "keneanung@mudlet.org:${DEPLOY_PATH}"
     # upload an unzipped, unversioned release for appimage.github.io
     scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet.AppImage" "keneanung@mudlet.org:${DEPLOY_PATH}"
-    DEPLOY_URL="http://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
+    DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
 
 
     # push release to DBLSQD
@@ -82,6 +82,12 @@ if [ "${DEPLOY}" = "deploy" ]; then
     bash "${HOME}/git-archive-all.sh" "Mudlet-${VERSION}.tar"
     xz "Mudlet-${VERSION}.tar"
     scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "keneanung@mudlet.org:${DEPLOY_PATH}"
+    
+    # generate and deploy geyser documentation
+    luarocks install --local ldoc
+    cd "${TRAVIS_BUILD_DIR}/src/mudlet-lua"
+    ./genDoc.sh
+    scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -r mudlet-lua-doc/files/ "keneanung@mudlet.org:${GEYSERDOC_DEPLOY_PATH}"
   fi
   export DEPLOY_URL
 fi

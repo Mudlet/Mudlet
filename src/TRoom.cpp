@@ -43,16 +43,16 @@ QDataStream &operator>>(QDataStream& ds, Qt::PenStyle& value)
     ds >> temporary;
     switch(temporary) {
     case Qt::DotLine:
-        [[clang::fallthrough]];
+        [[fallthrough]];
     case Qt::DashLine:
-        [[clang::fallthrough]];
+        [[fallthrough]];
     case Qt::DashDotLine:
-        [[clang::fallthrough]];
+        [[fallthrough]];
     case Qt::DashDotDotLine:
         value = static_cast<Qt::PenStyle>(temporary);
         break;
     case Qt::SolidLine:
-        [[clang::fallthrough]];
+        [[fallthrough]];
     default:
     // Force anything else to be a solidline
         value = Qt::SolidLine;
@@ -198,12 +198,11 @@ void TRoom::setExitWeight(const QString& cmd, int w)
     }
 }
 
-// Declared in header but was missing!
 // Uses lower case initials: n,ne,e,se,s,sw,w,nw
 //
 // also: up, down, in, out or any unprefixed special exit command
 // all of which can be stored but aren't (yet?) showable on the 2D mapper
-const bool TRoom::setDoor(const QString& cmd, const int doorStatus)
+bool TRoom::setDoor(const QString& cmd, const int doorStatus)
 {
     if (doorStatus > 0 && doorStatus <= 3) {
         if (doors.value(cmd, 0) != doorStatus) {

@@ -128,6 +128,8 @@ public slots:
     void slot_handleHostAddition(Host*, quint8);
     void slot_handleHostDeletion(Host*);
 
+    void slot_guiLanguageChanged(const QString&);
+
 private slots:
     void slot_changeShowSpacesAndTabs(bool);
     void slot_changeShowLineFeedsAndParagraphs(bool);
@@ -148,12 +150,12 @@ private slots:
     void slot_changeToolBarVisibility(const mudlet::controlsVisibility);
     void slot_changeShowIconsOnMenus(const Qt::CheckState);
     void slot_changeGuiLanguage(const QString&);
+    void slot_passwords_location_changed(int);
     void slot_changePlayerRoomStyle(const int);
     void slot_setPlayerRoomPrimaryColor();
     void slot_setPlayerRoomSecondaryColor();
     void slot_setPlayerRoomOuterDiameter(const int);
     void slot_setPlayerRoomInnerDiameter(const int);
-
 
 private:
     void setColors();
@@ -177,6 +179,7 @@ private:
     void disconnectHostRelatedControls();
     void generateMapGlyphDisplay();
     void generateDiscordTooltips();
+    void hidePasswordMigrationLabel();
 
     int mFontSize;
     QPointer<Host> mpHost;
@@ -185,6 +188,7 @@ private:
     QPointer<QMenu> mpMenu;
     QPointer<QDialog> mpDialogMapGlyphUsage;
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
+    std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
 
     QString mLogDirPath;
     // Needed to remember the state on construction so that we can sent the same
@@ -192,6 +196,7 @@ private:
     // Host::mEnableUserDictionary: - although, following review THAT has been
     // disallowed...
     bool mUseSharedDictionary;
+    void setupPasswordsMigration();
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

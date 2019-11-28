@@ -26,9 +26,6 @@
 #include "Host.h"
 #include "TKey.h"
 
-
-using namespace std;
-
 KeyUnit::KeyUnit(Host* pHost)
 : statsKeyTotal(0)
 , statsTempKeys(0)
@@ -49,7 +46,7 @@ KeyUnit::KeyUnit(Host* pHost)
 
 void KeyUnit::_uninstall(TKey* pChild, const QString& packageName)
 {
-    list<TKey*>* childrenList = pChild->mpMyChildrenList;
+    std::list<TKey*>* childrenList = pChild->mpMyChildrenList;
     for (auto key : *childrenList) {
         _uninstall(key, packageName);
         uninstallList.append(key);
@@ -384,7 +381,7 @@ void KeyUnit::initStats()
 
 void KeyUnit::_assembleReport(TKey* pChild)
 {
-    list<TKey*>* childrenList = pChild->mpMyChildrenList;
+    std::list<TKey*>* childrenList = pChild->mpMyChildrenList;
     for (auto pT : *childrenList) {
         _assembleReport(pT);
         if (pT->isActive()) {
@@ -410,7 +407,7 @@ QString KeyUnit::assembleReport()
             statsTempKeys++;
         }
         statsKeyTotal++;
-        list<TKey*>* childrenList = pChild->mpMyChildrenList;
+        std::list<TKey*>* childrenList = pChild->mpMyChildrenList;
         for (auto pT : *childrenList) {
             _assembleReport(pT);
             if (pT->isActive()) {

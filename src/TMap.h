@@ -25,6 +25,9 @@
 
 
 #include "TAstar.h"
+#if defined(INCLUDE_3DMAPPER)
+#include "glwidget.h"
+#endif
 
 #include "pre_guard.h"
 #include <QApplication>
@@ -43,7 +46,9 @@
 
 class dlgMapper;
 class Host;
+#if defined(INCLUDE_3DMAPPER)
 class GLWidget;
+#endif
 class TArea;
 class TRoom;
 class TRoomDB;
@@ -107,7 +112,6 @@ public:
     bool findPath(int from, int to);
     bool gotoRoom(int);
     bool gotoRoom(int, int);
-    void setView(float, float, float, float);
     bool serialize(QDataStream&, int saveVersion = 0);
     bool restore(QString location, bool downloadIfNotFound = true);
     bool retrieveMapFileStats(QString, QString*, int*, int*, int*, int*);
@@ -175,7 +179,9 @@ public:
     // contains complementary directions of dirs on TRoom.h
     QMap<int, int> reverseDirections;
 
+#if defined(INCLUDE_3DMAPPER)
     QPointer<GLWidget> mpM;
+#endif
     QPointer<dlgMapper> mpMapper;
     QMap<int, int> roomidToIndex;
 

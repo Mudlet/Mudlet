@@ -34,8 +34,8 @@
 #                                                                          #
 ############################################################################
 
-lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 7)) {
-    error("Mudlet requires Qt 5.7 or later")
+lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 11)) {
+    error("Mudlet requires Qt 5.11 or later")
 }
 
 # Including IRC Library
@@ -71,16 +71,20 @@ macx {
     QMAKE_CFLAGS_DEBUG += -O0
 }
 
-# enable C++14 for builds.
-CONFIG += c++14
+# enable C++17 for builds.
+lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 12)) {
+    QMAKE_CXXFLAGS += -std=c++17
+} else {
+    CONFIG += c++17
+}
 
 # MSVC specific flags. Enable multiprocessor MSVC builds.
 msvc:QMAKE_CXXFLAGS += -MP
 
 # Mac specific flags.
-macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.12
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
 
-QT += network opengl uitools multimedia gui concurrent
+QT += network uitools multimedia gui concurrent
 qtHaveModule(gamepad) {
     QT += gamepad
     message("Using Gamepad module")
@@ -90,64 +94,12 @@ qtHaveModule(texttospeech) {
     message("Using TextToSpeech module")
 }
 
-############################# TEMPORARY TESTING PART ###########################
-# Tempory tests to determine what scope variables are correct, it seems that
-# they are related to the complete mkspecs base directory names
-# (e.g. linux-g++-64) the first part at least seems to match up with what we
-#  have been using so far {"macx", "win32"} "unix" seems to be an oddity.
-clear(scopes)
-cygwin {
-  scopes += "cygwin"
-}
-linux-clang-libc++ {
-  scopes += "linux-clang-libc++"
-}
-linux-g++-32 {
-  scopes += "linux-g++-32"
-}
-linux-g++-64 {
-# not seen when expected:
-  scopes += "linux-g++-64"
-}
-linux-llvm {
-  scopes += "linux-llvm"
-}
-linux-lsb-g++ {
-  scopes += "linux-lsb-g++"
-}
-macx-g++ {
-  scopes += "macx-g++"
-}
-macx-xcode {
-  scopes += "macx-xcode"
-}
-win32-clang-msvc {
-  scopes += "win32-clang-msvc"
-}
-win32-msvc {
-  scopes += "win32-msvc"
-}
-win64 {
-  scopes += "win64"
-}
-
-!isEmpty( scopes ) : message("Previously unreported scope variables tested and found: $${scopes} - slysven would like to know about them.")
-# Confirmed (where):
-# darwin(Travis CI), linux(local), linux-clang(local), linux-g++(local),
-# macx(Travis CI), macx-clang(Travis CI), win32(AppVeyor CI),
-# win32-g++(AppVeyor CI), unix(local)
-# freebsd(local) freebsd-clang(local) freebsd-g++(local)
-
-# Suspected not to work:
-# linux-g++-32, linux-g++-64
-
-
 TEMPLATE = app
 
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 3.22.1
+VERSION = 4.3.0
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -155,8 +107,10 @@ VERSION = 3.22.1
 # the qmake BUILD variable is NOT built-in
 BUILD = $$(MUDLET_VERSION_BUILD)
 isEmpty( BUILD ) {
-# Leave the value of the following empty for a release build
-# i.e. the line should be "BUILD =" without quotes
+# Possible values are:
+# "-dev" for the development build
+# "-public-test-build" for the public test build
+# "" for the release build
    BUILD = "-dev"
 }
 
@@ -223,6 +177,16 @@ linux|macx|win32 {
 # else we are on another platform which the updater code will not support so
 # don't include it either
 
+
+######################### 3D mapper toggle #######################
+# To remove the 3D mapper, set the environment WITH_3DMAPPER variable to "NO"
+# ie: export WITH_3DMAPPER="NO" qmake
+#
+3DMAPPER_TEST = $$upper($$(WITH_3DMAPPER))
+isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
+    DEFINES += INCLUDE_3DMAPPER
+}
+
 ###################### Platform Specific Paths and related #####################
 # Specify default location for Lua files, in OS specific LUA_DEFAULT_DIR value
 # below, if this is not done then a hardcoded default of a ./mudlet-lua/lua
@@ -243,9 +207,14 @@ unix:!macx {
 # destination place for local builds for software for all users:
     isEmpty( PREFIX ) PREFIX = /usr/local
     # Now picks up the first element of the environmental XDG_DATA_DIRS if
-    # not overridden:
+    # not overridden by providing a DATAROOTDIR:
     isEmpty( DATAROOTDIR ) {
-        DATAROOTDIR = $$first($$replace( XDG_DATA_DIRS, ":", " "))
+        XDG_DATA_DIRS_TEST = $$(XDG_DATA_DIRS)
+        ! isEmpty( XDG_DATA_DIRS_TEST ) {
+            XDG_DATA_DIRS_TEST_SPLIT = $$split(XDG_DATA_DIRS_TEST, :)
+            DATAROOTDIR = $$first(XDG_DATA_DIRS_TEST_SPLIT)
+            message("First (most significant) element of XDG_DATA_DIRS has been determined to be: $${DATAROOTDIR} ...")
+        }
         isEmpty( DATAROOTDIR ) DATAROOTDIR = $${PREFIX}/share
     }
 
@@ -258,9 +227,9 @@ unix:!macx {
         LIBS += \
 # Some OS platforms have a hyphen (I think Cygwin does as well):
             -llua-5.1\
-# FreeFSB appends the version number to hunspell:
+# FreeBSD appends the version number to hunspell:
             -lhunspell-1.7
-# FreeFSB (at least) supports multiple Lua versions (and 5.1 is not the default anymore):
+# FreeBSD (at least) supports multiple Lua versions (and 5.1 is not the default anymore):
         INCLUDEPATH += \
             /usr/local/include/lua51
     } else {
@@ -272,10 +241,14 @@ unix:!macx {
     LIBS += -lpcre \
         -L/usr/local/lib/ \
         -lyajl \
-        -lGLU \
         -lzip \
         -lz \
         -lpugixml
+
+    isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
+       LIBS += -lGLU
+    }
+
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32 {
     MINGW_BASE_DIR = $$(MINGW_BASE_DIR)
@@ -289,8 +262,6 @@ unix:!macx {
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
         -lyajl \
-        -lopengl32 \
-        -lglu32 \
         -lpugixml \
         -lWs2_32 \
         -L"$${MINGW_BASE_DIR}\\bin"
@@ -367,10 +338,10 @@ DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 # tweaking in that situation
 
 # Edbee widget needed in all cases.
-# Mudlet customised (Lua 5.1 specific?) lua-code-format source code needed in
+# Mudlet customised (Lua 5.1 specific) lua-code-format source code needed in
 # all cases. (The code is built into a lcf module within
 # TLuaInterpreter::initIndenterGlobals() on demand) - and we need to get the
-# git submodule from Mudlet's own GitHub server...
+# git submodule from Mudlet's own GitHub repository
 
 # NOTE: It does SEEM possible to prebuild and install this into a system wide
 # luarocks installation by changing to the "./3rdparty/lcf" directory with the
@@ -390,10 +361,13 @@ win32 {
         # PowerShell - for cmd.exe the nearest equivalent is '&'
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/edbee-lib")
     }
-
     !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/lcf")
+    }
+    !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
+        message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
+        system("cd $${PWD}\.. & git submodule update --init 3rdparty/qtkeychain")
     }
 } else {
     !exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
@@ -403,6 +377,10 @@ win32 {
     !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}/.. ; git submodule update --init 3rdparty/lcf")
+    }
+    !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
+        message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
+        system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qtkeychain")
     }
 }
 
@@ -440,6 +418,12 @@ exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
 
 !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
     error("Cannot locate lua code formatter submodule source code, build abandoned!")
+}
+
+exists("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri") {
+    include("$${PWD}/../3rdparty/qtkeychain/qt5keychain.pri")
+} else {
+    error("Cannot locate QtKeychain submodule source code, build abandoned!")
 }
 
 contains( DEFINES, INCLUDE_UPDATER ) {
@@ -489,7 +473,6 @@ SOURCES += \
     EAction.cpp \
     exitstreewidget.cpp \
     FontManager.cpp \
-    glwidget.cpp \
     Host.cpp \
     HostManager.cpp \
     ircmessageformatter.cpp \
@@ -560,7 +543,6 @@ HEADERS += \
     dlgVarsMainArea.h \
     EAction.h \
     exitstreewidget.h \
-    glwidget.h \
     Host.h \
     HostManager.h \
     ircmessageformatter.h \
@@ -671,6 +653,26 @@ linux|macx|win32 {
 } else {
     !build_pass{
         message("The Updater code is excluded as on-line updating is not available on this platform")
+    }
+}
+
+
+contains( DEFINES, INCLUDE_3DMAPPER ) {
+    HEADERS += glwidget.h
+    SOURCES += glwidget.cpp
+    QT += opengl
+
+    win32 {
+        LIBS += -lopengl32 \
+                -lglu32
+    }
+
+    !build_pass{
+        message("The 3D mapper code is included in this configuration")
+    }
+} else {
+    !build_pass{
+        message("The 3D mapper code is excluded from this configuration")
     }
 }
 
@@ -1385,7 +1387,7 @@ DISTFILES += \
     ../CI/appveyor.after_success.ps1 \
     ../CI/appveyor.install.ps1 \
     ../CI/appveyor.set-build-info.ps1 \
-    ../CI/appveyor.set-environment.ps1 \
+    ../CI/appveyor.functions.ps1 \
     ../CI/appveyor.build.ps1 \
     mudlet-lua/lua/ldoc.css \
     mudlet-lua/genDoc.sh \

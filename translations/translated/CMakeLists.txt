@@ -32,7 +32,7 @@ foreach(ts_file ${TS_FILES_NOEXT})
   string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}" qm_file ${ts_file})
   execute_process(
           WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-          COMMAND ${LRELEASE_LOCATION} ${ts_file}.ts -compress -qm ${qm_file}.qm
+          COMMAND LANG=C ${LRELEASE_LOCATION} ${ts_file}.ts -compress -qm ${qm_file}.qm
           OUTPUT_VARIABLE "lrelease_output")
   file(APPEND "${CMAKE_CURRENT_SOURCE_DIR}/lrelease_output.txt" ${lrelease_output})
 endforeach()

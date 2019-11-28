@@ -226,12 +226,16 @@ public slots:
     void slot_import();
     void slot_viewStatsAction();
     void slot_debug_mode();
+    void slot_next_section();
+    void slot_previous_section();
+    void slot_show_current();
     void slot_show_timers();
     void slot_show_triggers();
     void slot_show_scripts();
     void slot_show_aliases();
     void slot_show_actions();
     void slot_show_keys();
+    void slot_activateMainWindow();
     void slot_tree_selection_changed();
     void slot_trigger_selected(QTreeWidgetItem* pItem);
     void slot_timer_selected(QTreeWidgetItem* pItem);
@@ -423,6 +427,9 @@ private:
 
     QScrollArea* mpScrollArea;
     QWidget* HpatternList;
+    // this widget holds the errors, trigger patterns, and all other widgets that aren't edbee
+    // in it, as a workaround for an extra splitter getting created by Qt below the error msg otherwise
+    QWidget *mpNonCodeWidgets;
     dlgTriggersMainArea* mpTriggersMainArea;
     dlgTimersMainArea* mpTimersMainArea;
     dlgSystemMessageArea* mpSystemMessageArea;

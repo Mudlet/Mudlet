@@ -1,55 +1,78 @@
 # Locate YAJL library
+# This module exports the following targets
+#
+# YAJL::YAJL
+#
 # This module defines
-#  YAJL_FOUND, if false, do not try to link to YAJL 
-#  YAJL_LIBRARIES
-#  YAJL_INCLUDE_DIR, where to find yajl_*.h 
+#  YAJL_FOUND, if false, do not try to link to YAJL
+#  YAJL_LIBRARY
+#  YAJL_INCLUDE_DIR, where to find yajl_*.h
 
+FIND_PACKAGE(PkgConfig)
+
+PKG_SEARCH_MODULE(PC_YAJL yajl libyajl)
 
 FIND_PATH(YAJL_INCLUDE_DIR yajl/yajl_version.h
   HINTS
-  ${YAJL_DIR} $ENV{YAJL_DIR}
-  PATH_SUFFIXES include
+    ${YAJL_DIR}
+    $ENV{YAJL_DIR}
+    ${PC_YAJL_INCLUDE_DIRS}
+  PATH_SUFFIXES
+    include
   PATHS
-  ~/Library/Frameworks
-  /Library/Frameworks
-  /usr/local
-  /usr
-  /sw # Fink
-  /opt/local # DarwinPorts
-  /opt/csw # Blastwave
-  /opt
+    ~/Library/Frameworks
+    /Library/Frameworks
+    /usr/local
+    /usr
+    /sw # Fink
+    /opt/local # DarwinPorts
+    /opt/csw # Blastwave
+    /opt
 )
 
-FIND_LIBRARY(YAJL_LIBRARY_RELEASE 
-  NAMES yajl yajl_s
+FIND_LIBRARY(YAJL_LIBRARY_RELEASE
+  NAMES
+    yajl
+    yajl_s
   HINTS
-  ${YAJL_DIR} $ENV{YAJL_DIR}
-  PATH_SUFFIXES lib64 lib
+    ${YAJL_DIR}
+    $ENV{YAJL_DIR}
+    ${PC_YAJL_LIBRARY_DIRS}
+    ${PC_YAJL_LIBRARY_DIR}
+  PATH_SUFFIXES
+    lib64
+    lib
   PATHS
-  ~/Library/Frameworks
-  /Library/Frameworks
-  /usr/local
-  /usr
-  /sw
-  /opt/local
-  /opt/csw
-  /opt
+    ~/Library/Frameworks
+    /Library/Frameworks
+    /usr/local
+    /usr
+    /sw
+    /opt/local
+    /opt/csw
+    /opt
 )
 
-FIND_LIBRARY(YAJL_LIBRARY_DEBUG 
-  NAMES yajld yajl_sd
+FIND_LIBRARY(YAJL_LIBRARY_DEBUG
+  NAMES
+    yajld
+    yajl_sd
   HINTS
-  ${YAJL_DIR} $ENV{YAJL_DIR}
-  PATH_SUFFIXES lib64 lib
+    ${YAJL_DIR} $ENV{YAJL_DIR}
+    ${PC_YAJL_LIBRARY_DIRS}
+    ${PC_YAJL_LIBRARY_DIR}
+  PATH_SUFFIXES
+    lib64
+    lib
   PATHS
-  ~/Library/Frameworks
-  /Library/Frameworks
-  /usr/local
-  /usr
-  /sw
-  /opt/local
-  /opt/csw
-  /opt
+    ~/Library/Frameworks
+    /Library/Frameworks
+    /usr/local
+    /usr
+    /sw
+    /opt/local
+    /opt/csw
+    /opt
 )
 
 IF(YAJL_LIBRARY_DEBUG AND YAJL_LIBRARY_RELEASE)
@@ -63,17 +86,47 @@ ELSEIF(YAJL_LIBRARY_DEBUG)
   GET_FILENAME_COMPONENT(YAJL_FILENAME ${YAJL_LIBRARY_DEBUG} NAME_WE)
 ENDIF()
 
-STRING(FIND ${YAJL_FILENAME} yajl_s YAJL_STATIC)
-
-IF(YAJL_STATIC EQUAL -1)
-  ADD_DEFINITIONS(-DYAJL_SHARED)
+IF(PC_YAJL_yajl_FOUND)
+  SET(YAJL_VERSION ${PC_YAJL_yajl_VERSION})
+ELSEIF(PC_YAJL_libyajl_FOUND)
+  SET(YAJL_VERSION ${PC_YAJL_libyajl_VERSION})
+ELSE()
+  SET(YAJL_VERSION ${PC_YAJL_VERSION})
 ENDIF()
 
-SET( YAJL_LIBRARIES "${YAJL_LIBRARY}" CACHE STRING "YAJL Libraries")
-
 INCLUDE(FindPackageHandleStandardArgs)
-# handle the QUIETLY and REQUIRED arguments and set YAJL_FOUND to TRUE if 
+# handle the QUIETLY and REQUIRED arguments and set YAJL_FOUND to TRUE if
 # all listed variables are TRUE
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(YAJL  DEFAULT_MSG  YAJL_LIBRARIES YAJL_INCLUDE_DIR)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(YAJL
+  REQUIRED_VARS
+    YAJL_LIBRARY
+    YAJL_INCLUDE_DIR
+  VERSION_VAR
+    YAJL_VERSION
+)
 
-MARK_AS_ADVANCED(YAJL_INCLUDE_DIR YAJL_LIBRARIES YAJL_LIBRARY YAJL_LIBRARY_RELEASE YAJL_LIBRARY_DEBUG)
+MARK_AS_ADVANCED(YAJL_INCLUDE_DIR YAJL_LIBRARY YAJL_LIBRARY_RELEASE YAJL_LIBRARY_DEBUG)
+
+STRING(FIND ${YAJL_FILENAME} yajl_s YAJL_STATIC)
+
+IF(YAJL_FOUND AND NOT TARGET YAJL::YAJL)
+  IF(YAJL_STATIC EQUAL -1)
+    ADD_LIBRARY(YAJL::YAJL SHARED IMPORTED)
+    SET_TARGET_PROPERTIES(YAJL::YAJL PROPERTIES
+      INTERFACE_COMPILE_DEFINITIONS
+        YAJL_SHARED
+      IMPORTED_LOCATION
+        "${YAJL_LIBRARY}"
+      INTERFACE_INCLUDE_DIRECTORIES
+        "${YAJL_INCLUDE_DIR}"
+    )
+  ELSE()
+    ADD_LIBRARY(YAJL::YAJL STATIC IMPORTED)
+    SET_TARGET_PROPERTIES(YAJL::YAJL PROPERTIES
+      IMPORTED_LOCATION
+        "${YAJL_LIBRARY}"
+      INTERFACE_INCLUDE_DIRECTORIES
+        "${YAJL_INCLUDE_DIR}"
+    )
+  ENDIF()
+ENDIF()

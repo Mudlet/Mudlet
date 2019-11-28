@@ -26,6 +26,7 @@
 #endif
 
 #include "pre_guard.h"
+#include <QPushButton>
 #include <QtConcurrent>
 #include "post_guard.h"
 
@@ -37,12 +38,20 @@
 //   and promptly quits. Installer updates Mudlet and launches Mudlet when its done
 // mac: handled completely outside of Mudlet by Sparkle
 
-Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent), mUpdateInstalled(false), mpInstallOrRestart(new QPushButton(tr("Update")))
+Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent)
+, mUpdateInstalled(false)
+, mpInstallOrRestart(new QPushButton(tr("Update")))
+, updateDialog(nullptr)
 {
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
     this->settings = settings;
 
-    feed = new dblsqd::Feed(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"), QStringLiteral("release"));
+    feed = new dblsqd::Feed(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"),
+                            mudlet::scmIsPublicTestVersion ? QStringLiteral("public-test-build") : QStringLiteral("release"));
+}
+Updater::~Updater()
+{
+    delete (feed);
 }
 
 // start the update process and figure out what needs to be done
@@ -190,7 +199,7 @@ void Updater::setupOnLinux()
     // Setup to automatically download the new release when an update is available
     QObject::connect(feed, &dblsqd::Feed::ready, this, [=]() {
 
-        // only update release builds to prevent auto-update from overwriting your
+        // don't update development builds to prevent auto-update from overwriting your
         // compiled binary while in development
         if (mudlet::scmIsDevelopmentVersion) {
             return;
@@ -247,14 +256,13 @@ void Updater::untarOnLinux(const QString& fileName)
 
 void Updater::updateBinaryOnLinux()
 {
-    // FIXME don't hardcode name in case we want to change it
     QFileInfo unzippedBinary(QStandardPaths::writableLocation(QStandardPaths::TempLocation) + "/" + unzippedBinaryName);
     auto systemEnvironment = QProcessEnvironment::systemEnvironment();
     auto appimageLocation = systemEnvironment.contains(QStringLiteral("APPIMAGE")) ?
                 systemEnvironment.value(QStringLiteral("APPIMAGE"), QString()) :
                 QCoreApplication::applicationFilePath();
 
-    QString installedBinaryPath(appimageLocation);
+    const QString& installedBinaryPath(appimageLocation);
 
     auto executablePermissions = unzippedBinary.permissions();
     executablePermissions |= QFileDevice::ExeOwner | QFileDevice::ExeUser;
@@ -280,7 +288,7 @@ void Updater::installOrRestartClicked(QAbstractButton* button, const QString& fi
 {
     Q_UNUSED(button)
 
-    // moc, when used with cmake on macos bugs out if the entire function declaration and definition is entirely
+    // moc, when used with cmake on macOS bugs out if the entire function declaration and definition is entirely
     // commented out so we leave a stub in
 #if !defined(Q_OS_MACOS)
 
@@ -338,6 +346,9 @@ void Updater::recordUpdateTime() const
     }
 
     QDataStream ifs(&file);
+    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+    }
     ifs << QDateTime::currentDateTime().toMSecsSinceEpoch();
     file.close();
 }
@@ -354,6 +365,9 @@ void Updater::recordUpdatedVersion() const
     }
 
     QDataStream ifs(&file);
+    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+    }
     ifs << APP_VERSION;
     file.close();
 }
@@ -380,6 +394,9 @@ bool Updater::shouldShowChangelog()
         return false;
     }
     QDataStream ifs(&file);
+    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+    }
     ifs >> updateTimestamp;
     file.close();
 
@@ -405,6 +422,9 @@ QString Updater::getPreviousVersion() const
         return QString();
     }
     QDataStream ifs(&file);
+    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+    }
     ifs >> previousVersion;
     file.close();
     file.remove();

@@ -1,4 +1,4 @@
-/***************************************************************************
+﻿/***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -33,9 +33,6 @@
 
 #include <cassert>
 #include <sstream>
-
-
-using namespace std;
 
 // Some extraordinary numbers outside of the range (0-255) used for ANSI colors:
 // Changing them WILL modify the Lua API of TLuaInterpreter::tempColorTrigger
@@ -315,6 +312,7 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
     for (i = 0; i < rc; i++) {
         char* substring_start = subject + ovector[2 * i];
         int substring_length = ovector[2 * i + 1] - ovector[2 * i];
+        int utf16_pos = toMatch.indexOf(QString(substring_start));
         std::string match;
         if (substring_length < 1) {
             captureList.push_back(match);
@@ -324,7 +322,7 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
 
         match.append(substring_start, substring_length);
         captureList.push_back(match);
-        posList.push_back(ovector[2 * i] + posOffset);
+        posList.push_back(utf16_pos + posOffset);
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::darkCyan), QColor(Qt::black)) << "capture group #" << (i + 1) << " = " >> 0;
             TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "<" << match.c_str() << ">\n" >> 0;
@@ -377,6 +375,7 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
         for (i = 0; i < rc; i++) {
             char* substring_start = subject + ovector[2 * i];
             int substring_length = ovector[2 * i + 1] - ovector[2 * i];
+            int utf16_pos = toMatch.indexOf(QString(substring_start));
 
             std::string match;
             if (substring_length < 1) {
@@ -386,7 +385,7 @@ bool TTrigger::match_perl(char* subject, const QString& toMatch, int regexNumber
             }
             match.append(substring_start, substring_length);
             captureList.push_back(match);
-            posList.push_back(ovector[2 * i] + posOffset);
+            posList.push_back(utf16_pos + posOffset);
             if (mudlet::debugMode) {
                 TDebug(QColor(Qt::darkCyan), QColor(Qt::black)) << "<regex mode: match all> capture group #" << (i + 1) << " = " >> 0;
                 TDebug(QColor(Qt::darkMagenta), QColor(Qt::black)) << "<" << match.c_str() << ">\n" >> 0;
@@ -491,7 +490,7 @@ bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QStri
             for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
                 int begin = *iti;
                 std::string& s = *its;
-                int length = s.size();
+                int length = QString::fromStdString(s).size();
                 pC->selectSection(begin, length);
                 pC->setBgColor(r1, g1, b1);
                 pC->setFgColor(r2, g2, b2);
@@ -611,7 +610,7 @@ bool TTrigger::match_substring(const QString& toMatch, const QString& regex, int
             for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
                 int begin = *iti;
                 std::string& s = *its;
-                int length = s.size();
+                int length = QString::fromStdString(s).size();
                 pC->selectSection(begin, length);
                 pC->setBgColor(r1, g1, b1);
                 pC->setFgColor(r2, g2, b2);
@@ -721,7 +720,8 @@ bool TTrigger::match_color_pattern(int line, int regexNumber)
             for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
                 int begin = *iti;
                 qDebug() << "TTrigger::match_color_pattern(" << line << "," << regexNumber << ") INFO - match found: " << (*its).c_str() << " size is:" << (*its).size();
-                int length = (*its).size();
+                std::string& s = *its;
+                int length = QString::fromStdString(s).size();
                 pC->selectSection(begin, length);
                 pC->setBgColor(r1, g1, b1);
                 pC->setFgColor(r2, g2, b2);
@@ -768,7 +768,7 @@ bool TTrigger::match_line_spacer(int regexNumber)
                                 >> 0;
                     }
                     matchStatePair.second->conditionMatched();
-                    std::list<string> captureList;
+                    std::list<std::string> captureList;
                     std::list<int> posList;
                     matchStatePair.second->multiCaptureList.push_back(captureList);
                     matchStatePair.second->multiCapturePosList.push_back(posList);
@@ -849,7 +849,7 @@ bool TTrigger::match_exact_match(const QString& toMatch, const QString& line, in
             for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
                 int begin = *iti;
                 std::string& s = *its;
-                int length = s.size();
+                int length = QString::fromStdString(s).size();
                 pC->selectSection(begin, length);
                 pC->setBgColor(r1, g1, b1);
                 pC->setFgColor(r2, g2, b2);
@@ -967,7 +967,7 @@ bool TTrigger::match(char* subject, const QString& toMatch, int line, int posOff
         if (mIsMultiline) {
             int k = 0;
             conditionMet = false; //invalidate conditionMet as it has no meaning for multiline triggers
-            list<TMatchState*> removeList;
+            std::list<TMatchState*> removeList;
 
             for (auto& matchStatePair : mConditionMap) {
                 k++;

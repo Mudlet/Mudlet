@@ -39,7 +39,9 @@
 
 #include "pre_guard.h"
 #include <QtUiTools>
+#include <QNetworkProxy>
 #include <zip.h>
+#include <memory>
 #include "post_guard.h"
 
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
@@ -56,16 +58,23 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBorderLeftWidth(0)
 , mBorderRightWidth(0)
 , mBorderTopHeight(0)
-, mCommandLineFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
-, mCommandSeparator(QLatin1String(";;"))
-, mDisplayFont(QFont("Bitstream Vera Sans Mono", 10, QFont::Normal))
+, mCommandLineFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal))
+, mCommandSeparator(QStringLiteral(";;"))
+, mDisplayFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mEnableGMCP(true)
+, mEnableMSSP(true)
 , mEnableMSDP(false)
 , mServerMXPenabled(true)
 , mFORCE_GA_OFF(false)
 , mFORCE_NO_COMPRESSION(false)
 , mFORCE_SAVE_ON_EXIT(false)
 , mInsertedMissingLF(false)
+, mSslTsl(false)
+, mUseProxy(false)
+, mProxyAddress(QString())
+, mProxyPort(0)
+, mProxyUsername(QString())
+, mProxyPassword(QString())
 , mIsGoingDown(false)
 , mIsProfileLoadingSequence(false)
 , mLF_ON_GA(true)
@@ -90,6 +99,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mUSE_UNIX_EOL(false)
 , mWrapAt(100)
 , mWrapIndentCount(0)
+, mEditorAutoComplete(true)
 , mEditorTheme(QLatin1String("Mudlet"))
 , mEditorThemeFile(QLatin1String("Mudlet.tmTheme"))
 , mThemePreviewItemID(-1)
@@ -184,6 +194,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
+
+    // Copy across the details needed for the "color_table":
+    mLuaInterpreter.updateAnsi16ColorsInTable();
+    mLuaInterpreter.updateExtendedAnsiColorsInTable();
+
     QString directoryLogFile = mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, QStringLiteral("log"));
     QString logFileName = QStringLiteral("%1/errors.txt").arg(directoryLogFile);
     QDir dirLogFile;
@@ -225,6 +240,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     if (!optin.isEmpty()) {
         mDiscordDisableServerSide = optin.toInt() == Qt::Unchecked ? true : false;
     }
+
+    loadSecuredPassword();
 }
 
 Host::~Host()
@@ -375,6 +392,7 @@ void Host::reloadModule(const QString& reloadModuleName)
 
 void Host::resetProfile_phase1()
 {
+    mAliasUnit.stopAllTriggers();
     mTriggerUnit.stopAllTriggers();
     mTimerUnit.stopAllTriggers();
     mKeyUnit.stopAllTriggers();
@@ -387,10 +405,12 @@ void Host::resetProfile_phase1()
 
 void Host::resetProfile_phase2()
 {
+    getAliasUnit()->removeAllTempAliases();
     getTimerUnit()->removeAllTempTimers();
     getTriggerUnit()->removeAllTempTriggers();
     getKeyUnit()->removeAllTempKeys();
 
+    mAliasUnit.doCleanup();
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
     mKeyUnit.doCleanup();
@@ -399,7 +419,6 @@ void Host::resetProfile_phase2()
     mEventMap.clear();
     mLuaInterpreter.initLuaGlobals();
     mLuaInterpreter.loadGlobal();
-    mLuaInterpreter.initIndenterGlobals();
     mBlockScriptCompile = false;
 
     getTriggerUnit()->compileAll();
@@ -410,9 +429,14 @@ void Host::resetProfile_phase2()
     // All the Timers are NOT compiled here;
     mResetProfile = false;
 
+    mAliasUnit.reenableAllTriggers();
     mTimerUnit.reenableAllTriggers();
     mTriggerUnit.reenableAllTriggers();
     mKeyUnit.reenableAllTriggers();
+
+    // Have to recopy the values into the Lua "color_table"
+    mLuaInterpreter.updateAnsi16ColorsInTable();
+    mLuaInterpreter.updateExtendedAnsiColorsInTable();
 
     TEvent event {};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
@@ -479,7 +503,6 @@ std::tuple<bool, QString, QString> Host::saveProfileAs(const QString& file)
 
 void Host::xmlSaved(const QString& xmlName)
 {
-    qDebug() << "saved" << xmlName;
     if (writers.contains(xmlName)) {
         auto writer = writers.take(xmlName);
         delete writer;
@@ -531,9 +554,54 @@ QString Host::getMmpMapLocation() const
 {
     return mpMap->getMmpMapLocation();
 }
+// error and debug consoles inherit font of the main console
+void Host::updateConsolesFont()
+{
+    if (mpEditorDialog) {
+        if (mpEditorDialog->mpErrorConsole) {
+            mpEditorDialog->mpErrorConsole->setMiniConsoleFont(mDisplayFont.family());
+            mpEditorDialog->mpErrorConsole->setMiniConsoleFontSize(mDisplayFont.pointSize());
+        }
+        if (mudlet::self()->mpDebugArea) {
+            mudlet::self()->mpDebugConsole->setMiniConsoleFont(mDisplayFont.family());
+            mudlet::self()->mpDebugConsole->setMiniConsoleFontSize(mDisplayFont.pointSize());
+        }
+    }
+}
+
+std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
+{
+    const QFontMetrics metrics(font);
+    if (metrics.averageCharWidth() == 0) {
+        return std::make_pair(false, QStringLiteral("specified font is invalid (its letters have 0 width)"));
+    }
+
+    mDisplayFont = font;
+    updateConsolesFont();
+    return std::make_pair(true, QString());
+}
+
+std::pair<bool, QString> Host::setDisplayFont(const QString& fontName)
+{
+    const auto result = setDisplayFont(QFont(fontName));
+    updateConsolesFont();
+    return result;
+}
+
+void Host::setDisplayFontFromString(const QString& fontData)
+{
+    mDisplayFont.fromString(fontData);
+    updateConsolesFont();
+}
+
+void Host::setDisplayFontSize(int size)
+{
+    mDisplayFont.setPointSize(size);
+    updateConsolesFont();
+}
 
 // Now returns the total weight of the path
-const unsigned int Host::assemblePath()
+unsigned int Host::assemblePath()
 {
     unsigned int totalWeight = 0;
     QStringList pathList;
@@ -557,7 +625,7 @@ const unsigned int Host::assemblePath()
     return totalWeight;
 }
 
-const bool Host::checkForMappingScript()
+bool Host::checkForMappingScript()
 {
     // the mapper script reminder is only shown once
     // because it is too difficult and error prone (->proper script sequence)
@@ -938,7 +1006,7 @@ bool Host::installPackage(const QString& fileName, int module)
                 }
             }
             // continuing, so update the folder name on disk
-            QString newpath(QStringLiteral("%1/%2/").arg(_home, packageName));
+            QString newpath(QStringLiteral("%1/%2").arg(_home, packageName));
             _dir.rename(_dir.absolutePath(), newpath);
             _dir = QDir(newpath);
         }
@@ -1248,6 +1316,9 @@ QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& 
     QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, getName(), item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
+        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+            ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        }
         ofs << what;
         file.close();
     }
@@ -1267,6 +1338,9 @@ QString Host::readProfileData(const QString& item)
     QString ret;
     if (success) {
         QDataStream ifs(&file);
+        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        }
         ifs >> ret;
         file.close();
     }
@@ -1343,7 +1417,7 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
             mWideAmbigousWidthGlyphs = (state == Qt::Checked);
             localState = (state == Qt::Checked);
             needToEmit = true;
-        };
+        }
 
     }
 
@@ -1449,7 +1523,7 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
     bool hasInvite = false;
     auto inviteUrl = discordInfo.value(QStringLiteral("inviteurl"));
     // Will be of form: "https://discord.gg/#####"
-    if (inviteUrl != QJsonValue::Undefined && !inviteUrl.toString().isEmpty()) {
+    if (inviteUrl != QJsonValue::Undefined && !inviteUrl.toString().isEmpty() && inviteUrl.toString() != QStringLiteral("0")) {
         hasInvite = true;
     }
 
@@ -1473,9 +1547,9 @@ void Host::processGMCPDiscordInfo(const QJsonObject& discordInfo)
 
     if (hasInvite) {
         if (hasCustomAppID) {
-            qDebug() << "Game using a custom Discord server. Invite URL: " << inviteUrl.toString();
+            qDebug() << "Game using a custom Discord server. Invite URL:" << inviteUrl.toString();
         } else if (hasApplicationId) {
-            qDebug() << "Game using Mudlet's Discord server. Invite URL: " << inviteUrl.toString();
+            qDebug() << "Game using Mudlet's Discord server. Invite URL:" << inviteUrl.toString();
         } else {
             qDebug() << "Discord invite URL: " << inviteUrl.toString();
         }
@@ -1697,44 +1771,44 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
 {
     Q_UNUSED(_useDictionary);
     bool useDictionary = true;
-    QMutexLocker locker(& mLock);
-    bool isChanged = false;
+    QMutexLocker locker(&mLock);
+    bool dictionaryChanged {};
     // Copy the value while we have the lock:
     bool isSpellCheckingEnabled = mEnableSpellCheck;
     if (mEnableUserDictionary != useDictionary) {
         mEnableUserDictionary = useDictionary;
-        isChanged = true;
+        dictionaryChanged = true;
     }
 
     if (mUseSharedDictionary != useShared) {
         mUseSharedDictionary = useShared;
-        isChanged = true;
+        dictionaryChanged = true;
     }
     locker.unlock();
 
-    // During start-up this gets called for the default_host profile - but that
-    // has a null mpConsole:
-    if (mpConsole) {
-        if (isChanged) {
-            // This will propogate the changes in the two flags to the main
-            // TConsole's copies of them - although setProfileSpellDictionary() is
-            // also called in the main TConsole constructor:
-            mpConsole->setProfileSpellDictionary();
-        }
+    if (!mpConsole) {
+        return;
+    }
 
-        // This also needs to handle the spell checking against the system/mudlet
-        // bundled dictionary being switched on or off. Given that if it has
-        // been disabled the spell checking code won't run we need to clear any
-        // highlights in the TCommandLine instance that may have been present when
-        // spell checking is turned on or off:
-        if (isSpellCheckingEnabled) {
-            // Now enabled - so recheck the whole command line with whichever
-            // dictionaries are active:
-            mpConsole->mpCommandLine->recheckWholeLine();
-        } else {
-            // Or it is now disabled so clear any spelling marks:
-            mpConsole->mpCommandLine->clearMarksOnWholeLine();
-        }
+    if (dictionaryChanged) {
+        // This will propogate the changes in the two flags to the main
+        // TConsole's copies of them - although setProfileSpellDictionary() is
+        // also called in the main TConsole constructor:
+        mpConsole->setProfileSpellDictionary();
+    }
+
+    // This also needs to handle the spell checking against the system/mudlet
+    // bundled dictionary being switched on or off. Given that if it has
+    // been disabled the spell checking code won't run we need to clear any
+    // highlights in the TCommandLine instance that may have been present when
+    // spell checking is turned on or off:
+    if (isSpellCheckingEnabled) {
+        // Now enabled - so recheck the whole command line with whichever
+        // dictionaries are active:
+        mpConsole->mpCommandLine->recheckWholeLine();
+    } else {
+        // Or it is now disabled so clear any spelling marks:
+        mpConsole->mpCommandLine->clearMarksOnWholeLine();
     }
 }
 
@@ -1770,6 +1844,80 @@ void Host::setName(const QString& newName)
         mpConsole->setProfileName(newName);
     }
     mTimerUnit.changeHostName(newName);
+}
+
+void Host::updateProxySettings(QNetworkAccessManager* manager)
+{
+    if (mUseProxy && !mProxyAddress.isEmpty() && mProxyPort != 0) {
+        auto& proxy = getConnectionProxy();
+        manager->setProxy(*proxy);
+    } else {
+        manager->setProxy(QNetworkProxy::DefaultProxy);
+    }
+}
+
+std::unique_ptr<QNetworkProxy>& Host::getConnectionProxy()
+{
+    if (!mpDownloaderProxy) {
+        mpDownloaderProxy = std::make_unique<QNetworkProxy>(QNetworkProxy::Socks5Proxy);
+    }
+    auto& proxy = mpDownloaderProxy;
+    proxy->setHostName(mProxyAddress);
+    proxy->setPort(mProxyPort);
+    if (!mProxyUsername.isEmpty()) {
+        proxy->setUser(mProxyUsername);
+    }
+    if (!mProxyPassword.isEmpty()) {
+        proxy->setPassword(mProxyPassword);
+    }
+
+    return mpDownloaderProxy;
+}
+
+void Host::setDisplayFontSpacing(const qreal spacing)
+{
+    mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, spacing);
+}
+
+void Host::setDisplayFontStyle(QFont::StyleStrategy s)
+{
+    mDisplayFont.setStyleStrategy(s);
+}
+
+void Host::setDisplayFontFixedPitch(bool enable)
+{
+    mDisplayFont.setFixedPitch(enable);
+}
+
+void Host::loadSecuredPassword()
+{
+    auto *job = new QKeychain::ReadPasswordJob(QStringLiteral("Mudlet profile"));
+    job->setAutoDelete(false);
+    job->setInsecureFallback(false);
+
+    job->setKey(getName());
+
+    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* job) {
+        if (job->error()) {
+            const auto error = job->errorString();
+            if (error != QStringLiteral("Entry not found") && error != QStringLiteral("No match")) {
+                qDebug() << "Host::loadSecuredPassword ERROR: couldn't retrieve secure password for" << getName() << ", error is:" << error;
+            }
+        } else {
+            auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
+            setPass(readJob->textData());
+        }
+
+        job->deleteLater();
+    });
+
+    job->start();
+}
+
+// Only needed for places outside of this class:
+void Host::updateAnsi16ColorsInTable()
+{
+    mLuaInterpreter.updateAnsi16ColorsInTable();
 }
 
 void Host::setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter, const quint8 innerDiameter, const QColor& outerColor, const QColor& innerColor)

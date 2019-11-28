@@ -31,6 +31,9 @@
 
 #include "pre_guard.h"
 #include <QtUiTools>
+#include <QSettings>
+#include <sstream>
+#include <../3rdparty/qtkeychain/keychain.h>
 #include "post_guard.h"
 
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
@@ -43,6 +46,10 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 , validName()
 , validUrl()
 , validPort()
+, mDefaultGames({"3Kingdoms", "3Scapes", "Aardwolf", "Achaea", "Aetolia",
+                 "Avalon.de", "BatMUD", "Clessidra", "Imperian", "Luminari",
+                 "Lusternia", "Materia Magica", "Midnight Sun 2", "Realms of Despair",
+                 "Reinos de Leyenda", "StickMUD", "WoTMUD", "ZombieMUD"})
 {
     setupUi(this);
 
@@ -65,6 +72,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
     // and certain architectures.
 
     profiles_tree_widget->setSelectionMode(QAbstractItemView::SingleSelection);
+    profiles_tree_widget->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(profiles_tree_widget, &QWidget::customContextMenuRequested, this, &dlgConnectionProfiles::slot_profile_menu);
 
     QAbstractButton* abort = dialog_buttonbox->button(QDialogButtonBox::Cancel);
     connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
@@ -89,6 +98,16 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
                                     "Welcome message. Both %1 and %2 may be replaced by icons when this text is used.");
 
     auto pWelcome_document = new QTextDocument(this);
+
+    auto copyProfile = new QAction(tr("Copy"), this);
+    copyProfile->setObjectName(QStringLiteral("copyProfile"));
+    auto copyProfileSettings = new QAction(tr("Copy settings only"), this);
+    copyProfileSettings->setObjectName(QStringLiteral("copyProfileSettingsOnly"));
+
+    copy_profile_toolbutton->addAction(copyProfile);
+    copy_profile_toolbutton->addAction(copyProfileSettings);
+    copy_profile_toolbutton->setDefaultAction(copyProfile);
+
     if (mudlet::self()->mShowIconsOnDialogs) {
         // Since I've switched to allowing the possibility of theme replacement
         // of icons we need a way to insert the current theme icons for
@@ -113,8 +132,11 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         offline_button->setIcon(QIcon(QStringLiteral(":/icons/mudlet_editor.png")));
         connect_button->setIcon(icon_connect);
         new_profile_button->setIcon(icon_new);
-        copy_profile_button->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
         remove_profile_button->setIcon(QIcon::fromTheme(QStringLiteral("edit-delete"), QIcon(QStringLiteral(":/icons/edit-delete.png"))));
+
+        copy_profile_toolbutton->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
+        copy_profile_toolbutton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+        copyProfile->setIcon(QIcon::fromTheme(QStringLiteral("edit-copy"), QIcon(QStringLiteral(":/icons/edit-copy.png"))));
 
         QTextCursor cursor = pWelcome_document->find(QStringLiteral("NEW_PROFILE_ICON"), 0, QTextDocument::FindWholeWords);
         // The indicated piece of marker text should be selected by the cursor
@@ -138,13 +160,28 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
         pWelcome_document->setHtml(QStringLiteral("<html><head/><body>%1</body></html>")
                                    .arg(Welcome_text_template.arg(QString(), QString())));
     }
+
     welcome_message->setDocument(pWelcome_document);
 
+    mpAction_revealPassword = new QAction(this);
+    mpAction_revealPassword->setCheckable(true);
+    mpAction_revealPassword->setObjectName(QStringLiteral("mpAction_revealPassword"));
+    slot_togglePasswordVisibility(false);
+
+    character_password_entry->addAction(mpAction_revealPassword, QLineEdit::TrailingPosition);
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        character_password_entry->setToolTip(tr("Characters password, stored securely in the computer's credential manager"));
+    } else {
+        character_password_entry->setToolTip(tr("Characters password. Note that the password isn't encrypted in storage"));
+    }
+
+    connect(mpAction_revealPassword, &QAction::triggered, this, &dlgConnectionProfiles::slot_togglePasswordVisibility);
     connect(offline_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_load);
     connect(connect_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::accept);
     connect(abort, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_cancel);
     connect(new_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_addProfile);
-    connect(copy_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_copy_profile);
+    connect(copyProfile, &QAction::triggered, this, &dlgConnectionProfiles::slot_copy_profile);
+    connect(copyProfileSettings, &QAction::triggered, this, &dlgConnectionProfiles::slot_copy_profilesettings_only);
     connect(remove_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_deleteProfile);
     connect(profile_name_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_update_name);
     connect(profile_name_entry, &QLineEdit::editingFinished, this, &dlgConnectionProfiles::slot_save_name);
@@ -237,10 +274,45 @@ void dlgConnectionProfiles::slot_update_website(const QString &url)
 void dlgConnectionProfiles::slot_update_pass(const QString &pass)
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
-    if (pItem) {
-        QString profile = pItem->text();
+    if (!pItem) {
+        return;
+    }
+
+    const auto profile = pItem->text();
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        writeSecurePassword(profile, pass);
+    } else {
         writeProfileData(profile, QStringLiteral("password"), pass);
     }
+}
+
+void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QString& pass) const
+{
+    auto *job = new QKeychain::WritePasswordJob(QStringLiteral("Mudlet profile"));
+    job->setAutoDelete(false);
+    job->setInsecureFallback(false);
+
+    job->setKey(profile);
+    job->setTextData(pass);
+    job->setProperty("profile", profile);
+
+    connect(job, &QKeychain::WritePasswordJob::finished, this, &dlgConnectionProfiles::slot_password_saved);
+
+    job->start();
+}
+
+void dlgConnectionProfiles::deleteSecurePassword(const QString& profile) const
+{
+    auto *job = new QKeychain::DeletePasswordJob(QStringLiteral("Mudlet profile"));
+    job->setAutoDelete(false);
+    job->setInsecureFallback(false);
+
+    job->setKey(profile);
+    job->setProperty("profile", profile);
+
+    connect(job, &QKeychain::WritePasswordJob::finished, this, &dlgConnectionProfiles::slot_password_deleted);
+
+    job->start();
 }
 
 void dlgConnectionProfiles::slot_update_login(const QString &login)
@@ -381,6 +453,8 @@ void dlgConnectionProfiles::slot_save_name()
     if (currentProfileEditName == newProfileName) {
         return;
     }
+
+    migrateSecuredPassword(currentProfileEditName, newProfileName);
 
     pItem->setText(newProfileName);
 
@@ -603,13 +677,16 @@ void dlgConnectionProfiles::slot_deleteProfile()
     delete_profile_dialog->raise();
 }
 
-QString dlgConnectionProfiles::readProfileData(const QString& profile, const QString& item)
+QString dlgConnectionProfiles::readProfileData(const QString& profile, const QString& item) const
 {
     QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
     bool success = file.open(QIODevice::ReadOnly);
     QString ret;
     if (success) {
         QDataStream ifs(&file);
+        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        }
         ifs >> ret;
         file.close();
     }
@@ -623,6 +700,9 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
     QFile file(f);
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
+        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+            ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        }
         ofs << what;
         file.close();
     }
@@ -636,7 +716,7 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
 
 // Use the URL so we can use the same descriptions for user generated copies of
 // predefined MUDs - but also need the port number to disambiguate the 3K ones!
-QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quint16 port, const QString& profile_name)
+QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quint16 port, const QString& profile_name) const
 {
     if (hostUrl == QLatin1String("realmsofdespair.com")) {
         return QLatin1String(
@@ -748,6 +828,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         return;
     }
 
+    slot_togglePasswordVisibility(false);
 
     QString profile_name = pItem->text();
 
@@ -823,7 +904,6 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
     }
     host_name_entry->setText(host_url);
-
 
     QString host_port = readProfileData(profile, QStringLiteral("port"));
     QString val = readProfileData(profile, QStringLiteral("ssl_tsl"));
@@ -938,8 +1018,19 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
 
     port_entry->setText(host_port);
 
-    val = readProfileData(profile, QStringLiteral("password"));
-    character_password_entry->setText(val);
+    // if we're currently copying a profile, don't blank and re-load the password,
+    // because there isn't one in storage yet. It'll be copied over into the widget
+    // by the copy method
+    if (!mCopyingProfile) {
+        character_password_entry->setText(QString());
+        loadSecuredPassword(profile, [this, profile_name](const QString& password) {
+            if (!password.isEmpty()) {
+                character_password_entry->setText(password);
+            } else {
+                character_password_entry->setText(readProfileData(profile_name, QStringLiteral("password")));
+            }
+        });
+    }
 
     val = readProfileData(profile, QStringLiteral("login"));
     login_entry->setText(val);
@@ -1165,10 +1256,10 @@ void dlgConnectionProfiles::fillout_form()
     host_name_entry->clear();
     port_entry->clear();
 
-    mProfileList = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    mProfileList = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot,
+                                                                               QDir::Name);
 
-    // if only the default_host is present it means no profiles have yet been created
-    if (mProfileList.isEmpty() || (mProfileList.size() == 1 && mProfileList.at(0) == QStringLiteral("default_host"))) {
+    if (mProfileList.isEmpty()) {
         welcome_message->show();
         requiredArea->hide();
         informationalArea->hide();
@@ -1178,7 +1269,7 @@ void dlgConnectionProfiles::fillout_form()
 // to fit all of the 'Welcome' message
 #if defined(Q_OS_MACOS)
         // macOS requires 15px more width to get 3 columns of MUD listings in
-        resize(minimumSize().width() + 15, 300);
+    resize(minimumSize().width() + 15, 300);
 #else
         resize(minimumSize().width(), 300);
 #endif
@@ -1202,7 +1293,7 @@ void dlgConnectionProfiles::fillout_form()
     QListWidgetItem* pM;
     QIcon mi;
 
-    auto &settings = *mudlet::self()->mpSettings;
+    auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(QStringLiteral("deletedDefaultMuds"), QStringList()).toStringList();
 
     mudServer = QStringLiteral("Avalon.de");
@@ -1211,9 +1302,13 @@ void dlgConnectionProfiles::fillout_form()
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
-        QPixmap p(QStringLiteral(":/icons/avalon.png"));
-        mi = QIcon(p.scaled(QSize(120, 30)));
-        pM->setIcon(mi);
+        if (!hasCustomIcon(mudServer)) {
+            QPixmap p(QStringLiteral(":/icons/avalon.png"));
+            mi = QIcon(p.scaled(QSize(120, 30)));
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
         description = getDescription(QStringLiteral("avalon.mud.de"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1226,8 +1321,12 @@ void dlgConnectionProfiles::fillout_form()
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
-        mi = QIcon(QStringLiteral(":/icons/achaea_120_30.png"));
-        pM->setIcon(mi);
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(QStringLiteral(":/icons/achaea_120_30.png"));
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
         description = getDescription(QStringLiteral("achaea.com"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1240,10 +1339,14 @@ void dlgConnectionProfiles::fillout_form()
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
-        QPixmap pd(QStringLiteral(":/icons/3klogo.png"));
-        QPixmap pd1 = pd.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
-        QIcon mi5(pd1);
-        pM->setIcon(mi5);
+        if (!hasCustomIcon(mudServer)) {
+            QPixmap pc(QStringLiteral(":/icons/3klogo.png"));
+            QPixmap pc1 = pc.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
+            mi = QIcon(pc1);
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
         description = getDescription(QStringLiteral("3k.org"), 3000, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1256,10 +1359,14 @@ void dlgConnectionProfiles::fillout_form()
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
-        QPixmap pc(QStringLiteral(":/icons/3slogo.png"));
-        QPixmap pc1 = pc.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
-        QIcon mi4(pc1);
-        pM->setIcon(mi4);
+        if (!hasCustomIcon(mudServer)) {
+            QPixmap pc(QStringLiteral(":/icons/3slogo.png"));
+            QPixmap pc1 = pc.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy();
+            mi = QIcon(pc1);
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
         description = getDescription(QStringLiteral("3k.org"), 3200, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1272,8 +1379,12 @@ void dlgConnectionProfiles::fillout_form()
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
-        mi = QIcon(QStringLiteral(":/icons/lusternia_120_30.png"));
-        pM->setIcon(mi);
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(QStringLiteral(":/icons/lusternia_120_30.png"));
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
         description = getDescription(QStringLiteral("lusternia.com"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1282,14 +1393,16 @@ void dlgConnectionProfiles::fillout_form()
 
     mudServer = QStringLiteral("BatMUD");
     if (!deletedDefaultMuds.contains(mudServer)) {
-        QPixmap pb(QStringLiteral(":/icons/batmud_mud.png"));
-        QPixmap pb1 = pb.scaled(QSize(120, 30)).copy();
-        mi = QIcon(pb1);
         pM = new QListWidgetItem(mudServer);
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(QStringLiteral(":/icons/batmud_mud.png"));
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
         profiles_tree_widget->addItem(pM);
-        pM->setIcon(mi);
         description = getDescription(QStringLiteral("batmud.bat.org"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1302,8 +1415,12 @@ void dlgConnectionProfiles::fillout_form()
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
-        mi = QIcon(QStringLiteral(":/icons/gw2.png"));
-        pM->setIcon(mi);
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(QStringLiteral(":/icons/gw2.png"));
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
         description = getDescription(QStringLiteral("godwars2.org"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1316,8 +1433,12 @@ void dlgConnectionProfiles::fillout_form()
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
-        mi = QIcon(QStringLiteral(":/icons/Slothmud.png"));
-        pM->setIcon(mi);
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(QStringLiteral(":/icons/Slothmud.png"));
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
         description = getDescription(QStringLiteral("slothmud.org"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1330,8 +1451,12 @@ void dlgConnectionProfiles::fillout_form()
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
-        mi = QIcon(QStringLiteral(":/icons/aardwolf_mud.png"));
-        pM->setIcon(mi);
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(QStringLiteral(":/icons/aardwolf_mud.png"));
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
         description = getDescription(QStringLiteral("aardmud.org"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1344,8 +1469,12 @@ void dlgConnectionProfiles::fillout_form()
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
-        mi = QIcon(QStringLiteral(":/materiaMagicaIcon"));
-        pM->setIcon(mi);
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(QStringLiteral(":/materiaMagicaIcon"));
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
         description = getDescription(QStringLiteral("materiamagica.com"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1358,8 +1487,12 @@ void dlgConnectionProfiles::fillout_form()
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
-        mi = QIcon(QStringLiteral(":/icons/120x30RoDLogo.png"));
-        pM->setIcon(mi);
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(QStringLiteral(":/icons/120x30RoDLogo.png"));
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
         description = getDescription(QStringLiteral("realmsofdespair.com"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1372,8 +1505,12 @@ void dlgConnectionProfiles::fillout_form()
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
-        mi = QIcon(QStringLiteral(":/icons/zombiemud.png"));
-        pM->setIcon(mi);
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(QStringLiteral(":/icons/zombiemud.png"));
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
         description = getDescription(QStringLiteral("zombiemud.org"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1386,8 +1523,12 @@ void dlgConnectionProfiles::fillout_form()
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
-        mi = QIcon(QStringLiteral(":/icons/aetolia_120_30.png"));
-        pM->setIcon(mi);
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(QStringLiteral(":/icons/aetolia_120_30.png"));
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
         description = getDescription(QStringLiteral("aetolia.com"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1400,8 +1541,12 @@ void dlgConnectionProfiles::fillout_form()
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
-        mi = QIcon(QStringLiteral(":/icons/imperian_120_30.png"));
-        pM->setIcon(mi);
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(QStringLiteral(":/icons/imperian_120_30.png"));
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
         description = getDescription(QStringLiteral("imperian.com"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1414,9 +1559,13 @@ void dlgConnectionProfiles::fillout_form()
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
-        mi = QIcon(QPixmap(QStringLiteral(":/icons/wotmudicon.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
-                                                                            Qt::SmoothTransformation).copy());
-        pM->setIcon(mi);
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(QPixmap(QStringLiteral(":/icons/wotmudicon.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
+                                                                                Qt::SmoothTransformation).copy());
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
         description = getDescription(QStringLiteral("game.wotmud.org"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1429,9 +1578,13 @@ void dlgConnectionProfiles::fillout_form()
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
-        mi = QIcon(QPixmap(QStringLiteral(":/icons/midnightsun2.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
-                                                                              Qt::SmoothTransformation).copy());
-        pM->setIcon(mi);
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(QPixmap(QStringLiteral(":/icons/midnightsun2.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
+                                                                                  Qt::SmoothTransformation).copy());
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
         description = getDescription(QStringLiteral("midnightsun2.org"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1444,9 +1597,14 @@ void dlgConnectionProfiles::fillout_form()
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
-        mi = QIcon(QPixmap(QStringLiteral(":/icons/luminari_icon.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
-                                                                              Qt::SmoothTransformation).copy());
-        pM->setIcon(mi);
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(
+                    QPixmap(QStringLiteral(":/icons/luminari_icon.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
+                                                                                Qt::SmoothTransformation).copy());
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
         description = getDescription(QStringLiteral("luminarimud.com"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1459,9 +1617,14 @@ void dlgConnectionProfiles::fillout_form()
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
-        mi = QIcon(QPixmap(QStringLiteral(":/icons/stickmud_icon.jpg")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
-                                                                              Qt::SmoothTransformation).copy());
-        pM->setIcon(mi);
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(
+                    QPixmap(QStringLiteral(":/icons/stickmud_icon.jpg")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
+                                                                                Qt::SmoothTransformation).copy());
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
         description = getDescription(QStringLiteral("stickmud.com"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1474,9 +1637,13 @@ void dlgConnectionProfiles::fillout_form()
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
-        mi = QIcon(QPixmap(QStringLiteral(":/icons/clessidra.jpg")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(QPixmap(QStringLiteral(":/icons/clessidra.jpg")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
                                                                                Qt::SmoothTransformation).copy());
-        pM->setIcon(mi);
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
         description = getDescription(QStringLiteral("clessidra.it"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1488,9 +1655,15 @@ void dlgConnectionProfiles::fillout_form()
         pM = new QListWidgetItem(mudServer);
         pM->setFont(font);
         pM->setForeground(QColor(Qt::white));
-        profiles_tree_widget->addItem(pM);
-        mi = QIcon(QPixmap(QStringLiteral(":/icons/reinosdeleyenda_mud.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
-        pM->setIcon(mi);
+        if (!hasCustomIcon(mudServer)) {
+            profiles_tree_widget->addItem(pM);
+            mi = QIcon(QPixmap(QStringLiteral(":/icons/reinosdeleyenda_mud.png")).scaled(QSize(120, 30),
+                                                                                         Qt::IgnoreAspectRatio,
+                                                                                         Qt::SmoothTransformation).copy());
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
         description = getDescription(QStringLiteral("reinosdeleyenda.es"), 0, mudServer);
         if (!description.isEmpty()) {
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
@@ -1500,150 +1673,272 @@ void dlgConnectionProfiles::fillout_form()
 #if defined(QT_DEBUG)
     mudServer = QStringLiteral("Mudlet self-test");
     if (!deletedDefaultMuds.contains(mudServer) && !mProfileList.contains(mudServer)) {
-        for (int i = mProfileList.size() - 1; i >= 0; --i) {
-            if (mProfileList.at(i) == "default_host") {
-                mProfileList.insert(i, mudServer);
-                break;
-            }
+        mProfileList.append(mudServer);
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        description = getDescription(QStringLiteral("mudlet.org"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
         }
     }
 #endif
 
-    for (int i = 0; i < mProfileList.size(); i++) {
-        QString s = mProfileList.at(i);
-        if (s.isEmpty()) {
-            continue;
-        }
-
-        auto pItem = new QListWidgetItem(mProfileList.at(i));
-
-        // mProfileList is derived from a filesystem directory, but MacOS is not
-        // necessarily case preserving for file names so any tests on them
-        // should be case insensitive
-        // skip creating icons for default MUDs as they are already created above
-        if ((!mProfileList.at(i).compare(QStringLiteral("Avalon.de"), Qt::CaseInsensitive)) || (!mProfileList.at(i).compare(QStringLiteral("BatMUD"), Qt::CaseInsensitive))
-            || (!mProfileList.at(i).compare(QStringLiteral("Materia Magica"), Qt::CaseInsensitive))
-            || (!mProfileList.at(i).compare(QStringLiteral("Aardwolf"), Qt::CaseInsensitive))
-            || (!mProfileList.at(i).compare(QStringLiteral("Achaea"), Qt::CaseInsensitive))
-            || (!mProfileList.at(i).compare(QStringLiteral("Aetolia"), Qt::CaseInsensitive))
-            || (!mProfileList.at(i).compare(QStringLiteral("Lusternia"), Qt::CaseInsensitive))
-            || (!mProfileList.at(i).compare(QStringLiteral("Imperian"), Qt::CaseInsensitive))
-            || (!mProfileList.at(i).compare(QStringLiteral("Realms of Despair"), Qt::CaseInsensitive))
-            || (!mProfileList.at(i).compare(QStringLiteral("ZombieMUD"), Qt::CaseInsensitive))
-            || (!mProfileList.at(i).compare(QStringLiteral("3Scapes"), Qt::CaseInsensitive))
-            || (!mProfileList.at(i).compare(QStringLiteral("3Kingdoms"), Qt::CaseInsensitive))
-            || (!mProfileList.at(i).compare(QStringLiteral("Midnight Sun 2"), Qt::CaseInsensitive))
-            || (!mProfileList.at(i).compare(QStringLiteral("Luminari"), Qt::CaseInsensitive))
-            || (!mProfileList.at(i).compare(QStringLiteral("StickMUD"), Qt::CaseInsensitive))
-            || (!mProfileList.at(i).compare(QStringLiteral("Clessidra"), Qt::CaseInsensitive))
-            || (!mProfileList.at(i).compare(QStringLiteral("Reinos de Leyenda"), Qt::CaseInsensitive))
-            || (!mProfileList.at(i).compare(QStringLiteral("WoTMUD"), Qt::CaseInsensitive))) {
-            delete pItem;
-            continue;
-        }
-        if (!mProfileList.at(i).compare(QStringLiteral("Mudlet self-test"), Qt::CaseInsensitive)) {
-            description = getDescription(QStringLiteral("mudlet.org"), 0, mudServer);
-            if (!description.isEmpty()) {
-                pItem->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
-            }
-        }
-
-        pItem->setFont(font);
-        pItem->setForeground(QColor(Qt::white));
-        profiles_tree_widget->addItem(pItem);
-        QPixmap pb(120, 30);
-        pb.fill(Qt::transparent);
-        uint hash = qHash(mProfileList.at(i));
-        QLinearGradient shade(0, 0, 120, 30);
-        quint8 i1 = hash % 255;
-        quint8 i2 = (hash + i) % 255;
-        quint8 i3 = (i * hash) % 255;
-        quint8 i4 = (3 * hash) % 255;
-        quint8 i5 = (hash) % 255;
-        quint8 i6 = (hash / (i + 2)) % 255; // In the other place where this is used i might be -1 or 0
-        shade.setColorAt(1, QColor(i1, i2, i3, 255));
-        shade.setColorAt(0, QColor(i4, i5, i6, 255));
-        QPainter pt(&pb);
-        pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
-        pt.fillRect(QRect(0, 0, 120, 30), shade);
-        QPixmap pg(QStringLiteral(":/icons/mudlet_main_32px.png"));
-        pt.drawPixmap(QRect(5, 5, 20, 20), pg);
-
-        QFont _font;
-        QImage _pm(90, 30, QImage::Format_ARGB32_Premultiplied);
-        QPainter _pt(&_pm);
-        _pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
-        int fs = 30;
-        for (; fs > 1; fs--) {
-            _pt.eraseRect(QRect(0, 0, 90, 30));
-            _pt.fillRect(QRect(0, 0, 90, 30), QColor(255, 0, 0, 10));
-            _font = QFont(QStringLiteral("DejaVu Sans"), fs, QFont::Normal);
-            _pt.setFont(_font);
-            QRect _r;
-            if ((i1 + i2 + i3 + i4 + i5 + i6) / 6 < 100) {
-                _pt.setPen(QColor(Qt::white));
-            } else {
-                _pt.setPen(QColor(Qt::black));
-            }
-            _pt.drawText(QRect(0, 0, 90, 30), Qt::AlignHCenter | Qt::AlignVCenter | Qt::TextWordWrap, s, &_r);
-            /*if( QFontMetrics( _font ).boundingRect( s ).width() <= 80
-               && QFontMetrics( _font ).boundingRect( s ).height() <= 30 )*/
-            if (_r.width() <= 90 && _r.height() <= 30) {
-                break;
-            }
-        }
-        pt.setFont(_font);
-        QRect _r;
-        if ((i1 + i2 + i3 + i4 + i5 + i6) / 6 < 100) {
-            pt.setPen(QColor(Qt::white));
-        } else {
-            pt.setPen(QColor(Qt::black));
-        }
-        pt.drawText(QRect(30, 0, 90, 30), Qt::AlignHCenter | Qt::AlignVCenter | Qt::TextWordWrap, s, &_r);
-        mi = QIcon(pb);
-        pItem->setIcon(mi);
-    }
+    setProfileIcon(font);
 
     QDateTime test_date;
     QString toselectProfileName;
     int toselectRow = -1;
     int test_profile_row = -1;
+    bool firstMudletLaunch = true;
 
     for (int i = 0; i < profiles_tree_widget->count(); i++) {
-        auto profile = profiles_tree_widget->item(i);
-        auto profileName = profile->text();
+        const auto profile = profiles_tree_widget->item(i);
+        const auto profileName = profile->text();
         if (profileName == QStringLiteral("Mudlet self-test")) {
             test_profile_row = i;
         }
 
-        QDateTime profile_lastRead = QFileInfo(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profileName)).lastModified();
-        // Since Qt 5.x null QTimes and QDateTimes are invalid - and might not
-        // work as expected - so test for validity of the test_date value as well
-        if ((!test_date.isValid()) || profile_lastRead > test_date) {
-            test_date = profile_lastRead;
-            toselectProfileName = profileName;
-            toselectRow = i;
+        const auto fileinfo = QFileInfo(
+                    mudlet::getMudletPath(mudlet::profileXmlFilesPath, profileName));
+
+        if (fileinfo.exists()) {
+            firstMudletLaunch = false;
+            QDateTime profile_lastRead = fileinfo.lastModified();
+            // Since Qt 5.x null QTimes and QDateTimes are invalid - and might not
+            // work as expected - so test for validity of the test_date value as well
+            if ((!test_date.isValid()) || profile_lastRead > test_date) {
+                test_date = profile_lastRead;
+                toselectProfileName = profileName;
+                toselectRow = i;
+            }
         }
     }
 
-    if (toselectRow != -1 && toselectProfileName == QStringLiteral("default_host") && profiles_tree_widget->count() > 1) {
-        // if the last profile read is default_host, it means the user hasn't created
-        // any profiles yet since default_host profile cannot actually be used. In this case,
-        // select a random pre-defined profile to give all MUDs a fair go
-
-        // make sure not to select the default_host or test_profile though
-        auto default_host_row = toselectRow;
-        // dont infinite loop.
-        if (test_profile_row == -1 || profiles_tree_widget->count() != 2) {
-            while (toselectRow == default_host_row || toselectRow == test_profile_row) {
+    if (firstMudletLaunch) {
+        // Select a random pre-defined profile to give all MUDs a fair go first time
+        // make sure not to select the test_profile though
+        if (profiles_tree_widget->count() > 1) {
+            while (toselectRow == -1 || toselectRow == test_profile_row) {
                 toselectRow = qrand() % profiles_tree_widget->count();
             }
         }
     }
 
-    profiles_tree_widget->setCurrentRow(toselectRow);
+    if (toselectRow != -1) {
+        profiles_tree_widget->setCurrentRow(toselectRow);
+    }
 
     updateDiscordStatus();
+}
+
+void dlgConnectionProfiles::setProfileIcon(const QFont& font) const
+{
+    for (int i = 0; i < mProfileList.size(); i++) {
+        const QString& profileName = mProfileList.at(i);
+        if (profileName.isEmpty()) {
+            continue;
+        }
+
+        if (hasCustomIcon(profileName)) {
+            loadCustomProfile(font, profileName);
+        } else {
+            // mProfileList is derived from a filesystem directory, but MacOS is not
+            // necessarily case preserving for file names so any tests on them
+            // should be case insensitive
+            // skip creating icons for default MUDs as they are already created above
+            if (mDefaultGames.contains(profileName, Qt::CaseInsensitive)) {
+                continue;
+            }
+
+            generateCustomProfile(font, i, profileName);
+        }
+    }
+}
+
+bool dlgConnectionProfiles::hasCustomIcon(const QString& profileName) const
+{
+    return QFileInfo::exists(mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, QStringLiteral("profileicon")));
+}
+
+void dlgConnectionProfiles::loadCustomProfile(const QFont& font, const QString& profileName) const
+{
+    auto pItem = new QListWidgetItem(profileName);
+    pItem->setFont(font);
+    pItem->setForeground(QColor(Qt::white));
+    setCustomIcon(profileName, pItem);
+    auto description = getDescription(profileName, 0, profileName);
+    if (!description.isEmpty()) {
+        pItem->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+    }
+    profiles_tree_widget->addItem(pItem);
+}
+
+void dlgConnectionProfiles::setCustomIcon(const QString& profileName, QListWidgetItem* profile) const {
+    auto profileIconPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, QStringLiteral("profileicon"));
+    auto icon = QIcon(QPixmap(profileIconPath).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+    profile->setIcon(icon);
+}
+
+// When a profile is renamed, migrate password storage to the new profile
+void dlgConnectionProfiles::migrateSecuredPassword(const QString &oldProfile, const QString &newProfile)
+{
+    const auto& password = character_password_entry->text().trimmed();
+
+    deleteSecurePassword(oldProfile);
+    writeSecurePassword(newProfile, password);
+}
+
+template <typename L>
+void dlgConnectionProfiles::loadSecuredPassword(const QString &profile, L callback)
+{
+    // character_password_entry
+
+    auto *job = new QKeychain::ReadPasswordJob(QStringLiteral("Mudlet profile"));
+    job->setAutoDelete(false);
+    job->setInsecureFallback(false);
+
+    job->setKey(profile);
+
+    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* job) {
+        if (job->error()) {
+            const auto error = job->errorString();
+            if (error != QStringLiteral("Entry not found") && error != QStringLiteral("No match")) {
+            qDebug() << "dlgConnectionProfiles::loadSecuredPassword ERROR: couldn't retrieve secure password for" << profile << ", error is:" << error;
+            }
+        }
+
+        auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
+        callback(readJob->textData());
+
+        job->deleteLater();
+    });
+
+    job->start();
+}
+
+void dlgConnectionProfiles::generateCustomProfile(const QFont& font, int i, const QString& profileName) const
+{
+    auto pItem = new QListWidgetItem(profileName);
+
+    pItem->setFont(font);
+    pItem->setForeground(QColor(Qt::white));
+    profiles_tree_widget->addItem(pItem);
+    QPixmap background(120, 30);
+    background.fill(Qt::transparent);
+    uint hash = qHash(profileName);
+    QLinearGradient shade(0, 0, 120, 30);
+    quint8 i1 = hash % 255;
+    quint8 i2 = (hash + i) % 255;
+    quint8 i3 = (i * hash) % 255;
+    quint8 i4 = (3 * hash) % 255;
+    quint8 i5 = (hash) % 255;
+    quint8 i6 = (hash / (i + 2)) % 255; // In the other place where this is used i might be -1 or 0
+    shade.setColorAt(1, QColor(i1, i2, i3, 255));
+    shade.setColorAt(0, QColor(i4, i5, i6, 255));
+    QPainter pt(&background);
+    pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
+    pt.fillRect(QRect(0, 0, 120, 30), shade);
+    QPixmap pg(QStringLiteral(":/icons/mudlet_main_32px.png"));
+    pt.drawPixmap(QRect(5, 5, 20, 20), pg);
+
+    QFont _font;
+    QImage _pm(90, 30, QImage::Format_ARGB32_Premultiplied);
+    QPainter _pt(&_pm);
+    _pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
+    for (int fs = 30; fs > 1; fs--) {
+        _pt.eraseRect(QRect(0, 0, 90, 30));
+        _pt.fillRect(QRect(0, 0, 90, 30), QColor(255, 0, 0, 10));
+        _font = QFont(QStringLiteral("DejaVu Sans"), fs, QFont::Normal);
+        _pt.setFont(_font);
+        QRect _r;
+        if ((i1 + i2 + i3 + i4 + i5 + i6) / 6 < 100) {
+            _pt.setPen(QColor(Qt::white));
+        } else {
+            _pt.setPen(QColor(Qt::black));
+        }
+        _pt.drawText(QRect(0, 0, 90, 30), Qt::AlignHCenter | Qt::AlignVCenter | Qt::TextWordWrap, profileName, &_r);
+        if (_r.width() <= 90 && _r.height() <= 30) {
+            break;
+        }
+    }
+    pt.setFont(_font);
+    QRect _r;
+    if ((i1 + i2 + i3 + i4 + i5 + i6) / 6 < 100) {
+        pt.setPen(QColor(Qt::white));
+    } else {
+        pt.setPen(QColor(Qt::black));
+    }
+        pt.drawText(QRect(30, 0, 90, 30), Qt::AlignHCenter | Qt::AlignVCenter | Qt::TextWordWrap, profileName, &_r);
+        pItem->setIcon(QIcon(background));
+}
+
+void dlgConnectionProfiles::slot_profile_menu(QPoint pos)
+{
+    QPoint globalPos = profiles_tree_widget->mapToGlobal(pos);
+    auto profileName = profiles_tree_widget->currentItem()->text();
+
+    QMenu menu;
+    if (hasCustomIcon(profileName)) {
+        menu.addAction(tr("Reset icon", "Reset the custom picture for this profile in the connection dialog and show the default one instead"), this, &dlgConnectionProfiles::slot_reset_custom_icon);
+    } else {
+        menu.addAction(QIcon(":/icons/mudlet_main_16px.png"), tr("Set custom icon", "Set a custom picture to show for the profile in the connection dialog"), this,  &dlgConnectionProfiles::slot_set_custom_icon);
+    }
+
+    menu.exec(globalPos);
+}
+
+void dlgConnectionProfiles::slot_set_custom_icon()
+{
+    auto profileName = profiles_tree_widget->currentItem()->text();
+
+    QString imageLocation = QFileDialog::getOpenFileName(this, tr("Select custom image for profile (should be 120x30)"),
+                                                    QStandardPaths::writableLocation(QStandardPaths::HomeLocation),
+                                                    tr("Images (%1)").arg(QStringLiteral("*.png *.gif *.jpg")));
+    if (imageLocation.isEmpty()) {
+        return;
+    }
+
+    bool success = mudlet::self()->setProfileIcon(profileName, imageLocation).first;
+    if (!success) {
+        return;
+    }
+
+    auto icon = QIcon(QPixmap(imageLocation).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
+    profiles_tree_widget->currentItem()->setIcon(icon);
+}
+
+void dlgConnectionProfiles::slot_reset_custom_icon()
+{
+    auto profileName = profiles_tree_widget->currentItem()->text();
+
+    bool success = mudlet::self()->resetProfileIcon(profileName).first;
+    if (!success) {
+        return;
+    }
+
+    auto currentRow = profiles_tree_widget->currentRow();
+    fillout_form();
+    profiles_tree_widget->setCurrentRow(currentRow);
+}
+
+void dlgConnectionProfiles::slot_password_saved(QKeychain::Job *job)
+{
+    if (job->error()) {
+        qWarning() << "dlgConnectionProfiles::slot_password_saved ERROR: couldn't save password for" << job->property("profile") << "; error was:" << job->errorString();
+    }
+
+    job->deleteLater();
+}
+
+void dlgConnectionProfiles::slot_password_deleted(QKeychain::Job *job)
+{
+    if (job->error()) {
+        qWarning() << "dlgConnectionProfiles::slot_password_deleted ERROR: couldn't delete password for" << job->property("profile") << "; error was:" << job->errorString();
+    }
+
+    job->deleteLater();
 }
 
 void dlgConnectionProfiles::slot_cancel()
@@ -1655,11 +1950,80 @@ void dlgConnectionProfiles::slot_cancel()
 
 void dlgConnectionProfiles::slot_copy_profile()
 {
-    QString profile_name = profile_name_entry->text().trimmed();
-    QString oldname = profile_name;
+    mCopyingProfile = true;
 
-    if (profile_name.isEmpty()) {
+    QString profile_name;
+    QString oldname;
+    QListWidgetItem* pItem;
+    const auto oldPassword = character_password_entry->text();
+
+    if (!copyProfileWidget(profile_name, oldname, pItem)) {
+        mCopyingProfile = false;
         return;
+    }
+
+    // copy the folder on-disk
+    QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, oldname));
+    if (!dir.exists()) {
+        mCopyingProfile = false;
+        return;
+    }
+
+    copyFolder(mudlet::getMudletPath(mudlet::profileHomePath, oldname),
+               mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
+    mProfileList << profile_name;
+    slot_item_clicked(pItem);
+    // Clear the Discord optin on the copied profile - just because the source
+    // one may have had it enabled does not mean we can assume the new one would
+    // want it set:
+    discord_optin_checkBox->setChecked(false);
+
+    // restore the password, which won't be copied by the disk copy if stored in the credential manager
+    character_password_entry->setText(oldPassword);
+    if (mudlet::self()->storingPasswordsSecurely()) {
+        writeSecurePassword(profile_name, oldPassword);
+    }
+    mCopyingProfile = false;
+}
+
+void dlgConnectionProfiles::slot_copy_profilesettings_only()
+{
+    QString profile_name;
+    QString oldname;
+    QListWidgetItem* pItem;
+    if (!copyProfileWidget(profile_name, oldname, pItem)) {
+        return;
+    }
+
+    QDir newProfileDir(mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
+    newProfileDir.mkpath(newProfileDir.path());
+    if (!newProfileDir.exists()) {
+        return;
+    }
+
+    // copy relevant profile files
+    for (QString file : {"url", "port", "password", "login", "description"}) {
+        auto filePath = QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileHomePath, oldname), file);
+        auto newFilePath = QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileHomePath, profile_name), file);
+        QFile::copy(filePath, newFilePath);
+    }
+
+    copyProfileSettingsOnly(oldname, profile_name);
+
+    mProfileList << profile_name;
+    slot_item_clicked(pItem);
+    // Clear the Discord optin on the copied profile - just because the source
+    // one may have had it enabled does not mean we can assume the new one would
+    // want it set:
+    discord_optin_checkBox->setChecked(false);
+}
+
+bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const
+{
+    profile_name = profile_name_entry->text().trimmed();
+    oldname = profile_name;
+    if (profile_name.isEmpty()) {
+        return false;
     }
 
     // prepend n+1 to end of the profile name
@@ -1677,9 +2041,9 @@ void dlgConnectionProfiles::slot_copy_profile()
         profile_name = profile_name2;
     }
 
-    auto pItem = new QListWidgetItem(profile_name);
+    pItem = new QListWidgetItem(profile_name);
     if (!pItem) {
-        return;
+        return false;
     }
 
     // add the new widget in
@@ -1696,20 +2060,77 @@ void dlgConnectionProfiles::slot_copy_profile()
     host_name_entry->setReadOnly(false);
     port_entry->setReadOnly(false);
 
-    // copy the folder on-disk
-    QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, oldname));
-    if (!dir.exists()) {
+    return true;
+}
+
+void dlgConnectionProfiles::copyProfileSettingsOnly(const QString& oldname, const QString& newname)
+{
+    QDir oldProfiledir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, oldname));
+    QDir newProfiledir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, newname));
+    newProfiledir.mkpath(newProfiledir.absolutePath());
+    QStringList entries = oldProfiledir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
+    if (entries.empty()) {
         return;
     }
 
-    copyFolder(mudlet::getMudletPath(mudlet::profileHomePath, oldname),
-               mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
-    mProfileList << profile_name;
-    slot_item_clicked(pItem);
-    // Clear the Discord optin on the copied profile - just because the source
-    // one may have had it enabled does not mean we can assume the new one would
-    // want it set:
-    discord_optin_checkBox->setChecked(false);
+    auto copySettingsFromFile = oldProfiledir.absoluteFilePath(entries.first());
+
+    pugi::xml_document newProfileXml;
+    if (extractSettingsFromProfile(newProfileXml, copySettingsFromFile)) {
+        saveProfileCopy(newProfiledir, newProfileXml);
+    }
+}
+
+bool dlgConnectionProfiles::extractSettingsFromProfile(pugi::xml_document& newProfile, const QString& copySettingsFrom)
+{
+    pugi::xml_document oldProfile;
+    pugi::xml_parse_result result = oldProfile.load_file(copySettingsFrom.toUtf8().constData());
+    if (!result) {
+        qWarning() << "dlgConnectionProfiles::copyProfileSettingsOnly() ERROR: couldn't parse" << copySettingsFrom;
+        qWarning() << "Parse error: " << result.description() << ", character pos= " << result.offset;
+        return false;
+    }
+
+    // write header
+    auto declaration = newProfile.prepend_child(pugi::node_declaration);
+    declaration.append_attribute("version") = "1.0";
+    declaration.append_attribute("encoding") = "UTF-8";
+    newProfile.append_child(pugi::node_doctype).set_value("MudletPackage");
+
+    // copy /MudletPackage attributes
+    auto mudletPackage = newProfile.append_child("MudletPackage");
+    const auto attributeNodes = oldProfile.select_nodes("/MudletPackage/attribute::*");
+    for (pugi::xpath_node_set::const_iterator it = attributeNodes.begin(); it != attributeNodes.end(); ++it) {
+        auto node = *it;
+        mudletPackage.append_attribute(node.attribute().name()) = node.attribute().value();
+    }
+
+    // remove installed packages/modules
+    const auto hostPackageResults = oldProfile.select_nodes("/MudletPackage/HostPackage");
+    pugi::xml_node hostPackage = hostPackageResults.first().node();
+    auto host = hostPackage.child("Host");
+    host.remove_child("mInstalledPackages");
+    host.remove_child("mInstalledModules");
+
+    // copy in the /Mudlet/HostPackage
+    mudletPackage.append_copy(hostPackage);
+    return true;
+}
+
+// save profile using Qt's API's which handle non-ASCII characters in Windows paths fine
+void dlgConnectionProfiles::saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const
+{
+    QFile file(newProfiledir.absoluteFilePath(QStringLiteral("Copied profile (settings only).xml")));
+    if (!file.open(QFile::WriteOnly)) {
+        qDebug() << "dlgConnectionProfiles::copyProfileSettingsOnly ERROR - couldn't create new profile file:" << file.fileName() << "-" << file.errorString();
+        return;
+    }
+
+    std::stringstream saveStringStream(std::ios::out);
+    newProfileXml.save(saveStringStream);
+    std::string output(saveStringStream.str());
+    file.write(output.data());
+    file.close();
 }
 
 void dlgConnectionProfiles::slot_load()
@@ -1739,11 +2160,11 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         return;
     }
     // load an old profile if there is any
-    // PLACEMARKER: Host creation (3) - normal case
+    // PLACEMARKER: Host creation (1) - normal case
     if (hostManager.addHost(profile_name, port_entry->text().trimmed(), QString(), QString())) {
         pHost = hostManager.getHost(profile_name);
         if (!pHost) {
-            return;
+            return ;
         }
     } else {
         return;
@@ -1755,15 +2176,20 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
     bool needsGenericPackagesInstall = false;
     mudlet::self()->hideMudletsVariables(pHost);
-    if (!entries.isEmpty()) {
+    if (entries.isEmpty()) {
+        needsGenericPackagesInstall = true;
+    } else {
         QFile file(QStringLiteral("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString()));
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
         importer.importPackage(&file, nullptr); // TODO: Missing false return value handler
         pHost->refreshPackageFonts();
-    } else {
-        needsGenericPackagesInstall = true;
+
+        // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
+        if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {
+            needsGenericPackagesInstall = true;
+        }
     }
 
     // overwrite the generic profile with user supplied name, url and login information
@@ -2000,5 +2426,30 @@ void dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QStrin
         QString srcName = sourceFolder + QDir::separator() + files[i];
         QString destName = destFolder + QDir::separator() + files[i];
         copyFolder(srcName, destName);
+    }
+}
+
+// As it is wired to the triggered() signal it is only called that way when
+// the user clicks on the action, and not when setChecked() is used.
+void dlgConnectionProfiles::slot_togglePasswordVisibility(const bool showPassword)
+{
+    if (mpAction_revealPassword->isChecked() != showPassword) {
+        // This will only be reached and needed by a call NOT prompted by the
+        // user clicking on the icon - i.e. either when a different profile is
+        // selected or when called from the constructor:
+        mpAction_revealPassword->setChecked(showPassword);
+    }
+
+    if (mpAction_revealPassword->isChecked()) {
+        character_password_entry->setEchoMode(QLineEdit::Normal);
+        // In practice I could not get the icon to change based upon supplying
+        // different QPixmaps for the QIcon for different states - so lets do it
+        // directly:
+        mpAction_revealPassword->setIcon(QIcon::fromTheme(QStringLiteral("password-show-on"), QIcon(QStringLiteral(":/icons/password-show-on.png"))));
+        mpAction_revealPassword->setToolTip(tr("<p>Click to hide the password; it will also hide if another profile is selected.</p>"));
+    } else {
+        character_password_entry->setEchoMode(QLineEdit::Password);
+        mpAction_revealPassword->setIcon(QIcon::fromTheme(QStringLiteral("password-show-off"), QIcon(QStringLiteral(":/icons/password-show-off.png"))));
+        mpAction_revealPassword->setToolTip(tr("<p>Click to reveal the password for this profile.</p>"));
     }
 }

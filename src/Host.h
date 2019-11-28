@@ -126,8 +126,8 @@ public:
 
     void closingDown();
     bool isClosingDown();
-    const unsigned int assemblePath();
-    const bool checkForMappingScript();
+    unsigned int assemblePath();
+    bool checkForMappingScript();
 
     TriggerUnit* getTriggerUnit() { return &mTriggerUnit; }
     TimerUnit* getTimerUnit() { return &mTimerUnit; }
@@ -228,6 +228,17 @@ public:
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
+    const QFont& getDisplayFont() const { return mDisplayFont; }
+    std::pair<bool, QString> setDisplayFont(const QFont& font);
+    std::pair<bool, QString> setDisplayFont(const QString& fontName);
+    void setDisplayFontFromString(const QString& fontData);
+    void setDisplayFontSize(int size);
+    void setDisplayFontSpacing(const qreal spacing);
+    void setDisplayFontStyle(QFont::StyleStrategy s);
+    void setDisplayFontFixedPitch(bool enable);
+    void updateProxySettings(QNetworkAccessManager* manager);
+    std::unique_ptr<QNetworkProxy>& getConnectionProxy();
+    void updateAnsi16ColorsInTable();
     // Store/retrieve all the settings in one call:
     void setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter = 120, const quint8 innerDiameter = 70, const QColor& outerColor = QColor(), const QColor& innerColor = QColor());
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
@@ -248,8 +259,8 @@ public:
     int mBorderTopHeight;
     QFont mCommandLineFont;
     QString mCommandSeparator;
-    QFont mDisplayFont;
     bool mEnableGMCP;
+    bool mEnableMSSP;
     bool mEnableMSDP;
     bool mServerMXPenabled;
     QTextStream mErrorLogStream;
@@ -264,6 +275,12 @@ public:
     bool mSslIgnoreExpired;
     bool mSslIgnoreSelfSigned;
     bool mSslIgnoreAll;
+
+    bool mUseProxy;
+    QString mProxyAddress;
+    quint16 mProxyPort;
+    QString mProxyUsername;
+    QString mProxyPassword;
 
     bool mIsGoingDown;
     bool mIsProfileLoadingSequence;
@@ -330,6 +347,8 @@ public:
     bool mUSE_UNIX_EOL;
     int mWrapAt;
     int mWrapIndentCount;
+
+    bool mEditorAutoComplete;
 
     // code editor theme (human-friendly name)
     QString mEditorTheme;
@@ -428,6 +447,7 @@ public:
     // suppressed.
     // An invalid/null value is treated as the "show all"/inactive case:
     QTime mTimerDebugOutputSuppressionInterval;
+    std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
@@ -445,7 +465,10 @@ private:
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
     void updateModuleZips() const;
+    void updateConsolesFont();
+    void loadSecuredPassword();
 
+    QFont mDisplayFont;
     QStringList mModulesToSync;
 
     QScopedPointer<LuaInterface> mLuaInterface;
