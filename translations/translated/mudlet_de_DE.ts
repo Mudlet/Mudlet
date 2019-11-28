@@ -10199,7 +10199,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="468"/>
       <source>&lt;p&gt;Echo the text you send in the display box.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This can be disabled by the game server if it negotiates to use the telnet ECHO option&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zeigt den Text, den du sendest, in der Anzeigebox an.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Dies kann vom Spielserver deaktiviert werden, wenn er die Telnet-ECHO-Option verwendet.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="478"/>
@@ -10657,7 +10657,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2836"/>
       <source>TextLabel</source>
-      <translation type="unfinished"/>
+      <translation>Text</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2866"/>
