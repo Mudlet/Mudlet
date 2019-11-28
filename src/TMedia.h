@@ -179,9 +179,9 @@ private:
     TMediaPlayer* getMediaPlayer(TMediaData& mediaData);
     TMediaPlayer* matchMediaPlayer(TMediaData& mediaData, QString absolutePathFileName);
     bool doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolutePathFileName);
-    void checkMediaKeyConstraints(TMediaData& mediaData, QString absolutePathFileName);
-    void playSound(TMediaData& soundData);
-    void playMusic(TMediaData& musicData);
+    void matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, QString absolutePathFileName);
+    void playSound(TMediaData& mediaData);
+    void playMusic(TMediaData& mediaData);
     TMediaData::MediaType parseJSONByMediaType(QJsonObject& json);
     QString parseJSONByMediaFileName(QJsonObject& json);
     int parseJSONByMediaVolume(QJsonObject& json);

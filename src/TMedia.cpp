@@ -728,7 +728,7 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolute
     return doesMediaHavePriorityToPlay;
 }
 
-void TMedia::checkMediaKeyConstraints(TMediaData& mediaData, QString absolutePathFileName)
+void TMedia::matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, QString absolutePathFileName)
 {
     QList<TMediaPlayer*> mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
     QListIterator<TMediaPlayer*> itTMediaPlayer(mTMediaPlayerList);
@@ -750,25 +750,25 @@ void TMedia::checkMediaKeyConstraints(TMediaData& mediaData, QString absolutePat
     }
 }
 
-void TMedia::playSound(TMediaData& soundData)
+void TMedia::playSound(TMediaData& mediaData)
 {
-    if (soundData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
+    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
         return;
     }
 
-    if (soundData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->mAcceptServerMedia) {
+    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->mAcceptServerMedia) {
         return;
     }
 
      // File wildcards "*" and "?" could return more than one sound so we process as QStringList.
-    QStringList fileNameList = TMedia::getFileNameList(soundData);
+    QStringList fileNameList = TMedia::getFileNameList(mediaData);
 
     if (fileNameList.isEmpty()) { // This should not happen.
         qWarning() << QStringLiteral("TMedia::playSound() WARNING - Could not generate a list of media file names.");
         return;
     }
 
-    TMediaPlayer* pPlayer = TMedia::getMediaPlayer(soundData);
+    TMediaPlayer* pPlayer = TMedia::getMediaPlayer(mediaData);
 
     if (!pPlayer) { // It should be impossible to ever reach this.
         qWarning() << QStringLiteral("TMedia::playSound() WARNING - Unable to create new QMediaPlayer object.");
@@ -777,40 +777,44 @@ void TMedia::playSound(TMediaData& soundData)
 
     QString absolutePathFileName;
 
-    if (soundData.getMediaLoops() == TMediaData::MediaLoopsDefault) { // Play once
+    if (mediaData.getMediaLoops() == TMediaData::MediaLoopsDefault) { // Play once
         if (fileNameList.size() > 1) {
             absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
         } else {
             absolutePathFileName = fileNameList.at(0);
         }
 
-        if (!TMedia::doesMediaHavePriorityToPlay(soundData, absolutePathFileName)) { // Filter out other sound
+        if (!TMedia::doesMediaHavePriorityToPlay(mediaData, absolutePathFileName)) { // Filter out other sound
             return;
         }
 
-        TMedia::checkMediaKeyConstraints(soundData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
+        if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mediaData.getMediaKey().isEmpty()) {
+            TMedia::matchMediaKeyAndStopMediaVariants(mediaData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
+        }
 
         pPlayer->getMediaPlayer()->setMedia(QUrl::fromLocalFile(absolutePathFileName));
     } else {
         QMediaPlaylist* playlist = new QMediaPlaylist;
 
-        if (soundData.getMediaLoops() == TMediaData::MediaLoopsRepeat) { // Repeat indefinitely
+        if (mediaData.getMediaLoops() == TMediaData::MediaLoopsRepeat) { // Repeat indefinitely
             if (fileNameList.size() > 1) {
                 absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
             } else {
                 absolutePathFileName = fileNameList.at(0);
             }
 
-            if (!TMedia::doesMediaHavePriorityToPlay(soundData, absolutePathFileName)) { // Filter out other sound
+            if (!TMedia::doesMediaHavePriorityToPlay(mediaData, absolutePathFileName)) { // Filter out other sound
                 return;
             }
 
-            TMedia::checkMediaKeyConstraints(soundData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
+            if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mediaData.getMediaKey().isEmpty()) {
+                TMedia::matchMediaKeyAndStopMediaVariants(mediaData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
+            }
 
             playlist->addMedia(QUrl::fromLocalFile(absolutePathFileName));
             playlist->setPlaybackMode(QMediaPlaylist::Loop);
         } else {
-            for (int k = 0; k < soundData.getMediaLoops(); k++) { // Repeat a finite number of times
+            for (int k = 0; k < mediaData.getMediaLoops(); k++) { // Repeat a finite number of times
                 if (fileNameList.size() > 1) {
                     absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
                 } else {
@@ -818,11 +822,13 @@ void TMedia::playSound(TMediaData& soundData)
                 }
 
                 if (k < 1) {
-                    if (!TMedia::doesMediaHavePriorityToPlay(soundData, absolutePathFileName)) { // Filter out other sound
+                    if (!TMedia::doesMediaHavePriorityToPlay(mediaData, absolutePathFileName)) { // Filter out other sound
                         return;
                     }
 
-                    TMedia::checkMediaKeyConstraints(soundData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
+                    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mediaData.getMediaKey().isEmpty()) {
+                        TMedia::matchMediaKeyAndStopMediaVariants(mediaData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
+                    }
                 }
 
                 playlist->addMedia(QUrl::fromLocalFile(absolutePathFileName));
@@ -834,35 +840,35 @@ void TMedia::playSound(TMediaData& soundData)
     }
 
     // Set volume and play
-    pPlayer->getMediaPlayer()->setVolume(soundData.getMediaVolume());
+    pPlayer->getMediaPlayer()->setVolume(mediaData.getMediaVolume());
     pPlayer->getMediaPlayer()->play();
 }
 
-void TMedia::playMusic(TMediaData& musicData)
+void TMedia::playMusic(TMediaData& mediaData)
 {
-    if (musicData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
+    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
         return;
     }
 
-    if (musicData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->mAcceptServerMedia) {
+    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->mAcceptServerMedia) {
         return;
     }
 
-    QStringList fileNameList = TMedia::getFileNameList(musicData);
+    QStringList fileNameList = TMedia::getFileNameList(mediaData);
 
     if (fileNameList.isEmpty()) { // This should not happen.
         qWarning() << QStringLiteral("TMedia::playMusic() WARNING - Could not generate a list of media file names.");
         return;
     }
 
-    TMediaPlayer* pPlayer = TMedia::matchMediaPlayer(musicData, fileNameList.at(0));
+    TMediaPlayer* pPlayer = TMedia::matchMediaPlayer(mediaData, fileNameList.at(0));
 
     if (pPlayer != nullptr) { // Same music is already playing
-        if (musicData.getMusicContinue() == TMediaData::MusicContinueDefault && musicData.getMediaLoops() == TMediaData::MediaLoopsDefault) {
+        if (mediaData.getMusicContinue() == TMediaData::MusicContinueDefault && mediaData.getMediaLoops() == TMediaData::MediaLoopsDefault) {
             return; // Continue playing it && Don't add more iterations of it
         }
     } else {
-        pPlayer = TMedia::getMediaPlayer(musicData);
+        pPlayer = TMedia::getMediaPlayer(mediaData);
     }
 
     // It should be impossible to ever reach this.
@@ -873,44 +879,48 @@ void TMedia::playMusic(TMediaData& musicData)
 
     QString absolutePathFileName;
 
-    if (musicData.getMediaLoops() == TMediaData::MediaLoopsDefault) { // Play once
+    if (mediaData.getMediaLoops() == TMediaData::MediaLoopsDefault) { // Play once
         if (fileNameList.size() > 1) {
             absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
         } else {
             absolutePathFileName = fileNameList.at(0);
         }
 
-        if (!TMedia::doesMediaHavePriorityToPlay(musicData, absolutePathFileName)) { // Filter out other music
+        if (!TMedia::doesMediaHavePriorityToPlay(mediaData, absolutePathFileName)) { // Filter out other music
             return;
         }
 
-        TMedia::checkMediaKeyConstraints(musicData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
+        if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mediaData.getMediaKey().isEmpty()) {
+            TMedia::matchMediaKeyAndStopMediaVariants(mediaData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
+        }
 
         pPlayer->getMediaPlayer()->setMedia(QUrl::fromLocalFile(absolutePathFileName));
     } else {
         QMediaPlaylist* playlist = new QMediaPlaylist;
 
-        if (musicData.getMediaLoops() == TMediaData::MediaLoopsRepeat) { // Repeat indefinitely
+        if (mediaData.getMediaLoops() == TMediaData::MediaLoopsRepeat) { // Repeat indefinitely
             if (fileNameList.size() > 1) {
                 absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
             } else {
                 absolutePathFileName = fileNameList.at(0);
             }
 
-            if (!TMedia::doesMediaHavePriorityToPlay(musicData, absolutePathFileName)) { // Filter out other music
+            if (!TMedia::doesMediaHavePriorityToPlay(mediaData, absolutePathFileName)) { // Filter out other music
                 return;
             }
 
-            TMedia::checkMediaKeyConstraints(musicData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
+            if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mediaData.getMediaKey().isEmpty()) {
+                TMedia::matchMediaKeyAndStopMediaVariants(mediaData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
+            }
 
             playlist->addMedia(QUrl::fromLocalFile(absolutePathFileName));
             playlist->setPlaybackMode(QMediaPlaylist::Loop);
         } else {
-            if (musicData.getMusicContinue() == TMediaData::MusicContinueDefault) {
-                musicData.setMediaLoops(musicData.getMediaLoops() - 1); // Subtract the currently playing music from the total
+            if (mediaData.getMusicContinue() == TMediaData::MusicContinueDefault) {
+                mediaData.setMediaLoops(mediaData.getMediaLoops() - 1); // Subtract the currently playing music from the total
             }
 
-            for (int k = 0; k < musicData.getMediaLoops(); k++) { // Repeat a finite number of times
+            for (int k = 0; k < mediaData.getMediaLoops(); k++) { // Repeat a finite number of times
                 if (fileNameList.size() > 1) {
                     absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
                 } else {
@@ -918,11 +928,13 @@ void TMedia::playMusic(TMediaData& musicData)
                 }
 
                 if (k < 1) {
-                    if (!TMedia::doesMediaHavePriorityToPlay(musicData, absolutePathFileName)) { // Filter out other sound
+                    if (!TMedia::doesMediaHavePriorityToPlay(mediaData, absolutePathFileName)) { // Filter out other sound
                         return;
                     }
 
-                    TMedia::checkMediaKeyConstraints(musicData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
+                    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mediaData.getMediaKey().isEmpty()) {
+                        TMedia::matchMediaKeyAndStopMediaVariants(mediaData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
+                    }
                 }
 
                 playlist->addMedia(QUrl::fromLocalFile(absolutePathFileName));
@@ -934,7 +946,7 @@ void TMedia::playMusic(TMediaData& musicData)
     }
 
     // Set volume and play music
-    pPlayer->getMediaPlayer()->setVolume(musicData.getMediaVolume());
+    pPlayer->getMediaPlayer()->setVolume(mediaData.getMediaVolume());
     pPlayer->getMediaPlayer()->play();
 }
 
