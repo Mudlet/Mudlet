@@ -1870,6 +1870,7 @@ void cTelnet::setMSSPVariables(const QByteArray& msg)
     mpHost->mLuaInterpreter.setMSSPTable(transcodedMsg);
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#MSP
 void cTelnet::setMSPVariables(const QByteArray& msg)
 {
     QString transcodedMsg;

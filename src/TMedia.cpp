@@ -34,37 +34,6 @@ TMedia::TMedia(Host* pHost, const QString& profileName)
 
 TMedia::~TMedia() {}
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#MSP
-void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
-{
-    if (!mpHost->mAcceptServerMedia) {
-        return;
-    }
-
-    auto document = QJsonDocument::fromJson(gmcp.toUtf8());
-
-    if (!document.isObject()) {
-        return;
-    }
-
-    // This is JSON
-    auto json = document.object();
-
-    if (json.isEmpty()) {
-        return;
-    }
-
-    if (packageMessage == "Client.Media") {
-        TMedia::parseJSONForMedia(json);
-    } else if (packageMessage == "Client.Media.Load") {
-        TMedia::parseJSONForMediaLoad(json);
-    } else if (packageMessage == "Client.Media.Play") {
-        TMedia::parseJSONForMediaPlay(json);
-    } else if (packageMessage == "Client.Media.Stop") {
-        TMedia::parseJSONForMediaStop(json);
-    }
-}
-
 void TMedia::playMedia(TMediaData& mediaData)
 {
     if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
@@ -108,6 +77,10 @@ void TMedia::playMedia(TMediaData& mediaData)
         if (!mediaFile.exists()) {
             TMedia::downloadFile(mediaData);
             return;
+        }
+
+        if (mediaData.getMediaVolume() == TMediaData::MediaVolumePreload) {
+            return; // A "feature", primarily for MSP, to enable volume 0 (zero) to preload files (already loaded above).  Processing complete.  Exit!
         }
     }
 
@@ -186,12 +159,45 @@ void TMedia::stopMedia(TMediaData& mediaData)
             }
 
             if (mediaData.getMediaPriority() != TMediaData::MediaPriorityNotSet && pPlayer->getMediaData().getMediaPriority() != TMediaData::MediaPriorityNotSet
-                && pPlayer->getMediaData().getMediaPriority() < mediaData.getMediaPriority()) {
+                && pPlayer->getMediaData().getMediaPriority() >= mediaData.getMediaPriority()) {
                 continue;
             }
         }
 
         pPlayer->getMediaPlayer()->stop();
+    }
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#GMCP
+void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
+{
+    if (!mpHost->mAcceptServerMedia) {
+        return;
+    }
+
+    auto document = QJsonDocument::fromJson(gmcp.toUtf8());
+
+    if (!document.isObject()) {
+        return;
+    }
+
+    // This is JSON
+    auto json = document.object();
+
+    if (packageMessage == "Client.Media.Stop") {
+        TMedia::parseJSONForMediaStop(json);
+    }
+
+    if (json.isEmpty()) {
+        return;
+    }
+
+    if (packageMessage == "Client.Media") {
+        TMedia::parseJSONForMedia(json);
+    } else if (packageMessage == "Client.Media.Load") {
+        TMedia::parseJSONForMediaLoad(json);
+    } else if (packageMessage == "Client.Media.Play") {
+        TMedia::parseJSONForMediaPlay(json);
     }
 }
 // End Public

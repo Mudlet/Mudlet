@@ -161,9 +161,9 @@ public:
     TMedia(Host* pHost, const QString& profileName);
     ~TMedia();
 
-    void parseGMCP(QString& packageMessage, QString& gmcp);
     void playMedia(TMediaData& mediaData);
     void stopMedia(TMediaData& mediaData);
+    void parseGMCP(QString& packageMessage, QString& gmcp);
 
 private:
     QUrl parseUrl(TMediaData& mediaData);
@@ -181,7 +181,9 @@ private:
     TMediaPlayer* matchMediaPlayer(TMediaData& mediaData, QString absolutePathFileName);
     bool doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolutePathFileName);
     void matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, QString absolutePathFileName);
+    
     void play(TMediaData& mediaData);
+
     TMediaData::MediaType parseJSONByMediaType(QJsonObject& json);
     QString parseJSONByMediaFileName(QJsonObject& json);
     int parseJSONByMediaVolume(QJsonObject& json);
@@ -192,6 +194,7 @@ private:
     QString parseJSONByMediaTarget(QJsonObject& json);
     QString parseJSONByMediaUrl(QJsonObject& json);
     QString parseJSONByMediaKey(QJsonObject& json);
+
     void parseJSONForMedia(QJsonObject& json);
     void parseJSONForMediaLoad(QJsonObject& json);
     void parseJSONForMediaPlay(QJsonObject& json);
