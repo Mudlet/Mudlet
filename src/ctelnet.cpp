@@ -1978,9 +1978,9 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
                         mediaData.setMediaPriority(TMediaData::MediaPriorityMin);
                     }
                 } else if (mspVAR == "C") {
-                    mediaData.setMediaContinue(mspVAL.toInt());
-
-                    if (mediaData.getMediaContinue() != TMediaData::MediaContinueDefault && mediaData.getMediaContinue() != TMediaData::MediaContinueRestart) {
+                    if (mspVAL.toInt() == 0) {
+                        mediaData.setMediaContinue(TMediaData::MediaContinueRestart);
+                    } else {
                         mediaData.setMediaContinue(TMediaData::MediaContinueDefault);
                     }
                 } else if (mspVAR == "T") {

@@ -69,8 +69,8 @@ public:
     };
 
     enum MediaContinue {
-        MediaContinueDefault = 1,
-        MediaContinueRestart = 0
+        MediaContinueDefault = true,
+        MediaContinueRestart = false
     };
 
     TMediaData()
@@ -95,8 +95,8 @@ public:
     void setMediaLoops(int mediaLoops) { mMediaLoops = mediaLoops; }
     int getMediaPriority() { return mMediaPriority; }
     void setMediaPriority(int mediaPriority) { mMediaPriority = mediaPriority; }
-    int getMediaContinue() { return mMediaContinue; }
-    void setMediaContinue(int mediaContinue) { mMediaContinue = mediaContinue; }
+    bool getMediaContinue() { return mMediaContinue; }
+    void setMediaContinue(bool mediaContinue) { mMediaContinue = mediaContinue; }
     QString getMediaTag() { return mMediaTag; }
     void setMediaTag(QString mediaTag) { mMediaTag = mediaTag; }
     QString getMediaTarget() { return mMediaTarget; }
@@ -115,7 +115,7 @@ private:
     int mMediaVolume;
     int mMediaLoops;
     int mMediaPriority;
-    int mMediaContinue;
+    bool mMediaContinue;
     QString mMediaTag;
     QString mMediaTarget;
     QString mMediaUrl;
@@ -181,7 +181,7 @@ private:
     TMediaPlayer* matchMediaPlayer(TMediaData& mediaData, QString absolutePathFileName);
     bool doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolutePathFileName);
     void matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, QString absolutePathFileName);
-    
+
     void play(TMediaData& mediaData);
 
     TMediaData::MediaType parseJSONByMediaType(QJsonObject& json);
