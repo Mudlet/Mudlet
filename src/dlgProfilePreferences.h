@@ -180,6 +180,7 @@ private:
     void generateMapGlyphDisplay();
     void generateDiscordTooltips();
     void hidePasswordMigrationLabel();
+    void setupPasswordsMigration();
 
     int mFontSize;
     QPointer<Host> mpHost;
@@ -196,7 +197,6 @@ private:
     // Host::mEnableUserDictionary: - although, following review THAT has been
     // disallowed...
     bool mUseSharedDictionary;
-    void setupPasswordsMigration();
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H
