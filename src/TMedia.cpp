@@ -684,34 +684,36 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolute
 {
     bool doesMediaHavePriorityToPlay = true;
 
-    if (mediaData.getMediaPriority() != TMediaData::MediaPriorityNotSet) {
-        int maxMediaPriority = 0;
+    if (mediaData.getMediaPriority() == TMediaData::MediaPriorityNotSet) {
+        return doesMediaHavePriorityToPlay;
+    }
 
-        QList<TMediaPlayer*> mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
-        QListIterator<TMediaPlayer*> itTMediaPlayer(mTMediaPlayerList);
+    int maxMediaPriority = 0;
 
-        while (itTMediaPlayer.hasNext()) { // Find the maximum priority of all playing sounds
-            TMediaPlayer* pTestPlayer = itTMediaPlayer.next();
+    QList<TMediaPlayer*> mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
+    QListIterator<TMediaPlayer*> itTMediaPlayer(mTMediaPlayerList);
 
-            if (pTestPlayer->getMediaPlayer()->state() == QMediaPlayer::PlayingState && pTestPlayer->getMediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
-                if (!pTestPlayer->getMediaPlayer()->media().canonicalUrl().toString().endsWith(absolutePathFileName)) { // Is it a different sound or music than specified?
-                    if (pTestPlayer->getMediaData().getMediaPriority() != TMediaData::MediaPriorityNotSet
-                        && pTestPlayer->getMediaData().getMediaPriority() > maxMediaPriority) {
-                        maxMediaPriority = pTestPlayer->getMediaData().getMediaPriority();
-                    }
+    while (itTMediaPlayer.hasNext()) { // Find the maximum priority of all playing sounds
+        TMediaPlayer* pTestPlayer = itTMediaPlayer.next();
+
+        if (pTestPlayer->getMediaPlayer()->state() == QMediaPlayer::PlayingState && pTestPlayer->getMediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
+            if (!pTestPlayer->getMediaPlayer()->media().canonicalUrl().toString().endsWith(absolutePathFileName)) { // Is it a different sound or music than specified?
+                if (pTestPlayer->getMediaData().getMediaPriority() != TMediaData::MediaPriorityNotSet
+                    && pTestPlayer->getMediaData().getMediaPriority() > maxMediaPriority) {
+                    maxMediaPriority = pTestPlayer->getMediaData().getMediaPriority();
                 }
             }
         }
+    }
 
-        if (maxMediaPriority >= mediaData.getMediaPriority()) { // Our media has a lower priority
-            doesMediaHavePriorityToPlay = false;
-        } else {
-            TMediaData stopMediaData;
-            stopMediaData.setMediaProtocol(mediaData.getMediaProtocol());
-            stopMediaData.setMediaType(mediaData.getMediaType());
-            stopMediaData.setMediaPriority(mediaData.getMediaPriority());
-            mpHost->mpMedia->stopMedia(stopMediaData); // If we have the highest priority, stop everything else.
-        }
+    if (maxMediaPriority >= mediaData.getMediaPriority()) { // Our media has a lower priority
+        doesMediaHavePriorityToPlay = false;
+    } else {
+        TMediaData stopMediaData;
+        stopMediaData.setMediaProtocol(mediaData.getMediaProtocol());
+        stopMediaData.setMediaType(mediaData.getMediaType());
+        stopMediaData.setMediaPriority(mediaData.getMediaPriority());
+        mpHost->mpMedia->stopMedia(stopMediaData); // If we have the highest priority, stop everything else.
     }
 
     return doesMediaHavePriorityToPlay;
