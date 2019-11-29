@@ -111,16 +111,7 @@ void TMedia::playMedia(TMediaData& mediaData)
         }
     }
 
-    switch (mediaData.getMediaType()) {
-        case TMediaData::MediaTypeSound:
-            TMedia::playSound(mediaData);
-            break;
-        case TMediaData::MediaTypeMusic:
-            TMedia::playMusic(mediaData);
-            break;
-        case TMediaData::MediaTypeVideo:
-            return;
-    }
+    TMedia::play(mediaData);
 }
 
 void TMedia::stopMedia(TMediaData& mediaData)
@@ -159,10 +150,7 @@ void TMedia::stopMedia(TMediaData& mediaData)
                     mTMediaPlayerList = mGMCPVideoList;
                     break;
                 case TMediaData::MediaTypeNotSet:
-                    mTMediaPlayerList = {};
-                    mTMediaPlayerList.append(mGMCPSoundList);
-                    mTMediaPlayerList.append(mGMCPMusicList);
-                    mTMediaPlayerList.append(mGMCPVideoList);
+                    mTMediaPlayerList = (mGMCPSoundList + mGMCPMusicList + mGMCPVideoList);
                     break;
             }
             break;
@@ -467,13 +455,7 @@ void TMedia::writeFile(QNetworkReply* reply)
                 reply->deleteLater();
                 mpHost->raiseEvent(event);
 
-                switch (mediaData.getMediaType()) {
-                    case TMediaData::MediaTypeSound:
-                        TMedia::playSound(mediaData);
-                        break;
-                    case TMediaData::MediaTypeMusic:
-                        TMedia::playMusic(mediaData);
-                }
+                TMedia::play(mediaData);
             } else {
                 event.mArgumentList << QLatin1String("sysDownloadError");
                 event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -757,101 +739,7 @@ void TMedia::matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, QString ab
     }
 }
 
-void TMedia::playSound(TMediaData& mediaData)
-{
-    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
-        return;
-    }
-
-    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->mAcceptServerMedia) {
-        return;
-    }
-
-     // File wildcards "*" and "?" could return more than one sound so we process as QStringList.
-    QStringList fileNameList = TMedia::getFileNameList(mediaData);
-
-    if (fileNameList.isEmpty()) { // This should not happen.
-        qWarning() << QStringLiteral("TMedia::playSound() WARNING - Could not generate a list of media file names.");
-        return;
-    }
-
-    TMediaPlayer* pPlayer = TMedia::getMediaPlayer(mediaData);
-
-    if (!pPlayer) { // It should be impossible to ever reach this.
-        qWarning() << QStringLiteral("TMedia::playSound() WARNING - Unable to create new QMediaPlayer object.");
-        return;
-    }
-
-    QString absolutePathFileName;
-
-    if (mediaData.getMediaLoops() == TMediaData::MediaLoopsDefault) { // Play once
-        if (fileNameList.size() > 1) {
-            absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
-        } else {
-            absolutePathFileName = fileNameList.at(0);
-        }
-
-        if (!TMedia::doesMediaHavePriorityToPlay(mediaData, absolutePathFileName)) { // Filter out other sound
-            return;
-        }
-
-        if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mediaData.getMediaKey().isEmpty()) {
-            TMedia::matchMediaKeyAndStopMediaVariants(mediaData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
-        }
-
-        pPlayer->getMediaPlayer()->setMedia(QUrl::fromLocalFile(absolutePathFileName));
-    } else {
-        QMediaPlaylist* playlist = new QMediaPlaylist;
-
-        if (mediaData.getMediaLoops() == TMediaData::MediaLoopsRepeat) { // Repeat indefinitely
-            if (fileNameList.size() > 1) {
-                absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
-            } else {
-                absolutePathFileName = fileNameList.at(0);
-            }
-
-            if (!TMedia::doesMediaHavePriorityToPlay(mediaData, absolutePathFileName)) { // Filter out other sound
-                return;
-            }
-
-            if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mediaData.getMediaKey().isEmpty()) {
-                TMedia::matchMediaKeyAndStopMediaVariants(mediaData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
-            }
-
-            playlist->addMedia(QUrl::fromLocalFile(absolutePathFileName));
-            playlist->setPlaybackMode(QMediaPlaylist::Loop);
-        } else {
-            for (int k = 0; k < mediaData.getMediaLoops(); k++) { // Repeat a finite number of times
-                if (fileNameList.size() > 1) {
-                    absolutePathFileName = fileNameList.at(qrand() % fileNameList.size());
-                } else {
-                    absolutePathFileName = fileNameList.at(0);
-                }
-
-                if (k < 1) {
-                    if (!TMedia::doesMediaHavePriorityToPlay(mediaData, absolutePathFileName)) { // Filter out other sound
-                        return;
-                    }
-
-                    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mediaData.getMediaKey().isEmpty()) {
-                        TMedia::matchMediaKeyAndStopMediaVariants(mediaData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
-                    }
-                }
-
-                playlist->addMedia(QUrl::fromLocalFile(absolutePathFileName));
-            }
-        }
-
-        playlist->setCurrentIndex(1);
-        pPlayer->getMediaPlayer()->setPlaylist(playlist);
-    }
-
-    // Set volume and play
-    pPlayer->getMediaPlayer()->setVolume(mediaData.getMediaVolume());
-    pPlayer->getMediaPlayer()->play();
-}
-
-void TMedia::playMusic(TMediaData& mediaData)
+void TMedia::play(TMediaData& mediaData)
 {
     if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
         return;
@@ -864,14 +752,18 @@ void TMedia::playMusic(TMediaData& mediaData)
     QStringList fileNameList = TMedia::getFileNameList(mediaData);
 
     if (fileNameList.isEmpty()) { // This should not happen.
-        qWarning() << QStringLiteral("TMedia::playMusic() WARNING - Could not generate a list of media file names.");
+        qWarning() << QStringLiteral("TMedia::play() WARNING - Could not generate a list of media file names.");
         return;
     }
 
-    TMediaPlayer* pPlayer = TMedia::matchMediaPlayer(mediaData, fileNameList.at(0));
+    TMediaPlayer* pPlayer;
+
+    if (mediaData.getMediaType() == TMediaData::MediaTypeMusic) {
+        pPlayer = TMedia::matchMediaPlayer(mediaData, fileNameList.at(0));
+    }
 
     if (pPlayer != nullptr) { // Same music is already playing
-        if (mediaData.getMusicContinue() == TMediaData::MusicContinueDefault && mediaData.getMediaLoops() == TMediaData::MediaLoopsDefault) {
+        if (mediaData.getMediaContinue() == TMediaData::MediaContinueDefault && mediaData.getMediaLoops() == TMediaData::MediaLoopsDefault) {
             return; // Continue playing it && Don't add more iterations of it
         }
     } else {
@@ -880,7 +772,7 @@ void TMedia::playMusic(TMediaData& mediaData)
 
     // It should be impossible to ever reach this.
     if (!pPlayer) {
-        qWarning() << QStringLiteral("TMedia::playMusic() WARNING - Unable to create new QMediaPlayer object.");
+        qWarning() << QStringLiteral("TMedia::play() WARNING - Unable to create new QMediaPlayer object.");
         return;
     }
 
@@ -893,7 +785,7 @@ void TMedia::playMusic(TMediaData& mediaData)
             absolutePathFileName = fileNameList.at(0);
         }
 
-        if (!TMedia::doesMediaHavePriorityToPlay(mediaData, absolutePathFileName)) { // Filter out other music
+        if (!TMedia::doesMediaHavePriorityToPlay(mediaData, absolutePathFileName)) { // Filter out other media
             return;
         }
 
@@ -912,7 +804,7 @@ void TMedia::playMusic(TMediaData& mediaData)
                 absolutePathFileName = fileNameList.at(0);
             }
 
-            if (!TMedia::doesMediaHavePriorityToPlay(mediaData, absolutePathFileName)) { // Filter out other music
+            if (!TMedia::doesMediaHavePriorityToPlay(mediaData, absolutePathFileName)) { // Filter out other media
                 return;
             }
 
@@ -923,7 +815,7 @@ void TMedia::playMusic(TMediaData& mediaData)
             playlist->addMedia(QUrl::fromLocalFile(absolutePathFileName));
             playlist->setPlaybackMode(QMediaPlaylist::Loop);
         } else {
-            if (mediaData.getMusicContinue() == TMediaData::MusicContinueDefault) {
+            if (mediaData.getMediaType() == TMediaData::MediaTypeMusic && mediaData.getMediaContinue() == TMediaData::MediaContinueDefault) {
                 mediaData.setMediaLoops(mediaData.getMediaLoops() - 1); // Subtract the currently playing music from the total
             }
 
@@ -952,7 +844,7 @@ void TMedia::playMusic(TMediaData& mediaData)
         pPlayer->getMediaPlayer()->setPlaylist(playlist);
     }
 
-    // Set volume and play music
+    // Set volume and play media
     pPlayer->getMediaPlayer()->setVolume(mediaData.getMediaVolume());
     pPlayer->getMediaPlayer()->play();
 }
@@ -1070,23 +962,23 @@ int TMedia::parseJSONByMediaLoops(QJsonObject& json)
     return mediaLoops;
 }
 
-TMediaData::MusicContinue TMedia::parseJSONByMusicContinue(QJsonObject& json)
+TMediaData::MediaContinue TMedia::parseJSONByMediaContinue(QJsonObject& json)
 {
-    TMediaData::MusicContinue musicContinue = TMediaData::MusicContinueDefault;
+    TMediaData::MediaContinue mediaContinue = TMediaData::MediaContinueDefault;
 
-    auto musicContinueJSON = json.value(QStringLiteral("continue"));
+    auto mediaContinueJSON = json.value(QStringLiteral("continue"));
 
-    if (musicContinueJSON != QJsonValue::Undefined && musicContinueJSON.isString() && !musicContinueJSON.toString().isEmpty()) {
-        if (musicContinueJSON.toString() == "false") {
-            musicContinue = TMediaData::MusicContinueRestart;
+    if (mediaContinueJSON != QJsonValue::Undefined && mediaContinueJSON.isString() && !mediaContinueJSON.toString().isEmpty()) {
+        if (mediaContinueJSON.toString() == "false") {
+            mediaContinue = TMediaData::MediaContinueRestart;
         } else {
-            musicContinue = TMediaData::MusicContinueDefault;
+            mediaContinue = TMediaData::MediaContinueDefault;
         }
-    } else if (musicContinueJSON != QJsonValue::Undefined && musicContinueJSON.toBool(true) == false) {
-        musicContinue = TMediaData::MusicContinueRestart;
+    } else if (mediaContinueJSON != QJsonValue::Undefined && mediaContinueJSON.toBool(true) == false) {
+        mediaContinue = TMediaData::MediaContinueRestart;
     }
 
-    return musicContinue;
+    return mediaContinue;
 }
 
 QString TMedia::parseJSONByMediaTag(QJsonObject& json)

@@ -1895,7 +1895,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     int mediaVolume = TMediaData::MediaVolumeDefault;
     int mediaLoops = TMediaData::MediaLoopsDefault;
     int mediaPriority = TMediaData::MediaPriorityNotSet;
-    int musicContinue = TMediaData::MusicContinueDefault;
+    int mediaContinue = TMediaData::MediaContinueDefault;
     QString mediaTag;
     QString mediaUrl;
 
@@ -1977,10 +1977,10 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
                         mediaData.setMediaPriority(TMediaData::MediaPriorityMin);
                     }
                 } else if (mspVAR == "C") {
-                    mediaData.setMusicContinue(mspVAL.toInt());
+                    mediaData.setMediaContinue(mspVAL.toInt());
 
-                    if (mediaData.getMusicContinue() != TMediaData::MusicContinueDefault && mediaData.getMusicContinue() != TMediaData::MusicContinueRestart) {
-                        mediaData.setMusicContinue(TMediaData::MusicContinueDefault);
+                    if (mediaData.getMediaContinue() != TMediaData::MediaContinueDefault && mediaData.getMediaContinue() != TMediaData::MediaContinueRestart) {
+                        mediaData.setMediaContinue(TMediaData::MediaContinueDefault);
                     }
                 } else if (mspVAR == "T") {
                     mediaData.setMediaTag(mspVAL.toLower()); // To provide case insensitivity of MSP spec

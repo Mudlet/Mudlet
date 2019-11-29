@@ -68,9 +68,9 @@ public:
         MediaPriorityNotSet = 0
     };
 
-    enum MusicContinue {
-        MusicContinueDefault = 1,
-        MusicContinueRestart = 0
+    enum MediaContinue {
+        MediaContinueDefault = 1,
+        MediaContinueRestart = 0
     };
 
     TMediaData()
@@ -80,7 +80,7 @@ public:
         mMediaVolume = MediaVolumeDefault;
         mMediaLoops = MediaLoopsDefault;
         mMediaPriority = MediaPriorityNotSet;
-        mMusicContinue = MusicContinueDefault;
+        mMediaContinue = MediaContinueDefault;
     }
 
     int getMediaProtocol() { return mMediaProtocol; }
@@ -95,8 +95,8 @@ public:
     void setMediaLoops(int mediaLoops) { mMediaLoops = mediaLoops; }
     int getMediaPriority() { return mMediaPriority; }
     void setMediaPriority(int mediaPriority) { mMediaPriority = mediaPriority; }
-    int getMusicContinue() { return mMusicContinue; }
-    void setMusicContinue(int musicContinue) { mMusicContinue = musicContinue; }
+    int getMediaContinue() { return mMediaContinue; }
+    void setMediaContinue(int mediaContinue) { mMediaContinue = mediaContinue; }
     QString getMediaTag() { return mMediaTag; }
     void setMediaTag(QString mediaTag) { mMediaTag = mediaTag; }
     QString getMediaTarget() { return mMediaTarget; }
@@ -115,7 +115,7 @@ private:
     int mMediaVolume;
     int mMediaLoops;
     int mMediaPriority;
-    int mMusicContinue;
+    int mMediaContinue;
     QString mMediaTag;
     QString mMediaTarget;
     QString mMediaUrl;
@@ -181,14 +181,13 @@ private:
     TMediaPlayer* matchMediaPlayer(TMediaData& mediaData, QString absolutePathFileName);
     bool doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolutePathFileName);
     void matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, QString absolutePathFileName);
-    void playSound(TMediaData& mediaData);
-    void playMusic(TMediaData& mediaData);
+    void play(TMediaData& mediaData);
     TMediaData::MediaType parseJSONByMediaType(QJsonObject& json);
     QString parseJSONByMediaFileName(QJsonObject& json);
     int parseJSONByMediaVolume(QJsonObject& json);
     int parseJSONByMediaPriority(QJsonObject& json);
     int parseJSONByMediaLoops(QJsonObject& json);
-    TMediaData::MusicContinue parseJSONByMusicContinue(QJsonObject& json);
+    TMediaData::MediaContinue parseJSONByMediaContinue(QJsonObject& json);
     QString parseJSONByMediaTag(QJsonObject& json);
     QString parseJSONByMediaTarget(QJsonObject& json);
     QString parseJSONByMediaUrl(QJsonObject& json);
