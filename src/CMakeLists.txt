@@ -222,7 +222,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(Qt5 5.11 REQUIRED COMPONENTS Core Multimedia Network OpenGL UiTools Widgets Concurrent)
+find_package(Qt5 5.11 REQUIRED COMPONENTS Core Multimedia MultimediaWidgets Network OpenGL UiTools Widgets Concurrent)
 find_package(Qt5 COMPONENTS Gamepad QUIET)
 find_package(Qt5 COMPONENTS TextToSpeech QUIET)
 
@@ -307,6 +307,7 @@ target_link_libraries(mudlet
     Qt5::Core
     Qt5::Network
     Qt5::Multimedia
+    Qt5::MultimediaWidgets
     Qt5::OpenGL
     Qt5::UiTools
     Qt5::Widgets

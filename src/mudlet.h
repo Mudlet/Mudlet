@@ -47,7 +47,6 @@
 #include <QMainWindow>
 #include <QMap>
 #include <QMediaPlayer>
-#include <QMediaPlaylist>
 #include <QPointer>
 #include <QProxyStyle>
 #include <QQueue>

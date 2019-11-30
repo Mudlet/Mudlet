@@ -852,6 +852,13 @@ void TMedia::play(TMediaData& mediaData)
         pPlayer->getMediaPlayer()->setPlaylist(playlist);
     }
 
+    if (mediaData.getMediaType() == TMediaData::MediaTypeVideo) {
+        QVideoWidget* videoWidget = new QVideoWidget;
+        pPlayer->getMediaPlayer()->setVideoOutput(videoWidget);
+        videoWidget->resize(400, 300);
+        videoWidget->show();
+    }
+
     // Set volume and play media
     pPlayer->getMediaPlayer()->setVolume(mediaData.getMediaVolume());
     pPlayer->getMediaPlayer()->play();

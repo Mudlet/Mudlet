@@ -23,11 +23,12 @@
  ***************************************************************************/
 
 
-#include "TMedia.h"
-
 #include "Host.h"
 #include "TEvent.h"
 #include "mudlet.h"
+
+#include <QMediaPlaylist>
+#include <QVideoWidget>
 
 class TMediaData
 {
