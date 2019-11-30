@@ -150,11 +150,6 @@ void TMedia::stopMedia(TMediaData& mediaData)
                 continue;
             }
 
-            if (!mediaData.getMediaTarget().isEmpty() && !pPlayer->getMediaData().getMediaTarget().isEmpty()
-                && pPlayer->getMediaData().getMediaTarget() != mediaData.getMediaTarget()) {
-                continue;
-            }
-
             if (mediaData.getMediaPriority() != TMediaData::MediaPriorityNotSet && pPlayer->getMediaData().getMediaPriority() != TMediaData::MediaPriorityNotSet
                 && pPlayer->getMediaData().getMediaPriority() >= mediaData.getMediaPriority()) {
                 continue;
@@ -991,19 +986,6 @@ QString TMedia::parseJSONByMediaTag(QJsonObject& json)
     return mediaTag;
 }
 
-QString TMedia::parseJSONByMediaTarget(QJsonObject& json)
-{
-    QString mediaTarget = QString();
-
-    auto mediaTargetJSON = json.value(QStringLiteral("target"));
-
-    if (mediaTargetJSON != QJsonValue::Undefined && !mediaTargetJSON.toString().isEmpty()) {
-        mediaTarget = mediaTargetJSON.toString();
-    }
-
-    return mediaTarget;
-}
-
 QString TMedia::parseJSONByMediaUrl(QJsonObject& json)
 {
     QString mediaUrl = QString();
@@ -1084,7 +1066,6 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     mediaData.setMediaUrl(TMedia::parseJSONByMediaUrl(json));
     mediaData.setMediaKey(TMedia::parseJSONByMediaKey(json));
     mediaData.setMediaTag(TMedia::parseJSONByMediaTag(json));
-    mediaData.setMediaTarget(TMedia::parseJSONByMediaTarget(json));
     mediaData.setMediaVolume(TMedia::parseJSONByMediaVolume(json));
     mediaData.setMediaLoops(TMedia::parseJSONByMediaLoops(json));
     mediaData.setMediaPriority(TMedia::parseJSONByMediaPriority(json));
@@ -1101,7 +1082,6 @@ void TMedia::parseJSONForMediaStop(QJsonObject& json)
     mediaData.setMediaFileName(TMedia::parseJSONByMediaFileName(json));
     mediaData.setMediaKey(TMedia::parseJSONByMediaKey(json));
     mediaData.setMediaTag(TMedia::parseJSONByMediaTag(json));
-    mediaData.setMediaTarget(TMedia::parseJSONByMediaTarget(json));
     mediaData.setMediaPriority(TMedia::parseJSONByMediaPriority(json));
 
     TMedia::stopMedia(mediaData);

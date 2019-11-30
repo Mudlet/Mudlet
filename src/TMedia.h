@@ -98,8 +98,6 @@ public:
     void setMediaContinue(bool mediaContinue) { mMediaContinue = mediaContinue; }
     QString getMediaTag() { return mMediaTag; }
     void setMediaTag(QString mediaTag) { mMediaTag = mediaTag; }
-    QString getMediaTarget() { return mMediaTarget; }
-    void setMediaTarget(QString mediaTarget) { mMediaTarget = mediaTarget; }
     QString getMediaUrl() { return mMediaUrl; }
     void setMediaUrl(QString mediaUrl) { mMediaUrl = mediaUrl; }
     QString getMediaKey() { return mMediaUrl; }
@@ -116,7 +114,6 @@ private:
     int mMediaPriority;
     bool mMediaContinue;
     QString mMediaTag;
-    QString mMediaTarget;
     QString mMediaUrl;
     QString mMediaKey;
     QString mMediaAbsolutePathFileName;
@@ -190,7 +187,6 @@ private:
     int parseJSONByMediaLoops(QJsonObject& json);
     TMediaData::MediaContinue parseJSONByMediaContinue(QJsonObject& json);
     QString parseJSONByMediaTag(QJsonObject& json);
-    QString parseJSONByMediaTarget(QJsonObject& json);
     QString parseJSONByMediaUrl(QJsonObject& json);
     QString parseJSONByMediaKey(QJsonObject& json);
 
