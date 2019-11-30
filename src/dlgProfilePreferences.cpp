@@ -852,10 +852,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
         widget_playerRoomStyle->show();
         comboBox_playerRoomStyle->setCurrentIndex(pHost->mpMap->mPlayerRoomStyle);
+        // Custom colours only available in style '3' (of '0' to '3'):
         pushButton_playerRoomPrimaryColor->setEnabled(pHost->mpMap->mPlayerRoomStyle == 3);
         pushButton_playerRoomSecondaryColor->setEnabled(pHost->mpMap->mPlayerRoomStyle == 3);
         spinBox_playerRoomOuterDiameter->setValue(pHost->mpMap->mPlayerRoomOuterDiameterPercentage);
         spinBox_playerRoomInnerDiameter->setValue(pHost->mpMap->mPlayerRoomInnerDiameterPercentage);
+        // Adjustable inner diameter not available for style '0' (original):
         spinBox_playerRoomInnerDiameter->setEnabled(pHost->mpMap->mPlayerRoomStyle != 0);
         setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor);
         setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor);
@@ -2573,6 +2575,23 @@ void dlgProfilePreferences::slot_save_and_exit()
 
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
+
+        if (widget_playerRoomStyle->isVisible()) {
+            // Although the controls have been interactively modifying the
+            // TMap cached values for these, they were not being committed to
+            // the master values in the Host instance - but now we should write
+            // those - whilst we can get the first three (quint8) values
+            // directly from controls on this form/dialogue, the last two
+            // (QColors) are easiest to retrieve from the TMap instance as the
+            // colours are not directly stored here (as for some styles they
+            // show a partly "grey-ed out" colour as they are disabled for those
+            // styles):
+            pHost->setPlayerRoomStyleDetails(static_cast<quint8>(comboBox_playerRoomStyle->currentIndex()),
+                                             static_cast<quint8>(spinBox_playerRoomOuterDiameter->value()),
+                                             static_cast<quint8>(spinBox_playerRoomInnerDiameter->value()),
+                                             pHost->mpMap->mPlayerRoomOuterColor,
+                                             pHost->mpMap->mPlayerRoomInnerColor);
+        }
     }
 
 #if defined(INCLUDE_UPDATER)
@@ -3625,7 +3644,7 @@ void dlgProfilePreferences::slot_guiLanguageChanged(const QString& language)
 void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
 {
     Host* pHost = mpHost;
-    if (!pHost || !mpHost->mpMap) {
+    if (!pHost || !pHost->mpMap) {
         return;
     }
 
@@ -3651,7 +3670,7 @@ void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
 
     default:
         style = 0;
-        [[clang::fallthrough]];
+        [[fallthrough]];
     case 0: // "Original"
         pushButton_playerRoomPrimaryColor->setEnabled(false);
         pushButton_playerRoomSecondaryColor->setEnabled(false);
@@ -3659,16 +3678,13 @@ void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
     }
     setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor);
     setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor);
-    pHost->mPlayerRoomOuterColor = pHost->mpMap->mPlayerRoomOuterColor;
-    pHost->mPlayerRoomInnerColor = pHost->mpMap->mPlayerRoomInnerColor;
     pHost->mpMap->mPlayerRoomStyle = static_cast<quint8>(style);
-    pHost->mPlayerRoomStyle = static_cast<quint8>(style);
-    if (!mpHost->mpMap->mpMapper || !mpHost->mpMap->mpMapper->mp2dMap) {
+    if (!pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
         return;
     }
     pHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(style);
     // And update the displayed map:
-    mpHost->mpMap->mpMapper->mp2dMap->update();
+    pHost->mpMap->mpMapper->mp2dMap->update();
 }
 
 void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()

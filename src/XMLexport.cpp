@@ -437,11 +437,17 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mRequiredDiscordUserDiscriminator") = pHost->mRequiredDiscordUserDiscriminator.toUtf8().constData();
     host.append_attribute("mSGRCodeHasColSpaceId") = pHost->getHaveColorSpaceId() ? "yes" : "no";
     host.append_attribute("mServerMayRedefineColors") = pHost->getMayRedefineColors() ? "yes" : "no";
-    host.append_attribute("playerRoomPrimaryColor") = pHost->mPlayerRoomOuterColor.name().toLatin1().constData();
-    host.append_attribute("playerRoomSecondaryColor") = pHost->mPlayerRoomInnerColor.name().toLatin1().constData();
-    host.append_attribute("playerRoomStyle") = QString::number(pHost->mPlayerRoomStyle).toLatin1().constData();
-    host.append_attribute("playerRoomOuterDiameter") = QString::number(pHost->mPlayerRoomOuterDiameterPercentage).toLatin1().constData();
-    host.append_attribute("playerRoomInnerDiameter") = QString::number(pHost->mPlayerRoomInnerDiameterPercentage).toLatin1().constData();
+    quint8 styleCode = 0;
+    quint8 outerDiameterPercentage = 0;
+    quint8 innerDiameterPercentage = 0;
+    QColor outerColor;
+    QColor innerColor;
+    pHost->getPlayerRoomStyleDetails(styleCode, outerDiameterPercentage, innerDiameterPercentage, outerColor, innerColor);
+    host.append_attribute("playerRoomPrimaryColor") = outerColor.name(QColor::HexArgb).toLatin1().constData();
+    host.append_attribute("playerRoomSecondaryColor") = innerColor.name(QColor::HexArgb).toLatin1().constData();
+    host.append_attribute("playerRoomStyle") = QString::number(styleCode).toLatin1().constData();
+    host.append_attribute("playerRoomOuterDiameter") = QString::number(outerDiameterPercentage).toLatin1().constData();
+    host.append_attribute("playerRoomInnerDiameter") = QString::number(innerDiameterPercentage).toLatin1().constData();
 
     QString ignore;
     QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
