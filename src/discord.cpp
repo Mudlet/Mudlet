@@ -28,7 +28,7 @@
 #include "post_guard.h"
 
 // Uncomment this to provide some additional qDebug() output:
-#define DEBUG_DISCORD 1
+// #define DEBUG_DISCORD 1
 
 QReadWriteLock Discord::smReadWriteLock;
 
