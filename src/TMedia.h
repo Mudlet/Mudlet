@@ -28,7 +28,6 @@
 #include "mudlet.h"
 
 #include <QMediaPlaylist>
-#include <QVideoWidget>
 
 class TMediaData
 {
@@ -42,7 +41,6 @@ public:
     enum MediaType {
         MediaTypeSound = 1,
         MediaTypeMusic = 2,
-        MediaTypeVideo = 3,
         MediaTypeNotSet = 0
     };
 
@@ -208,7 +206,6 @@ private:
     QList<TMediaPlayer*> mMSPMusicList;
     QList<TMediaPlayer*> mGMCPSoundList;
     QList<TMediaPlayer*> mGMCPMusicList;
-    QList<TMediaPlayer*> mGMCPVideoList;
 
     QNetworkAccessManager* mpNetworkAccessManager;
     QMap<QNetworkReply*, TMediaData> mMediaDownloads;

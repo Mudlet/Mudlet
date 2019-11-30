@@ -119,11 +119,8 @@ void TMedia::stopMedia(TMediaData& mediaData)
                 case TMediaData::MediaTypeMusic:
                     mTMediaPlayerList = mGMCPMusicList;
                     break;
-                case TMediaData::MediaTypeVideo:
-                    mTMediaPlayerList = mGMCPVideoList;
-                    break;
                 case TMediaData::MediaTypeNotSet:
-                    mTMediaPlayerList = (mGMCPSoundList + mGMCPMusicList + mGMCPVideoList);
+                    mTMediaPlayerList = (mGMCPSoundList + mGMCPMusicList);
                     break;
             }
             break;
@@ -580,9 +577,6 @@ QList<TMediaPlayer*> TMedia::getMediaPlayerList(TMediaData& mediaData)
                 case TMediaData::MediaTypeMusic:
                     mTMediaPlayerList = mGMCPMusicList;
                     break;
-                case TMediaData::MediaTypeVideo:
-                    mTMediaPlayerList = mGMCPVideoList;
-                    break;
             }
             break;
     }
@@ -632,9 +626,6 @@ TMediaPlayer* TMedia::getMediaPlayer(TMediaData& mediaData)
                         break;
                     case TMediaData::MediaTypeMusic:
                         mGMCPMusicList.append(pPlayer);
-                        break;
-                    case TMediaData::MediaTypeVideo:
-                        mGMCPVideoList.append(pPlayer);
                         break;
                 }
                 break;
@@ -852,13 +843,6 @@ void TMedia::play(TMediaData& mediaData)
         pPlayer->getMediaPlayer()->setPlaylist(playlist);
     }
 
-    if (mediaData.getMediaType() == TMediaData::MediaTypeVideo) {
-        QVideoWidget* videoWidget = new QVideoWidget;
-        pPlayer->getMediaPlayer()->setVideoOutput(videoWidget);
-        videoWidget->resize(400, 300);
-        videoWidget->show();
-    }
-
     // Set volume and play media
     pPlayer->getMediaPlayer()->setVolume(mediaData.getMediaVolume());
     pPlayer->getMediaPlayer()->play();
@@ -875,8 +859,6 @@ TMediaData::MediaType TMedia::parseJSONByMediaType(QJsonObject& json)
             mediaType = TMediaData::MediaTypeSound;
         } else if (mediaTypeJSON.toString().toLower() == "music") {
             mediaType = TMediaData::MediaTypeMusic;
-        } else if (mediaTypeJSON.toString().toLower() == "video") {
-            mediaType = TMediaData::MediaTypeVideo;
         }
     }
 
