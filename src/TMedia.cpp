@@ -1023,7 +1023,7 @@ QString TMedia::parseJSONByMediaKey(QJsonObject& json)
     return mediaKey;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#Loading_Media 
+// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#Loading_Media
 void TMedia::parseJSONForMedia(QJsonObject& json)
 {
     TMediaData mediaData;
