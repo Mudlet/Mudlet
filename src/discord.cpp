@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2018 by Vadim Peretokin - vperetokin@gmail.com          *
- *   Copyright (C) 2018 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2018-2019 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,6 +26,9 @@
 #include <QHash>
 #include <string.h>
 #include "post_guard.h"
+
+// Uncomment this to provide some additional qDebug() output:
+// #define DEBUG_DISCORD 1
 
 QReadWriteLock Discord::smReadWriteLock;
 
@@ -57,9 +60,18 @@ Discord::Discord(QObject* parent)
               {"starmourn", {"starmourn.com"}},
               {"stickmud", {"stickmud.com"}}}
 {
+#if defined(Q_OS_WIN64)
+    // Only defined on 64 bit Windows
+    mpLibrary.reset(new QLibrary(QStringLiteral("discord-rpc64")));
+#elif defined(Q_OS_WIN32)
+    // Defined on both 32 and 64 bit Windows
+    mpLibrary.reset(new QLibrary(QStringLiteral("discord-rpc32")));
+#else
+    // All other OSes
     mpLibrary.reset(new QLibrary(QStringLiteral("discord-rpc")));
+#endif
 
-    using Discord_InitializePrototype = void (*)(const char*, DiscordEventHandlers*, int);
+    using Discord_InitializePrototype = void (*)(const char*, DiscordEventHandlers*, int, const char*);
     using Discord_UpdatePresencePrototype = void (*)(const DiscordRichPresence*);
     using Discord_RunCallbacksPrototype = void (*)();
     using Discord_ShutdownPrototype = void (*)();
@@ -69,10 +81,13 @@ Discord::Discord(QObject* parent)
     Discord_RunCallbacks = reinterpret_cast<Discord_RunCallbacksPrototype>(mpLibrary->resolve("Discord_RunCallbacks"));
     Discord_Shutdown = reinterpret_cast<Discord_ShutdownPrototype>(mpLibrary->resolve("Discord_Shutdown"));
 
-    if (!Discord_Initialize || !Discord_UpdatePresence || !Discord_RunCallbacks || !Discord_Shutdown) {
+    if (!mpLibrary->isLoaded() || !Discord_Initialize || !Discord_UpdatePresence || !Discord_RunCallbacks || !Discord_Shutdown) {
         qDebug() << "Could not find Discord library - searched in:";
         for (auto& libraryPath : qApp->libraryPaths()) {
             qDebug() << "    " << libraryPath;
+        }
+        if (auto msg = mpLibrary->errorString(); !msg.isEmpty()) {
+            qDebug().noquote().nospace() << "  additionally there is an error message: \"" << msg << "\".";
         }
         return;
     }
@@ -90,7 +105,7 @@ Discord::Discord(QObject* parent)
     mpHandlers->joinRequest = handleDiscordJoinRequest;
 
     // Initialise the default Mudlet presence
-    Discord_Initialize(mHostApplicationIDs.value(nullptr).toUtf8().constData(), mpHandlers, 0);
+    Discord_Initialize(mHostApplicationIDs.value(nullptr).toUtf8().constData(), mpHandlers, 0, nullptr);
 
     // mudlet instance is not available in this constructor as it's still being initialised, so postpone the connection
     QTimer::singleShot(0, [this]() {
@@ -256,6 +271,9 @@ void Discord::handleDiscordReady(const DiscordUser* request)
     Discord::smAvatar = QString::fromUtf8(request->avatar);
     Discord::smReadWriteLock.unlock();
 
+#if defined(DEBUG_DISCORD)
+    qDebug().noquote().nospace() << "Discord Ready callback received - for UserName: \"" << smUserName << "\", ID: \"" << smUserId << "#" << smDiscriminator << "\".";
+#endif
     // don't call UpdatePresence from here - freezes Mudlet deep in the Discord API
     // when profile autostart is enabled
 }
@@ -310,6 +328,9 @@ void Discord::UpdatePresence()
     if (!pHost) {
         localDiscordPresence tempPresence;
         tempPresence.setLargeImageKey(QStringLiteral("mudlet"));
+#if defined(DEBUG_DISCORD)
+        qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - no current active Host instance, sending update using built-in Mudlet ApplicationID:\n" << tempPresence;
+#endif
         DiscordRichPresence convertedPresence(tempPresence.convert());
         Discord_UpdatePresence(&convertedPresence);
 
@@ -319,6 +340,9 @@ void Discord::UpdatePresence()
     if (!pHost->discordUserIdMatch(Discord::smUserName, Discord::smDiscriminator)) {
         // Oh dear - the current Discord User does not match the required user
         // details (if set) - must abort
+#if defined(DEBUG_DISCORD)
+        qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - Discord UserName/Discriminator does not match, not sending this update!";
+#endif
         return;
     }
 
@@ -355,9 +379,12 @@ void Discord::UpdatePresence()
     if (mCurrentApplicationId != applicationID) {
         // It has changed - must shutdown and reopen the library instance with
         // the alternate application id:
+#if defined(DEBUG_DISCORD)
+        qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - mCurrentApplicationId (\"" << mCurrentApplicationId << "\") does not match the one for this Host instance (\"" << applicationID << "\"), restarting RPC library with the latter.";
+#endif
         Discord_Shutdown();
 
-        Discord_Initialize(applicationID.toUtf8().constData(), mpHandlers, 0);
+        Discord_Initialize(applicationID.toUtf8().constData(), mpHandlers, 0, nullptr);
         mCurrentApplicationId = applicationID;
     }
 
@@ -422,6 +449,9 @@ void Discord::UpdatePresence()
         pDiscordPresence->setStartTimeStamp(0);
     }
 
+#if defined(DEBUG_DISCORD)
+    qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - sending update:\n" << *pDiscordPresence;
+#endif
     // Convert our stored presence into the format that the RPC library wants:
     DiscordRichPresence convertedPresence(pDiscordPresence->convert());
     Discord_UpdatePresence(&convertedPresence);
