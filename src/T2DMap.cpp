@@ -1414,7 +1414,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         if (playerRoomId == currentAreaRoom) {
             // We defer drawing THIS (the player's room) until the end
             isPlayerRoomVisible = true;
-            playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx),static_cast<qreal>(ry));
+            playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry));
         } else {
             // Not the player's room:
             drawRoom(painter, roomVNumFont, pen, room, pArea, currentAreaRoom, isFontBigEnoughToShowRoomVnum, playerRoomId, rx, ry, __Pick);
@@ -2366,7 +2366,7 @@ void T2DMap::createLabel(QRectF labelRectangle)
     textOrImageDialog.setStandardButtons(QMessageBox::Cancel);
     textOrImageDialog.exec();
     if (textOrImageDialog.clickedButton() == textButton) {
-        QString title = tr("Enter label text.","2D Mapper create label dialog title/text");
+        QString title = tr("Enter label text.", "2D Mapper create label dialog title/text");
         font = QFontDialog::getFont(nullptr);
         text = QInputDialog::getText(nullptr, title, title);
         if (text.length() < 1) {
@@ -2402,7 +2402,7 @@ void T2DMap::createLabel(QRectF labelRectangle)
     QPixmap pixmap(fabs(labelRectangle.width()), fabs(labelRectangle.height()));
     QRect drawRectangle = labelRectangle.normalized().toRect();
     drawRectangle.moveTo(0, 0);
-    //pixmap.fill(QColor(0,255,0,0));
+    //pixmap.fill(QColor(0, 255, 0, 0));
     QPainter labelPainter(&pixmap);
     QPen labelPen;
     labelPainter.setFont(font);
@@ -5145,16 +5145,16 @@ void T2DMap::setPlayerRoomStyle(const int type)
     case 1: // Simple(?) shaded red ring:
         if (solid) {
             mPlayerRoomColorGradentStops.resize(3);
-            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255,0,0,255));
-            mPlayerRoomColorGradentStops[1] = QGradientStop(0.990, QColor(255,0,0,255));
-            mPlayerRoomColorGradentStops[2] = QGradientStop(1.000, QColor(255,0,0,0));
+            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255, 0, 0, 255));
+            mPlayerRoomColorGradentStops[1] = QGradientStop(0.990, QColor(255, 0, 0, 255));
+            mPlayerRoomColorGradentStops[2] = QGradientStop(1.000, QColor(255, 0, 0, 0));
         } else  {
             mPlayerRoomColorGradentStops.resize(5);
-            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255,0,0,0));
-            mPlayerRoomColorGradentStops[1] = QGradientStop(factor * 0.950, QColor(255,0,0,0));
-            mPlayerRoomColorGradentStops[2] = QGradientStop(factor * 1.050, QColor(255,0,0,255));
-            mPlayerRoomColorGradentStops[3] = QGradientStop(1.000 - (factor * 0.100), QColor(255,0,0,255));
-            mPlayerRoomColorGradentStops[4] = QGradientStop(1.000, QColor(255,0,0,0));
+            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255, 0, 0, 0));
+            mPlayerRoomColorGradentStops[1] = QGradientStop(factor * 0.950, QColor(255, 0, 0, 0));
+            mPlayerRoomColorGradentStops[2] = QGradientStop(factor * 1.050, QColor(255, 0, 0, 255));
+            mPlayerRoomColorGradentStops[3] = QGradientStop(1.000 - (factor * 0.100), QColor(255, 0, 0, 255));
+            mPlayerRoomColorGradentStops[4] = QGradientStop(1.000, QColor(255, 0, 0, 0));
         }
         break;
         // End of case 1:
@@ -5162,16 +5162,16 @@ void T2DMap::setPlayerRoomStyle(const int type)
     case 2: // Shaded bicolor (blue-yellow - so it ALWAYS contrasts with underlying room color) Ring:
         if (solid) {
             mPlayerRoomColorGradentStops.resize(3);
-            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255,255,0,255));
-            mPlayerRoomColorGradentStops[1] = QGradientStop(0.990, QColor(0,0,255,255));
-            mPlayerRoomColorGradentStops[2] = QGradientStop(1.000, QColor(0,0,255,0));
+            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255, 255, 0, 255));
+            mPlayerRoomColorGradentStops[1] = QGradientStop(0.990, QColor(0, 0, 255, 255));
+            mPlayerRoomColorGradentStops[2] = QGradientStop(1.000, QColor(0, 0, 255, 0));
         } else  {
             mPlayerRoomColorGradentStops.resize(5);
-            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255,255,0,0));
-            mPlayerRoomColorGradentStops[1] = QGradientStop(factor * 0.950, QColor(255,255,0,0));
-            mPlayerRoomColorGradentStops[2] = QGradientStop(factor * 1.050, QColor(255,255,0,255));
-            mPlayerRoomColorGradentStops[3] = QGradientStop(1.000 - (factor * 0.100), QColor(0,0,255,255));
-            mPlayerRoomColorGradentStops[4] = QGradientStop(1.000, QColor(0,0,255,0));
+            mPlayerRoomColorGradentStops[0] = QGradientStop(0.000, QColor(255, 255, 0, 0));
+            mPlayerRoomColorGradentStops[1] = QGradientStop(factor * 0.950, QColor(255, 255, 0, 0));
+            mPlayerRoomColorGradentStops[2] = QGradientStop(factor * 1.050, QColor(255, 255, 0, 255));
+            mPlayerRoomColorGradentStops[3] = QGradientStop(1.000 - (factor * 0.100), QColor(0, 0, 255, 255));
+            mPlayerRoomColorGradentStops[4] = QGradientStop(1.000, QColor(0, 0, 255, 0));
         }
         break;
         // End of case 2:

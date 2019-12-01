@@ -1418,7 +1418,7 @@ void dlgProfilePreferences::setTab(QString tab)
 {
     foreach (QWidget* child, tabWidget->findChildren<QWidget*>())
     {
-        if (child->objectName().contains(tab,Qt::CaseInsensitive))
+        if (child->objectName().contains(tab, Qt::CaseInsensitive))
         {
             tabWidget->setCurrentIndex(tabWidget->indexOf(child));
             return;
@@ -3489,10 +3489,10 @@ void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& co
                 QPixmap labelBackground(1 + (button->iconSize().height() * 3), 1 + (button->iconSize().height()));
                 labelBackground.fill(Qt::black);
                 QPainter painter(&labelBackground);
-                painter.drawImage(QRect(0,0, labelBackground.width(), labelBackground.height()),
+                painter.drawImage(QRect(0, 0, labelBackground.width(), labelBackground.height()),
                                   QImage(QStringLiteral(":/icons/black_white_transparent_check_1x3_ratio.png"))
                                           .scaled(labelBackground.width(), labelBackground.height(), Qt::KeepAspectRatioByExpanding));
-                painter.fillRect(0,0, labelBackground.width(), labelBackground.height(), color);
+                painter.fillRect(0, 0, labelBackground.width(), labelBackground.height(), color);
                 painter.end();
                 button->setIcon(QIcon(labelBackground));
             } else {
@@ -3520,10 +3520,10 @@ void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& co
             QPixmap iconBackground(1 + (button->iconSize().height() * 3), 1 + (button->iconSize().height()));
             iconBackground.fill(Qt::black);
             QPainter painter(&iconBackground);
-            painter.drawImage(QRect(0,0, iconBackground.width(), iconBackground.height()),
+            painter.drawImage(QRect(0, 0, iconBackground.width(), iconBackground.height()),
                               QImage(QStringLiteral(":/icons/black_white_transparent_check_1x3_ratio.png"))
                                       .scaled(iconBackground.width(), iconBackground.height(), Qt::KeepAspectRatioByExpanding));
-            painter.fillRect(0,0, iconBackground.width(), iconBackground.height(), disabledColor);
+            painter.fillRect(0, 0, iconBackground.width(), iconBackground.height(), disabledColor);
             painter.end();
             // Because the button is disabled we have to explictly force our
             // icon to be used for that state otherwise the built-in icon engine
