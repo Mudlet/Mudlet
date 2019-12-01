@@ -849,6 +849,23 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(pushButton_showGlyphUsage, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_showMapGlyphUsage, Qt::UniqueConnection);
         connect(fontComboBox_mapSymbols, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_setMapSymbolFont, Qt::UniqueConnection);
         connect(checkBox_isOnlyMapSymbolFontToBeUsed, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapSymbolFontStrategy, Qt::UniqueConnection);
+
+        widget_playerRoomStyle->show();
+        comboBox_playerRoomStyle->setCurrentIndex(pHost->mpMap->mPlayerRoomStyle);
+        // Custom colours only available in style '3' (of '0' to '3'):
+        pushButton_playerRoomPrimaryColor->setEnabled(pHost->mpMap->mPlayerRoomStyle == 3);
+        pushButton_playerRoomSecondaryColor->setEnabled(pHost->mpMap->mPlayerRoomStyle == 3);
+        spinBox_playerRoomOuterDiameter->setValue(pHost->mpMap->mPlayerRoomOuterDiameterPercentage);
+        spinBox_playerRoomInnerDiameter->setValue(pHost->mpMap->mPlayerRoomInnerDiameterPercentage);
+        // Adjustable inner diameter not available for style '0' (original):
+        spinBox_playerRoomInnerDiameter->setEnabled(pHost->mpMap->mPlayerRoomStyle != 0);
+        setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor);
+        setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor);
+        connect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changePlayerRoomStyle);
+        connect(pushButton_playerRoomPrimaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomPrimaryColor);
+        connect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setPlayerRoomSecondaryColor);
+        connect(spinBox_playerRoomOuterDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomOuterDiameter);
+        connect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomInnerDiameter);
     } else {
         label_mapSymbolsFont->setEnabled(false);
         fontComboBox_mapSymbols->setEnabled(false);
@@ -856,6 +873,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         pushButton_showGlyphUsage->setEnabled(false);
 
         checkBox_showDefaultArea->hide();
+        widget_playerRoomStyle->hide();
     }
 
     comboBox_encoding->addItem(QLatin1String("ASCII"));
@@ -1115,6 +1133,13 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_resetLogDir, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), nullptr, nullptr);
     disconnect(mIsToLogInHtml, &QAbstractButton::clicked, nullptr, nullptr);
+
+    widget_playerRoomStyle->hide();
+    disconnect(comboBox_playerRoomStyle, qOverload<int>(&QComboBox::currentIndexChanged), nullptr, nullptr);
+    disconnect(pushButton_playerRoomPrimaryColor, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(spinBox_playerRoomOuterDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
+    disconnect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
 }
 
 void dlgProfilePreferences::clearHostDetails()
@@ -1393,7 +1418,7 @@ void dlgProfilePreferences::setTab(QString tab)
 {
     foreach (QWidget* child, tabWidget->findChildren<QWidget*>())
     {
-        if (child->objectName().contains(tab,Qt::CaseInsensitive))
+        if (child->objectName().contains(tab, Qt::CaseInsensitive))
         {
             tabWidget->setCurrentIndex(tabWidget->indexOf(child));
             return;
@@ -1506,7 +1531,9 @@ void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
             pHost->updateAnsi16ColorsInTable();
         }
 
-        // Also set a contrasting foreground color so text will always be visible
+        // Also set a contrasting foreground color so text will always be
+        // visible - if the button is disabled the colors will be somewhat
+        // "greyed-out":
         setButtonColor(b, color);
     }
 }
@@ -2550,6 +2577,23 @@ void dlgProfilePreferences::slot_save_and_exit()
 
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
+
+        if (widget_playerRoomStyle->isVisible()) {
+            // Although the controls have been interactively modifying the
+            // TMap cached values for these, they were not being committed to
+            // the master values in the Host instance - but now we should write
+            // those - whilst we can get the first three (quint8) values
+            // directly from controls on this form/dialogue, the last two
+            // (QColors) are easiest to retrieve from the TMap instance as the
+            // colours are not directly stored here (as for some styles they
+            // show a partly "grey-ed out" colour as they are disabled for those
+            // styles):
+            pHost->setPlayerRoomStyleDetails(static_cast<quint8>(comboBox_playerRoomStyle->currentIndex()),
+                                             static_cast<quint8>(spinBox_playerRoomOuterDiameter->value()),
+                                             static_cast<quint8>(spinBox_playerRoomInnerDiameter->value()),
+                                             pHost->mpMap->mPlayerRoomOuterColor,
+                                             pHost->mpMap->mPlayerRoomInnerColor);
+        }
     }
 
 #if defined(INCLUDE_UPDATER)
@@ -3426,8 +3470,78 @@ void dlgProfilePreferences::slot_changeLogFileAsHtml(const bool isHtml)
 
 void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& color)
 {
-    button->setStyleSheet(QStringLiteral("QPushButton{color: %1; background-color: %2;}").arg(color.lightness() > 127 ? QStringLiteral("black") : QStringLiteral("white"),
-                                                                                              color.name()));
+    if (color.isValid()) {
+        if (button->isEnabled()) {
+            if (button == pushButton_playerRoomPrimaryColor || button == pushButton_playerRoomSecondaryColor) {
+
+                // These two buttons show a color that may have transparency; so,
+                // instead of colouring the background, we include a generated
+                // black/white checkerboard pattern overlaid with the colour which
+                // when its alpha is not a 100% opaque will (partly) show the
+                // checkerboard.
+
+                // Ensure the icon has a 3:1 aspect ratio:
+                if (auto iconWidth{button->iconSize().width()}, iconHeight{button->iconSize().height()}; iconWidth != iconHeight * 3) {
+                    button->setIconSize(QSize(iconHeight * 3, iconHeight));
+                }
+
+                // Create a black/white checker background and overlay
+                QPixmap labelBackground(1 + (button->iconSize().height() * 3), 1 + (button->iconSize().height()));
+                labelBackground.fill(Qt::black);
+                QPainter painter(&labelBackground);
+                painter.drawImage(QRect(0, 0, labelBackground.width(), labelBackground.height()),
+                                  QImage(QStringLiteral(":/icons/black_white_transparent_check_1x3_ratio.png"))
+                                          .scaled(labelBackground.width(), labelBackground.height(), Qt::KeepAspectRatioByExpanding));
+                painter.fillRect(0, 0, labelBackground.width(), labelBackground.height(), color);
+                painter.end();
+                button->setIcon(QIcon(labelBackground));
+            } else {
+                button->setStyleSheet(QStringLiteral("QPushButton {color: %1; background-color: %2; }")
+                                              .arg(color.lightness() > 127 ? QLatin1String("black") : QLatin1String("white"),
+                                                   color.name()));
+            }
+            return;
+        }
+
+        QColor disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation()/4, color.lightness(), color.alpha());
+        if (button == pushButton_playerRoomPrimaryColor || button == pushButton_playerRoomSecondaryColor) {
+
+            // These two buttons show a color that may have transparency; so,
+            // instead of colouring the background, we include a generated
+            // black/white checkerboard pattern overlaid with the colour which
+            // when its alpha is not a 100% opaque will (partly) show the
+            // checkerboard.
+
+            // Ensure the icon has a 3:1 aspect ratio:
+            if (auto iconWidth{button->iconSize().width()}, iconHeight{button->iconSize().height()}; iconWidth != iconHeight * 3) {
+                button->setIconSize(QSize(iconHeight * 3, iconHeight));
+            }
+
+            QPixmap iconBackground(1 + (button->iconSize().height() * 3), 1 + (button->iconSize().height()));
+            iconBackground.fill(Qt::black);
+            QPainter painter(&iconBackground);
+            painter.drawImage(QRect(0, 0, iconBackground.width(), iconBackground.height()),
+                              QImage(QStringLiteral(":/icons/black_white_transparent_check_1x3_ratio.png"))
+                                      .scaled(iconBackground.width(), iconBackground.height(), Qt::KeepAspectRatioByExpanding));
+            painter.fillRect(0, 0, iconBackground.width(), iconBackground.height(), disabledColor);
+            painter.end();
+            // Because the button is disabled we have to explictly force our
+            // icon to be used for that state otherwise the built-in icon engine
+            // will assume our image is for the normal state and grey it out
+            // completely by automagic means instead of making use of the
+            // partial (desaturating) effect that we want to use:
+            QIcon icon;
+            icon.addPixmap(iconBackground, QIcon::Disabled, QIcon::Off);
+            button->setIcon(icon);
+        } else {
+            button->setStyleSheet(QStringLiteral("QPushButton {color: %1; background-color: %2; }")
+                              .arg(QLatin1String("darkGray"), disabledColor.name()));
+        }
+        return;
+    }
+
+    button->setIcon(QIcon());
+    button->setStyleSheet(QString());
 }
 
 // These next eight slots are so that if there are multiple profile preferences
@@ -3584,4 +3698,138 @@ void dlgProfilePreferences::slot_guiLanguageChanged(const QString& language)
     // assembled after the class instance was created {i.e. outside of the
     // setupUi(...) call in the constructor} would be needed in every class with
     // persistent UI texts - this is not trivial and has been deemed NWIH...!
+}
+
+void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
+{
+    Host* pHost = mpHost;
+    if (!pHost || !pHost->mpMap) {
+        return;
+    }
+
+    int style = index;
+    switch (index) {
+    case 1: // Red ring
+        pushButton_playerRoomPrimaryColor->setEnabled(false);
+        pushButton_playerRoomSecondaryColor->setEnabled(false);
+        spinBox_playerRoomInnerDiameter->setEnabled(true);
+        break;
+
+    case 2: // Blue-yellow ring
+        pushButton_playerRoomPrimaryColor->setEnabled(false);
+        pushButton_playerRoomSecondaryColor->setEnabled(false);
+        spinBox_playerRoomInnerDiameter->setEnabled(true);
+        break;
+
+    case 3: // Custom ring
+        pushButton_playerRoomPrimaryColor->setEnabled(true);
+        pushButton_playerRoomSecondaryColor->setEnabled(true);
+        spinBox_playerRoomInnerDiameter->setEnabled(true);
+        break;
+
+    default:
+        style = 0;
+        [[fallthrough]];
+    case 0: // "Original"
+        pushButton_playerRoomPrimaryColor->setEnabled(false);
+        pushButton_playerRoomSecondaryColor->setEnabled(false);
+        spinBox_playerRoomInnerDiameter->setEnabled(false);
+    }
+    setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor);
+    setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor);
+    pHost->mpMap->mPlayerRoomStyle = static_cast<quint8>(style);
+    if (!pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
+        return;
+    }
+    pHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(style);
+    // And update the displayed map:
+    pHost->mpMap->mpMapper->mp2dMap->update();
+}
+
+void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()
+{
+    Host* pHost = mpHost;
+    if (!pHost || !mpHost->mpMap || !mpHost->mpMap->mpMapper || !mpHost->mpMap->mpMapper->mp2dMap) {
+        return;
+    }
+
+    setPlayerRoomColor(pushButton_playerRoomPrimaryColor, mpHost->mpMap->mPlayerRoomOuterColor);
+    if (comboBox_playerRoomStyle->currentIndex() != 3) {
+        return;
+    }
+
+    // The current setting IS for the custom color - so use it straight away:
+    mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(3);
+    // And update the displayed map:
+    mpHost->mpMap->mpMapper->mp2dMap->update();
+}
+
+void dlgProfilePreferences::slot_setPlayerRoomSecondaryColor()
+{
+    Host* pHost = mpHost;
+    if (!pHost || !mpHost->mpMap || !mpHost->mpMap->mpMapper || !mpHost->mpMap->mpMapper->mp2dMap) {
+        return;
+    }
+
+    setPlayerRoomColor(pushButton_playerRoomSecondaryColor, mpHost->mpMap->mPlayerRoomInnerColor);
+    if (comboBox_playerRoomStyle->currentIndex() != 3) {
+        return;
+    }
+
+    // The current setting IS for the custom color - so use it straight away:
+    mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(3);
+    // And update the displayed map:
+    mpHost->mpMap->mpMapper->mp2dMap->update();
+}
+
+void dlgProfilePreferences::slot_setPlayerRoomOuterDiameter(const int value)
+{
+    Host* pHost = mpHost;
+    if (!pHost || !mpHost->mpMap || !mpHost->mpMap->mpMapper || !mpHost->mpMap->mpMapper->mp2dMap) {
+        return;
+    }
+
+    if (value < 256 && mpHost->mpMap->mPlayerRoomOuterDiameterPercentage != value) {
+        mpHost->mpMap->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
+        mpHost->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
+        // And update the displayed map:
+        mpHost->mpMap->mpMapper->mp2dMap->update();
+    }
+}
+
+void dlgProfilePreferences::slot_setPlayerRoomInnerDiameter(const int value)
+{
+    Host* pHost = mpHost;
+    if (!pHost || !mpHost->mpMap || !mpHost->mpMap->mpMapper || !mpHost->mpMap->mpMapper->mp2dMap) {
+        return;
+    }
+
+    if (value < 256 && mpHost->mpMap->mPlayerRoomInnerDiameterPercentage != value) {
+        mpHost->mpMap->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
+        mpHost->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
+        // Redefine the QGradientStops
+        mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(qBound(0, comboBox_playerRoomStyle->currentIndex(), 3));
+        // And update the displayed map:
+        mpHost->mpMap->mpMapper->mp2dMap->update();
+    }
+}
+
+void dlgProfilePreferences::setPlayerRoomColor(QPushButton* b, QColor& c)
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    auto color = QColorDialog::getColor(c, this, (b == pushButton_playerRoomPrimaryColor
+                                                          ? tr("Set outer color of player room mark.")
+                                                          : tr("Set inner color of player room mark.")),
+                                        QColorDialog::ShowAlphaChannel);
+    if (color.isValid()) {
+        c = color;
+
+        // Also sets a contrasting foreground color so text will always be
+        // visible and adjusts the saturation of a disabled button:
+        setButtonColor(b, color);
+    }
 }
