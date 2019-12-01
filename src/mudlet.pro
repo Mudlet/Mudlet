@@ -99,7 +99,7 @@ TEMPLATE = app
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.1.2
+VERSION = 4.3.0
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -207,9 +207,14 @@ unix:!macx {
 # destination place for local builds for software for all users:
     isEmpty( PREFIX ) PREFIX = /usr/local
     # Now picks up the first element of the environmental XDG_DATA_DIRS if
-    # not overridden:
+    # not overridden by providing a DATAROOTDIR:
     isEmpty( DATAROOTDIR ) {
-        DATAROOTDIR = $$first($$replace( XDG_DATA_DIRS, ":", " "))
+        XDG_DATA_DIRS_TEST = $$(XDG_DATA_DIRS)
+        ! isEmpty( XDG_DATA_DIRS_TEST ) {
+            XDG_DATA_DIRS_TEST_SPLIT = $$split(XDG_DATA_DIRS_TEST, :)
+            DATAROOTDIR = $$first(XDG_DATA_DIRS_TEST_SPLIT)
+            message("First (most significant) element of XDG_DATA_DIRS has been determined to be: $${DATAROOTDIR} ...")
+        }
         isEmpty( DATAROOTDIR ) DATAROOTDIR = $${PREFIX}/share
     }
 

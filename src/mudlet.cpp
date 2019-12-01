@@ -959,6 +959,8 @@ void mudlet::scanForMudletTranslations(const QString& path)
                 currentTranslation.mNativeName = QStringLiteral("Español");
             } else if (!languageCode.compare(QLatin1String("pt_PT"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = QStringLiteral("Portugês");
+            } else if (!languageCode.compare(QLatin1String("pt_BR"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = QStringLiteral("Português (Brasil)");
             } else {
                 currentTranslation.mNativeName = languageCode;
             }
@@ -2289,9 +2291,9 @@ bool mudlet::setConsoleBufferSize(Host* pHost, const QString& name, int x1, int 
     if (pC) {
         pC->buffer.setBufferSize(x1, y1);
         return true;
-    } else {
-        return false;
     }
+
+    return false;
 }
 
 bool mudlet::setScrollBarVisible(Host* pHost, const QString& name, bool isVisible)
@@ -3843,6 +3845,7 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     pHost->mLuaInterpreter.loadGlobal();
     hideMudletsVariables(pHost);
 
+    pHost->mBlockStopWatchCreation = false;
     pHost->getScriptUnit()->compileAll();
     pHost->mIsProfileLoadingSequence = false;
 
@@ -5400,7 +5403,7 @@ QPair<bool, bool> mudlet::addWordToSet(const QString& word)
             mWordSet_shared.insert(word);
             qDebug().noquote().nospace() << "mudlet::addWordToSet(\"" << word << "\") INFO - word added to shared mWordSet.";
             isAdded = true;
-        };
+        }
         mDictionaryReadWriteLock.unlock();
         return qMakePair(true, isAdded);
     }
@@ -5419,7 +5422,7 @@ QPair<bool, bool> mudlet::removeWordFromSet(const QString& word)
         if (mWordSet_shared.remove(word)) {
             qDebug().noquote().nospace() << "mudlet::removeWordFromSet(\"" << word << "\") INFO - word removed from shared mWordSet.";
             isRemoved = true;
-        };
+        }
         mDictionaryReadWriteLock.unlock();
         return qMakePair(true, isRemoved);
     }

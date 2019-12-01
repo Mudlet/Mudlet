@@ -192,6 +192,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mAllowToSendCommand(true)
 , mAutoClearCommandLineAfterSend(false)
 , mBlockScriptCompile(true)
+, mBlockStopWatchCreation(true)
 , mEchoLuaErrors(false)
 , mBorderBottomHeight(0)
 , mBorderLeftWidth(0)
@@ -531,6 +532,7 @@ void Host::reloadModule(const QString& reloadModuleName)
 
 void Host::resetProfile_phase1()
 {
+    mAliasUnit.stopAllTriggers();
     mTriggerUnit.stopAllTriggers();
     mTimerUnit.stopAllTriggers();
     mKeyUnit.stopAllTriggers();
@@ -543,11 +545,13 @@ void Host::resetProfile_phase1()
 
 void Host::resetProfile_phase2()
 {
+    getAliasUnit()->removeAllTempAliases();
     getTimerUnit()->removeAllTempTimers();
     getTriggerUnit()->removeAllTempTriggers();
     getKeyUnit()->removeAllTempKeys();
     removeAllNonPersistentStopWatches();
 
+    mAliasUnit.doCleanup();
     mTimerUnit.doCleanup();
     mTriggerUnit.doCleanup();
     mKeyUnit.doCleanup();
@@ -566,6 +570,7 @@ void Host::resetProfile_phase2()
     // All the Timers are NOT compiled here;
     mResetProfile = false;
 
+    mAliasUnit.reenableAllTriggers();
     mTimerUnit.reenableAllTriggers();
     mTriggerUnit.reenableAllTriggers();
     mKeyUnit.reenableAllTriggers();
@@ -890,17 +895,12 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 
 QPair<int, QString> Host::createStopWatch(const QString& name)
 {
-    if (mResetProfile || mIsProfileLoadingSequence) {
+    if (mResetProfile || mBlockStopWatchCreation) {
         // Don't create stopwatches when test loading scripts or during a profile reset:
         return qMakePair(0, QStringLiteral("unable to create a stopwatch at this time"));
     }
 
     if (!mStopWatchMap.isEmpty() && !name.isEmpty()) {
-        // As we need to check the names we will need a different algorithm
-        // than just looking for the first gap in the integer sequence
-        // 1,2,3,...n if we want to avoid going through the list twice,
-        // the first time to check the name is not in use and a second time
-        // to find the lower positive unused integer id:
         QMapIterator<int, stopWatch*> itStopWatch(mStopWatchMap);
         while (itStopWatch.hasNext()) {
             itStopWatch.next();
@@ -1881,7 +1881,7 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
             mWideAmbigousWidthGlyphs = (state == Qt::Checked);
             localState = (state == Qt::Checked);
             needToEmit = true;
-        };
+        }
 
     }
 
