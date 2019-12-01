@@ -679,17 +679,34 @@ bool T2DMap::sizeFontToFitTextInRect( QFont & font, const QRectF & boundaryRect,
     return true;
 }
 
+// Helper that refactors out code to start a speedwalk:
+void T2DMap::initiateSpeeWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId)
+{
+    mTarget = speedWalkTargetRoomId;
+    if (mpMap->mpRoomDB->getRoom(speedWalkTargetRoomId)) {
+        mpMap->mTargetID = speedWalkTargetRoomId;
+        if (mpMap->findPath(speedWalkStartRoomId, speedWalkTargetRoomId)) {
+            mpHost->startSpeedWalk();
+        } else {
+            mpHost->mpConsole->printSystemMessage(tr("Mapper: Cannot find a path from %1 to %2 using known exits.\n")
+                                                          .arg(QString::number(speedWalkStartRoomId),
+                                                               QString::number(speedWalkTargetRoomId)));
+        }
+    }
+}
+
 // This has been refactored to a separate function out of the paintEven() code
 // because we need to use it in two places - one for every room that is not the
 // player's room and then, AFTER all those have been drawn, once for the
 // player's room if it is visible. This is so it is drawn LAST (and any effects,
 // or extra markings for it do not get overwritten by the drawing of the other
 // rooms)...
-inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, TRoom* pRoom, TArea* pArea, const int currentRoomId, const bool isFontBigEnoughToShowRoomVnum, const int playerRoomId, const float rx, const float ry, const bool picked)
+inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, TRoom* pRoom, const bool isGridMode, const bool areRoomIdsLegible, const int speedWalkStartRoomId, const float rx, const float ry, const bool picked)
 {
+    const int currentRoomId = pRoom->getId();
     pRoom->rendered = false;
     QRectF roomRectangle;
-    if (pArea->gridMode) {
+    if (isGridMode) {
         roomRectangle = QRectF(rx - mRoomWidth / 2.0, ry - mRoomHeight / 2.0, mRoomWidth, mRoomHeight);
     } else {
         roomRectangle = QRectF(rx - (mRoomWidth * rSize) / 2.0, ry - (mRoomHeight * rSize) / 2.0, mRoomWidth * rSize, mRoomHeight * rSize);
@@ -781,16 +798,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, 
             diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
             painter.drawPath(diameterPath);
 
-            mTarget = currentRoomId;
-            if (mpMap->mpRoomDB->getRoom(mTarget)) {
-                mpMap->mTargetID = mTarget;
-                if (mpMap->findPath(playerRoomId, mpMap->mTargetID)) {
-                    mpHost->startSpeedWalk();
-                } else {
-                    QString msg = tr("Mapper: Cannot find a path to this room using known exits.\n");
-                    mpHost->mpConsole->printSystemMessage(msg);
-                }
-            }
+            initiateSpeeWalk(speedWalkStartRoomId, currentRoomId);
         }
 
     } else {
@@ -814,7 +822,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, 
         }
 
         // Do we need to draw the room symbol:
-        if (!(mShowRoomID && isFontBigEnoughToShowRoomVnum) && !pRoom->mSymbol.isEmpty()) {
+        if (!(mShowRoomID && areRoomIdsLegible) && !pRoom->mSymbol.isEmpty()) {
             QString pixmapKey;
             if (roomColor.lightness() > 127) {
                 pixmapKey = QStringLiteral("B_%1").arg(pRoom->mSymbol);
@@ -822,7 +830,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, 
                 pixmapKey = QStringLiteral("W_%1").arg(pRoom->mSymbol);
             }
             if (!mSymbolPixmapCache.contains(pixmapKey)) {
-                addSymbolToPixmapCache(pixmapKey, pArea->gridMode);
+                addSymbolToPixmapCache(pixmapKey, isGridMode);
             }
 
             painter.save();
@@ -877,7 +885,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, 
         }
 
         // Do we need to draw the room Id number:
-        if (mShowRoomID && isFontBigEnoughToShowRoomVnum) {
+        if (mShowRoomID && areRoomIdsLegible) {
             painter.save();
             QColor roomIdColor;
             if (roomColor.lightness() > 127) {
@@ -1110,7 +1118,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, 
     }
 
     painter.restore();
-    if (!pArea->gridMode) {
+    if (!isGridMode) {
         QMapIterator<int, QPoint> it(mAreaExitsList);
         while (it.hasNext()) {
             it.next();
@@ -1152,16 +1160,7 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, 
                 painter.drawPath(myPath);
 
                 mPick = false;
-                mTarget = it.key();
-                if (mpMap->mpRoomDB->getRoom(mTarget)) {
-                    mpMap->mTargetID = mTarget;
-                    if (mpMap->findPath(playerRoomId, mpMap->mTargetID)) {
-                        mpMap->mpHost->startSpeedWalk();
-                    } else {
-                        QString msg = tr("Mapper: Cannot find a path to this room using known exits.\n");
-                        mpHost->mpConsole->printSystemMessage(msg);
-                    }
-                }
+                initiateSpeeWalk(speedWalkStartRoomId, it.key());
             }
         }
     }
@@ -1417,12 +1416,12 @@ void T2DMap::paintEvent(QPaintEvent* e)
             playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry));
         } else {
             // Not the player's room:
-            drawRoom(painter, roomVNumFont, pen, room, pArea, currentAreaRoom, isFontBigEnoughToShowRoomVnum, playerRoomId, rx, ry, __Pick);
+            drawRoom(painter, roomVNumFont, pen, room, pArea->gridMode, isFontBigEnoughToShowRoomVnum, playerRoomId, rx, ry, __Pick);
         }
     } // End of while loop for each room in area
 
     if (isPlayerRoomVisible) {
-        drawRoom(painter, roomVNumFont, pen, playerRoom, pArea, playerRoomId, isFontBigEnoughToShowRoomVnum, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), __Pick);
+        drawRoom(painter, roomVNumFont, pen, playerRoom, pArea->gridMode, isFontBigEnoughToShowRoomVnum, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), __Pick);
         painter.save();
         QPen transparentPen(Qt::transparent);
         QPainterPath myPath;
