@@ -321,6 +321,12 @@ public:
     static int getStopWatchTime(lua_State*);
     static int startStopWatch(lua_State*);
     static int resetStopWatch(lua_State*);
+    static int adjustStopWatch(lua_State*);
+    static int deleteStopWatch(lua_State*);
+    static int setStopWatchPersistence(lua_State*);
+    static int getStopWatches(lua_State*);
+    static int setStopWatchName(lua_State*);
+    static int getStopWatchBrokenDownTime(lua_State*);
     static int createMiniConsole(lua_State*);
     static int createLabel(lua_State*);
     static int moveWindow(lua_State*);
@@ -538,9 +544,12 @@ private:
     void handleHttpOK(QNetworkReply*);
 #if defined(Q_OS_WIN32)
     void loadUtf8Filenames();
-
 #endif
     void insertColorTableEntry(lua_State*, const QColor&, const QString&);
+    // The last argument is only needed if the third one is true:
+    static void generateElapsedTimeTable(lua_State*, const QStringList&, const bool, const qint64 elapsedTimeMilliSeconds = 0);
+    static std::tuple<bool, int> getWatchId(lua_State*, Host&);
+
 
     QNetworkAccessManager* mpFileDownloader;
     std::list<std::string> mCaptureGroupList;
