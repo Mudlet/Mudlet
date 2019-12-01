@@ -28,9 +28,6 @@
 #include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
-#if defined(INCLUDE_3DMAPPER)
-#include "glwidget.h"
-#endif
 
 #include "pre_guard.h"
 #include <QListWidget>
@@ -66,6 +63,10 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
     mp2dMap->mpMap = pM;
     mp2dMap->mpHost = pH;
+    // Have to do this here rather than in the T2DMap constructor because that
+    // classes mpMap pointer is not initialised in its constructor.
+    // Set up default player room markings:
+    mp2dMap->setPlayerRoomStyle(mpMap->mPlayerRoomStyle);
     QMapIterator<int, QString> it(mpMap->mpRoomDB->getAreaNamesMap());
     //sort them alphabetically (case sensitive)
     QMap<QString, QString> areaNames;
@@ -113,7 +114,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     connect(increaseTop, &QAbstractButton::pressed, glWidget, &GLWidget::increaseTop);
     connect(increaseBottom, &QAbstractButton::pressed, glWidget, &GLWidget::increaseBottom);
     connect(reduceTop, &QAbstractButton::pressed, glWidget, &GLWidget::reduceTop);
-    connect(reduceBottom, &QAbstractButton::pressed, glWidget, &GLWidget::reduceBottom);    
+    connect(reduceBottom, &QAbstractButton::pressed, glWidget, &GLWidget::reduceBottom);
     connect(shiftZup, &QAbstractButton::pressed, glWidget, &GLWidget::shiftZup);
     connect(shiftZdown, &QAbstractButton::pressed, glWidget, &GLWidget::shiftZdown);
     connect(shiftLeft, &QAbstractButton::pressed, glWidget, &GLWidget::shiftLeft);

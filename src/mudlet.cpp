@@ -60,6 +60,7 @@
 #include <QJsonValue>
 #include <QNetworkDiskCache>
 #include <QMessageBox>
+#include <QNetworkDiskCache>
 #include <QScrollBar>
 #include <QTableWidget>
 #include <QTextStream>
@@ -3405,41 +3406,50 @@ void mudlet::createMapper(bool loadDefaultMap)
     if (!pHost) {
         return;
     }
-    if (pHost->mpMap->mpMapper) {
+    auto pMap = pHost->mpMap.data();
+    if (pMap->mpMapper) {
         bool visStatus = pHost->mpMap->mpMapper->isVisible();
-        if (pHost->mpMap->mpMapper->parentWidget()->inherits("QDockWidget")) {
-            pHost->mpMap->mpMapper->parentWidget()->setVisible(!visStatus);
+        if (pMap->mpMapper->parentWidget()->inherits("QDockWidget")) {
+            pMap->mpMapper->parentWidget()->setVisible(!visStatus);
         }
-        pHost->mpMap->mpMapper->setVisible(!visStatus);
+        pMap->mpMapper->setVisible(!visStatus);
         return;
     }
 
     auto hostName(pHost->getName());
     pHost->mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(hostName));
     pHost->mpDockableMapWidget->setObjectName(QStringLiteral("dockMap_%1").arg(hostName));
-    pHost->mpMap->mpMapper = new dlgMapper(pHost->mpDockableMapWidget, pHost, pHost->mpMap.data()); //FIXME: mpHost definieren
-#if defined(INCLUDE_3DMAPPER)
-    pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
-#endif
-    pHost->mpDockableMapWidget->setWidget(pHost->mpMap->mpMapper);
+    // Arrange for TMap member values to be copied from the Host masters so they
+    // are in place when the 2D mapper is created:
+    pHost->getPlayerRoomStyleDetails(pMap->mPlayerRoomStyle,
+                                     pMap->mPlayerRoomOuterDiameterPercentage,
+                                     pMap->mPlayerRoomInnerDiameterPercentage,
+                                     pMap->mPlayerRoomOuterColor,
+                                     pMap->mPlayerRoomInnerColor);
 
-    if (loadDefaultMap && pHost->mpMap->mpRoomDB->getRoomIDList().isEmpty()) {
+    pMap->mpMapper = new dlgMapper(pHost->mpDockableMapWidget, pHost, pMap); //FIXME: mpHost definieren
+#if defined(INCLUDE_3DMAPPER)
+    pMap->mpM = pMap->mpMapper->glWidget;
+#endif
+    pHost->mpDockableMapWidget->setWidget(pMap->mpMapper);
+
+    if (loadDefaultMap && pMap->mpRoomDB->getRoomIDList().isEmpty()) {
         qDebug() << "mudlet::slot_mapper() - restore map case 3.";
-        pHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(3) report"), true);
+        pMap->pushErrorMessagesToFile(tr("Pre-Map loading(3) report"), true);
         QDateTime now(QDateTime::currentDateTime());
-        if (pHost->mpMap->restore(QString())) {
-            pHost->mpMap->audit();
-            pHost->mpMap->mpMapper->mp2dMap->init();
-            pHost->mpMap->mpMapper->updateAreaComboBox();
-            pHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-            pHost->mpMap->mpMapper->show();
+        if (pMap->restore(QString())) {
+            pMap->audit();
+            pMap->mpMapper->mp2dMap->init();
+            pMap->mpMapper->updateAreaComboBox();
+            pMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+            pMap->mpMapper->show();
         }
 
-        pHost->mpMap->pushErrorMessagesToFile(tr("Loading map(3) at %1 report").arg(now.toString(Qt::ISODate)), true);
+        pMap->pushErrorMessagesToFile(tr("Loading map(3) at %1 report").arg(now.toString(Qt::ISODate)), true);
 
     } else {
-        if (pHost->mpMap->mpMapper) {
-            pHost->mpMap->mpMapper->show();
+        if (pMap->mpMapper) {
+            pMap->mpMapper->show();
         }
     }
     addDockWidget(Qt::RightDockWidgetArea, pHost->mpDockableMapWidget);

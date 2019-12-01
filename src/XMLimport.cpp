@@ -869,6 +869,32 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->setMayRedefineColors(false);
     }
 
+    if (attributes().hasAttribute(QLatin1String("playerRoomStyle"))) {
+        quint8 styleCode = 0;
+        quint8 outerDiameterPercentage = 0;
+        quint8 innerDiameterPercentage = 0;
+        QColor outerColor;
+        QColor innerColor;
+        // Retrieve current (possibly default) settings:
+        pHost->getPlayerRoomStyleDetails(styleCode, outerDiameterPercentage, innerDiameterPercentage, outerColor, innerColor);
+        // Gather values from file:
+        styleCode = static_cast<quint8>(qBound(0, attributes().value(QLatin1String("playerRoomStyle")).toInt(), 255));
+        outerDiameterPercentage = static_cast<quint8>(qBound(0, attributes().value(QLatin1String("playerRoomOuterDiameter")).toInt(), 255));
+        innerDiameterPercentage = static_cast<quint8>(qBound(0, attributes().value(QLatin1String("playerRoomInnerDiameter")).toInt(), 255));
+        outerColor.setNamedColor(attributes().value(QLatin1String("playerRoomPrimaryColor")).toString());
+        innerColor.setNamedColor(attributes().value(QLatin1String("playerRoomSecondaryColor")).toString());
+        // Store all the settings in the Host instance:
+        pHost->setPlayerRoomStyleDetails(styleCode, outerDiameterPercentage, innerDiameterPercentage, outerColor, innerColor);
+        if (pHost->mpMap) {
+            // And the TMap instance:
+            pHost->mpMap->mPlayerRoomStyle = styleCode;
+            pHost->mpMap->mPlayerRoomOuterDiameterPercentage = outerDiameterPercentage;
+            pHost->mpMap->mPlayerRoomInnerDiameterPercentage = innerDiameterPercentage;
+            pHost->mpMap->mPlayerRoomOuterColor = outerColor;
+            pHost->mpMap->mPlayerRoomInnerColor = innerColor;
+        }
+    }
+
     pHost->mFORCE_MXP_NEGOTIATION_OFF = (attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes");
     pHost->mEnableTextAnalyzer = (attributes().value("enableTextAnalyzer") == "yes");
     pHost->mRoomSize = attributes().value("mRoomSize").toString().toDouble();

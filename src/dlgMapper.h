@@ -33,6 +33,9 @@
 
 class Host;
 class TMap;
+#if defined(INCLUDE_3DMAPPER)
+class GLWidget;
+#endif
 
 
 class dlgMapper : public QWidget, public Ui::mapper
