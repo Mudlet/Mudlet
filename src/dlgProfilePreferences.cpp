@@ -1531,7 +1531,9 @@ void dlgProfilePreferences::setColor(QPushButton* b, QColor& c)
             pHost->updateAnsi16ColorsInTable();
         }
 
-        // Also set a contrasting foreground color so text will always be visible
+        // Also set a contrasting foreground color so text will always be
+        // visible - if the button is disabled the colors will be somewhat
+        // "greyed-out":
         setButtonColor(b, color);
     }
 }
@@ -3470,18 +3472,75 @@ void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& co
 {
     if (color.isValid()) {
         if (button->isEnabled()) {
-            button->setStyleSheet(QStringLiteral("QPushButton {color: %1; background-color: %2; }")
-                                  .arg(color.lightness() > 127 ? QLatin1String("black") : QLatin1String("white"),
-                                       color.name()));
+            if (button == pushButton_playerRoomPrimaryColor || button == pushButton_playerRoomSecondaryColor) {
+
+                // These two buttons show a color that may have transparency; so,
+                // instead of colouring the background, we include a generated
+                // black/white checkerboard pattern overlaid with the colour which
+                // when its alpha is not a 100% opaque will (partly) show the
+                // checkerboard.
+
+                // Ensure the icon has a 3:1 aspect ratio:
+                if (auto iconWidth{button->iconSize().width()}, iconHeight{button->iconSize().height()}; iconWidth != iconHeight * 3) {
+                    button->setIconSize(QSize(iconHeight * 3, iconHeight));
+                }
+
+                // Create a black/white checker background and overlay
+                QPixmap labelBackground(1 + (button->iconSize().height() * 3), 1 + (button->iconSize().height()));
+                labelBackground.fill(Qt::black);
+                QPainter painter(&labelBackground);
+                painter.drawImage(QRect(0,0, labelBackground.width(), labelBackground.height()),
+                                  QImage(QStringLiteral(":/icons/black_white_transparent_check_1x3_ratio.png"))
+                                          .scaled(labelBackground.width(), labelBackground.height(), Qt::KeepAspectRatioByExpanding));
+                painter.fillRect(0,0, labelBackground.width(), labelBackground.height(), color);
+                painter.end();
+                button->setIcon(QIcon(labelBackground));
+            } else {
+                button->setStyleSheet(QStringLiteral("QPushButton {color: %1; background-color: %2; }")
+                                              .arg(color.lightness() > 127 ? QLatin1String("black") : QLatin1String("white"),
+                                                   color.name()));
+            }
             return;
         }
 
-        QColor disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation()/4, color.lightness());
-        button->setStyleSheet(QStringLiteral("QPushButton {color: %1; background-color: %2; }")
+        QColor disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation()/4, color.lightness(), color.alpha());
+        if (button == pushButton_playerRoomPrimaryColor || button == pushButton_playerRoomSecondaryColor) {
+
+            // These two buttons show a color that may have transparency; so,
+            // instead of colouring the background, we include a generated
+            // black/white checkerboard pattern overlaid with the colour which
+            // when its alpha is not a 100% opaque will (partly) show the
+            // checkerboard.
+
+            // Ensure the icon has a 3:1 aspect ratio:
+            if (auto iconWidth{button->iconSize().width()}, iconHeight{button->iconSize().height()}; iconWidth != iconHeight * 3) {
+                button->setIconSize(QSize(iconHeight * 3, iconHeight));
+            }
+
+            QPixmap iconBackground(1 + (button->iconSize().height() * 3), 1 + (button->iconSize().height()));
+            iconBackground.fill(Qt::black);
+            QPainter painter(&iconBackground);
+            painter.drawImage(QRect(0,0, iconBackground.width(), iconBackground.height()),
+                              QImage(QStringLiteral(":/icons/black_white_transparent_check_1x3_ratio.png"))
+                                      .scaled(iconBackground.width(), iconBackground.height(), Qt::KeepAspectRatioByExpanding));
+            painter.fillRect(0,0, iconBackground.width(), iconBackground.height(), disabledColor);
+            painter.end();
+            // Because the button is disabled we have to explictly force our
+            // icon to be used for that state otherwise the built-in icon engine
+            // will assume our image is for the normal state and grey it out
+            // completely by automagic means instead of making use of the
+            // partial (desaturating) effect that we want to use:
+            QIcon icon;
+            icon.addPixmap(iconBackground, QIcon::Disabled, QIcon::Off);
+            button->setIcon(icon);
+        } else {
+            button->setStyleSheet(QStringLiteral("QPushButton {color: %1; background-color: %2; }")
                               .arg(QLatin1String("darkGray"), disabledColor.name()));
+        }
         return;
     }
 
+    button->setIcon(QIcon());
     button->setStyleSheet(QString());
 }
 
