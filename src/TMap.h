@@ -250,7 +250,7 @@ public:
     // marking, integer percentage clamped in the preferences between 83 and 0,
     // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
     // one):
-    quint8 mPlayerRoomInnerDiameterPercentage;
+    quint8 mPlayerRoomInnerDiameterPercentage {};
 
 public slots:
     // Moved and revised from dlgMapper:
