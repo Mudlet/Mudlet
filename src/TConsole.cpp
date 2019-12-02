@@ -2256,6 +2256,13 @@ TLabel* TConsole::createLabel(const QString& name, int x, int y, int width, int 
 void TConsole::createMapper(int x, int y, int width, int height)
 {
     if (!mpMapper) {
+        // Arrange for TMap member values to be copied from the Host masters so they
+        // are in place when the 2D mapper is created:
+        mpHost->getPlayerRoomStyleDetails(mpHost->mpMap->mPlayerRoomStyle,
+                                          mpHost->mpMap->mPlayerRoomOuterDiameterPercentage,
+                                          mpHost->mpMap->mPlayerRoomInnerDiameterPercentage,
+                                          mpHost->mpMap->mPlayerRoomOuterColor,
+                                          mpHost->mpMap->mPlayerRoomInnerColor);
         mpMapper = new dlgMapper(mpMainFrame, mpHost, mpHost->mpMap.data());
 #if defined(INCLUDE_3DMAPPER)
         mpHost->mpMap->mpM = mpMapper->glWidget;
