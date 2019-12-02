@@ -155,6 +155,7 @@ public:
     void setMmpMapLocation(const QString &location);
     QString getMmpMapLocation() const;
 
+
     TRoomDB* mpRoomDB;
     QMap<int, int> envColors;
     QPointer<Host> mpHost;
@@ -236,7 +237,20 @@ public:
     // location of an MMP map provided by the game
     QString mMmpMapLocation;
 
-
+    // Base color(s) for the player room in the mappers:
+    QColor mPlayerRoomOuterColor;
+    QColor mPlayerRoomInnerColor;
+    // Mode selected - 0 is closest to original style:
+    quint8 mPlayerRoomStyle;
+    // Percentage of the room size (actually width) for the outer diameter of
+    // the circular marking, integer percentage clamped in the preferences
+    // between 200 and 50 - default 120:
+    quint8 mPlayerRoomOuterDiameterPercentage;
+    // Percentage of the outer size for the inner diameter of the circular
+    // marking, integer percentage clamped in the preferences between 83 and 0,
+    // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
+    // one):
+    quint8 mPlayerRoomInnerDiameterPercentage;
 
 public slots:
     // Moved and revised from dlgMapper:
