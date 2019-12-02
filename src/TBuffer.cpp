@@ -24,6 +24,7 @@
 
 #include "mudlet.h"
 #include "TConsole.h"
+#include "TEvent.h"
 
 #include "pre_guard.h"
 #include <QTextBoundaryFinder>
@@ -701,7 +702,7 @@ TChar::TChar(const TChar& copy)
 const QString timeStampFormat = QStringLiteral("hh:mm:ss.zzz ");
 const QString blankTimeStamp  = QStringLiteral("------------ ");
 
-TBuffer::TBuffer(Host* pH)
+TBuffer::TBuffer(Host* pH, TConsole* pConsole)
 : mLinkID(0)
 , mLinesLimit(10000)
 , mBatchDeleteSize(1000)
@@ -720,6 +721,7 @@ TBuffer::TBuffer(Host* pH)
 , mOpenMainQuote()
 , mMXP_SEND_NO_REF_MODE(false)
 , mEchoingText(false)
+, mpConsole(pConsole)
 , mGotESC(false)
 , mGotCSI(false)
 , mGotOSC(false)
@@ -780,14 +782,8 @@ TBuffer::TBuffer(Host* pH)
 
 void TBuffer::setBufferSize(int s, int batch)
 {
-    if (s < 100) {
-        s = 100;
-    }
-    if (batch >= s) {
-        batch = s / 10;
-    }
-    mLinesLimit = s;
-    mBatchDeleteSize = batch;
+    mLinesLimit = qMin(100, s);
+    mBatchDeleteSize = (batch >= mLinesLimit) ? (mLinesLimit / 10) : batch;
 }
 
 void TBuffer::updateColors()
@@ -3853,6 +3849,18 @@ void TBuffer::shrinkBuffer()
         dirty.pop_front();
         buffer.pop_front();
         mCursorY--;
+    }
+
+    if (mpConsole->getType() & (TConsole::MainConsole|TConsole::UserWindow|TConsole::SubConsole)) {
+        // Signal to lua subsystem that indexes into the Console will need adjusting
+        TEvent bufferShrinkEvent{};
+        bufferShrinkEvent.mArgumentList.append(QLatin1String("sysBufferShrinkEvent"));
+        bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        bufferShrinkEvent.mArgumentList.append(mpConsole->mConsoleName);
+        bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        bufferShrinkEvent.mArgumentList.append(QString::number(mBatchDeleteSize));
+        bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mpHost->raiseEvent(bufferShrinkEvent);
     }
 }
 

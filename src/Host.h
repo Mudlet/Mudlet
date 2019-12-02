@@ -335,6 +335,7 @@ public:
     // after the main TConsole for a new profile has been created during the
     // period when mIsProfileLoadingSequence has been set:
     bool mBlockScriptCompile;
+    bool mBlockStopWatchCreation;
     bool mEchoLuaErrors;
     int mBorderBottomHeight;
     int mBorderLeftWidth;
@@ -369,6 +370,10 @@ public:
     QString mProxyPassword;
 
     bool mIsGoingDown;
+    // Used to force the test compilation of the scripts for TActions ("Buttons")
+    // that are pushdown buttons that run when they are "pushed down" during
+    // loading even though the buttons start out with themselves NOT being
+    // pushed down:
     bool mIsProfileLoadingSequence;
 
     bool mLF_ON_GA;

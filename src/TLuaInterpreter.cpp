@@ -1959,13 +1959,31 @@ int TLuaInterpreter::getStopWatchTime(lua_State* L)
 int TLuaInterpreter::createStopWatch(lua_State* L)
 {
     QString name;
-    if (lua_gettop(L)) {
-        if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L, "createStopWatch: bad argument #1 type (name as string is optional, got %s!)", luaL_typename(L, 1));
+    bool autoStart = true;
+    int n = lua_gettop(L);
+    int s = 0;
+    if (n) {
+        if (lua_type(L, ++s) == LUA_TBOOLEAN) {
+            autoStart = lua_toboolean(L, s);
+        } else if (lua_type(L, s) == LUA_TSTRING) {
+            autoStart = false;
+            name = QString::fromUtf8(lua_tostring(L, 1));
+        } else {
+            lua_pushfstring(L, "createStopWatch: bad argument #%d type (name as string or autostart as boolean are optional, got %s!)", luaL_typename(L, s));
             return lua_error(L);
         }
-        name = QString::fromUtf8(lua_tostring(L, 1));
+
+        if (n > 1) {
+            if (lua_type(L, ++s) == LUA_TBOOLEAN) {
+                autoStart = lua_toboolean(L, s);
+            } else {
+                lua_pushfstring(L, "createStopWatch: bad argument #%d type (autostart as boolean is optional, got %s!)", luaL_typename(L, s));
+                return lua_error(L);
+            }
+        }
     }
+
+
     Host& host = getHostFromLua(L);
     QPair<int, QString> result = host.createStopWatch(name);
     if (!result.first) {
@@ -1973,6 +1991,11 @@ int TLuaInterpreter::createStopWatch(lua_State* L)
         lua_pushfstring(L, result.second.toUtf8().constData());
         return 2;
     }
+
+    if (autoStart) {
+        host.startStopWatch(result.first);
+    }
+
     lua_pushnumber(L, result.first);
     return 1;
 }
@@ -2103,6 +2126,31 @@ int TLuaInterpreter::resetStopWatch(lua_State* L)
     return 1;
 }
 
+// No documentation available in wiki - internal helper
+// to get ID of stopwatch from either a (numeric) ID argument or a (string) name
+// - used to refactor the same code out of four separate stop-watch functions:
+std::tuple<bool, int> TLuaInterpreter::getWatchId(lua_State* L, Host& h)
+{
+    if (lua_type(L, 1) == LUA_TNUMBER) {
+        return std::make_tuple(true, static_cast<int>(lua_tointeger(L, 1)));
+    }
+
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
+    // Using an empty string will return the first unnamed stopwatch:
+    int watchId = h.findStopWatchId(name);
+    if (!watchId) {
+        lua_pushnil(L);
+        if (name.isEmpty()) {
+            lua_pushstring(L, "no unnamed stopwatches found");
+        } else {
+            lua_pushfstring(L, "stopwatch with name \"%s\" not found", name.toUtf8().constData());
+        }
+        return std::make_tuple(false, 0);
+    }
+
+    return std::make_tuple(true, watchId);
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#adjustStopWatch
 int TLuaInterpreter::adjustStopWatch(lua_State* L)
 {
@@ -2111,23 +2159,10 @@ int TLuaInterpreter::adjustStopWatch(lua_State* L)
         return lua_error(L);
     }
 
-    int watchId = 0;
     Host& host = getHostFromLua(L);
-    if (lua_type(L, 1) == LUA_TNUMBER) {
-        watchId = static_cast<int>(lua_tointeger(L, 1));
-    } else {
-        QString name = QString::fromUtf8(lua_tostring(L, 1));
-        // Using an empty string will return the first unnamed stopwatch:
-        watchId = host.findStopWatchId(name);
-        if (!watchId) {
-            lua_pushnil(L);
-            if (name.isEmpty()) {
-                lua_pushstring(L, "no unnamed stopwatches found");
-            } else {
-                lua_pushfstring(L, "stopwatch with name \"%s\" not found", name.toUtf8().constData());
-            }
-            return 2;
-        }
+    auto [success, watchId] = getWatchId(L, host);
+    if (!success) {
+        return 2;
     }
 
     if (!lua_isnumber(L, 2)) {
@@ -2156,23 +2191,10 @@ int TLuaInterpreter::deleteStopWatch(lua_State* L)
         return lua_error(L);
     }
 
-    int watchId = 0;
     Host& host = getHostFromLua(L);
-    if (lua_type(L, 1) == LUA_TNUMBER) {
-        watchId = static_cast<int>(lua_tointeger(L, 1));
-    } else {
-        QString name = QString::fromUtf8(lua_tostring(L, 1));
-        // Using an empty string will return the first unnamed stopwatch:
-        watchId = host.findStopWatchId(name);
-        if (!watchId) {
-            lua_pushnil(L);
-            if (name.isEmpty()) {
-                lua_pushstring(L, "no unnamed stopwatches found");
-            } else {
-                lua_pushfstring(L, "stopwatch with name \"%s\" not found", name.toUtf8().constData());
-            }
-            return 2;
-        }
+    auto [success, watchId] = getWatchId(L, host);
+    if (!success) {
+        return 2;
     }
 
     bool result = host.destroyStopWatch(watchId);
@@ -2195,23 +2217,10 @@ int TLuaInterpreter::setStopWatchPersistence(lua_State* L)
         return lua_error(L);
     }
 
-    int watchId = 0;
     Host& host = getHostFromLua(L);
-    if (lua_type(L, 1) == LUA_TNUMBER) {
-        watchId = static_cast<int>(lua_tointeger(L, 1));
-    } else {
-        QString name = QString::fromUtf8(lua_tostring(L, 1));
-        // Using an empty string will return the first unnamed stopwatch:
-        watchId = host.findStopWatchId(name);
-        if (!watchId) {
-            lua_pushnil(L);
-            if (name.isEmpty()) {
-                lua_pushstring(L, "no unnamed stopwatches found");
-            } else {
-                lua_pushfstring(L, "stopwatch with name \"%s\" not found", name.toUtf8().constData());
-            }
-            return 2;
-        }
+    auto [success, watchId] = getWatchId(L, host);
+    if (!success) {
+        return 2;
     }
 
     if (!lua_isboolean(L, 2)) {
@@ -2317,23 +2326,10 @@ int TLuaInterpreter::getStopWatchBrokenDownTime(lua_State* L)
         return lua_error(L);
     }
 
-    int watchId = 0;
     Host& host = getHostFromLua(L);
-    if (lua_type(L, 1) == LUA_TNUMBER) {
-        watchId = static_cast<int>(lua_tointeger(L, 1));
-    } else {
-        QString name = QString::fromUtf8(lua_tostring(L, 1));
-        // Using an empty string will return the first unnamed stopwatch:
-        watchId = host.findStopWatchId(name);
-        if (!watchId) {
-            lua_pushnil(L);
-            if (name.isEmpty()) {
-                lua_pushstring(L, "no unnamed stopwatches found");
-            } else {
-                lua_pushfstring(L, "stopwatch with name \"%s\" not found", name.toUtf8().constData());
-            }
-            return 2;
-        }
+    auto [success, watchId] = getWatchId(L, host);
+    if (!success) {
+        return 2;
     }
 
     QPair<bool, QString> result = host.getBrokenDownStopWatchTime(watchId);
@@ -2514,47 +2510,40 @@ int TLuaInterpreter::moveCursor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setConsoleBufferSize
 int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
 {
-    int s = 1;
+    int s = 0;
     int n = lua_gettop(L);
-    std::string a1;
+    QString windowName = QStringLiteral("main");
     if (n > 2) {
-        if (!lua_isstring(L, s)) {
-            lua_pushstring(L, "setConsoleBufferSize: wrong argument type");
-            lua_error(L);
-            return 1;
-        } else {
-            a1 = lua_tostring(L, s);
-            s++;
+        if (!lua_isstring(L, ++s)) {
+            lua_pushfstring(L, "setConsoleBufferSize: bad argument #%d type (console name as string is optional, got %s!)", s, luaL_typename(L, s));
+            return lua_error(L);
         }
-    }
-    int luaFrom;
-    if (!lua_isnumber(L, s)) {
-        lua_pushstring(L, "setConsoleBufferSize: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaFrom = lua_tointeger(L, s);
-        s++;
+        windowName = QString::fromUtf8(lua_tostring(L, s));
     }
 
-    int luaTo;
-    if (!lua_isnumber(L, s)) {
-        lua_pushstring(L, "setConsoleBufferSize: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaTo = lua_tointeger(L, s);
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "setConsoleBufferSize: bad argument #%d type (maximum line count as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
     }
+    int limit = lua_tointeger(L, s);
+
+    if (!lua_isnumber(L, ++s)) {
+        lua_pushfstring(L, "setConsoleBufferSize: bad argument #%d type (delete line count as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    }
+    int chunkSize = lua_tointeger(L, s);
 
     Host& host = getHostFromLua(L);
-
-    if (a1 == "main" || n < 3) {
-        host.mpConsole->buffer.setBufferSize(luaFrom, luaTo);
-    } else {
-        QString windowName = a1.c_str();
-        mudlet::self()->setConsoleBufferSize(&host, windowName, luaFrom, luaTo);
+    if (!windowName.compare(QLatin1String("main"))) {
+        host.mpConsole->buffer.setBufferSize(limit, chunkSize);
+    } else if (!mudlet::self()->setConsoleBufferSize(&host, windowName, limit, chunkSize)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "window \"%s\" not found", windowName.toUtf8().constData());
+        return 2;
     }
-    return 0;
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableScrollBar
@@ -14951,8 +14940,11 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
             break;
         // These are all QMouseEvents
         case (QEvent::MouseButtonPress):
+            [[fallthrough]];
         case (QEvent::MouseButtonDblClick):
+            [[fallthrough]];
         case (QEvent::MouseButtonRelease):
+            [[fallthrough]];
         case (QEvent::MouseMove): {
             auto qME = static_cast<const QMouseEvent*>(qE);
             lua_newtable(L);
@@ -15071,8 +15063,9 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
             break;
         }
         }
-    } else
+    } else {
         error = lua_pcall(L, pE.mArgumentList.size(), LUA_MULTRET, 0);
+    }
 
     if (error) {
         std::string err = "";
@@ -16401,7 +16394,7 @@ QPair<int, QString> TLuaInterpreter::startTempTimer(double timeout, const QStrin
         // Apparently this will call the TTimer::unregisterTimer(...) method:
         delete pT;
         return qMakePair(-1, QStringLiteral("unable to compile \"%1\", reason: %2").arg(function, errMsg));
-    };
+    }
 
     int id = pT->getID();
     pT->setIsActive(true);

@@ -549,6 +549,7 @@ private:
     void insertColorTableEntry(lua_State*, const QColor&, const QString&);
     // The last argument is only needed if the third one is true:
     static void generateElapsedTimeTable(lua_State*, const QStringList&, const bool, const qint64 elapsedTimeMilliSeconds = 0);
+    static std::tuple<bool, int> getWatchId(lua_State*, Host&);
 
 
     QNetworkAccessManager* mpFileDownloader;
