@@ -815,7 +815,9 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     pHost->mShowInfo = (attributes().value("mShowInfo") == "yes");
     pHost->mAcceptServerGUI = (attributes().value("mAcceptServerGUI") == "yes");
-    pHost->mAcceptServerMedia = (attributes().value("mAcceptServerMedia") == "yes");
+    if (attributes().hasAttribute(QLatin1String("mAcceptServerMedia"))) {
+        pHost->mAcceptServerMedia = (attributes().value("mAcceptServerMedia") == "yes");
+    }
     pHost->mMapperUseAntiAlias = (attributes().value("mMapperUseAntiAlias") == "yes");
     if (attributes().hasAttribute(QStringLiteral("mEditorAutoComplete"))) {
         pHost->mEditorAutoComplete = (attributes().value(QStringLiteral("mEditorAutoComplete")) == "yes");
