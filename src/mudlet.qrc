@@ -29,6 +29,7 @@
         <file>icons/avalon.png</file>
         <file>icons/badge.png</file>
         <file>icons/batmud_mud.png</file>
+        <file>icons/black_white_transparent_check_1x3_ratio.png</file>
         <file>icons/bookmarks.png</file>
         <file>icons/chronometer.png</file>
         <file>icons/clessidra.jpg</file>
@@ -66,6 +67,11 @@
         <file>icons/edit-web-search.png</file>
         <file>icons/errors.png</file>
         <file>icons/export.png</file>
+        <file>icons/face-plain.png</file>
+        <file>icons/face-sad.png</file>
+        <file>icons/face-smile.png</file>
+        <file>icons/face-surprise.png</file>
+        <file>icons/face-uncertain.png</file>
         <file>icons/filter-grey-locked.png</file>
         <file>icons/filter-grey.png</file>
         <file>icons/filter-locked.png</file>
@@ -185,10 +191,5 @@
         <file>ui/package_manager.ui</file>
         <file>ui/package_manager_unpack.ui</file>
         <file>ui/set_room_area.ui</file>
-        <file>icons/face-plain.png</file>
-        <file>icons/face-sad.png</file>
-        <file>icons/face-smile.png</file>
-        <file>icons/face-surprise.png</file>
-        <file>icons/face-uncertain.png</file>
     </qresource>
 </RCC>

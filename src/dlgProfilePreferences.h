@@ -149,13 +149,19 @@ private slots:
     void slot_changeMenuBarVisibility(const mudlet::controlsVisibility);
     void slot_changeToolBarVisibility(const mudlet::controlsVisibility);
     void slot_changeShowIconsOnMenus(const Qt::CheckState);
-    void slot_changeGuiLanguage(const QString &language);
-    void slot_passwords_location_changed(int index);
+    void slot_changeGuiLanguage(const QString&);
+    void slot_passwords_location_changed(int);
+    void slot_changePlayerRoomStyle(const int);
+    void slot_setPlayerRoomPrimaryColor();
+    void slot_setPlayerRoomSecondaryColor();
+    void slot_setPlayerRoomOuterDiameter(const int);
+    void slot_setPlayerRoomInnerDiameter(const int);
 
 private:
     void setColors();
     void setColors2();
     void setColor(QPushButton*, QColor&);
+    void setPlayerRoomColor(QPushButton*, QColor&);
     void setButtonColor(QPushButton*, const QColor&);
     void loadEditorTab();
     void populateThemesList();
@@ -174,6 +180,7 @@ private:
     void generateMapGlyphDisplay();
     void generateDiscordTooltips();
     void hidePasswordMigrationLabel();
+    void setupPasswordsMigration();
 
     int mFontSize;
     QPointer<Host> mpHost;
@@ -190,7 +197,6 @@ private:
     // Host::mEnableUserDictionary: - although, following review THAT has been
     // disallowed...
     bool mUseSharedDictionary;
-    void setupPasswordsMigration();
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

@@ -24,24 +24,25 @@
  ***************************************************************************/
 
 
-#include "TArea.h"
 #include "pre_guard.h"
-#include <QTreeWidget>
 #include <QCache>
 #include <QColor>
-#include <QElapsedTimer>
 #include <QFont>
 #include <QPixmap>
 #include <QPointer>
 #include <QString>
+#include <QTreeWidget>
 #include <QWidget>
 #include "post_guard.h"
 
 class Host;
+class TArea;
 class TMap;
+class TRoom;
 
 class QCheckBox;
 class QComboBox;
+class QElapsedTimer;
 class QListWidgetItem;
 class QPushButton;
 class QTreeWidgetItem;
@@ -161,6 +162,7 @@ public:
     bool mSizeLabel;
     bool isCenterViewCall;
     QString mHelpMsg;
+    void setPlayerRoomStyle(const int style);
 
 public slots:
     void slot_roomSelectionChanged();
@@ -213,8 +215,10 @@ private:
     std::pair<int, int> getMousePosition();
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10);
+    void drawRoom(QPainter&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const int, const float, const float, const bool);
     void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const bool showingCurrentArea, QColor& infoColor);
     void paintAreaExits(QPainter& painter, QPen& pen, QList<int>& exitList, QList<int>& oneWayExits, const TArea* pArea, int zLevel, float exitWidth);
+    void initiateSpeeWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
 
     bool mDialogLock;
 
@@ -232,8 +236,8 @@ private:
     // slot_movePosition(), etc.} - previously have
     // used -1 but is now reset to 0 if it is not valid.
     int mMultiSelectionHighlightRoomId;
-    bool mIsSelectionSorting;
 
+    bool mIsSelectionSorting;
     bool mIsSelectionSortByNames;
 
     // Used to keep track of if sorting the multiple
@@ -242,11 +246,14 @@ private:
     bool mIsSelectionUsingNames;
     QCache<QString, QPixmap> mSymbolPixmapCache;
     ushort mSymbolFontSize;
-
     QFont mMapSymbolFont;
     QPointer<QAction> mpCreateRoomAction;
     // in the players current area, how many digits does the biggest room number have?
     quint8 mMaxRoomIdDigits;
+
+    // Holds the QRadialGradient details to use for the player room:
+    QGradientStops mPlayerRoomColorGradentStops;
+
 private slots:
     void slot_createRoom();
 };
