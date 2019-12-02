@@ -160,7 +160,7 @@ void TMedia::stopMedia(TMediaData& mediaData)
     }
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#Client.Media
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#Client.Media
 void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
 {
     if (!mpHost->mAcceptServerMedia) {
@@ -672,7 +672,7 @@ TMediaPlayer* TMedia::matchMediaPlayer(TMediaData& mediaData, QString absolutePa
     return pPlayer;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#priority:_1_to_100
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#priority:_1_to_100
 bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolutePathFileName)
 {
     bool doesMediaHavePriorityToPlay = true;
@@ -712,7 +712,7 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolute
     return doesMediaHavePriorityToPlay;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#key
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#key
 void TMedia::matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, QString absolutePathFileName)
 {
     QList<TMediaPlayer*> mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
@@ -845,7 +845,7 @@ void TMedia::play(TMediaData& mediaData)
     pPlayer->getMediaPlayer()->play();
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#type:_sound
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#type:_sound
 TMediaData::MediaType TMedia::parseJSONByMediaType(QJsonObject& json)
 {
     TMediaData::MediaType mediaType = TMediaData::MediaTypeNotSet;
@@ -863,7 +863,7 @@ TMediaData::MediaType TMedia::parseJSONByMediaType(QJsonObject& json)
     return mediaType;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#name
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#name
 QString TMedia::parseJSONByMediaFileName(QJsonObject& json)
 {
     QString mediaFileName = QString();
@@ -877,7 +877,7 @@ QString TMedia::parseJSONByMediaFileName(QJsonObject& json)
     return mediaFileName;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#volume:_1_to_100
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#volume:_1_to_100
 int TMedia::parseJSONByMediaVolume(QJsonObject& json)
 {
     int mediaVolume = TMediaData::MediaVolumeDefault;
@@ -909,7 +909,7 @@ int TMedia::parseJSONByMediaVolume(QJsonObject& json)
     return mediaVolume;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#priority:_1_to_100
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#priority:_1_to_100
 int TMedia::parseJSONByMediaPriority(QJsonObject& json)
 {
     int mediaPriority = TMediaData::MediaPriorityNotSet;
@@ -937,7 +937,7 @@ int TMedia::parseJSONByMediaPriority(QJsonObject& json)
     return mediaPriority;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#loops:_-1.2C_1_or_more
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#loops:_-1.2C_1_or_more
 int TMedia::parseJSONByMediaLoops(QJsonObject& json)
 {
     int mediaLoops = TMediaData::MediaLoopsDefault;
@@ -961,7 +961,7 @@ int TMedia::parseJSONByMediaLoops(QJsonObject& json)
     return mediaLoops;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#continue:_true_or_false_.28for_music.29
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#continue:_true_or_false_.28for_music.29
 TMediaData::MediaContinue TMedia::parseJSONByMediaContinue(QJsonObject& json)
 {
     TMediaData::MediaContinue mediaContinue = TMediaData::MediaContinueDefault;
@@ -981,7 +981,7 @@ TMediaData::MediaContinue TMedia::parseJSONByMediaContinue(QJsonObject& json)
     return mediaContinue;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#tag
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#tag
 QString TMedia::parseJSONByMediaTag(QJsonObject& json)
 {
     QString mediaTag = QString();
@@ -995,7 +995,7 @@ QString TMedia::parseJSONByMediaTag(QJsonObject& json)
     return mediaTag;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#url
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#url
 QString TMedia::parseJSONByMediaUrl(QJsonObject& json)
 {
     QString mediaUrl = QString();
@@ -1009,7 +1009,7 @@ QString TMedia::parseJSONByMediaUrl(QJsonObject& json)
     return mediaUrl;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#key
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#key
 QString TMedia::parseJSONByMediaKey(QJsonObject& json)
 {
     QString mediaKey = QString();
@@ -1023,7 +1023,7 @@ QString TMedia::parseJSONByMediaKey(QJsonObject& json)
     return mediaKey;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#Loading_Media
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#Loading_Media
 void TMedia::parseJSONForMedia(QJsonObject& json)
 {
     TMediaData mediaData;
@@ -1034,7 +1034,7 @@ void TMedia::parseJSONForMedia(QJsonObject& json)
     TMedia::processUrl(mediaData);
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#Loading_Media
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#Loading_Media
 void TMedia::parseJSONForMediaLoad(QJsonObject& json)
 {
     TMediaData mediaData;
@@ -1064,7 +1064,7 @@ void TMedia::parseJSONForMediaLoad(QJsonObject& json)
     }
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#Playing_Media
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#Playing_Media
 void TMedia::parseJSONForMediaPlay(QJsonObject& json)
 {
     TMediaData mediaData;
@@ -1087,7 +1087,7 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     TMedia::playMedia(mediaData);
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#Stopping_Media
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#Stopping_Media
 void TMedia::parseJSONForMediaStop(QJsonObject& json)
 {
     TMediaData mediaData;
