@@ -1573,8 +1573,10 @@ QString TTextEdit::getSelectedText(char newlineChar)
             if (y == mPA.y()) {
                 crash_location = 4;
                 // start from the column where the selection started
-                if (!mpBuffer->buffer.at(y).at(0).isSelected()) {
-                    x = mPA.x();
+                if (mpBuffer->lineBuffer.at(y).size()) {
+                    if (!mpBuffer->buffer.at(y).at(0).isSelected()) {
+                        x = mPA.x();
+                    }
                 }
                 crash_location = 5;
                 if (!isSingleLine) {
