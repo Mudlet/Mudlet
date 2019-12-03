@@ -1563,6 +1563,8 @@ QString TTextEdit::getSelectedText(char newlineChar)
     normaliseSelection();
 
     QString text;
+    int x, y, total;
+
 
     if(!mpBuffer->buffer[0].size()) {
         return text;
@@ -1570,7 +1572,7 @@ QString TTextEdit::getSelectedText(char newlineChar)
     // for each selected line
     bool isSingleLine = (mPA.y() == mPB.y());
     // CHECKME: the <= together with the +1 in the test looks suspecious:
-    for (int y = mPA.y(), total = mPB.y() + 1; y <= total; ++y) {
+    for (y = mPA.y(), total = mPB.y() + 1; y <= total; ++y) {
         // stop if we are at the end of the buffer lines
         if (y >= static_cast<int>(mpBuffer->buffer.size())) {
             mSelectedRegion = QRegion(0, 0, 0, 0);
@@ -1578,12 +1580,14 @@ QString TTextEdit::getSelectedText(char newlineChar)
             return text;
         }
 
-        int x = 0;
+        x = 0;
         // if the selection started on this line
         if (y == mPA.y()) {
             // start from the column where the selection started
-            if (!mpBuffer->buffer.at(y).at(0).isSelected()) {
-                x = mPA.x();
+            if (mpBuffer->lineBuffer.at(y).size()) {
+                if (!mpBuffer->buffer.at(y).at(0).isSelected()) {
+                    x = mPA.x();
+                }
             }
             if (!isSingleLine) {
                 // insert the number of spaces to push the first line to the right
