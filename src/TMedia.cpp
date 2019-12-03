@@ -752,7 +752,7 @@ void TMedia::play(TMediaData& mediaData)
         return;
     }
 
-    TMediaPlayer* pPlayer;
+    TMediaPlayer* pPlayer {};
 
     if (mediaData.getMediaType() == TMediaData::MediaTypeMusic) {
         pPlayer = TMedia::matchMediaPlayer(mediaData, fileNameList.at(0));
@@ -837,6 +837,7 @@ void TMedia::play(TMediaData& mediaData)
         }
 
         playlist->setCurrentIndex(1);
+        qDebug() << pPlayer->getMediaPlayer();
         pPlayer->getMediaPlayer()->setPlaylist(playlist);
     }
 
