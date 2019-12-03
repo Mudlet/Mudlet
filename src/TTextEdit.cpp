@@ -1547,88 +1547,59 @@ QString TTextEdit::getSelectedText(char newlineChar)
     normaliseSelection();
 
     QString text;
-    int x, y, total, crash_location;
+    int x, y, total;
 
-    try {
 
-        crash_location = 1;
-        if(!mpBuffer->buffer[0].size()) {
+    if(!mpBuffer->buffer[0].size()) {
+        return text;
+    }
+    // for each selected line
+    bool isSingleLine = (mPA.y() == mPB.y());
+    // CHECKME: the <= together with the +1 in the test looks suspecious:
+    for (y = mPA.y(), total = mPB.y() + 1; y <= total; ++y) {
+        // stop if we are at the end of the buffer lines
+        if (y >= static_cast<int>(mpBuffer->buffer.size())) {
+            mSelectedRegion = QRegion(0, 0, 0, 0);
+            forceUpdate();
             return text;
         }
-        // for each selected line
-        bool isSingleLine = (mPA.y() == mPB.y());
-        // CHECKME: the <= together with the +1 in the test looks suspecious:
-        for (y = mPA.y(), total = mPB.y() + 1; y <= total; ++y) {
-            crash_location = 2;
-            // stop if we are at the end of the buffer lines
-            if (y >= static_cast<int>(mpBuffer->buffer.size())) {
-                crash_location = 3;
-                mSelectedRegion = QRegion(0, 0, 0, 0);
-                forceUpdate();
-                return text;
-            }
 
-            x = 0;
-            // if the selection started on this line
-            if (y == mPA.y()) {
-                crash_location = 4;
-                // start from the column where the selection started
-                if (mpBuffer->lineBuffer.at(y).size()) {
-                    if (!mpBuffer->buffer.at(y).at(0).isSelected()) {
-                        x = mPA.x();
-                    }
-                }
-                crash_location = 5;
-                if (!isSingleLine) {
-                    // insert the number of spaces to push the first line to the right
-                    // so it lines up with the following lines - but only if there
-                    // is MORE than a single line:
-                    text.append(QStringLiteral(" ").repeated(x));
+        x = 0;
+        // if the selection started on this line
+        if (y == mPA.y()) {
+            // start from the column where the selection started
+            if (mpBuffer->lineBuffer.at(y).size()) {
+                if (!mpBuffer->buffer.at(y).at(0).isSelected()) {
+                    x = mPA.x();
                 }
             }
-            crash_location = 6;
-            // while we are not at the end of the buffer line
-            while (x < static_cast<int>(mpBuffer->buffer[y].size())) {
-                crash_location = 7;
-                if (mpBuffer->buffer.at(y).at(x).isSelected()) {
-                    crash_location = 8;
-                    text.append(mpBuffer->lineBuffer[y].at(x));
-                }
-                // if the selection ended on this line
-                if (y >= mPB.y()) {
-                    crash_location = 9;
-                    // stop if the selection ended on this column or the buffer line is ending
-                    if (x >= static_cast<int>(mpBuffer->buffer[y].size() - 1)) {
-                        crash_location = 10;
-                        mSelectedRegion = QRegion(0, 0, 0, 0);
-                        forceUpdate();
-                        return text;
-                    }
-                }
-                x++;
+            if (!isSingleLine) {
+                // insert the number of spaces to push the first line to the right
+                // so it lines up with the following lines - but only if there
+                // is MORE than a single line:
+                text.append(QStringLiteral(" ").repeated(x));
             }
-            crash_location = 11;
-            // we never append the last character of a buffer line se we set our own
-            text.append(newlineChar);
         }
-        qDebug() << "TTextEdit::getSelectedText(...) INFO - unexpectedly hit bottom of method so returning:" << text;
-        return text;
-    } catch (...) {
-        qDebug() << "TTextEdit::getSelectedText(...) CRASH at location " << crash_location << "\n";
-        qDebug() << "x = " << x << " y = " << y << " mPA.x = " << mPA.x() << "  mPA.y = " << mPA.y() << " mPB.x = " << mPB.x() << "  mPB.y = " << mPB.y() << "\n";
-        try {
-            crash_location = 1;
-            qDebug() << "mpBuffer->buffer.size() = " << mpBuffer->buffer.size() << "\n";
-            crash_location = 2;
-            qDebug() << "mpBuffer->buffer[y].size() = " << mpBuffer->buffer[y].size() << "\n";
-            crash_location = 3;
-            qDebug() << "mpBuffer->lineBuffer[y].at(x) = " << mpBuffer->lineBuffer[y].at(x) << "\n";
-            crash_location = 4;
-            qDebug() << "mpBuffer->buffer.at(y).at(x).isSelected() = " << mpBuffer->buffer.at(y).at(x).isSelected() << "\n";
-        } catch (...) {
-            qDebug() << "TTextEdit::getSelectedText(...) Secondary CRASH at location " << crash_location << "\n";
+        // while we are not at the end of the buffer line
+        while (x < static_cast<int>(mpBuffer->buffer[y].size())) {
+            if (mpBuffer->buffer.at(y).at(x).isSelected()) {
+                text.append(mpBuffer->lineBuffer[y].at(x));
+            }
+            // if the selection ended on this line
+            if (y >= mPB.y()) {
+                // stop if the selection ended on this column or the buffer line is ending
+                if (x >= static_cast<int>(mpBuffer->buffer[y].size() - 1)) {
+                    mSelectedRegion = QRegion(0, 0, 0, 0);
+                    forceUpdate();
+                    return text;
+                }
+            }
+            x++;
         }
+        // we never append the last character of a buffer line se we set our own
+        text.append(newlineChar);
     }
+    qDebug() << "TTextEdit::getSelectedText(...) INFO - unexpectedly hit bottom of method so returning:" << text;
     return text;
 }
 
