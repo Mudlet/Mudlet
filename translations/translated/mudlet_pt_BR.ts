@@ -928,7 +928,7 @@ com um novo símbolo para esta sala:</translation>
       <location filename="../src/T2DMap.cpp" line="2946"/>
       <source>Move</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>Mover</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2947"/>
@@ -940,7 +940,7 @@ com um novo símbolo para esta sala:</translation>
       <location filename="../src/T2DMap.cpp" line="2949"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>Excluir</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2950"/>
@@ -1000,13 +1000,13 @@ com um novo símbolo para esta sala:</translation>
       <location filename="../src/T2DMap.cpp" line="3006"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)</comment>
-      <translation type="unfinished"/>
+      <translation>Propriedades</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3010"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise</comment>
-      <translation type="unfinished"/>
+      <translation>propriedades...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3014"/>
@@ -1640,7 +1640,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="12358"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>Jogando %1</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14711"/>
@@ -2310,7 +2310,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1328"/>
       <source>%1 {none}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {none}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1331"/>
@@ -2330,7 +2330,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1340"/>
       <source>%1 {invalid}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {invalid}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1344"/>
@@ -2906,13 +2906,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1812"/>
       <source>{3-per-em space}</source>
       <comment>Unicode U+2004 codepoint - three-per-em (&apos;m&apos;) wide (thick) space.</comment>
-      <translation type="unfinished"/>
+      <translation>{3-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1813"/>
       <source>{4-per-em space}</source>
       <comment>Unicode U+2005 codepoint - four-per-em (&apos;m&apos;) wide (Middle) space.</comment>
-      <translation type="unfinished"/>
+      <translation>{4-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1814"/>
@@ -3128,25 +3128,25 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1849"/>
       <source>{variation selector 1}</source>
       <comment>Unicode U+FE00 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 1}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1850"/>
       <source>{variation selector 2}</source>
       <comment>Unicode U+FE01 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1851"/>
       <source>{variation selector 3}</source>
       <comment>Unicode U+FE02 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1852"/>
       <source>{variation selector 4}</source>
       <comment>Unicode U+FE03 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1853"/>
@@ -3266,19 +3266,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1897"/>
       <source>{FitzPatrick modifier 1 or 2}</source>
       <comment>Unicode codepoint U+0001F3FB - FitzPatrick modifier (Emoji Human skin-tone) 1-2.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 1 or 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1898"/>
       <source>{FitzPatrick modifier 3}</source>
       <comment>Unicode codepoint U+0001F3FC - FitzPatrick modifier (Emoji Human skin-tone) 3.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1899"/>
       <source>{FitzPatrick modifier 4}</source>
       <comment>Unicode codepoint U+0001F3FD - FitzPatrick modifier (Emoji Human skin-tone) 4.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1900"/>
@@ -3542,7 +3542,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="62"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nome:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="115"/>
@@ -3650,7 +3650,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="35"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nome:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="57"/>
@@ -4110,7 +4110,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="84"/>
       <source>Color:</source>
-      <translation type="unfinished"/>
+      <translation>Cor:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="58"/>
@@ -4178,7 +4178,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="126"/>
       <source>Color:</source>
-      <translation type="unfinished"/>
+      <translation>Cor:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="47"/>
@@ -4329,7 +4329,7 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="54"/>
       <source>Delete</source>
-      <translation type="unfinished"/>
+      <translation>Excluir</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="61"/>
@@ -4916,7 +4916,7 @@ Count</source>
       <location filename="../src/dlgColorTrigger.cpp" line="218"/>
       <source>%1 [%2]</source>
       <comment>Color Trigger dialog button in basic 16-color set, the first value is the name of the color, the second is the ANSI color number - for most languages modification is not likely to be needed - this text is used in two places</comment>
-      <translation type="unfinished"/>
+      <translation>%1 [%2]</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="405"/>
@@ -5441,7 +5441,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="803"/>
       <source>%1 {Default, recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {Default, recommended}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="814"/>
@@ -5477,7 +5477,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1927"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Carregar mapa do Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1942"/>
@@ -6515,7 +6515,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="664"/>
       <source>Name</source>
       <comment>Heading for the second column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>Nome</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="665"/>
@@ -7115,7 +7115,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2326"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2400"/>
       <source>Name</source>
-      <translation type="unfinished"/>
+      <translation>Nome</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1394"/>
@@ -7380,7 +7380,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nome:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
@@ -9888,12 +9888,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1343"/>
       <source>Foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Primeiro Plano:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1366"/>
       <source>Background:</source>
-      <translation type="unfinished"/>
+      <translation>Plano de Fundo:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1386"/>
@@ -10603,7 +10603,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2154"/>
       <source>Background color:</source>
-      <translation type="unfinished"/>
+      <translation>Cor de fundo:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2467"/>
@@ -10886,12 +10886,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="767"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="790"/>
       <source>Weight:</source>
-      <translation type="unfinished"/>
+      <translation>Peso:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="866"/>
@@ -11296,7 +11296,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nome:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="40"/>
@@ -11360,7 +11360,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="29"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nome:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="69"/>
@@ -11499,7 +11499,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="65"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nome:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="85"/>
@@ -11588,12 +11588,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="672"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Plano de Fundo</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="659"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Primeiro Plano</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="479"/>
@@ -11665,7 +11665,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="109"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nome:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="175"/>
