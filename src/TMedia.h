@@ -123,29 +123,26 @@ class TMediaPlayer
 {
 public:
     TMediaPlayer() {}
-
-    ~TMediaPlayer()
-    {
-        if (mMediaPlayer != nullptr) {
-            mMediaPlayer->stop();
-        }
-    }
+    ~TMediaPlayer() {}
 
     TMediaPlayer(Host* pHost, TMediaData& mediaData)
     {
         mpHost = pHost;
         mMediaPlayer = new QMediaPlayer(pHost);
         mMediaData = mediaData;
+        initialized = true;
     }
 
     TMediaData getMediaData() { return mMediaData; }
     void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
-    QMediaPlayer* getMediaPlayer() { return mMediaPlayer; }
+    QMediaPlayer* getMediaPlayer() const { return mMediaPlayer; }
+    bool isInitialized() { return initialized; }
 
 private:
     QPointer<Host> mpHost;
     TMediaData mMediaData;
     QMediaPlayer* mMediaPlayer;
+    bool initialized = false;
 };
 
 class TMedia: public QObject
@@ -172,9 +169,9 @@ private:
     void writeFile(QNetworkReply* reply);
     void downloadFile(TMediaData& mediaData);
     QString setupMediaAbsolutePathFileName(TMediaData& mediaData);
-    QList<TMediaPlayer*> getMediaPlayerList(TMediaData& mediaData);
-    TMediaPlayer* getMediaPlayer(TMediaData& mediaData);
-    TMediaPlayer* matchMediaPlayer(TMediaData& mediaData, QString absolutePathFileName);
+    QList<TMediaPlayer> getMediaPlayerList(TMediaData& mediaData);
+    TMediaPlayer getMediaPlayer(TMediaData& mediaData);
+    TMediaPlayer matchMediaPlayer(TMediaData& mediaData, QString absolutePathFileName);
     bool doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolutePathFileName);
     void matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, QString absolutePathFileName);
 
@@ -198,10 +195,10 @@ private:
     QPointer<Host> mpHost;
     QString mProfileName;
 
-    QList<TMediaPlayer*> mMSPSoundList;
-    QList<TMediaPlayer*> mMSPMusicList;
-    QList<TMediaPlayer*> mGMCPSoundList;
-    QList<TMediaPlayer*> mGMCPMusicList;
+    QList<TMediaPlayer> mMSPSoundList;
+    QList<TMediaPlayer> mMSPMusicList;
+    QList<TMediaPlayer> mGMCPSoundList;
+    QList<TMediaPlayer> mGMCPMusicList;
 
     QNetworkAccessManager* mpNetworkAccessManager;
     QMap<QNetworkReply*, TMediaData> mMediaDownloads;
