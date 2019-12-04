@@ -14,17 +14,17 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="273"/>
       <source>Too many redirects.</source>
-      <translation type="unfinished"/>
+      <translation>Zbyt wiele przekierowań.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="282"/>
       <source>No data received from server</source>
-      <translation type="unfinished"/>
+      <translation>Nie otrzymano danych z serwera</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="293"/>
       <source>Could not verify download integrity.</source>
-      <translation type="unfinished"/>
+      <translation>Nie można zweryfikować integralności pobranych danych.</translation>
     </message>
   </context>
   <context>
@@ -339,17 +339,17 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="55"/>
       <source>Start element not found!</source>
-      <translation type="unfinished"/>
+      <translation>Element początkowy nie został znaleziony!</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
       <source>line %1: %2</source>
-      <translation type="unfinished"/>
+      <translation>linia %1: %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="149"/>
       <source>Expected %1 while parsing</source>
-      <translation type="unfinished"/>
+      <translation>Oczekiwano %1 podczas analizowania</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.cpp" line="145"/>
@@ -359,7 +359,7 @@ please wait...</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="82"/>
       <source>No data found!</source>
-      <translation type="unfinished"/>
+      <translation>Nie znaleziono żadnych danych!</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="89"/>
@@ -554,14 +554,16 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="1419"/>
       <source>Mapper: Cannot find a path to this room using known exits.
 </source>
-      <translation type="unfinished"/>
+      <translation>Maper: Nie można znaleźć drogi do tej lokacji przy użyciu znanych wyjść.
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2210"/>
       <source>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and non-breaking hyphens which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. %2 is the (text) name of the area, %3 is the number for it, %4 to %9 are pairs (min &lt;-&gt; max) of extremes for each of x,y and z coordinates</comment>
-      <translation type="unfinished"/>
+      <translation>Obszar:%1%2 ID:%1%3 x:%1%4%1&lt;–&gt;%1%5 y:%1%6%1&lt;–&gt;%1%7 z:%1%8%1&lt;–&gt;%1%9
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2247"/>
@@ -594,7 +596,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2372"/>
       <source>Text label or image label?</source>
       <comment>2D Mapper create label dialog text</comment>
-      <translation type="unfinished"/>
+      <translation>Etykieta tekstowa czy obraz?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2373"/>
@@ -612,13 +614,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2378"/>
       <source>Enter label text.</source>
       <comment>2D Mapper create label dialog title/text</comment>
-      <translation type="unfinished"/>
+      <translation>Wprowadź tekst etykiety.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2385"/>
       <source>Background color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Kolor tła</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2386"/>
