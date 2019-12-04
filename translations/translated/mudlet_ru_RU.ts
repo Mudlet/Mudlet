@@ -7935,12 +7935,12 @@ Starting... Have fun!
       <location filename="../src/ui/main_window.ui" line="311"/>
       <location filename="../src/ui/main_window.ui" line="314"/>
       <source>Report an issue</source>
-      <translation type="unfinished"/>
+      <translation>Сообщить об проблеме</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="317"/>
       <source>Report an issue about the public test build</source>
-      <translation type="unfinished"/>
+      <translation>Сообщить о проблеме о публичной тестовой версии</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="157"/>
@@ -8531,12 +8531,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="410"/>
       <source>Report issue</source>
-      <translation type="unfinished"/>
+      <translation>Сообщить о проблеме</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="414"/>
       <source>Report an issue about the Mudlet Public Test Build</source>
-      <translation type="unfinished"/>
+      <translation>Сообщить о проблеме о публичной тестовой версии</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="697"/>
