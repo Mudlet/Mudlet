@@ -662,7 +662,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2793"/>
       <source>Undo</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>Cofnij</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2794"/>
@@ -674,13 +674,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2801"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)</comment>
-      <translation type="unfinished"/>
+      <translation>Właściwości</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2803"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)</comment>
-      <translation type="unfinished"/>
+      <translation>właściwości...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2804"/>
@@ -692,7 +692,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2807"/>
       <source>Finish</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>Zakończ</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2808"/>
@@ -704,25 +704,25 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2829"/>
       <source>Create new map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>Utwórz nową mapę</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2832"/>
       <source>Load map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>Wczytaj mapę</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2845"/>
       <source>Create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Stwórz lokację</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2851"/>
       <source>Move</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Przenieś</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2852"/>
@@ -758,7 +758,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2863"/>
       <source>Spread</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Rozprosz</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2864"/>
@@ -770,7 +770,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2867"/>
       <source>Shrink</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Skurcz</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2868"/>
@@ -782,7 +782,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2871"/>
       <source>Lock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Zablokuj</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2872"/>
@@ -1179,7 +1179,7 @@ rooms:</source>
     <message>
       <location filename="../src/TAlias.cpp" line="252"/>
       <source>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Błąd: w &quot;Wzór:&quot;, błędne wyrażenie regularne, powód: &quot;%1&quot;.</translation>
     </message>
   </context>
   <context>
@@ -1209,19 +1209,19 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="115"/>
       <source>ISO 8859-4 (Baltic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-4 (kraje bałtyckie/Baltic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="134"/>
       <source>ISO 8859-5 (Cyrillic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-5 (cyrylica/Cyrillic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="153"/>
       <source>ISO 8859-6 (Arabic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-6 (arabski/Arabic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="172"/>
@@ -1367,12 +1367,12 @@ rooms:</source>
     <message>
       <location filename="../src/TCommandLine.cpp" line="651"/>
       <source>Add to user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj do słownika użytkownika</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="653"/>
       <source>Remove from user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>Usuń ze słownika użytkownika</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="657"/>
@@ -1487,7 +1487,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="390"/>
       <source>Start logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>Rozpocznij logowanie wyjścia gry do pliku.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="401"/>
