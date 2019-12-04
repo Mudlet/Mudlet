@@ -1071,13 +1071,13 @@ for all of the %n selected room(s):</source>
       <location filename="../src/T2DMap.cpp" line="3807"/>
       <source>OK</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3812"/>
       <source>Cancel</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation type="unfinished"/>
+      <translation>Cancelar</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3869"/>
@@ -3430,7 +3430,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="350"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Cancelar</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="370"/>
@@ -3440,7 +3440,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="377"/>
       <source>OK</source>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="387"/>
@@ -3765,7 +3765,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1826"/>
       <source>Cancel</source>
       <comment>Cancel download of GUI package from Server</comment>
-      <translation type="unfinished"/>
+      <translation>Cancelar</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1448"/>
@@ -3831,7 +3831,7 @@ Reason: </source>
       <location filename="../src/ctelnet.cpp" line="2168"/>
       <source>OK</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2357"/>
@@ -3959,7 +3959,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="123"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Cancelar</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="136"/>
@@ -4309,7 +4309,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="567"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Cancelar</translation>
     </message>
   </context>
   <context>
@@ -4334,7 +4334,7 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="61"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>Cancelar</translation>
     </message>
   </context>
   <context>
@@ -11220,7 +11220,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
       <source>&amp;Cancel</source>
-      <translation type="unfinished"/>
+      <translation>&amp;Cancelar</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2001"/>
