@@ -178,6 +178,7 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
 
     if (packageMessage == "Client.Media.Stop") {
         TMedia::parseJSONForMediaStop(json);
+        return;
     }
 
     if (json.isEmpty()) {
