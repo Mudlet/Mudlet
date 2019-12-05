@@ -602,30 +602,6 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
             qWarning() << QStringLiteral("TMedia::getMediaPlayer() WARNING - Unable to create new QMediaPlayer object.");
             return pPlayer;
         }
-
-        switch (mediaData.getMediaProtocol()) {
-            case TMediaData::MediaProtocolMSP:
-                switch (mediaData.getMediaType()) {
-                    case TMediaData::MediaTypeSound:
-                        mMSPSoundList.append(pPlayer);
-                        break;
-                    case TMediaData::MediaTypeMusic:
-                        mMSPMusicList.append(pPlayer);
-                        break;
-                }
-                break;
-
-            case TMediaData::MediaProtocolGMCP:
-                switch (mediaData.getMediaType()) {
-                    case TMediaData::MediaTypeSound:
-                        mGMCPSoundList.append(pPlayer);
-                        break;
-                    case TMediaData::MediaTypeMusic:
-                        mGMCPMusicList.append(pPlayer);
-                        break;
-                }
-                break;
-        }
     }
 
     disconnect(pPlayer.getMediaPlayer(), &QMediaPlayer::stateChanged, nullptr, nullptr);
@@ -682,8 +658,6 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolute
         return doesMediaHavePriorityToPlay;
     }
 
-    qDebug() << "Our priority" << mediaData.getMediaPriority();
-
     int maxMediaPriority = 0;
 
     QList<TMediaPlayer> mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
@@ -694,12 +668,9 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolute
 
         if (pTestPlayer.getMediaPlayer()->state() == QMediaPlayer::PlayingState && pTestPlayer.getMediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
             if (!pTestPlayer.getMediaPlayer()->media().canonicalUrl().toString().endsWith(absolutePathFileName)) { // Is it a different sound or music than specified?
-                qDebug() << "Their identity: " << pTestPlayer.getMediaPlayer()->media().canonicalUrl().toString();
-                qDebug() << "Their priority" << pTestPlayer.getMediaData().getMediaPriority();
                 if (pTestPlayer.getMediaData().getMediaPriority() != TMediaData::MediaPriorityNotSet
                     && pTestPlayer.getMediaData().getMediaPriority() > maxMediaPriority) {
                     maxMediaPriority = pTestPlayer.getMediaData().getMediaPriority();
-                    qDebug() << "maxMediaPriority is now " << maxMediaPriority;
                 }
             }
         }
@@ -778,8 +749,6 @@ void TMedia::play(TMediaData& mediaData)
         return;
     }
 
-    qDebug() << "play() mediaData.getMediaPriority()" << mediaData.getMediaPriority();
-
     QString absolutePathFileName;
 
     if (mediaData.getMediaLoops() == TMediaData::MediaLoopsDefault) { // Play once
@@ -845,15 +814,36 @@ void TMedia::play(TMediaData& mediaData)
         }
 
         playlist->setCurrentIndex(1);
-        qDebug() << pPlayer.getMediaPlayer();
         pPlayer.getMediaPlayer()->setPlaylist(playlist);
+    }
+
+    switch (mediaData.getMediaProtocol()) {
+        case TMediaData::MediaProtocolMSP:
+            switch (mediaData.getMediaType()) {
+                case TMediaData::MediaTypeSound:
+                    mMSPSoundList.append(pPlayer);
+                    break;
+                case TMediaData::MediaTypeMusic:
+                    mMSPMusicList.append(pPlayer);
+                    break;
+            }
+            break;
+
+        case TMediaData::MediaProtocolGMCP:
+            switch (mediaData.getMediaType()) {
+                case TMediaData::MediaTypeSound:
+                    mGMCPSoundList.append(pPlayer);
+                    break;
+                case TMediaData::MediaTypeMusic:
+                    mGMCPMusicList.append(pPlayer);
+                    break;
+            }
+            break;
     }
 
     // Set volume and play media
     pPlayer.getMediaPlayer()->setVolume(mediaData.getMediaVolume());
     pPlayer.getMediaPlayer()->play();
-    qDebug() << pPlayer.getMediaData().getMediaPriority();
-    qDebug() << pPlayer.getMediaData().getMediaAbsolutePathFileName();
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#type:_sound
@@ -1037,7 +1027,7 @@ QString TMedia::parseJSONByMediaKey(QJsonObject& json)
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#Loading_Media
 void TMedia::parseJSONForMedia(QJsonObject& json)
 {
-    TMediaData mediaData;
+    TMediaData mediaData {};
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolGMCP);
     mediaData.setMediaUrl(TMedia::parseJSONByMediaUrl(json));
@@ -1048,7 +1038,7 @@ void TMedia::parseJSONForMedia(QJsonObject& json)
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#Loading_Media
 void TMedia::parseJSONForMediaLoad(QJsonObject& json)
 {
-    TMediaData mediaData;
+    TMediaData mediaData {};
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolGMCP);
     mediaData.setMediaFileName(TMedia::parseJSONByMediaFileName(json)); //Required
@@ -1078,7 +1068,7 @@ void TMedia::parseJSONForMediaLoad(QJsonObject& json)
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#Playing_Media
 void TMedia::parseJSONForMediaPlay(QJsonObject& json)
 {
-    TMediaData mediaData;
+    TMediaData mediaData {};
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolGMCP);
     mediaData.setMediaType(TMedia::parseJSONByMediaType(json));
@@ -1094,6 +1084,7 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     mediaData.setMediaVolume(TMedia::parseJSONByMediaVolume(json));
     mediaData.setMediaLoops(TMedia::parseJSONByMediaLoops(json));
     mediaData.setMediaPriority(TMedia::parseJSONByMediaPriority(json));
+    mediaData.setMediaContinue(TMedia::parseJSONByMediaContinue(json));
 
     TMedia::playMedia(mediaData);
 }
@@ -1101,7 +1092,7 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#Stopping_Media
 void TMedia::parseJSONForMediaStop(QJsonObject& json)
 {
-    TMediaData mediaData;
+    TMediaData mediaData {};
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolGMCP);
     mediaData.setMediaType(TMedia::parseJSONByMediaType(json));
