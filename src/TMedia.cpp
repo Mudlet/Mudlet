@@ -46,7 +46,7 @@ void TMedia::playMedia(TMediaData& mediaData)
 
     mediaData.setMediaFileName(mediaData.getMediaFileName().replace(QLatin1Char('\\'), QLatin1Char('/')));
 
-    if (!TMedia::isFileRelative(mediaData) || mediaData.getMediaTag().contains("..")) { // Security
+    if (!TMedia::isFileRelative(mediaData)) { // Security
         return;
     }
 
@@ -259,11 +259,7 @@ QStringList TMedia::parseFileNameList(TMediaData& mediaData, QDir &dir)
         QStringList fileNames(dir.entryList(QDir::Files | QDir::Readable, QDir::Name));
 
         for (auto& fileName : qAsConst(fileNames)) {
-            if (!mediaData.getMediaTag().isEmpty()) {
-                fileNameList << QStringLiteral("%1/%2/%3").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaTag(), fileName);
-            } else {
-                fileNameList << QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), fileName);
-            }
+            fileNameList << QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), fileName);
         }
     } else {
         if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mediaData.getMediaFileName().contains('.')) {
@@ -277,12 +273,7 @@ QStringList TMedia::parseFileNameList(TMediaData& mediaData, QDir &dir)
             }
         }
 
-        if (!mediaData.getMediaTag().isEmpty()) {
-            fileNameList << QStringLiteral("%1/%2/%3")
-                .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaTag(), mediaData.getMediaFileName());
-        } else {
-            fileNameList << QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName());
-        }
+        fileNameList << QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName());
     }
 
     return fileNameList;
@@ -301,23 +292,22 @@ QStringList TMedia::getFileNameList(TMediaData& mediaData)
         return fileNameList;
     }
 
-    if (!mediaData.getMediaTag().isEmpty()) {
-        QString mediaTagPath = QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaTag());
-        QDir mediaTagDir(mediaTagPath);
+    if (!mediaData.getMediaFileName().isEmpty() && mediaData.getMediaFileName().contains('/')) {
+        QString mediaSubPath = QStringLiteral("%1/%2")
+            .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
+        QDir mediaSubDir(mediaSubPath);
 
-        if (!mediaTagDir.mkpath(mediaTagPath)) {
+        if (!mediaSubDir.mkpath(mediaSubPath)) {
             qWarning() << QStringLiteral("TMedia::getFileNameList() WARNING - Attempt made to create a directory failed: %1")
-                .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaTag());
+                .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
             return fileNameList;
         }
 
-        fileNameList = TMedia::parseFileNameList(mediaData, mediaTagDir);
+        fileNameList = TMedia::parseFileNameList(mediaData, mediaSubDir);
     }
 
-    // Enter this block if no mediaTag was specified.  Also, per the specification, if mediaTag was specified above, but we did not
-    // find anything in a mediaTag directory, fall back and search for the mediaFileName in the root "media" directory.
+    // If we did declare a sub directory, but didn't find the file there, we'll try a search in the root directory per the specification.
     if (fileNameList.isEmpty()) {
-        mediaData.setMediaTag(QString());
         fileNameList = TMedia::parseFileNameList(mediaData, mediaDir);
     }
 
@@ -343,18 +333,10 @@ QUrl TMedia::getFileUrl(TMediaData& mediaData)
     if (!mediaLocation.isEmpty()) {
         bool endsWithSlash = mediaLocation.endsWith('/');
 
-        if (!mediaData.getMediaTag().isEmpty()) {
-            if (!endsWithSlash) {
-                fileUrl = QUrl::fromUserInput(QStringLiteral("%1/%2/%3").arg(mediaLocation, mediaData.getMediaTag(), mediaData.getMediaFileName()));
-            } else {
-                fileUrl = QUrl::fromUserInput(QStringLiteral("%1%2/%3").arg(mediaLocation, mediaData.getMediaTag(), mediaData.getMediaFileName()));
-            }
+        if (!endsWithSlash) {
+            fileUrl = QUrl::fromUserInput(QStringLiteral("%1/%2").arg(mediaLocation, mediaData.getMediaFileName()));
         } else {
-            if (!endsWithSlash) {
-                fileUrl = QUrl::fromUserInput(QStringLiteral("%1/%2").arg(mediaLocation, mediaData.getMediaFileName()));
-            } else {
-                fileUrl = QUrl::fromUserInput(QStringLiteral("%1%2").arg(mediaLocation, mediaData.getMediaFileName()));
-            }
+            fileUrl = QUrl::fromUserInput(QStringLiteral("%1%2").arg(mediaLocation, mediaData.getMediaFileName()));
         }
     }
 
@@ -483,13 +465,14 @@ void TMedia::downloadFile(TMediaData& mediaData)
         return;
     }
 
-    if (!mediaData.getMediaTag().isEmpty()) {
-        QString mediaTagPath = QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaTag());
-        QDir mediaTagDir(mediaTagPath);
+    if (!mediaData.getMediaFileName().isEmpty() && mediaData.getMediaFileName().contains('/')) {
+        QString mediaSubPath = QStringLiteral("%1/%2")
+            .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
+        QDir mediaSubDir(mediaSubPath);
 
-        if (!mediaTagDir.mkpath(mediaTagPath)) {
+        if (!mediaSubDir.mkpath(mediaSubPath)) {
             qWarning() << QStringLiteral("TMedia::downloadFile() WARNING - Attempt made to create a directory failed: %1")
-                .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaTag());
+                .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
             return;
         }
     }
@@ -536,13 +519,7 @@ QString TMedia::setupMediaAbsolutePathFileName(TMediaData& mediaData)
 {
     QString absolutePathFileName;
 
-    if (!mediaData.getMediaTag().isEmpty()) {
-        absolutePathFileName = QStringLiteral("%1/%2/%3")
-            .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaTag(), mediaData.getMediaFileName());
-    } else {
-        absolutePathFileName = QStringLiteral("%1/%2")
-            .arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName());
-    }
+    absolutePathFileName = QStringLiteral("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName());
 
     mediaData.setMediaAbsolutePathFileName(absolutePathFileName);
 
