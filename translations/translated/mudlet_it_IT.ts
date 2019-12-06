@@ -7909,12 +7909,12 @@ Avvio in corso... Buon divertimento!
       <location filename="../src/ui/main_window.ui" line="311"/>
       <location filename="../src/ui/main_window.ui" line="314"/>
       <source>Report an issue</source>
-      <translation type="unfinished"/>
+      <translation>Segnala un problema</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="317"/>
       <source>Report an issue about the public test build</source>
-      <translation type="unfinished"/>
+      <translation>Segnala un problema della versione di test di Mudlet</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="157"/>
@@ -8510,12 +8510,12 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="410"/>
       <source>Report issue</source>
-      <translation type="unfinished"/>
+      <translation>Segnala un problema</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="414"/>
       <source>Report an issue about the Mudlet Public Test Build</source>
-      <translation type="unfinished"/>
+      <translation>Segnala un problema della versione di test di Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="697"/>
@@ -9961,32 +9961,32 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="250"/>
       <source>Allow server to download and play media (requires GMCP enabled below)</source>
-      <translation type="unfinished"/>
+      <translation>Consenti di scaricare e riprodurre i media (richiede GMCP abilitato)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="269"/>
       <source>GMCP - Enable Generic Mud Communication Protocol</source>
-      <translation type="unfinished"/>
+      <translation>GMCP - Abilita Generic Mud Communication Protocol</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="279"/>
       <source>MSDP - Enable Mud Server Data Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSDP - Abilita Mud Server Data Protocol</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="289"/>
       <source>MSSP - Enable Mud Server Status Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSSP - Abilita Mud Server Status Protocol</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="296"/>
       <source>&lt;p&gt;Enables MSP - provides Mud Sound Protocol messages during game play for supported games&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Abilita MSP - accetta messaggi Mud Sound Protocol per i giochi supportati&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="299"/>
       <source>MSP - Enable Mud Sound Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSP - Abilita Mud Sound Protocol</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="498"/>
