@@ -832,91 +832,91 @@ com um novo símbolo para esta sala:</translation>
       <location filename="../src/T2DMap.cpp" line="2883"/>
       <source>Exits</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Saídas</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2884"/>
       <source>Set room exits</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Definir saídas das salas</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2887"/>
       <source>Symbol</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Símbolo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2888"/>
       <source>Set one or more symbols or letters to mark special rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Definir um ou mais símbolos ou letras para marcar salas especiais</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2891"/>
       <source>Move to</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Mover para</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2892"/>
       <source>Move selected group to a given position</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Mover grupo selecionado para determinada posição</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2895"/>
       <source>Area</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Área</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2896"/>
       <source>Set room&apos;s area number</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>definir sala&apos;s número da sala</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2899"/>
       <source>Custom exit line</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Linha de saída personalizada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2901"/>
       <source>Replace an exit line with a custom line</source>
       <comment>2D Mapper context menu (room) item tooltip (enabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Substitua uma linha de saída com uma linha personalizada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2905"/>
       <source>Custom exit lines are not shown and are not editable in grid mode</source>
       <comment>2D Mapper context menu (room) item tooltip (disabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Linhas de saída personalizadas não são mostradas e não são editáveis em modo de grade</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2909"/>
       <source>Create Label</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Criar Rótulo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2910"/>
       <source>Create labels to show text or images</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Criar rótulos para mostrar texto ou imagens</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2913"/>
       <source>Set location</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Definir localização</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2915"/>
       <source>Set player current location to here</source>
       <comment>2D Mapper context menu (room) item tooltip (enabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Definir aqui a posição atual do jogador</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2919"/>
