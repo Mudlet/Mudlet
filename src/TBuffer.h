@@ -43,7 +43,6 @@
 #include <string>
 
 class Host;
-class TConsole;
 
 class QTextCodec;
 
@@ -144,7 +143,7 @@ class TBuffer
 
 
 public:
-    TBuffer(Host* pH, TConsole* pConsole = nullptr);
+    TBuffer(Host* pH);
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, TChar& format);
     void expandLine(int y, int count, TChar&);
@@ -276,8 +275,6 @@ private:
     void resetColors();
 
     static const int scmMaxLinks = 2000;
-
-    const TConsole* mpConsole;
 
     // First stage in decoding SGR/OCS sequences - set true when we see the
     // ASCII ESC character:
