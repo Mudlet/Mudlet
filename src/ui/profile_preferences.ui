@@ -266,7 +266,7 @@
              <string>&lt;p&gt;Enables GMCP - note that if you have MSDP enabled as well, some servers will prefer one over the other&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>GMCP - Enable Generic Mud Communication Protocol</string>
+             <string>Enable GMCP  (Generic Mud Communication Protocol)</string>
             </property>
            </widget>
           </item>
@@ -276,7 +276,7 @@
              <string>&lt;p&gt;Enables MSDP - note that if you have GMCP enabled as well, some servers will prefer one over the other&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>MSDP - Enable Mud Server Data Protocol</string>
+             <string>Enable MSDP  (Mud Server Data Protocol)</string>
             </property>
            </widget>
           </item>
@@ -286,7 +286,7 @@
              <string>&lt;p&gt;Enables MSSP - provides Mud Server Status Protocol information upon connection for supported games&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>MSSP - Enable Mud Server Status Protocol</string>
+             <string>Enable MSSP  (Mud Server Status Protocol)</string>
             </property>
            </widget>
           </item>
@@ -296,7 +296,7 @@
              <string>&lt;p&gt;Enables MSP - provides Mud Sound Protocol messages during game play for supported games&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>MSP - Enable Mud Sound Protocol</string>
+             <string>Enable MSP  (Mud Sound Protocol, experimental in Mudlet)</string>
             </property>
            </widget>
           </item>
