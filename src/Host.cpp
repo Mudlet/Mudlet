@@ -30,6 +30,7 @@
 #include "TCommandLine.h"
 #include "TEvent.h"
 #include "TMap.h"
+#include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
 #include "XMLimport.h"
@@ -202,8 +203,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mDisplayFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mEnableGMCP(true)
 , mEnableMSSP(true)
+, mEnableMSP(true)
 , mEnableMSDP(false)
 , mServerMXPenabled(true)
+, mMediaLocationGMCP(QString())
+, mMediaLocationMSP(QString())
 , mFORCE_GA_OFF(false)
 , mFORCE_NO_COMPRESSION(false)
 , mFORCE_SAVE_ON_EXIT(false)
@@ -220,6 +224,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mNoAntiAlias(false)
 , mpEditorDialog(nullptr)
 , mpMap(new TMap(this, hostname))
+, mpMedia(new TMedia(this, hostname))
 , mpNotePad(nullptr)
 , mPrintCommand(true)
 , mIsRemoteEchoingActive(false)
@@ -295,6 +300,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mServerGUI_Package_version(QLatin1String("-1"))
 , mServerGUI_Package_name(QLatin1String("nothing"))
 , mAcceptServerGUI(true)
+, mAcceptServerMedia(true)
 , mCommandLineFgColor(Qt::darkGray)
 , mCommandLineBgColor(Qt::black)
 , mMapperUseAntiAlias(true)
@@ -707,6 +713,38 @@ void Host::updateConsolesFont()
             mudlet::self()->mpDebugConsole->setMiniConsoleFontSize(mDisplayFont.pointSize());
         }
     }
+}
+
+void Host::setMediaLocationGMCP(const QString& mediaUrl)
+{
+    QUrl url = QUrl(mediaUrl);
+
+    if (!url.isValid()) {
+        return;
+    }
+
+    mMediaLocationGMCP = mediaUrl;
+}
+
+QString Host::getMediaLocationGMCP() const
+{
+    return mMediaLocationGMCP;
+}
+
+void Host::setMediaLocationMSP(const QString& mediaUrl)
+{
+    QUrl url = QUrl(mediaUrl);
+
+    if (!url.isValid()) {
+        return;
+    }
+
+    mMediaLocationMSP = mediaUrl;
+}
+
+QString Host::getMediaLocationMSP() const
+{
+    return mMediaLocationMSP;
 }
 
 std::pair<bool, QString> Host::setDisplayFont(const QFont& font)

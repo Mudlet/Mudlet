@@ -800,10 +800,13 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mFORCE_GA_OFF = (attributes().value("mFORCE_GA_OFF") == "yes");
     pHost->mFORCE_SAVE_ON_EXIT = (attributes().value("mFORCE_SAVE_ON_EXIT") == "yes");
     pHost->mEnableGMCP = (attributes().value("mEnableGMCP") == "yes");
+    pHost->mEnableMSDP = (attributes().value("mEnableMSDP") == "yes");
     if (attributes().hasAttribute(QLatin1String("mEnableMSSP"))) {
         pHost->mEnableMSSP = (attributes().value(QStringLiteral("mEnableMSSP")) == "yes");
     }
-    pHost->mEnableMSDP = (attributes().value("mEnableMSDP") == "yes");
+    if (attributes().hasAttribute(QLatin1String("mEnableMSP"))) {
+        pHost->mEnableMSP = (attributes().value(QStringLiteral("mEnableMSP")) == "yes");
+    }
     pHost->mMapStrongHighlight = (attributes().value("mMapStrongHighlight") == "yes");
     pHost->mLogStatus = (attributes().value("mLogStatus") == "yes");
     pHost->mEnableSpellCheck = (attributes().value("mEnableSpellCheck") == "yes");
@@ -812,6 +815,9 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     pHost->mShowInfo = (attributes().value("mShowInfo") == "yes");
     pHost->mAcceptServerGUI = (attributes().value("mAcceptServerGUI") == "yes");
+    if (attributes().hasAttribute(QLatin1String("mAcceptServerMedia"))) {
+        pHost->mAcceptServerMedia = (attributes().value("mAcceptServerMedia") == "yes");
+    }
     pHost->mMapperUseAntiAlias = (attributes().value("mMapperUseAntiAlias") == "yes");
     if (attributes().hasAttribute(QStringLiteral("mEditorAutoComplete"))) {
         pHost->mEditorAutoComplete = (attributes().value(QStringLiteral("mEditorAutoComplete")) == "yes");

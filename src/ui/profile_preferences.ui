@@ -244,6 +244,13 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QCheckBox" name="acceptServerMedia">
+            <property name="text">
+             <string>Allow server to download and play media (requires GMCP enabled below)</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -259,7 +266,7 @@
              <string>&lt;p&gt;Enables GMCP - note that if you have MSDP enabled as well, some servers will prefer one over the other&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Enable GMCP</string>
+             <string>Enable GMCP  (Generic Mud Communication Protocol)</string>
             </property>
            </widget>
           </item>
@@ -269,7 +276,7 @@
              <string>&lt;p&gt;Enables MSDP - note that if you have GMCP enabled as well, some servers will prefer one over the other&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Enable MSDP</string>
+             <string>Enable MSDP  (Mud Server Data Protocol)</string>
             </property>
            </widget>
           </item>
@@ -279,11 +286,21 @@
              <string>&lt;p&gt;Enables MSSP - provides Mud Server Status Protocol information upon connection for supported games&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Enable MSSP</string>
+             <string>Enable MSSP  (Mud Server Status Protocol)</string>
             </property>
            </widget>
           </item>
           <item row="3" column="0">
+           <widget class="QCheckBox" name="mEnableMSP">
+            <property name="toolTip">
+             <string>&lt;p&gt;Enables MSP - provides Mud Sound Protocol messages during game play for supported games&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable MSP  (Mud Sound Protocol, experimental in Mudlet)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
            <widget class="QLabel" name="need_reconnect_for_data_protocol">
             <property name="enabled">
              <bool>true</bool>
@@ -5206,6 +5223,7 @@
   <tabstop>mAlertOnNewData</tabstop>
   <tabstop>mFORCE_SAVE_ON_EXIT</tabstop>
   <tabstop>acceptServerGUI</tabstop>
+  <tabstop>acceptServerMedia</tabstop>
   <tabstop>mEnableGMCP</tabstop>
   <tabstop>mEnableMSDP</tabstop>
   <tabstop>mEnableMSSP</tabstop>
