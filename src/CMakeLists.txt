@@ -84,6 +84,7 @@ set(mudlet_SRCS
     TLabel.cpp
     TLuaInterpreter.cpp
     TMap.cpp
+    TMedia.cpp
     TriggerUnit.cpp
     TRoom.cpp
     TRoomDB.cpp
@@ -186,6 +187,7 @@ set(mudlet_HDRS
     TLuaInterpreter.h
     TMap.h
     TMatchState.h
+    TMedia.h
     Tree.h
     TriggerUnit.h
     TRoom.h

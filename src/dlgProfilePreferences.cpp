@@ -518,6 +518,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
+    acceptServerMedia->setChecked(pHost->mAcceptServerMedia);
 
     ircHostName->setText(dlgIRC::readIrcHostName(pHost));
     ircHostPort->setText(QString::number(dlgIRC::readIrcHostPort(pHost)));
@@ -749,8 +750,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     //encoding->setCurrentIndex( pHost->mEncoding );
     mFORCE_SAVE_ON_EXIT->setChecked(pHost->mFORCE_SAVE_ON_EXIT);
     mEnableGMCP->setChecked(pHost->mEnableGMCP);
-    mEnableMSSP->setChecked(pHost->mEnableMSSP);
     mEnableMSDP->setChecked(pHost->mEnableMSDP);
+    mEnableMSSP->setChecked(pHost->mEnableMSSP);
+    mEnableMSP->setChecked(pHost->mEnableMSP);
 
     // load profiles into mappers "copy map to profile" combobox
     // this feature should work seamlessly both for online and offline profiles
@@ -1036,8 +1038,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_background_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setBgColor2);
 
     connect(mEnableGMCP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
-    connect(mEnableMSSP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSDP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableMSSP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableMSP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
 
     connect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
     connect(mFORCE_GA_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
@@ -1118,6 +1121,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
 
     disconnect(mEnableGMCP, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(mEnableMSSP, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(mEnableMSP, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(mEnableMSDP, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, nullptr, nullptr);
@@ -1151,6 +1155,7 @@ void dlgProfilePreferences::clearHostDetails()
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
     acceptServerGUI->setChecked(false);
+    acceptServerMedia->setChecked(false);
 
     // Given that the IRC sub-system can handle there NOT being an active host
     // this may need revising
@@ -1203,6 +1208,7 @@ void dlgProfilePreferences::clearHostDetails()
     mFORCE_SAVE_ON_EXIT->setChecked(false);
     mEnableGMCP->setChecked(false);
     mEnableMSSP->setChecked(false);
+    mEnableMSP->setChecked(false);
     mEnableMSDP->setChecked(false);
 
     pushButton_chooseProfiles->setEnabled(false);
@@ -2359,6 +2365,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
         pHost->mCommandSeparator = command_separator_lineedit->text();
         pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
+        pHost->mAcceptServerMedia = acceptServerMedia->isChecked();
         pHost->mUSE_IRE_DRIVER_BUGFIX = checkBox_USE_IRE_DRIVER_BUGFIX->isChecked();
         pHost->set_USE_IRE_DRIVER_BUGFIX(checkBox_USE_IRE_DRIVER_BUGFIX->isChecked());
         pHost->mEnableTextAnalyzer = checkBox_enableTextAnalyzer->isChecked();
@@ -2370,6 +2377,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mFORCE_SAVE_ON_EXIT = mFORCE_SAVE_ON_EXIT->isChecked();
         pHost->mEnableGMCP = mEnableGMCP->isChecked();
         pHost->mEnableMSSP = mEnableMSSP->isChecked();
+        pHost->mEnableMSP = mEnableMSP->isChecked();
         pHost->mEnableMSDP = mEnableMSDP->isChecked();
         pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
         if (pHost->mpMap && pHost->mpMap->mpMapper) {

@@ -4488,6 +4488,14 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         // directory for that profile - does NOT end in a '/' unless the
         // supplied profle name does:
         return QStringLiteral("%1/.config/mudlet/profiles/%2").arg(QDir::homePath(), extra1);
+    case profileMediaPath:
+        // Takes one extra argument (profile name) that returns the directory
+        // for the profile's cached media files - does NOT end in a '/'
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/media").arg(QDir::homePath(), extra1);
+    case profileMediaPathFileName:
+        // Takes two extra arguments (profile name, mediaFileName) that returns
+        // the pathFile name for any media file:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/media/%3").arg(QDir::homePath(), extra1, extra2);
     case profileXmlFilesPath:
         // Takes one extra argument (profile name) that returns the directory
         // for the profile game save XML files - ends in a '/'

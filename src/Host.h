@@ -52,7 +52,7 @@ class dlgTriggerEditor;
 class TEvent;
 class TArea;
 class LuaInterface;
-class TMap;
+class TMedia;
 class TRoom;
 class TConsole;
 class dlgNotepad;
@@ -306,6 +306,10 @@ public:
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
+    void setMediaLocationGMCP(const QString& mediaUrl);
+    QString getMediaLocationGMCP() const;
+    void setMediaLocationMSP(const QString& mediaUrl);
+    QString getMediaLocationMSP() const;
     const QFont& getDisplayFont() const { return mDisplayFont; }
     std::pair<bool, QString> setDisplayFont(const QFont& font);
     std::pair<bool, QString> setDisplayFont(const QString& fontName);
@@ -344,8 +348,11 @@ public:
     QString mCommandSeparator;
     bool mEnableGMCP;
     bool mEnableMSSP;
+    bool mEnableMSP;
     bool mEnableMSDP;
     bool mServerMXPenabled;
+    QString mMediaLocationGMCP;
+    QString mMediaLocationMSP;
     QTextStream mErrorLogStream;
     QMap<QString, QList<TScript*>> mEventHandlerMap;
     bool mFORCE_GA_OFF;
@@ -377,6 +384,7 @@ public:
 
     dlgTriggerEditor* mpEditorDialog;
     QScopedPointer<TMap> mpMap;
+    QScopedPointer<TMedia> mpMedia;
     dlgNotepad* mpNotePad;
 
     // This is set when we want commands we typed to be shown on the main
@@ -520,6 +528,7 @@ public:
     QString mServerGUI_Package_version;
     QString mServerGUI_Package_name;
     bool mAcceptServerGUI;
+    bool mAcceptServerMedia;
     QColor mCommandLineFgColor;
     QColor mCommandLineBgColor;
     bool mMapperUseAntiAlias;
