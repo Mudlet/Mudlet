@@ -27,8 +27,6 @@
 #include "TEvent.h"
 #include "mudlet.h"
 
-#include <QMediaPlaylist>
-
 class TMediaData
 {
 public:
