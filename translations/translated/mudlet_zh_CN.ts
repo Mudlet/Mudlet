@@ -4700,61 +4700,61 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="169"/>
       <source>Contributed many improvements to Mudlet&apos;s db: interface, event system, and has been around the project for a very long while assisting users.</source>
       <comment>about:keneanung</comment>
-      <translation type="unfinished"/>
+      <translation>对 Mudlet&apos;s db 做出了许多改进：界面，事件系统，并且一直陪伴该项目很长时间，同时协助用户。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="173"/>
       <source>Does a ton of work in making Mudlet, the website and the wiki accessible to you regardless of the language you speak - and promoting our genre!</source>
       <comment>about:Leris</comment>
-      <translation type="unfinished"/>
+      <translation>做了大量的工作，使 Mudlet，网站和WiKi 无论你说什么语言，你都可以访问，并推广我们的流派！</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="177"/>
       <source>Contributions to the Travis integration, CMake and Visual C++ build, a lot of code quality and memory management improvements.</source>
       <comment>about:ahmedcharles</comment>
-      <translation type="unfinished"/>
+      <translation>对 Travis 集成， CMake 和 Visual C++ 构建的贡献，许多代码质量和内存管理改进。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="181"/>
       <source>Developed a shared module system that allows script packages to be shared among profiles, a UI for viewing Lua variables, improvements in the mapper and all around.</source>
       <comment>about:Chris7</comment>
-      <translation type="unfinished"/>
+      <translation>开发了一个共享模块系统，允许在概要文件之间共享脚本包，用于查看 Lua 变量的 UI ，以及映射器及其周围的改进。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="185"/>
       <source>Developed the first version of our Mac OSX installer. He is the former maintainer of the Mac version of Mudlet.</source>
       <comment>about:Ben Carlsen</comment>
-      <translation type="unfinished"/>
+      <translation>开发了我们的 Mac OSX 安装程序的第一个版本。 他是 Mudlet Mac 版本的前维护者。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="189"/>
       <source>Joined in December 2009 though he&apos;s been around much longer. Contributed to the Lua API and is the former maintainer of the Lua API.</source>
       <comment>about:Ben Smith</comment>
-      <translation type="unfinished"/>
+      <translation>2009 年 12 月加入，他加入的时间更长。 为 Lua API 提供了帮助，并且是 Lua API 的前维护人员。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="193"/>
       <source>Joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches and has helped with release management of 1.0.5.</source>
       <comment>about:Blaine von Roeder</comment>
-      <translation type="unfinished"/>
+      <translation>2009年 12 月加入。 他向 Lua API 提供了帮助，提交了少量的 bugfix 补丁，并帮助发布了 1.0.5的发布管理。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="197"/>
       <source>Developed the original cmake build script and he has committed a number of patches.</source>
       <comment>about:Bruno Bigras</comment>
-      <translation type="unfinished"/>
+      <translation>开发了最初的 cmake 构建脚本，他已经提交了一些补丁。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="200"/>
       <source>Contributed to the Lua API.</source>
       <comment>about:Carter Dewey</comment>
-      <translation type="unfinished"/>
+      <translation>为 Lua API 做出了贡献。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="203"/>
       <source>Developed the Vyzor GUI Manager for Mudlet.</source>
       <comment>about:Oneymus</comment>
-      <translation type="unfinished"/>
+      <translation>为 Mudlet 开发 Vyzor GUI Manager 。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="206"/>
@@ -4766,49 +4766,49 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="211"/>
       <source>Joining us 2017 they have given us some useful C++ and Lua contributions.</source>
       <comment>about:Dicene</comment>
-      <translation type="unfinished"/>
+      <translation>于2017 年加入我们，他们为我们提供了一些有用的 C++ 和 Lua 的贡献。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="214"/>
       <source>Contributed the Geyser layout manager for Mudlet in March 2010. It is written in Lua and aims at simplifying user GUI scripting.</source>
       <comment>about:James Younquist</comment>
-      <translation type="unfinished"/>
+      <translation>2010 年 3 月为 Mudlet 提供了 Geyser 布局经理。 它是用 Lua 编写的，旨在简化用户 GUI 脚本编制。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="218"/>
       <source>Helped develop and debug the Lua API.</source>
       <comment>about:John Dahlström</comment>
-      <translation type="unfinished"/>
+      <translation>帮助开发和调试 Lua API。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="221"/>
       <source>Contributed several improvements and new features for Geyser.</source>
       <comment>about:Beliaar</comment>
-      <translation type="unfinished"/>
+      <translation>为 Geyser 提供了一些改进和新功能。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="224"/>
       <source>The original author of our Windows installer.</source>
       <comment>about:Leigh Stillard</comment>
-      <translation type="unfinished"/>
+      <translation>Windows 安装程序的原始作者。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="227"/>
       <source>Worked on the manual, forum help and helps with GUI design and documentation.</source>
       <comment>about:Maksym Grinenko</comment>
-      <translation type="unfinished"/>
+      <translation>致力于说明手册、论坛帮助和 GUI 设计和文档帮助。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="230"/>
       <source>Developed a database Lua API that allows for far easier use of databases and one of the original OSX installers.</source>
       <comment>about:Stephen Hansen</comment>
-      <translation type="unfinished"/>
+      <translation>开发了一个数据库 Lua API，允许更容易使用数据库和原始 OSX 安装程序之一。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="233"/>
       <source>Designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. Visit his homepage at &lt;a href=&quot;http://thorwil.wordpress.com/&quot;&gt;thorwil.wordpress.com&lt;/a&gt;.</source>
       <comment>about:Thorsten Wilms</comment>
-      <translation type="unfinished"/>
+      <translation>为我们设计了美丽的标志，我们启动画面，关于对话，我们的网站，几个图标和徽章。 您可以访问他的主页 &lt;a href=&quot;http://thorwil.wordpress.com/&quot;&gt;thorwil.wordpress.com&lt;/a&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="242"/>
@@ -4831,7 +4831,7 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="582"/>
       <source>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; is built upon the shoulders of other projects in the FOSS world; as well as using many GPL components we also make use of some third-party software with other licenses:&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; 是建立在自由开放源码软件世界其他项目的肩膀上的；以及使用许多 GPL 组件，我们还使用一些第三方软件和其他许可证：&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="824"/>
