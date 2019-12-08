@@ -83,6 +83,7 @@ class TKey;
 class TConsole;
 class dlgVarsMainArea;
 
+class QSettings;
 
 class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 {
@@ -216,7 +217,7 @@ public slots:
     void slot_var_selected(QTreeWidgetItem*);
     void slot_var_changed(QTreeWidgetItem*);
     void slot_show_vars();
-    void slot_viewErrorsAction();
+    void slot_toggleErrorsConsole();
     void slot_setupPatternControls(const int);
     void slot_soundTrigger();
     void slot_colorizeTriggerSetBgColor();
@@ -402,6 +403,8 @@ private:
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
     void key_grab_callback(int key, int modifier);
 
+    void readSplitValues(QSettings&, const EditorViewType, const bool, const QString&);
+    void writeSplitValues(QSettings&, const EditorViewType, const bool, const QString&);
 
     QToolBar* toolBar;
     QToolBar* toolBar2;
@@ -487,6 +490,10 @@ private:
     QString msgInfoAddButton;
     QString msgInfoAddVar;
     QString msgInfoAddKey;
+
+    // Holds the splitter settings for each different view so each one can be
+    // restored when the view is changed:
+    QMap<QPair<EditorViewType, bool>, QList<int>> mSplitSizesMap;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)

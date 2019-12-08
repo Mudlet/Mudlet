@@ -82,8 +82,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 // TODO: Implement other searchOptions:
 //, mpAction_searchWholeWords(nullptr)
 //, mpAction_searchRegExp(nullptr)
-, mCleanResetQueued(false)
 , mSavingAs(false)
+, mCleanResetQueued(false)
 , mAutosaveInterval{}
 {
     // init generated dialog
@@ -491,7 +491,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     QAction* viewErrorsAction = new QAction(QIcon(QStringLiteral(":/icons/errors.png")), tr("errors"), this);
     viewErrorsAction->setStatusTip(tr("Shows/Hides the errors console in the bottom right of this editor."));
-    connect(viewErrorsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_viewErrorsAction);
+    connect(viewErrorsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleErrorsConsole);
 
     QAction* showDebugAreaAction = new QAction(QIcon(QStringLiteral(":/icons/tools-report-bug.png")), tr("Debug"), this);
     showDebugAreaAction->setToolTip(tr("Activates Debug Messages -> system will be <b><i>slower</i></b>."));
@@ -785,9 +785,19 @@ void dlgTriggerEditor::slot_viewStatsAction()
     mudlet::self()->raise();
 }
 
-void dlgTriggerEditor::slot_viewErrorsAction()
+void dlgTriggerEditor::slot_toggleErrorsConsole()
 {
+    if (mCurrentView != EditorViewType::cmUnknownView) {
+        mSplitSizesMap.insert(qMakePair(mCurrentView, mpErrorConsole->isVisible()), splitter_right->sizes());
+    }
+
     mpErrorConsole->setVisible(!mpErrorConsole->isVisible());
+
+    auto key = qMakePair(mCurrentView, mpErrorConsole->isVisible());
+    if (mSplitSizesMap.contains(key)) {
+        // Restore previously stored split
+        splitter_right->setSizes(mSplitSizesMap.value(key));
+    }
 }
 
 
@@ -832,6 +842,18 @@ void dlgTriggerEditor::closeEvent(QCloseEvent* event)
     event->accept();
 }
 
+void dlgTriggerEditor::readSplitValues(QSettings& settingsRef, const EditorViewType viewType, const bool errorConsoleVisible, const QString & viewName)
+{
+    const QString viewNameAndErrorConsoleVisible = viewName % (errorConsoleVisible ? QStringLiteral("_withErrorConsole") : QStringLiteral("_noErrorConsole"));
+    if (settingsRef.contains(viewNameAndErrorConsoleVisible)) {
+        QList<int> numberList;
+        for (const QString& value : settingsRef.value(viewNameAndErrorConsoleVisible).toStringList()) {
+            numberList.append(value.toInt());
+        }
+        mSplitSizesMap.insert(qMakePair(viewType, errorConsoleVisible), numberList);
+    }
+}
+
 void dlgTriggerEditor::readSettings()
 {
     /* In case sensitive environments, two different config directories
@@ -843,12 +865,45 @@ void dlgTriggerEditor::readSettings()
     QSettings settings_new("mudlet", "Mudlet");
     QSettings settings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
 
-    QPoint pos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
-    QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
-    resize(size);
-    move(pos);
+    settings.beginGroup(mpHost->getName());
+    {
+        QPoint pos = settings.value(QStringLiteral("editorPosition"), QPoint(10, 10)).toPoint();
+        QSize size = settings.value(QStringLiteral("editorSize"), QSize(600, 400)).toSize();
+        resize(size);
+        move(pos);
+        mAutosaveInterval = settings.value(QStringLiteral("autosaveIntervalMinutes"), 2).toInt();
+        settings.beginGroup(QStringLiteral("editorSplits"));
+        {
+            readSplitValues(settings, EditorViewType::cmActionView, false, QStringLiteral("buttonsView"));
+            readSplitValues(settings, EditorViewType::cmAliasView, false, QStringLiteral("aliasesView"));
+            readSplitValues(settings, EditorViewType::cmKeysView, false, QStringLiteral("keybindingsView"));
+            readSplitValues(settings, EditorViewType::cmScriptView, false, QStringLiteral("scriptsView"));
+            readSplitValues(settings, EditorViewType::cmTimerView, false, QStringLiteral("timersView"));
+            readSplitValues(settings, EditorViewType::cmTriggerView, false, QStringLiteral("triggersView"));
+            readSplitValues(settings, EditorViewType::cmVarsView, false, QStringLiteral("variablesView"));
 
-    mAutosaveInterval = settings.value("autosaveIntervalMinutes", 2).toInt();
+            readSplitValues(settings, EditorViewType::cmActionView, true, QStringLiteral("buttonsView"));
+            readSplitValues(settings, EditorViewType::cmAliasView, true, QStringLiteral("aliasesView"));
+            readSplitValues(settings, EditorViewType::cmKeysView, true, QStringLiteral("keybindingsView"));
+            readSplitValues(settings, EditorViewType::cmScriptView, true, QStringLiteral("scriptsView"));
+            readSplitValues(settings, EditorViewType::cmTimerView, true, QStringLiteral("timersView"));
+            readSplitValues(settings, EditorViewType::cmTriggerView, true, QStringLiteral("triggersView"));
+            readSplitValues(settings, EditorViewType::cmVarsView, true, QStringLiteral("variablesView"));
+        }
+    }
+    settings.endGroup();
+}
+
+void dlgTriggerEditor::writeSplitValues(QSettings& settingsRef, const EditorViewType viewType, const bool errorConsoleVisible, const QString & viewName)
+{
+    auto key = qMakePair(viewType, errorConsoleVisible);
+    if (mSplitSizesMap.contains(key)) {
+        QStringList numberStringList;
+        for (const auto value : mSplitSizesMap.value(key)) {
+            numberStringList.append(QString::number(value));
+        }
+        settingsRef.setValue(viewName % (errorConsoleVisible ? QStringLiteral("_withErrorConsole") : QStringLiteral("_noErrorConsole")), numberStringList);
+    }
 }
 
 void dlgTriggerEditor::writeSettings()
@@ -857,10 +912,35 @@ void dlgTriggerEditor::writeSettings()
        were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory
        (the organization name) to "mudlet".
        Furthermore, we skip the version from the application name to follow the convention.*/
-    QSettings settings("mudlet", "Mudlet");
-    settings.setValue("script_editor_pos", pos());
-    settings.setValue("script_editor_size", size());
-    settings.setValue("autosaveIntervalMinutes", mAutosaveInterval);
+    QSettings settings(QStringLiteral("mudlet"), QStringLiteral("Mudlet"));
+    // Store the settings for each profile separately - eventually it would be sensible to
+    // store them in a per profile file along with the other data for each profile...
+    settings.beginGroup(mpHost->getName());
+    {
+        settings.setValue(QStringLiteral("editorPosition"), pos());
+        settings.setValue(QStringLiteral("editorSize"), size());
+        settings.setValue(QStringLiteral("autosaveIntervalMinutes"), mAutosaveInterval);
+        settings.beginGroup(QStringLiteral("editorSplits"));
+        {
+            writeSplitValues(settings, EditorViewType::cmActionView, false, QStringLiteral("buttonsView"));
+            writeSplitValues(settings, EditorViewType::cmAliasView, false, QStringLiteral("aliasesView"));
+            writeSplitValues(settings, EditorViewType::cmKeysView, false, QStringLiteral("keybindingsView"));
+            writeSplitValues(settings, EditorViewType::cmScriptView, false, QStringLiteral("scriptsView"));
+            writeSplitValues(settings, EditorViewType::cmTimerView, false, QStringLiteral("timersView"));
+            writeSplitValues(settings, EditorViewType::cmTriggerView, false, QStringLiteral("triggersView"));
+            writeSplitValues(settings, EditorViewType::cmVarsView, false, QStringLiteral("variablesView"));
+
+            writeSplitValues(settings, EditorViewType::cmActionView, true, QStringLiteral("buttonsView"));
+            writeSplitValues(settings, EditorViewType::cmAliasView, true, QStringLiteral("aliasesView"));
+            writeSplitValues(settings, EditorViewType::cmKeysView, true, QStringLiteral("keybindingsView"));
+            writeSplitValues(settings, EditorViewType::cmScriptView, true, QStringLiteral("scriptsView"));
+            writeSplitValues(settings, EditorViewType::cmTimerView, true, QStringLiteral("timersView"));
+            writeSplitValues(settings, EditorViewType::cmTriggerView, true, QStringLiteral("triggersView"));
+            writeSplitValues(settings, EditorViewType::cmVarsView, true, QStringLiteral("variablesView"));
+        }
+        settings.endGroup();
+    }
+    settings.endGroup();
 }
 
 void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
@@ -6642,10 +6722,16 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     // Edbee doesn't have a readonly option, so I'm using setEnabled
      mpSourceEditorEdbee->setEnabled(true);
 
-    if (mCurrentView != view) {
-        clearDocument(mpSourceEditorEdbee); // Change View
+    if (mCurrentView == view) {
+        return;
     }
-    mCurrentView = view;
+
+    clearDocument(mpSourceEditorEdbee);
+
+    // Store the splitter settings for the current view
+    if (mCurrentView != EditorViewType::cmUnknownView) {
+        mSplitSizesMap.insert(qMakePair(mCurrentView, mpErrorConsole->isVisible()), splitter_right->sizes());
+    }
 
     mpActionsMainArea->setVisible(view == EditorViewType::cmActionView);
     treeWidget_actions->setVisible(view == EditorViewType::cmActionView);
@@ -6668,6 +6754,13 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     mpVarsMainArea->setVisible(view == EditorViewType::cmVarsView);
     treeWidget_variables->setVisible(view == EditorViewType::cmVarsView);
     checkBox_displayAllVariables->setVisible(view == EditorViewType::cmVarsView);
+
+    mCurrentView = view;
+    auto key = qMakePair(mCurrentView, mpErrorConsole->isVisible());
+    if (mSplitSizesMap.contains(key)) {
+        // Restore previously stored split
+        splitter_right->setSizes(mSplitSizesMap.value(key));
+    }
 }
 
 void dlgTriggerEditor::slot_show_timers()
@@ -8758,5 +8851,9 @@ void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
                 slot_showAllTriggerControls(true);
             }
         }
+    }
+
+    if (mCurrentView != EditorViewType::cmUnknownView) {
+        mSplitSizesMap.insert(qMakePair(mCurrentView, mpErrorConsole->isVisible()), splitter_right->sizes());
     }
 }
