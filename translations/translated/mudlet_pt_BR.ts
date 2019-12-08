@@ -934,7 +934,7 @@ com um novo símbolo para esta sala:</translation>
       <location filename="../src/T2DMap.cpp" line="2947"/>
       <source>Move label</source>
       <comment>2D Mapper context menu item (label) tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Mover o Marcador</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2949"/>
@@ -946,19 +946,19 @@ com um novo símbolo para esta sala:</translation>
       <location filename="../src/T2DMap.cpp" line="2950"/>
       <source>Delete label</source>
       <comment>2D Mapper context menu (label) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Remover marcador</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2966"/>
       <source>Add point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Adicionar pontos</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2973"/>
       <source>Divide segment by adding a new point mid-way along</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Divida o segmento adicionando um novo ponto a meio do caminho</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2976"/>
