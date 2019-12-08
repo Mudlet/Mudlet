@@ -4682,19 +4682,19 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="151"/>
       <source>GUI design and initial feature planning. He is responsible for the project homepage and the user manual. Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp;amp; user help. With the project from the very beginning and is an official spokesman of the project. Since the retirement of Heiko, he has become the head of the Mudlet project.</source>
       <comment>about:Vadi</comment>
-      <translation type="unfinished"/>
+      <translation>GUI 设计和初始功能规划。 他负责项目主页和用户手册。 Windows ， macOS， Ubuntu 和通用 Linux 安装程序的维护人员。 维护 Mudlet Wiki Lua API ，并处理项目管理，公共关系 &amp; 用户帮助。 从一开始就有这个项目，是项目的官方发言人。 自从 Heiko 退休后，他就成为了 Mudlet 项目的负责人。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="158"/>
       <source>After joining in 2013, he has been poking various bits of the C++ code and GUI with a pointy stick; subsequently trying to patch over some of the holes made/found. Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language other than American English you will be seeing the results of him getting fed up with the spelling differences between what was being used and the British English his brain wanted to see.</source>
       <comment>about:SlySven</comment>
-      <translation type="unfinished"/>
+      <translation>在2013年加入后，他一直用 C++ 代码和 GUI 进行升级优化，随后尝试对所发现/发现的一些漏洞进行修补。 最近，他一直在为 Mudlet 4.0.0 在 I18n 和 L10n 工作，所以如果你以美国英语以外的语言播放 Mudlet ，那么你将看到他在不同语言之间的拼写差异的成果。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="165"/>
       <source>Former maintainer of the early Windows and Apple OSX packages. He also administers our server and helps the project in many ways.</source>
       <comment>about:demonnic</comment>
-      <translation type="unfinished"/>
+      <translation>早期的 Windows 和 Apple OSX 软件包的维护人员。 他还管理我们的服务器并以多种方式帮助项目。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="169"/>
