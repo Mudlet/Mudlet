@@ -9129,37 +9129,37 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="834"/>
       <source>Swahili</source>
-      <translation type="unfinished"/>
+      <translation>斯瓦希里语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="835"/>
       <source>Swahili (Kenya)</source>
-      <translation type="unfinished"/>
+      <translation>斯瓦希里语(肯尼亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="836"/>
       <source>Swahili (Tanzania)</source>
-      <translation type="unfinished"/>
+      <translation>斯瓦希里语 (坦桑尼亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="837"/>
       <source>Telugu</source>
-      <translation type="unfinished"/>
+      <translation>泰卢固语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="838"/>
       <source>Telugu (India)</source>
-      <translation type="unfinished"/>
+      <translation>泰卢固语(印度)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="839"/>
       <source>Thai</source>
-      <translation type="unfinished"/>
+      <translation>泰语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="840"/>
       <source>Thai (Thailand)</source>
-      <translation type="unfinished"/>
+      <translation>泰国语(泰国)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="841"/>
@@ -9481,7 +9481,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="403"/>
       <source>If you&apos;ve got multiple profiles open, splits Mudlet screen to show them all at once</source>
-      <translation type="unfinished"/>
+      <translation>如果你已经打开了多个情景，分割Mudlet屏幕以一次显示所有情景。</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="421"/>
@@ -9540,12 +9540,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="1285"/>
       <source>Load Mudlet Module</source>
-      <translation type="unfinished"/>
+      <translation>加载 Mudlet 模块</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1292"/>
       <source>Load Mudlet Module:</source>
-      <translation type="unfinished"/>
+      <translation>加载 Mudlet 模块:</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1292"/>
@@ -9676,13 +9676,17 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="4681"/>
       <source>Review %n update(s)...</source>
       <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>检查 %n 更新...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="4686"/>
       <source>&lt;p&gt;Review the update(s) available...&lt;/p&gt;</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>&lt;p&gt;查看可用更新...&lt;/p&gt;</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4777"/>
@@ -9792,7 +9796,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="317"/>
       <location filename="../src/ui/profile_preferences.ui" line="2522"/>
       <source>Please reconnect to your game for the change to take effect</source>
-      <translation type="unfinished"/>
+      <translation>请重新连接到您的游戏，以使更改生效</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="333"/>
@@ -9837,7 +9841,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="420"/>
       <source>.txt</source>
-      <translation type="unfinished"/>
+      <translation>.txt</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="453"/>
@@ -9872,22 +9876,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="250"/>
       <source>Allow server to download and play media (requires GMCP enabled below)</source>
-      <translation type="unfinished"/>
+      <translation>允许服务器下载和播放介质 (需要在下面启用 GMCP)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="269"/>
       <source>GMCP - Enable Generic Mud Communication Protocol</source>
-      <translation type="unfinished"/>
+      <translation>GMCP - 启用通用Mud通信协议</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="279"/>
       <source>MSDP - Enable Mud Server Data Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSDP - 启用 Mud 服务器数据协议</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="289"/>
       <source>MSSP - Enable Mud Server Status Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSSP - 启用 Mud 服务器状态协议</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="296"/>
@@ -9897,7 +9901,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="299"/>
       <source>MSP - Enable Mud Sound Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSP - 启用 Mud 声音协议</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="498"/>
@@ -9912,7 +9916,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="518"/>
       <source>Enter text to separate commands with or leave blank to disable</source>
-      <translation type="unfinished"/>
+      <translation>输入要分隔的命令的文本，或将其留空以禁用</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="525"/>
@@ -10008,7 +10012,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1047"/>
       <source>&apos;&quot;</source>
-      <translation type="unfinished"/>
+      <translation>&apos;&quot;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1060"/>
@@ -10143,7 +10147,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="223"/>
       <source>Miscellaneous</source>
-      <translation type="unfinished"/>
+      <translation>其他</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="286"/>
@@ -10284,17 +10288,17 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1188"/>
       <source>h:mm:ss.zzz</source>
       <comment>Used to set a time interval only</comment>
-      <translation type="unfinished"/>
+      <translation>h:mm:ss.zzz</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1301"/>
       <source>Autocomplete</source>
-      <translation type="unfinished"/>
+      <translation>自动补全</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1307"/>
       <source>Autocomplete Lua functions in code editor</source>
-      <translation type="unfinished"/>
+      <translation>在代码编辑器中自动补全(自动完成) Lua 函数</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1350"/>
