@@ -2095,7 +2095,7 @@ the file:
       <location filename="../src/TMap.cpp" line="2210"/>
       <source>Downloading map file for use in %1...</source>
       <comment>%1 is the name of the current Mudlet profile</comment>
-      <translation type="unfinished"/>
+      <translation>正在下载地图文件 %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2240"/>
@@ -3639,7 +3639,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="728"/>
       <source>Supporters</source>
-      <translation type="unfinished"/>
+      <translation>支持者</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="757"/>
