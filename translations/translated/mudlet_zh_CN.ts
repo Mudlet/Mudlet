@@ -5300,7 +5300,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="144"/>
       <source>$ Type &lt;b&gt;/help&lt;/b&gt; for commands or &lt;b&gt;/help [command]&lt;/b&gt; for command syntax.</source>
-      <translation type="unfinished"/>
+      <translation>$指令 &lt;b&gt;/help&lt;/b&gt;  或 &lt;b&gt;/help [command]&lt;/b&gt; 命令的语法。</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="203"/>
@@ -5368,7 +5368,7 @@ Count</source>
     <message>
       <location filename="../src/dlgMapper.cpp" line="135"/>
       <source>3D mapper is not available in this version of Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>3D mapper在此版本的 Mudlet 中不可用</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="258"/>
@@ -8405,52 +8405,52 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="693"/>
       <source>English (Australia)</source>
-      <translation type="unfinished"/>
+      <translation>英语(澳大利亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="694"/>
       <source>English (Bahamas)</source>
-      <translation type="unfinished"/>
+      <translation>英语(牙买加)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="695"/>
       <source>English (Botswana)</source>
-      <translation type="unfinished"/>
+      <translation>英语 (博茨瓦纳)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="696"/>
       <source>English (Belize)</source>
-      <translation type="unfinished"/>
+      <translation>英语(伯利兹)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="639"/>
       <source>Arabic (Egypt)</source>
-      <translation type="unfinished"/>
+      <translation>阿拉伯语(埃及)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="410"/>
       <source>Report issue</source>
-      <translation type="unfinished"/>
+      <translation>报告问题</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="414"/>
       <source>Report an issue about the Mudlet Public Test Build</source>
-      <translation type="unfinished"/>
+      <translation>报告有关 Mudlet 公共测试构建的问题</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="697"/>
       <source>English (Canada)</source>
-      <translation type="unfinished"/>
+      <translation>英语(加拿大)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="698"/>
       <source>English (Denmark)</source>
-      <translation type="unfinished"/>
+      <translation>英语(丹麦)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="699"/>
       <source>English (United Kingdom)</source>
-      <translation type="unfinished"/>
+      <translation>英语(英国)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="700"/>
@@ -8461,22 +8461,22 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="701"/>
       <source>English (Ghana)</source>
-      <translation type="unfinished"/>
+      <translation>英语(加纳)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="702"/>
       <source>English (Hong Kong SAR China)</source>
-      <translation type="unfinished"/>
+      <translation>英语 (中国香港特别行政区)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="703"/>
       <source>English (Ireland)</source>
-      <translation type="unfinished"/>
+      <translation>英语(爱尔兰)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="704"/>
       <source>English (India)</source>
-      <translation type="unfinished"/>
+      <translation>英语(印度)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="705"/>
@@ -9029,12 +9029,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="814"/>
       <source>Sinhala (Sri Lanka)</source>
-      <translation type="unfinished"/>
+      <translation>僧伽罗语(斯里兰卡)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="815"/>
       <source>Slovak</source>
-      <translation type="unfinished"/>
+      <translation>斯洛伐克文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="816"/>
@@ -9119,12 +9119,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="832"/>
       <source>Swedish (Sweden)</source>
-      <translation type="unfinished"/>
+      <translation>瑞典语(瑞典)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="833"/>
       <source>Swedish (Finland)</source>
-      <translation type="unfinished"/>
+      <translation>瑞典语(芬兰)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="834"/>
