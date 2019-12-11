@@ -1891,17 +1891,6 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
     transcodedMsg.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
 
-    TMediaData::MediaType mediaType;
-    QString mediaFileName;
-    int mediaVolume = TMediaData::MediaVolumeDefault;
-    int mediaLoops = TMediaData::MediaLoopsDefault;
-    int mediaPriority = TMediaData::MediaPriorityNotSet;
-    int mediaContinue = TMediaData::MediaContinueDefault;
-    QString mediaTag;
-    QString mediaUrl;
-
-    qDebug() << transcodedMsg;
-
     if (!transcodedMsg.endsWith(QStringLiteral(")"))) {
         return;
     } else {
@@ -1909,7 +1898,7 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
         transcodedMsg.chop(1);
     }
 
-    TMediaData mediaData;
+    TMediaData mediaData {};
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolMSP);
 

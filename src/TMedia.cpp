@@ -22,6 +22,16 @@
 
 #include "TMedia.h"
 
+#include "pre_guard.h"
+#include <QDir>
+#include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QNetworkDiskCache>
+#include <QMediaPlaylist>
+#include <QStandardPaths>
+#include "post_guard.h"
+
 // Public
 TMedia::TMedia(Host* pHost, const QString& profileName)
 {
@@ -46,7 +56,7 @@ void TMedia::playMedia(TMediaData& mediaData)
 
     mediaData.setMediaFileName(mediaData.getMediaFileName().replace(QLatin1Char('\\'), QLatin1Char('/')));
 
-    if (!TMedia::isFileRelative(mediaData)) { // Security
+    if (!TMedia::isFileRelative(mediaData)) {
         return;
     }
 
@@ -1026,7 +1036,7 @@ void TMedia::parseJSONForMediaLoad(QJsonObject& json)
 
     mediaData.setMediaFileName(mediaData.getMediaFileName().replace(QLatin1Char('\\'), QLatin1Char('/')));
 
-    if (!TMedia::isFileRelative(mediaData) || mediaData.getMediaTag().contains("..")) { // Security
+    if (!TMedia::isFileRelative(mediaData)) {
         return;
     }
 
