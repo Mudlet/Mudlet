@@ -1968,8 +1968,10 @@ int TLuaInterpreter::createStopWatch(lua_State* L)
         } else if (lua_type(L, s) == LUA_TSTRING) {
             autoStart = false;
             name = QString::fromUtf8(lua_tostring(L, 1));
+        } else if (lua_type(L, s) == LUA_TNIL) {
+            ; // fallthrough for compatibility with old-style stopwatches in case createStopWatch(nil) is passed
         } else {
-            lua_pushfstring(L, "createStopWatch: bad argument #%d type (name as string or autostart as boolean are optional, got %s!)", luaL_typename(L, s));
+            lua_pushfstring(L, "createStopWatch: bad argument #%d type (name as string or autostart as boolean are optional, got %s!)", s, luaL_typename(L, s));
             return lua_error(L);
         }
 
@@ -1977,7 +1979,7 @@ int TLuaInterpreter::createStopWatch(lua_State* L)
             if (lua_type(L, ++s) == LUA_TBOOLEAN) {
                 autoStart = lua_toboolean(L, s);
             } else {
-                lua_pushfstring(L, "createStopWatch: bad argument #%d type (autostart as boolean is optional, got %s!)", luaL_typename(L, s));
+                lua_pushfstring(L, "createStopWatch: bad argument #%d type (autostart as boolean is optional, got %s!)", s,  luaL_typename(L, s));
                 return lua_error(L);
             }
         }
