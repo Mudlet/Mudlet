@@ -915,11 +915,19 @@ inline void T2DMap::drawRoom(QPainter& painter, QFont& roomVNumFont, QPen& pen, 
     const float innerStubDoorPenThicknessFactor = 0.0125f;
 
     QColor lc;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    if (roomColor.lightness() > 127) {
+        lc = QColorConstants::Black;
+    } else {
+        lc = QColorConstants::White;
+    }
+#else
     if (roomColor.lightness() > 127) {
         lc = QColor(Qt::black);
     } else {
         lc = QColor(Qt::white);
     }
+#endif
     pen = painter.pen();
     pen.setColor(lc);
     pen.setCosmetic(mMapperUseAntiAlias);
