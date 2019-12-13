@@ -2292,9 +2292,9 @@ bool mudlet::setConsoleBufferSize(Host* pHost, const QString& name, int x1, int 
     if (pC) {
         pC->buffer.setBufferSize(x1, y1);
         return true;
+    } else {
+        return false;
     }
-
-    return false;
 }
 
 bool mudlet::setScrollBarVisible(Host* pHost, const QString& name, bool isVisible)
