@@ -2862,6 +2862,11 @@ void mudlet::closeEvent(QCloseEvent* event)
             pC->mpHost->mpNotePad->close();
             pC->mpHost->mpNotePad = nullptr;
         }
+        // close IRC client window if it is open.
+        if (mpIrcClientMap.contains(pC->mpHost)) {
+            mpIrcClientMap[pC->mpHost]->setAttribute(Qt::WA_DeleteOnClose);
+            mpIrcClientMap[pC->mpHost]->deleteLater();
+        }
 
         // Wait for disconnection to complete
         while (pC->mpHost->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
