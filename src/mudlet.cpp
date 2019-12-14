@@ -2493,7 +2493,11 @@ std::pair<bool, int> mudlet::getLineNumber(Host* pHost, QString& windowName)
     if (pC) {
         return std::make_pair(true, pC->getLineNumber());
     } else {
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        TDebug(QColorConstants::White, QColorConstants::Red) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+#else
         TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+#endif
         return std::make_pair(false, -1);
     }
 }
@@ -2508,7 +2512,11 @@ int mudlet::getColumnNumber(Host* pHost, QString& name)
     if (pC) {
         return pC->getColumnNumber();
     } else {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        TDebug(QColorConstants::White, QColorConstants::Red) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+#else
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+#endif
         return -1;
     }
 }
@@ -2523,7 +2531,11 @@ int mudlet::getLastLineNumber(Host* pHost, const QString& name)
     if (pC) {
         return pC->getLastLineNumber();
     } else {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        TDebug(QColorConstants::White, QColorConstants::Red) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+#else
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+#endif
         return -1;
     }
 }
@@ -4747,7 +4759,11 @@ int mudlet::getColumnCount(Host* pHost, QString& name)
     if (pC) {
         return pC->mUpperPane->getColumnCount();
     } else {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        TDebug(QColorConstants::White, QColorConstants::Red) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+#else
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+#endif
         return -1;
     }
 }
@@ -4762,7 +4778,11 @@ int mudlet::getRowCount(Host* pHost, QString& name)
     if (pC) {
         return pC->mUpperPane->getRowCount();
     } else {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        TDebug(QColorConstants::White, QColorConstants::Red) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+#else
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+#endif
         return -1;
     }
 }
