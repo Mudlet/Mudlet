@@ -14,7 +14,7 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="273"/>
       <source>Too many redirects.</source>
-      <translation>Muitos redirecionamentos.</translation>
+      <translation>Demasiados redirecionamentos.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="282"/>
@@ -982,7 +982,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2996"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action)</comment>
-      <translation type="unfinished"/>
+      <translation>use &quot;remover linha&quot; para remover o único segmento que termine num ponto editável</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3002"/>
@@ -1186,7 +1186,7 @@ rooms:</source>
     <message>
       <location filename="../src/TAlias.cpp" line="252"/>
       <source>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Erro: em &quot;Padrão:&quot;, expressão regular defeituosa, razão: &quot;%1&quot;.</translation>
     </message>
   </context>
   <context>
@@ -1374,12 +1374,12 @@ rooms:</source>
     <message>
       <location filename="../src/TCommandLine.cpp" line="651"/>
       <source>Add to user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>Adicionar ao dicionário do utilizador</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="653"/>
       <source>Remove from user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>Remover do dicionário do utilizador</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="657"/>
@@ -1878,7 +1878,7 @@ Tried these locations:
       <source>[ ALERT ] - Saving map in a format {%1} that is different than the one it was
 loaded as {%2}. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Guardando o mapa no formato {%1} que é diferente do formato carregado, {%2}. Isto pode ser um problema se quiseres partilhar o mapa resultante com outros que usem o formato original.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="188"/>
