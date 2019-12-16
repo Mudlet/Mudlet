@@ -1141,7 +1141,7 @@ used is:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4119"/>
       <source>1 {count 0, default}</source>
-      <translation type="unfinished"/>
+      <translation>1 {count 0, default}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4123"/>
@@ -1385,31 +1385,31 @@ rooms:</source>
       <location filename="../src/TCommandLine.cpp" line="657"/>
       <source>▼Mudlet▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which we have bundled with Mudlet; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼Mudlet▼ │ sugestões do dicionário │ ▲Utilizador▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="667"/>
       <source>▼System▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which is provided as part of the OS; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼Sistema▼ │ sugestões do dicionário │ ▲Utilizador▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="735"/>
       <source>no suggestions (system)</source>
       <comment>used when the command spelling checker using the selected system dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>nenhuma sugestão (sistema)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="761"/>
       <source>no suggestions (shared)</source>
       <comment>used when the command spelling checker using the dictionary shared between profile has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>nenhuma sugestão (partilhada)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="765"/>
       <source>no suggestions (profile)</source>
       <comment>used when the command spelling checker using the profile&apos;s own dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>nenhuma sugestão (perfil)</translation>
     </message>
   </context>
   <context>
@@ -1472,14 +1472,15 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2470"/>
       <source>System Message: %1</source>
-      <translation type="unfinished"/>
+      <translation>Mensagem do sistema: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2617"/>
       <location filename="../src/TConsole.cpp" line="2656"/>
       <source>No search results, sorry!
 </source>
-      <translation type="unfinished"/>
+      <translation>Nenhum resultado da procura, desculpa!
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="367"/>
@@ -1537,7 +1538,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="1051"/>
       <source>&apos;Log session ending at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Sessão de log terminada às &apos;hh:mm:ss&apos; em &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1064"/>
@@ -1643,21 +1644,21 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14711"/>
       <source>ERROR</source>
-      <translation type="unfinished"/>
+      <translation>ERRO</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14712"/>
       <location filename="../src/TLuaInterpreter.cpp" line="14723"/>
       <source>object</source>
       <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>objecto</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14712"/>
       <location filename="../src/TLuaInterpreter.cpp" line="14723"/>
       <source>function</source>
       <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>função</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15964"/>
@@ -1668,7 +1669,7 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16068"/>
       <location filename="../src/TLuaInterpreter.cpp" line="16244"/>
       <source>no error message available from Lua</source>
-      <translation type="unfinished"/>
+      <translation>nenhuma mensagem de erro disponível do Lua</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15966"/>
@@ -1679,7 +1680,7 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16070"/>
       <location filename="../src/TLuaInterpreter.cpp" line="16246"/>
       <source>Lua error:</source>
-      <translation type="unfinished"/>
+      <translation>Erro Lua:</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15969"/>
@@ -1690,12 +1691,12 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16073"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2</source>
       <comment>%1 is the name of the module. %2 can be an additional message about the expected effect.</comment>
-      <translation type="unfinished"/>
+      <translation>[ ERRO ] - Impossível encontrar módulo Lua %1.%2</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15973"/>
       <source>Some functions may not be available.</source>
-      <translation type="unfinished"/>
+      <translation>Algumas funções podem não estar disponíveis.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15977"/>
@@ -1706,17 +1707,17 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16081"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name of the module.</comment>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Módulo Lua %1 carregado.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16014"/>
       <source>Probably will not be able to access Mudlet Lua code.</source>
-      <translation type="unfinished"/>
+      <translation>Provavelmente não será capaz de aceder ao código Lua do Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16035"/>
       <source>Database support will not be available.</source>
-      <translation type="unfinished"/>
+      <translation>Apoio da base de dados não estará disponível.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16056"/>
