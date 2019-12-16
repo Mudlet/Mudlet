@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018 by Stephen Lyons                   #
+#    Copyright (C) 2013-2015, 2017-2019 by Stephen Lyons                   #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -96,6 +96,13 @@ qtHaveModule(texttospeech) {
 
 TEMPLATE = app
 
+####################### Note about environmental variables #####################
+# qmake does not handle environmental variables in the same manner as it's own
+# internal ones and it is best to convert the former to the latter before using
+# qmake test or replacement functions on the contents.  To clarify what is
+# happening an ENV_ prefix is now used to mark a qmake variable that has been
+# "converted" from an environmental one without that prefix
+
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
@@ -104,22 +111,25 @@ VERSION = 4.4.0
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
 # variable to make identification of the used version simple
-# the qmake BUILD variable is NOT built-in
-BUILD = $$(MUDLET_VERSION_BUILD)
-isEmpty( BUILD ) {
-# Possible values are:
+ENV_MUDLET_VERSION_BUILD = $$(MUDLET_VERSION_BUILD)
+isEmpty( ENV_MUDLET_VERSION_BUILD ) {
+# Possible {reserved by the Mudlet Makers team} values are:
 # "-dev" for the development build
 # "-public-test-build" for the public test build
 # "" for the release build
-   BUILD = "-dev"
+# This forcibly prevents a build being identified internally as a release
+# version as it requires manual editing - usually by the Project leader - to
+# temporarily clear this value when a release is being produced:
+   ENV_MUDLET_VERSION_BUILD = "-dev"
 }
 
-# Changing BUILD and VERSION values affects: ctelnet.cpp, main.cpp, mudlet.cpp
-# dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to
-# be automatically rebuilt so you will need to 'touch' them...!
+# Changing MUDLET_VERSION_BUILD and VERSION values affects: ctelnet.cpp,
+# main.cpp, mudlet.cpp, dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT
+# cause those files to be automatically rebuilt so you will need to 'touch'
+# them...!
 # Use APP_VERSION, APP_BUILD and APP_TARGET defines in the source code if needed.
 DEFINES += APP_VERSION=\\\"$${VERSION}\\\"
-DEFINES += APP_BUILD=\\\"$${BUILD}\\\"
+DEFINES += APP_BUILD=\\\"$${ENV_MUDLET_VERSION_BUILD}\\\"
 
 # Capitalize the name for Mudlet, so it appears as 'Mudlet' and not 'mudlet' in the .dmg installer
 macx {
@@ -142,8 +152,9 @@ DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 # something else (or not even # exist) we need to be careful in checking it
 # exists before doing much else with it. Also as an environmental variable it
 # is tricky to handle unless we read it into a qmake variable first:
-FONT_TEST = $$upper($$(WITH_FONTS))
-isEmpty( FONT_TEST ) | !equals(FONT_TEST, "NO" ) {
+ENV_WITH_FONT = $$(WITH_FONTS)
+ENV_WITH_FONT = $$upper( ENV_WITH_FONT )
+isEmpty( ENV_WITH_FONT ) | !equals( ENV_WITH_FONT, "NO" ) {
     DEFINES += INCLUDE_FONTS
     # Can download and extract latest Unbuntu font files (currently X.YY is
     # 0.83) from:
@@ -165,8 +176,9 @@ isEmpty( FONT_TEST ) | !equals(FONT_TEST, "NO" ) {
 # to handle unless we read it into a qmake variable first:
 linux|macx|win32 {
     # We are on one of the supported platforms
-    UPDATER_TEST = $$upper($$(WITH_UPDATER))
-    isEmpty( UPDATER_TEST ) | !equals(UPDATER_TEST, "NO" ) {
+    ENV_WITH_UPDATER = $$(WITH_UPDATER)
+    ENV_WITH_UPDATER = $$upper( ENV_WITH_UPDATER )
+    isEmpty( ENV_WITH_UPDATER ) | !equals( ENV_WITH_UPDATER, "NO" ) {
        # The environmental variable does not exist or it does and it is NOT the
        # particular value we are looking out for - so include the updater code:
        DEFINES += INCLUDE_UPDATER
@@ -182,8 +194,9 @@ linux|macx|win32 {
 # To remove the 3D mapper, set the environment WITH_3DMAPPER variable to "NO"
 # ie: export WITH_3DMAPPER="NO" qmake
 #
-3DMAPPER_TEST = $$upper($$(WITH_3DMAPPER))
-isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
+ENV_WITH_3DMAPPER = $$(WITH_3DMAPPER)
+ENV_WITH_3DMAPPER = $$upper( ENV_WITH_3DMAPPER )
+isEmpty( ENV_WITH_3DMAPPER ) | !equals( ENV_WITH_3DMAPPER, "NO" ) {
     DEFINES += INCLUDE_3DMAPPER
 }
 
@@ -205,24 +218,31 @@ isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
 # destination place for local builds for software for all users:
-    isEmpty( PREFIX ) PREFIX = /usr/local
+    ENV_PREFIX = $$(PREFIX)
+    ENV_EXEC_PREFIX = $$(EXEC_PREFIX)
+    ENV_DATAROOTDIR = $$(DATAROOTDIR)
+    ENV_DATADIR = $$(DATADIR)
+    ENV_BINDIR = $$(BINDIR)
+    ENV_DOCDIR = $$(DOCDIR)
+    isEmpty( ENV_PREFIX ) ENV_PREFIX = /usr/local
+    isEmpty( ENV_EXEC_PREFIX ) ENV_EXEC_PREFIX = $${ENV_PREFIX}
     # Now picks up the first element of the environmental XDG_DATA_DIRS if
     # not overridden by providing a DATAROOTDIR:
-    isEmpty( DATAROOTDIR ) {
-        XDG_DATA_DIRS_TEST = $$(XDG_DATA_DIRS)
-        ! isEmpty( XDG_DATA_DIRS_TEST ) {
-            XDG_DATA_DIRS_TEST_SPLIT = $$split(XDG_DATA_DIRS_TEST, :)
-            DATAROOTDIR = $$first(XDG_DATA_DIRS_TEST_SPLIT)
-            message("First (most significant) element of XDG_DATA_DIRS has been determined to be: $${DATAROOTDIR} ...")
+    isEmpty( ENV_DATAROOTDIR ) {
+        ENV_XDG_DATA_DIRS = $$(XDG_DATA_DIRS)
+        ! isEmpty( ENV_XDG_DATA_DIRS ) {
+            XDG_DATA_DIRS_SPLIT = $$split( ENV_XDG_DATA_DIRS, : )
+            ENV_DATAROOTDIR = $$first( XDG_DATA_DIRS_SPLIT )
+            message("First (most significant) element of XDG_DATA_DIRS has been determined to be: $${ENV_DATAROOTDIR} ...")
         }
-        isEmpty( DATAROOTDIR ) DATAROOTDIR = $${PREFIX}/share
+        isEmpty( ENV_DATAROOTDIR ) ENV_DATAROOTDIR = $${ENV_PREFIX}/share
     }
 
-    isEmpty( DATADIR ) DATADIR = $${DATAROOTDIR}/mudlet
+    isEmpty( ENV_DATADIR ) ENV_DATADIR = $${ENV_DATAROOTDIR}/mudlet
 # According to Linux FHS /usr/local/games is an alternative location for leasure time BINARIES 8-):
-    isEmpty( BINDIR ) BINDIR = $${PREFIX}/bin
+    isEmpty( ENV_BINDIR ) ENV_BINDIR = $${ENV_EXEC_PREFIX}/bin
 # Again according to FHS /usr/local/share/games is the corresponding place for locally built games documentation:
-    isEmpty( DOCDIR ) DOCDIR = $${DATAROOTDIR}/doc/mudlet
+    isEmpty( ENV_DOCDIR ) ENV_DOCDIR = $${ENV_DATAROOTDIR}/doc/mudlet
     freebsd {
         LIBS += \
 # Some OS platforms have a hyphen (I think Cygwin does as well):
@@ -245,15 +265,15 @@ unix:!macx {
         -lz \
         -lpugixml
 
-    isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
+    isEmpty( ENV_WITH_3DMAPPER ) | !equals( ENV_WITH_3DMAPPER, "NO" ) {
        LIBS += -lGLU
     }
 
-    LUA_DEFAULT_DIR = $${DATADIR}/lua
+    LUA_DEFAULT_DIR = $${ENV_DATADIR}/lua
 } else:win32 {
-    MINGW_BASE_DIR = $$(MINGW_BASE_DIR)
-    isEmpty(MINGW_BASE_DIR) {
-        MINGW_BASE_DIR = "C:\\Qt\\Tools\\mingw730_32"
+    ENV_MINGW_BASE_DIR = $$(MINGW_BASE_DIR)
+    isEmpty( ENV_MINGW_BASE_DIR ) {
+        ENV_MINGW_BASE_DIR = "C:\\Qt\\Tools\\mingw730_32"
     }
     LIBS +=  \
         -llua51 \
@@ -264,21 +284,21 @@ unix:!macx {
         -lyajl \
         -lpugixml \
         -lWs2_32 \
-        -L"$${MINGW_BASE_DIR}\\bin"
+        -L"$${ENV_MINGW_BASE_DIR}\\bin"
     INCLUDEPATH += \
                    "C:\\Libraries\\boost_1_67_0" \
-                   "$${MINGW_BASE_DIR}\\include" \
-                   "$${MINGW_BASE_DIR}\\lib\include"
+                   "$${ENV_MINGW_BASE_DIR}\\include" \
+                   "$${ENV_MINGW_BASE_DIR}\\lib\include"
 # Leave this undefined so mudlet::readSettings() preprocessing will fall back to
 # hard-coded executable's /mudlet-lua/lua/ subdirectory
-#    LUA_DEFAULT_DIR = $$clean_path($$system(echo %ProgramFiles%)/lua)
+#    LUA_DEFAULT_DIR = $$clean_path( $$system( echo %ProgramFiles% )/lua )
 }
 
 unix:!macx {
 #   the "target" install set is handled automagically, just not very well...
-    target.path = $${BINDIR}
+    target.path = $${ENV_BINDIR}
     message("$${TARGET} will be installed to "$${target.path}"...")
-#     DOCS.path = $${DOCS_DIR}
+#     DOCS.path = $${ENV_DOCDIR}
 #     message("Documentation will be installed to "$${DOCS.path}"...")
     !isEmpty( LUA_DEFAULT_DIR ) {
 # if a directory has been set for the lua files move the detail into the
@@ -307,11 +327,11 @@ macx {
 
 # use ccache if available
 unix {
-    BASE_CXX = $$QMAKE_CXX
+    BASE_CXX = $${QMAKE_CXX}
     # common linux location
-    exists(/usr/bin/ccache):QMAKE_CXX = ccache $$BASE_CXX
+    exists(/usr/bin/ccache):QMAKE_CXX = ccache $${BASE_CXX}
     # common macos location
-    exists(/usr/local/bin/ccache):QMAKE_CXX = ccache $$BASE_CXX
+    exists(/usr/local/bin/ccache):QMAKE_CXX = ccache $${BASE_CXX}
 }
 
 # There does not seem to be an obvious pkg-config option for these two
@@ -1237,19 +1257,19 @@ macx {
 
     contains( DEFINES, INCLUDE_UPDATER ) {
         # allow linker to find sparkle framework if we bundle it in
-        SPARKLE_PATH = $$PWD/../3rdparty/cocoapods/Pods/Sparkle
+        SPARKLE_PATH = $${PWD}/../3rdparty/cocoapods/Pods/Sparkle
 
-        !exists($$SPARKLE_PATH) {
+        !exists( $${SPARKLE_PATH} ) {
             message("Sparkle CocoaPod is missing, running 'pod install' to get it...")
-            system("cd ../3rdparty/cocoapods && pod install");
+            system( "cd ../3rdparty/cocoapods && pod install" );
         }
 
-        LIBS += -F$$SPARKLE_PATH
+        LIBS += -F$${SPARKLE_PATH}
         LIBS += -framework Sparkle
 
         # necessary for Sparkle to compile
-        QMAKE_LFLAGS += -F $$SPARKLE_PATH
-        QMAKE_OBJECTIVE_CFLAGS += -F $$SPARKLE_PATH
+        QMAKE_LFLAGS += -F $${SPARKLE_PATH}
+        QMAKE_OBJECTIVE_CFLAGS += -F $${SPARKLE_PATH}
 
         SOURCES += ../3rdparty/sparkle-glue/AutoUpdater.cpp
 
@@ -1262,7 +1282,7 @@ macx {
 
         # Copy Sparkle into the app bundle
         sparkle.path = Contents/Frameworks
-        sparkle.files = $$SPARKLE_PATH/Sparkle.framework
+        sparkle.files = $${SPARKLE_PATH}/Sparkle.framework
         QMAKE_BUNDLE_DATA += sparkle
     }
 
