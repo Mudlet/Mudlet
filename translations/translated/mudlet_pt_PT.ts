@@ -1722,7 +1722,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16056"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>utf8.* Funções Lua não estarão disponíveis.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16077"/>
@@ -2474,17 +2474,17 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="38"/>
       <source>Default Area</source>
-      <translation type="unfinished"/>
+      <translation>Área padrão</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="502"/>
       <source>Area with ID=%1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>Área com ID=%1 já existe!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="521"/>
       <source>An Unnamed Area is (no longer) permitted!</source>
-      <translation type="unfinished"/>
+      <translation>Uma Área sem nome (não) é permitida!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="525"/>
@@ -4971,7 +4971,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="104"/>
       <source>Copy settings only</source>
-      <translation type="unfinished"/>
+      <translation>Copiar apenas configurações</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="173"/>
@@ -5244,7 +5244,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="57"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliases</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="58"/>
@@ -6277,12 +6277,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="377"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliases</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="378"/>
       <source>Show Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar Aliases</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="382"/>
@@ -6660,14 +6660,14 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3511"/>
       <source>New alias group</source>
-      <translation type="unfinished"/>
+      <translation>Novo grupo de aliases</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3513"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4125"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4195"/>
       <source>New alias</source>
-      <translation type="unfinished"/>
+      <translation>Novo alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3602"/>
@@ -7188,7 +7188,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2054"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2084"/>
       <source>Alias</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1759"/>
@@ -9166,12 +9166,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="280"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliases</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="281"/>
       <source>Show and edit aliases</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar e editar aliases</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="286"/>
@@ -9246,7 +9246,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="349"/>
       <source>Settings</source>
-      <translation type="unfinished"/>
+      <translation>Configurações</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="350"/>
@@ -9763,7 +9763,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="716"/>
       <source>Enable anti-aliasing</source>
-      <translation type="unfinished"/>
+      <translation>Activar anti-aliasing</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="732"/>
