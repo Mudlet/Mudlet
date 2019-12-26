@@ -42,6 +42,7 @@
 #include <QFileDialog>
 #include <QFontDialog>
 #include <QNetworkDiskCache>
+#include <QPainter>
 #include <QString>
 #include <QTableWidget>
 #include <QToolBar>
