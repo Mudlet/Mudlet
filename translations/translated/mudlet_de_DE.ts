@@ -7908,12 +7908,12 @@ Starte... Viel Spaß!
       <location filename="../src/ui/main_window.ui" line="311"/>
       <location filename="../src/ui/main_window.ui" line="314"/>
       <source>Report an issue</source>
-      <translation type="unfinished"/>
+      <translation>Problem melden</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="317"/>
       <source>Report an issue about the public test build</source>
-      <translation type="unfinished"/>
+      <translation>Ein Problem mit dem öffentlichen Test-Build melden</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="157"/>
@@ -8504,12 +8504,12 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="410"/>
       <source>Report issue</source>
-      <translation type="unfinished"/>
+      <translation>Problem melden</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="414"/>
       <source>Report an issue about the Mudlet Public Test Build</source>
-      <translation type="unfinished"/>
+      <translation>Ein Problem mit dem öffentlichen Mudlet Test-Build melden</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="697"/>
@@ -9954,7 +9954,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="250"/>
       <source>Allow server to download and play media (requires GMCP enabled below)</source>
-      <translation type="unfinished"/>
+      <translation>Erlauben Sie dem Server das Herunterladen und Abspielen von Medien (benötigt GMCP unten aktiviert)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="269"/>
