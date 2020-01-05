@@ -3960,7 +3960,7 @@ Die alte Version &apos;%2&apos; wird deinstalliert.</translation>
       <location filename="../src/ctelnet.cpp" line="519"/>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: </source>
-      <translation>[ ALARM ] - Verbindung wurde getrennt.
+      <translation>[ ACHTUNG ] - Verbindung wurde getrennt.
 Grund: </translation>
     </message>
     <message>
@@ -9959,27 +9959,27 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="269"/>
       <source>GMCP - Enable Generic Mud Communication Protocol</source>
-      <translation type="unfinished"/>
+      <translation>GMCP - Aktiviere das Generische-Mud-Kommunikations-Protokoll</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="279"/>
       <source>MSDP - Enable Mud Server Data Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSDP - Aktiviere das Mud-Server-Daten-Protokoll</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="289"/>
       <source>MSSP - Enable Mud Server Status Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSDP - Aktiviere das Mud-Server-Status-Protokoll</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="296"/>
       <source>&lt;p&gt;Enables MSP - provides Mud Sound Protocol messages during game play for supported games&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Aktiviert MSP - bietet während des Spiels Meldungen zum Mud Sound Protocol für unterstützte Spiele&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="299"/>
       <source>MSP - Enable Mud Sound Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSP - Aktiviere das Mud-Sound-Protokoll</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="498"/>
