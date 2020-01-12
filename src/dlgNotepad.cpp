@@ -66,6 +66,7 @@ void dlgNotepad::save()
     file.open(QIODevice::WriteOnly);
     QTextStream fileStream;
     fileStream.setDevice(&file);
+    fileStream.setCodec(QTextCodec::codecForName("UTF-8"));
     fileStream << notesEdit->toPlainText();
     file.close();
 
@@ -80,6 +81,7 @@ void dlgNotepad::restore()
     file.open(QIODevice::ReadOnly);
     QTextStream fileStream;
     fileStream.setDevice(&file);
+    fileStream.setCodec(QTextCodec::codecForName("UTF-8"));
     QString txt = fileStream.readAll();
     notesEdit->blockSignals(true);
     notesEdit->setPlainText(txt);
