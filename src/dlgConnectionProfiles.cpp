@@ -1690,7 +1690,7 @@ void dlgConnectionProfiles::fillout_form()
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
         if (!hasCustomIcon(mudServer)) {
-            mi = QIcon(QPixmap(QStringLiteral(":/icons/fiery_mud.png")));
+            mi = QIcon(QStringLiteral(":/icons/fiery_mud.png"));
             pM->setIcon(mi);
         } else {
             setCustomIcon(mudServer, pM);
