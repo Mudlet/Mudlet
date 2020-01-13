@@ -78,10 +78,9 @@ void dlgNotepad::save()
     mNeedToSave = false;
 }
 
-void dlgNotepad::restoreFile(const QString& fName, const bool useUtf8Encoding)
+void dlgNotepad::restoreFile(const QString& fn, const bool useUtf8Encoding)
 {
-    QFile file;
-    file.setFileName(fName);
+    QFile file(fn);
     file.open(QIODevice::ReadOnly);
     QTextStream fileStream;
     fileStream.setDevice(&file);
