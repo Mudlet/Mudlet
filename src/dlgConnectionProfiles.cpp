@@ -1136,7 +1136,7 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
             val = QStringLiteral("<center><a href='http://www.clessidra.it/'>http://www.clessidra.it</a></center>");
         }
         if (profile_name == QStringLiteral("Fierymud")) {
-            val = QStringLiteral("<center><a href='http://www.fierymud.org/'>http://www.fierymud.org</a></center>");
+            val = QStringLiteral("<center><a href='https://www.fierymud.org/'>https://www.fierymud.org</a></center>");
         }
         if (profile_name == QStringLiteral("Reinos de Leyenda")) {
             val = QStringLiteral("<center><a href='https://www.reinosdeleyenda.es/'>Main website</a></center>\n"
@@ -1690,9 +1690,7 @@ void dlgConnectionProfiles::fillout_form()
         pM->setForeground(QColor(Qt::white));
         profiles_tree_widget->addItem(pM);
         if (!hasCustomIcon(mudServer)) {
-            mi = QIcon(
-                    QPixmap(QStringLiteral(":/icons/fiery_mud.png")).scaled(QSize(120, 30), Qt::IgnoreAspectRatio,
-                                                                                Qt::SmoothTransformation).copy());
+            mi = QIcon(QPixmap(QStringLiteral(":/icons/fiery_mud.png"));
             pM->setIcon(mi);
         } else {
             setCustomIcon(mudServer, pM);
