@@ -30,6 +30,11 @@
 
 using namespace std::chrono;
 
+// Used before we spotted a problem with not specifying an encoding:
+const QString local8BitEncodedNotesFileName{QStringLiteral("notes.txt")};
+// Used afterwards:
+const QString utf8EncodedNotesFileName{QStringLiteral("notes_utf8.txt")};
+
 dlgNotepad::dlgNotepad(Host* pH)
 : mpHost(pH)
 {
@@ -56,7 +61,7 @@ dlgNotepad::~dlgNotepad()
 void dlgNotepad::save()
 {
     QString directoryFile = mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName());
-    QString fileName = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("notes.txt"));
+    QString fileName = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
     QDir dirFile;
     if (!dirFile.exists(directoryFile)) {
         dirFile.mkpath(directoryFile);
@@ -73,20 +78,37 @@ void dlgNotepad::save()
     mNeedToSave = false;
 }
 
-void dlgNotepad::restore()
+void dlgNotepad::restoreFile(const QString& fName, const bool useUtf8Encoding)
 {
-    QString fileName = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), QStringLiteral("notes.txt"));
     QFile file;
-    file.setFileName(fileName);
+    file.setFileName(fName);
     file.open(QIODevice::ReadOnly);
     QTextStream fileStream;
     fileStream.setDevice(&file);
-    fileStream.setCodec(QTextCodec::codecForName("UTF-8"));
-    QString txt = fileStream.readAll();
+    if (useUtf8Encoding) {
+        fileStream.setCodec(QTextCodec::codecForName("UTF-8"));
+    }
+    const QString txt = fileStream.readAll();
     notesEdit->blockSignals(true);
     notesEdit->setPlainText(txt);
     notesEdit->blockSignals(false);
     file.close();
+}
+
+void dlgNotepad::restore()
+{
+    QString fileName = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
+    if (QFile::exists(fileName)) {
+        restoreFile(fileName, true);
+        return;
+    }
+
+    // A utf8 encoded (new style) file was not found, so look for an older one
+    // where we did not enforce an encoding (and, at least on Windows, it
+    // defaulted to the local8Bit one) and it would break if characters were
+    // used {e.g. emojis} that that encoding did not handle:
+    fileName = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), local8BitEncodedNotesFileName);
+    restoreFile(fileName, false);
 }
 
 void dlgNotepad::slot_text_written()
