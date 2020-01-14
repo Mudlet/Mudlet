@@ -2186,17 +2186,15 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     // Check to ensure we have a map directory to save the map files to.
     QDir toProfileDir;
     QString toProfileDirPathString = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
-    if (!toProfileDir.exists(toProfileDirPathString)) {
-        if (!toProfileDir.mkpath(toProfileDirPathString)) {
-            QString errMsg = tr("[ ERROR ] - Unable to use or create directory to store map.\n"
-                                "Please check that you have permissions/access to:\n"
-                                "\"%1\"\n"
-                                "and there is enough space. The download operation has failed.")
-                                        .arg(toProfileDirPathString);
-            pHost->postMessage(errMsg);
-            mXmlImportMutex.unlock();
-            return;
-        }
+    if (!toProfileDir.mkpath(toProfileDirPathString)) {
+        QString errMsg = tr("[ ERROR ] - Unable to use or create directory to store map.\n"
+                            "Please check that you have permissions/access to:\n"
+                            "\"%1\"\n"
+                            "and there is enough space. The download operation has failed.")
+                                    .arg(toProfileDirPathString);
+        pHost->postMessage(errMsg);
+        mXmlImportMutex.unlock();
+        return;
     }
 
     if (localFileName.isEmpty()) {
