@@ -1,6 +1,6 @@
 /***************************************************************************
 *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
-*   Copyright (C) 2013-2019 by Stephen Lyons - slysven@virginmedia.com    *
+*   Copyright (C) 2013-2020 by Stephen Lyons - slysven@virginmedia.com    *
 *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
 *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
 *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -3321,25 +3321,20 @@ int TLuaInterpreter::setFont(lua_State* L)
                             s,
                             luaL_typename(L, s));
             return lua_error(L);
-        } else {
-            windowName = QString::fromUtf8(lua_tostring(L, s));
         }
+
+        windowName = QString::fromUtf8(lua_tostring(L, s));
     }
 
-    QString font;
     if (!lua_isstring(L, ++s)) {
         lua_pushfstring(L, "setFont: bad argument #%d type (name as string expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
-    } else {
-        font = QString::fromUtf8(lua_tostring(L, s));
     }
-
-    // ensure that emojis are displayed in colour even if this font doesn't support it
-    QFont::insertSubstitution(font, QStringLiteral("Noto Color Emoji"));
+    QString fontName{QString::fromUtf8(lua_tostring(L, s))};
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
-            if (auto [setNewFont, errorMessage] = pHost->setDisplayFont(font); !setNewFont) {
+            if (auto [setNewFont, errorMessage] = pHost->setDisplayFont(fontName); !setNewFont) {
                 lua_pushnil(L);
                 lua_pushstring(L, errorMessage.toUtf8().constData());
                 return 2;
@@ -3359,7 +3354,7 @@ int TLuaInterpreter::setFont(lua_State* L)
             return 2;
         }
     } else {
-        if (!mudlet::self()->setWindowFont(pHost, windowName, font)) {
+        if (!mudlet::self()->setWindowFont(pHost, windowName, fontName)) {
             lua_pushnil(L);
             lua_pushfstring(L, R"(window "%s" not found)", windowName.toUtf8().constData());
             return 2;

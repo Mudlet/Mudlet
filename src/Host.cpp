@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -200,7 +200,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBorderTopHeight(0)
 , mCommandLineFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mCommandSeparator(QStringLiteral(";;"))
-, mDisplayFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mEnableGMCP(true)
 , mEnableMSSP(true)
 , mEnableMSP(true)
@@ -348,6 +347,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mFORCE_MXP_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()
 , mEnableTextAnalyzer(false)
+, mDisplayFont(QFont(QStringLiteral("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mTimerDebugOutputSuppressionInterval(QTime())
 , mTriggerUnit(this)
 , mTimerUnit(this)
@@ -426,6 +426,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     if (!optin.isEmpty()) {
         mDiscordDisableServerSide = optin.toInt() == Qt::Unchecked ? true : false;
     }
+
+    connect(mudlet::self(), &mudlet::signal_fontSubstitutionIndexChanged, this, &Host::slot_handleFontSubstitutionChanges);
 
     loadSecuredPassword();
 }
@@ -741,16 +743,17 @@ QString Host::getMmpMapLocation() const
 {
     return mpMap->getMmpMapLocation();
 }
+
 // error and debug consoles inherit font of the main console
 void Host::updateConsolesFont()
 {
     if (mpEditorDialog) {
         if (mpEditorDialog->mpErrorConsole) {
-            mpEditorDialog->mpErrorConsole->setMiniConsoleFont(mDisplayFont.family());
+            mpEditorDialog->mpErrorConsole->setMiniConsoleFontName(mDisplayFont.family());
             mpEditorDialog->mpErrorConsole->setMiniConsoleFontSize(mDisplayFont.pointSize());
         }
         if (mudlet::self()->mpDebugArea) {
-            mudlet::self()->mpDebugConsole->setMiniConsoleFont(mDisplayFont.family());
+            mudlet::self()->mpDebugConsole->setMiniConsoleFontName(mDisplayFont.family());
             mudlet::self()->mpDebugConsole->setMiniConsoleFontSize(mDisplayFont.pointSize());
         }
     }
@@ -795,21 +798,33 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font)
         return std::make_pair(false, QStringLiteral("specified font is invalid (its letters have 0 width)"));
     }
 
+    // ensure that emojis are displayed in colour even if this font doesn't
+    // support it by using an additional substitution - if we have to:
+    mudlet::self()->recordAFontUse(font);
+
     mDisplayFont = font;
+    // Because we may be entering Emojis we should use the same font for the
+    // command line (and the editor Lua script area) - but keep the originally
+    // specified (in the constructor) size:
+    mCommandLineFont = font;
+    mCommandLineFont.setPointSize(14);
+
     updateConsolesFont();
     return std::make_pair(true, QString());
 }
 
+// Wrapper for the one that takes a QFont reference - so the code common to both
+// needs to be in the inner method:
 std::pair<bool, QString> Host::setDisplayFont(const QString& fontName)
 {
-    const auto result = setDisplayFont(QFont(fontName));
-    updateConsolesFont();
-    return result;
+    return setDisplayFont(QFont{fontName});
 }
 
+// Only used from the XMLimport class when reading a profile:
 void Host::setDisplayFontFromString(const QString& fontData)
 {
     mDisplayFont.fromString(fontData);
+    mudlet::self()->recordAFontUse(mDisplayFont);
     updateConsolesFont();
 }
 
@@ -2471,4 +2486,15 @@ void Host::getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, q
     secondaryColor = mPlayerRoomInnerColor;
     // We have accessed the protected aspects of this class so can unlock the mutex locker and proceed:
     locker.unlock();
+}
+
+void Host::slot_handleFontSubstitutionChanges()
+{
+    // Reload the main console and all the sub-console/userwindows fonts - and
+    // also covers the Editor's error console AND the Central Debug Console -
+    // though if multiplaying is being done it will be rapidly switched
+    // between each profiles' font...
+    setDisplayFont(getDisplayFont());
+
+    mpConsole->refreshAllSubConsoleFonts();
 }

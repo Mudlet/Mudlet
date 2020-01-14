@@ -5,7 +5,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
- *   Copyright (C) 2015-2016, 2018-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2015-2016, 2018-2020 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
@@ -39,6 +39,7 @@
 #include "discord.h"
 
 #include "pre_guard.h"
+#include <QDebug>
 #include <QFlags>
 #ifdef QT_GAMEPAD_LIB
 #include <QGamepad>
@@ -70,6 +71,7 @@ class QAction;
 class QCloseEvent;
 class QMenu;
 class QLabel;
+class QLineEdit;
 class QListWidget;
 class QPushButton;
 class QTableWidget;
@@ -180,6 +182,8 @@ public:
     bool openWebPage(const QString& path);
     void checkUpdatesOnStart();
     void processEventLoopHack();
+    bool baseSystemInitialised(); // Is NON-const!
+
     static const QString scmMudletXmlDefaultVersion;
     static QPointer<TConsole> mpDebugConsole;
     static QPointer<QMainWindow> mpDebugArea;
@@ -422,12 +426,16 @@ public:
     void scanForQtTranslations(const QString&);
     void layoutModules();
     void startAutoLogin();
+    void fontSubstitutionChanged(const int);
+    void setEmojiFontSubstitutionIndex(const int);
+    void recordAFontUse(const QFont&);
+    void recordAFontUse(const QString&);
+    void refreshLineEditFont(QLineEdit&);
 
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
 #endif
-
 
     // Currently tracks the "mudlet_option_use_smallscreen" file's existance but
     // may eventually migrate solely to the "EnableFullScreenMode" in the main
@@ -456,6 +464,26 @@ public:
     // will be true if they are ones bundled with Mudlet, false if provided by
     // the system
     bool mUsingMudletDictionaries;
+
+    // An index into a set of names for a font to use as a substitute when
+    // (ideally) color emojis are needed - Should be one of (default on):
+    // * 0 - "Empty" (macOs, FreeBSD) {also Linux with fontConfig less than
+    // 2.10.94} - color emojis are native (and "enforced") on macOs; seemly not
+    // available on FreeBSD and apparently broken (grossly oversized) on Linuxes
+    // with older fontConfig library - though assume for Linux that it does have
+    // a new enough version, as the control for this will allow users for whom
+    // Color Emojis are broken can set it back to this ("None") value.
+    // * 1 - "Nono Color Emoji" (Linux) {with fontConfig at least 2.10.94};
+    // supported by Windows 10 Anniversary Update - seemingly version 10.0.14316
+    // or later ONLY)
+    // * 2 - "Segoe UI Emoji" (Windows) supported by Windows 8.1 or later
+    // * 3 - "Segoe UI Symbol" (Windows) {monochrome only} supported by Windows
+    // 7 or later.
+    // * 4 - "Openmoji" {currently monochrome only but available for all OSes}
+    // so we offer it as a fall-back - or for those who WANT a monochrome option
+    // whether that works on macOs remains to be tested...
+    int mEmojiSubstituteFontIndex;
+    static const QStringList mEmojiSubstituteFontList;
 
 public slots:
     void processEventLoopHack_timerRun();
@@ -503,6 +531,7 @@ public slots:
 protected:
     void closeEvent(QCloseEvent* event) override;
 
+
 signals:
     void signal_editorTextOptionsChanged(QTextOption::Flags);
     void signal_profileMapReloadRequested(QList<QString>);
@@ -520,7 +549,7 @@ signals:
     void signal_passwordsMigratedToSecure();
     void signal_passwordMigratedToSecure(const QString&);
     void signal_passwordsMigratedToProfiles();
-
+    void signal_fontSubstitutionIndexChanged(const int);
 
 private slots:
     void slot_tab_changed(int);
@@ -689,6 +718,23 @@ private:
     QStringList mProfilePasswordsToMigrate {};
 
     bool mStorePasswordsSecurely {true};
+
+    // Inserting a substitute in for a QFont is actually something that applies
+    // to all instances of the font family - as different profiles and places
+    // within each profile can be using the same font name it is a waste of time
+    // resetting the substitution list for the same family name each time that
+    // font is called for. Instead, keep a list of the font names that we have
+    // inserted an emoji font substitution for and only specify a substitution
+    // for fonts not so processed since the setting was last changed:
+    QSet<QString> mFontsProcessedForEmojiSubstitutes;
+
+    // Gets set when the first profile is loaded - used to ensure that widgets
+    // created before then (as part of various classes executing their
+    // constructors) get updated with the right combination of font plus
+    // emoji substitute font - which only gets determined after those
+    // constructors have run.  Accessed via getBaseSystemInitialised()
+    // (which sets it on first use) it may also be useful for other things:
+    bool mBaseSystemInitialised {};
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)

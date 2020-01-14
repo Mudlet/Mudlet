@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
-#    Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2015-2020 by Stephen Lyons - slysven@virginmedia.com    #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -22,7 +22,11 @@
 set(mudlet_RCCS mudlet.qrc)
 
 if(USE_FONTS)
-  list(APPEND mudlet_RCCS mudlet_fonts.qrc)
+  if(WIN32)
+    list(APPEND mudlet_RCCS mudlet_fonts_windows.qrc)
+  else()
+    list(APPEND mudlet_RCCS mudlet_fonts_unix.qrc)
+  endif()
 endif()
 
 if(WIN32)

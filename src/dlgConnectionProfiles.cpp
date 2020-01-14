@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016-2018, 2020 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -2257,6 +2258,14 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 
     emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());
     emit signal_load_profile(profile_name, alsoConnect);
+    if (!mudlet::self()->baseSystemInitialised()) {
+        // Fake a change in the font used for Emoji substitutions for the very
+        // first profile opened so that all the existing widgets that are using
+        // fonts that are affected by this get redrawn with the right font and
+        // font substitute - this is needed to handle widgets drawn by class
+        // constructors before the font substitute is setup:
+        emit mudlet::self()->signal_fontSubstitutionIndexChanged(mudlet::self()->mEmojiSubstituteFontIndex);
+    }
 }
 
 bool dlgConnectionProfiles::validateProfile()

@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2009, 2018 by Vadim Peretokin - vperetokin@gmail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@viginmedia.com     *
+ *   Copyright (C) 2017-2018, 2020 by Stephen Lyons                        *
+ *                                                - slysven@viginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -73,7 +74,9 @@ void FontManager::loadFont(const QString& filePath)
     rememberFont(filePath, fontID);
 
     if (fontID == -1) {
-        qWarning() << "FontManager::loadFonts() warning - Could not load the font(s) in the file: " << filePath;
+        qWarning().nospace().noquote() << "FontManager::loadFont(\"" << filePath << "\") WARNING - Could not load the font(s) in that file!";
+    } else {
+        qDebug().nospace().noquote() << "FontManager::loadFont(\"" << filePath << "\") INFO - families for font are:\n\"" << QFontDatabase::applicationFontFamilies(fontID).join("\",\n\"") << "\".\n";
     }
 }
 

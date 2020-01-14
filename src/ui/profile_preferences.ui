@@ -686,14 +686,24 @@
            </widget>
           </item>
           <item row="0" column="2">
-           <widget class="QLabel" name="label_35">
+           <widget class="QLabel" name="label_fontSize">
             <property name="text">
              <string>Size:</string>
             </property>
            </widget>
           </item>
           <item row="0" column="3">
-           <widget class="QComboBox" name="fontSize"/>
+           <widget class="QSpinBox" name="spinBox_fontSize">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>39</number>
+            </property>
+            <property name="value">
+             <number>10</number>
+            </property>
+           </widget>
           </item>
           <item row="1" column="0" colspan="4">
            <widget class="QLabel" name="label_invalidFontError">
@@ -2920,20 +2930,6 @@
           <string>Other Special options</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_debug">
-          <item row="1" column="1">
-           <widget class="QComboBox" name="comboBox_store_passwords_in">
-            <item>
-             <property name="text">
-              <string>the computer's password manager (secure)</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>plaintext with the profile (portable)</string>
-             </property>
-            </item>
-           </widget>
-          </item>
           <item row="0" column="1">
            <widget class="QCheckBox" name="checkBox_expectCSpaceIdInColonLessMColorCode">
             <property name="toolTip">
@@ -2961,13 +2957,38 @@
            </widget>
           </item>
           <item row="1" column="0">
+           <widget class="QLabel" name="label_emojiSubstitionFont">
+            <property name="text">
+             <string>Additional font substitution for Color emojis:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QComboBox" name="comboBox_emojiSubstitionFont">
+           </widget>
+          </item>
+          <item row="2" column="0">
            <widget class="QLabel" name="label_store_passwords_in">
             <property name="text">
              <string>Store character login passwords in:</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="2">
+          <item row="2" column="1">
+           <widget class="QComboBox" name="comboBox_store_passwords_in">
+            <item>
+             <property name="text">
+              <string>the computer's password manager (secure)</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>plaintext with the profile (portable)</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="2">
            <widget class="QLabel" name="label_password_migration_notification">
             <property name="font">
              <font>
@@ -5243,7 +5264,7 @@
   <tabstop>radioButton_userDictionary_profile</tabstop>
   <tabstop>radioButton_userDictionary_common</tabstop>
   <tabstop>fontComboBox</tabstop>
-  <tabstop>fontSize</tabstop>
+  <tabstop>spinBox_fontSize</tabstop>
   <tabstop>mNoAntiAlias</tabstop>
   <tabstop>topBorderHeight</tabstop>
   <tabstop>leftBorderWidth</tabstop>

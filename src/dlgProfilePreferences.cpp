@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016-2018 by Stephen Lyons                        *
+ *   Copyright (C) 2014, 2016-2018, 2020 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -52,8 +52,9 @@ using namespace std::chrono_literals;
 
 dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 : QDialog(pF)
-, mFontSize(10)
 , mpHost(pHost)
+, mInitialFontSize(10)
+, mInitialEmojiFontSubstitionIndex(mudlet::self()->mEmojiSubstituteFontIndex)
 , mpMenu(nullptr)
 , mUseSharedDictionary(false)
 {
@@ -229,6 +230,95 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                              "<p><i>This setting is only processed when individual menus are created and changes may not "
                                              "propogate everywhere until Mudlet is restarted.</i></p>"));
 
+    // First entry:
+    comboBox_emojiSubstitionFont->addItem(tr("none",
+                                             // Intentional separator
+                                             "Text for the case when no additional font substitution is to be used to provide color "
+                                             "emoji glyphs, it is the first option and needs to be translated however the remaining "
+                                             "entries will list font names directly which will not/do not need to be translated."));
+    // Remaining entries:
+    comboBox_emojiSubstitionFont->addItems(mudlet::mEmojiSubstituteFontList.mid(1));
+
+    QString generalEmojiSubstitutionToolTipParagraph(tr("<p>The fonts that can be used to provide additional emoji characters are somewhat "
+                                                        "Operating System (and in some cases OS <i>Version</i>) dependent - a font - if "
+                                                        "selected here - will be used to suppliment the main font chosen in several places "
+                                                        "in the Mudlet application. Not all of these choices will be function on all OSes: "
+                                                        "<ol><li><tt>None</tt> - no suppliment will be added by the Mudlet application but may be "
+                                                        "introduced by the Operating System or the Qt libraries on Windows or macOs</li>"
+                                                        "<li><tt>%1</tt> - An open source color font developed by Google that works on many Linuxes but "
+                                                        "not currently on any Windows OS except within some web browsers on later Windows 10 versions</li>"
+                                                        "<li><tt>%2</tt> - A proprietary color font developed by Microsoft that works on Windows 8.1 and later</li>"
+                                                        "<li><tt>%3</tt> - A proprietary <u>monochrome</u> font developed by Microsoft that works on Windows 7 and later</li>"
+                                                        "<li><tt>%4</tt> - An open source color font developed by HfG Schwäbisch Gmünd (Design University) "
+                                                        "and external contributors - which only works in monochrome at present but should be "
+                                                        "usable in that state for all Operating Systems - it is an option should you wish "
+                                                        "to force the use of monochrome emojis with the same foreground and background "
+                                                        "color as the rest of the Game text</li></ol></p>",
+                                                        // Intentional argument separator
+                                                        "A boiler plate paragraph to be prepended to an OS/Version sepecific one translated separately.")
+                                                     .arg(mudlet::mEmojiSubstituteFontList.at(1),
+                                                          mudlet::mEmojiSubstituteFontList.at(2),
+                                                          mudlet::mEmojiSubstituteFontList.at(3),
+                                                          mudlet::mEmojiSubstituteFontList.at(4)));
+
+#if defined(Q_OS_WIN32)
+    if (QVersionNumber::fromString(QSysInfo::kernelVersion()) >= QVersionNumber(10, 0, 15019)) {
+        // Windows 10 Anniversary Update (Fast ring 2017/01/27) or later
+        // see: https://en.wikipedia.org/wiki/Windows_10_version_history#Version_1703_%28Creators_Update%29
+        // - can't use Noto Color Emoji and Segoe UI Emoji is probably what MS
+        // would prefer:
+        comboBox_emojiSubstitionFont->setToolTip(tr("%1<p>Windows versions from (partway through) Windows 10 \"Creator's Update\" "
+                                                    "ought to be able to provide color emojis within their Web-browser from any type "
+                                                    "of color font, but this does not work for other applications such as Mudlet "
+                                                    "thus the recommended one is the MicroSoft provided: \"<tt>%2</tt>\".</p>")
+                                                 .arg(generalEmojiSubstitutionToolTipParagraph, mudlet::mEmojiSubstituteFontList.at(2)));
+    } else if (QVersionNumber::fromString(QSysInfo::kernelVersion()) >= QVersionNumber(6, 3, 9200)) {
+        // Windows 8.1 or later
+        comboBox_emojiSubstitionFont->setToolTip(tr("%1<p>Windows versions from 8.1 until (partway through) Windows 10 \"Creator's Update\" "
+                                                    "can provide color emojis only within their Web-browser and only from fonts such as "
+                                                    "the Segoe UI Emoji font, that use the MicroSoft specific color font system, so that "
+                                                    "makes the recommendation for this system: \"<tt>%2</tt>\".</p>")
+                                                 .arg(generalEmojiSubstitutionToolTipParagraph, mudlet::mEmojiSubstituteFontList.at(2)));
+    } else {
+        // Windows 7 or 8 (without MS Office 2016 installed)
+        comboBox_emojiSubstitionFont->setToolTip(tr("%1<p>It is not believed that Windows versions before 8.1 can provide color emojis "
+                                                    "at all (unless MS Office 2016 is installed) so no additional font could be considered "
+                                                    "to provide colored emoji glyphs. However there are a range of monochrome characters "
+                                                    "that may be of use from an older MS specific font, this means the recommendation for "
+                                                    "this system is: \"<tt>%2</tt>\".</p>")
+                                                 .arg(generalEmojiSubstitutionToolTipParagraph, mudlet::mEmojiSubstituteFontList.at(3)));
+    }
+#elif defined(Q_OS_LINUX)
+    comboBox_emojiSubstitionFont->setToolTip(tr("%1<p>Linux can produce color emojis provided that it uses a <tt>fontConfig</tt> library "
+                                                "of, the Mudlet Makers believe, at least version <b>2.11.94</b>; this is the case for "
+                                                "many recent Linux distributions but not all. One symptom of this not being so is that "
+                                                "color emojis are shown but are grossly oversized and not being positioned correctly "
+                                                "relative to the line of text in which they are suppose to appear. Mudlet cannot "
+                                                "determine whether the version of fontConfig on this system is too old so it will assume "
+                                                "that things are working and recommend you select: \"<tt>%2</tt>\", however you can select "
+                                                "\"<tt>None</tt>\" to revert to standard monochrome glyphs if you experience problems."
+                                                "or \"<tt>%3</tt>\" to use an open source font which supports some Unicode 12.0 emojis "
+                                                "that we include with Mudlet.</p>")
+                                             .arg(generalEmojiSubstitutionToolTipParagraph,
+                                                  mudlet::mEmojiSubstituteFontList.at(1),
+                                                  mudlet::mEmojiSubstituteFontList.at(3)));
+#elif defined(Q_OS_MACOS)
+    comboBox_emojiSubstitionFont->setToolTip(tr("%1<p>The macOs system is belived to handle color emojis automatically and no "
+                                                "additional font needs to be considered to provide colored emoji glyphs so the "
+                                                "recommendation for this system is: \"<tt>None</tt>\".</p>")
+                                             .arg(generalEmojiSubstitutionToolTipParagraph));
+#else
+    comboBox_emojiSubstitionFont->setToolTip(tr("%1<p>It is not believed that this system can provide color emojis so no additional font "
+                                                "needs to be considered to provide colored emoji glyphs, this means the "
+                                                "recommendation for this system is: \"<tt>None</tt>\".</p>")
+                                             .arg(generalEmojiSubstitutionToolTipParagraph));
+#endif
+    if (mudlet::self()->mEmojiSubstituteFontIndex >=0
+        && mudlet::self()->mEmojiSubstituteFontIndex < mudlet::mEmojiSubstituteFontList.size()
+        && comboBox_emojiSubstitionFont->count() <= mudlet::mEmojiSubstituteFontList.size()) {
+
+        comboBox_emojiSubstitionFont->setCurrentIndex(mudlet::self()->mEmojiSubstituteFontIndex);
+    }
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
     connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
@@ -254,6 +344,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_toolBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeToolBarVisibility);
     connect(pMudlet, &mudlet::signal_showIconsOnMenusChanged, this, &dlgProfilePreferences::slot_changeShowIconsOnMenus);
     connect(pMudlet, &mudlet::signal_guiLanguageChanged, this, &dlgProfilePreferences::slot_guiLanguageChanged);
+    connect(pMudlet, &mudlet::signal_fontSubstitutionIndexChanged, this, &dlgProfilePreferences::slot_fontSubstitutionChanged);
 
     generateDiscordTooltips();
 
@@ -627,12 +718,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     setColors();
 
-    QStringList sizeList;
-    for (int i = 1; i < 40; i++) {
-        sizeList << QString::number(i);
-    }
-    fontSize->insertItems(1, sizeList);
-
     setColors2();
 
     // the GMCP warning is hidden by default and is only enabled when the value is toggled
@@ -642,20 +727,18 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     need_reconnect_for_specialoption->hide();
 
     fontComboBox->setCurrentFont(pHost->getDisplayFont());
-    mFontSize = pHost->getDisplayFont().pointSize();
-    if (mFontSize < 0) {
-        mFontSize = 10;
+    mInitialFontSize = pHost->getDisplayFont().pointSize();
+    if (mInitialFontSize < 0) {
+        mInitialFontSize = 10;
     }
-    if (mFontSize < 40 && mFontSize > 0) {
-        fontSize->setCurrentIndex((mFontSize - 1));
+    if (mInitialFontSize < 40) {
+        spinBox_fontSize->setValue(mInitialFontSize);
     } else {
         // if the font size set for the main console is outside the pre-set range
         // this will unfortunately reset the font to default size.
-        // without this the first entry (font-size 1) is selected and on-save
-        // will make the console font far too tiny to read.
         // Maybe our font-size range should be generated differently if the console
         // has a font size larger than the preset range offers?
-        fontSize->setCurrentIndex(9); // default font is size 10, index 9.
+        spinBox_fontSize->setValue(10);
     }
 
     wrap_at_spinBox->setValue(pHost->mWrapAt);
@@ -1015,7 +1098,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(reset_colors_button_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::resetColors2);
 
     connect(fontComboBox, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::setDisplayFont);
-    connect(fontSize, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::setFontSize);
+    connect(spinBox_fontSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::setFontSize);
 
     connect(pushButton_black_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorBlack2);
     connect(pushButton_Lblack_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightBlack2);
@@ -1097,7 +1180,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(reset_colors_button_2, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(fontComboBox, qOverload<const QFont&>(&QFontComboBox::currentFontChanged), nullptr, nullptr);
-    disconnect(fontSize, qOverload<int>(&QComboBox::currentIndexChanged), nullptr, nullptr);
+    disconnect(spinBox_fontSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
 
     disconnect(pushButton_black_2, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(pushButton_Lblack_2, &QAbstractButton::clicked, nullptr, nullptr);
@@ -1170,15 +1253,13 @@ void dlgProfilePreferences::clearHostDetails()
 
     groupBox_downloadMapOptions->setVisible(false);
 
-    fontSize->clear();
+    spinBox_fontSize->setValue(10);
 
     need_reconnect_for_data_protocol->hide();
 
     need_reconnect_for_specialoption->hide();
 
     fontComboBox->clear();
-
-    fontSize->clear();
 
     setColors();
     setColors2();
@@ -1594,7 +1675,6 @@ void dlgProfilePreferences::setCommandBgColor()
 
 void dlgProfilePreferences::setFontSize()
 {
-    mFontSize = fontSize->currentIndex() + 1;
     // delay setting pHost->mDisplayFont until save is clicked by the user.
     //setDisplayFont();
 }
@@ -1605,26 +1685,33 @@ void dlgProfilePreferences::setDisplayFont()
     if (!pHost) {
         return;
     }
-    QFont newFont = fontComboBox->currentFont();
-    newFont.setPointSize(mFontSize);
 
-    if (pHost->getDisplayFont() == newFont) {
+    QFont newFont(fontComboBox->currentFont().family(), spinBox_fontSize->value(), QFont::Normal);
+    if (newFont.family() == pHost->getDisplayFont().family()
+        && spinBox_fontSize->value() == mInitialFontSize
+        && comboBox_emojiSubstitionFont->currentIndex() == mInitialEmojiFontSubstitionIndex) {
+
+        // Okay there is no changes to the font
         return;
     }
 
+    // C++17 style if that runs the initilization code before the ';' and then
+    // tests the local variable (validFont) that was returned, afterwards:
     if (auto [validFont, errorMessage] = pHost->setDisplayFont(newFont); !validFont) {
         label_invalidFontError->show();
         return;
     }
     label_invalidFontError->hide();
 
-    QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
-    auto* mainConsole = mudlet::self()->mConsoleMap.value(pHost);
+    mudlet::self()->recordAFontUse(newFont);
+
+    QPointer<TConsole> mainConsole = pHost->mpConsole;
     if (!mainConsole) {
         return;
     }
 
-    // update the display properly when font or size selections change.
+    // update the display properly when font or size or emoji font substitution
+    // selections change.
     mainConsole->changeColors();
     mainConsole->mUpperPane->updateScreenView();
     mainConsole->mUpperPane->forceUpdate();
@@ -1636,21 +1723,6 @@ void dlgProfilePreferences::setDisplayFont()
     config->beginChanges();
     config->setFont(newFont);
     config->endChanges();
-}
-
-// Currently UNUSED!
-void dlgProfilePreferences::setCommandLineFont()
-{
-    Host* pHost = mpHost;
-    if (!pHost) {
-        return;
-    }
-    bool ok;
-    QFont font = QFontDialog::getFont(&ok, pHost->mCommandLineFont, this);
-    pHost->mCommandLineFont = font;
-    if (mudlet::self()->mConsoleMap.contains(pHost)) {
-        mudlet::self()->mConsoleMap[pHost]->changeColors();
-    }
 }
 
 void dlgProfilePreferences::setColorBlack()
@@ -2427,10 +2499,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mSslIgnoreSelfSigned = checkBox_self_signed->isChecked();
         pHost->mSslIgnoreAll = checkBox_ignore_all->isChecked();
 
-
-        if (pMudlet->mConsoleMap.contains(pHost)) {
-            pMudlet->mConsoleMap[pHost]->changeColors();
-        }
+        pHost->mpConsole->changeColors();
 
         QString lIgnore = doubleclick_ignore_lineedit->text();
         pHost->mDoubleClickIgnore.clear();
@@ -2515,13 +2584,11 @@ void dlgProfilePreferences::slot_save_and_exit()
 
         setDisplayFont();
 
-        if (pMudlet->mConsoleMap.contains(pHost)) {
-            int x = pMudlet->mConsoleMap[pHost]->width();
-            int y = pMudlet->mConsoleMap[pHost]->height();
-            QSize s = QSize(x, y);
-            QResizeEvent event(s, s);
-            QApplication::sendEvent(pMudlet->mConsoleMap[pHost], &event);
-        }
+        int x = pHost->mpConsole->width();
+        int y = pHost->mpConsole->height();
+        QSize s = QSize(x, y);
+        QResizeEvent event(s, s);
+        QApplication::sendEvent(pHost->mpConsole, &event);
 
         pHost->mEchoLuaErrors = checkBox_echoLuaErrors->isChecked();
         pHost->setWideAmbiguousEAsianGlyphs(checkBox_useWideAmbiguousEastAsianGlyphs->checkState());
@@ -2637,6 +2704,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     pMudlet->setEditorTextoptions(checkBox_showSpacesAndTabs->isChecked(), checkBox_showLineFeedsAndParagraphs->isChecked());
     pMudlet->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
     pMudlet->setShowIconsOnMenu(checkBox_showIconsOnMenus->checkState());
+    pMudlet->setEmojiFontSubstitutionIndex(comboBox_emojiSubstitionFont->currentIndex());
 
     mudlet::self()->mDiscord.UpdatePresence();
 
@@ -3839,5 +3907,14 @@ void dlgProfilePreferences::setPlayerRoomColor(QPushButton* b, QColor& c)
         // Also sets a contrasting foreground color so text will always be
         // visible and adjusts the saturation of a disabled button:
         setButtonColor(b, color);
+    }
+}
+
+void dlgProfilePreferences::slot_fontSubstitutionChanged(const int index)
+{
+    if (index <= comboBox_emojiSubstitionFont->count() && index != comboBox_emojiSubstitionFont->currentIndex()) {
+        comboBox_emojiSubstitionFont->blockSignals(true);
+        comboBox_emojiSubstitionFont->setCurrentIndex(index);
+        comboBox_emojiSubstitionFont->blockSignals(false);
     }
 }

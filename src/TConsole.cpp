@@ -572,6 +572,9 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     }
 
     // error and debug consoles inherit font of the main console
+    // though as this is being done in the constructor it may be before
+    // the emoji font to use as a substitute may NOT have been applied
+    // for the first Host/profile loaded
     if (mType & (ErrorConsole | CentralDebugConsole)) {
         mDisplayFont = mpHost->getDisplayFont();
         mDisplayFontName = mDisplayFont.family();
@@ -1115,7 +1118,6 @@ void TConsole::changeColors()
     mDisplayFont.setFixedPitch(true);
     if (mType == CentralDebugConsole) {
         mDisplayFont.setStyleStrategy((QFont::StyleStrategy)(QFont::NoAntialias | QFont::PreferQuality));
-        mDisplayFont.setFixedPitch(true);
         mUpperPane->setFont(mDisplayFont);
         mLowerPane->setFont(mDisplayFont);
         QPalette palette;
@@ -1143,7 +1145,6 @@ void TConsole::changeColors()
         mpHost->setDisplayFontSpacing(letterSpacing);
         mDisplayFont.setLetterSpacing(QFont::AbsoluteSpacing, mUpperPane->mLetterSpacing);
 #endif
-        mDisplayFont.setFixedPitch(true);
         mUpperPane->setFont(mDisplayFont);
         mLowerPane->setFont(mDisplayFont);
         QPalette palette;
@@ -1163,6 +1164,7 @@ void TConsole::changeColors()
             pal.setColor(QPalette::Base, mpHost->mCommandLineBgColor); //QColor(255,255,225));
             mpCommandLine->setPalette(pal);
             mpCommandLine->mRegularPalette = pal;
+            mpCommandLine->update();
         }
         if (mpHost->mNoAntiAlias) {
             mpHost->setDisplayFontStyle(QFont::NoAntialias);
@@ -1170,7 +1172,6 @@ void TConsole::changeColors()
             mpHost->setDisplayFontStyle(QFont::StyleStrategy(QFont::PreferAntialias | QFont::PreferQuality));
         }
         mpHost->setDisplayFontFixedPitch(true);
-        mDisplayFont.setFixedPitch(true);
 #if defined(Q_OS_MACOS) || defined(Q_OS_LINUX)
         QPixmap pixmap = QPixmap(2000, 600);
         QPainter p(&pixmap);
@@ -1202,7 +1203,9 @@ void TConsole::changeColors()
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
         if (mpCommandLine) {
-            mpCommandLine->setFont(mpHost->getDisplayFont());
+            // Keep the font size at the initial value though:
+            QFont commandLineFont(mpHost->getDisplayFont().family(),  mpCommandLine->font().pointSize());
+            mpCommandLine->setFont(commandLineFont);
         }
         mFormatCurrent.setColors(mpHost->mFgColor, mpHost->mBgColor);
     } else {
@@ -1928,9 +1931,10 @@ void TConsole::refreshMiniConsole() const
     mLowerPane->forceUpdate();
 }
 
-bool TConsole::setMiniConsoleFont(const QString& font)
+bool TConsole::setMiniConsoleFontName(const QString& fontName)
 {
-    mDisplayFontName = font;
+    mudlet::self()->recordAFontUse(fontName);
+    mDisplayFontName = fontName;
 
     refreshMiniConsole();
     return true;
@@ -2865,3 +2869,22 @@ void TConsole::setProfileName(const QString& newName)
     }
 }
 
+void TConsole::refreshAllSubConsoleFonts()
+{
+    mudlet::self()->recordAFontUse(mUpperPane->font());
+    QFont mainDisplayFont(mUpperPane->font().family(), mUpperPane->font().pointSize(), mUpperPane->font().weight());
+    mUpperPane->setFont(mainDisplayFont);
+    mLowerPane->setFont(mainDisplayFont);
+
+    QMapIterator<QString, TConsole*> itConsole(mSubConsoleMap);
+    while (itConsole.hasNext()) {
+        itConsole.next();
+        auto* pConsole = itConsole.value();
+        mudlet::self()->recordAFontUse(pConsole->mUpperPane->font());
+        QFont subConsoleFont(pConsole->mUpperPane->font().family(), pConsole->mUpperPane->font().pointSize(), pConsole->mUpperPane->font().weight());
+        pConsole->mUpperPane->setFont(subConsoleFont);
+        pConsole->mLowerPane->setFont(subConsoleFont);
+        pConsole->mUpperPane->forceUpdate();
+        pConsole->mLowerPane->forceUpdate();
+    }
+}

@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -67,7 +67,12 @@
 #include <QToolBar>
 #include <QVariantHash>
 #include <QRandomGenerator>
+
 #include <zip.h>
+#if defined(Q_OS_WIN32)
+    #include <QSysInfo>
+    #include <QVersionNumber>
+#endif
 #include "post_guard.h"
 
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
@@ -132,6 +137,10 @@ QVariantHash mudlet::mLuaFunctionNames;
 
 QPointer<mudlet> mudlet::_self = nullptr;
 
+// Internally Qt seems to lower case these names so we must also do so when we
+// use them programmatically rather than for UI display purposes:
+const QStringList mudlet::mEmojiSubstituteFontList{"", "Noto Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "OpenMoji"};
+
 void mudlet::start()
 {
     _self = new mudlet;
@@ -182,6 +191,22 @@ mudlet::mudlet()
 , mHunspell_sharedDictionary(nullptr)
 {
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
+
+#if defined(Q_OS_LINUX)
+    mEmojiSubstituteFontIndex = 1; // "Noto Color Emoji"
+#elif defined(Q_OS_WIN32)
+    if (QVersionNumber::fromString(QSysInfo::kernelVersion()) >= QVersionNumber(6, 3, 9200)) {
+        // windows 8.1 or later - supposed to support "Segou UI Emoji"
+        mEmojiSubstituteFontIndex = 2; // "Segou UI Emoji"
+    } else {
+        // 8.0 or before - no color support, but can still use monochrome emojis
+        mEmojiSubstituteFontIndex = 3; // "Segou UI Symbol"
+    }
+#else
+    // macOS, FreeBSD
+    mEmojiSubstituteFontIndex = 0; // "None"
+#endif
+
     mpSettings = getQSettings();
     readEarlySettings(*mpSettings);
     if (mShowIconsOnMenuCheckedState != Qt::PartiallyChecked) {
@@ -191,6 +216,9 @@ mudlet::mudlet()
     }
 
     qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
+
+    // Ensure the default font is known about:
+    recordAFontUse(qApp->font());
 
     scanForMudletTranslations(QStringLiteral(":/lang"));
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
@@ -1881,7 +1909,7 @@ bool mudlet::setWindowFont(Host* pHost, const QString& window, const QString& fo
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(window);
     if (pC) {
-        pC->setMiniConsoleFont(font);
+        pC->setMiniConsoleFontName(font);
         return true;
     } else {
         return false;
@@ -2972,6 +3000,10 @@ void mudlet::readEarlySettings(const QSettings& settings)
     }
 
     mInterfaceLanguage = settings.value("interfaceLanguage", QStringLiteral("en_US")).toString();
+
+    if (settings.contains(QStringLiteral("emojiSubstituteFontIndex"))) {
+        mEmojiSubstituteFontIndex = settings.value(QStringLiteral("emojiSubstituteFontIndex"), mEmojiSubstituteFontIndex).toInt();
+    }
 }
 
 void mudlet::readLateSettings(const QSettings& settings)
@@ -3139,6 +3171,7 @@ void mudlet::writeSettings()
     settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
     settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
     settings.setValue("interfaceLanguage", mInterfaceLanguage);
+    settings.setValue(QStringLiteral("emojiSubstituteFontIndex"), mEmojiSubstituteFontIndex);
 }
 
 void mudlet::slot_show_connection_dialog()
@@ -5579,4 +5612,136 @@ void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request
         request.setSslConfiguration(config);
     }
 #endif
+}
+
+// Applies the selected Emoji font substitution to ALL fonts that we have seen
+// used in ALL profiles:
+void mudlet::setEmojiFontSubstitutionIndex(const int index)
+{
+    if (index >=0 && index < mEmojiSubstituteFontList.count() && index != mEmojiSubstituteFontIndex) {
+        // A change has been made and it is a valid value:
+        QSetIterator<QString> itFontFamily(mFontsProcessedForEmojiSubstitutes);
+        if (mEmojiSubstituteFontIndex > 0) {
+            // A substitute WAS in use so clear it from the fonts that have been
+            // processed for substitution:
+            while (itFontFamily.hasNext()) {
+                QString familyName{itFontFamily.next()};
+                // The font names returned by QFont::substitutes(...) seem to be
+                // lower case (the Qt Docs describe the searching process to be
+                // case-insensitive) - so our manipulations of any list has to
+                // be on that basis:
+                QSet<QString> currentSubstitutions{QFont::substitutes(familyName).toSet()};
+                currentSubstitutions.remove(mEmojiSubstituteFontList.at(mEmojiSubstituteFontIndex).toLower());
+                if (index > 0) {
+                    // We now need (a different one) so add it to the list:
+                    currentSubstitutions.insert(mEmojiSubstituteFontList.at(index).toLower());
+                }
+                // We can only remove all the substitutions from a font at once
+                // so do that:
+                QFont::removeSubstitutions(familyName);
+                // And then reapply any that are still wanted:
+                if (!currentSubstitutions.isEmpty()) {
+                    QFont::insertSubstitutions(familyName, currentSubstitutions.toList());
+                }
+            }
+
+        } else {
+            if (index > 0) {
+                // A substitute wasn't previously being used but one is wanted now:
+                while (itFontFamily.hasNext()) {
+                    QString familyName{itFontFamily.next()};
+                    QSet<QString> currentSubstitutions{QFont::substitutes(familyName).toSet()};
+                    // We now need one so add it to font (and the list for debug
+                    // display purposes):
+                    QFont::insertSubstitution(familyName, mEmojiSubstituteFontList.at(index).toLower());
+                    currentSubstitutions.insert(mEmojiSubstituteFontList.at(index).toLower());
+                }
+            }
+        }
+
+        // Change the record of which emoji substitute font we are using (if any):
+        mEmojiSubstituteFontIndex = index;
+
+        // Tell everyone that the font substitution to handle color emojis has
+        // changed - recipients should reload the font they use if that is
+        // applicable:
+        emit signal_fontSubstitutionIndexChanged(index);
+    }
+}
+
+// On Windows 10 the standard or "default" font is "Segoe UI" and for the user
+// to change that actually requires them to edit their registry...
+void mudlet::recordAFontUse(const QFont& font)
+{
+    const QString fontName = font.family();
+    recordAFontUse(fontName);
+}
+
+// This (and the wrapper above that takes a font reference instead)
+// method records the font used and applies the current emoij substitution
+// font to the indicated application font so that subsequent uses of
+// the font has the substitute if needed.
+// To CHANGE that substitution across the board it is necessary
+// to call mudlet::setEmojiFontSubstitutionIndex(...) !
+void mudlet::recordAFontUse(const QString& baseFontName)
+{
+    // Skip any cases where we are noting the actual font that would
+    // be used for substitutions!
+    if (mEmojiSubstituteFontList.mid(1).join("~").toLower().split("~").toSet().contains(baseFontName.toLower())) {
+        return;
+    }
+
+    if (mFontsProcessedForEmojiSubstitutes.contains(baseFontName.toLower())) {
+        // Already done this font so no need to repeat...
+        return;
+    }
+
+    // Remove any substitute fonts that are associated with Emojis - but only
+    // them in case we ever do something that allows/requires other substitutes
+    // to also be included.
+    // Record the current substitutes:
+    QSet<QString> currentSubstitutes{QFont::substitutes(baseFontName).toSet()};
+
+    // Take off the ones that we consider for Emojis - because the original
+    // substitute font list might be mixed case but the details returned from
+    // QFont::substitutes(...) is not case sensitive (it seems to be all lower
+    // case) convert the details extracted from the former (by
+    // QStringList::mid(...)) to also be lowercase - by combining as a single
+    // string, and then splitting it after making that lowercase:
+    currentSubstitutes.subtract(mEmojiSubstituteFontList.mid(1).join("~").toLower().split("~").toSet());
+
+    if (mEmojiSubstituteFontIndex) {
+        // Ensure font is in substitution - this is for every use of this
+        // family in this application so we only have/need to do it once per
+        // font:
+        currentSubstitutes.insert(mEmojiSubstituteFontList.at(mEmojiSubstituteFontIndex).toLower());
+    }
+
+    // now we have all the substitutions wanted - remove existing ones:
+    QFont::removeSubstitutions(baseFontName);
+    // and then reinsert them (including our wanted emoji one if we need it):
+    QFont::insertSubstitutions(baseFontName, currentSubstitutes.toList());
+    // and record that we have done this font:
+    mFontsProcessedForEmojiSubstitutes.insert(baseFontName.toLower());
+}
+
+// Helper to redo the font for a class derived from a widget
+void mudlet::refreshLineEditFont(QLineEdit& widget)
+{
+    recordAFontUse(widget.font());
+    QFont newNameFont(QFont(widget.font().family(), widget.font().pointSize(), widget.font().weight()));
+    // This is a particular font that is not expected to be used for real
+    // so that it is always a *different* font than the actually used one:
+    widget.setFont(QFont("Bitstream Vera Sans", 6, QFont::Light));
+    widget.setFont(newNameFont);
+}
+
+bool mudlet::baseSystemInitialised()
+{
+    if (mBaseSystemInitialised) {
+        return true;
+    }
+
+    mBaseSystemInitialised = true;
+    return false;
 }

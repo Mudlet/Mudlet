@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2016-2019 by Stephen Lyons                   *
- *                                            - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2014, 2016-2020 by Stephen Lyons                   *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -401,9 +401,13 @@ int main(int argc, char* argv[])
     if (!dir.exists(ubuntuFontDirectory)) {
         dir.mkpath(ubuntuFontDirectory);
     }
-    QString notoFontDirectory(QStringLiteral("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    QString notoFontDirectory(QStringLiteral("%1/noto-emoji-2018-08-10-unicode11").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
+    }
+    QString openMojiFontDirectory(QStringLiteral("%1/openmoji-12.1").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    if (!dir.exists(openMojiFontDirectory)) {
+        dir.mkpath(openMojiFontDirectory);
     }
 
     // The original code plonks the fonts AND the Copyright into the MAIN mudlet
@@ -454,9 +458,16 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-R.ttf"));
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
 
-    copyFont(notoFontDirectory, QStringLiteral("fonts/notocoloremoji-unhinted-2018-04-24-pistol-update"), QStringLiteral("NotoColorEmoji.ttf"));
-    copyFont(notoFontDirectory, QStringLiteral("fonts/notocoloremoji-unhinted-2018-04-24-pistol-update"), QStringLiteral("LICENSE_OFL.txt"));
-#endif
+#if !defined (Q_OS_WIN32)
+    // Windows 10 - even the latest (March 2019) cannot handle the Noto Color
+    // Emoji font in anything other than the Chromium or Edge web-browsers...
+    // see: https://github.com/googlefonts/noto-emoji#using-notocoloremoji
+    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-emoji-2018-08-10-unicode11"), QStringLiteral("NotoColorEmoji.ttf"));
+    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-emoji-2018-08-10-unicode11"), QStringLiteral("LICENSE_OFL.txt"));
+#endif // NOT defined(Q_OS_WINDOWS)
+
+    copyFont(openMojiFontDirectory, QStringLiteral("fonts/openmoji-12.1"), QStringLiteral("OpenMoji-Color.ttf"));
+#endif // defined(INCLUDE_FONTS)
 
     mudlet::debugMode = false;
 

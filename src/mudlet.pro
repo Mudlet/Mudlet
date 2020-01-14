@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018 by Stephen Lyons                   #
+#    Copyright (C) 2013-2015, 2017-2018, 2020 by Stephen Lyons             #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -627,7 +627,14 @@ RESOURCES = mudlet.qrc \
             ../translations/translated/qm.qrc
 
 contains(DEFINES, INCLUDE_FONTS) {
-    RESOURCES += mudlet_fonts.qrc
+    # Windows cannot use the Noto Color Font and the 32-Bit builds on MSYS2
+    # crash because it needs more than 4GB to compile the reasource file
+    win32 {
+        RESOURCES += mudlet_fonts_windows.qrc
+    } else {
+        RESOURCES += mudlet_fonts_unix.qrc
+    }
+
     !build_pass{
         # On windows or on platforms that support CONFIG having debug_and_release"
         # then there can be three passes through this file and we only want the
