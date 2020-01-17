@@ -1,7 +1,7 @@
 <RCC>
     <qresource prefix="/">
-        <file>fonts/noto-emoji-2018-08-10-unicode11/LICENSE_OFL.txt</file>
-        <file>fonts/noto-emoji-2018-08-10-unicode11/NotoColorEmoji.ttf</file>
+        <file>fonts/noto-emoji-2019-11-19-unicode12/LICENSE</file>
+        <file>fonts/noto-emoji-2019-11-19-unicode12/NotoColorEmoji.ttf</file>
         <file>fonts/openmoji-12.1/OpenMoji-Color.ttf</file>
         <file>fonts/ttf-bitstream-vera-1.10/COPYRIGHT.TXT</file>
         <file>fonts/ttf-bitstream-vera-1.10/local.conf</file>

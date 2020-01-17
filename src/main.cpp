@@ -401,7 +401,7 @@ int main(int argc, char* argv[])
     if (!dir.exists(ubuntuFontDirectory)) {
         dir.mkpath(ubuntuFontDirectory);
     }
-    QString notoFontDirectory(QStringLiteral("%1/noto-emoji-2018-08-10-unicode11").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    QString notoFontDirectory(QStringLiteral("%1/noto-emoji-2019-11-19-unicode12").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
@@ -462,8 +462,8 @@ int main(int argc, char* argv[])
     // Windows 10 - even the latest (March 2019) cannot handle the Noto Color
     // Emoji font in anything other than the Chromium or Edge web-browsers...
     // see: https://github.com/googlefonts/noto-emoji#using-notocoloremoji
-    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-emoji-2018-08-10-unicode11"), QStringLiteral("NotoColorEmoji.ttf"));
-    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-emoji-2018-08-10-unicode11"), QStringLiteral("LICENSE_OFL.txt"));
+    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-emoji-2019-11-19-unicode12"), QStringLiteral("NotoColorEmoji.ttf"));
+    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-emoji-2019-11-19-unicode12"), QStringLiteral("LICENSE.txt"));
 #endif // NOT defined(Q_OS_WINDOWS)
 
     copyFont(openMojiFontDirectory, QStringLiteral("fonts/openmoji-12.1"), QStringLiteral("OpenMoji-Color.ttf"));
