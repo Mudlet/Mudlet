@@ -291,17 +291,17 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 #elif defined(Q_OS_LINUX)
     comboBox_emojiSubstitionFont->setToolTip(tr("%1<p>Linux can produce color emojis provided that it uses a <tt>fontConfig</tt> library "
                                                 "of, the Mudlet Makers believe, at least version <b>2.11.94</b>; this is the case for "
-                                                "many recent Linux distributions but not all. One symptom of this not being so is that "
-                                                "color emojis are shown but are grossly oversized and not being positioned correctly "
+                                                "many recent Linux distributions but not all. One symptom of an older version is that "
+                                                "color emojis might be shown but are grossly oversized and not positioned correctly "
                                                 "relative to the line of text in which they are suppose to appear. Mudlet cannot "
                                                 "determine whether the version of fontConfig on this system is too old so it will assume "
                                                 "that things are working and recommend you select: \"<tt>%2</tt>\", however you can select "
-                                                "\"<tt>None</tt>\" to revert to standard monochrome glyphs if you experience problems."
-                                                "or \"<tt>%3</tt>\" to use an open source font which supports some Unicode 12.0 emojis "
-                                                "that we include with Mudlet.</p>")
+                                                "\"<tt>None</tt>\" to revert to standard monochrome glyphs if you experience problems "
+                                                "or \"<tt>%3</tt>\" to use a different open source font which also supports Unicode 12.0 "
+                                                "emojis but which currently only works in monochrome.</p>")
                                              .arg(generalEmojiSubstitutionToolTipParagraph,
                                                   mudlet::mEmojiSubstituteFontList.at(1),
-                                                  mudlet::mEmojiSubstituteFontList.at(3)));
+                                                  mudlet::mEmojiSubstituteFontList.at(4)));
 #elif defined(Q_OS_MACOS)
     comboBox_emojiSubstitionFont->setToolTip(tr("%1<p>The macOs system is belived to handle color emojis automatically and no "
                                                 "additional font needs to be considered to provide colored emoji glyphs so the "
