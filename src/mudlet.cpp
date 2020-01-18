@@ -192,6 +192,9 @@ mudlet::mudlet()
 {
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
 
+    // Sets up a default prior to reading the stored setting (if any) - this
+    // ensures a sensible initial choice is made for new users or the first time
+    // a version of Mudlet with this code in is used:
 #if defined(Q_OS_LINUX)
     mEmojiSubstituteFontIndex = 1; // "Noto Color Emoji"
 #elif defined(Q_OS_WIN32)
@@ -216,9 +219,6 @@ mudlet::mudlet()
     }
 
     qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
-
-    // Ensure the default font is known about:
-    recordAFontUse(qApp->font());
 
     scanForMudletTranslations(QStringLiteral(":/lang"));
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
@@ -610,6 +610,13 @@ mudlet::mudlet()
 
     // load bundled fonts
     mFontManager.addFonts();
+
+    // Ensure the default font is known about:
+    recordAFontUse(qApp->font());
+    // The above also ensures that that font has the correct emoji substitution
+    // we just have to use a new instance of that font.
+    qApp->setFont(QFont(qApp->font().family(), qApp->font().pointSize(), qApp->font().weight()));
+
     loadDictionaryLanguageMap();
 }
 
@@ -5662,6 +5669,9 @@ void mudlet::setEmojiFontSubstitutionIndex(const int index)
         // Change the record of which emoji substitute font we are using (if any):
         mEmojiSubstituteFontIndex = index;
 
+        // Update the default font:
+        qApp->setFont(QFont(qApp->font().family(), qApp->font().pointSize(), qApp->font().weight()));
+
         // Tell everyone that the font substitution to handle color emojis has
         // changed - recipients should reload the font they use if that is
         // applicable:
@@ -5736,6 +5746,7 @@ void mudlet::refreshLineEditFont(QLineEdit& widget)
     widget.setFont(newNameFont);
 }
 
+// Returns false ONCE per application run...
 bool mudlet::baseSystemInitialised()
 {
     if (mBaseSystemInitialised) {
