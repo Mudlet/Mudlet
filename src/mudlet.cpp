@@ -654,7 +654,7 @@ void mudlet::initEdbee()
 void mudlet::loadDictionaryLanguageMap()
 {
     // Used to identify Hunspell dictionaries (some of which are not useful -
-    // the "_med" ones are suppliments and no good for Mudlet) - all keys are to
+    // the "_med" ones are supplements and no good for Mudlet) - all keys are to
     // be lower cased so that the values can be looked up with a
     // QMap<T1, T2>::value(const T1&) where the parameter has been previously
     // been converted to all-lower case:

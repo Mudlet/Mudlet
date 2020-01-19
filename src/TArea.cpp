@@ -35,7 +35,7 @@
 // but as they are stored in the map file they ought not to be redefined without
 // a map file change - however the data that was stored - though wrong was not
 // actually used internally so we will just fix it and carry on!  We will use
-// the (supplimented by the addition of a code for OTHER) DIR_**** values set
+// the (supplemented by the addition of a code for OTHER) DIR_**** values set
 // in the top of TRoom.h.
 // FIXME: Modify mapper "painter" code to use "exits" rather than deriving the
 // same information each time it is run ???

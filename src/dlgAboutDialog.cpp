@@ -1020,7 +1020,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     QString communiHeader(tr("<h2><u>Communi IRC Library</u></h2>"
                              "<h3>Copyright © 2008-2016 The Communi Project</h3>"));
 
-    QString communiKonverstionSuppliment(tr("<p>Parts of <tt>irctextformat.cpp</t> code come from Konversation and are copyrighted to:<br>"
+    QString communiKonverstionSupplement(tr("<p>Parts of <tt>irctextformat.cpp</t> code come from Konversation and are copyrighted to:<br>"
                                             "Copyright © 2002 Dario Abatianni &lt;eisfuchs@tigress.com&gt;<br>"
                                             "Copyright © 2004 Peter Simonsson &lt;psn@linux.se&gt;<br>"
                                             "Copyright © 2006-2008 Eike Hein &lt;hein@kde.org&gt;<br>"
@@ -1042,7 +1042,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     QString edbeeHeader(tr("<h2><u>edbee - multi-feature editor widget</u></h2>"
                            "<h3>Copyright © 2012-2014 by Reliable Bits Software by Blommers IT</h3>"));
 
-    QString edbeeSuppliment(tr("The <b>edbee-lib</b> widget itself incorporates other components with licences that must be noted as well, they are:"));
+    QString edbeeSupplement(tr("The <b>edbee-lib</b> widget itself incorporates other components with licences that must be noted as well, they are:"));
 
     QString OnigmoHeader(tr("<h2><u>Onigmo (Oniguruma-mod) LICENSE</u></h2>"
                             "<h3>Copyright © 2002-2009 K.Kosako &lt;sndgk393 AT ybb DOT ne DOT jp&gt;<br>"
@@ -1109,7 +1109,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                                        .arg(QStringLiteral("Neither the name of the Communi Project nor the names of its contributors may"),
                                                             QStringLiteral("COPYRIGHT HOLDERS AND CONTRIBUTORS"),
                                                             QStringLiteral("COPYRIGHT HOLDERS OR CONTRIBUTORS")),
-                                               communiKonverstionSuppliment)); //  5 - Communi supplimentary about Konversation - translatable
+                                               communiKonverstionSupplement)); //  5 - Communi supplementary about Konversation - translatable
 
     license_3rdParty_texts.append(QStringLiteral("%6%7<hr>%8%9<hr>")
                                           .arg(luaHeader,                      //  6 - lua header - translatable
@@ -1131,7 +1131,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                                  "%17%18<hr width=\"33%\">"
                                                  "%19%20<hr width=\"33%\">"
                                                  "%21%22")
-                                          .arg(edbeeSuppliment,                // 14 - edbee other components:
+                                          .arg(edbeeSupplement,                // 14 - edbee other components:
                                                OnigmoHeader,                   // 15 - Onigmo (Oniguruma-mod) header - translatable
                                                BSD2Clause_Body                 // 16 - Onigmo (Oniguruma-mod) body BSD2 ("AUTHOR AND/OR CONTRIBUTORS") - not translatable
                                                        .arg(QStringLiteral("AUTHOR AND CONTRIBUTORS"),

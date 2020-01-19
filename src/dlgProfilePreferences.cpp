@@ -241,9 +241,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     QString generalEmojiSubstitutionToolTipParagraph(tr("<p>The fonts that can be used to provide additional emoji characters are somewhat "
                                                         "Operating System (and in some cases OS <i>Version</i>) dependent - a font - if "
-                                                        "selected here - will be used to suppliment the main font chosen in several places "
-                                                        "in the Mudlet application. Not all of these choices will be function on all OSes: "
-                                                        "<ol><li><tt>None</tt> - no suppliment will be added by the Mudlet application but may be "
+                                                        "selected here - will be used to supplement the main font chosen in several places "
+                                                        "in the Mudlet application. Not all of these choices will be functional on all OSes: "
+                                                        "<ol><li><tt>None</tt> - no supplement will be added by the Mudlet application but may be "
                                                         "introduced by the Operating System or the Qt libraries on Windows or macOs</li>"
                                                         "<li><tt>%1</tt> - An open source color font developed by Google that works on many Linuxes but "
                                                         "not currently on any Windows OS except within some web browsers on later Windows 10 versions</li>"
@@ -303,7 +303,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                   mudlet::mEmojiSubstituteFontList.at(1),
                                                   mudlet::mEmojiSubstituteFontList.at(4)));
 #elif defined(Q_OS_MACOS)
-    comboBox_emojiSubstitionFont->setToolTip(tr("%1<p>The macOs system is belived to handle color emojis automatically and no "
+    comboBox_emojiSubstitionFont->setToolTip(tr("%1<p>The macOs system is believed to handle color emojis automatically and no "
                                                 "additional font needs to be considered to provide colored emoji glyphs so the "
                                                 "recommendation for this system is: \"<tt>None</tt>\".</p>")
                                              .arg(generalEmojiSubstitutionToolTipParagraph));
@@ -652,7 +652,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     QDir dir(path);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
     // QRegularExpression rex(QStringLiteral(R"(\.dic$)"));
-    // Use the affix file as that may eliminate supplimental dictionaries:
+    // Use the affix file as that may eliminate supplemental dictionaries:
     QRegularExpression rex(QStringLiteral(R"(\.aff$)"));
     entries = entries.filter(rex);
     // Don't emit signals - like (void) QListWidget::currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
