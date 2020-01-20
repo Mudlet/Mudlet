@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2020 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -148,7 +148,6 @@ public:
     TLabel*
     createLabel(const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
     TConsole* createMiniConsole(const QString& name, int x, int y, int width, int height);
-    bool createButton(const QString& name, int x, int y, int width, int height, bool fillBackground);
     bool raiseWindow(const QString& name);
     bool lowerWindow(const QString& name);
     bool showWindow(const QString& name);

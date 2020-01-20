@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -2386,7 +2386,7 @@ bool mudlet::setLabelClickCallback(Host* pHost, const QString& name, const QStri
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setClick(pHost, func, pA);
+        pL->setClick(func, pA);
         return true;
     } else {
         return false;
@@ -2401,7 +2401,7 @@ bool mudlet::setLabelDoubleClickCallback(Host* pHost, const QString& name, const
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setDoubleClick(pHost, func, pA);
+        pL->setDoubleClick(func, pA);
         return true;
     } else {
         return false;
@@ -2416,7 +2416,7 @@ bool mudlet::setLabelReleaseCallback(Host* pHost, const QString& name, const QSt
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setRelease(pHost, func, pA);
+        pL->setRelease(func, pA);
         return true;
     } else {
         return false;
@@ -2431,7 +2431,7 @@ bool mudlet::setLabelMoveCallback(Host* pHost, const QString& name, const QStrin
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setMove(pHost, func, pA);
+        pL->setMove(func, pA);
         return true;
     } else {
         return false;
@@ -2446,7 +2446,7 @@ bool mudlet::setLabelWheelCallback(Host* pHost, const QString& name, const QStri
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setWheel(pHost, func, pA);
+        pL->setWheel(func, pA);
         return true;
     } else {
         return false;
@@ -2461,7 +2461,7 @@ bool mudlet::setLabelOnEnter(Host* pHost, const QString& name, const QString& fu
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setEnter(pHost, func, pA);
+        pL->setEnter(func, pA);
         return true;
     } else {
         return false;
@@ -2476,7 +2476,7 @@ bool mudlet::setLabelOnLeave(Host* pHost, const QString& name, const QString& fu
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setLeave(pHost, func, pA);
+        pL->setLeave(func, pA);
         return true;
     } else {
         return false;

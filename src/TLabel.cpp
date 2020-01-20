@@ -3,6 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -30,63 +31,58 @@
 #include "post_guard.h"
 
 
-TLabel::TLabel(QWidget* pW) : QLabel(pW), mpHost(nullptr), mouseInside()
+TLabel::TLabel(Host* pH, QWidget* pW)
+: QLabel(pW)
+, mpHost(pH)
 {
     setMouseTracking(true);
 }
 
-void TLabel::setClick(Host* pHost, const QString& func, const TEvent& args)
+void TLabel::setClick(const QString& func, const TEvent& args)
 {
-    releaseParams(pHost, mClickParams);
-    mpHost = pHost;
+    releaseParams(mClickParams);
     mClick = func;
     mClickParams = args;
 }
 
-void TLabel::setDoubleClick(Host* pHost, const QString& func, const TEvent& args)
+void TLabel::setDoubleClick(const QString& func, const TEvent& args)
 {
-    releaseParams(pHost, mDoubleClickParams);
-    mpHost = pHost;
+    releaseParams(mDoubleClickParams);
     mDoubleClick = func;
     mDoubleClickParams = args;
 }
 
-void TLabel::setRelease(Host* pHost, const QString& func, const TEvent& args)
+void TLabel::setRelease(const QString& func, const TEvent& args)
 {
-    releaseParams(pHost, mReleaseParams);
-    mpHost = pHost;
+    releaseParams(mReleaseParams);
     mRelease = func;
     mReleaseParams = args;
 }
 
-void TLabel::setMove(Host* pHost, const QString& func, const TEvent& args)
+void TLabel::setMove(const QString& func, const TEvent& args)
 {
-    releaseParams(pHost, mMoveParams);
-    mpHost = pHost;
+    releaseParams(mMoveParams);
     mMove = func;
     mMoveParams = args;
 }
 
-void TLabel::setWheel(Host* pHost, const QString& func, const TEvent& args)
+void TLabel::setWheel(const QString& func, const TEvent& args)
 {
-    releaseParams(pHost, mWheelParams);
-    mpHost = pHost;
+    releaseParams(mWheelParams);
     mWheel = func;
     mWheelParams = args;
 }
 
-void TLabel::setEnter(Host* pHost, const QString& func, const TEvent& args)
+void TLabel::setEnter(const QString& func, const TEvent& args)
 {
-    releaseParams(pHost, mEnterParams);
-    mpHost = pHost;
+    releaseParams(mEnterParams);
     mEnter = func;
     mEnterParams = args;
 }
 
-void TLabel::setLeave(Host* pHost, const QString& func, const TEvent& args)
+void TLabel::setLeave(const QString& func, const TEvent& args)
 {
-    releaseParams(pHost, mLeaveParams);
-    mpHost = pHost;
+    releaseParams(mLeaveParams);
     mLeave = func;
     mLeaveParams = args;
 }
@@ -280,14 +276,15 @@ bool TLabel::forwardEventToMapper(QEvent* event)
 // searching for parameters that are references to values in the
 // Lua registry, and correctly dereferences them. This allows
 // the parameters to be safely overwritten.
-void TLabel::releaseParams(Host* pHost, TEvent& params) {
+void TLabel::releaseParams(TEvent& params)
+{
     if (params.mArgumentList.isEmpty()) {
         return;
     }
 
     for (int i = 0; i < params.mArgumentList.size(); i++) {
         if ( params.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE || params.mArgumentTypeList.at(i) == ARGUMENT_TYPE_FUNCTION) {
-            pHost->getLuaInterpreter()->freeLuaRegistryIndex(i);
+            mpHost->getLuaInterpreter()->freeLuaRegistryIndex(i);
         }
     }
 
