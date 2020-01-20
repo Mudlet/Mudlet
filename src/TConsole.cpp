@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -2238,7 +2238,7 @@ TLabel* TConsole::createLabel(const QString& name, int x, int y, int width, int 
 {
     auto pL = mLabelMap.value(name);
     if (!pL) {
-        pL = new TLabel(mpMainFrame);
+        pL = new TLabel(mpHost, mpMainFrame);
         mLabelMap[name] = pL;
         pL->setObjectName(name);
         pL->setAutoFillBackground(fillBackground);
@@ -2305,23 +2305,6 @@ void TConsole::createMapper(int x, int y, int width, int height)
 #else
     mpMapper->show();
 #endif
-}
-
-bool TConsole::createButton(const QString& name, int x, int y, int width, int height, bool fillBackground)
-{
-    if (!mLabelMap.contains(name)) {
-        auto pC = new TLabel(mpMainFrame);
-        mLabelMap[name] = pC;
-        pC->setObjectName(name);
-        pC->setAutoFillBackground(fillBackground);
-        pC->resize(width, height);
-        pC->setContentsMargins(0, 0, 0, 0);
-        pC->move(x, y);
-        pC->show();
-        return true;
-    } else {
-        return false;
-    }
 }
 
 bool TConsole::setBackgroundImage(const QString& name, const QString& path)
