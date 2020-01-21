@@ -2253,6 +2253,25 @@ TLabel* TConsole::createLabel(const QString& name, int x, int y, int width, int 
     }
 }
 
+std::pair<bool, QString> TConsole::deleteLabel(const QString& name)
+{
+    if (name.isEmpty()) {
+        return std::make_pair(false, QStringLiteral("a label cannot have an empty string as its name"));
+    }
+
+    auto pL = mLabelMap.take(name);
+    if (pL) {
+        // Using deleteLater() rather than delete as it seems a safer option
+        // given that this item is likely to be linked to some events and
+        // suchlike:
+        pL->deleteLater();
+        return std::make_pair(true, QString());
+    }
+
+    // Message is of the form needed for a Lua API function call run-time error
+    return std::make_pair(false, QStringLiteral("label name \"%1\" not found").arg(name));
+}
+
 void TConsole::createMapper(int x, int y, int width, int height)
 {
     if (!mpMapper) {
