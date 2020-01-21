@@ -6758,7 +6758,7 @@ int TLuaInterpreter::sendMSDP(lua_State* L)
     
     for (int i = 1; i <= n; ++i) {
         if (!lua_isstring(L, i)) {
-            lua_pushfstring(L, "sendMSDP: bad argument type #" + std::to_string(i) + " type (variable name as string expected, not %1!)", luaL_typename(L, 1));
+            lua_pushfstring(L, "sendMSDP: bad argument #%d type (%s as string expected, not %s!)", i, (i == 1 ? "variable name" : "value"), luaL_typename(L, i));
             return lua_error(L);
         }
     }
