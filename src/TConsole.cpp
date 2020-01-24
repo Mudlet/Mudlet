@@ -2256,7 +2256,7 @@ TLabel* TConsole::createLabel(const QString& name, int x, int y, int width, int 
 std::pair<bool, QString> TConsole::deleteLabel(const QString& name)
 {
     if (name.isEmpty()) {
-        return std::make_pair(false, QStringLiteral("a label cannot have an empty string as its name"));
+        return {false, QLatin1String("a label cannot have an empty string as its name")};
     }
 
     auto pL = mLabelMap.take(name);
@@ -2265,11 +2265,20 @@ std::pair<bool, QString> TConsole::deleteLabel(const QString& name)
         // given that this item is likely to be linked to some events and
         // suchlike:
         pL->deleteLater();
-        return std::make_pair(true, QString());
+
+        // It remains to be seen if the label has "gone" as a result of the
+        // above by the time the Lua subsystem processes the following:
+        TEvent mudletEvent{};
+        mudletEvent.mArgumentList.append(QLatin1String("sysLabelDeletion"));
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mudletEvent.mArgumentList.append(name);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(mudletEvent);
+        return {true, QString()};
     }
 
     // Message is of the form needed for a Lua API function call run-time error
-    return std::make_pair(false, QStringLiteral("label name \"%1\" not found").arg(name));
+    return {false, QStringLiteral("label name \"%1\" not found").arg(name)} ;
 }
 
 void TConsole::createMapper(int x, int y, int width, int height)
