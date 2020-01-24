@@ -2051,7 +2051,7 @@ void cTelnet::atcpComposerSave(QString txt)
             // IRE game I tested does not accept \t as tab and only accepts an 09 byte.
             output += " \"";
             output += encodeAndCookBytes(escapedTxt.toStdString());
-            output += "\"";            
+            output += "\"";
         }
         output += TN_IAC;
         output += TN_SE;
