@@ -47,7 +47,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget * parent)
 , validUrl()
 , validPort()
 , mDefaultGames({"3Kingdoms", "3Scapes", "Aardwolf", "Achaea", "Aetolia",
-                 "Avalon.de", "BatMUD", "Clessidra", "Imperian", "Luminari",
+                 "Avalon.de", "BatMUD", "Clessidra", "Fierymud", "Imperian", "Luminari",
                  "Lusternia", "Materia Magica", "Midnight Sun 2", "Realms of Despair",
                  "Reinos de Leyenda", "StickMUD", "WoTMUD", "ZombieMUD"})
 {
@@ -817,6 +817,9 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                  * Clessidra e' il primo MUD completamente in italiano mai creato. Su Clessidra potrete trovare solo aree originali ed in italiano. Molte caratteristiche rendono Clessidra uno dei migliori, se non il migliore, MUD in Italia : Avanzati sistemi di spostamento, sfide uno-contro-uno contro gli amici, o i nemici, L'arena e i combattimenti, Le sfide all'ultimo sangue e i MOB intelligenti con le loro Quest e tecniche di combattimento, un sistema di assegnazione di missioni casuali e un avanzatissimo sistema di Clan che permettera' guerre e conquiste. Disponibilità di mercenari in caso di poca utenza, sistema di produzione/mercato per ottenere esclusivi oggetti, un interfaccia grafica per aiutarti a giocare, sia per i novizi che gli esperti. Un MUD che si evolve di continuo.
                  * -- end translation --
                  */
+    } else if (hostUrl == QStringLiteral("fierymud.org")) {
+        return QStringLiteral(
+                "The original vision of FieryMUD was to create a challanging MUD for advanced players. This new reborne Fiery is a hope to bring back the goals of the past by inflicting certain death on unsuspecting players. FieryMUD will continue to grow and change through the coming years and those players who seek challenge and possess imagination will come in search of what the 3D world fails to offer them.");
     } else {
         return readProfileData(profile_name, QStringLiteral("description"));
     }
@@ -898,6 +901,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("Reinos de Leyenda")) {
             host_url = QStringLiteral("reinosdeleyenda.es");
+        }
+        if (profile_name == QStringLiteral("Fierymud")) {
+            host_url = QStringLiteral("fierymud.org");
         }
         if (profile_name == QStringLiteral("Mudlet self-test")) {
             host_url = QStringLiteral("mudlet.org");
@@ -1009,6 +1015,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
             //host_url = QStringLiteral("reinosdeleyenda.es");
             host_port = QStringLiteral("23");
             port_ssl_tsl->setChecked(false);
+        }
+        if (profile_name == QStringLiteral("Fierymud")) {
+            host_port = QStringLiteral("4000");
         }
         if (profile_name == QStringLiteral("Mudlet self-test")) {
             host_port = QStringLiteral("23");
@@ -1125,6 +1134,9 @@ void dlgConnectionProfiles::slot_item_clicked(QListWidgetItem* pItem)
         }
         if (profile_name == QStringLiteral("Clessidra")) {
             val = QStringLiteral("<center><a href='http://www.clessidra.it/'>http://www.clessidra.it</a></center>");
+        }
+        if (profile_name == QStringLiteral("Fierymud")) {
+            val = QStringLiteral("<center><a href='https://www.fierymud.org/'>https://www.fierymud.org</a></center>");
         }
         if (profile_name == QStringLiteral("Reinos de Leyenda")) {
             val = QStringLiteral("<center><a href='https://www.reinosdeleyenda.es/'>Main website</a></center>\n"
@@ -1669,6 +1681,26 @@ void dlgConnectionProfiles::fillout_form()
             pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
         }
     }
+
+
+    mudServer = QStringLiteral("Fierymud");
+    if (!deletedDefaultMuds.contains(mudServer)) {
+        pM = new QListWidgetItem(mudServer);
+        pM->setFont(font);
+        pM->setForeground(QColor(Qt::white));
+        profiles_tree_widget->addItem(pM);
+        if (!hasCustomIcon(mudServer)) {
+            mi = QIcon(QStringLiteral(":/icons/fiery_mud.png"));
+            pM->setIcon(mi);
+        } else {
+            setCustomIcon(mudServer, pM);
+        }
+        description = getDescription(QStringLiteral("fierymud.org"), 0, mudServer);
+        if (!description.isEmpty()) {
+            pM->setToolTip(QLatin1String("<html><head/><body><p>") % description % QLatin1String("</p></body></html>"));
+        }
+    }
+
 
 #if defined(QT_DEBUG)
     mudServer = QStringLiteral("Mudlet self-test");
