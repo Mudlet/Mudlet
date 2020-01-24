@@ -14294,7 +14294,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
                     break;
                 }
                 j++;
-            }           
+            }
             Host& host = getHostFromLua(L);
             if (host.mTelnet.mpComposer) {
                 return;
