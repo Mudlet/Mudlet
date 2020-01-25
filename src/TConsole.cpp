@@ -2278,7 +2278,7 @@ std::pair<bool, QString> TConsole::deleteLabel(const QString& name)
     }
 
     // Message is of the form needed for a Lua API function call run-time error
-    return {false, QStringLiteral("label name \"%1\" not found").arg(name)} ;
+    return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
 }
 
 void TConsole::createMapper(int x, int y, int width, int height)
