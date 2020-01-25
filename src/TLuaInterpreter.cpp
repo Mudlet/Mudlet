@@ -6755,6 +6755,11 @@ int TLuaInterpreter::sendMSDP(lua_State* L)
     Host& host = getHostFromLua(L);
     int n = lua_gettop(L);
     
+    if (n < 1) {
+        lua_pushstring(L, "sendMSDP: bad argument #1 type (variable name as string expected, got nil!)");
+        return lua_error(L);
+    }
+
     for (int i = 1; i <= n; ++i) {
         if (!lua_isstring(L, i)) {
             lua_pushfstring(L, "sendMSDP: bad argument #%d type (%s as string expected, got %s!)", i, (i == 1 ? "variable name" : "value"), luaL_typename(L, i));
