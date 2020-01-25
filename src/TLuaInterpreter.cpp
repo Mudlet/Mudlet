@@ -6753,7 +6753,6 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
 int TLuaInterpreter::sendMSDP(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    std::string variable;
     int n = lua_gettop(L);
     
     for (int i = 1; i <= n; ++i) {
@@ -6763,7 +6762,7 @@ int TLuaInterpreter::sendMSDP(lua_State* L)
         }
     }
 
-    variable = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
+    std::string variable = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
 
     std::string output;
     output += TN_IAC;
