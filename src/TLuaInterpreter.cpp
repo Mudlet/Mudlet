@@ -14282,15 +14282,17 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
             QString title = match.captured(1);
             QString initialText = match.captured(2);
             int j=0;
-            while((j = initialText.indexOf("\\", j)) != -1){
+            while((j = initialText.indexOf('\\', j)) != -1){
                 // while we find a backslash, look at the next character, decide what to replace them both with
                 switch(initialText.at(j+1).unicode()){
-                    case 'n' : initialText.replace(j,2,QLatin1String("\n")); break;
-                    case 't' : initialText.replace(j,2,QLatin1String("\t")); break; // IRE instead sends it out as \u0009
-                    case '\"' : initialText.replace(j,2,QLatin1String("\"")); break;
-                    case '\\' : initialText.replace(j,2,QLatin1String("\\")); break;
+                    case 'n' : initialText.replace(j,2,'\n'); break;
+                    case 't' : initialText.replace(j,2,'\t'); break; // IRE instead sends it out as \u0009
+                    case '\"' : initialText.replace(j,2,'\"'); break;
+                    case '\\' : initialText.replace(j,2,'\\'); break;
                     case 'u' : // if Achaea sends any \u codes other than tab then this could be more generic
-                        if(initialText.midRef(j,6) == "\\u0009") initialText.replace(j,6,QLatin1String("\t"));
+                        if(initialText.midRef(j+2,4) == QLatin1String("0009")){
+                            initialText.replace(j,6,'\t');
+                        }
                     break;
                 }
                 j++;

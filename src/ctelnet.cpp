@@ -2045,9 +2045,9 @@ void cTelnet::atcpComposerSave(QString txt)
         if (!txt.isEmpty()) {
             QString escapedTxt;
             escapedTxt = txt;
-            escapedTxt.replace(QLatin1String("\\"), QLatin1String(R"(\\)")); // backslash first; contained in the others
-            escapedTxt.replace(QLatin1String("\""), QLatin1String(R"(\")"));
-            escapedTxt.replace(QLatin1String("\n"), QLatin1String(R"(\n)"));
+            escapedTxt.replace('\\', QLatin1String(R"(\\)")); // backslash first; contained in the others
+            escapedTxt.replace('\"', QLatin1String(R"(\")"));
+            escapedTxt.replace('\n', QLatin1String(R"(\n)"));
             // IRE game I tested does not accept \t as tab and only accepts an 09 byte.
             output += " \"";
             output += encodeAndCookBytes(escapedTxt.toStdString());
