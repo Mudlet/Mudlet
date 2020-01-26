@@ -2973,31 +2973,28 @@ int TLuaInterpreter::setModulePriority(lua_State* L)
 
 int TLuaInterpreter::getModuleSync(lua_State* L)
 {
-  QString moduleName;
-  if (!lua_isstring(L, 1)) {
-    lua_pushstring(L, "getModuleSync: Module must be a string");
-    return lua_error(L);;
-  } else {
-    moduleName = lua_tostring(L, 1);
-  }
+    if (!lua_isstring(L, 1)) {
+        lua_pushstring(L, "getModuleSync: Module must be a string");
+        return lua_error(L);
+    }
+    
+    QString moduleName = lua_tostring(L, 1);
 
-  Host& host = getHostFromLua(L);
-  QMap<QString, QStringList> modules = host.mInstalledModules;
-  if (!modules.contains(moduleName)) {
-    lua_pushstring(L, "getModuleSync: Module doesn't exist");
-    return lua_error(L);
-  }
 
-  QStringList moduleSync = host.getModulesToSync();
+    Host& host = getHostFromLua(L);
+    if (!host.mInstalledModules.contains(moduleName)) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "getModuleSync: module \"%s\" not found", moduleName.toUtf8().constData());
+        return 2;
+    }
 
-  if (moduleSync.contains(moduleName)) {
-    lua_pushboolean(L, 1);
-    return 1;
-  } else {
-    lua_pushboolean(L, 0);
-    return 1;
-  }
-  return 0;
+    QStringList moduleSync = host.getModulesToSync();
+
+    if (moduleSync.contains(moduleName)) {
+        lua_pushboolean(L, host.getModulesToSync().contains(moduleName));
+        return 1;
+    }
+    return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadMap
