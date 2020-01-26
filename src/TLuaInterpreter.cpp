@@ -6753,13 +6753,21 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
 int TLuaInterpreter::sendMSDP(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    std::string variable;
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "sendMSDP: bad argument #1 type (variable name as string expected, got %1!)", luaL_typename(L,1));
+    int n = lua_gettop(L);
+    
+    if (n < 1) {
+        lua_pushstring(L, "sendMSDP: bad argument #1 type (variable name as string expected, got nil!)");
         return lua_error(L);
-    } else {
-        variable = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
     }
+
+    for (int i = 1; i <= n; ++i) {
+        if (!lua_isstring(L, i)) {
+            lua_pushfstring(L, "sendMSDP: bad argument #%d type (%s as string expected, got %s!)", i, (i == 1 ? "variable name" : "value"), luaL_typename(L, i));
+            return lua_error(L);
+        }
+    }
+
+    std::string variable = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
 
     std::string output;
     output += TN_IAC;
@@ -6768,7 +6776,6 @@ int TLuaInterpreter::sendMSDP(lua_State* L)
     output += MSDP_VAR;
     output += variable;
 
-    int n = lua_gettop(L);
     for (int i = 2; i <= n; ++i) {
         output += MSDP_VAL;
         output += host.mTelnet.encodeAndCookBytes(lua_tostring(L, i));
