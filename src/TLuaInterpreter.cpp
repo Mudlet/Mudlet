@@ -2980,21 +2980,15 @@ int TLuaInterpreter::getModuleSync(lua_State* L)
     
     QString moduleName = lua_tostring(L, 1);
 
-
     Host& host = getHostFromLua(L);
     if (!host.mInstalledModules.contains(moduleName)) {
         lua_pushnil(L);
-        lua_pushfstring(L, "getModuleSync: module \"%s\" not found", moduleName.toUtf8().constData());
+        lua_pushfstring(L, "module \"%s\" not found", moduleName.toUtf8().constData());
         return 2;
     }
 
-    QStringList moduleSync = host.getModulesToSync();
-
-    if (moduleSync.contains(moduleName)) {
-        lua_pushboolean(L, host.getModulesToSync().contains(moduleName));
-        return 1;
-    }
-    return 0;
+    lua_pushboolean(L, host.getModulesToSync().contains(moduleName));
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadMap
