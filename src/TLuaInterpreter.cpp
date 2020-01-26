@@ -2971,6 +2971,36 @@ int TLuaInterpreter::setModulePriority(lua_State* L)
     return 0;
 }
 
+int TLuaInterpreter::getModuleSync(lua_State* L)
+{
+  QString moduleName;
+  if (!lua_isstring(L, 1)) {
+    lua_pushstring(L, "getModuleSync: Module must be a string");
+    lua_error(L);
+    return 1;
+  } else {
+    moduleName = lua_tostring(L, 1);
+  }
+
+  Host& host = getHostFromLua(L)
+  QMap<QString, QStringList> modules = host.mInstalledModules;
+  if (!modules.contains(moduleName)) {
+    lua_pushfstring(L, "getModuleSync: module %s not found", moduleName)
+    lua_error(L);
+    return 1;
+  }
+
+  QStringList moduleSync = host.mModulesToSync
+
+  if (moduleSync.contains(moduleName)) {
+    lua_pusboolean(L, 1)
+    return 1;
+  } else {
+    lua_pushboolean(L, 0)
+    return 1;
+  }
+  return 0;
+}
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadMap
 int TLuaInterpreter::loadMap(lua_State* L)
 {
