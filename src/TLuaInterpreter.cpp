@@ -2984,7 +2984,7 @@ int TLuaInterpreter::getModuleSync(lua_State* L)
   Host& host = getHostFromLua(L);
   QMap<QString, QStringList> modules = host.mInstalledModules;
   if (!modules.contains(moduleName)) {
-    lua_pushfstring(L, "getModuleSync: module %s not found", moduleName.toStdString());
+    lua_pushstring(L, "getModuleSync: Module doesn't exist");
     return lua_error(L);
   }
 
