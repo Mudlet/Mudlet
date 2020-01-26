@@ -152,6 +152,7 @@ public:
     static int installModule(lua_State* L);
     static int uninstallModule(lua_State* L);
     static int getModulePath(lua_State* L);
+    static int getModuleSync(lua_State* L);
     static int reloadModule(lua_State* L);
     static int lockExit(lua_State*);
     static int lockSpecialExit(lua_State*);

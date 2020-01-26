@@ -250,6 +250,7 @@ public:
     void startSpeedWalk();
     void saveModules(int sync, bool backup = true);
     void reloadModule(const QString& reloadModuleName);
+    QStringList getModulesToSync() { return mModulesToSync; }
     bool blockScripts() { return mBlockScriptCompile; }
     void refreshPackageFonts();
 
