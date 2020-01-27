@@ -15832,6 +15832,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getExitStubs1", TLuaInterpreter::getExitStubs1);
     lua_register(pGlobalLua, "setModulePriority", TLuaInterpreter::setModulePriority);
     lua_register(pGlobalLua, "getModulePriority", TLuaInterpreter::getModulePriority);
+    lua_register(pGlobalLua, "getModuleSync", TLuaInterpreter::getModuleSync);
     lua_register(pGlobalLua, "updateMap", TLuaInterpreter::updateMap);
     lua_register(pGlobalLua, "addMapEvent", TLuaInterpreter::addMapEvent);
     lua_register(pGlobalLua, "removeMapEvent", TLuaInterpreter::removeMapEvent);
