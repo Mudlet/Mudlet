@@ -2978,7 +2978,7 @@ int TLuaInterpreter::getModuleSync(lua_State* L)
         return lua_error(L);
     }
     
-    QString moduleName = lua_tostring(L, 1);
+    QString moduleName = QString::fromUtf8(lua_tostring(L, 1));
 
     Host& host = getHostFromLua(L);
     if (!host.mInstalledModules.contains(moduleName)) {
