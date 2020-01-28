@@ -108,7 +108,7 @@ public:
     FontManager mFontManager;
     Discord mDiscord;
     QPointer<QSettings> mpSettings;
-    void addSubWindow(TConsole* p);
+
     int getColumnNumber(Host* pHost, QString& name);
     std::pair<bool, int> getLineNumber(Host* pHost, QString& windowName);
     void printSystemMessage(Host* pH, const QString& s);

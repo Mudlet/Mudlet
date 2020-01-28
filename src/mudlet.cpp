@@ -2817,12 +2817,6 @@ Host* mudlet::getActiveHost()
     }
 }
 
-void mudlet::addSubWindow(TConsole* pConsole)
-{
-    mainPane->layout()->addWidget(pConsole);
-    pConsole->show(); //NOTE: this is important for Apple OSX otherwise the console isnt displayed
-}
-
 void mudlet::closeEvent(QCloseEvent* event)
 {
     foreach (TConsole* pC, mConsoleMap) {
