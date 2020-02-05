@@ -2269,7 +2269,7 @@ std::pair<bool, QString> TConsole::deleteLabel(const QString& name)
         // It remains to be seen if the label has "gone" as a result of the
         // above by the time the Lua subsystem processes the following:
         TEvent mudletEvent{};
-        mudletEvent.mArgumentList.append(QLatin1String("sysLabelDeletion"));
+        mudletEvent.mArgumentList.append(QLatin1String("sysLabelDeleted"));
         mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mudletEvent.mArgumentList.append(name);
         mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -2875,4 +2875,3 @@ void TConsole::setProfileName(const QString& newName)
         pC->setProfileName(newName);
     }
 }
-
