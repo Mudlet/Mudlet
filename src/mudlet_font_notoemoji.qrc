@@ -1,0 +1,7 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/">
+        <file>fonts/noto-emoji-2019-11-19-unicode12/LICENSE</file>
+        <file>fonts/noto-emoji-2019-11-19-unicode12/NotoColorEmoji.ttf</file>
+    </qresource>
+</RCC>

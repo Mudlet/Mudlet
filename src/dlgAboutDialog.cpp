@@ -750,7 +750,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                "SOFTWARE.</p>"));
 
     QString SILOpenFontText(
-                QStringLiteral("<h3>SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007</h3>"
+                QStringLiteral("<h4>The SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007</h4>"
                                "<p>PREAMBLE</p>"
                                "<p>The goals of the Open Font License (OFL) are to stimulate worldwide "
                                "development of collaborative font projects, to support the font "
@@ -822,7 +822,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     // Note: THIS license IS available in other official language translations,
     // see: https://creativecommons.org/licenses/by-sa/4.0/legalcode#languages .
     // However it is not a burden to put upon our translators without some thought first.
-    QString CC_SA_4_0_body(QStringLiteral("<h3>Creative Commons Attribution-ShareAlike 4.0 International Public License</h3>"
+    QString CC_SA_4_0_body(QStringLiteral("<h4>The Creative Commons Attribution-ShareAlike 4.0 International Public License</h4>"
                          /*Section*/ "<p>By exercising the Licensed Rights (defined below), You accept and agree to be bound "
                                      "by the terms and conditions of this Creative Commons Attribution-ShareAlike 4.0 "
                                      "International Public License (\"Public License\"). To the extent this Public License may be "
@@ -1058,7 +1058,7 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                           "All rights reserved.</h3>"));
 
     QString QsLogHeader(tr("<h2><u>Qt-Components, QsLog</u></h2>"
-                           "<h3>(<span style=\"color:red\"><u>https://bitbucket.org/razvapetru/qt-components [broken link]</u></span></h3>"
+                           "<h3>(<span style=\"color:red\"><u>https://bitbucket.org/razvapetru/qt-components [broken link]</u></span>"
                            "<small><a href=\"https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components\"> {&quot;Wayback Machine&quot; archived version}</a></small>)<br>"
                            "Copyright © 2013, Razvan Petru<br>"
                            "All rights reserved.</h3>"));
@@ -1168,40 +1168,40 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
 #endif // defined(INCLUDE_UPDATER)
 
 #if defined(INCLUDE_FONTS) || defined(DEBUG_SHOWALL)
-    QString noto_header = tr("Noto Color Emoji font",
+    QString noto_header = tr("<h2><u>Noto Color Emoji font</u></h2>",
                              // Intentional argument separator
                              "The name of the Google font, it is likely that only the last word (and its position in the text) needs to be translated)");
-    QString openMoji_header = tr("<h2>OpenMoji font</h2></b><br>"
+    QString openMoji_header = tr("<h2><u>OpenMoji font</u></h2>"
                                  "<h3>All emojis designed by <a href=\"https://openmoji.org/\">OpenMoji</a> – the open-source emoji and icon project.</h3>",
                                  // Intentional argument separator
                                  "Pleae preserve the HTML tag formatting");
-    QString twemoji_header = tr("<h2>Twitter Emoji for Everyone font</h2></b><br>"
+    QString twemoji_header = tr("<h2><u>Twitter Emoji for Everyone font</u></h2>"
                                 "<h3>Copyright © 2016 Brad Erickson CC-BY-4.0/MIT<br>"
                                 "Copyright © 2016 Twitter, Inc. CC-BY-4.0<br>"
                                 "Copyright © 2013 Joe Loughry and Terence Eden MIT</h3>");
     license_3rdParty_texts.append(QStringLiteral("<hr>%31")
                                   .arg(UbuntuFontText));                       // 31 - Ubuntu Font Text - not translatable
-    license_3rdParty_texts.append(QStringLiteral("<hr><b><center>%32</center></b>"
+    license_3rdParty_texts.append(QStringLiteral("<hr>%32"
                                                  "%33")
                                   .arg(noto_header,                            // 32 - Noto Color Emoji header - (a bit) translatable
                                        SILOpenFontText));                      // 33 - Noto Color Emoji font text (SIL Open Font licence Text) - not translatable
-    license_3rdParty_texts.append(QStringLiteral("<hr>%34<br>"
+    license_3rdParty_texts.append(QStringLiteral("<hr>%34"
                                                  "%35")
                                   .arg(openMoji_header,                        // 34 - OpenMoji header - translatable
                                        CC_SA_4_0_body));                       // 35 - Creative Commons Attribution Share-Alike - could be translated but it has been left out of translation for now
-    license_3rdParty_texts.append(QStringLiteral("<hr>%36<br>"
+    license_3rdParty_texts.append(QStringLiteral("<hr>%36"
                                                  "%37")
                                   .arg(twemoji_header,                         // 34 - Twitter Emoji header - translatable
                                        CC_SA_4_0_body));                       // 35 - Creative Commons Attribution Share-Alike - could be translated but it has been left out of translation for now
 #endif
 
-    license_3rdParty_texts.append(QStringLiteral("<hr><br>"
-                                                 "<center><img src=\":/icons/Discord-Logo+Wordmark-Color_400x136px.png\"/></center><br>"
+    license_3rdParty_texts.append(QStringLiteral("<hr>"
+                                                 "<center><img src=\":/icons/Discord-Logo+Wordmark-Color_400x136px.png\"/></center>"
                                                  "%38%39")
                                   .arg(DiscordHeader,                          // 38 - Discord header - translatable
                                        MIT_Body));                             // 39 - Discord body MIT - not translatable
 
-    license_3rdParty_texts.append(QStringLiteral("<hr><br>"
+    license_3rdParty_texts.append(QStringLiteral("<hr>"
                                                  "%40%41")
                                   .arg(QtKeyChainHeader,                       // 40 - QtKeyChain header - translatable
                                        BSD2Clause_Body                         // 41 - QtKeyChain body BSD2 ("AUTHOR") - not translatable

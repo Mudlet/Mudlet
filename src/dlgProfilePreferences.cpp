@@ -3915,7 +3915,7 @@ void dlgProfilePreferences::setPlayerRoomColor(QPushButton* b, QColor& c)
 
 void dlgProfilePreferences::slot_fontSubstitutionChanged(const int index)
 {
-    if (index <= comboBox_emojiSubstitionFont->count() && index != comboBox_emojiSubstitionFont->currentIndex()) {
+    if (index >=0 && index < comboBox_emojiSubstitionFont->count() && index != comboBox_emojiSubstitionFont->currentIndex()) {
         comboBox_emojiSubstitionFont->blockSignals(true);
         comboBox_emojiSubstitionFont->setCurrentIndex(index);
         comboBox_emojiSubstitionFont->blockSignals(false);

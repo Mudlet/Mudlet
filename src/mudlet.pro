@@ -629,10 +629,15 @@ RESOURCES = mudlet.qrc \
 contains(DEFINES, INCLUDE_FONTS) {
     # Windows cannot use the Noto Color Font and the 32-Bit builds on MSYS2
     # crash because it needs more than 4GB to compile the reasource file
-    win32 {
-        RESOURCES += mudlet_fonts_windows.qrc
-    } else {
-        RESOURCES += mudlet_fonts_unix.qrc
+    # We are now testing a different way that includes each LARGE font file
+    # as a descrete resource file:
+    RESOURCES += \
+        mudlet_font_openmoji.qrc \
+        mudlet_font_twemoji.qrc \
+        mudlet_fonts_common.qrc
+    !win32 {
+        RESOURCES += \
+            mudlet_font_notoemoji.qrc
     }
 
     !build_pass{

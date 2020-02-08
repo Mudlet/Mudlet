@@ -22,10 +22,11 @@
 set(mudlet_RCCS mudlet.qrc)
 
 if(USE_FONTS)
-  if(WIN32)
-    list(APPEND mudlet_RCCS mudlet_fonts_windows.qrc)
-  else()
-    list(APPEND mudlet_RCCS mudlet_fonts_unix.qrc)
+  list(APPEND mudlet_RCCS mudlet_fonts_common.qrc)
+  list(APPEND mudlet_RCCS mudlet_font_openmoji.qrc)
+  list(APPEND mudlet_RCCS mudlet_font_twemoji.qrc)
+  if(NOT WIN32)
+    list(APPEND mudlet_RCCS mudlet_font_notoemoji.qrc)
   endif()
 endif()
 

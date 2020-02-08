@@ -1,0 +1,7 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/">
+        <file>fonts/twemoji-12.0.1/LICENSE.md</file>
+        <file>fonts/twemoji-12.0.1/TwitterColorEmoji-SVGinOT.ttf</file>
+    </qresource>
+</RCC>

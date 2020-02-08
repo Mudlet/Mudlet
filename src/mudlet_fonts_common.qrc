@@ -1,8 +1,5 @@
 <RCC>
     <qresource prefix="/">
-        <file>fonts/noto-emoji-2019-11-19-unicode12/LICENSE</file>
-        <file>fonts/noto-emoji-2019-11-19-unicode12/NotoColorEmoji.ttf</file>
-        <file>fonts/openmoji-12.1/OpenMoji-Color.ttf</file>
         <file>fonts/ttf-bitstream-vera-1.10/COPYRIGHT.TXT</file>
         <file>fonts/ttf-bitstream-vera-1.10/local.conf</file>
         <file>fonts/ttf-bitstream-vera-1.10/README.TXT</file>
@@ -17,8 +14,6 @@
         <file>fonts/ttf-bitstream-vera-1.10/VeraMono.ttf</file>
         <file>fonts/ttf-bitstream-vera-1.10/VeraSe.ttf</file>
         <file>fonts/ttf-bitstream-vera-1.10/VeraSeBd.ttf</file>
-        <file>fonts/twemoji-12.0.1/LICENSE.md</file>
-        <file>fonts/twemoji-12.0.1/TwitterColorEmoji-SVGinOT.ttf</file>
         <file>fonts/ubuntu-font-family-0.83/CONTRIBUTING.txt</file>
         <file>fonts/ubuntu-font-family-0.83/copyright.txt</file>
         <file>fonts/ubuntu-font-family-0.83/FONTLOG.txt</file>

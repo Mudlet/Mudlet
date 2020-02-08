@@ -1,0 +1,6 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/">
+        <file>fonts/openmoji-12.1/OpenMoji-Color.ttf</file>
+    </qresource>
+</RCC>
