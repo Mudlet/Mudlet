@@ -1171,10 +1171,14 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
     QString noto_header = tr("Noto Color Emoji font",
                              // Intentional argument separator
                              "The name of the Google font, it is likely that only the last word (and its position in the text) needs to be translated)");
-    QString openMoji_header = tr("<b><center>OpenMoji font</center></b><br>"
-                                 "All emojis designed by <a href=\"https://openmoji.org/\">OpenMoji</a> – the open-source emoji and icon project.",
+    QString openMoji_header = tr("<h2>OpenMoji font</h2></b><br>"
+                                 "<h3>All emojis designed by <a href=\"https://openmoji.org/\">OpenMoji</a> – the open-source emoji and icon project.</h3>",
                                  // Intentional argument separator
                                  "Pleae preserve the HTML tag formatting");
+    QString twemoji_header = tr("<h2>Twitter Emoji for Everyone font</h2></b><br>"
+                                "<h3>Copyright © 2016 Brad Erickson CC-BY-4.0/MIT<br>"
+                                "Copyright © 2016 Twitter, Inc. CC-BY-4.0<br>"
+                                "Copyright © 2013 Joe Loughry and Terence Eden MIT</h3>");
     license_3rdParty_texts.append(QStringLiteral("<hr>%31")
                                   .arg(UbuntuFontText));                       // 31 - Ubuntu Font Text - not translatable
     license_3rdParty_texts.append(QStringLiteral("<hr><b><center>%32</center></b>"
@@ -1185,18 +1189,22 @@ void dlgAboutDialog::setThirdPartyTab(const QString& htmlHead) const
                                                  "%35")
                                   .arg(openMoji_header,                        // 34 - OpenMoji header - translatable
                                        CC_SA_4_0_body));                       // 35 - Creative Commons Attribution Share-Alike - could be translated but it has been left out of translation for now
+    license_3rdParty_texts.append(QStringLiteral("<hr>%36<br>"
+                                                 "%37")
+                                  .arg(twemoji_header,                         // 34 - Twitter Emoji header - translatable
+                                       CC_SA_4_0_body));                       // 35 - Creative Commons Attribution Share-Alike - could be translated but it has been left out of translation for now
 #endif
 
     license_3rdParty_texts.append(QStringLiteral("<hr><br>"
                                                  "<center><img src=\":/icons/Discord-Logo+Wordmark-Color_400x136px.png\"/></center><br>"
-                                                 "%36%37")
-                                  .arg(DiscordHeader,                          // 36 - Discord header - translatable
-                                       MIT_Body));                             // 37 - Discord body MIT - not translatable
+                                                 "%38%39")
+                                  .arg(DiscordHeader,                          // 38 - Discord header - translatable
+                                       MIT_Body));                             // 39 - Discord body MIT - not translatable
 
     license_3rdParty_texts.append(QStringLiteral("<hr><br>"
-                                                 "%38%39")
-                                  .arg(QtKeyChainHeader,                       // 38 - QtKeyChain header - translatable
-                                       BSD2Clause_Body                         // 39 - QtKeyChain body BSD2 ("AUTHOR") - not translatable
+                                                 "%40%41")
+                                  .arg(QtKeyChainHeader,                       // 40 - QtKeyChain header - translatable
+                                       BSD2Clause_Body                         // 41 - QtKeyChain body BSD2 ("AUTHOR") - not translatable
                                        .arg(QLatin1String("AUTHOR"), QLatin1String("AUTHOR"))));
 
     license_3rdParty_texts.append(QStringLiteral("</body></html>"));

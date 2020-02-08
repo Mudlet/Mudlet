@@ -401,10 +401,18 @@ int main(int argc, char* argv[])
     if (!dir.exists(ubuntuFontDirectory)) {
         dir.mkpath(ubuntuFontDirectory);
     }
+#if !defined(OS_WIN32)
     QString notoFontDirectory(QStringLiteral("%1/noto-emoji-2019-11-19-unicode12").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
+#endif
+    // This may also prove to not be usable on Windows - needs checking:
+    QString twemojiFontDirectory(QStringLiteral("%1/twemoji-12.0.1").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    if (!dir.exists(twemojiFontDirectory)) {
+        dir.mkpath(twemojiFontDirectory);
+    }
+
     QString openMojiFontDirectory(QStringLiteral("%1/openmoji-12.1").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
     if (!dir.exists(openMojiFontDirectory)) {
         dir.mkpath(openMojiFontDirectory);
@@ -465,6 +473,10 @@ int main(int argc, char* argv[])
     copyFont(notoFontDirectory, QStringLiteral("fonts/noto-emoji-2019-11-19-unicode12"), QStringLiteral("NotoColorEmoji.ttf"));
     copyFont(notoFontDirectory, QStringLiteral("fonts/noto-emoji-2019-11-19-unicode12"), QStringLiteral("LICENSE.txt"));
 #endif // NOT defined(Q_OS_WINDOWS)
+
+    // This too may not be usable on Windows, needs checking:
+    copyFont(twemojiFontDirectory, QStringLiteral("fonts/twemoji-12.0.1"), QStringLiteral("TwitterColorEmoji-SVGinOT.ttf"));
+    copyFont(twemojiFontDirectory, QStringLiteral("fonts/twemoji-12.0.1"), QStringLiteral("LICENSE.md"));
 
     copyFont(openMojiFontDirectory, QStringLiteral("fonts/openmoji-12.1"), QStringLiteral("OpenMoji-Color.ttf"));
 #endif // defined(INCLUDE_FONTS)

@@ -253,13 +253,16 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                                         "and external contributors - which only works in monochrome at present but should be "
                                                         "usable in that state for all Operating Systems - it is an option should you wish "
                                                         "to force the use of monochrome emojis with the same foreground and background "
-                                                        "color as the rest of the Game text</li></ol></p>",
+                                                        "color as the rest of the Game text</li>"
+                                                        "<li><tt>%5</tt> - An open source color font developed by Twitter and assembled by "
+                                                        "Brad Erickson (GitHub username 'eosrei')</li></ol></p>",
                                                         // Intentional argument separator
                                                         "A boiler plate paragraph to be prepended to an OS/Version sepecific one translated separately.")
                                                      .arg(mudlet::mEmojiSubstituteFontList.at(1),
                                                           mudlet::mEmojiSubstituteFontList.at(2),
                                                           mudlet::mEmojiSubstituteFontList.at(3),
-                                                          mudlet::mEmojiSubstituteFontList.at(4)));
+                                                          mudlet::mEmojiSubstituteFontList.at(4),
+                                                          mudlet::mEmojiSubstituteFontList.at(5)));
 
 #if defined(Q_OS_WIN32)
     if (QVersionNumber::fromString(QSysInfo::kernelVersion()) >= QVersionNumber(10, 0, 15019)) {

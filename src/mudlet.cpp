@@ -139,7 +139,7 @@ QPointer<mudlet> mudlet::_self = nullptr;
 
 // Internally Qt seems to lower case these names so we must also do so when we
 // use them programmatically rather than for UI display purposes:
-const QStringList mudlet::mEmojiSubstituteFontList{"", "Noto Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "OpenMoji"};
+const QStringList mudlet::mEmojiSubstituteFontList{"", "Noto Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "OpenMoji", "Twitter Color Emoji"};
 
 void mudlet::start()
 {
