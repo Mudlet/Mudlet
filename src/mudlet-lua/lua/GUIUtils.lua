@@ -1780,7 +1780,7 @@ function dreplace(window, text)
   xReplace(window, text, 'd')
 end
 
---- version of replace function that allows for color, by way of dinsertText
+--- version of replace function that allows for color, by way of hinsertText
 --- @param windowName Optional name of the window to replace on
 --- @param text The text to replace the selection with.
 function hreplace(window, text)
