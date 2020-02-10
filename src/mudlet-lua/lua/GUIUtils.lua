@@ -1759,7 +1759,6 @@ function xReplace(window, text, type)
   elseif type == 'd' then
     dinsertText(window, text)
   elseif type == 'h' then
-    echo "test"
     hinsertText(window, text)
   else
     insertText(window, text)
