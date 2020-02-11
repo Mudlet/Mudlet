@@ -1739,30 +1739,49 @@ function moveCursorDown(window, lines, keep_horizontal)
   if keep_horizontal then x = getColumnNumber(window) end
   moveCursor(window, x, math.min(curLine + lines, getLastLineNumber(window)))
 end
-  
-  -- version of replace function that allows for color, by way of cinsertText
-function creplace(window, text)
-	if not text then text, window = window, nil end
-	window = window or "main"
-	local str, start, stop = getSelection(window)
+
+-- internal function that handles coloured replace variants
+function xReplace(window, text, type)
+  if not text then
+    text = window
+    window = "main"
+  end
+  local str, start, stop = getSelection(window)
 	if window ~= "main" then
 		replace(window, "")
+    moveCursor(window, start, getLineNumber(window))
 	else
 		replace("")
+    moveCursor(start, getLineNumber())
 	end
-	moveCursor(window, start, getLineNumber(window))
-	cinsertText(window, text)
+  if type == 'c' then
+    cinsertText(window, text)
+  elseif type == 'd' then
+    dinsertText(window, text)
+  elseif type == 'h' then
+    hinsertText(window, text)
+  else
+    insertText(window, text)
+  end
 end
 
+--- version of replace function that allows for color, by way of cinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
+function creplace(window, text)
+  xReplace(window, text, 'c')
+end
+
+--- version of replace function that allows for color, by way of dinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
 function dreplace(window, text)
-	if not text then text, window = window, nil end
-	window = window or "main"
-	local str, start, stop = getSelection(window)
-	if window ~= "main" then
-		replace(window, "")
-	else
-		replace("")
-	end
-	moveCursor(window, start, getLineNumber(window))
-	dinsertText(window, text)
+  xReplace(window, text, 'd')
+end
+
+--- version of replace function that allows for color, by way of hinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
+function hreplace(window, text)
+  xReplace(window, text, 'h')
 end
