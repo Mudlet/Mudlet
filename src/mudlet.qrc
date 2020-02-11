@@ -2,7 +2,6 @@
     <qresource prefix="/">
         <file alias="materiaMagicaIcon">icons/logo_mm-120x30px-verticalBlackBgd.png</file>
         <file alias="translation-stats.json">../translations/translated/translation-stats.json</file>
-        <file>3k-mapper.xml</file>
         <file>deleteOldProfiles.xml</file>
         <file>echo.xml</file>
         <file>edbee_defaults/Lua.tmLanguage</file>
