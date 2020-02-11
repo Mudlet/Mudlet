@@ -6,7 +6,7 @@
     <message>
       <location filename="../src/discord.cpp" line="132"/>
       <source>via Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet aracılığıyla</translation>
     </message>
   </context>
   <context>
@@ -14,17 +14,17 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="273"/>
       <source>Too many redirects.</source>
-      <translation type="unfinished"/>
+      <translation>Çok fazla yeniden yönlendirme var.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="282"/>
       <source>No data received from server</source>
-      <translation type="unfinished"/>
+      <translation>Sunucudan veri alınmadı</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="293"/>
       <source>Could not verify download integrity.</source>
-      <translation type="unfinished"/>
+      <translation>İndirilen dosyanın bütünlüğü doğrulanamadı.</translation>
     </message>
   </context>
   <context>
@@ -34,19 +34,23 @@
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Modül açılıyor:
+&quot;%1&quot;
+Lütfen bekleyin...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1429"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
-      <translation type="unfinished"/>
+      <translation>Paket açılıyor:
+&quot;%1&quot;
+Lütfen bekleyin...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1433"/>
       <source>Unpacking</source>
-      <translation type="unfinished"/>
+      <translation>Paket açılıyor</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2040"/>
