@@ -1024,7 +1024,7 @@ the highlighted room (%1) to:</source>
       <location filename="../src/T2DMap.cpp" line="3510"/>
       <source>Cancel</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation type="unfinished"/>
+      <translation>İptal</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3599"/>
@@ -1070,7 +1070,7 @@ for all of the %n selected room(s):</source>
       <location filename="../src/T2DMap.cpp" line="3812"/>
       <source>Cancel</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation type="unfinished"/>
+      <translation>İptal</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3869"/>
@@ -3420,7 +3420,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="350"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>İptal</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="370"/>
@@ -3755,7 +3755,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1826"/>
       <source>Cancel</source>
       <comment>Cancel download of GUI package from Server</comment>
-      <translation type="unfinished"/>
+      <translation>İptal</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1448"/>
@@ -3949,7 +3949,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="123"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>İptal</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="136"/>
@@ -4022,7 +4022,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2318"/>
       <source>load oldest profile</source>
-      <translation type="unfinished"/>
+      <translation>en eski profili yükle</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2341"/>
@@ -4082,7 +4082,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2519"/>
       <source>Game description</source>
-      <translation type="unfinished"/>
+      <translation>Oyun açıklaması</translation>
     </message>
   </context>
   <context>
@@ -4299,7 +4299,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="567"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>İptal</translation>
     </message>
   </context>
   <context>
@@ -4326,7 +4326,7 @@ Eğer eminseniz, doğrulamak için lütfen profil adını yazınız:</translatio
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="61"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>İptal</translation>
     </message>
   </context>
   <context>
@@ -4952,7 +4952,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="80"/>
       <source>Offline</source>
-      <translation type="unfinished"/>
+      <translation>Çevrimdışı</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="102"/>
@@ -5175,7 +5175,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="422"/>
       <source>! Connecting %1...</source>
-      <translation type="unfinished"/>
+      <translation>! %1 e bağlanılıyor...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="427"/>
@@ -7655,12 +7655,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="157"/>
       <source>Disconnect</source>
-      <translation type="unfinished"/>
+      <translation>Bağlantıyı kes</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="165"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Yeniden bağlan</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="173"/>
@@ -9118,12 +9118,12 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="260"/>
       <location filename="../src/mudlet.cpp" line="262"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>Bağlan</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="265"/>
       <source>Disconnect</source>
-      <translation type="unfinished"/>
+      <translation>Bağlantıyı kes</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="317"/>
@@ -9277,7 +9277,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="396"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Yeniden bağlan</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="397"/>
@@ -10786,7 +10786,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2877"/>
       <source>Connection</source>
-      <translation type="unfinished"/>
+      <translation>Bağlantı</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4941"/>
@@ -11214,7 +11214,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
       <source>&amp;Cancel</source>
-      <translation type="unfinished"/>
+      <translation>&amp;İptal</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2001"/>
