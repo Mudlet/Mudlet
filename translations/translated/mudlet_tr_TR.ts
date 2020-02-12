@@ -4314,7 +4314,9 @@ custom line?</source>
       <source>Are you sure that you&apos;d like to delete this profile? Everything (aliases, triggers, backups, etc) will be gone.
 
 If you are, please type in the profile name as a confirmation:</source>
-      <translation type="unfinished"/>
+      <translation>Bu profili silmek istediğinize emin misiniz? Profile dair bütün (aliaslar, triggerlar, yedekler vs) dosyalar silinecektir.
+
+Eğer eminseniz, doğrulamak için lütfen profil adını yazınız:</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="54"/>
@@ -4934,7 +4936,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2294"/>
       <source>This profile name is already in use.</source>
-      <translation type="unfinished"/>
+      <translation>Bu profil adı zaten kullanılıyor.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="473"/>
