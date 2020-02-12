@@ -163,7 +163,7 @@ function Geyser.Container:show (auto)
     self:show_impl()
   end
   for _, v in pairs(self.windowList) do
-    v:show(true)
+    if v.hidden == false then v:show(true) end
   end
 end
 
