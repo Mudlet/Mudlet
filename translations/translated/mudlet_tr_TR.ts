@@ -4007,7 +4007,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2286"/>
       <source>Secure:</source>
-      <translation>Güvenli Bağlantı:</translation>
+      <translation>Güvenli:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2293"/>
