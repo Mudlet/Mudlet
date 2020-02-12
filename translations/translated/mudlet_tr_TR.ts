@@ -1965,7 +1965,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1608"/>
       <source>Start my own</source>
-      <translation type="unfinished"/>
+      <translation>Kendi haritama başlayacağım</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1666"/>
@@ -1975,12 +1975,12 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2077"/>
       <source>Map issues</source>
-      <translation type="unfinished"/>
+      <translation>Harita sorunları</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2084"/>
       <source>Area issues</source>
-      <translation type="unfinished"/>
+      <translation>Bölge sorunları</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2090"/>
