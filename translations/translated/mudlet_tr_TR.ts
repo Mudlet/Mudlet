@@ -3967,7 +3967,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="20"/>
       <source>Select a profile to connect with</source>
-      <translation type="unfinished"/>
+      <translation>Bağlanmak için bir profil seçin</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2081"/>
@@ -3987,7 +3987,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2193"/>
       <source>Required</source>
-      <translation type="unfinished"/>
+      <translation>Zorunlu</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2199"/>
@@ -4002,12 +4002,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2242"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>Bağlantı noktası:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2286"/>
       <source>Secure:</source>
-      <translation type="unfinished"/>
+      <translation>Güvenli Bağlantı:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2293"/>
@@ -10726,7 +10726,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2719"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>Bağlantı noktası:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2757"/>
