@@ -2748,7 +2748,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1210"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopyala</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1221"/>
@@ -2758,7 +2758,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1225"/>
       <source>Copy as image</source>
-      <translation type="unfinished"/>
+      <translation>Resim olarak kopyala</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1228"/>
@@ -3972,17 +3972,17 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2081"/>
       <source>Remove</source>
-      <translation type="unfinished"/>
+      <translation>Kaldır</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2100"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopyala</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2125"/>
       <source>New</source>
-      <translation type="unfinished"/>
+      <translation>Yeni</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2193"/>
@@ -4012,12 +4012,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2293"/>
       <source>Profile history:</source>
-      <translation type="unfinished"/>
+      <translation>Profil geçmişi:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2313"/>
       <source>load newest profile</source>
-      <translation type="unfinished"/>
+      <translation>en yeni profili yükle</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2318"/>
@@ -4027,7 +4027,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2341"/>
       <source>Optional</source>
-      <translation type="unfinished"/>
+      <translation>İsteğe Bağlı</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2354"/>
@@ -4047,7 +4047,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2347"/>
       <source>Password:</source>
-      <translation type="unfinished"/>
+      <translation>Şifre:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2400"/>
@@ -4062,17 +4062,17 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2383"/>
       <source>Open profile on Mudlet start</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet başlatıldığında profili aç</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2393"/>
       <source>Reconnect automatically</source>
-      <translation type="unfinished"/>
+      <translation>Otomatik olarak yeniden bağlan</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2448"/>
       <source>Informational</source>
-      <translation type="unfinished"/>
+      <translation>Bilgilendirici</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2475"/>
@@ -4921,7 +4921,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="79"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>Bağlan</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1185"/>
@@ -4957,12 +4957,12 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="102"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopyala</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="104"/>
       <source>Copy settings only</source>
-      <translation type="unfinished"/>
+      <translation>Yalnızca ayarları kopyala</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="173"/>
@@ -5165,7 +5165,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="416"/>
       <source>! Connected to %1.</source>
-      <translation type="unfinished"/>
+      <translation>! %1 e bağlanıldı.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="417"/>
@@ -6389,7 +6389,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8550"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8556"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopyala</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="437"/>
@@ -7348,7 +7348,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="507"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopyala</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="508"/>
@@ -9129,12 +9129,12 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="317"/>
       <location filename="../src/mudlet.cpp" line="326"/>
       <source>Discord</source>
-      <translation type="unfinished"/>
+      <translation>Discord</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="324"/>
       <source>Open Discord</source>
-      <translation type="unfinished"/>
+      <translation>Discord'u Aç</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="329"/>
