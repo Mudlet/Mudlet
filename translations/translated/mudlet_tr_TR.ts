@@ -1885,7 +1885,8 @@ map with others relying on the original format.</source>
       <location filename="../src/TMap.cpp" line="1029"/>
       <source>[ ERROR ] - The format {%1} you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version {%2}.</source>
-      <translation type="unfinished"/>
+      <translation>[ HATA ]-Haritayı kaydetmeye çalıştığınız {%1} biçimi, Mudlet 'in bu sürümü için çok yeni.
+Yalnızca {%2 } sürümüne kadar olan sürümler desteklenmektedir.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1055"/>
