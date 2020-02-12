@@ -1892,13 +1892,14 @@ Yalnızca {%2 } sürümüne kadar olan sürümler desteklenmektedir.</translatio
       <location filename="../src/TMap.cpp" line="1055"/>
       <source>[ WARN ]  - Saving map in a format {%1} different from the
 recommended format {%2} for this version of Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>[ UYARI ] - Haritayı kaydettiğiniz {%1} formatı, Mudlet'in bu sürümü
+için tavsiye edilen {%2} formatından farklıdır.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1345"/>
       <location filename="../src/TMap.cpp" line="1650"/>
       <source>[ ERROR ] - Unable to open (for reading) map file: &quot;%1&quot;!</source>
-      <translation type="unfinished"/>
+      <translation>[ HATA ] - Harita dosyası açılamıyor (Okumak İçin) : &quot;%1&quot;!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1367"/>
