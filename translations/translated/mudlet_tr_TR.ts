@@ -3766,7 +3766,7 @@ Uninstalling old version &apos;%2&apos;.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="382"/>
       <source>[ INFO ]  - Looking up the IP address of server: %1:%2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ BİLGİ ] - Sunucunun IP adresi araştırılıyor:%1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="506"/>
@@ -3997,7 +3997,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2219"/>
       <source>Server address:</source>
-      <translation type="unfinished"/>
+      <translation>Sunucu adresi:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2242"/>
@@ -10737,7 +10737,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2702"/>
       <source>Server address:</source>
-      <translation type="unfinished"/>
+      <translation>Sunucu adresi:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2750"/>
