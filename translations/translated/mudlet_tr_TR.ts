@@ -2170,7 +2170,7 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="114"/>
       <location filename="../src/TRoom.cpp" line="1064"/>
       <source>West</source>
-      <translation type="unfinished"/>
+      <translation>Batı</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="115"/>
@@ -2199,12 +2199,12 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="119"/>
       <source>Other</source>
-      <translation type="unfinished"/>
+      <translation>Diğer</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="121"/>
       <source>Unknown</source>
-      <translation type="unfinished"/>
+      <translation>Bilinmeyen</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="252"/>
@@ -2224,17 +2224,17 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="994"/>
       <source>Northwest</source>
-      <translation type="unfinished"/>
+      <translation>Kuzeybatı</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1022"/>
       <source>Southeast</source>
-      <translation type="unfinished"/>
+      <translation>Güneydoğu</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1036"/>
       <source>Southwest</source>
-      <translation type="unfinished"/>
+      <translation>Güneybatı</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1141"/>
