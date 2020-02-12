@@ -55,14 +55,14 @@ Lütfen bekleyin...</translation>
     <message>
       <location filename="../src/Host.cpp" line="2040"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>%1 oynuyor</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2042"/>
       <location filename="../src/Host.cpp" line="2048"/>
       <source>%1 at %2:%3</source>
       <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
-      <translation type="unfinished"/>
+      <translation>%2:%3 de %1</translation>
     </message>
   </context>
   <context>
@@ -70,22 +70,22 @@ Lütfen bekleyin...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="141"/>
       <source>! %1</source>
-      <translation type="unfinished"/>
+      <translation>! %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="143"/>
       <source>! %1 is away (%2)</source>
-      <translation type="unfinished"/>
+      <translation>! %1 şu an bilgisayar başında değil. (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="144"/>
       <source>! %1 is back</source>
-      <translation type="unfinished"/>
+      <translation>! %1 bilgisayar başına geri döndü</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="150"/>
       <source>! invited %1 to %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 %2 ye davet edildi</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="152"/>
@@ -313,7 +313,7 @@ Lütfen bekleyin...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="424"/>
       <source> - server operator</source>
-      <translation type="unfinished"/>
+      <translation> - sunucu operatörü</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="431"/>
@@ -323,27 +323,27 @@ Lütfen bekleyin...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="438"/>
       <source>%1 days</source>
-      <translation type="unfinished"/>
+      <translation>%1 gün</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="441"/>
       <source>%1 hours</source>
-      <translation type="unfinished"/>
+      <translation>%1 saat</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="444"/>
       <source>%1 mins</source>
-      <translation type="unfinished"/>
+      <translation>%1 dakika</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="445"/>
       <source>%1 secs</source>
-      <translation type="unfinished"/>
+      <translation>%1 saniye</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="55"/>
       <source>Start element not found!</source>
-      <translation type="unfinished"/>
+      <translation>Başlangıç öğesi bulunamadı!</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
@@ -514,12 +514,12 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3781"/>
       <source>Delete color</source>
       <comment>Deletes an environment colour</comment>
-      <translation type="unfinished"/>
+      <translation>Rengi sil</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3799"/>
       <source>Define new color</source>
-      <translation type="unfinished"/>
+      <translation>Yeni renk tanımla</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4113"/>
@@ -533,7 +533,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2382"/>
       <source>no text</source>
       <comment>Default text if a label is created in mapper with no text</comment>
-      <translation type="unfinished"/>
+      <translation>metin yok</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="142"/>
@@ -545,7 +545,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="142"/>
       <source>Name</source>
       <comment>Room name in the mapper widget</comment>
-      <translation type="unfinished"/>
+      <translation>İsim</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="144"/>
@@ -663,7 +663,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2793"/>
       <source>Undo</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>Geri al</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2794"/>
@@ -705,19 +705,19 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2829"/>
       <source>Create new map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>Yeni harita oluştur</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2832"/>
       <source>Load map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>Haritayı yükle</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2845"/>
       <source>Create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Oda oluştur</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2851"/>
@@ -735,25 +735,25 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2855"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Sil</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2856"/>
       <source>Delete room</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Odayı sil</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2859"/>
       <source>Color</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Renk</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2860"/>
       <source>Change room color</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Odanın rengini değiştir</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2863"/>
@@ -783,7 +783,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2871"/>
       <source>Lock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Kilitle</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2872"/>
@@ -795,7 +795,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2875"/>
       <source>Unlock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Kilidi aç</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2876"/>
@@ -807,37 +807,37 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2879"/>
       <source>Weight</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Ağırlık</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2880"/>
       <source>Set room weight</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Odanın ağırlığını ayarla</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2883"/>
       <source>Exits</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Çıkışlar</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2884"/>
       <source>Set room exits</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Odanın çıkışlarını ayarla</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2887"/>
       <source>Symbol</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Sembol</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2888"/>
       <source>Set one or more symbols or letters to mark special rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Özel odaları işaretlemek için bir veya daha fazla sembol ya da harf ayarlayın</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2891"/>
@@ -849,13 +849,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2892"/>
       <source>Move selected group to a given position</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Seçili grubu belirtilen konuma taşı</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2895"/>
       <source>Area</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Bölge</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2896"/>
@@ -1794,49 +1794,49 @@ Tried these locations:
       <location filename="../src/TMap.cpp" line="995"/>
       <source>n</source>
       <comment>This translation converts the direction that DIR_NORTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>k</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="996"/>
       <source>ne</source>
       <comment>This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>kd</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="997"/>
       <source>e</source>
       <comment>This translation converts the direction that DIR_EAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>d</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="998"/>
       <source>se</source>
       <comment>This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>gd</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="999"/>
       <source>s</source>
       <comment>This translation converts the direction that DIR_SOUTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>g</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1000"/>
       <source>sw</source>
       <comment>This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>gb</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1001"/>
       <source>w</source>
       <comment>This translation converts the direction that DIR_WEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>b</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1002"/>
       <source>nw</source>
       <comment>This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>kb</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1003"/>
@@ -1957,7 +1957,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1607"/>
       <source>Download the map</source>
-      <translation type="unfinished"/>
+      <translation>Haritayı indirin</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1608"/>
@@ -2007,7 +2007,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2120"/>
       <source>End of report</source>
-      <translation type="unfinished"/>
+      <translation>Raporun sonu</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2126"/>
@@ -2173,25 +2173,25 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="115"/>
       <location filename="../src/TRoom.cpp" line="1078"/>
       <source>Up</source>
-      <translation type="unfinished"/>
+      <translation>Yukarı</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="116"/>
       <location filename="../src/TRoom.cpp" line="1092"/>
       <source>Down</source>
-      <translation type="unfinished"/>
+      <translation>Aşağı</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="117"/>
       <location filename="../src/TRoom.cpp" line="1106"/>
       <source>In</source>
-      <translation type="unfinished"/>
+      <translation>İçeri</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="118"/>
       <location filename="../src/TRoom.cpp" line="1120"/>
       <source>Out</source>
-      <translation type="unfinished"/>
+      <translation>Dışarı</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="119"/>
@@ -2216,7 +2216,7 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="980"/>
       <source>Northeast</source>
-      <translation type="unfinished"/>
+      <translation>Kuzeydoğu</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="994"/>
@@ -2302,7 +2302,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1331"/>
       <source>%1 (open)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (açık)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1334"/>
