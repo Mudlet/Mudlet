@@ -2095,7 +2095,7 @@ the file:
       <location filename="../src/TMap.cpp" line="2210"/>
       <source>Downloading map file for use in %1...</source>
       <comment>%1 is the name of the current Mudlet profile</comment>
-      <translation type="unfinished"/>
+      <translation>正在下载地图文件 %1...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2240"/>
@@ -3639,7 +3639,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="728"/>
       <source>Supporters</source>
-      <translation type="unfinished"/>
+      <translation>支持者</translation>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="757"/>
@@ -4008,7 +4008,10 @@ error message was: &quot;%2&quot;.</source>
 &lt;li&gt;click the &lt;i&gt;Default&lt;/i&gt; or &lt;i&gt;Ignore&lt;/i&gt; buttons at the bottom for a pair of other special cases&lt;/li&gt;
 &lt;li&gt;click &lt;i&gt;Cancel&lt;/i&gt; to close this dialog without making any changes&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</source>
       <comment>Ensure that &quot;Default&quot;, &quot;Ignore&quot; and &quot;Cancel&quot; in this instruction are the same as used for the controls elsewhere on this dialog.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;small&gt;选择:&lt;ul&gt;&lt;li&gt;下列16个基本色中的一个&lt;/li&gt;
+&lt;li&gt;点击 &lt;i&gt;更多&lt;/i&gt; 按钮可进入 256 色选择项, 按照接下来的指令选择256色中的一种; 如果该颜色已经被使用, 那么这一部分将会被显示出来&lt;/li&gt;
+&lt;li&gt;点击 &lt;i&gt;默认&lt;/i&gt; 或 &lt;i&gt;忽略&lt;/i&gt; 按钮 将使用默认设定&lt;/li&gt;
+&lt;li&gt;点击 &lt;i&gt;取消&lt;/i&gt; 将关闭该对话框并不作任何修改&lt;/li&gt;&lt;/ul&gt;&lt;/small&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="58"/>
@@ -4662,91 +4665,96 @@ Count</source>
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#7289DA;&quot;&gt;&lt;b&gt;Discord&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://discord.gg/kuYvMQ9&quot;&gt;discord.gg&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Source code&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet&quot;&gt;github.com/Mudlet/Mudlet&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;Features/bugs&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;github.com/Mudlet/Mudlet/issues&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;主页&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://www.mudlet.org/&quot;&gt;www.mudlet.org&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;论坛&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://forums.mudlet.org/&quot;&gt;forums.mudlet.org&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;文档&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://wiki.mudlet.org/w/Main_Page&quot;&gt;WiKi百科&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#7289DA;&quot;&gt;&lt;b&gt;Discord&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://discord.gg/kuYvMQ9&quot;&gt;discord.gg&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;源代码&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet&quot;&gt;github.com/Mudlet/Mudlet&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#40b040;&quot;&gt;&lt;b&gt;特性/Bugs&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;github.com/Mudlet/Mudlet/issues&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="148"/>
       <source>Original author, original project lead, Mudlet core coding, retired.</source>
       <comment>about:Heiko</comment>
-      <translation type="unfinished"/>
+      <translation>原作者，原始项目牵头人，Mudlet核心编码已经退出。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="151"/>
       <source>GUI design and initial feature planning. He is responsible for the project homepage and the user manual. Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp;amp; user help. With the project from the very beginning and is an official spokesman of the project. Since the retirement of Heiko, he has become the head of the Mudlet project.</source>
       <comment>about:Vadi</comment>
-      <translation type="unfinished"/>
+      <translation>GUI 设计和初始功能规划。 他负责项目主页和用户手册。 Windows ， macOS， Ubuntu 和通用 Linux 安装程序的维护人员。 维护 Mudlet Wiki Lua API ，并处理项目管理，公共关系 &amp; 用户帮助。 从一开始就有这个项目，是项目的官方发言人。 自从 Heiko 退休后，他就成为了 Mudlet 项目的负责人。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="158"/>
       <source>After joining in 2013, he has been poking various bits of the C++ code and GUI with a pointy stick; subsequently trying to patch over some of the holes made/found. Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language other than American English you will be seeing the results of him getting fed up with the spelling differences between what was being used and the British English his brain wanted to see.</source>
       <comment>about:SlySven</comment>
-      <translation type="unfinished"/>
+      <translation>在2013年加入后，他一直用 C++ 代码和 GUI 进行升级优化，随后尝试对所发现/发现的一些漏洞进行修补。 最近，他一直在为 Mudlet 4.0.0 在 I18n 和 L10n 工作，所以如果你以美国英语以外的语言播放 Mudlet ，那么你将看到他在不同语言之间的拼写差异的成果。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="165"/>
       <source>Former maintainer of the early Windows and Apple OSX packages. He also administers our server and helps the project in many ways.</source>
       <comment>about:demonnic</comment>
-      <translation type="unfinished"/>
+      <translation>早期的 Windows 和 Apple OSX 软件包的维护人员。 他还管理我们的服务器并以多种方式帮助项目。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="169"/>
       <source>Contributed many improvements to Mudlet&apos;s db: interface, event system, and has been around the project for a very long while assisting users.</source>
       <comment>about:keneanung</comment>
-      <translation type="unfinished"/>
+      <translation>对 Mudlet&apos;s db 做出了许多改进：界面，事件系统，并且一直陪伴该项目很长时间，同时协助用户。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="173"/>
       <source>Does a ton of work in making Mudlet, the website and the wiki accessible to you regardless of the language you speak - and promoting our genre!</source>
       <comment>about:Leris</comment>
-      <translation type="unfinished"/>
+      <translation>做了大量的工作，使 Mudlet，网站和WiKi 无论你说什么语言，你都可以访问，并推广我们的流派！</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="177"/>
       <source>Contributions to the Travis integration, CMake and Visual C++ build, a lot of code quality and memory management improvements.</source>
       <comment>about:ahmedcharles</comment>
-      <translation type="unfinished"/>
+      <translation>对 Travis 集成， CMake 和 Visual C++ 构建的贡献，许多代码质量和内存管理改进。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="181"/>
       <source>Developed a shared module system that allows script packages to be shared among profiles, a UI for viewing Lua variables, improvements in the mapper and all around.</source>
       <comment>about:Chris7</comment>
-      <translation type="unfinished"/>
+      <translation>开发了一个共享模块系统，允许在概要文件之间共享脚本包，用于查看 Lua 变量的 UI ，以及映射器及其周围的改进。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="185"/>
       <source>Developed the first version of our Mac OSX installer. He is the former maintainer of the Mac version of Mudlet.</source>
       <comment>about:Ben Carlsen</comment>
-      <translation type="unfinished"/>
+      <translation>开发了我们的 Mac OSX 安装程序的第一个版本。 他是 Mudlet Mac 版本的前维护者。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="189"/>
       <source>Joined in December 2009 though he&apos;s been around much longer. Contributed to the Lua API and is the former maintainer of the Lua API.</source>
       <comment>about:Ben Smith</comment>
-      <translation type="unfinished"/>
+      <translation>2009 年 12 月加入，他加入的时间更长。 为 Lua API 提供了帮助，并且是 Lua API 的前维护人员。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="193"/>
       <source>Joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches and has helped with release management of 1.0.5.</source>
       <comment>about:Blaine von Roeder</comment>
-      <translation type="unfinished"/>
+      <translation>2009年 12 月加入。 他向 Lua API 提供了帮助，提交了少量的 bugfix 补丁，并帮助发布了 1.0.5的发布管理。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="197"/>
       <source>Developed the original cmake build script and he has committed a number of patches.</source>
       <comment>about:Bruno Bigras</comment>
-      <translation type="unfinished"/>
+      <translation>开发了最初的 cmake 构建脚本，他已经提交了一些补丁。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="200"/>
       <source>Contributed to the Lua API.</source>
       <comment>about:Carter Dewey</comment>
-      <translation type="unfinished"/>
+      <translation>为 Lua API 做出了贡献。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="203"/>
       <source>Developed the Vyzor GUI Manager for Mudlet.</source>
       <comment>about:Oneymus</comment>
-      <translation type="unfinished"/>
+      <translation>为 Mudlet 开发 Vyzor GUI Manager 。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="206"/>
@@ -4758,49 +4766,49 @@ Count</source>
       <location filename="../src/dlgAboutDialog.cpp" line="211"/>
       <source>Joining us 2017 they have given us some useful C++ and Lua contributions.</source>
       <comment>about:Dicene</comment>
-      <translation type="unfinished"/>
+      <translation>于2017 年加入我们，他们为我们提供了一些有用的 C++ 和 Lua 的贡献。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="214"/>
       <source>Contributed the Geyser layout manager for Mudlet in March 2010. It is written in Lua and aims at simplifying user GUI scripting.</source>
       <comment>about:James Younquist</comment>
-      <translation type="unfinished"/>
+      <translation>2010 年 3 月为 Mudlet 提供了 Geyser 布局经理。 它是用 Lua 编写的，旨在简化用户 GUI 脚本编制。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="218"/>
       <source>Helped develop and debug the Lua API.</source>
       <comment>about:John Dahlström</comment>
-      <translation type="unfinished"/>
+      <translation>帮助开发和调试 Lua API。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="221"/>
       <source>Contributed several improvements and new features for Geyser.</source>
       <comment>about:Beliaar</comment>
-      <translation type="unfinished"/>
+      <translation>为 Geyser 提供了一些改进和新功能。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="224"/>
       <source>The original author of our Windows installer.</source>
       <comment>about:Leigh Stillard</comment>
-      <translation type="unfinished"/>
+      <translation>Windows 安装程序的原始作者。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="227"/>
       <source>Worked on the manual, forum help and helps with GUI design and documentation.</source>
       <comment>about:Maksym Grinenko</comment>
-      <translation type="unfinished"/>
+      <translation>致力于说明手册、论坛帮助和 GUI 设计和文档帮助。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="230"/>
       <source>Developed a database Lua API that allows for far easier use of databases and one of the original OSX installers.</source>
       <comment>about:Stephen Hansen</comment>
-      <translation type="unfinished"/>
+      <translation>开发了一个数据库 Lua API，允许更容易使用数据库和原始 OSX 安装程序之一。</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="233"/>
       <source>Designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. Visit his homepage at &lt;a href=&quot;http://thorwil.wordpress.com/&quot;&gt;thorwil.wordpress.com&lt;/a&gt;.</source>
       <comment>about:Thorsten Wilms</comment>
-      <translation type="unfinished"/>
+      <translation>为我们设计了美丽的标志，我们启动画面，关于对话，我们的网站，几个图标和徽章。 您可以访问他的主页 &lt;a href=&quot;http://thorwil.wordpress.com/&quot;&gt;thorwil.wordpress.com&lt;/a&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="242"/>
@@ -4823,12 +4831,12 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="582"/>
       <source>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; is built upon the shoulders of other projects in the FOSS world; as well as using many GPL components we also make use of some third-party software with other licenses:&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; 是建立在自由开放源码软件世界其他项目的肩膀上的；以及使用许多 GPL 组件，我们还使用一些第三方软件和其他许可证：&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="824"/>
       <source>&lt;h2&gt;&lt;u&gt;Communi IRC Library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008-2016 The Communi Project&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Communi IRC Library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008-2016 The Communi Project&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="827"/>
@@ -4838,17 +4846,17 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="833"/>
       <source>&lt;h2&gt;&lt;u&gt;lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="836"/>
       <source>&lt;h2&gt;&lt;u&gt;lua_yajl - Lua 5.1 interface to yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Brian Maher &amp;lt;maherb at brimworks dot com&amp;gt;&lt;br&gt;Copyright © 2009 Brian Maher&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;lua_yajl - Lua 5.1 interface to yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Brian Maher &amp;lt;maherb at brimworks dot com&amp;gt;&lt;br&gt;Copyright © 2009 Brian Maher&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="841"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaZip - Reading files inside zip files&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Danilo Tuler&lt;br&gt;Copyright © 2003-2007 Kepler Project&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;LuaZip - 在zip 文件中读取文件&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;作者：Danilo Tuler&lt;br&gt;版权所有 © 2003-2007 Kepler项目&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="846"/>
@@ -4858,7 +4866,7 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="849"/>
       <source>The &lt;b&gt;edbee-lib&lt;/b&gt; widget itself incorporates other components with licences that must be noted as well, they are:</source>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;edbee-lib&lt;/b&gt; 窗口小部件本身包含其他必须注意的许可证组件，它们是:</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="851"/>
@@ -4883,7 +4891,7 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="871"/>
       <source>&lt;h2&gt;&lt;u&gt;dblsqd&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Philipp Medien&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;dblsqd&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Philipp Medien&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="874"/>
@@ -4903,7 +4911,7 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="898"/>
       <source>&lt;h2&gt;&lt;u&gt;Discord - Rich Presence - RPC library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Discord, Inc.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Discord - Rich Presence - RPC library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;版权所有 © 2017 Discord, Inc.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="901"/>
@@ -4915,7 +4923,9 @@ Count</source>
       <source>
                           These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Mudlet&apos;s patreon&lt;/a&gt;:
                           </source>
-      <translation type="unfinished"/>
+      <translation>
+                          这些强大的人将永远被深情地记住&lt;br&gt;他们慷慨的资金支持 &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Mudlet&apos; patreon&lt;/a&gt;:
+                          </translation>
     </message>
   </context>
   <context>
@@ -5108,7 +5118,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="173"/>
       <source>Characters password, stored securely in the computer&apos;s credential manager</source>
-      <translation type="unfinished"/>
+      <translation>字符密码，安全地存储在计算机的凭据管理器</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="175"/>
@@ -5201,12 +5211,12 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2449"/>
       <source>&lt;p&gt;Click to hide the password; it will also hide if another profile is selected.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;单击以隐藏密码; 如果选择了另一个概要文件，那么它也将隐藏。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2453"/>
       <source>&lt;p&gt;Click to reveal the password for this profile.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;单击以显示此概要文件的密码。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2323"/>
@@ -5290,7 +5300,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="144"/>
       <source>$ Type &lt;b&gt;/help&lt;/b&gt; for commands or &lt;b&gt;/help [command]&lt;/b&gt; for command syntax.</source>
-      <translation type="unfinished"/>
+      <translation>$指令 &lt;b&gt;/help&lt;/b&gt;  或 &lt;b&gt;/help [command]&lt;/b&gt; 命令的语法。</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="203"/>
@@ -5358,7 +5368,7 @@ Count</source>
     <message>
       <location filename="../src/dlgMapper.cpp" line="135"/>
       <source>3D mapper is not available in this version of Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>3D mapper在此版本的 Mudlet 中不可用</translation>
     </message>
     <message>
       <location filename="../src/dlgMapper.cpp" line="258"/>
@@ -8395,52 +8405,52 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="693"/>
       <source>English (Australia)</source>
-      <translation type="unfinished"/>
+      <translation>英语(澳大利亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="694"/>
       <source>English (Bahamas)</source>
-      <translation type="unfinished"/>
+      <translation>英语(牙买加)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="695"/>
       <source>English (Botswana)</source>
-      <translation type="unfinished"/>
+      <translation>英语 (博茨瓦纳)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="696"/>
       <source>English (Belize)</source>
-      <translation type="unfinished"/>
+      <translation>英语(伯利兹)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="639"/>
       <source>Arabic (Egypt)</source>
-      <translation type="unfinished"/>
+      <translation>阿拉伯语(埃及)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="410"/>
       <source>Report issue</source>
-      <translation type="unfinished"/>
+      <translation>报告问题</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="414"/>
       <source>Report an issue about the Mudlet Public Test Build</source>
-      <translation type="unfinished"/>
+      <translation>报告有关 Mudlet 公共测试构建的问题</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="697"/>
       <source>English (Canada)</source>
-      <translation type="unfinished"/>
+      <translation>英语(加拿大)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="698"/>
       <source>English (Denmark)</source>
-      <translation type="unfinished"/>
+      <translation>英语(丹麦)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="699"/>
       <source>English (United Kingdom)</source>
-      <translation type="unfinished"/>
+      <translation>英语(英国)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="700"/>
@@ -8451,22 +8461,22 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="701"/>
       <source>English (Ghana)</source>
-      <translation type="unfinished"/>
+      <translation>英语(加纳)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="702"/>
       <source>English (Hong Kong SAR China)</source>
-      <translation type="unfinished"/>
+      <translation>英语 (中国香港特别行政区)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="703"/>
       <source>English (Ireland)</source>
-      <translation type="unfinished"/>
+      <translation>英语(爱尔兰)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="704"/>
       <source>English (India)</source>
-      <translation type="unfinished"/>
+      <translation>英语(印度)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="705"/>
@@ -9019,12 +9029,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="814"/>
       <source>Sinhala (Sri Lanka)</source>
-      <translation type="unfinished"/>
+      <translation>僧伽罗语(斯里兰卡)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="815"/>
       <source>Slovak</source>
-      <translation type="unfinished"/>
+      <translation>斯洛伐克文</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="816"/>
@@ -9109,47 +9119,47 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="832"/>
       <source>Swedish (Sweden)</source>
-      <translation type="unfinished"/>
+      <translation>瑞典语(瑞典)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="833"/>
       <source>Swedish (Finland)</source>
-      <translation type="unfinished"/>
+      <translation>瑞典语(芬兰)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="834"/>
       <source>Swahili</source>
-      <translation type="unfinished"/>
+      <translation>斯瓦希里语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="835"/>
       <source>Swahili (Kenya)</source>
-      <translation type="unfinished"/>
+      <translation>斯瓦希里语(肯尼亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="836"/>
       <source>Swahili (Tanzania)</source>
-      <translation type="unfinished"/>
+      <translation>斯瓦希里语 (坦桑尼亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="837"/>
       <source>Telugu</source>
-      <translation type="unfinished"/>
+      <translation>泰卢固语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="838"/>
       <source>Telugu (India)</source>
-      <translation type="unfinished"/>
+      <translation>泰卢固语(印度)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="839"/>
       <source>Thai</source>
-      <translation type="unfinished"/>
+      <translation>泰语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="840"/>
       <source>Thai (Thailand)</source>
-      <translation type="unfinished"/>
+      <translation>泰国语(泰国)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="841"/>
@@ -9471,7 +9481,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="403"/>
       <source>If you&apos;ve got multiple profiles open, splits Mudlet screen to show them all at once</source>
-      <translation type="unfinished"/>
+      <translation>如果你已经打开了多个情景，分割Mudlet屏幕以一次显示所有情景。</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="421"/>
@@ -9530,12 +9540,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="1285"/>
       <source>Load Mudlet Module</source>
-      <translation type="unfinished"/>
+      <translation>加载 Mudlet 模块</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1292"/>
       <source>Load Mudlet Module:</source>
-      <translation type="unfinished"/>
+      <translation>加载 Mudlet 模块:</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1292"/>
@@ -9666,13 +9676,17 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="4681"/>
       <source>Review %n update(s)...</source>
       <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>检查 %n 更新...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="4686"/>
       <source>&lt;p&gt;Review the update(s) available...&lt;/p&gt;</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>&lt;p&gt;查看可用更新...&lt;/p&gt;</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4777"/>
@@ -9782,7 +9796,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="317"/>
       <location filename="../src/ui/profile_preferences.ui" line="2522"/>
       <source>Please reconnect to your game for the change to take effect</source>
-      <translation type="unfinished"/>
+      <translation>请重新连接到您的游戏，以使更改生效</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="333"/>
@@ -9827,7 +9841,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="420"/>
       <source>.txt</source>
-      <translation type="unfinished"/>
+      <translation>.txt</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="453"/>
@@ -9862,22 +9876,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="250"/>
       <source>Allow server to download and play media (requires GMCP enabled below)</source>
-      <translation type="unfinished"/>
+      <translation>允许服务器下载和播放介质 (需要在下面启用 GMCP)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="269"/>
       <source>GMCP - Enable Generic Mud Communication Protocol</source>
-      <translation type="unfinished"/>
+      <translation>GMCP - 启用通用Mud通信协议</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="279"/>
       <source>MSDP - Enable Mud Server Data Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSDP - 启用 Mud 服务器数据协议</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="289"/>
       <source>MSSP - Enable Mud Server Status Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSSP - 启用 Mud 服务器状态协议</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="296"/>
@@ -9887,7 +9901,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="299"/>
       <source>MSP - Enable Mud Sound Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSP - 启用 Mud 声音协议</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="498"/>
@@ -9902,7 +9916,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="518"/>
       <source>Enter text to separate commands with or leave blank to disable</source>
-      <translation type="unfinished"/>
+      <translation>输入要分隔的命令的文本，或将其留空以禁用</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="525"/>
@@ -9998,7 +10012,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1047"/>
       <source>&apos;&quot;</source>
-      <translation type="unfinished"/>
+      <translation>&apos;&quot;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1060"/>
@@ -10133,7 +10147,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="223"/>
       <source>Miscellaneous</source>
-      <translation type="unfinished"/>
+      <translation>其他</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="286"/>
@@ -10274,17 +10288,17 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1188"/>
       <source>h:mm:ss.zzz</source>
       <comment>Used to set a time interval only</comment>
-      <translation type="unfinished"/>
+      <translation>h:mm:ss.zzz</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1301"/>
       <source>Autocomplete</source>
-      <translation type="unfinished"/>
+      <translation>自动补全</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1307"/>
       <source>Autocomplete Lua functions in code editor</source>
-      <translation type="unfinished"/>
+      <translation>在代码编辑器中自动补全(自动完成) Lua 函数</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1350"/>
