@@ -4327,6 +4327,33 @@ int TLuaInterpreter::setBackgroundImage(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getImageSize
+int TLuaInterpreter::getImageSize(lua_State* L)
+{
+    QString imageLocation;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "getImageSize: bad argument #1 type (image location as string as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        imageLocation = QString::fromUtf8(lua_tostring(L, 1));
+        if (imageLocation.isEmpty()) {
+            lua_pushnil(L);
+            lua_pushstring(L, "bad argument #1 value (image location cannot be an empty string)");
+            return 2;
+        }
+    }
+
+    if (auto size = mudlet::self()->getImageSize(imageLocation); size) {
+        lua_pushnumber(L, size->width());
+        lua_pushnumber(L, size->height());
+        return 2;
+    } else {
+        lua_pushnil(L);
+        lua_pushfstring(L, "couldn't retrieve image size. Is the location '%s' correct?", imageLocation.toUtf8().constData());
+        return 2;
+    }
+}
+
 // No documentation available in wiki - internal function
 int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
 {
@@ -15639,6 +15666,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setLabelWheelCallback", TLuaInterpreter::setLabelWheelCallback);
     lua_register(pGlobalLua, "setLabelOnEnter", TLuaInterpreter::setLabelOnEnter);
     lua_register(pGlobalLua, "setLabelOnLeave", TLuaInterpreter::setLabelOnLeave);
+    lua_register(pGlobalLua, "getImageSize", TLuaInterpreter::getImageSize);
     lua_register(pGlobalLua, "moveWindow", TLuaInterpreter::moveWindow);
     lua_register(pGlobalLua, "setTextFormat", TLuaInterpreter::setTextFormat);
     lua_register(pGlobalLua, "getMainWindowSize", TLuaInterpreter::getMainWindowSize);

@@ -2584,6 +2584,17 @@ void mudlet::deleteLine(Host* pHost, const QString& name)
     }
 }
 
+std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
+{
+    QImage image(imageLocation);
+
+    if (image.isNull()) {
+        return {};
+    }
+
+    return {image.size()};
+}
+
 bool mudlet::insertText(Host* pHost, const QString& windowName, const QString& text)
 {
     if (!pHost || !pHost->mpConsole) {
