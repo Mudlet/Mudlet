@@ -4032,12 +4032,12 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2354"/>
       <source>Character name:</source>
-      <translation type="unfinished"/>
+      <translation>Karakter adı:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2361"/>
       <source>The characters name</source>
-      <translation type="unfinished"/>
+      <translation>Karakterin adı</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2413"/>
@@ -4982,7 +4982,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="576"/>
       <source>new profile name</source>
-      <translation type="unfinished"/>
+      <translation>yeni profil adı</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="674"/>
