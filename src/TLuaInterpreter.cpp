@@ -3516,6 +3516,14 @@ int TLuaInterpreter::openUserWindow(lua_State* L)
 
     Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
+//Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
+    auto pL = host.mpConsole->mLabelMap.value(text);
+    if (pL) {
+        lua_pushfstring(L, "openUserWindow: Cannot create UserWindow. %s exists already!",text.toUtf8().constData());
+        lua_error(L);
+        return 1;
+    }
+
     lua_pushboolean(L, mudlet::self()->openWindow(&host, text, loadLayout));
     return 1;
 }
@@ -3524,36 +3532,60 @@ int TLuaInterpreter::openUserWindow(lua_State* L)
 int TLuaInterpreter::createMiniConsole(lua_State* L)
 {
     std::string luaSendText = "";
+    std::string luaSendWindow = "";
+    int x, y, width, height,counter;
+    counter = 3;
+//make the windowname optional by using counter. If windowname "main" add to main console
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "createMiniConsole: wrong argument type");
         lua_error(L);
         return 1;
     } else {
-        luaSendText = lua_tostring(L, 1);
+        luaSendWindow = lua_tostring(L, 1);
+        if (luaSendWindow == "main") {
+                // QString::compare is zero for a match on the "default"
+                // case so clear the variable - to flag this as the main
+                // window case - as is the case for an empty string
+                luaSendWindow.clear();
+            }
     }
-    int x, y, width, height;
     if (!lua_isnumber(L, 2)) {
+        luaSendText = lua_tostring(L, 2);
+        if(!lua_isstring(L,2)){
+            lua_pushstring(L, "createMiniConsole: wrong argument type");
+            lua_error(L);
+            return 1;}
+     }else {
+        luaSendText = luaSendWindow;
+        luaSendWindow.clear();
+        counter = 2;
+    }
+
+    if (!lua_isnumber(L, counter)) {
         lua_pushstring(L, "createMiniConsole: wrong argument type");
         lua_error(L);
         return 1;
     } else {
-        x = lua_tonumber(L, 2);
+        x = lua_tonumber(L, counter);
+        counter++;
     }
-    if (!lua_isnumber(L, 3)) {
+    if (!lua_isnumber(L, counter)) {
         lua_pushstring(L, "createMiniConsole: wrong argument type");
         lua_error(L);
         return 1;
     } else {
-        y = lua_tonumber(L, 3);
+        y = lua_tonumber(L, counter);
+        counter++;
     }
-    if (!lua_isnumber(L, 4)) {
+    if (!lua_isnumber(L, counter)) {
         lua_pushstring(L, "createMiniConsole: wrong argument type");
         lua_error(L);
         return 1;
     } else {
-        width = lua_tonumber(L, 4);
+        width = lua_tonumber(L, counter);
+        counter++;
     }
-    if (!lua_isnumber(L, 5)) {
+    if (!lua_isnumber(L, counter)) {
         lua_pushstring(L, "createMiniConsole: wrong argument type");
         lua_error(L);
         return 1;
@@ -3562,7 +3594,14 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
     }
     Host& host = getHostFromLua(L);
     QString name(luaSendText.c_str());
-    lua_pushboolean(L, mudlet::self()->createMiniConsole(&host, name, x, y, width, height));
+    QString windowname(luaSendWindow.c_str());
+    auto pC = host.mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        lua_pushfstring(L, "createMiniConsole: Cannot create Miniconsole. %s exists already!", name.toUtf8().constData());
+        lua_error(L);
+        return 1;
+    }
+    lua_pushboolean(L, mudlet::self()->createMiniConsole(&host, windowname, name, x, y, width, height));
     return 1;
 }
 
@@ -3570,62 +3609,101 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
 int TLuaInterpreter::createLabel(lua_State* L)
 {
     std::string luaSendText = "";
+    std::string luaSendWindow = "";
+    int x, y, width, height, counter;
+    counter = 3;
+
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "createLabel: wrong argument type");
         lua_error(L);
         return 1;
     } else {
-        luaSendText = lua_tostring(L, 1);
+        luaSendWindow = lua_tostring(L, 1);
+        if (luaSendWindow == "main") {
+                // QString::compare is zero for a match on the "default"
+                // case so clear the variable - to flag this as the main
+                // window case - as is the case for an empty string
+                luaSendWindow.clear();
+            }
     }
-    int x, y, width, height;
-    bool fillBackground, clickthrough = false;
+
     if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "createLabel: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        x = lua_tonumber(L, 2);
+        luaSendText = lua_tostring(L, 2);
+        if(!lua_isstring(L,2)){
+            lua_pushstring(L, "createLabel: wrong argument type");
+            lua_error(L);
+            return 1;}
+     }else {
+        luaSendText = luaSendWindow;
+        luaSendWindow.clear();
+        counter = 2;
     }
-    if (!lua_isnumber(L, 3)) {
-        lua_pushstring(L, "createLabel: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        y = lua_tonumber(L, 3);
-    }
-    if (!lua_isnumber(L, 4)) {
-        lua_pushstring(L, "createLabel: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        width = lua_tonumber(L, 4);
-    }
-    if (!lua_isnumber(L, 5)) {
-        lua_pushstring(L, "createLabel: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        height = lua_tonumber(L, 5);
-    }
-    if (!lua_isnumber(L, 6)) {
-        lua_pushstring(L, "createLabel: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        fillBackground = lua_toboolean(L, 6);
-    }
-    if (lua_gettop(L) > 6) {
-        if (!lua_isboolean(L, 7)) {
+
+    bool fillBackground, clickthrough = false;
+       if (!lua_isnumber(L, counter)) {
             lua_pushstring(L, "createLabel: wrong argument type");
             lua_error(L);
             return 1;
         } else {
-            clickthrough = lua_toboolean(L, 7);
+            x = lua_tonumber(L, counter);
+            counter++;
+        }
+
+    if (!lua_isnumber(L, counter)) {
+        lua_pushstring(L, "createLabel: wrong argument type");
+        lua_error(L);
+        return 1;
+    } else {
+        y = lua_tonumber(L, counter);
+        counter++;
+    }
+
+    if (!lua_isnumber(L, counter)) {
+        lua_pushstring(L, "createLabel: wrong argument type");
+        lua_error(L);
+        return 1;
+    } else {
+        width = lua_tonumber(L, counter);
+        counter++;
+    }
+
+    if (!lua_isnumber(L, counter)) {
+        lua_pushstring(L, "createLabel: wrong argument type");
+        lua_error(L);
+        return 1;
+    } else {
+        height = lua_tonumber(L, counter);
+        counter++;
+    }
+
+    if (!lua_isnumber(L, counter)) {
+        lua_pushstring(L, "createLabel: wrong argument type");
+        lua_error(L);
+        return 1;
+    } else {
+        fillBackground = lua_toboolean(L, counter);
+        counter++;
+    }
+    if (lua_gettop(L) > counter) {
+        counter++;
+        if (!lua_isboolean(L, counter)) {
+            lua_pushstring(L, "createLabel: wrong argument type");
+            lua_error(L);
+            return 1;
+        } else {
+            clickthrough = lua_toboolean(L, counter);
         }
     }
     Host& host = getHostFromLua(L);
     QString name(luaSendText.c_str());
-    lua_pushboolean(L, mudlet::self()->createLabel(&host, name, x, y, width, height, fillBackground, clickthrough));
+    QString windowname(luaSendWindow.c_str());
+    auto pC = host.mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        lua_pushfstring(L, "createLabel: Cannot create Label. %s exists already!",name.toUtf8().constData());
+        lua_error(L);
+        return 1;
+    }
+    lua_pushboolean(L, mudlet::self()->createLabel(&host, windowname, name, x, y, width, height, fillBackground, clickthrough));
     return 1;
 }
 
@@ -3670,55 +3748,103 @@ int TLuaInterpreter::createMapper(lua_State* L)
 int TLuaInterpreter::createButton(lua_State* L)
 {
     std::string luaSendText = "";
+    std::string luaSendWindow = "";
+    int x, y, width, height, counter;
+    counter = 3;
+
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "createButton: wrong argument type");
         lua_error(L);
         return 1;
     } else {
-        luaSendText = lua_tostring(L, 1);
+        luaSendWindow = lua_tostring(L, 1);
+        if (luaSendWindow == "main") {
+                // QString::compare is zero for a match on the "default"
+                // case so clear the variable - to flag this as the main
+                // window case - as is the case for an empty string
+                luaSendWindow.clear();
+            }
     }
-    int x, y, width, height;
-    bool fillBackground = false;
+
     if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "createButton: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        x = lua_tonumber(L, 2);
+        luaSendText = lua_tostring(L, 2);
+        if(!lua_isstring(L,2)){
+            lua_pushstring(L, "createButton: wrong argument type");
+            lua_error(L);
+            return 1;}
+     }else {
+        luaSendText = luaSendWindow;
+        luaSendWindow.clear();
+        counter = 2;
     }
-    if (!lua_isnumber(L, 3)) {
+
+    bool fillBackground, clickthrough = false;
+       if (!lua_isnumber(L, counter)) {
+            lua_pushstring(L, "createButton: wrong argument type");
+            lua_error(L);
+            return 1;
+        } else {
+            x = lua_tonumber(L, counter);
+            counter++;
+        }
+
+    if (!lua_isnumber(L, counter)) {
         lua_pushstring(L, "createButton: wrong argument type");
         lua_error(L);
         return 1;
     } else {
-        y = lua_tonumber(L, 3);
+        y = lua_tonumber(L, counter);
+        counter++;
     }
-    if (!lua_isnumber(L, 4)) {
+
+    if (!lua_isnumber(L, counter)) {
         lua_pushstring(L, "createButton: wrong argument type");
         lua_error(L);
         return 1;
     } else {
-        width = lua_tonumber(L, 4);
+        width = lua_tonumber(L, counter);
+        counter++;
     }
-    if (!lua_isnumber(L, 5)) {
-        lua_pushstring(L, "createButton: wrong argument type");
+
+    if (!lua_isnumber(L, counter)) {
+        lua_pushstring(L, "createLabel: wrong argument type");
         lua_error(L);
         return 1;
     } else {
-        height = lua_tonumber(L, 5);
+        height = lua_tonumber(L, counter);
+        counter++;
     }
-    if (!lua_isnumber(L, 6)) {
-        lua_pushstring(L, "createButton: wrong argument type");
+
+    if (!lua_isnumber(L, counter)) {
+        lua_pushstring(L, "createLabel: wrong argument type");
         lua_error(L);
         return 1;
     } else {
-        fillBackground = lua_toboolean(L, 6);
+        fillBackground = lua_toboolean(L, counter);
+        counter++;
+    }
+    if (lua_gettop(L) > counter) {
+        counter++;
+        if (!lua_isboolean(L, counter)) {
+            lua_pushstring(L, "createButton: wrong argument type");
+            lua_error(L);
+            return 1;
+        } else {
+            counter--;
+            clickthrough = lua_toboolean(L, counter);
+        }
     }
     Host& host = getHostFromLua(L);
     QString name(luaSendText.c_str());
-    //TODO FIXME
-    mudlet::self()->createLabel(&host, name, x, y, width, height, fillBackground, false);
-    return 0;
+    QString windowname(luaSendWindow.c_str());
+    auto pC = host.mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        lua_pushfstring(L, "createButton: Cannot create Label. %s exists already!",name.toUtf8().constData());
+        lua_error(L);
+        return 1;
+    }
+    lua_pushboolean(L, mudlet::self()->createLabel(&host, windowname, name, x, y, width, height, fillBackground, clickthrough));
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createBuffer
@@ -6873,6 +6999,26 @@ int TLuaInterpreter::getMainWindowSize(lua_State* L)
 
     lua_pushnumber(L, mainWindowSize.width());
     lua_pushnumber(L, mainWindowSize.height());
+
+    return 2;
+}
+//add getUserWindowSize
+int TLuaInterpreter::getUserWindowSize(lua_State* L)
+{
+    std::string luaSendWindow = "";
+    if (!lua_isstring(L, 1)) {
+        lua_pushstring(L, "getUserWindowSize: wrong argument type");
+        lua_error(L);
+        return 1;
+    } else {
+        luaSendWindow = lua_tostring(L, 1);
+    }
+
+    Host& host = getHostFromLua(L);
+    QString windowname(luaSendWindow.c_str());
+    QSize userWindowSize = host.mpConsole->getUserWindowSize(windowname);
+    lua_pushnumber(L, userWindowSize.width());
+    lua_pushnumber(L, userWindowSize.height());
 
     return 2;
 }
@@ -15642,6 +15788,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "moveWindow", TLuaInterpreter::moveWindow);
     lua_register(pGlobalLua, "setTextFormat", TLuaInterpreter::setTextFormat);
     lua_register(pGlobalLua, "getMainWindowSize", TLuaInterpreter::getMainWindowSize);
+    lua_register(pGlobalLua, "getUserWindowSize", TLuaInterpreter::getUserWindowSize);
     lua_register(pGlobalLua, "getMousePosition", TLuaInterpreter::getMousePosition);
     lua_register(pGlobalLua, "setProfileIcon", TLuaInterpreter::setProfileIcon);
     lua_register(pGlobalLua, "resetProfileIcon", TLuaInterpreter::resetProfileIcon);

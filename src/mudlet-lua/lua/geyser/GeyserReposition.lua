@@ -13,3 +13,4 @@ function GeyserReposition()
 end
 
 registerAnonymousEventHandler("sysWindowResizeEvent", "GeyserReposition")
+registerAnonymousEventHandler("sysUserWindowResizeEvent", "GeyserReposition")

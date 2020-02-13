@@ -342,6 +342,7 @@ public:
     static int setLabelOnEnter(lua_State*);
     static int setLabelOnLeave(lua_State*);
     static int getMainWindowSize(lua_State*);
+    static int getUserWindowSize(lua_State*);
     static int getMousePosition(lua_State*);
     static int setMiniConsoleFontSize(lua_State*);
     static int setProfileIcon(lua_State*);

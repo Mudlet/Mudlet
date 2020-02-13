@@ -666,6 +666,24 @@ void TConsole::resizeEvent(QResizeEvent* event)
         mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(mudletEvent);
     }
+//create the sysUserWindowResize Event for automatic resizing with Geyser
+    if (mType & (UserWindow)) {
+        TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
+        QString func = "handleWindowResizeEvent";
+        QString n = "WindowResizeEvent";
+        pLua->call(func, n);
+
+        TEvent mudletEvent {};
+        mudletEvent.mArgumentList.append(QLatin1String("sysUserWindowResizeEvent"));
+        mudletEvent.mArgumentList.append(QString::number(x));
+        mudletEvent.mArgumentList.append(QString::number(y));
+        mudletEvent.mArgumentList.append(mConsoleName);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(mudletEvent);
+    }
 }
 
 void TConsole::refresh()
@@ -2187,6 +2205,14 @@ TConsole* TConsole::createBuffer(const QString& name)
 
 void TConsole::resetMainConsole()
 {
+//resetProfile should reset also UserWindows
+    QMutableMapIterator<QString, TDockWidget*> itDockWidget(mDockWidgetMap);
+    while (itDockWidget.hasNext()) {
+        itDockWidget.next();
+        itDockWidget.value()->close();
+        itDockWidget.remove();
+    }
+
     QMutableMapIterator<QString, TConsole*> itSubConsole(mSubConsoleMap);
     while (itSubConsole.hasNext()) {
         itSubConsole.next();
@@ -2204,12 +2230,18 @@ void TConsole::resetMainConsole()
 }
 
 // This is a sub-console overlaid on to the main console
-TConsole* TConsole::createMiniConsole(const QString& name, int x, int y, int width, int height)
+TConsole* TConsole::createMiniConsole(const QString& windowname,const QString& name, int x, int y, int width, int height)
 {
+//if pW then add Console as Overlay to the Userwindow
+    auto pW = mDockWidgetMap.value(windowname);
     auto pC = mSubConsoleMap.value(name);
     if (!pC) {
-        pC = new TConsole(mpHost, SubConsole, mpMainFrame);
-        if (!pC) {
+        if (!pW){
+            pC = new TConsole(mpHost, SubConsole, mpMainFrame);
+        }else{
+            pC = new TConsole(mpHost, SubConsole, pW->widget());
+        }
+	if (!pC) {
             return nullptr;
         }
         mSubConsoleMap[name] = pC;
@@ -2234,11 +2266,17 @@ TConsole* TConsole::createMiniConsole(const QString& name, int x, int y, int wid
     }
 }
 
-TLabel* TConsole::createLabel(const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
+TLabel* TConsole::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
 {
+//if pW put Label in Userwindow
     auto pL = mLabelMap.value(name);
+    auto pW = mDockWidgetMap.value(windowname);
     if (!pL) {
-        pL = new TLabel(mpHost, mpMainFrame);
+        if (!pW){
+            pL = new TLabel(mpHost, mpMainFrame);
+        }else{
+            pL = new TLabel(mpHost, pW->widget());
+        }
         mLabelMap[name] = pL;
         pL->setObjectName(name);
         pL->setAutoFillBackground(fillBackground);
@@ -2654,6 +2692,17 @@ QSize TConsole::getMainWindowSize() const
     int commandLineHeight = mpCommandLine->height();
     QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
     return mainWindowSize;
+}
+//getUserWindowSize for resizing in Geyser
+QSize TConsole::getUserWindowSize(const QString& windowname) const
+{
+    auto pW = mDockWidgetMap.value(windowname);
+    if (pW){
+        QSize windowSize = pW->widget()->size();
+        QSize userWindowSize(windowSize.width(), windowSize.height());
+        return userWindowSize;
+    }
+    return getMainWindowSize();
 }
 
 void TConsole::slot_reloadMap(QList<QString> profilesList)

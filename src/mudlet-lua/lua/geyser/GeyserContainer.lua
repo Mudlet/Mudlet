@@ -272,6 +272,18 @@ function Geyser.Container:new(cons, container)
     else
       -- Else assume the root window is my container
       Geyser:add(me)
+      container=Geyser
+    end
+   --Create Root-Container for UserWindow and add Children
+   if (container == Geyser) and (me.windowname) and (me.windowname ~= "main") then
+        container = Geyser.Container:new({name=me.windowname.."Container",x=0,y=0,width="100%",height="100%"})
+        container:add(me)
+        container.get_width = function()
+            return getUserWindowSize(me.windowname)
+        end
+        container.get_height = function()
+            local w, h = getUserWindowSize(me.windowname) return h
+        end
     end
   end
 

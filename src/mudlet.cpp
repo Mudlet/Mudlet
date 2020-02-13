@@ -2019,7 +2019,7 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
     return false;
 }
 
-bool mudlet::createMiniConsole(Host* pHost, const QString& name, int x, int y, int width, int height)
+bool mudlet::createMiniConsole(Host* pHost, const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (!pHost || !pHost->mpConsole) {
         return false;
@@ -2027,7 +2027,7 @@ bool mudlet::createMiniConsole(Host* pHost, const QString& name, int x, int y, i
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
     if (!pC) {
-        pC = pHost->mpConsole->createMiniConsole(name, x, y, width, height);
+        pC = pHost->mpConsole->createMiniConsole(windowname, name, x, y, width, height);
         if (pC) {
             pC->setMiniConsoleFontSize(12);
             return true;
@@ -2042,7 +2042,7 @@ bool mudlet::createMiniConsole(Host* pHost, const QString& name, int x, int y, i
     return false;
 }
 
-bool mudlet::createLabel(Host* pHost, const QString& name, int x, int y, int width, int height, bool fillBg,
+bool mudlet::createLabel(Host* pHost, const QString& windowname, const QString& name,int x, int y, int width, int height, bool fillBg,
                          bool clickthrough)
 {
     if (!pHost || !pHost->mpConsole) {
@@ -2051,7 +2051,7 @@ bool mudlet::createLabel(Host* pHost, const QString& name, int x, int y, int wid
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (!pL) {
-        pL = pHost->mpConsole->createLabel(name, x, y, width, height, fillBg, clickthrough);
+        pL = pHost->mpConsole->createLabel(windowname, name, x, y, width, height, fillBg, clickthrough);
         if (pL) {
             return true;
         }

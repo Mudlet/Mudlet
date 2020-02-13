@@ -312,7 +312,8 @@ function Geyser.MiniConsole:new (cons, container)
 
   -----------------------------------------------------------
   -- Now create the MiniConsole using primitives
-  createMiniConsole(me.name, me:get_x(), me:get_y(),
+  me.windowname = me.windowname or me.container.windowname or "main"
+  createMiniConsole(me.windowname,me.name, me:get_x(), me:get_y(),
   me:get_width(), me:get_height())
 
   -- Set any defined colors
