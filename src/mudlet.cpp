@@ -2592,7 +2592,7 @@ std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
         return {};
     }
 
-    return {image.size()};
+    return image.size();
 }
 
 bool mudlet::insertText(Host* pHost, const QString& windowName, const QString& text)

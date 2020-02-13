@@ -4343,15 +4343,14 @@ int TLuaInterpreter::getImageSize(lua_State* L)
         }
     }
 
-    if (auto size = mudlet::self()->getImageSize(imageLocation); size) {
+    if (auto size = mudlet::self()->getImageSize(imageLocation)) {
         lua_pushnumber(L, size->width());
         lua_pushnumber(L, size->height());
-        return 2;
     } else {
         lua_pushnil(L);
         lua_pushfstring(L, "couldn't retrieve image size. Is the location '%s' correct?", imageLocation.toUtf8().constData());
-        return 2;
     }
+    return 2;
 }
 
 // No documentation available in wiki - internal function
