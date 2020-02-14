@@ -3,6 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
+ *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -30,63 +31,58 @@
 #include "post_guard.h"
 
 
-TLabel::TLabel(QWidget* pW) : QLabel(pW), mpHost(nullptr), mouseInside()
+TLabel::TLabel(Host* pH, QWidget* pW)
+: QLabel(pW)
+, mpHost(pH)
 {
     setMouseTracking(true);
 }
 
-void TLabel::setClick(Host* pHost, const QString& func, const TEvent& args)
+void TLabel::setClick(const QString& func, const TEvent& args)
 {
-    releaseParams(pHost, mClickParams);
-    mpHost = pHost;
+    releaseParams(mClickParams);
     mClick = func;
     mClickParams = args;
 }
 
-void TLabel::setDoubleClick(Host* pHost, const QString& func, const TEvent& args)
+void TLabel::setDoubleClick(const QString& func, const TEvent& args)
 {
-    releaseParams(pHost, mDoubleClickParams);
-    mpHost = pHost;
+    releaseParams(mDoubleClickParams);
     mDoubleClick = func;
     mDoubleClickParams = args;
 }
 
-void TLabel::setRelease(Host* pHost, const QString& func, const TEvent& args)
+void TLabel::setRelease(const QString& func, const TEvent& args)
 {
-    releaseParams(pHost, mReleaseParams);
-    mpHost = pHost;
+    releaseParams(mReleaseParams);
     mRelease = func;
     mReleaseParams = args;
 }
 
-void TLabel::setMove(Host* pHost, const QString& func, const TEvent& args)
+void TLabel::setMove(const QString& func, const TEvent& args)
 {
-    releaseParams(pHost, mMoveParams);
-    mpHost = pHost;
+    releaseParams(mMoveParams);
     mMove = func;
     mMoveParams = args;
 }
 
-void TLabel::setWheel(Host* pHost, const QString& func, const TEvent& args)
+void TLabel::setWheel(const QString& func, const TEvent& args)
 {
-    releaseParams(pHost, mWheelParams);
-    mpHost = pHost;
+    releaseParams(mWheelParams);
     mWheel = func;
     mWheelParams = args;
 }
 
-void TLabel::setEnter(Host* pHost, const QString& func, const TEvent& args)
+void TLabel::setEnter(const QString& func, const TEvent& args)
 {
-    releaseParams(pHost, mEnterParams);
-    mpHost = pHost;
+    releaseParams(mEnterParams);
     mEnter = func;
     mEnterParams = args;
 }
 
-void TLabel::setLeave(Host* pHost, const QString& func, const TEvent& args)
+void TLabel::setLeave(const QString& func, const TEvent& args)
 {
-    releaseParams(pHost, mLeaveParams);
-    mpHost = pHost;
+    releaseParams(mLeaveParams);
     mLeave = func;
     mLeaveParams = args;
 }
@@ -95,7 +91,9 @@ void TLabel::mousePressEvent(QMouseEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    } else if (mpHost && !mClick.isEmpty()) {
+    }
+
+    if (mpHost && !mClick.isEmpty()) {
         mpHost->getLuaInterpreter()->callEventHandler(mClick, mClickParams, event);
         event->accept();
     } else {
@@ -107,7 +105,9 @@ void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    } else if (mpHost && !mDoubleClick.isEmpty()) {
+    }
+
+    if (mpHost && !mDoubleClick.isEmpty()) {
         mpHost->getLuaInterpreter()->callEventHandler(mDoubleClick, mDoubleClickParams, event);
         event->accept();
     } else {
@@ -119,7 +119,9 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    } else if (mpHost && !mRelease.isEmpty()) {
+    }
+
+    if (mpHost && !mRelease.isEmpty()) {
         mpHost->getLuaInterpreter()->callEventHandler(mRelease, mReleaseParams, event);
         event->accept();
     } else {
@@ -131,7 +133,9 @@ void TLabel::mouseMoveEvent(QMouseEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    } else if (mpHost && !mMove.isEmpty()) {
+    }
+
+    if (mpHost && !mMove.isEmpty()) {
         mpHost->getLuaInterpreter()->callEventHandler(mMove, mMoveParams, event);
         event->accept();
     } else {
@@ -141,9 +145,11 @@ void TLabel::mouseMoveEvent(QMouseEvent* event)
 
 void TLabel::wheelEvent(QWheelEvent* event)
 {
-    if (forwardEventToMapper(event))
+    if (forwardEventToMapper(event)) {
         return;
-    else if (mpHost && !mWheel.isEmpty()) {
+    }
+
+    if (mpHost && !mWheel.isEmpty()) {
         mpHost->getLuaInterpreter()->callEventHandler(mWheel, mWheelParams, event);
         event->accept();
     } else {
@@ -155,7 +161,9 @@ void TLabel::leaveEvent(QEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    } else if (mpHost && !mLeave.isEmpty()) {
+    }
+
+    if (mpHost && !mLeave.isEmpty()) {
         mpHost->getLuaInterpreter()->callEventHandler(mLeave, mLeaveParams, event);
         event->accept();
     } else {
@@ -167,7 +175,9 @@ void TLabel::enterEvent(QEvent* event)
 {
     if (forwardEventToMapper(event)) {
         return;
-    } else if (mpHost && !mEnter.isEmpty()) {
+    }
+
+    if (mpHost && !mEnter.isEmpty()) {
         mpHost->getLuaInterpreter()->callEventHandler(mEnter, mEnterParams, event);
         event->accept();
     } else {
@@ -185,8 +195,11 @@ bool TLabel::forwardEventToMapper(QEvent* event)
 
     switch (event->type()) {
     case (QEvent::MouseButtonPress):
+        [[fallthrough]];
     case (QEvent::MouseButtonDblClick):
+        [[fallthrough]];
     case (QEvent::MouseButtonRelease):
+        [[fallthrough]];
     case (QEvent::MouseMove): {
         auto mouseEvent = static_cast<QMouseEvent*>(event);
         QWidget* qw = qApp->widgetAt(mouseEvent->globalPos());
@@ -199,6 +212,7 @@ bool TLabel::forwardEventToMapper(QEvent* event)
         break;
     }
     case (QEvent::Enter):
+        [[fallthrough]];
     case (QEvent::Leave): {
         QWidget* qw = qApp->widgetAt(QCursor::pos());
 
@@ -214,15 +228,41 @@ bool TLabel::forwardEventToMapper(QEvent* event)
         QWidget* qw = qApp->widgetAt(wheelEvent->globalPos());
 
         if (qw && parentWidget()->findChild<QWidget*>(QStringLiteral("mapper")) && parentWidget()->findChild<QWidget*>(QStringLiteral("mapper"))->isAncestorOf(qw)) {
+#if (QT_VERSION >= QT_VERSION_CHECK(5,12, 0))
+            // Have switched to the latest QWheelEvent as that handles both X
+            // and Y wheels at the same time whereas previously we said the
+            // event was a vertical one - even if it wasn't! Additionally we
+            // pass on the source of the Qt event - and whether the delta values
+            // are inverted:
             QWheelEvent newEvent(qw->mapFromGlobal(wheelEvent->globalPos()),
                                  wheelEvent->globalPos(),
                                  wheelEvent->pixelDelta(),
                                  wheelEvent->angleDelta(),
-                                 wheelEvent->angleDelta().y() / 8,
-                                 Qt::Vertical,
                                  wheelEvent->buttons(),
                                  wheelEvent->modifiers(),
-                                 wheelEvent->phase());
+                                 wheelEvent->phase(),
+                                 wheelEvent->inverted(),
+                                 wheelEvent->source());
+#else
+            // Unfortunately it was only introduced in Qt 5.12 and Qt didn't
+            // document that initially... see
+            // https://bugreports.qt.io/browse/QTBUG-80088 !
+            // Anyhow QWheelEvent::delta() and QWheelEvent::orientation() are
+            // Qt4 relics and have been declared obsolete for new code, but we
+            // can still use them for older Qt versions:
+            QWheelEvent newEvent(qw->mapFromGlobal(wheelEvent->globalPos()),
+                                 wheelEvent->globalPos(),
+                                 wheelEvent->pixelDelta(),
+                                 wheelEvent->angleDelta(),
+                                 wheelEvent->delta(),
+                                 wheelEvent->orientation(),
+                                 wheelEvent->buttons(),
+                                 wheelEvent->modifiers(),
+                                 wheelEvent->phase(),
+                                 wheelEvent->source(),
+                                 wheelEvent->inverted());
+#endif
+
             qApp->sendEvent(qw, &newEvent);
             return true;
         }
@@ -236,14 +276,15 @@ bool TLabel::forwardEventToMapper(QEvent* event)
 // searching for parameters that are references to values in the
 // Lua registry, and correctly dereferences them. This allows
 // the parameters to be safely overwritten.
-void TLabel::releaseParams(Host* pHost, TEvent& params) {
+void TLabel::releaseParams(TEvent& params)
+{
     if (params.mArgumentList.isEmpty()) {
         return;
     }
 
     for (int i = 0; i < params.mArgumentList.size(); i++) {
         if ( params.mArgumentTypeList.at(i) == ARGUMENT_TYPE_TABLE || params.mArgumentTypeList.at(i) == ARGUMENT_TYPE_FUNCTION) {
-            pHost->getLuaInterpreter()->freeLuaRegistryIndex(i);
+            mpHost->getLuaInterpreter()->freeLuaRegistryIndex(i);
         }
     }
 

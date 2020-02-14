@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -60,6 +60,7 @@
 #include <QJsonValue>
 #include <QNetworkDiskCache>
 #include <QMessageBox>
+#include <QNetworkDiskCache>
 #include <QScrollBar>
 #include <QTableWidget>
 #include <QTextStream>
@@ -314,7 +315,7 @@ mudlet::mudlet()
     mpMainToolBar->widgetForAction(mpActionVariables)->setObjectName(mpActionVariables->objectName());
 
     mpButtonDiscord = new QToolButton(this);
-    mpButtonDiscord->setText(tr("Discord"));
+    mpButtonDiscord->setText(QStringLiteral("Discord"));
     mpButtonDiscord->setObjectName(QStringLiteral("discord"));
     mpButtonDiscord->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonDiscord->setPopupMode(QToolButton::MenuButtonPopup);
@@ -323,7 +324,7 @@ mudlet::mudlet()
 
     mpActionDiscord = new QAction(tr("Open Discord"), this);
     mpActionDiscord->setIcon(QIcon(QStringLiteral(":/icons/Discord-Logo-Color.png")));
-    mpActionDiscord->setIconText(tr("Discord"));
+    mpActionDiscord->setIconText(QStringLiteral("Discord"));
     mpActionDiscord->setObjectName(QStringLiteral("openDiscord"));
 
     mpActionIRC = new QAction(tr("Open IRC"), this);
@@ -834,6 +835,7 @@ void mudlet::loadDictionaryLanguageMap()
                                   {QStringLiteral("sw"), tr("Swahili")},
                                   {QStringLiteral("sw_ke"), tr("Swahili (Kenya)")},
                                   {QStringLiteral("sw_tz"), tr("Swahili (Tanzania)")},
+                                  {QStringLiteral("tr_TR"), tr("Turkish")},
                                   {QStringLiteral("te"), tr("Telugu")},
                                   {QStringLiteral("te_in"), tr("Telugu (India)")},
                                   {QStringLiteral("th"), tr("Thai")},
@@ -959,6 +961,10 @@ void mudlet::scanForMudletTranslations(const QString& path)
                 currentTranslation.mNativeName = QStringLiteral("Español");
             } else if (!languageCode.compare(QLatin1String("pt_PT"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = QStringLiteral("Portugês");
+            } else if (!languageCode.compare(QLatin1String("pt_BR"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = QStringLiteral("Português (Brasil)");
+            } else if (!languageCode.compare(QLatin1String("tr_TR"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = QStringLiteral("Türkçe");
             } else {
                 currentTranslation.mNativeName = languageCode;
             }
@@ -2383,7 +2389,7 @@ bool mudlet::setLabelClickCallback(Host* pHost, const QString& name, const QStri
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setClick(pHost, func, pA);
+        pL->setClick(func, pA);
         return true;
     } else {
         return false;
@@ -2398,7 +2404,7 @@ bool mudlet::setLabelDoubleClickCallback(Host* pHost, const QString& name, const
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setDoubleClick(pHost, func, pA);
+        pL->setDoubleClick(func, pA);
         return true;
     } else {
         return false;
@@ -2413,7 +2419,7 @@ bool mudlet::setLabelReleaseCallback(Host* pHost, const QString& name, const QSt
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setRelease(pHost, func, pA);
+        pL->setRelease(func, pA);
         return true;
     } else {
         return false;
@@ -2428,7 +2434,7 @@ bool mudlet::setLabelMoveCallback(Host* pHost, const QString& name, const QStrin
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setMove(pHost, func, pA);
+        pL->setMove(func, pA);
         return true;
     } else {
         return false;
@@ -2443,7 +2449,7 @@ bool mudlet::setLabelWheelCallback(Host* pHost, const QString& name, const QStri
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setWheel(pHost, func, pA);
+        pL->setWheel(func, pA);
         return true;
     } else {
         return false;
@@ -2458,7 +2464,7 @@ bool mudlet::setLabelOnEnter(Host* pHost, const QString& name, const QString& fu
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setEnter(pHost, func, pA);
+        pL->setEnter(func, pA);
         return true;
     } else {
         return false;
@@ -2473,7 +2479,7 @@ bool mudlet::setLabelOnLeave(Host* pHost, const QString& name, const QString& fu
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setLeave(pHost, func, pA);
+        pL->setLeave(func, pA);
         return true;
     } else {
         return false;
@@ -2490,7 +2496,11 @@ std::pair<bool, int> mudlet::getLineNumber(Host* pHost, QString& windowName)
     if (pC) {
         return std::make_pair(true, pC->getLineNumber());
     } else {
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        TDebug(QColorConstants::White, QColorConstants::Red) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+#else
         TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+#endif
         return std::make_pair(false, -1);
     }
 }
@@ -2505,7 +2515,11 @@ int mudlet::getColumnNumber(Host* pHost, QString& name)
     if (pC) {
         return pC->getColumnNumber();
     } else {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        TDebug(QColorConstants::White, QColorConstants::Red) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+#else
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+#endif
         return -1;
     }
 }
@@ -2520,7 +2534,11 @@ int mudlet::getLastLineNumber(Host* pHost, const QString& name)
     if (pC) {
         return pC->getLastLineNumber();
     } else {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        TDebug(QColorConstants::White, QColorConstants::Red) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+#else
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+#endif
         return -1;
     }
 }
@@ -2858,6 +2876,11 @@ void mudlet::closeEvent(QCloseEvent* event)
             pC->mpHost->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
             pC->mpHost->mpNotePad->close();
             pC->mpHost->mpNotePad = nullptr;
+        }
+        // close IRC client window if it is open.
+        if (mpIrcClientMap.contains(pC->mpHost)) {
+            mpIrcClientMap[pC->mpHost]->setAttribute(Qt::WA_DeleteOnClose);
+            mpIrcClientMap[pC->mpHost]->deleteLater();
         }
 
         // Wait for disconnection to complete
@@ -3403,41 +3426,50 @@ void mudlet::createMapper(bool loadDefaultMap)
     if (!pHost) {
         return;
     }
-    if (pHost->mpMap->mpMapper) {
+    auto pMap = pHost->mpMap.data();
+    if (pMap->mpMapper) {
         bool visStatus = pHost->mpMap->mpMapper->isVisible();
-        if (pHost->mpMap->mpMapper->parentWidget()->inherits("QDockWidget")) {
-            pHost->mpMap->mpMapper->parentWidget()->setVisible(!visStatus);
+        if (pMap->mpMapper->parentWidget()->inherits("QDockWidget")) {
+            pMap->mpMapper->parentWidget()->setVisible(!visStatus);
         }
-        pHost->mpMap->mpMapper->setVisible(!visStatus);
+        pMap->mpMapper->setVisible(!visStatus);
         return;
     }
 
     auto hostName(pHost->getName());
     pHost->mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(hostName));
     pHost->mpDockableMapWidget->setObjectName(QStringLiteral("dockMap_%1").arg(hostName));
-    pHost->mpMap->mpMapper = new dlgMapper(pHost->mpDockableMapWidget, pHost, pHost->mpMap.data()); //FIXME: mpHost definieren
-#if defined(INCLUDE_3DMAPPER)
-    pHost->mpMap->mpM = pHost->mpMap->mpMapper->glWidget;
-#endif
-    pHost->mpDockableMapWidget->setWidget(pHost->mpMap->mpMapper);
+    // Arrange for TMap member values to be copied from the Host masters so they
+    // are in place when the 2D mapper is created:
+    pHost->getPlayerRoomStyleDetails(pMap->mPlayerRoomStyle,
+                                     pMap->mPlayerRoomOuterDiameterPercentage,
+                                     pMap->mPlayerRoomInnerDiameterPercentage,
+                                     pMap->mPlayerRoomOuterColor,
+                                     pMap->mPlayerRoomInnerColor);
 
-    if (loadDefaultMap && pHost->mpMap->mpRoomDB->getRoomIDList().isEmpty()) {
+    pMap->mpMapper = new dlgMapper(pHost->mpDockableMapWidget, pHost, pMap); //FIXME: mpHost definieren
+#if defined(INCLUDE_3DMAPPER)
+    pMap->mpM = pMap->mpMapper->glWidget;
+#endif
+    pHost->mpDockableMapWidget->setWidget(pMap->mpMapper);
+
+    if (loadDefaultMap && pMap->mpRoomDB->getRoomIDList().isEmpty()) {
         qDebug() << "mudlet::slot_mapper() - restore map case 3.";
-        pHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(3) report"), true);
+        pMap->pushErrorMessagesToFile(tr("Pre-Map loading(3) report"), true);
         QDateTime now(QDateTime::currentDateTime());
-        if (pHost->mpMap->restore(QString())) {
-            pHost->mpMap->audit();
-            pHost->mpMap->mpMapper->mp2dMap->init();
-            pHost->mpMap->mpMapper->updateAreaComboBox();
-            pHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-            pHost->mpMap->mpMapper->show();
+        if (pMap->restore(QString())) {
+            pMap->audit();
+            pMap->mpMapper->mp2dMap->init();
+            pMap->mpMapper->updateAreaComboBox();
+            pMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+            pMap->mpMapper->show();
         }
 
-        pHost->mpMap->pushErrorMessagesToFile(tr("Loading map(3) at %1 report").arg(now.toString(Qt::ISODate)), true);
+        pMap->pushErrorMessagesToFile(tr("Loading map(3) at %1 report").arg(now.toString(Qt::ISODate)), true);
 
     } else {
-        if (pHost->mpMap->mpMapper) {
-            pHost->mpMap->mpMapper->show();
+        if (pMap->mpMapper) {
+            pMap->mpMapper->show();
         }
     }
     addDockWidget(Qt::RightDockWidgetArea, pHost->mpDockableMapWidget);
@@ -3843,6 +3875,7 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     pHost->mLuaInterpreter.loadGlobal();
     hideMudletsVariables(pHost);
 
+    pHost->mBlockStopWatchCreation = false;
     pHost->getScriptUnit()->compileAll();
     pHost->mIsProfileLoadingSequence = false;
 
@@ -4475,6 +4508,14 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         // directory for that profile - does NOT end in a '/' unless the
         // supplied profle name does:
         return QStringLiteral("%1/.config/mudlet/profiles/%2").arg(QDir::homePath(), extra1);
+    case profileMediaPath:
+        // Takes one extra argument (profile name) that returns the directory
+        // for the profile's cached media files - does NOT end in a '/'
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/media").arg(QDir::homePath(), extra1);
+    case profileMediaPathFileName:
+        // Takes two extra arguments (profile name, mediaFileName) that returns
+        // the pathFile name for any media file:
+        return QStringLiteral("%1/.config/mudlet/profiles/%2/media/%3").arg(QDir::homePath(), extra1, extra2);
     case profileXmlFilesPath:
         // Takes one extra argument (profile name) that returns the directory
         // for the profile game save XML files - ends in a '/'
@@ -4721,7 +4762,11 @@ int mudlet::getColumnCount(Host* pHost, QString& name)
     if (pC) {
         return pC->mUpperPane->getColumnCount();
     } else {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        TDebug(QColorConstants::White, QColorConstants::Red) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+#else
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+#endif
         return -1;
     }
 }
@@ -4736,7 +4781,11 @@ int mudlet::getRowCount(Host* pHost, QString& name)
     if (pC) {
         return pC->mUpperPane->getRowCount();
     } else {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << "ERROR: window doesn't exist\n" >> 0;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+        TDebug(QColorConstants::White, QColorConstants::Red) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+#else
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << QStringLiteral("ERROR: window doesn't exist\n") >> 0;
+#endif
         return -1;
     }
 }
@@ -5392,7 +5441,7 @@ QPair<bool, bool> mudlet::addWordToSet(const QString& word)
             mWordSet_shared.insert(word);
             qDebug().noquote().nospace() << "mudlet::addWordToSet(\"" << word << "\") INFO - word added to shared mWordSet.";
             isAdded = true;
-        };
+        }
         mDictionaryReadWriteLock.unlock();
         return qMakePair(true, isAdded);
     }
@@ -5411,7 +5460,7 @@ QPair<bool, bool> mudlet::removeWordFromSet(const QString& word)
         if (mWordSet_shared.remove(word)) {
             qDebug().noquote().nospace() << "mudlet::removeWordFromSet(\"" << word << "\") INFO - word removed from shared mWordSet.";
             isRemoved = true;
-        };
+        }
         mDictionaryReadWriteLock.unlock();
         return qMakePair(true, isRemoved);
     }

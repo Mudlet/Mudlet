@@ -328,6 +328,12 @@ public:
         // supplied profle name does:
         profileHomePath,
         // Takes one extra argument (profile name) that returns the directory
+        // for the profile game save media files - does NOT end in a '/'
+        profileMediaPath,
+        // Takes two extra arguments (profile name, mediaFileName) that returns
+        // the pathFile name for any media file:
+        profileMediaPathFileName,
+        // Takes one extra argument (profile name) that returns the directory
         // for the profile game save XML files - ends in a '/':
         profileXmlFilesPath,
         // Takes one extra argument (profile name) that returns the directory

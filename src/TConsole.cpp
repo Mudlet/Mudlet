@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -2238,7 +2238,7 @@ TLabel* TConsole::createLabel(const QString& name, int x, int y, int width, int 
 {
     auto pL = mLabelMap.value(name);
     if (!pL) {
-        pL = new TLabel(mpMainFrame);
+        pL = new TLabel(mpHost, mpMainFrame);
         mLabelMap[name] = pL;
         pL->setObjectName(name);
         pL->setAutoFillBackground(fillBackground);
@@ -2253,9 +2253,44 @@ TLabel* TConsole::createLabel(const QString& name, int x, int y, int width, int 
     }
 }
 
+std::pair<bool, QString> TConsole::deleteLabel(const QString& name)
+{
+    if (name.isEmpty()) {
+        return {false, QLatin1String("a label cannot have an empty string as its name")};
+    }
+
+    auto pL = mLabelMap.take(name);
+    if (pL) {
+        // Using deleteLater() rather than delete as it seems a safer option
+        // given that this item is likely to be linked to some events and
+        // suchlike:
+        pL->deleteLater();
+
+        // It remains to be seen if the label has "gone" as a result of the
+        // above by the time the Lua subsystem processes the following:
+        TEvent mudletEvent{};
+        mudletEvent.mArgumentList.append(QLatin1String("sysLabelDeleted"));
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mudletEvent.mArgumentList.append(name);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(mudletEvent);
+        return {true, QString()};
+    }
+
+    // Message is of the form needed for a Lua API function call run-time error
+    return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
+}
+
 void TConsole::createMapper(int x, int y, int width, int height)
 {
     if (!mpMapper) {
+        // Arrange for TMap member values to be copied from the Host masters so they
+        // are in place when the 2D mapper is created:
+        mpHost->getPlayerRoomStyleDetails(mpHost->mpMap->mPlayerRoomStyle,
+                                          mpHost->mpMap->mPlayerRoomOuterDiameterPercentage,
+                                          mpHost->mpMap->mPlayerRoomInnerDiameterPercentage,
+                                          mpHost->mpMap->mPlayerRoomOuterColor,
+                                          mpHost->mpMap->mPlayerRoomInnerColor);
         mpMapper = new dlgMapper(mpMainFrame, mpHost, mpHost->mpMap.data());
 #if defined(INCLUDE_3DMAPPER)
         mpHost->mpMap->mpM = mpMapper->glWidget;
@@ -2298,23 +2333,6 @@ void TConsole::createMapper(int x, int y, int width, int height)
 #else
     mpMapper->show();
 #endif
-}
-
-bool TConsole::createButton(const QString& name, int x, int y, int width, int height, bool fillBackground)
-{
-    if (!mLabelMap.contains(name)) {
-        auto pC = new TLabel(mpMainFrame);
-        mLabelMap[name] = pC;
-        pC->setObjectName(name);
-        pC->setAutoFillBackground(fillBackground);
-        pC->resize(width, height);
-        pC->setContentsMargins(0, 0, 0, 0);
-        pC->move(x, y);
-        pC->show();
-        return true;
-    } else {
-        return false;
-    }
 }
 
 bool TConsole::setBackgroundImage(const QString& name, const QString& path)
@@ -2857,4 +2875,3 @@ void TConsole::setProfileName(const QString& newName)
         pC->setProfileName(newName);
     }
 }
-
