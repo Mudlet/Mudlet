@@ -4332,7 +4332,7 @@ int TLuaInterpreter::getImageSize(lua_State* L)
 {
     QString imageLocation;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "getImageSize: bad argument #1 type (image location as string as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "getImageSize: bad argument #1 type (image location as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     } else {
         imageLocation = QString::fromUtf8(lua_tostring(L, 1));
@@ -4348,7 +4348,7 @@ int TLuaInterpreter::getImageSize(lua_State* L)
         lua_pushnumber(L, size->height());
     } else {
         lua_pushnil(L);
-        lua_pushfstring(L, "couldn't retrieve image size. Is the location '%s' correct?", imageLocation.toUtf8().constData());
+        lua_pushfstring(L, "couldn't retrieve image size, is the location '%s' correct?", imageLocation.toUtf8().constData());
     }
     return 2;
 }
