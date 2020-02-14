@@ -315,7 +315,7 @@ mudlet::mudlet()
     mpMainToolBar->widgetForAction(mpActionVariables)->setObjectName(mpActionVariables->objectName());
 
     mpButtonDiscord = new QToolButton(this);
-    mpButtonDiscord->setText(tr("Discord"));
+    mpButtonDiscord->setText(QStringLiteral("Discord"));
     mpButtonDiscord->setObjectName(QStringLiteral("discord"));
     mpButtonDiscord->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonDiscord->setPopupMode(QToolButton::MenuButtonPopup);
@@ -324,7 +324,7 @@ mudlet::mudlet()
 
     mpActionDiscord = new QAction(tr("Open Discord"), this);
     mpActionDiscord->setIcon(QIcon(QStringLiteral(":/icons/Discord-Logo-Color.png")));
-    mpActionDiscord->setIconText(tr("Discord"));
+    mpActionDiscord->setIconText(QStringLiteral("Discord"));
     mpActionDiscord->setObjectName(QStringLiteral("openDiscord"));
 
     mpActionIRC = new QAction(tr("Open IRC"), this);
