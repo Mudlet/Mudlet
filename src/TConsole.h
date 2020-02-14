@@ -147,6 +147,7 @@ public:
     void refresh();
     TLabel*
     createLabel(const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
+    std::pair<bool, QString> deleteLabel(const QString&);
     TConsole* createMiniConsole(const QString& name, int x, int y, int width, int height);
     bool raiseWindow(const QString& name);
     bool lowerWindow(const QString& name);
