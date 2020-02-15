@@ -2042,7 +2042,7 @@ bool mudlet::createMiniConsole(Host* pHost, const QString& windowname, const QSt
     return false;
 }
 
-bool mudlet::createLabel(Host* pHost, const QString& windowname, const QString& name,int x, int y, int width, int height, bool fillBg,
+bool mudlet::createLabel(Host* pHost, const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg,
                          bool clickthrough)
 {
     if (!pHost || !pHost->mpConsole) {
