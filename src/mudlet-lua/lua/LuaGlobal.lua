@@ -112,6 +112,7 @@ local packages = {
   "geyser/GeyserReposition.lua",
   "geyser/GeyserHBox.lua",
   "geyser/GeyserVBox.lua",
+  "geyser/GeyserUserWindow.lua",
   -- TODO probably don't need to load this file
   "geyser/GeyserTests.lua",
   "GUIUtils.lua",

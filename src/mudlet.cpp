@@ -2029,6 +2029,7 @@ bool mudlet::createMiniConsole(Host* pHost, const QString& windowname, const QSt
     }
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    auto pW = pHost->mpConsole->mDockWidgetMap.value(name);
     if (!pC) {
         pC = pHost->mpConsole->createMiniConsole(windowname, name, x, y, width, height);
         if (pC) {
@@ -2039,8 +2040,11 @@ bool mudlet::createMiniConsole(Host* pHost, const QString& windowname, const QSt
         // CHECK: The absence of an explict return statement in this block means that
         // reusing an existing mini console causes the lua function to seem to
         // fail - is this as per Wiki?
-        pC->resize(width, height);
-        pC->move(x, y);
+        // This part was causing problems with UserWindows
+        if (!pW) {
+            pC->resize(width, height);
+            pC->move(x, y);
+        }
     }
     return false;
 }

@@ -3533,7 +3533,7 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
 {
     std::string luaSendText = "";
     std::string luaSendWindow = "";
-    int x, y, width, height,counter;
+    int x, y, width, height, counter;
     counter = 3;
     //make the windowname optional by using counter. If windowname "main" add to main console
     if (!lua_isstring(L, 1)) {
@@ -3551,11 +3551,12 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
     }
     if (!lua_isnumber(L, 2)) {
         luaSendText = lua_tostring(L, 2);
-        if(!lua_isstring(L,2)){
+        if (!lua_isstring(L, 2)) {
             lua_pushstring(L, "createMiniConsole: wrong argument type");
             lua_error(L);
-            return 1;}
-    }else {
+            return 1;
+        }
+    } else {
         luaSendText = luaSendWindow;
         luaSendWindow.clear();
         counter = 2;
@@ -3595,12 +3596,6 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
     Host& host = getHostFromLua(L);
     QString name(luaSendText.c_str());
     QString windowname(luaSendWindow.c_str());
-    auto pC = host.mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        lua_pushfstring(L, "createMiniConsole: Cannot create Miniconsole. %s exists already!", name.toUtf8().constData());
-        lua_error(L);
-        return 1;
-    }
     lua_pushboolean(L, mudlet::self()->createMiniConsole(&host, windowname, name, x, y, width, height));
     return 1;
 }
@@ -3629,11 +3624,12 @@ int TLuaInterpreter::createLabel(lua_State* L)
 
     if (!lua_isnumber(L, 2)) {
         luaSendText = lua_tostring(L, 2);
-        if(!lua_isstring(L,2)){
+        if (!lua_isstring(L, 2)) {
             lua_pushstring(L, "createLabel: wrong argument type");
             lua_error(L);
-            return 1;}
-    }else {
+            return 1;
+        }
+    } else {
         luaSendText = luaSendWindow;
         luaSendWindow.clear();
         counter = 2;
@@ -3697,12 +3693,6 @@ int TLuaInterpreter::createLabel(lua_State* L)
     Host& host = getHostFromLua(L);
     QString name(luaSendText.c_str());
     QString windowname(luaSendWindow.c_str());
-    auto pC = host.mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        lua_pushfstring(L, "createLabel: Cannot create Label. %s exists already!",name.toUtf8().constData());
-        lua_error(L);
-        return 1;
-    }
     lua_pushboolean(L, mudlet::self()->createLabel(&host, windowname, name, x, y, width, height, fillBackground, clickthrough));
     return 1;
 }
@@ -3786,11 +3776,12 @@ int TLuaInterpreter::createButton(lua_State* L)
 
     if (!lua_isnumber(L, 2)) {
         luaSendText = lua_tostring(L, 2);
-        if(!lua_isstring(L,2)){
+        if (!lua_isstring(L, 2)) {
             lua_pushstring(L, "createButton: wrong argument type");
             lua_error(L);
-            return 1;}
-    }else {
+            return 1;
+        }
+    } else {
         luaSendText = luaSendWindow;
         luaSendWindow.clear();
         counter = 2;
@@ -3855,12 +3846,6 @@ int TLuaInterpreter::createButton(lua_State* L)
     Host& host = getHostFromLua(L);
     QString name(luaSendText.c_str());
     QString windowname(luaSendWindow.c_str());
-    auto pC = host.mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        lua_pushfstring(L, "createButton: Cannot create Label. %s exists already!",name.toUtf8().constData());
-        lua_error(L);
-        return 1;
-    }
     lua_pushboolean(L, mudlet::self()->createLabel(&host, windowname, name, x, y, width, height, fillBackground, clickthrough));
     return 1;
 }

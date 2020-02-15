@@ -2236,9 +2236,9 @@ TConsole* TConsole::createMiniConsole(const QString& windowname, const QString& 
     auto pW = mDockWidgetMap.value(windowname);
     auto pC = mSubConsoleMap.value(name);
     if (!pC) {
-        if (!pW){
+        if (!pW) {
             pC = new TConsole(mpHost, SubConsole, mpMainFrame);
-        }else{
+        } else {
             pC = new TConsole(mpHost, SubConsole, pW->widget());
         }
         if (!pC) {
@@ -2271,10 +2271,11 @@ TLabel* TConsole::createLabel(const QString& windowname, const QString& name, in
     //if pW put Label in Userwindow
     auto pL = mLabelMap.value(name);
     auto pW = mDockWidgetMap.value(windowname);
-    if (!pL) {
-        if (!pW){
+    auto pC = mSubConsoleMap.value(name);
+    if (!pL && !pC) {
+        if (!pW) {
             pL = new TLabel(mpHost, mpMainFrame);
-        }else{
+        } else {
             pL = new TLabel(mpHost, pW->widget());
         }
         mLabelMap[name] = pL;

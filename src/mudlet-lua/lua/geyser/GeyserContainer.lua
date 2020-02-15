@@ -114,9 +114,10 @@ end
 -- Called on window resize events.
 function Geyser.Container:reposition ()
   local x, y, w, h = self:get_x(), self:get_y(), self:get_width(), self:get_height()
-  moveWindow(self.name, self:get_x(), self:get_y())
-  resizeWindow(self.name, self:get_width(), self:get_height())
-
+  if self.type ~= "userwindow" then
+    moveWindow(self.name, self:get_x(), self:get_y())
+    resizeWindow(self.name, self:get_width(), self:get_height())
+  end
   -- deal with all children of this container
   for k, v in pairs(self.windowList) do
     if k ~= self and not v.nestLabels then
@@ -229,7 +230,7 @@ function Geyser.Container:flash (time)
   local time = time or 1.0
   local x, y, width, height = self.get_x(), self.get_y(), self.get_width(), self.get_height()
   local name = self.name .. "_dimensions_flash"
-  createLabel(name, x, y, width, height, 1)
+  createLabel(self.windowname ,name, x, y, width, height, 1)
   resizeWindow(name, width, height)
   moveWindow(name, x, y)
   setBackgroundColor(name, 190, 190, 190, 128)
