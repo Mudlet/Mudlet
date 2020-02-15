@@ -148,6 +148,7 @@ public:
     TLabel*
     createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
+    std::pair<bool, QString> deleteLabel(const QString&);
     bool raiseWindow(const QString& name);
     bool lowerWindow(const QString& name);
     bool showWindow(const QString& name);

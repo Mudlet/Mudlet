@@ -1842,25 +1842,25 @@ Tried these locations:
       <location filename="../src/TMap.cpp" line="1003"/>
       <source>up</source>
       <comment>This translation converts the direction that DIR_UP codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>y</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1004"/>
       <source>down</source>
       <comment>This translation converts the direction that DIR_DOWN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>a</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1005"/>
       <source>in</source>
       <comment>This translation converts the direction that DIR_IN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>i</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1006"/>
       <source>out</source>
       <comment>This translation converts the direction that DIR_OUT codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>d</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1045"/>
@@ -1873,30 +1873,33 @@ map with others relying on the original format.</source>
       <location filename="../src/TMap.cpp" line="188"/>
       <source>[MAP ERROR:]%1
 </source>
-      <translation type="unfinished"/>
+      <translation>[HARİTA HATASI:]%1
+</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="440"/>
       <source>[ INFO ]  - Map audit starting...</source>
-      <translation type="unfinished"/>
+      <translation>[BİLGİ] - Harita denetimi başlıyor...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1029"/>
       <source>[ ERROR ] - The format {%1} you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version {%2}.</source>
-      <translation type="unfinished"/>
+      <translation>[ HATA ]-Haritayı kaydetmeye çalıştığınız {%1} biçimi, Mudlet 'in bu sürümü için çok yeni.
+Yalnızca {%2 } sürümüne kadar olan sürümler desteklenmektedir.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1055"/>
       <source>[ WARN ]  - Saving map in a format {%1} different from the
 recommended format {%2} for this version of Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>[ UYARI ] - Haritayı kaydettiğiniz {%1} formatı, Mudlet'in bu sürümü
+için tavsiye edilen {%2} formatından farklıdır.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1345"/>
       <location filename="../src/TMap.cpp" line="1650"/>
       <source>[ ERROR ] - Unable to open (for reading) map file: &quot;%1&quot;!</source>
-      <translation type="unfinished"/>
+      <translation>[ HATA ] - Harita dosyası açılamıyor (Okumak İçin) : &quot;%1&quot;!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1367"/>

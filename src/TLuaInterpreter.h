@@ -3,7 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016, 2018-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2016, 2018-2020 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -329,6 +329,7 @@ public:
     static int getStopWatchBrokenDownTime(lua_State*);
     static int createMiniConsole(lua_State*);
     static int createLabel(lua_State*);
+    static int deleteLabel(lua_State*);
     static int moveWindow(lua_State*);
     static int setTextFormat(lua_State*);
     static int setBackgroundImage(lua_State*);
