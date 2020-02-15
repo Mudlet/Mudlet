@@ -2230,9 +2230,9 @@ void TConsole::resetMainConsole()
 }
 
 // This is a sub-console overlaid on to the main console
-TConsole* TConsole::createMiniConsole(const QString& windowname,const QString& name, int x, int y, int width, int height)
+TConsole* TConsole::createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
-//if pW then add Console as Overlay to the Userwindow
+    //if pW then add Console as Overlay to the Userwindow
     auto pW = mDockWidgetMap.value(windowname);
     auto pC = mSubConsoleMap.value(name);
     if (!pC) {
@@ -2241,7 +2241,7 @@ TConsole* TConsole::createMiniConsole(const QString& windowname,const QString& n
         }else{
             pC = new TConsole(mpHost, SubConsole, pW->widget());
         }
-	if (!pC) {
+        if (!pC) {
             return nullptr;
         }
         mSubConsoleMap[name] = pC;
@@ -2268,7 +2268,7 @@ TConsole* TConsole::createMiniConsole(const QString& windowname,const QString& n
 
 TLabel* TConsole::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
 {
-//if pW put Label in Userwindow
+    //if pW put Label in Userwindow
     auto pL = mLabelMap.value(name);
     auto pW = mDockWidgetMap.value(windowname);
     if (!pL) {

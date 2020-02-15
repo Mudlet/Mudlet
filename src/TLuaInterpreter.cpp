@@ -3535,7 +3535,7 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
     std::string luaSendWindow = "";
     int x, y, width, height,counter;
     counter = 3;
-//make the windowname optional by using counter. If windowname "main" add to main console
+    //make the windowname optional by using counter. If windowname "main" add to main console
     if (!lua_isstring(L, 1)) {
         lua_pushstring(L, "createMiniConsole: wrong argument type");
         lua_error(L);
@@ -3543,11 +3543,11 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
     } else {
         luaSendWindow = lua_tostring(L, 1);
         if (luaSendWindow == "main") {
-                // QString::compare is zero for a match on the "default"
-                // case so clear the variable - to flag this as the main
-                // window case - as is the case for an empty string
-                luaSendWindow.clear();
-            }
+            // QString::compare is zero for a match on the "default"
+            // case so clear the variable - to flag this as the main
+            // window case - as is the case for an empty string
+            luaSendWindow.clear();
+        }
     }
     if (!lua_isnumber(L, 2)) {
         luaSendText = lua_tostring(L, 2);
@@ -3555,7 +3555,7 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
             lua_pushstring(L, "createMiniConsole: wrong argument type");
             lua_error(L);
             return 1;}
-     }else {
+    }else {
         luaSendText = luaSendWindow;
         luaSendWindow.clear();
         counter = 2;
@@ -3620,11 +3620,11 @@ int TLuaInterpreter::createLabel(lua_State* L)
     } else {
         luaSendWindow = lua_tostring(L, 1);
         if (luaSendWindow == "main") {
-                // QString::compare is zero for a match on the "default"
-                // case so clear the variable - to flag this as the main
-                // window case - as is the case for an empty string
-                luaSendWindow.clear();
-            }
+            // QString::compare is zero for a match on the "default"
+            // case so clear the variable - to flag this as the main
+            // window case - as is the case for an empty string
+            luaSendWindow.clear();
+        }
     }
 
     if (!lua_isnumber(L, 2)) {
@@ -3633,21 +3633,21 @@ int TLuaInterpreter::createLabel(lua_State* L)
             lua_pushstring(L, "createLabel: wrong argument type");
             lua_error(L);
             return 1;}
-     }else {
+    }else {
         luaSendText = luaSendWindow;
         luaSendWindow.clear();
         counter = 2;
     }
 
     bool fillBackground, clickthrough = false;
-       if (!lua_isnumber(L, counter)) {
-            lua_pushstring(L, "createLabel: wrong argument type");
-            lua_error(L);
-            return 1;
-        } else {
-            x = lua_tonumber(L, counter);
-            counter++;
-        }
+    if (!lua_isnumber(L, counter)) {
+        lua_pushstring(L, "createLabel: wrong argument type");
+        lua_error(L);
+        return 1;
+    } else {
+        x = lua_tonumber(L, counter);
+        counter++;
+    }
 
     if (!lua_isnumber(L, counter)) {
         lua_pushstring(L, "createLabel: wrong argument type");
@@ -3759,11 +3759,11 @@ int TLuaInterpreter::createButton(lua_State* L)
     } else {
         luaSendWindow = lua_tostring(L, 1);
         if (luaSendWindow == "main") {
-                // QString::compare is zero for a match on the "default"
-                // case so clear the variable - to flag this as the main
-                // window case - as is the case for an empty string
-                luaSendWindow.clear();
-            }
+            // QString::compare is zero for a match on the "default"
+            // case so clear the variable - to flag this as the main
+            // window case - as is the case for an empty string
+            luaSendWindow.clear();
+        }
     }
 
     if (!lua_isnumber(L, 2)) {
@@ -3772,21 +3772,21 @@ int TLuaInterpreter::createButton(lua_State* L)
             lua_pushstring(L, "createButton: wrong argument type");
             lua_error(L);
             return 1;}
-     }else {
+    }else {
         luaSendText = luaSendWindow;
         luaSendWindow.clear();
         counter = 2;
     }
 
     bool fillBackground, clickthrough = false;
-       if (!lua_isnumber(L, counter)) {
-            lua_pushstring(L, "createButton: wrong argument type");
-            lua_error(L);
-            return 1;
-        } else {
-            x = lua_tonumber(L, counter);
-            counter++;
-        }
+    if (!lua_isnumber(L, counter)) {
+        lua_pushstring(L, "createButton: wrong argument type");
+        lua_error(L);
+        return 1;
+    } else {
+        x = lua_tonumber(L, counter);
+        counter++;
+    }
 
     if (!lua_isnumber(L, counter)) {
         lua_pushstring(L, "createButton: wrong argument type");
@@ -3807,7 +3807,7 @@ int TLuaInterpreter::createButton(lua_State* L)
     }
 
     if (!lua_isnumber(L, counter)) {
-        lua_pushstring(L, "createLabel: wrong argument type");
+        lua_pushstring(L, "createButton: wrong argument type");
         lua_error(L);
         return 1;
     } else {
@@ -3816,7 +3816,7 @@ int TLuaInterpreter::createButton(lua_State* L)
     }
 
     if (!lua_isnumber(L, counter)) {
-        lua_pushstring(L, "createLabel: wrong argument type");
+        lua_pushstring(L, "createButton: wrong argument type");
         lua_error(L);
         return 1;
     } else {
