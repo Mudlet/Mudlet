@@ -282,7 +282,8 @@ function Geyser.Container:new(cons, container)
             return getUserWindowSize(me.windowname)
         end
         container.get_height = function()
-            local w, h = getUserWindowSize(me.windowname) return h
+            local w, h = getUserWindowSize(me.windowname)
+            return h
         end
     end
   end
