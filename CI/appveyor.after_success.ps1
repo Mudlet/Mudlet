@@ -45,7 +45,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and $Env:APPVEYOR_SCHEDULED_BUILD -ne 
   Move-Item $Env:APPVEYOR_BUILD_FOLDER\src\release\* $SQUIRRELWINBIN
 
   Write-Output "=== Creating Nuget package ==="
-  if ($Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build'))
+  if ($Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build')) {
     # allow public test builds to be installed side by side with the release builds
     (Get-Content C:\projects\installers\windows\mudlet.nuspec).replace('<id>Mudlet</id>', '<id>Mudlet.PublicTestBuild</id>') | Set-Content C:\projects\installers\windows\mudlet.nuspec
   }
@@ -58,35 +58,49 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and $Env:APPVEYOR_SCHEDULED_BUILD -ne 
   Write-Output "=== Copying installer over for appveyor ==="
   Move-Item C:\projects\squirreloutput\* $Env:APPVEYOR_BUILD_FOLDER\src\release
 
-  # get winscp .NET dll for uploads
-  # activate higher TLS version. Seems PS only uses 1.0 by default
-  # credit: https://stackoverflow.com/questions/41618766/powershell-invoke-webrequest-fails-with-ssl-tls-secure-channel/48030563#48030563
-  [Net.ServicePointManager]::SecurityProtocol = [System.Security.Authentication.SslProtocols] "tls, tls11, tls12"
-  (New-Object System.Net.WebClient).DownloadFile("https://downloads.sourceforge.net/project/winscp/WinSCP/5.13.4/WinSCP-5.13.4-Automation.zip?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fwinscp%2Ffiles%2FWinSCP%2F5.13.4%2FWinSCP-5.13.4-Automation.zip%2Fdownload&ts=1538514946", "C:\src\Winscp-automation.zip")
-  Add-Type -AssemblyName System.IO.Compression.FileSystem
-  [System.IO.Compression.ZipFile]::ExtractToDirectory("C:\src\Winscp-automation.zip", "C:\src\Winscp-automation\")
-  Add-Type -Path 'C:\src\Winscp-automation\WinSCPnet.dll'
+  if ($Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build')) {
+    Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-ptb-windows.zip";
+    Set-Variable -Name "inFile" -Value "${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe";
+    Set-Variable -Name "outFile" -Value "upload-location.txt";
+    Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
 
-  # do the upload
-  $sessionOptions = New-Object WinSCP.SessionOptions -Property @{
-    # sftp://
-    Protocol = [WinSCP.Protocol]::Scp
-    HostName = "mudlet.org"
-    UserName = "keneanung"
-    SshPrivateKeyPath = "$Env:APPVEYOR_BUILD_FOLDER\CI\mudlet-deploy-key-windows.ppk"
-    SshPrivateKeyPassphrase = "${Env:DEPLOY_KEY_PASS}"
+    $DEPLOY_URL = Get-Content -Path $outFile -Raw
+  } else {
+    # get winscp .NET dll for uploads
+    # activate higher TLS version. Seems PS only uses 1.0 by default
+    # credit: https://stackoverflow.com/questions/41618766/powershell-invoke-webrequest-fails-with-ssl-tls-secure-channel/48030563#48030563
+    [Net.ServicePointManager]::SecurityProtocol = [System.Security.Authentication.SslProtocols] "tls, tls11, tls12"
+    (New-Object System.Net.WebClient).DownloadFile("https://downloads.sourceforge.net/project/winscp/WinSCP/5.13.4/WinSCP-5.13.4-Automation.zip?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fwinscp%2Ffiles%2FWinSCP%2F5.13.4%2FWinSCP-5.13.4-Automation.zip%2Fdownload&ts=1538514946", "C:\src\Winscp-automation.zip")
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory("C:\src\Winscp-automation.zip", "C:\src\Winscp-automation\")
+    Add-Type -Path 'C:\src\Winscp-automation\WinSCPnet.dll'
+
+    # do the upload
+    $sessionOptions = New-Object WinSCP.SessionOptions -Property @{
+      # sftp://
+      Protocol = [WinSCP.Protocol]::Scp
+      HostName = "mudlet.org"
+      UserName = "keneanung"
+      SshPrivateKeyPath = "$Env:APPVEYOR_BUILD_FOLDER\CI\mudlet-deploy-key-windows.ppk"
+      SshPrivateKeyPassphrase = "${Env:DEPLOY_KEY_PASS}"
+    }
+    $session = New-Object WinSCP.Session
+    $fingerprint =  $session.ScanFingerprint($sessionOptions, "SHA-256")
+    $sessionOptions.SshHostKeyFingerprint = $fingerprint
+    # Connect
+    Write-Output "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
+    $session.Open($sessionOptions)
+    $session.PutFiles("${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe", "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe")
+    $session.Close()
+    $session.Dispose()
+    $DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${Env:VERSION}-windows-installer.exe"
   }
-  $session = New-Object WinSCP.Session
-  $fingerprint =  $session.ScanFingerprint($sessionOptions, "SHA-256")
-  $sessionOptions.SshHostKeyFingerprint = $fingerprint
-  # Connect
-  $session.Open($sessionOptions)
-  $session.PutFiles("${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe", "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe")
-  $session.Close()
-  $session.Dispose()
-  $DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${Env:VERSION}-windows-installer.exe"
+
+  Write-Output "=== Installing dblsqd-cli ==="
   npm install -g dblsqd-cli
   dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${Env:DBLSQD_USER}" -p "${Env:DBLSQD_PASS}"
+
+  Write-Output "=== Registering release with Dblsqd ==="
   dblsqd push -a mudlet -c release -r "${Env:VERSION}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
 }
 
