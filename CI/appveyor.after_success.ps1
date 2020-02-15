@@ -8,7 +8,7 @@ windeployqt.exe --release mudlet.exe
 
 Remove-Item * -include *.cpp, *.o
 
-if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and $Env:APPVEYOR_SCHEDULED_BUILD -ne "True") {
+if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build')) {
   cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip "%APPVEYOR_BUILD_FOLDER%\src\release\*"
 
   Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
@@ -18,7 +18,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and $Env:APPVEYOR_SCHEDULED_BUILD -ne 
 
   $DEPLOY_URL = Get-Content -Path $outFile -Raw
 } else {
-  if ($Env:APPVEYOR_SCHEDULED_BUILD -eq "True") {
+  if ($Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build')) {
     Write-Output "=== Creating a Public Test build ==="
   } else {
     Write-Output "=== Creating a Release build ==="
