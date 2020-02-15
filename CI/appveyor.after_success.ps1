@@ -58,7 +58,10 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Env:MUDLET_VERSION_BUILD.Sta
   Write-Output "=== Copying installer over for appveyor ==="
   Move-Item C:\projects\squirreloutput\* $Env:APPVEYOR_BUILD_FOLDER\src\release
 
+  Tree $Env:APPVEYOR_BUILD_FOLDER\src\release
+
   if ($Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build')) {
+    Write-Output "=== Uploading public test build to make.mudlet.org ==="
     Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-ptb-windows.zip";
     Set-Variable -Name "inFile" -Value "${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe";
     Set-Variable -Name "outFile" -Value "upload-location.txt";
