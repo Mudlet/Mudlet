@@ -58,7 +58,13 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Env:MUDLET_VERSION_BUILD.Sta
   Write-Output "=== Copying installer over for appveyor ==="
   Move-Item C:\projects\squirreloutput\* $Env:APPVEYOR_BUILD_FOLDER\src\release
 
+  Write-Output "=== Printing contents of C:\projects\squirreloutput ==="
+  Tree C:\projects\squirreloutput
+  Write-Output "=== Done printing"
+
+  Write-Output "=== Printing contents of $Env:APPVEYOR_BUILD_FOLDER\src\release ==="
   Tree $Env:APPVEYOR_BUILD_FOLDER\src\release
+  Write-Output "=== Done printing"
 
   if ($Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build')) {
     Write-Output "=== Uploading public test build to make.mudlet.org ==="
