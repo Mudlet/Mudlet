@@ -2361,26 +2361,6 @@ bool mudlet::moveWindow(Host* pHost, const QString& name, int x1, int y1)
     return false;
 }
 
-bool mudlet::closeWindow(Host* pHost, const QString& name)
-{
-    if (!pHost || !pHost->mpConsole) {
-        return false;
-    }
-
-    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
-    if (pC) {
-        auto pD = pHost->mpConsole->mDockWidgetMap.value(name);
-        if (pD) {
-            pD->hide();
-            pD->update();
-        }
-        return pHost->mpConsole->hideWindow(name);
-
-    } else {
-        return false;
-    }
-}
-
 bool mudlet::setLabelClickCallback(Host* pHost, const QString& name, const QString& func, const TEvent& pA)
 {
     if (!pHost || !pHost->mpConsole) {

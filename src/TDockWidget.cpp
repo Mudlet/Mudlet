@@ -41,14 +41,14 @@ void TDockWidget::setTConsole(TConsole* pC)
 
 void TDockWidget::closeEvent(QCloseEvent* event)
 {
-    if (!mpHost->isClosingDown()) {
+    if (!(mpHost->isClosingDown() || mpConsole->dying())) {
         mudlet::self()->hideWindow(mpHost, widgetConsoleName);
         event->ignore();
         return;
-    } else {
-        event->accept();
-        return;
     }
+
+    setAttribute(Qt::WA_DeleteOnClose);
+    event->accept();
 }
 
 void TDockWidget::resizeEvent(QResizeEvent* event)

@@ -105,6 +105,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mpHunspell_system(nullptr)
 , mpHunspell_shared(nullptr)
 , mpHunspell_profile(nullptr)
+, mDieFlag(false)
 {
     auto ps = new QShortcut(this);
     ps->setKey(Qt::CTRL + Qt::Key_W);
@@ -709,21 +710,30 @@ void TConsole::refresh()
 
 void TConsole::closeEvent(QCloseEvent* event)
 {
+    if (mType == ErrorConsole) {
+        // This does not actually need any special handling - it will be going
+        // away as the Editor is destroyed
+        mUpperPane->close();
+        mLowerPane->close();
+        event->accept();
+        return;
+    }
+
     if (mType == CentralDebugConsole) {
         if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
             event->accept();
             return;
-        } else {
-            hide();
-            mudlet::mpDebugArea->setVisible(false);
-            mudlet::debugMode = false;
-            event->ignore();
-            return;
         }
+
+        hide();
+        mudlet::mpDebugArea->setVisible(false);
+        mudlet::debugMode = false;
+        event->ignore();
+        return;
     }
 
     if (mType & (SubConsole|Buffer)) {
-        if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
+        if (mudlet::self()->isGoingDown() || mpHost->isClosingDown() || mDieFlag) {
             auto pC = mpHost->mpConsole->mSubConsoleMap.take(mConsoleName);
             if (pC) {
                 // As it happens pC will be identical to 'this' it is just that
@@ -735,15 +745,15 @@ void TConsole::closeEvent(QCloseEvent* event)
 
             event->accept();
             return;
-        } else {
-            hide();
-            event->ignore();
-            return;
         }
+
+        hide();
+        event->ignore();
+        return;
     }
 
     if (mType == UserWindow) {
-        if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
+        if (mudlet::self()->isGoingDown() || mpHost->isClosingDown() || mDieFlag) {
             auto pC = mpHost->mpConsole->mSubConsoleMap.take(mConsoleName);
             auto pD = mpHost->mpConsole->mDockWidgetMap.take(mConsoleName);
             if (pC) {
@@ -759,11 +769,11 @@ void TConsole::closeEvent(QCloseEvent* event)
 
             event->accept();
             return;
-        } else {
-            hide();
-            event->ignore();
-            return;
         }
+
+        hide();
+        event->ignore();
+        return;
     }
 
     TEvent conCloseEvent{};
@@ -2435,12 +2445,14 @@ bool TConsole::hideWindow(const QString& name)
     if (pC) {
         pC->hide();
         return true;
-    } else if (pL) {
+    }
+
+    if (pL) {
         pL->hide();
         return true;
-    } else {
-        return false;
     }
+
+    return false;
 }
 
 bool TConsole::printWindow(const QString& name, const QString& text)
@@ -2874,4 +2886,71 @@ void TConsole::setProfileName(const QString& newName)
     for (auto pC : mSubConsoleMap) {
         pC->setProfileName(newName);
     }
+}
+
+std::pair<bool, QString> TConsole::closeWindow(const QString& name, const bool destroy)
+{
+    if (name.isEmpty()) {
+        return std::make_pair(false, QStringLiteral("a window/buffer cannot have an empty string as a name"));
+    }
+
+    auto pC = mSubConsoleMap.value(name);
+    if (pC) {
+        auto pD = pC->mpDockWidget;
+        if (destroy) {
+            mSubConsoleMap.remove(name);
+            pC->mDieFlag = true;
+            ConsoleType type = pC->mType;
+            if (type != TConsole::UserWindow) {
+                // Is NOT a floating/dockable window:
+                pC->close();
+                // Do not send an event for Buffers - as they have no visible
+                // representation any GUI system does not need/want to know
+                // about them going away
+                if (type != TConsole::Buffer) {
+                    TEvent event{};
+                    event.mArgumentList.append(QStringLiteral("sysWindowDeletion"));
+                    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                    event.mArgumentList.append(name);
+                    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                    mpHost->raiseEvent(event);
+                }
+                return std::make_pair(true, QString());
+            }
+
+            // Is a floating/dockable window - so we have to close THAT
+            // (TDockWidget) rather than just the TConsole it contains:
+            if (pD) {
+                mDockWidgetMap.remove(name);
+                pD->close();
+                TEvent event{};
+                event.mArgumentList.append(QStringLiteral("sysWindowDeletion"));
+                event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                event.mArgumentList.append(name);
+                event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                mpHost->raiseEvent(event);
+                return std::make_pair(true, QString());
+            }
+
+            Q_UNREACHABLE();
+            return std::make_pair(false, QStringLiteral("due to some internal error Mudlet thought it was trying to close a "
+                                                        "floating/dockable user window but lost track of the TDockWidget that contained "
+                                                        "it - please report this to the Mudlet developers"));
+        }
+
+        if (pD) {
+            pD->hide();
+            pD->update();
+        }
+        // Technically this hides either a TConsole OR a TLabel but we have
+        // determined already that we have a TConsole of this name {we may have
+        // to get around to enforcing uniqueness of names between both consoles
+        // and labels if we do not do that already}.
+        // Therefore it SHOULD be safe to assume that we WILL get a true
+        // response and do not need to code for otherwise
+        Q_ASSERT_X(hideWindow(name), "TConsole::closeWindow(...)", "hideWindow(...) failed for a name that does match an existing TConsole");
+        return std::make_pair(true, QString());
+    }
+
+    return std::make_pair(false, QStringLiteral("window/buffer \"%1\" not found").arg(name));
 }

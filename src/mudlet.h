@@ -140,7 +140,6 @@ public:
     bool showWindow(Host*, const QString&);
     bool hideWindow(Host*, const QString&);
     bool paste(Host*, const QString&);
-    bool closeWindow(Host*, const QString&);
     bool resizeWindow(Host*, const QString&, int, int);
     bool clearWindow(Host*, const QString&);
     bool pasteWindow(Host* pHost, const QString& name);

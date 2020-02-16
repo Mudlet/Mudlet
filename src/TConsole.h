@@ -210,6 +210,9 @@ public:
     // 2 = Selection not valid
     QPair<quint8, TChar> getTextAttributes() const;
     QPair<quint8, TChar> getTextAttributes(const QString&) const;
+    std::pair<bool, QString> closeWindow(const QString& name, const bool destroy);
+    bool dying() const { return mDieFlag; }
+
 
 
     QPointer<Host> mpHost;
@@ -355,6 +358,10 @@ private:
     // for the ".aff" file - this member is for the per profile option only as
     // the shared one is held by the mudlet singleton class:
     QSet<QString> mWordSet_profile;
+
+    // Flag for user generated windows so that receiving a close event will
+    // actually close rather than just hide this TConsole instance
+    bool mDieFlag;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)

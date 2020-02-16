@@ -3775,22 +3775,35 @@ int TLuaInterpreter::clearUserWindow(lua_State* L)
     return 0;
 }
 
-// Documentation: ? - public function but should stay undocumented -- compare https://github.com/Mudlet/Mudlet/issues/1149
+// Documentation: ? - public function previously undocumented, refer to
+// https://github.com/Mudlet/Mudlet/issues/1149 - but now that it CAN close the
+// window/buffer it should be detailed in the wiki.
 int TLuaInterpreter::closeUserWindow(lua_State* L)
 {
-    std::string luaSendText = "";
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "closeUserWindow: wrong argument type");
-        lua_error(L);
-        return 1;
-    } else {
-        luaSendText = lua_tostring(L, 1);
+        lua_pushfstring(L, "closeUserWindow: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
     }
-    Host& host = getHostFromLua(L);
-    QString text(luaSendText.c_str());
-    mudlet::self()->closeWindow(&host, text);
 
-    return 0;
+    bool reallyDestroyWindow = false;
+    if (lua_gettop(L) > 1 ) {
+        if (!lua_isboolean(L, 2)) {
+            lua_pushfstring(L, "closeUserWindow: bad argument #2 type (really destroy as boolean is optional, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        }
+        reallyDestroyWindow = lua_toboolean(L, 2);
+    }
+
+    QString name{QString::fromUtf8(lua_tostring(L, 1))};
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.mpConsole->closeWindow(name, reallyDestroyWindow); !success) {
+        lua_pushnil(L);
+        lua_pushstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hideWindow -- not hideUserWindow - compare initLuaGlobals()
