@@ -336,6 +336,7 @@ public:
     static int setBackgroundColor(lua_State*);
     static int createButton(lua_State*);
     static int setLabelClickCallback(lua_State*);
+    static int getImageSize(lua_State*);
     static int setLabelDoubleClickCallback(lua_State*);
     static int setLabelReleaseCallback(lua_State*);
     static int setLabelMoveCallback(lua_State*);
