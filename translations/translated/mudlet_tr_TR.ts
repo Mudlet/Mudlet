@@ -157,7 +157,7 @@ Lütfen bekleyin...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="241"/>
       <source>[%1%2] %3</source>
-      <translation type="unfinished"/>
+      <translation>[%1%2] %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="249"/>
@@ -243,7 +243,7 @@ Lütfen bekleyin...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="386"/>
       <source>? %2 %3 %4</source>
-      <translation type="unfinished"/>
+      <translation>? %2 %3 %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="392"/>
@@ -1024,7 +1024,7 @@ the highlighted room (%1) to:</source>
       <location filename="../src/T2DMap.cpp" line="3510"/>
       <source>Cancel</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation type="unfinished"/>
+      <translation>İptal</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3599"/>
@@ -1070,7 +1070,7 @@ for all of the %n selected room(s):</source>
       <location filename="../src/T2DMap.cpp" line="3812"/>
       <source>Cancel</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation type="unfinished"/>
+      <translation>İptal</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3869"/>
@@ -1965,7 +1965,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1608"/>
       <source>Start my own</source>
-      <translation type="unfinished"/>
+      <translation>Kendi haritama başlayacağım</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1666"/>
@@ -1975,12 +1975,12 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2077"/>
       <source>Map issues</source>
-      <translation type="unfinished"/>
+      <translation>Harita sorunları</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2084"/>
       <source>Area issues</source>
-      <translation type="unfinished"/>
+      <translation>Bölge sorunları</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2090"/>
@@ -2170,7 +2170,7 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="114"/>
       <location filename="../src/TRoom.cpp" line="1064"/>
       <source>West</source>
-      <translation type="unfinished"/>
+      <translation>Batı</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="115"/>
@@ -2199,12 +2199,12 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="119"/>
       <source>Other</source>
-      <translation type="unfinished"/>
+      <translation>Diğer</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="121"/>
       <source>Unknown</source>
-      <translation type="unfinished"/>
+      <translation>Bilinmeyen</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="252"/>
@@ -2224,17 +2224,17 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="994"/>
       <source>Northwest</source>
-      <translation type="unfinished"/>
+      <translation>Kuzeybatı</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1022"/>
       <source>Southeast</source>
-      <translation type="unfinished"/>
+      <translation>Güneydoğu</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1036"/>
       <source>Southwest</source>
-      <translation type="unfinished"/>
+      <translation>Güneybatı</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1141"/>
@@ -2748,7 +2748,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1210"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopyala</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1221"/>
@@ -2758,7 +2758,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1225"/>
       <source>Copy as image</source>
-      <translation type="unfinished"/>
+      <translation>Resim olarak kopyala</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1228"/>
@@ -3420,7 +3420,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="350"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>İptal</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="370"/>
@@ -3755,7 +3755,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1826"/>
       <source>Cancel</source>
       <comment>Cancel download of GUI package from Server</comment>
-      <translation type="unfinished"/>
+      <translation>İptal</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1448"/>
@@ -3766,7 +3766,7 @@ Uninstalling old version &apos;%2&apos;.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="382"/>
       <source>[ INFO ]  - Looking up the IP address of server: %1:%2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ BİLGİ ] - Sunucunun IP adresi araştırılıyor:%1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="506"/>
@@ -3949,7 +3949,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="123"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>İptal</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="136"/>
@@ -3967,77 +3967,77 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="20"/>
       <source>Select a profile to connect with</source>
-      <translation type="unfinished"/>
+      <translation>Bağlanmak için bir profil seçin</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2081"/>
       <source>Remove</source>
-      <translation type="unfinished"/>
+      <translation>Kaldır</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2100"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopyala</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2125"/>
       <source>New</source>
-      <translation type="unfinished"/>
+      <translation>Yeni</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2193"/>
       <source>Required</source>
-      <translation type="unfinished"/>
+      <translation>Zorunlu</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2199"/>
       <source>Profile name:</source>
-      <translation type="unfinished"/>
+      <translation>Profil adı:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2219"/>
       <source>Server address:</source>
-      <translation type="unfinished"/>
+      <translation>Sunucu adresi:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2242"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>Bağlantı noktası:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2286"/>
       <source>Secure:</source>
-      <translation type="unfinished"/>
+      <translation>Güvenli:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2293"/>
       <source>Profile history:</source>
-      <translation type="unfinished"/>
+      <translation>Profil geçmişi:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2313"/>
       <source>load newest profile</source>
-      <translation type="unfinished"/>
+      <translation>en yeni profili yükle</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2318"/>
       <source>load oldest profile</source>
-      <translation type="unfinished"/>
+      <translation>en eski profili yükle</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2341"/>
       <source>Optional</source>
-      <translation type="unfinished"/>
+      <translation>İsteğe Bağlı</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2354"/>
       <source>Character name:</source>
-      <translation type="unfinished"/>
+      <translation>Karakter adı:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2361"/>
       <source>The characters name</source>
-      <translation type="unfinished"/>
+      <translation>Karakterin adı</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2413"/>
@@ -4047,7 +4047,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2347"/>
       <source>Password:</source>
-      <translation type="unfinished"/>
+      <translation>Şifre:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2400"/>
@@ -4062,17 +4062,17 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2383"/>
       <source>Open profile on Mudlet start</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet başlatıldığında profili aç</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2393"/>
       <source>Reconnect automatically</source>
-      <translation type="unfinished"/>
+      <translation>Otomatik olarak yeniden bağlan</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2448"/>
       <source>Informational</source>
-      <translation type="unfinished"/>
+      <translation>Bilgilendirici</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2475"/>
@@ -4082,7 +4082,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2519"/>
       <source>Game description</source>
-      <translation type="unfinished"/>
+      <translation>Oyun açıklaması</translation>
     </message>
   </context>
   <context>
@@ -4299,7 +4299,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="567"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>İptal</translation>
     </message>
   </context>
   <context>
@@ -4314,7 +4314,9 @@ custom line?</source>
       <source>Are you sure that you&apos;d like to delete this profile? Everything (aliases, triggers, backups, etc) will be gone.
 
 If you are, please type in the profile name as a confirmation:</source>
-      <translation type="unfinished"/>
+      <translation>Bu profili silmek istediğinize emin misiniz? Profile dair bütün (aliaslar, triggerlar, yedekler vs) dosyalar silinecektir.
+
+Eğer eminseniz, doğrulamak için lütfen profil adını yazınız:</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="54"/>
@@ -4324,7 +4326,7 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="61"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>İptal</translation>
     </message>
   </context>
   <context>
@@ -4919,7 +4921,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="79"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>Bağlan</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1185"/>
@@ -4934,7 +4936,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2294"/>
       <source>This profile name is already in use.</source>
-      <translation type="unfinished"/>
+      <translation>Bu profil adı zaten kullanılıyor.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="473"/>
@@ -4945,22 +4947,22 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="89"/>
       <source>&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;Welcome to Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;b&gt;Click on one of the games on the list to play.&lt;/b&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;To play a game not in the list, click on %1 &lt;span style=&quot; color:#555753;&quot;&gt;New&lt;/span&gt;, fill in the &lt;i&gt;Profile Name&lt;/i&gt;, &lt;i&gt;Server address&lt;/i&gt;, and &lt;i&gt;Port&lt;/i&gt; fields in the &lt;i&gt;Required &lt;/i&gt; area.&lt;/p&gt;&lt;p&gt;After that, click %2 &lt;span style=&quot; color:#555753;&quot;&gt;Connect&lt;/span&gt; to play.&lt;/p&gt;&lt;p&gt;Have fun!&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;The Mudlet Team &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</source>
       <comment>Welcome message. Both %1 and %2 may be replaced by icons when this text is used.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;Mudlet'e hoşgeldiniz!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;b&gt;Oynamaya başlamak için listede bulunan oyunlardan bir tanesine tıklayın.&lt;/b&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;Listede bulunmayan bir oyunu oynamak için %1 e tıklayın &lt;span style=&quot; color:#555753;&quot;&gt;Yeni&lt;/span&gt;, Doldurun &lt;i&gt;Profil Adı&lt;/i&gt;, &lt;i&gt;Sunucu adresi&lt;/i&gt;, ve &lt;i&gt;Port&lt;/i&gt; içerisinde bulunan &lt;i&gt;Zorunlu &lt;/i&gt; alan.&lt;/p&gt;&lt;p&gt;Daha sonra %2 ye tıklayın&lt;span style=&quot; color:#555753;&quot;&gt;Bağlan&lt;/span&gt; Oynamak için.&lt;/p&gt;&lt;p&gt;Bol eğlenceler!&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;Mudlet Ekibi &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="80"/>
       <source>Offline</source>
-      <translation type="unfinished"/>
+      <translation>Çevrimdışı</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="102"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopyala</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="104"/>
       <source>Copy settings only</source>
-      <translation type="unfinished"/>
+      <translation>Yalnızca ayarları kopyala</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="173"/>
@@ -4980,7 +4982,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="576"/>
       <source>new profile name</source>
-      <translation type="unfinished"/>
+      <translation>yeni profil adı</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="674"/>
@@ -5045,12 +5047,12 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2393"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before loading.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Yüklemeden önce, lütfen geçerli bir profil adı, oyun sunucu adresi ve oyun portunu ayarlayın.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2397"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before connecting.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Bağlanmadan önce lütfen geçerli bir profil adı, oyun sunucu adresi ve oyun portunu ayarlayın.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2449"/>
@@ -5086,7 +5088,9 @@ Count</source>
       <source>Please enter the URL or IP address of the Game server.
 
 %1</source>
-      <translation type="unfinished"/>
+      <translation>Lütfen Oyun sunucusunun URL'sini veya IP adresini girin.
+
+%1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2358"/>
@@ -5161,7 +5165,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="416"/>
       <source>! Connected to %1.</source>
-      <translation type="unfinished"/>
+      <translation>! %1 e bağlanıldı.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="417"/>
@@ -5171,7 +5175,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="422"/>
       <source>! Connecting %1...</source>
-      <translation type="unfinished"/>
+      <translation>! %1 e bağlanılıyor...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="427"/>
@@ -6385,7 +6389,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8550"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8556"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopyala</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="437"/>
@@ -7344,7 +7348,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="507"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopyala</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="508"/>
@@ -7651,12 +7655,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="157"/>
       <source>Disconnect</source>
-      <translation type="unfinished"/>
+      <translation>Bağlantıyı kes</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="165"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Yeniden bağlan</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="173"/>
@@ -9114,23 +9118,23 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="260"/>
       <location filename="../src/mudlet.cpp" line="262"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>Bağlan</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="265"/>
       <source>Disconnect</source>
-      <translation type="unfinished"/>
+      <translation>Bağlantıyı kes</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="317"/>
       <location filename="../src/mudlet.cpp" line="326"/>
       <source>Discord</source>
-      <translation type="unfinished"/>
+      <translation>Discord</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="324"/>
       <source>Open Discord</source>
-      <translation type="unfinished"/>
+      <translation>Discord'u Aç</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="329"/>
@@ -9273,7 +9277,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="396"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Yeniden bağlan</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="397"/>
@@ -10722,7 +10726,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2719"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>Bağlantı noktası:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2757"/>
@@ -10737,7 +10741,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2702"/>
       <source>Server address:</source>
-      <translation type="unfinished"/>
+      <translation>Sunucu adresi:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2750"/>
@@ -10782,7 +10786,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2877"/>
       <source>Connection</source>
-      <translation type="unfinished"/>
+      <translation>Bağlantı</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4941"/>
@@ -11210,7 +11214,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
       <source>&amp;Cancel</source>
-      <translation type="unfinished"/>
+      <translation>&amp;İptal</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2001"/>

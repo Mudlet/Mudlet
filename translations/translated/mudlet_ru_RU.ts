@@ -9988,7 +9988,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="250"/>
       <source>Allow server to download and play media (requires GMCP enabled below)</source>
-      <translation type="unfinished"/>
+      <translation>Разрешить серверу загружать и воспроизводить звуки (требуется включить GMCP ниже)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="269"/>
