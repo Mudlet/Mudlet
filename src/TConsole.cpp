@@ -2271,8 +2271,7 @@ TLabel* TConsole::createLabel(const QString& windowname, const QString& name, in
     //if pW put Label in Userwindow
     auto pL = mLabelMap.value(name);
     auto pW = mDockWidgetMap.value(windowname);
-    auto pC = mSubConsoleMap.value(name);
-    if (!pL && !pC) {
+    if (!pL) {
         if (!pW) {
             pL = new TLabel(mpHost, mpMainFrame);
         } else {
@@ -2320,8 +2319,9 @@ std::pair<bool, QString> TConsole::deleteLabel(const QString& name)
     return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
 }
 
-void TConsole::createMapper(int x, int y, int width, int height)
+void TConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
 {
+    auto pW = mDockWidgetMap.value(windowname);
     if (!mpMapper) {
         // Arrange for TMap member values to be copied from the Host masters so they
         // are in place when the 2D mapper is created:
@@ -2330,7 +2330,11 @@ void TConsole::createMapper(int x, int y, int width, int height)
                                           mpHost->mpMap->mPlayerRoomInnerDiameterPercentage,
                                           mpHost->mpMap->mPlayerRoomOuterColor,
                                           mpHost->mpMap->mPlayerRoomInnerColor);
-        mpMapper = new dlgMapper(mpMainFrame, mpHost, mpHost->mpMap.data());
+        if (!pW) {
+            mpMapper = new dlgMapper(mpMainFrame, mpHost, mpHost->mpMap.data());
+        } else {
+            mpMapper = new dlgMapper(pW->widget(), mpHost, mpHost->mpMap.data());
+        }
 #if defined(INCLUDE_3DMAPPER)
         mpHost->mpMap->mpM = mpMapper->glWidget;
 #endif
