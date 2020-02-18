@@ -111,7 +111,11 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Env:MUDLET_VERSION_BUILD.Sta
   dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${Env:DBLSQD_USER}" -p "${Env:DBLSQD_PASS}"
 
   Write-Output "=== Registering release with Dblsqd ==="
-  dblsqd push -a mudlet -c release -r "${Env:VERSION}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
+  if ($Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build')) {
+    dblsqd push -a mudlet -c public-test-build -r "${Env:VERSION}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
+  } else {
+    dblsqd push -a mudlet -c release -r "${Env:VERSION}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
+  }
 }
 
 if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
