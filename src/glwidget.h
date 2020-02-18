@@ -24,15 +24,14 @@
 
 
 #include "pre_guard.h"
-#include <QtOpenGL/qgl.h> //problem with git
 #include <QPointer>
 #include "post_guard.h"
-
+#include <QOpenGLWidget>
 class Host;
 class TMap;
 
 
-class GLWidget : public QGLWidget
+class GLWidget : public QOpenGLWidget
 {
     Q_OBJECT
 
