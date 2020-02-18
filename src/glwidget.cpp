@@ -327,7 +327,11 @@ void GLWidget::setZDist(int angle)
 
 void GLWidget::initializeGL()
 {
-    QColor color = Qt::black;
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    QColor color(QColorConstants::Black);
+#else
+    QColor color(Qt::black);
+#endif
     glClearColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
     xRot = 1;
     yRot = 5;
@@ -374,7 +378,11 @@ void GLWidget::paintGL()
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             QPainter painter(this);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            painter.setPen(QColorConstants::white);
+#else
             painter.setPen(Qt::white);
+#endif
             painter.setFont(QFont("Bitstream Vera Sans Mono", 30));
             painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
             painter.drawText(width() / 3, height() / 2, "no map or no valid position on map");
