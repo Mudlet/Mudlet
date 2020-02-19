@@ -379,9 +379,9 @@ void GLWidget::paintGL()
 
             QPainter painter(this);
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
-            painter.setPen(QColorConstants::white);
+            painter.setPen(QColorConstants::White);
 #else
-            painter.setPen(Qt::White);
+            painter.setPen(Qt::white);
 #endif
             painter.setFont(QFont("Bitstream Vera Sans Mono", 30));
             painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
