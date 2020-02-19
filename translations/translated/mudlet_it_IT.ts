@@ -4753,13 +4753,13 @@ Utilizzi</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="165"/>
       <source>Former maintainer of the early Windows and Apple OSX packages. He also administers our server and helps the project in many ways.</source>
       <comment>about:demonnic</comment>
-      <translation type="unfinished"/>
+      <translation>Ex-sviluppatore delle prime versioni di Mudlet per Windows e Apple OSX. Ha gestito il nostro server e aiutato il progetto in molti modi.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="169"/>
       <source>Contributed many improvements to Mudlet&apos;s db: interface, event system, and has been around the project for a very long while assisting users.</source>
       <comment>about:keneanung</comment>
-      <translation type="unfinished"/>
+      <translation>Ha contribuito a migliorare l'interfaccia db di Mudlet, il gestore di event e ha collaborato per lungo tempo aiutando gli utenti.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="173"/>
@@ -4777,7 +4777,7 @@ Utilizzi</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="181"/>
       <source>Developed a shared module system that allows script packages to be shared among profiles, a UI for viewing Lua variables, improvements in the mapper and all around.</source>
       <comment>about:Chris7</comment>
-      <translation type="unfinished"/>
+      <translation>Ha sviluppato il sistema di moduli condivisi che permette di utilizzare lo stesso package in più profili. Ha creato una UI per visualizzare le variabili Lua, ha contribuito a migliorare il mapper e non solo.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="185"/>
@@ -4789,13 +4789,13 @@ Utilizzi</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="189"/>
       <source>Joined in December 2009 though he&apos;s been around much longer. Contributed to the Lua API and is the former maintainer of the Lua API.</source>
       <comment>about:Ben Smith</comment>
-      <translation type="unfinished"/>
+      <translation>Si è unito al gruppo nel Dicembre 2009 anche se collaborava già da tempo. Ha contribuito alle API Lua e ne ha contribuito alla manutenzione.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="193"/>
       <source>Joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches and has helped with release management of 1.0.5.</source>
       <comment>about:Blaine von Roeder</comment>
-      <translation type="unfinished"/>
+      <translation>Si è unito al gruppo nel Dicembre 2009. Ha contribuito alle API Lua, inviando varie patch di correzione bug e ha aiutato con il rilascio della versione 1.0.5.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="197"/>
@@ -4819,7 +4819,7 @@ Utilizzi</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="206"/>
       <source>Worked wonders in rejuventating our Website in 2017 but who prefers a little anonymity - if you are a &lt;i&gt;SpamBot&lt;/i&gt; you will not get onto our Fora now. They have also made some useful C++ core code contributions and we look forward to future reviews on and work in that area.</source>
       <comment>about:TheFae</comment>
-      <translation type="unfinished"/>
+      <translation>Ha fatto miracoli per ringiovanire il sito nel 2017, ma preferisce restare anonimo - se sei uno &lt;i&gt;SpamBot&lt;/i&gt; non potrai più accedere al nostro forum. Ha anche creato dell'utile codice C++ per il core di Mudlet e stiamo aspettando cosa produrrà nel futuro in questo settore.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="211"/>
