@@ -22,11 +22,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
+#include <QOpenGLWidget>
 #include "pre_guard.h"
 #include <QPointer>
 #include "post_guard.h"
-#include <QOpenGLWidget>
+
 class Host;
 class TMap;
 
