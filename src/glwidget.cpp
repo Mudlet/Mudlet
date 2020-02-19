@@ -381,7 +381,7 @@ void GLWidget::paintGL()
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             painter.setPen(QColorConstants::white);
 #else
-            painter.setPen(Qt::white);
+            painter.setPen(Qt::White);
 #endif
             painter.setFont(QFont("Bitstream Vera Sans Mono", 30));
             painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
@@ -2271,7 +2271,7 @@ void GLWidget::wheelEvent(QWheelEvent* e)
         e->accept();
         return;
     }
-    if (e->delta() > 0){
+    if (e->delta() > 0) {
         if (abs(mScale) < 0.3) {
             mScale += 0.01;
         } else {
