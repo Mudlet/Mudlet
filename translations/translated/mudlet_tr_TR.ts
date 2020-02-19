@@ -433,23 +433,24 @@ Lütfen bekleyin...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="741"/>
       <source>No map or no valid position.</source>
-      <translation type="unfinished"/>
+      <translation>Harita ya da geçerli konum yok.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2233"/>
       <source>Room Name: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Oda Adı: %1
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2846"/>
       <source>Create a new room here</source>
-      <translation type="unfinished"/>
+      <translation>Burada yeni bir oda oluştur</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3011"/>
       <source>Change the properties of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>Bu satırın özelliklerini değiştir</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3210"/>
@@ -597,43 +598,43 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2372"/>
       <source>Text label or image label?</source>
       <comment>2D Mapper create label dialog text</comment>
-      <translation type="unfinished"/>
+      <translation>Metin etiketi mi, resim etiketi mi?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2373"/>
       <source>Text Label</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Metin etiketi</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2374"/>
       <source>Image Label</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Resim Etiketi</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2378"/>
       <source>Enter label text.</source>
       <comment>2D Mapper create label dialog title/text</comment>
-      <translation type="unfinished"/>
+      <translation>Etiketin metnini girin.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2385"/>
       <source>Background color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Arkaplan rengi</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2386"/>
       <source>Foreground color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Ön plan rengi</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2390"/>
       <source>Select image</source>
       <comment>2D Mapper create label file dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Görseli seç</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2397"/>
@@ -645,13 +646,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2398"/>
       <source>Background</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Arkaplan</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2399"/>
       <source>Foreground</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Ön plan</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2643"/>
@@ -1879,7 +1880,7 @@ map with others relying on the original format.</source>
     <message>
       <location filename="../src/TMap.cpp" line="440"/>
       <source>[ INFO ]  - Map audit starting...</source>
-      <translation>[BİLGİ] - Harita denetimi başlıyor...</translation>
+      <translation>[ BİLGİ ] - Harita denetimi başlıyor...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1029"/>
