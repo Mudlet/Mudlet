@@ -7,8 +7,6 @@ if ($Env:APPVEYOR_REPO_TAG -eq "false") {
   } else {
     $Env:MUDLET_VERSION_BUILD = "-testing"
   }
-  # hardcoded for testing
-  $Env:MUDLET_VERSION_BUILD = "-public-test-build"
   if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
       $Script:Commit = git rev-parse --short $Env:APPVEYOR_PULL_REQUEST_HEAD_COMMIT
       $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-PR$Env:APPVEYOR_PULL_REQUEST_NUMBER-$Commit"
