@@ -1571,7 +1571,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1692"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ BİLGİ ] - Harita dosyası bulundu ve açıldı, şimdi inceleniyor...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1699"/>
@@ -1581,7 +1581,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1702"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ BİLGİ ] - Harita dosyası bulundu fakat açılamadı, lütfen "%1" 'in izinlerini kontrol edin.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1705"/>
