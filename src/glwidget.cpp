@@ -33,6 +33,7 @@
 #include <QtEvents>
 #include "post_guard.h"
 
+#include <QPainter>
 #ifdef Q_OS_MACOS
 #include <OpenGL/glu.h>
 #else
@@ -50,7 +51,7 @@ float xpos = 0, ypos = 0, zpos = 0, xrot = 0, yrot = 0, angle = 0.0, mPanXStart 
 float zmax, zmin;
 
 GLWidget::GLWidget(QWidget *parent)
-    : QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
+: QOpenGLWidget(parent)
 , mShowInfo()
 , dehnung()
 , mTarget()
@@ -83,7 +84,7 @@ GLWidget::GLWidget(QWidget *parent)
 
 
 GLWidget::GLWidget(TMap* pM, QWidget* parent)
-: QGLWidget(QGLFormat(QGL::SampleBuffers), parent)
+: QOpenGLWidget(parent)
 , mShowInfo()
 , xRot()
 , yRot()
@@ -130,7 +131,7 @@ void GLWidget::fullView()
 {
     mShowTopLevels = 9999999;
     mShowBottomLevels = 999999;
-    updateGL();
+    update();
 }
 
 
@@ -138,47 +139,47 @@ void GLWidget::shiftDown()
 {
     mShiftMode = true;
     mOy--;
-    updateGL();
+    update();
 }
 
 void GLWidget::shiftUp()
 {
     mShiftMode = true;
     mOy++;
-    updateGL();
+    update();
 }
 
 void GLWidget::shiftLeft()
 {
     mShiftMode = true;
     mOx--;
-    updateGL();
+    update();
 }
 
 void GLWidget::shiftRight()
 {
     mShiftMode = true;
     mOx++;
-    updateGL();
+    update();
 }
 void GLWidget::shiftZup()
 {
     mShiftMode = true;
     mOz++;
-    updateGL();
+    update();
 }
 
 void GLWidget::shiftZdown()
 {
     mShiftMode = true;
     mOz--;
-    updateGL();
+    update();
 }
 
 void GLWidget::showInfo()
 {
     mShowInfo = !mShowInfo;
-    updateGL();
+    update();
 }
 
 
@@ -186,13 +187,13 @@ void GLWidget::singleView()
 {
     mShowTopLevels = 0;
     mShowBottomLevels = 0;
-    updateGL();
+    update();
 }
 
 void GLWidget::increaseTop()
 {
     mShowTopLevels += 1;
-    updateGL();
+    update();
 }
 
 void GLWidget::reduceTop()
@@ -204,13 +205,13 @@ void GLWidget::reduceTop()
         mShowTopLevels = abs(zmax);
     }
     mShowTopLevels--;
-    updateGL();
+    update();
 }
 
 void GLWidget::increaseBottom()
 {
     mShowBottomLevels++;
-    updateGL();
+    update();
 }
 
 void GLWidget::reduceBottom()
@@ -222,7 +223,7 @@ void GLWidget::reduceBottom()
         mShowBottomLevels = abs(zmin);
     }
     mShowBottomLevels--;
-    updateGL();
+    update();
 }
 
 void GLWidget::defaultView()
@@ -234,7 +235,7 @@ void GLWidget::defaultView()
     is2DView = false;
     setVisible(!isVisible());
     mpMap->mpMapper->mp2dMap->setVisible(!mpMap->mpMapper->mp2dMap->isVisible());
-    updateGL();
+    update();
 }
 
 void GLWidget::sideView()
@@ -244,7 +245,7 @@ void GLWidget::sideView()
     zRot = 0.0;
     mScale = 1.0;
     is2DView = false;
-    updateGL();
+    update();
 }
 
 void GLWidget::topView()
@@ -254,7 +255,7 @@ void GLWidget::topView()
     zRot = 15.0;
     mScale = 1.0;
     is2DView = true;
-    updateGL();
+    update();
 }
 
 
@@ -265,8 +266,10 @@ void GLWidget::goRoom(const QString& s)
 void GLWidget::setScale(int angle)
 {
     mScale = 150 / ((float)angle + 300);
+    makeCurrent();
     resizeGL(width(), height());
-    updateGL();
+    doneCurrent();
+    update();
     return;
 }
 
@@ -275,7 +278,7 @@ void GLWidget::setXRotation(int angle)
     qNormalizeAngle(angle);
     xRot = angle;
     is2DView = false;
-    updateGL();
+    update();
     return;
 }
 
@@ -284,7 +287,7 @@ void GLWidget::setYRotation(int angle)
     qNormalizeAngle(angle);
     yRot = angle;
     is2DView = false;
-    updateGL();
+    update();
     return;
 }
 
@@ -293,7 +296,7 @@ void GLWidget::setZRotation(int angle)
     qNormalizeAngle(angle);
     zRot = angle;
     is2DView = false;
-    updateGL();
+    update();
     return;
 }
 
@@ -301,7 +304,7 @@ void GLWidget::setXDist(int angle)
 {
     xDist = angle;
     is2DView = false;
-    updateGL();
+    update();
     return;
 }
 
@@ -309,7 +312,7 @@ void GLWidget::setYDist(int angle)
 {
     yDist = angle;
     is2DView = false;
-    updateGL();
+    update();
     return;
 }
 
@@ -317,14 +320,19 @@ void GLWidget::setZDist(int angle)
 {
     zDist = angle;
     is2DView = false;
-    updateGL();
+    update();
     return;
 }
 
 
 void GLWidget::initializeGL()
 {
-    qglClearColor(Qt::black);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+    QColor color(QColorConstants::Black);
+#else
+    QColor color(Qt::black);
+#endif
+    glClearColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
     xRot = 1;
     yRot = 5;
     zRot = 10;
@@ -346,7 +354,7 @@ void GLWidget::setViewCenter(int areaId, int xPos, int yPos, int zPos)
     mOx = xPos;
     mOy = yPos;
     mOz = zPos;
-    updateGL();
+    update();
 }
 
 void GLWidget::paintGL()
@@ -368,7 +376,17 @@ void GLWidget::paintGL()
             glDepthFunc(GL_LESS);
             glClearColor(0.0, 0.0, 0.0, 1.0);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            renderText(width() / 3, height() / 2, "no map or no valid position on map", QFont("Bitstream Vera Sans Mono", 30, QFont::Normal));
+
+            QPainter painter(this);
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
+            painter.setPen(QColorConstants::White);
+#else
+            painter.setPen(Qt::white);
+#endif
+            painter.setFont(QFont("Bitstream Vera Sans Mono", 30));
+            painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
+            painter.drawText(width() / 3, height() / 2, "no map or no valid position on map");
+            painter.end();
 
             glLoadIdentity();
             glFlush();
@@ -2148,6 +2166,7 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         GLuint buff[16] = {0};
         GLint hits;
         GLint view[4];
+        makeCurrent();
         glSelectBuffer(16, buff);
         glGetIntegerv(GL_VIEWPORT, view);
         glRenderMode(GL_SELECT);
@@ -2159,12 +2178,14 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         gluPickMatrix(x, y, 0.1, 0.1, view);
         gluPerspective(60 * mScale, (GLfloat)width() / (GLfloat)height(), 0.0001, 10000.0);
         glMatrixMode(GL_MODELVIEW);
-
+        doneCurrent();
         mTarget = -22;
         selectionMode = true;
+        makeCurrent();
         paintGL();
+        doneCurrent();
         selectionMode = false;
-
+        makeCurrent();
         glMatrixMode(GL_PROJECTION);
         glPopMatrix();
         hits = glRenderMode(GL_RENDER);
@@ -2180,7 +2201,8 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         glLoadIdentity();
         gluPerspective(60 * mScale, (GLfloat)width() / (GLfloat)height(), 0.0001, 10000.0);
         glMatrixMode(GL_MODELVIEW);
-        updateGL();
+        doneCurrent();
+        update();
         if (mpMap->mpRoomDB->getRoom(mTarget)) {
             mpMap->mTargetID = mTarget;
             if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
@@ -2242,8 +2264,10 @@ void GLWidget::wheelEvent(QWheelEvent* e)
         } else {
             mScale -= 0.03;
         }
+        makeCurrent();
         resizeGL(width(), height());
-        updateGL();
+        doneCurrent();
+        update();
         e->accept();
         return;
     }
@@ -2253,8 +2277,10 @@ void GLWidget::wheelEvent(QWheelEvent* e)
         } else {
             mScale += 0.03;
         }
+        makeCurrent();
         resizeGL(width(), height());
-        updateGL();
+        doneCurrent();
+        update();
         e->accept();
         return;
     }
