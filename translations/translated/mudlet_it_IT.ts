@@ -4741,7 +4741,7 @@ Utilizzi</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="151"/>
       <source>GUI design and initial feature planning. He is responsible for the project homepage and the user manual. Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp;amp; user help. With the project from the very beginning and is an official spokesman of the project. Since the retirement of Heiko, he has become the head of the Mudlet project.</source>
       <comment>about:Vadi</comment>
-      <translation type="unfinished"/>
+      <translation>Ha disegnato la GUI e ha studiato il rilascio delle prime funzionalità. E'il responsabile del sito del progetto e del manuale utente. Si occupa del programma di installazione per Windows, MacOS, UBuntu e Linux (generico). Aggiorna la wiki di Mudlet, le API Lua e gestisce il progetto, le pubbliche relazioni e l'aiuto agli utenti. Si è unito al progetto dall'inizio e ne è il portavoce ufficiale. Dall'abbandono di Heiko è diventato il responsabile del progetto.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="158"/>
