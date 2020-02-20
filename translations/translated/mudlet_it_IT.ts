@@ -4747,7 +4747,7 @@ Utilizzi</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="158"/>
       <source>After joining in 2013, he has been poking various bits of the C++ code and GUI with a pointy stick; subsequently trying to patch over some of the holes made/found. Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language other than American English you will be seeing the results of him getting fed up with the spelling differences between what was being used and the British English his brain wanted to see.</source>
       <comment>about:SlySven</comment>
-      <translation type="unfinished"/>
+      <translation>Dopo essersi unito nel 2013, ha frugato in ogni bit del codice C++ e della GUI con la sua penna rossa da maestrina, cercando di sistemare ogni imperfezione. Recentemente ha lavorato sul sistema l18n e l10n per Mudlet 4.0.0 quindi se stai giocando in una lingua differente dall'inglese americano è merito del suo lavoro.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="165"/>
