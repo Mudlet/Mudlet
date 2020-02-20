@@ -5996,6 +5996,22 @@ int TLuaInterpreter::setAppStyleSheet(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setAppStyleSheet
+int TLuaInterpreter::setProfileStyleSheet(lua_State* L)
+{
+    QString styleSheet;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setProfileStyleSheet: bad argument #1 type (style sheet as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    styleSheet = QString::fromUtf8(lua_tostring(L, 1));
+
+    Host& host = getHostFromLua(L);
+    host.mpConsole->setStyleSheet(styleSheet);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // No documentation available in wiki - internal function
 // this was an internal only function used by the package system, but it was
 // inactive and has been removed
@@ -15792,6 +15808,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "loadMap", TLuaInterpreter::loadMap);
     lua_register(pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize);
     lua_register(pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet);
+    lua_register(pGlobalLua, "setProfileStyleSheet", TLuaInterpreter::setProfileStyleSheet);
     lua_register(pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc);
     lua_register(pGlobalLua, "getIrcNick", TLuaInterpreter::getIrcNick);
     lua_register(pGlobalLua, "getIrcServer", TLuaInterpreter::getIrcServer);
