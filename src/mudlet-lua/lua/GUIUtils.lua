@@ -461,7 +461,7 @@ end
 ---   <pre>
 ---   createGauge("healthBar", 300, 20, 30, 300, "Now with some text", "green", "horizontal, vertical, goofy, or batty")
 ---   </pre>
-function createGauge(windowname,gaugeName, width, height, x, y, gaugeText, r, g, b, orientation)
+function createGauge(windowname, gaugeName, width, height, x, y, gaugeText, r, g, b, orientation)
   --Make windowname optional
   if type(gaugeName) == "number" then
     orientation = b
@@ -490,13 +490,13 @@ function createGauge(windowname,gaugeName, width, height, x, y, gaugeText, r, g,
   orientation = orientation or "horizontal"
   assert(table.contains({ "horizontal", "vertical", "goofy", "batty" }, orientation), "createGauge: orientation must be horizontal, vertical, goofy, or batty")
   local tbl = { width = width, height = height, x = x, y = y, text = gaugeText, r = r, g = g, b = b, orientation = orientation, value = 1 }
-  createLabel(windowname,gaugeName .. "_back", 0, 0, 0, 0, 1)
+  createLabel(windowname, gaugeName .. "_back", 0, 0, 0, 0, 1)
   setBackgroundColor(gaugeName .. "_back", r, g, b, 100)
 
-  createLabel(windowname,gaugeName .. "_front", 0, 0, 0, 0, 1)
+  createLabel(windowname, gaugeName .. "_front", 0, 0, 0, 0, 1)
   setBackgroundColor(gaugeName .. "_front", r, g, b, 255)
 
-  createLabel(windowname,gaugeName .. "_text", 0, 0, 0, 0, 1)
+  createLabel(windowname, gaugeName .. "_text", 0, 0, 0, 0, 1)
   setBackgroundColor(gaugeName .. "_text", 0, 0, 0, 0)
 
   -- save new values in table

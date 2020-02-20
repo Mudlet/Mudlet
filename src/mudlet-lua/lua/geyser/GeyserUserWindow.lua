@@ -50,7 +50,7 @@ end
 
 Geyser.UserWindow.Parent = Geyser.Window
 
-function Geyser.UserWindow:new (cons)
+function Geyser.UserWindow:new(cons)
   cons = cons or {}
   cons.name = cons.name or Geyser.nameGen()
   cons.type = cons.type or "userwindow"
@@ -66,11 +66,17 @@ function Geyser.UserWindow:new (cons)
   self.__index = self
   
   me.restoreLayout = me.restoreLayout or false
-  
+  me.docked = me.docked or false
+
   openUserWindow(me.name,me.restoreLayout)
-  
-  me:move(cons.x,cons.y)
-  me:resize(cons.width,cons.height)
+
+  --Resizing not possible if docked
+  --Docking position not choosable
+  if me.docked == false then
+      me:move(cons.x,cons.y)
+      me:resize(cons.width,cons.height)
+  end
+
   me:resetWindow()
   return me
 end

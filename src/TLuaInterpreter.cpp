@@ -1293,7 +1293,7 @@ int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
 {
     QString windowName;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "setMiniConsoleFontSize: bad argument #1 type (MiniConsole name as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "setMiniConsoleFontSize: bad argument #1 type (miniconsole name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     } else {
         windowName = QString::fromUtf8(lua_tostring(L, 1));
@@ -1310,7 +1310,7 @@ int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
         lua_pushboolean(L, true);
     } else {
         lua_pushnil(L);
-        lua_pushfstring(L, R"(MiniConsole "%s" not found)", windowName.toUtf8().constData());
+        lua_pushfstring(L, R"(miniconsole "%s" not found)", windowName.toUtf8().constData());
     }
     return 0;
 }
@@ -3537,7 +3537,7 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
     counter = 3;
     //make the windowname optional by using counter. If windowname "main" add to main console
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "createMiniConsole: bad argument #1 type (MiniConsole name/windowname as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "createMiniConsole: bad argument #1 type (miniconsole name as string expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
@@ -3551,7 +3551,7 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
     }
     if (!lua_isnumber(L, 2)) {      
         if (!lua_isstring(L, 2)) {
-            lua_pushfstring(L, "createMiniConsole: bad argument #2 type (MiniConsole name as string expected, got %s!)", luaL_typename(L, 2));
+            lua_pushfstring(L, "createMiniConsole: bad argument #2 type (miniconsole name as string expected, got %s!)", luaL_typename(L, 2));
             lua_error(L);
             return 1;
         }
@@ -3563,7 +3563,7 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
     }
 
     if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createMiniConsole: bad argument #%d type (MiniConsole x-coordinate as number expected, got %s!)", counter, luaL_typename(L, counter));
+        lua_pushfstring(L, "createMiniConsole: bad argument #%d type (miniconsole x-coordinate as number expected, got %s!)", counter, luaL_typename(L, counter));
         lua_error(L);
         return 1;
     } else {
@@ -3571,7 +3571,7 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
         counter++;
     }
     if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createMiniConsole: bad argument #%d type (MiniConsole y-coordinate as number expected, got %s!)", counter, luaL_typename(L, counter));
+        lua_pushfstring(L, "createMiniConsole: bad argument #%d type (miniconsole y-coordinate as number expected, got %s!)", counter, luaL_typename(L, counter));
         lua_error(L);
         return 1;
     } else {
@@ -3579,7 +3579,7 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
         counter++;
     }
     if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createMiniConsole: bad argument #%d type (MiniConsole width as number expected, got %s!)", counter, luaL_typename(L, counter));
+        lua_pushfstring(L, "createMiniConsole: bad argument #%d type (miniconsole width as number expected, got %s!)", counter, luaL_typename(L, counter));
         lua_error(L);
         return 1;
     } else {
@@ -3587,7 +3587,7 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
         counter++;
     }
     if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createMiniConsole: bad argument #%d type (MiniConsole height as number expected, got %s!)", counter, luaL_typename(L, counter));
+        lua_pushfstring(L, "createMiniConsole: bad argument #%d type (miniconsole height as number expected, got %s!)", counter, luaL_typename(L, counter));
         lua_error(L);
         return 1;
     } else {
@@ -3615,7 +3615,7 @@ int TLuaInterpreter::createLabel(lua_State* L)
     counter = 3;
 
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "createLabel: bad argument #1 type (label name/windowname as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "createLabel: bad argument #1 type (label name as string expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
@@ -3793,7 +3793,7 @@ int TLuaInterpreter::createButton(lua_State* L)
     counter = 3;
 
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "createButton: bad argument #1 type (label name/windowname as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "createButton: bad argument #1 type (label name as string expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
@@ -7047,7 +7047,7 @@ int TLuaInterpreter::getUserWindowSize(lua_State* L)
 {
     std::string luaSendWindow = "";
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "getUserWindowSize: wrong argument type");
+        lua_pushfstring(L, "getUserWindowSize: bad argument #1 type (name as string expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
