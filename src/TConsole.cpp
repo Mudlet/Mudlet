@@ -2205,9 +2205,9 @@ TConsole* TConsole::createBuffer(const QString& name)
 
 void TConsole::resetMainConsole()
 {
-//resetProfile should reset also UserWindows
-//save WindowLayout before deleting UserWindows
-    mudlet::self()->saveWindowLayout(); 
+    //resetProfile should reset also UserWindows
+    //save WindowLayout before deleting UserWindows
+    mudlet::self()->saveWindowLayout();
     QMutableMapIterator<QString, TDockWidget*> itDockWidget(mDockWidgetMap);
     while (itDockWidget.hasNext()) {
         itDockWidget.next();
