@@ -6,9 +6,13 @@
 
 --- Responds to sysWindowResizeEvent and causes all windows managed
 -- by Geyser to update their sizes and positions.
-function GeyserReposition()
+function GeyserReposition(event, w, h, arg)
   for _, window in pairs(Geyser.windowList) do
-    window:reposition()
+    if event == "sysUserWindowResizeEvent" and window.type == "userwindow" and arg.."Container" == window.name then
+      window:reposition()
+    elseif event == "sysWindowResizeEvent" and window.type ~= "userwindow" then 
+      window:reposition()
+    end
   end
 end
 
