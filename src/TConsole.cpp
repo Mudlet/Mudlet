@@ -2206,10 +2206,13 @@ TConsole* TConsole::createBuffer(const QString& name)
 void TConsole::resetMainConsole()
 {
 //resetProfile should reset also UserWindows
+//save WindowLayout before deleting UserWindows
+    mudlet::self()->saveWindowLayout(); 
     QMutableMapIterator<QString, TDockWidget*> itDockWidget(mDockWidgetMap);
     while (itDockWidget.hasNext()) {
         itDockWidget.next();
         itDockWidget.value()->close();
+        itDockWidget.value()->deleteLater();
         itDockWidget.remove();
     }
 
@@ -2218,6 +2221,7 @@ void TConsole::resetMainConsole()
         itSubConsole.next();
         // CHECK: Do we need to handle the float/dockable widgets here:
         itSubConsole.value()->close();
+        itSubConsole.value()->deleteLater();
         itSubConsole.remove();
     }
 
@@ -2225,6 +2229,7 @@ void TConsole::resetMainConsole()
     while (itLabel.hasNext()) {
         itLabel.next();
         itLabel.value()->close();
+        itLabel.value()->deleteLater();
         itLabel.remove();
     }
 }

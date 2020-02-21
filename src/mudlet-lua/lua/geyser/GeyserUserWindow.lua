@@ -71,8 +71,8 @@ function Geyser.UserWindow:new(cons)
   openUserWindow(me.name,me.restoreLayout)
 
   --Resizing not possible if docked
-  --Docking position not choosable
-  if me.docked == false then
+  --Docking position not choosable if restoreLayout don't move/resize at start
+  if me.docked == false and me.restoreLayout == false then
       me:move(cons.x,cons.y)
       me:resize(cons.width,cons.height)
   end
