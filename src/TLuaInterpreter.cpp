@@ -15450,23 +15450,21 @@ int TLuaInterpreter::getConnectionInfo(lua_State *L)
     return 2;
 }
 
-int TLuaInterpreter::unzip2(lua_State *L)
+int TLuaInterpreter::unzipAsync(lua_State *L)
 {
     QString zipLocation;
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "unzip2: bad argument #1 type (zip location as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "unzipAsync: bad argument #1 type (zip location as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
-    } else {
-        zipLocation = QString::fromUtf8(lua_tostring(L, 1));
     }
+    zipLocation = QString::fromUtf8(lua_tostring(L, 1));
 
     QString extractLocation;
     if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "unzip2: bad argument #2 type (extract location as string expected, got %s!)", luaL_typename(L, 2));
+        lua_pushfstring(L, "unzipAsync: bad argument #2 type (extract location as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
-    } else {
-        extractLocation = QString::fromUtf8(lua_tostring(L, 2));
     }
+    extractLocation = QString::fromUtf8(lua_tostring(L, 2));
 
     QTemporaryDir temporaryDir;
     if (!temporaryDir.isValid()) {
@@ -16049,7 +16047,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "postHTTP", TLuaInterpreter::postHTTP);
     lua_register(pGlobalLua, "deleteHTTP", TLuaInterpreter::deleteHTTP);
     lua_register(pGlobalLua, "getConnectionInfo", TLuaInterpreter::getConnectionInfo);
-    lua_register(pGlobalLua, "unzip2", TLuaInterpreter::unzip2);
+    lua_register(pGlobalLua, "unzipAsync", TLuaInterpreter::unzipAsync);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     // prepend profile path to package.path and package.cpath
