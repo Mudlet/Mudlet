@@ -105,7 +105,7 @@ public:
     void luaWrapLine(std::string& buf, int line);
 
     int getColumnNumber();
-    void createMapper(int, int, int, int);
+    void createMapper(const QString &windowname, int, int, int, int);
 
     void setWrapAt(int pos)
     {
@@ -146,8 +146,9 @@ public:
     int getLastLineNumber();
     void refresh();
     TLabel*
-    createLabel(const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
-    TConsole* createMiniConsole(const QString& name, int x, int y, int width, int height);
+    createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
+    TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
+    std::pair<bool, QString> deleteLabel(const QString&);
     bool raiseWindow(const QString& name);
     bool lowerWindow(const QString& name);
     bool showWindow(const QString& name);
@@ -180,6 +181,7 @@ public:
 
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;
+    QSize getUserWindowSize(const QString& windowname) const;
 
     void toggleLogging(bool);
     ConsoleType getType() const { return mType; }

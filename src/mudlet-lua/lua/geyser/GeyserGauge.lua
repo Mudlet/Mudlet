@@ -132,7 +132,7 @@ function Geyser.Gauge:new (cons, container)
   -- Set the metatable.
   setmetatable(me, self)
   self.__index = self
-
+  me.windowname = me.windowname or me.container.windowname or "main"
   -----------------------------------------------------------
   -- Now create the Gauge using primitives and tastey classes
 
