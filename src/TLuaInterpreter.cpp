@@ -15511,7 +15511,8 @@ int TLuaInterpreter::unzip2(lua_State *L)
     });
     watcher->setFuture(future);
 
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // No documentation available in wiki - internal function
