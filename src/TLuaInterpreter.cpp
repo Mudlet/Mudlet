@@ -49,6 +49,7 @@
 #endif
 
 #include "pre_guard.h"
+#include <QtConcurrent>
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
@@ -6798,7 +6799,7 @@ int TLuaInterpreter::sendMSDP(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     int n = lua_gettop(L);
-    
+
     if (n < 1) {
         lua_pushstring(L, "sendMSDP: bad argument #1 type (variable name as string expected, got nil!)");
         return lua_error(L);
@@ -15449,6 +15450,70 @@ int TLuaInterpreter::getConnectionInfo(lua_State *L)
     return 2;
 }
 
+int TLuaInterpreter::unzip2(lua_State *L)
+{
+    QString zipLocation;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "unzip2: bad argument #1 type (zip location as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        zipLocation = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    QString extractLocation;
+    if (!lua_isstring(L, 2)) {
+        lua_pushfstring(L, "unzip2: bad argument #2 type (extract location as string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    } else {
+        extractLocation = QString::fromUtf8(lua_tostring(L, 2));
+    }
+
+    QTemporaryDir temporaryDir;
+    if (!temporaryDir.isValid()) {
+        lua_pushnil(L);
+        lua_pushstring(L,
+                       "coudln't create temporary directory to extract the zip into");
+        return 2;
+    }
+
+    extractLocation = QDir::fromNativeSeparators(extractLocation);
+    if (!extractLocation.endsWith(QLatin1String("/"))) {
+        extractLocation.append(QLatin1String("/"));
+    }
+
+    QDir dir;
+    if (!dir.mkpath(extractLocation)) {
+        lua_pushnil(L);
+        lua_pushstring(L,
+                       "coudln't create output directory to extract the zip into");
+        return 2;
+    }
+
+    auto future = QtConcurrent::run(mudlet::unzip, zipLocation, extractLocation, temporaryDir.path());
+    auto watcher = new QFutureWatcher<bool>;
+    QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
+        TEvent event {};
+        Host& host = getHostFromLua(L);
+
+        if (future.result()) {
+            event.mArgumentList.append(QStringLiteral("sysUnzipDone"));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        } else {
+            event.mArgumentList.append(QStringLiteral("sysUnzipError"));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        }
+
+        event.mArgumentList.append(zipLocation);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(extractLocation);
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        host.raiseEvent(event);
+    });
+    watcher->setFuture(future);
+
+    return 0;
+}
+
 // No documentation available in wiki - internal function
 void TLuaInterpreter::set_lua_table(const QString& tableName, QStringList& variableList)
 {
@@ -15983,6 +16048,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "postHTTP", TLuaInterpreter::postHTTP);
     lua_register(pGlobalLua, "deleteHTTP", TLuaInterpreter::deleteHTTP);
     lua_register(pGlobalLua, "getConnectionInfo", TLuaInterpreter::getConnectionInfo);
+    lua_register(pGlobalLua, "unzip2", TLuaInterpreter::unzip2);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
     // prepend profile path to package.path and package.cpath
