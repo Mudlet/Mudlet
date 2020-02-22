@@ -30,45 +30,17 @@
 class TMediaData
 {
 public:
-    enum MediaProtocol {
-        MediaProtocolMSP = 90,
-        MediaProtocolGMCP = 201,
-        MediaProtocolNotSet = 0
-    };
+    enum MediaProtocol { MediaProtocolMSP = 90, MediaProtocolGMCP = 201, MediaProtocolNotSet = 0 };
 
-    enum MediaType {
-        MediaTypeSound = 1,
-        MediaTypeMusic = 2,
-        MediaTypeNotSet = 0
-    };
+    enum MediaType { MediaTypeSound = 1, MediaTypeMusic = 2, MediaTypeNotSet = 0 };
 
-    enum MediaVolume {
-        MediaVolumeMax = 100,
-        MediaVolumeHigh = 75,
-        MediaVolumeDefault = 50,
-        MediaVolumeLow = 25,
-        MediaVolumeMin = 1,
-        MediaVolumePreload = 0
-    };
+    enum MediaVolume { MediaVolumeMax = 100, MediaVolumeHigh = 75, MediaVolumeDefault = 50, MediaVolumeLow = 25, MediaVolumeMin = 1, MediaVolumePreload = 0 };
 
-    enum MediaLoops {
-        MediaLoopsDefault = 1,
-        MediaLoopsRepeat = -1
-    };
+    enum MediaLoops { MediaLoopsDefault = 1, MediaLoopsRepeat = -1 };
 
-    enum MediaPriority {
-        MediaPriorityMax = 100,
-        MediaPriorityHigh = 75,
-        MediaPriorityDefault = 50,
-        MediaPriorityLow = 25,
-        MediaPriorityMin = 1,
-        MediaPriorityNotSet = 0
-    };
+    enum MediaPriority { MediaPriorityMax = 100, MediaPriorityHigh = 75, MediaPriorityDefault = 50, MediaPriorityLow = 25, MediaPriorityMin = 1, MediaPriorityNotSet = 0 };
 
-    enum MediaContinue {
-        MediaContinueDefault = true,
-        MediaContinueRestart = false
-    };
+    enum MediaContinue { MediaContinueDefault = true, MediaContinueRestart = false };
 
     TMediaData()
     {
@@ -143,7 +115,7 @@ private:
     bool initialized = false;
 };
 
-class TMedia: public QObject
+class TMedia : public QObject
 {
     Q_OBJECT
 
@@ -160,7 +132,7 @@ private:
     QUrl parseUrl(TMediaData& mediaData);
     bool isValidUrl(QUrl& url);
     bool isFileRelative(TMediaData& mediaData);
-    QStringList parseFileNameList(TMediaData& mediaData, QDir &dir);
+    QStringList parseFileNameList(TMediaData& mediaData, QDir& dir);
     QStringList getFileNameList(TMediaData& mediaData);
     QUrl getFileUrl(TMediaData& mediaData);
     bool processUrl(TMediaData& mediaData);
@@ -185,7 +157,7 @@ private:
     QString parseJSONByMediaUrl(QJsonObject& json);
     QString parseJSONByMediaKey(QJsonObject& json);
 
-    void parseJSONForMedia(QJsonObject& json);
+    void parseJSONForMediaDefault(QJsonObject& json);
     void parseJSONForMediaLoad(QJsonObject& json);
     void parseJSONForMediaPlay(QJsonObject& json);
     void parseJSONForMediaStop(QJsonObject& json);
