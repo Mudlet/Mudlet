@@ -312,34 +312,37 @@ function Geyser.MiniConsole:new (cons, container)
 
   -----------------------------------------------------------
   -- Now create the MiniConsole using primitives
-  createMiniConsole(me.name, me:get_x(), me:get_y(),
-  me:get_width(), me:get_height())
+  if not string.find(me.name, ".*Class") then
+    me.windowname = me.windowname or me.container.windowname or "main"
+    createMiniConsole(me.windowname,me.name, me:get_x(), me:get_y(),
+    me:get_width(), me:get_height())
 
-  -- Set any defined colors
-  Geyser.Color.applyColors(me)
+    -- Set any defined colors
+    Geyser.Color.applyColors(me)
 
-  if cons.fontSize then
-    me:setFontSize(cons.fontSize)
-  elseif container then
-    me:setFontSize(container.fontSize)
-    cons.fontSize = container.fontSize
-  else
-    me:setFontSize(8)
-    cons.fontSize = 8
+    if cons.fontSize then
+      me:setFontSize(cons.fontSize)
+    elseif container then
+      me:setFontSize(container.fontSize)
+      cons.fontSize = container.fontSize
+    else
+      me:setFontSize(8)
+      cons.fontSize = 8
+    end
+    if cons.scrollBar then
+      me:enableScrollBar()
+    else
+      me:disableScrollBar()
+    end
+    if cons.font then
+      me:setFont(cons.font)
+    end
+    if cons.wrapAt == "auto" then
+      me:setAutoWrap()
+    elseif cons.wrapAt then
+      me:setWrap(cons.wrapAt)
+    end
+    --print("  New in " .. self.name .. " : " .. me.name)
   end
-  if cons.scrollBar then
-    me:enableScrollBar()
-  else
-    me:disableScrollBar()
-  end
-  if cons.font then
-    me:setFont(cons.font)
-  end
-  if cons.wrapAt == "auto" then
-    me:setAutoWrap()
-  elseif cons.wrapAt then
-    me:setWrap(cons.wrapAt)
-  end
-  --print("  New in " .. self.name .. " : " .. me.name)
   return me
 end

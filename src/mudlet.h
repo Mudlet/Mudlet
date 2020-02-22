@@ -130,9 +130,8 @@ public:
     int getFontSize(Host*, const QString&);
     QSize calcFontSize(Host* pHost, const QString& windowName);
     bool openWindow(Host*, const QString&, bool loadLayout = true);
-    bool createMiniConsole(Host*, const QString&, int, int, int, int);
-    bool createLabel(Host* pHost, const QString& name, int x, int y, int width, int height, bool fillBg,
-                         bool clickthrough);
+    std::pair<bool, QString> createMiniConsole(Host*, const QString& windowname, const QString& name, int, int, int, int);
+    std::pair<bool, QString> createLabel(Host* pHost, const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
     bool echoWindow(Host*, const QString&, const QString&);
     bool echoLink(Host* pHost, const QString& name, const QString& text, QStringList&, QStringList&, bool customFormat = false);
     void insertLink(Host*, const QString&, const QString&, QStringList&, QStringList&, bool customFormat = false);

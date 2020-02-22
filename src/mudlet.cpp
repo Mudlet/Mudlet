@@ -2022,44 +2022,54 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
     return false;
 }
 
-bool mudlet::createMiniConsole(Host* pHost, const QString& name, int x, int y, int width, int height)
+std::pair<bool, QString> mudlet::createMiniConsole(Host* pHost, const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (!pHost || !pHost->mpConsole) {
-        return false;
+        return {false, QString()};
     }
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    auto pW = pHost->mpConsole->mDockWidgetMap.value(name);
     if (!pC) {
-        pC = pHost->mpConsole->createMiniConsole(name, x, y, width, height);
+        pC = pHost->mpConsole->createMiniConsole(windowname, name, x, y, width, height);
         if (pC) {
             pC->setMiniConsoleFontSize(12);
-            return true;
+            return {true, QString()};
         }
-    } else {
+    } else if (pC) {
         // CHECK: The absence of an explict return statement in this block means that
         // reusing an existing mini console causes the lua function to seem to
         // fail - is this as per Wiki?
-        pC->resize(width, height);
-        pC->move(x, y);
+        // This part was causing problems with UserWindows
+        if (!pW) {
+            pC->resize(width, height);
+            pC->move(x, y);
+            return {false, QStringLiteral("miniconsole \"%1\" exists already. moving/resizing \"%1\".").arg(name)};
+        }
     }
-    return false;
+    return {false, QStringLiteral("miniconsole/userwindow \"%1\" exists already.").arg(name)};
 }
 
-bool mudlet::createLabel(Host* pHost, const QString& name, int x, int y, int width, int height, bool fillBg,
-                         bool clickthrough)
+std::pair<bool, QString> mudlet::createLabel(Host* pHost, const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough)
 {
     if (!pHost || !pHost->mpConsole) {
-        return false;
+        return {false, QString()};
     }
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
-    if (!pL) {
-        pL = pHost->mpConsole->createLabel(name, x, y, width, height, fillBg, clickthrough);
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (!pL && !pC) {
+        pL = pHost->mpConsole->createLabel(windowname, name, x, y, width, height, fillBg, clickthrough);
         if (pL) {
-            return true;
+            return {true, QString()};
         }
+    } else if (pL) {
+        return {false, QStringLiteral("label \"%1\" exists already.").arg(name)};
+    } else if (pC) {
+        return {false, QStringLiteral("a miniconsole/userwindow with the name \"%1\" exists already. label name has to be unique.").arg(name)};
     }
-    return false;
+    return {false, QString()};
+
 }
 
 bool mudlet::createBuffer(Host* pHost, const QString& name)
