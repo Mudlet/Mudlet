@@ -15470,7 +15470,7 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
     if (!temporaryDir.isValid()) {
         lua_pushnil(L);
         lua_pushstring(L,
-                       "coudln't create temporary directory to extract the zip into");
+                       "couldn't create temporary directory to extract the zip into");
         return 2;
     }
 
@@ -15483,7 +15483,7 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
     if (!dir.mkpath(extractLocation)) {
         lua_pushnil(L);
         lua_pushstring(L,
-                       "coudln't create output directory to extract the zip into");
+                       "couldn't create output directory to extract the zip into");
         return 2;
     }
 
