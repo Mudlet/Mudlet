@@ -1429,7 +1429,7 @@ void mudlet::slot_close_profile_requested(int tab)
     }
 
     pH->mpConsole->mUserAgreedToCloseConsole = true;
-    pH->closingDown();
+    pH->closingDown(); // Only place this is used
 
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
 #if defined (Q_OS_WIN32)

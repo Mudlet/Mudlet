@@ -479,7 +479,7 @@ void cTelnet::handle_socket_signal_disconnected()
     mNeedDecompression = false;
     reset();
 
-    if (!mpHost->mIsGoingDown) {
+    if (!mpHost->isGoingDown()) {
         postMessage(spacer);
 
 #if !defined(QT_NO_SSL)

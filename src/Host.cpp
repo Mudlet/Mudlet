@@ -218,7 +218,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mProxyPort(0)
 , mProxyUsername(QString())
 , mProxyPassword(QString())
-, mIsGoingDown(false)
 , mIsProfileLoadingSequence(false)
 , mLF_ON_GA(true)
 , mNoAntiAlias(false)
@@ -357,6 +356,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mKeyUnit(this)
 , mHostID(id)
 , mHostName(hostname)
+, mIsGoingDown(false)
 , mIsClosingDown(false)
 , mLogin(login)
 , mPass(pass)
@@ -435,8 +435,8 @@ Host::~Host()
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
     }
-    mIsGoingDown = true;
-    mIsClosingDown = true;
+    mIsGoingDown = true; // Only place this is set
+    mIsClosingDown = true; // Also set by isClosingDown() call in
     mErrorLogStream.flush();
     mErrorLogFile.close();
 }

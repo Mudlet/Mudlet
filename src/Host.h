@@ -324,6 +324,7 @@ public:
     // Store/retrieve all the settings in one call:
     void setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter = 120, const quint8 innerDiameter = 70, const QColor& outerColor = QColor(), const QColor& innerColor = QColor());
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
+    bool isGoingDown() const { return mIsGoingDown; }
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
@@ -372,7 +373,6 @@ public:
     QString mProxyUsername;
     QString mProxyPassword;
 
-    bool mIsGoingDown;
     // Used to force the test compilation of the scripts for TActions ("Buttons")
     // that are pushdown buttons that run when they are "pushed down" during
     // loading even though the buttons start out with themselves NOT being
@@ -585,6 +585,8 @@ private:
     int mHostID;
     QString mHostName;
 
+    // Was public:
+    bool mIsGoingDown;
     bool mIsClosingDown;
 
     QString mLine;
