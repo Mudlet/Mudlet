@@ -15452,19 +15452,17 @@ int TLuaInterpreter::getConnectionInfo(lua_State *L)
 
 int TLuaInterpreter::unzipAsync(lua_State *L)
 {
-    QString zipLocation;
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "unzipAsync: bad argument #1 type (zip location as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    zipLocation = QString::fromUtf8(lua_tostring(L, 1));
+    QString zipLocation {QString::fromUtf8(lua_tostring(L, 1))};
 
-    QString extractLocation;
     if (!lua_isstring(L, 2)) {
         lua_pushfstring(L, "unzipAsync: bad argument #2 type (extract location as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
-    extractLocation = QString::fromUtf8(lua_tostring(L, 2));
+    QString extractLocation {QString::fromUtf8(lua_tostring(L, 2))};
 
     QTemporaryDir temporaryDir;
     if (!temporaryDir.isValid()) {
@@ -15483,7 +15481,7 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
     if (!dir.mkpath(extractLocation)) {
         lua_pushnil(L);
         lua_pushstring(L,
-                       "couldn't create output directory to extract the zip into");
+                       "couldn't create output directory to put the extracted files into");
         return 2;
     }
 
