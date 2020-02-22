@@ -313,6 +313,7 @@ std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
                 constructToolbar(childAction, pTB);
                 childAction->mpToolBar = pTB;
                 pTB->setStyleSheet(pTB->mpTAction->css);
+                pTB->setStyleSheet(mpHost->mProfileStyleSheet);
             }
             continue; //action package
         }
@@ -336,6 +337,7 @@ std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
         constructToolbar(action, pTB);
         action->mpToolBar = pTB;
         pTB->setStyleSheet(pTB->mpTAction->css);
+        pTB->setStyleSheet(mpHost->mProfileStyleSheet);
     }
 
     return mToolBarList;
@@ -371,6 +373,7 @@ std::list<QPointer<TEasyButtonBar>> ActionUnit::getEasyButtonBarList()
                 constructToolbar(*childActionIterator, pTB);
                 (*childActionIterator)->mpEasyButtonBar = pTB;
                 pTB->setStyleSheet(pTB->mpTAction->css);
+                pTB->setStyleSheet(mpHost->mProfileStyleSheet);
             }
             continue; //rootAction package
         }
@@ -396,6 +399,7 @@ std::list<QPointer<TEasyButtonBar>> ActionUnit::getEasyButtonBarList()
         constructToolbar(rootAction, pTB);
         rootAction->mpEasyButtonBar = pTB;
         pTB->setStyleSheet(pTB->mpTAction->css);
+        pTB->setStyleSheet(mpHost->mProfileStyleSheet);
     }
 
     return mEasyButtonBarList;
@@ -482,6 +486,7 @@ void ActionUnit::constructToolbar(TAction* pA, TToolBar* pTB)
     }
 
     pTB->setStyleSheet(pTB->mpTAction->css);
+    pTB->setStyleSheet(mpHost->mProfileStyleSheet);
     pA->setDataSaved();
 }
 
@@ -532,6 +537,7 @@ void ActionUnit::constructToolbar(TAction* pA, TEasyButtonBar* pTB)
     }
 
     pTB->setStyleSheet(pTB->mpTAction->css);
+    pTB->setStyleSheet(mpHost->mProfileStyleSheet);
     pTB->show();
 }
 

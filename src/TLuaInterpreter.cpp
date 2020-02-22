@@ -6007,7 +6007,7 @@ int TLuaInterpreter::setProfileStyleSheet(lua_State* L)
     styleSheet = QString::fromUtf8(lua_tostring(L, 1));
 
     Host& host = getHostFromLua(L);
-    host.mpConsole->setStyleSheet(styleSheet);
+    mudlet::self()->setProfileStyleSheet(&host, styleSheet);
     lua_pushboolean(L, true);
     return 1;
 }

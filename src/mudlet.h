@@ -132,6 +132,7 @@ public:
     bool createMiniConsole(Host*, const QString&, int, int, int, int);
     bool createLabel(Host* pHost, const QString& name, int x, int y, int width, int height, bool fillBg,
                          bool clickthrough);
+    bool setProfileStyleSheet(Host* pHost, const QString& styleSheet);
     bool echoWindow(Host*, const QString&, const QString&);
     bool echoLink(Host* pHost, const QString& name, const QString& text, QStringList&, QStringList&, bool customFormat = false);
     void insertLink(Host*, const QString&, const QString&, QStringList&, QStringList&, bool customFormat = false);
