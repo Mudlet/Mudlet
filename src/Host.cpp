@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -2471,4 +2471,39 @@ void Host::getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, q
     secondaryColor = mPlayerRoomInnerColor;
     // We have accessed the protected aspects of this class so can unlock the mutex locker and proceed:
     locker.unlock();
+}
+
+bool Host::setProfileAppStyleSheet(const QString& styleSheet, const bool isFromPreferences)
+{
+    QMutexLocker locker(& mLock);
+    // Now we have the exclusive lock on this class's protected members
+
+    QString oldStyleSheet{mProfileAppStyleSheet};
+    mProfileAppStyleSheet = styleSheet;
+
+    // We have accessed the protected aspects of this class so can unlock the mutex locker and proceed:
+    locker.unlock();
+
+    // However if there has not been any change than we do not need to propogate
+    // anything
+    if (!styleSheet.compare(oldStyleSheet)) {
+        // There HASN'T been a change
+        return false;
+    }
+
+    // There HAS been a change - so lets apply it:
+    mudlet::self()->applyAppStyleSheet();
+    // Also tell the display of it in the preferences to reset to the new one,
+    // if it was NOT the source of the change:
+    if (!isFromPreferences) {
+        emit signal_appStyleSheetChanged();
+    }
+
+    return true;
+}
+
+const QString& Host::getProfileAppStyleSheet()
+{
+    QMutexLocker locker(& mLock);
+    return mProfileAppStyleSheet;
 }

@@ -263,6 +263,11 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     if (mType == MainConsole) {
         mpCommandLine = new TCommandLine(pH, this, mpMainDisplay);
+        // Needed so that Application Stylesheets can target just a specific.
+        // profile. By definition the MainConsole cannot be the Debug Console so
+        // we can use mProfileName here instead of interrogating the Host
+        // instance for it's name:
+        mpCommandLine->setProperty(mudlet::scmProperty_ProfileName, mProfileName);
         mpCommandLine->setContentsMargins(0, 0, 0, 0);
         mpCommandLine->setSizePolicy(sizePolicy);
         mpCommandLine->setFocusPolicy(Qt::StrongFocus);
@@ -283,6 +288,10 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpScrollBar->setFixedWidth(15);
 
     splitter = new TSplitter(Qt::Vertical);
+    // Needed so that Application Stylesheets can target just a specific profile:
+    if (mpHost) {
+        splitter->setProperty(mudlet::scmProperty_ProfileName, mProfileName);
+    }
     splitter->setContentsMargins(0, 0, 0, 0);
     splitter->setSizePolicy(sizePolicy);
     splitter->setOrientation(Qt::Vertical);
@@ -291,11 +300,19 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     splitter->setParent(layer);
 
     mUpperPane = new TTextEdit(this, splitter, &buffer, mpHost, false);
+    // Needed so that Application Stylesheets can target just a specific profile:
+    if (mpHost) {
+        mUpperPane->setProperty(mudlet::scmProperty_ProfileName, mProfileName);
+    }
     mUpperPane->setContentsMargins(0, 0, 0, 0);
     mUpperPane->setSizePolicy(sizePolicy3);
     mUpperPane->setFocusPolicy(Qt::NoFocus);
 
     mLowerPane = new TTextEdit(this, splitter, &buffer, mpHost, true);
+    // Needed so that Application Stylesheets can target just a specific profile:
+    if (mpHost) {
+        mLowerPane->setProperty(mudlet::scmProperty_ProfileName, mProfileName);
+    }
     mLowerPane->setContentsMargins(0, 0, 0, 0);
     mLowerPane->setSizePolicy(sizePolicy3);
     mLowerPane->setFocusPolicy(Qt::NoFocus);
@@ -603,7 +620,9 @@ Host* TConsole::getHost()
 void TConsole::setLabelStyleSheet(std::string& buf, std::string& sh)
 {
     QString key = QString::fromUtf8(buf.c_str());
-    QString sheet = sh.c_str();
+    // sh could contain properties or other identifiers that may not be encoded
+    // in Latin1:
+    QString sheet = QString::fromUtf8(sh.c_str());
     if (mLabelMap.find(key) != mLabelMap.end()) {
         QLabel* pC = mLabelMap[key];
         if (!pC) {
@@ -2198,9 +2217,9 @@ TConsole* TConsole::createBuffer(const QString& name)
         pC->hide();
         pC->layerCommandLine->hide();
         return pC;
-    } else {
-        return nullptr;
     }
+
+    return nullptr;
 }
 
 void TConsole::resetMainConsole()
@@ -2236,16 +2255,14 @@ TConsole* TConsole::createMiniConsole(const QString& windowname, const QString& 
     auto pW = mDockWidgetMap.value(windowname);
     auto pC = mSubConsoleMap.value(name);
     if (!pC) {
-        if (!pW) {
-            pC = new TConsole(mpHost, SubConsole, mpMainFrame);
-        } else {
-            pC = new TConsole(mpHost, SubConsole, pW->widget());
-        }
+        pC = new TConsole(mpHost, SubConsole, (pW ? pW->widget() : mpMainFrame));
         if (!pC) {
             return nullptr;
         }
         mSubConsoleMap[name] = pC;
         pC->setObjectName(name);
+        // Needed so that Application Stylesheets can target just a specific profile:
+        pC->setProperty(mudlet::scmProperty_ProfileName, mProfileName);
         pC->mConsoleName = name;
         pC->setFocusPolicy(Qt::NoFocus);
         const auto& hostCommandLine = mpHost->mpConsole->mpCommandLine;
@@ -2261,9 +2278,9 @@ TConsole* TConsole::createMiniConsole(const QString& windowname, const QString& 
         pC->setMiniConsoleFontSize(12);
         pC->show();
         return pC;
-    } else {
-        return nullptr;
     }
+
+    return nullptr;
 }
 
 TLabel* TConsole::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
@@ -2272,13 +2289,11 @@ TLabel* TConsole::createLabel(const QString& windowname, const QString& name, in
     auto pL = mLabelMap.value(name);
     auto pW = mDockWidgetMap.value(windowname);
     if (!pL) {
-        if (!pW) {
-            pL = new TLabel(mpHost, mpMainFrame);
-        } else {
-            pL = new TLabel(mpHost, pW->widget());
-        }
+        pL = new TLabel(mpHost, (pW ? pW->widget() : mpMainFrame));
         mLabelMap[name] = pL;
         pL->setObjectName(name);
+        // Needed so that Application Stylesheets can target just a specific profile:
+        pL->setProperty(mudlet::scmProperty_ProfileName, mProfileName);
         pL->setAutoFillBackground(fillBackground);
         pL->setClickThrough(clickThrough);
         pL->resize(width, height);
@@ -2286,9 +2301,9 @@ TLabel* TConsole::createLabel(const QString& windowname, const QString& name, in
         pL->move(x, y);
         pL->show();
         return pL;
-    } else {
-        return nullptr;
     }
+
+    return nullptr;
 }
 
 std::pair<bool, QString> TConsole::deleteLabel(const QString& name)

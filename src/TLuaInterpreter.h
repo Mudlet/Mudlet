@@ -176,6 +176,7 @@ public:
     static int restartIrc(lua_State*);
     static int showUnzipProgress(lua_State*);
     static int setAppStyleSheet(lua_State*);
+    static int getAppStyleSheet(lua_State*);
     static int setMainWindowSize(lua_State* L);
     static int registerAnonymousEventHandler(lua_State* L);
     static int setRoomChar(lua_State*);
@@ -527,10 +528,10 @@ public:
     static int unzipAsync(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
 
-
-    static const QMap<Qt::MouseButton, QString> mMouseButtons;
     void freeLuaRegistryIndex(int index);
     void encodingChanged(const QString&);
+
+    static const QMap<Qt::MouseButton, QString> mMouseButtons;
 
 public slots:
     void slot_httpRequestFinished(QNetworkReply*);
@@ -569,9 +570,9 @@ private:
     lua_State* pGlobalLua;
 
     struct lua_state_deleter {
-      void operator()(lua_State* ptr) const noexcept {
-        lua_close(ptr);
-      }
+        void operator()(lua_State* ptr) const noexcept {
+            lua_close(ptr);
+        }
     };
 
     std::unique_ptr<lua_State, lua_state_deleter> pIndenterState;

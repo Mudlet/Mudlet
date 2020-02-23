@@ -6213,9 +6213,37 @@ int TLuaInterpreter::setAppStyleSheet(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(host.getName());
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    qApp->setStyleSheet(styleSheet);
-    mudlet::self()->getHostManager().postInterHostEvent(nullptr, event, true);
-    lua_pushboolean(L, true);
+    // This will apply the composite style sheet generated from ALL active
+    // profiles IF this profile has changed its OWN appStyleSheet
+    if (host.setProfileAppStyleSheet(styleSheet)) {
+        // A change in the style-sheet details that we set HAS been made, so
+        // tell all the profiles:
+        mudlet::self()->getHostManager().postInterHostEvent(nullptr, event, true);
+        lua_pushboolean(L, true);
+    } else {
+        lua_pushboolean(L, false);
+    }
+    return 1;
+}
+
+// Documentation: not currently documented as may not be useful except for debugging
+int TLuaInterpreter::getAppStyleSheet(lua_State* L)
+{
+    bool wholeApplication = false;
+    if (lua_gettop(L)) {
+        if (!lua_isboolean(L, 1)) {
+            lua_pushfstring(L, "getAppStyleSheet: bad argument #1 type (get whole application stylesheet as boolean is optional {default is 'false'}, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        }
+        wholeApplication = lua_toboolean(L, 1);
+    }
+
+    if (wholeApplication) {
+        lua_pushstring(L, mudlet::self()->getAppStyleSheet().toUtf8().constData());
+    } else {
+        Host& host = getHostFromLua(L);
+        lua_pushstring(L, host.getProfileAppStyleSheet().toUtf8().constData());
+    }
     return 1;
 }
 
@@ -7792,7 +7820,8 @@ int TLuaInterpreter::tempButton(lua_State* L)
     pT->setScript(script);
     pT->setIsFolder(false);
     pT->setIsActive(true);
-
+    // Needed so that Application Stylesheets can target just a specific profile:
+    pT->setProperty(mudlet::scmProperty_ProfileName, host.getName());
 
     //    pT->setIsPushDownButton( isChecked );
     //    pT->mLocation = location;
@@ -7910,7 +7939,8 @@ int TLuaInterpreter::tempButtonToolbar(lua_State* L)
     pT->setIsFolder(true);
     pT->setIsActive(true);
     pT->registerAction();
-    // N/U:     int childID = pT->getID();
+    // Needed so that Application Stylesheets can target just a specific profile:
+    pT->setProperty(mudlet::scmProperty_ProfileName, host.getName());
     host.getActionUnit()->updateToolbar();
 
 
@@ -16144,6 +16174,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "loadMap", TLuaInterpreter::loadMap);
     lua_register(pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize);
     lua_register(pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet);
+    lua_register(pGlobalLua, "getAppStyleSheet", TLuaInterpreter::getAppStyleSheet);
     lua_register(pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc);
     lua_register(pGlobalLua, "getIrcNick", TLuaInterpreter::getIrcNick);
     lua_register(pGlobalLua, "getIrcServer", TLuaInterpreter::getIrcServer);

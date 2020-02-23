@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2019-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -436,6 +436,6 @@ void TimerUnit::changeHostName(const QString& newName)
 {
     QSetIterator<QTimer*> itQTimerPtr(mQTimerSet);
     while (itQTimerPtr.hasNext()) {
-        itQTimerPtr.next()->setProperty(TTimer::scmProperty_HostName, newName);
+        itQTimerPtr.next()->setProperty(mudlet::scmProperty_ProfileName, newName);
     }
 }

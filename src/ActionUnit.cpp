@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017, 2020 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -287,6 +287,7 @@ int ActionUnit::getNewID()
 
 std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
 {
+    const QString profileName{mpHost->getName()};
     for (auto& action : mActionRootNodeList) {
         if (action->mLocation != 4) {
             continue; // skip over any root action node that is NOT going to be a TToolBar.
@@ -303,6 +304,9 @@ std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
                 }
                 if (!found) {
                     pTB = new TToolBar(childAction, childAction->getName(), mudlet::self());
+                    // Needed so that Application Stylesheets can target just a
+                    // specific profile:
+                    pTB->setProperty(mudlet::scmProperty_ProfileName, profileName);
                     mToolBarList.push_back(pTB);
                 }
                 if (childAction->mOrientation == 1) {
@@ -312,6 +316,7 @@ std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
                 }
                 constructToolbar(childAction, pTB);
                 childAction->mpToolBar = pTB;
+                // This will override any styling set via a global appStyleSheet:
                 pTB->setStyleSheet(pTB->mpTAction->css);
             }
             continue; //action package
@@ -326,6 +331,9 @@ std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
         }
         if (!found) {
             pTB = new TToolBar(action, action->getName(), mudlet::self());
+            // Needed so that Application Stylesheets can target just a
+            // specific profile:
+            pTB->setProperty(mudlet::scmProperty_ProfileName, profileName);
             mToolBarList.push_back(pTB);
         }
         if (action->mOrientation == 1) {
@@ -335,6 +343,7 @@ std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
         }
         constructToolbar(action, pTB);
         action->mpToolBar = pTB;
+        // This will override any styling set via a global appStyleSheet:
         pTB->setStyleSheet(pTB->mpTAction->css);
     }
 
@@ -343,6 +352,7 @@ std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
 
 std::list<QPointer<TEasyButtonBar>> ActionUnit::getEasyButtonBarList()
 {
+    const QString profileName{mpHost->getName()};
     for (auto& rootAction : mActionRootNodeList) {
         if (rootAction->mLocation == 4) {
             continue; // skip over any root action node that IS going to be a TToolBar.
@@ -359,6 +369,9 @@ std::list<QPointer<TEasyButtonBar>> ActionUnit::getEasyButtonBarList()
                 }
                 if (!found) {
                     pTB = new TEasyButtonBar(rootAction, (*childActionIterator)->getName(), mpHost->mpConsole->mpTopToolBar);
+                    // Needed so that Application Stylesheets can target just a
+                    // specific profile:
+                    pTB->setProperty(mudlet::scmProperty_ProfileName, profileName);
                     mpHost->mpConsole->mpTopToolBar->layout()->addWidget(pTB);
                     mEasyButtonBarList.emplace_back(pTB);
                     (*childActionIterator)->mpEasyButtonBar = pTB; // wird fuer drag&drop gebraucht
@@ -370,6 +383,7 @@ std::list<QPointer<TEasyButtonBar>> ActionUnit::getEasyButtonBarList()
                 }
                 constructToolbar(*childActionIterator, pTB);
                 (*childActionIterator)->mpEasyButtonBar = pTB;
+                // This will override any styling set via a global appStyleSheet:
                 pTB->setStyleSheet(pTB->mpTAction->css);
             }
             continue; //rootAction package
@@ -384,6 +398,9 @@ std::list<QPointer<TEasyButtonBar>> ActionUnit::getEasyButtonBarList()
         }
         if (!found) {
             pTB = new TEasyButtonBar(rootAction, rootAction->getName(), mpHost->mpConsole->mpTopToolBar);
+            // Needed so that Application Stylesheets can target just a
+            // specific profile:
+            pTB->setProperty(mudlet::scmProperty_ProfileName, profileName);
             mpHost->mpConsole->mpTopToolBar->layout()->addWidget(pTB);
             mEasyButtonBarList.emplace_back(pTB);
             rootAction->mpEasyButtonBar = pTB; // wird fuer drag&drop gebraucht
@@ -395,6 +412,7 @@ std::list<QPointer<TEasyButtonBar>> ActionUnit::getEasyButtonBarList()
         }
         constructToolbar(rootAction, pTB);
         rootAction->mpEasyButtonBar = pTB;
+        // This will override any styling set via a global appStyleSheet:
         pTB->setStyleSheet(pTB->mpTAction->css);
     }
 
@@ -481,6 +499,7 @@ void ActionUnit::constructToolbar(TAction* pA, TToolBar* pTB)
         pTB->show();
     }
 
+    // This will override any Application style sheet:
     pTB->setStyleSheet(pTB->mpTAction->css);
     pA->setDataSaved();
 }
@@ -531,6 +550,7 @@ void ActionUnit::constructToolbar(TAction* pA, TEasyButtonBar* pTB)
         break;
     }
 
+    // This will override any Application style sheet:
     pTB->setStyleSheet(pTB->mpTAction->css);
     pTB->show();
 }

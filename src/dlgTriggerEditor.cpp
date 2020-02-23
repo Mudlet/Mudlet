@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
@@ -274,6 +274,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     // option areas
     mpErrorConsole = new TConsole(mpHost, TConsole::ErrorConsole, this);
+    // Needed so that Application Stylesheets can target just a specific profile:
+    mpErrorConsole->setProperty(mudlet::scmProperty_ProfileName, mpHost->getName());
     mpErrorConsole->setWrapAt(100);
     mpErrorConsole->mUpperPane->slot_toggleTimeStamps(true);
     mpErrorConsole->mLowerPane->slot_toggleTimeStamps(true);

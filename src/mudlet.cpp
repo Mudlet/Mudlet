@@ -70,6 +70,11 @@
 #include <zip.h>
 #include "post_guard.h"
 
+// Was originally defined as 'scmProperty_HostName = "HostName"' in TTimer but
+// it is wanted more generally now that we use it to tag UI elements for styling
+// on a per profile basis:
+const char* mudlet::scmProperty_ProfileName = "ProfileName";
+
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::Close) {
@@ -583,6 +588,29 @@ mudlet::mudlet()
     // load bundled fonts
     mFontManager.addFonts();
     loadDictionaryLanguageMap();
+
+    // Detect and handle any style-sheet set from the command line:
+    mCommandLineAppStyleSheet = qApp->styleSheet();
+    if (!mCommandLineAppStyleSheet.isEmpty() && mCommandLineAppStyleSheet.startsWith(QLatin1String("file:"))) {
+        // The stored value is a file name - we will have to convert it to the
+        // file's contents
+        QFile styleFile(QUrl(mCommandLineAppStyleSheet).toLocalFile());
+        qDebug().nospace().noquote() << "mudlet::mudlet() INFO - found that a style-sheet file \"" << styleFile.fileName() << "\" was specified on the command-line, now reading it...";
+        if (styleFile.open(QIODevice::ReadOnly|QIODevice::Text)) {
+            // This expects the style-sheet file to be UTF-8 encoded -
+            // specifying this might be needed on SOME OSes such as Windows for
+            // targetting widgets with names that might be problematic if a
+            // local8Bit encoding was used:
+            mCommandLineAppStyleSheet = QString::fromUtf8(styleFile.readAll());
+            styleFile.close();
+            // At this point the app style sheet will be the file's contents,
+            // but we want to wrap it with start and end comments so that it
+            // shows up in the preference dialogue even with no profiles loaded
+            applyAppStyleSheet();
+        } else {
+            qDebug().nospace().noquote() << "mudlet::mudlet() ERROR - failed to read style-sheet file, reason: " << styleFile.errorString() << ".";
+        }
+    }
 }
 
 QSettings* mudlet::getQSettings()
@@ -1503,6 +1531,11 @@ void mudlet::slot_close_profile_requested(int tab)
     int hostCount = mHostManager.getHostCount();
     emit signal_hostDestroyed(pH, --hostCount);
     mHostManager.deleteHost(pH->getName());
+    if (!isGoingDown()) {
+        // If there are any profiles still open, or even if there is not, redo
+        // the stylesheet now that the selected profile has gone away:
+        applyAppStyleSheet();
+    }
 }
 
 void mudlet::slot_tab_changed(int tabID)
@@ -1573,11 +1606,13 @@ void mudlet::addConsoleForNewHost(Host* pH)
     if (!pConsole) {
         return;
     }
-    pH->mpConsole = pConsole;
-    pConsole->setWindowTitle(pH->getName());
-    pConsole->setObjectName(pH->getName());
-    mConsoleMap[pH] = pConsole;
     QString tabName = pH->getName();
+    pH->mpConsole = pConsole;
+    pConsole->setWindowTitle(tabName);
+    pConsole->setObjectName(tabName);
+    // Needed so that Application Stylesheets can target just a specific profile:
+    pConsole->setProperty(mudlet::scmProperty_ProfileName, tabName);
+    mConsoleMap[pH] = pConsole;
     int newTabID = mpTabBar->addTab(tabName);
     /*
      * There is a sneaky feature on some OSes (I found it on FreeBSD but
@@ -1648,7 +1683,7 @@ void mudlet::slot_timer_fires()
     }
 
     // Pull the Host name and TTimer::id from the properties:
-    QString hostName(pQT->property(TTimer::scmProperty_HostName).toString());
+    QString hostName(pQT->property(mudlet::scmProperty_ProfileName).toString());
     if (Q_UNLIKELY(hostName.isEmpty())) {
         qWarning().nospace().noquote() << "mudlet::slot_timer_fires() INFO - Host name is empty - so TTimer has probably been deleted.";
         pQT->deleteLater();
@@ -1975,11 +2010,15 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         dockwidget->setContentsMargins(0, 0, 0, 0);
         dockwidget->setFeatures(QDockWidget::AllDockWidgetFeatures);
         dockwidget->setWindowTitle(tr("User window - %1 - %2").arg(hostName, name));
+        // Needed so that Application Stylesheets can target just a specific profile:
+        dockwidget->setProperty(mudlet::scmProperty_ProfileName, hostName);
         pHost->mpConsole->mDockWidgetMap.insert(name, dockwidget);
         // It wasn't obvious but the parent passed to the TConsole constructor
         // is sliced down to a QWidget and is NOT a TDockWidget pointer:
         console = new TConsole(pHost, TConsole::UserWindow, dockwidget->widget());
         console->setObjectName(QStringLiteral("dockWindowConsole_%1_%2").arg(hostName, name));
+        // Needed so that Application Stylesheets can target just a specific profile:
+        console->setProperty(mudlet::scmProperty_ProfileName, hostName);
         // Without this the TConsole instance inside the TDockWidget will be
         // left being called the default value of "main":
         console->mConsoleName = name;
@@ -2877,7 +2916,7 @@ void mudlet::closeEvent(QCloseEvent* event)
 
     writeSettings();
 
-    goingDown();
+    goingDown(); // Only place this function is called (and the flag it sets, is set)
     if (mpDebugArea) {
         mpDebugArea->setAttribute(Qt::WA_DeleteOnClose);
         mpDebugArea->close();
@@ -5603,4 +5642,60 @@ void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request
         request.setSslConfiguration(config);
     }
 #endif
+}
+
+void mudlet::applyAppStyleSheet()
+{
+    // TODO - include Mudlet application's own style sheet - not yet implimented
+
+    QString newGlobalAppStyleSheet;
+    // Iterate through all the profiles and gather their appStyleSheet, putting
+    // profiles loaded later BEFORE earlier loaded one so that priority in
+    // styling a widget is given to the styling from the earliest profile loaded
+    // that does it.
+    for (auto& hostName: mHostManager.getHostList()) {
+        auto host = mHostManager.getHost(hostName);
+        const QString& profileAppStyleSheet = host->getProfileAppStyleSheet();
+        if (!profileAppStyleSheet.isEmpty()) {
+            // Qt style sheets support C-style comments - so lets use them to
+            // help to clarify what has been put into the style-sheet:
+            newGlobalAppStyleSheet.prepend(QStringLiteral("/* %1 */\n"
+                                                          "%2\n"
+                                                          "/* %3 */\n")
+                                                   .arg(tr("Start of stylesheet from profile: \"%1\"",
+                                                           // Intentional comment to separate arguments
+                                                           "Comment text inserted into global style sheet text to delimit the start of the"
+                                                           "style sheet from the profile name as %1").arg(hostName),
+                                                        profileAppStyleSheet,
+                                                        tr("End of stylesheet from profile: \"%1\"",
+                                                           // Intentional comment to separate arguments
+                                                           "Comment text inserted into global style sheet text to delimit the end of the"
+                                                           "style sheet from the profile name as %1").arg(hostName)));
+        }
+    }
+
+    // Prepend any style sheet loaded from the command line - so that ANY
+    // profile can override it:
+    if (!mCommandLineAppStyleSheet.isEmpty()) {
+        newGlobalAppStyleSheet.prepend(QStringLiteral("/* %1 */\n"
+                                                      "%2\n"
+                                                      "/* %3 */\n")
+                                               .arg(tr("Start of stylesheet specified as a Mudlet command line argument",
+                                                       // Intentional comment to separate arguments
+                                                       "Comment text inserted into global style sheet text to delimit the start of the"
+                                                       "style sheet from the command line"),
+                                                    mCommandLineAppStyleSheet,
+                                                    tr("End of stylesheet specified as a Mudlet command line argument",
+                                                       // Intentional comment to separate arguments
+                                                       "Comment text inserted into global style sheet text to delimit the end of the"
+                                                       "style sheet from the command line")));
+    }
+    qApp->setStyleSheet(newGlobalAppStyleSheet);
+    mGlobalAppStyleSheet.swap(newGlobalAppStyleSheet);
+    emit signal_appStyleSheetChanged();
+}
+
+const QString& mudlet::getAppStyleSheet() const
+{
+    return mGlobalAppStyleSheet;
 }

@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -325,6 +325,22 @@ public:
     void setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter = 120, const quint8 innerDiameter = 70, const QColor& outerColor = QColor(), const QColor& innerColor = QColor());
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
 
+    // Apply a style-sheet set from this profile's Lua interpreter - will be
+    // combined with those from:
+    // * other profiles
+    // * any file specified on the command line
+    // (* eventually something from Mudlet itself)
+    // and the combination will be applied to the application.
+    // Returns true if any *change* has been made - if not then we should not
+    // try and apply the same. The second argument, if provided and true,
+    // suppresses the emission of the Host::signal_appStyleSheetChanged()
+    // which signals an update to the display of the style sheet in the
+    // preferences - as that is the source of the change in the first place when
+    // that flag is set!
+    bool setProfileAppStyleSheet(const QString&, const bool isFromPreferences = false);
+    // This is NOT a const method as it modifies the mLock member:
+    const QString& getProfileAppStyleSheet();
+
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
     TLuaInterpreter mLuaInterpreter;
@@ -552,6 +568,10 @@ signals:
     void profileSaveStarted();
     void profileSaveFinished();
     void signal_changeSpellDict(const QString&);
+    // Tell the display of the profile's appStyleSheet in the preferences
+    // dialogue to update itself:
+    void signal_appStyleSheetChanged();
+
 
 private slots:
     void slot_reloadModules();
@@ -681,6 +701,9 @@ private:
     // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
     // one):
     quint8 mPlayerRoomInnerDiameterPercentage;
+
+    // The Application Style sheet generated for this profile.
+    QString mProfileAppStyleSheet;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

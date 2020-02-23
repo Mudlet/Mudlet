@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2019-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,7 +27,6 @@
 #include "TDebug.h"
 #include "mudlet.h"
 
-const char* TTimer::scmProperty_HostName = "HostName";
 const char* TTimer::scmProperty_TTimerId = "TTimerId";
 
 TTimer::TTimer(TTimer* parent, Host* pHost)
@@ -42,7 +41,7 @@ TTimer::TTimer(TTimer* parent, Host* pHost)
 , mRepeating(false)
 {
     mpQTimer->stop();
-    mpQTimer->setProperty(scmProperty_HostName, mpHost->getName());
+    mpQTimer->setProperty(mudlet::scmProperty_ProfileName, mpHost->getName());
     mpHost->getTimerUnit()->mQTimerSet.insert(mpQTimer);
     mpQTimer->setProperty(scmProperty_TTimerId, 0);
 }
@@ -60,7 +59,7 @@ TTimer::TTimer(const QString& name, QTime time, Host* pHost, bool repeating)
 , mModuleMember(false)
 {
     mpQTimer->stop();
-    mpQTimer->setProperty(scmProperty_HostName, mpHost->getName());
+    mpQTimer->setProperty(mudlet::scmProperty_ProfileName, mpHost->getName());
     mpHost->getTimerUnit()->mQTimerSet.insert(mpQTimer);
     mpQTimer->setProperty(scmProperty_TTimerId, 0);
     mRepeating = repeating;

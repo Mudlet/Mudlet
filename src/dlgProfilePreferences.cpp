@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016-2018 by Stephen Lyons                        *
+ *   Copyright (C) 2014, 2016-2018, 2020 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -153,7 +153,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
         // tick the box and make it be "un-untickable" as automatic updates are
         // disabled in dev builds
         checkbox_noAutomaticUpdates->setChecked(true);
-        checkbox_noAutomaticUpdates->setDisabled(true);
+        checkbox_noAutomaticUpdates->setEnabled(false);
         checkbox_noAutomaticUpdates->setToolTip(tr("<p>Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.</p>"));
     } else {
         checkbox_noAutomaticUpdates->setChecked(!pMudlet->updater->updateAutomatically());
@@ -169,9 +169,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     // Qt Designer utility when the dialog was saved with a different one
     // on top! 8-)
     tabWidget->setCurrentIndex(0);
-
-    // To be moved to a slot that is used on GUI language change when that gets
-    // implimented:
 
     // Set the tooltip on the containing widget so both the label and the
     // control have the same tool-tip:
@@ -230,7 +227,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
                                              "<p><i>This setting is only processed when individual menus are created and changes may not "
                                              "propogate everywhere until Mudlet is restarted.</i></p>"));
 
-
+    plainTextEdit_globalStyleSheet->setPlainText(mudlet::self()->getAppStyleSheet());
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
     connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
     connect(closeButton, &QAbstractButton::pressed, this, &dlgProfilePreferences::slot_save_and_exit);
@@ -255,6 +252,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     connect(pMudlet, &mudlet::signal_toolBarVisibilityChanged, this, &dlgProfilePreferences::slot_changeToolBarVisibility);
     connect(pMudlet, &mudlet::signal_showIconsOnMenusChanged, this, &dlgProfilePreferences::slot_changeShowIconsOnMenus);
     connect(pMudlet, &mudlet::signal_guiLanguageChanged, this, &dlgProfilePreferences::slot_guiLanguageChanged);
+    connect(pMudlet, &mudlet::signal_appStyleSheetChanged, this, &dlgProfilePreferences::slot_globalAppStyleSheetChanged);
 
     generateDiscordTooltips();
 
@@ -365,7 +363,13 @@ void dlgProfilePreferences::disableHostDetails()
     comboBox_encoding->setEnabled(false);
     groupBox_miscellaneous->setEnabled(false);
     groupBox_protocols->setEnabled(false);
+    groupBox_logOptions->setEnabled(false);
     need_reconnect_for_data_protocol->hide();
+
+    // also hide some log options file details:
+    label_logFileName->setVisible(false);
+    lineEdit_logFileName->setVisible(false);
+    label_logFileNameExtension->setVisible(false);
 
     // on tab_inputLine:
     groupBox_input->setEnabled(false);
@@ -404,7 +408,7 @@ void dlgProfilePreferences::disableHostDetails()
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
     comboBox_mapFileSaveFormatVersion->clear();
     label_mapFileActionResult->hide();
-    hidePasswordMigrationLabel();
+
     label_mapSymbolsFont->setEnabled(false);
     fontComboBox_mapSymbols->setEnabled(false);
     checkBox_isOnlyMapSymbolFontToBeUsed->setEnabled(false);
@@ -420,25 +424,28 @@ void dlgProfilePreferences::disableHostDetails()
     // on tab_mapperColors:
     groupBox_mapperColors->setEnabled(false);
 
-    // on groupBox_logOptions:
-    groupBox_logOptions->setEnabled(false);
-    lineEdit_logFileName->setVisible(false);
-    label_logFileName->setVisible(false);
-    label_logFileNameExtension->setVisible(false);
+    // on tab_styleSheet:
+    groupBox_profileStyleSheet->setEnabled(false);
 
-    // on groupBox_specialOptions:
-    groupBox_specialOptions->setEnabled(false);
+    // on tab_connection:
+    groupBox_ssl->setEnabled(false);
+    groupBox_proxy->setEnabled(false);
+
+    // on tab_specialOptions:
+    groupBox_specialOptionsOlderGameOptions->setEnabled(false);
+    need_reconnect_for_specialoption->hide();
 
     // it is possible to connect using the IRC client off of the
     // "default" host even without a normal profile loaded so leave
     // groupBox_ircOptions enabled...
-    need_reconnect_for_specialoption->hide();
     groupbox_searchEngineSelection->setEnabled(false);
 
+    // We do not show the Discord settings until needed:
     groupBox_discordPrivacy->hide();
 
-    // tab security
-    groupBox_ssl->setEnabled(false);
+    // The password groupBox is always enabled, but hide the label that shows
+    // the results of changing the option:
+    hidePasswordMigrationLabel();
 }
 
 void dlgProfilePreferences::enableHostDetails()
@@ -448,6 +455,9 @@ void dlgProfilePreferences::enableHostDetails()
     comboBox_encoding->setEnabled(true);
     groupBox_miscellaneous->setEnabled(true);
     groupBox_protocols->setEnabled(true);
+    groupBox_logOptions->setEnabled(true);
+    // label_logFileName, lineEdit_logFileName and label_logFileNameExtension
+    // get set visible when slot_logFileNameFormatChange(...) is called
 
     // on tab_inputLine:
     groupBox_input->setEnabled(true);
@@ -458,7 +468,8 @@ void dlgProfilePreferences::enableHostDetails()
     groupBox_borders->setEnabled(true);
     groupBox_wrapping->setEnabled(true);
     groupBox_doubleClick->setEnabled(true);
-
+    // Some of groupBox_displayOptions are always usable, so must pick out and
+    // enable the others:
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
     checkBox_enableTextAnalyzer->setEnabled(true);
     checkBox_echoLuaErrors->setEnabled(true);
@@ -472,9 +483,9 @@ void dlgProfilePreferences::enableHostDetails()
     groupBox_displayColors->setEnabled(true);
 
     // on tab_mapper:
-    // most of groupBox_mapFiles is disabled but there is ONE checkBox that
-    // is accessable because it is application wide - so disable EVERYTHING
-    // else that is not already disabled:
+    // most of groupBox_mapFiles will have been disabled but there is ONE
+    // checkBox that was accessable because it is application wide - so enable
+    // EVERYTHING else that is not already enabled:
     label_saveMap->setEnabled(true);
     pushButton_saveMap->setEnabled(true);
     label_loadMap->setEnabled(true);
@@ -484,25 +495,29 @@ void dlgProfilePreferences::enableHostDetails()
 
     groupBox_downloadMapOptions->setEnabled(true);
     groupBox_mapOptions->setEnabled(true);
+    // checkBox_showDefaultArea is normally hidden until a map is loaded
 
     // on tab_mapperColors:
     groupBox_mapperColors->setEnabled(true);
 
-    // on tab_logging:
-    groupBox_logOptions->setEnabled(true);
+    // on tab_styleSheet:
+    groupBox_profileStyleSheet->setEnabled(true);
 
-    // on groupBox_specialOptions:
-    groupBox_specialOptions->setEnabled(true);
-    // it is possible to connect using the IRC client off of the
-    // "default" host even without a normal profile loaded so leave
-    // groupBox_ircOptions enabled...
-    groupbox_searchEngineSelection->setEnabled(true);
-
+    // on tab_connection:
 #if defined(QT_NO_SSL)
     groupBox_ssl->setEnabled(false);
 #else
     groupBox_ssl->setEnabled(QSslSocket::supportsSsl());
 #endif
+    // groupBox_proxy is enabled by default
+
+    // on tab_specialOptions:
+    groupBox_specialOptionsOlderGameOptions->setEnabled(true);
+
+    // it is possible to connect using the IRC client off of the
+    // "default" host even without a normal profile loaded so leave
+    // groupBox_ircOptions enabled...
+    groupbox_searchEngineSelection->setEnabled(true);
 }
 
 void dlgProfilePreferences::initWithHost(Host* pHost)
@@ -897,6 +912,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     notificationAreaIconLabelInformation->hide();
     notificationAreaMessageBox->hide();
 
+    mInitialProfileAppStyleSheet = pHost->getProfileAppStyleSheet();
+    plainTextEdit_profileStyleSheet->setPlainText(mInitialProfileAppStyleSheet);
+
 #if !defined(QT_NO_SSL)
     if (QSslSocket::supportsSsl() && pHost->mSslTsl) {
         QSslCertificate cert = pHost->mTelnet.getPeerCertificate();
@@ -1057,9 +1075,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(comboBox_logFileNameFormat, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_logFileNameFormatChange);
     connect(mIsToLogInHtml, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeLogFileAsHtml);
 
-    //Security tab
-
-
+    connect(buttonBox_profileStyleSheet->button(QDialogButtonBox::Apply), &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_applyProfileAppStyleSheet);
+    connect(buttonBox_profileStyleSheet->button(QDialogButtonBox::Reset), &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetProfileAppStyleSheet);
+    connect(pHost, &Host::signal_appStyleSheetChanged, this, &dlgProfilePreferences::slot_profileAppStyleSheetChanged);
 }
 
 void dlgProfilePreferences::disconnectHostRelatedControls()
@@ -1145,6 +1163,15 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_playerRoomSecondaryColor, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(spinBox_playerRoomOuterDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
+
+    disconnect(buttonBox_profileStyleSheet->button(QDialogButtonBox::Apply), &QAbstractButton::clicked, this, nullptr);
+    disconnect(buttonBox_profileStyleSheet->button(QDialogButtonBox::Reset), &QAbstractButton::clicked, this, nullptr);
+    // We only need to disconnect the &dlgProfilePreferences::slot_profileAppStyleSheetChanged()
+    // slot if mpHost is still valid because it will have been automatically
+    // disconnected when the Host instance it pointed to was destroyed:
+    if (mpHost) {
+        disconnect(mpHost, &Host::signal_appStyleSheetChanged, this, &dlgProfilePreferences::slot_profileAppStyleSheetChanged);
+    }
 }
 
 void dlgProfilePreferences::clearHostDetails()
@@ -1223,6 +1250,8 @@ void dlgProfilePreferences::clearHostDetails()
 
     label_mapFileActionResult->hide();
 
+    plainTextEdit_profileStyleSheet->clear();
+
     hidePasswordMigrationLabel();
 
     doubleclick_ignore_lineedit->clear();
@@ -1250,7 +1279,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     groupBox_ssl_certificate->hide();
     notificationArea->hide();
-    groupBox_proxy->setDisabled(true);
+    groupBox_proxy->setEnabled(false);
 
     // Remove the reference to the Host/profile in the title:
     setWindowTitle(tr("Profile preferences"));
@@ -2042,18 +2071,21 @@ void dlgProfilePreferences::hidePasswordMigrationLabel()
 void dlgProfilePreferences::slot_passwords_location_changed(int index)
 {
     // index 0 = use secure storage, index 1 = use profile storage
+    if (index < 0 || index > 1) {
+        qWarning() << "dlgProfilePreferences::slot_passwords_location_changed(" << index << ") ERROR - invalid value received - could break things";
+    }
     if (index == 0) {
         if (mudlet::self()->migratePasswordsToSecureStorage()) {
             label_password_migration_notification->setText(tr("Migrating passwords to secure storage..."));
             label_password_migration_notification->show();
-            comboBox_store_passwords_in->setDisabled(true);
+            comboBox_store_passwords_in->setEnabled(false);
             hidePasswordMigrationLabelTimer->stop();
         }
     } else {
         if (mudlet::self()->migratePasswordsToProfileStorage()) {
             label_password_migration_notification->setText(tr("Migrating passwords to profiles..."));
             label_password_migration_notification->show();
-            comboBox_store_passwords_in->setDisabled(true);
+            comboBox_store_passwords_in->setEnabled(false);
             hidePasswordMigrationLabelTimer->stop();
         }
     }
@@ -2603,6 +2635,9 @@ void dlgProfilePreferences::slot_save_and_exit()
                                              pHost->mpMap->mPlayerRoomOuterColor,
                                              pHost->mpMap->mPlayerRoomInnerColor);
         }
+
+        // Save any outstanding changes made to the profile's AppStyleSheet:
+        slot_applyProfileAppStyleSheet();
     }
 
 #if defined(INCLUDE_UPDATER)
@@ -3842,4 +3877,37 @@ void dlgProfilePreferences::setPlayerRoomColor(QPushButton* b, QColor& c)
         // visible and adjusts the saturation of a disabled button:
         setButtonColor(b, color);
     }
+}
+
+void dlgProfilePreferences::slot_applyProfileAppStyleSheet()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    if (mInitialProfileAppStyleSheet != plainTextEdit_profileStyleSheet->toPlainText()) {
+        pHost->setProfileAppStyleSheet(plainTextEdit_profileStyleSheet->toPlainText(), true);
+    }
+}
+
+void dlgProfilePreferences::slot_resetProfileAppStyleSheet()
+{
+    plainTextEdit_profileStyleSheet->setPlainText(mInitialProfileAppStyleSheet);
+}
+
+void dlgProfilePreferences::slot_profileAppStyleSheetChanged()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    mInitialProfileAppStyleSheet = pHost->getProfileAppStyleSheet();
+    slot_resetProfileAppStyleSheet();
+}
+
+void dlgProfilePreferences::slot_globalAppStyleSheetChanged()
+{
+    plainTextEdit_globalStyleSheet->setPlainText(mudlet::self()->getAppStyleSheet());
 }

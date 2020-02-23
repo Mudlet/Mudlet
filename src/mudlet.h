@@ -5,7 +5,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
- *   Copyright (C) 2015-2016, 2018-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2015-2016, 2018-2020 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
@@ -423,7 +423,8 @@ public:
     void scanForQtTranslations(const QString&);
     void layoutModules();
     void startAutoLogin();
-
+    void applyAppStyleSheet();
+    const QString& getAppStyleSheet() const;
 
 #if defined(INCLUDE_UPDATER)
     Updater* updater;
@@ -457,6 +458,8 @@ public:
     // will be true if they are ones bundled with Mudlet, false if provided by
     // the system
     bool mUsingMudletDictionaries;
+
+    static const char* scmProperty_ProfileName;
 
 public slots:
     void processEventLoopHack_timerRun();
@@ -521,6 +524,8 @@ signals:
     void signal_passwordsMigratedToSecure();
     void signal_passwordMigratedToSecure(const QString&);
     void signal_passwordsMigratedToProfiles();
+    // Informs any profile preferences dialogue to update it's display of the global appStyleSheet
+    void signal_appStyleSheetChanged();
 
 
 private slots:
@@ -690,6 +695,14 @@ private:
     QStringList mProfilePasswordsToMigrate {};
 
     bool mStorePasswordsSecurely {true};
+
+    // Used to hold any style-sheet that was loaded as a file from the command line
+    QString mCommandLineAppStyleSheet;
+
+    // The currently applied application style sheet - cached from the last time
+    // it was set to avoid the hassle of querying each profile for their
+    // individual attempts to style the application.
+    QString mGlobalAppStyleSheet;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(mudlet::controlsVisibility)
@@ -734,7 +747,7 @@ private:
     // mudlet_xx_YY.qm files placed into the embedded resource file during
     // building the application:
     int mTranslatedPercentage;
-    // What the usable Mudlet translation file-was found to be:
+    // What the usable Mudlet translation file was found to be:
     QString mMudletTranslationFileName;
     // What the usable Qt translation file was found to be, note that in most
     // cases the loaded file will be a "xx" language only file even though it

@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2018, 2020 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -122,6 +123,7 @@ public slots:
     // Save.
     void slot_save_and_exit();
 
+    // Miscellaneous.
     void hideActionLabel();
     void slot_setEncoding(const QString&);
 
@@ -129,6 +131,21 @@ public slots:
     void slot_handleHostDeletion(Host*);
 
     void slot_guiLanguageChanged(const QString&);
+
+    // The composite appStyleSheet has been changed - either by this dialogue
+    // or another profile or via a lua script in any of them or (in the future)
+    // by the Mudlet application itself:
+    void slot_globalAppStyleSheetChanged();
+    // The profileAppStyleSheet has been changed - by a Lua function call:
+    void slot_profileAppStyleSheetChanged();
+    // The user wants to reset the text in the plainTextEdit holding the
+    // application style-sheet for this profile back to what was used on entry
+    // to this dialogue:
+    void slot_resetProfileAppStyleSheet();
+    // The user wants to apply the current text in the plainTextEdit holding the
+    // application style-sheet for this profile:
+    void slot_applyProfileAppStyleSheet();
+
 
 private slots:
     void slot_changeShowSpacesAndTabs(bool);
@@ -197,6 +214,8 @@ private:
     // Host::mEnableUserDictionary: - although, following review THAT has been
     // disallowed...
     bool mUseSharedDictionary;
+
+    QString mInitialProfileAppStyleSheet;
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

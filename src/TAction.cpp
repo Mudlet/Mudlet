@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017, 2020 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -32,6 +32,7 @@
 #include "TToolBar.h"
 #include "mudlet.h"
 
+// Constructor for a menu/button
 TAction::TAction(TAction* parent, Host* pHost)
 : Tree<TAction>(parent)
 , mpToolBar(nullptr)
@@ -61,6 +62,7 @@ TAction::TAction(TAction* parent, Host* pHost)
 {
 }
 
+// Constructor for a toolbar
 TAction::TAction(const QString& name, Host* pHost)
 : Tree<TAction>(nullptr)
 , mpToolBar(nullptr)
@@ -209,6 +211,7 @@ void TAction::execute()
 
 void TAction::expandToolbar(TToolBar* pT)
 {
+    const QString profileName{mpHost->getName()};
     for (auto action : *mpMyChildrenList) {
         if (!action->isActive()) {
             // This test and conditional loop abort was missing from this method
@@ -220,6 +223,8 @@ void TAction::expandToolbar(TToolBar* pT)
         QIcon icon(action->mIcon);
         QString name = action->getName();
         auto button = new TFlipButton(action, mpHost);
+        // Needed so that Application Stylesheets can target just a specific profile:
+        button->setProperty(mudlet::scmProperty_ProfileName, profileName);
         button->setIcon(icon);
         button->setText(name);
         button->setCheckable(action->mIsPushDownButton);
@@ -233,24 +238,28 @@ void TAction::expandToolbar(TToolBar* pT)
         }
 
         button->setFlat(mButtonFlat);
-        // This applies the CSS for THIS TAction to a CHILD's representation on the Toolbar
+        // This applies the CSS for THIS TAction to a CHILD's representation on
+        // the Toolbar
+        // It also overrides any Application Style Sheet:
         button->setStyleSheet(css);
 
         /*
-		 * CHECK: The other expandToolbar(...) has the following in this position:
-		 *       //FIXME: Heiko April 2012: only run checkbox button scripts, but run them even if unchecked
-		 *       if( action->mIsPushDownButton && mpHost->mIsProfileLoadingSequence )
-		 *       {
-		 *          qDebug()<<"expandToolBar() name="<<action->mName<<" executing script";
-		 *          action->execute();
-		 *       }
-		 * Why does it have this and we do not? - Slysven
-		 */
+         * CHECK: The other expandToolbar(...) has the following in this position:
+         *       //FIXME: Heiko April 2012: only run checkbox button scripts, but run them even if unchecked
+         *       if( action->mIsPushDownButton && mpHost->mIsProfileLoadingSequence ) {
+         *           qDebug()<<"expandToolBar() name="<<action->mName<<" executing script";
+         *           action->execute();
+         *       }
+         * Why does it have this and we do not? - Slysven
+         */
 
         if (action->isFolder()) {
             auto newMenu = new QMenu(pT);
-            // This applies the CSS for THIS TAction to a CHILD's own menu - is this right
+            // This applies the CSS for THIS TAction to a CHILD's own menu - is
+            // this right
+            // It also overrides any Application Style Sheet:
             newMenu->setStyleSheet(css);
+
             // CHECK: Use the Child's CSS instead for a menu on it? - Slysven:
             // newMenu->setStyleSheet( action->css );
             action->insertActions(pT, newMenu);
@@ -287,6 +296,7 @@ void TAction::insertActions(TToolBar* pT, QMenu* menu)
         // until the mudlet instance is at the end of the application!
         // Changed to use pT, the toolbar
         auto newMenu = new QMenu(pT);
+        // It also overrides any Application Style Sheet:
         newMenu->setStyleSheet(css);
         action->setMenu(newMenu);
 
@@ -299,6 +309,7 @@ void TAction::insertActions(TToolBar* pT, QMenu* menu)
 
 void TAction::expandToolbar(TEasyButtonBar* pT)
 {
+    const QString profileName{mpHost->getName()};
     for (auto action : *mpMyChildrenList) {
         if (!action->isActive()) {
             continue;
@@ -306,6 +317,8 @@ void TAction::expandToolbar(TEasyButtonBar* pT)
         QIcon icon(action->mIcon);
         QString name = action->getName();
         auto button = new TFlipButton(action, mpHost);
+        // Needed so that Application Stylesheets can target just a specific profile:
+        button->setProperty(mudlet::scmProperty_ProfileName, profileName);
         button->setIcon(icon);
         button->setText(name);
         button->setCheckable(action->mIsPushDownButton);
@@ -319,7 +332,8 @@ void TAction::expandToolbar(TEasyButtonBar* pT)
         }
 
         button->setFlat(mButtonFlat);
-        // This applies the CSS for THIS TAction to a CHILD's representation on the Toolbar
+        // This applies the CSS for THIS TAction to a CHILD's representation on
+        // the Toolbar and override any Application style sheet:
         button->setStyleSheet(css);
 
         //FIXME: Heiko April 2012: only run checkbox button scripts, but run them even if unchecked
@@ -330,12 +344,14 @@ void TAction::expandToolbar(TEasyButtonBar* pT)
 
 
         if (action->isFolder()) {
-            // This applied the CSS for THIS TAction to a CHILD's own menu - is this right
             auto newMenu = new QMenu(button);
 
+            // This applied the CSS for THIS TAction to a CHILD's own menu - is this right
             // CHECK: consider using the Child's CSS instead for a menu on it
             // - Slysven:
             // newMenu->setStyleSheet( action->css );
+            // This applies the CSS for THIS TAction to a CHILD's representation on
+            // the Toolbar and override any Application style sheet:
             newMenu->setStyleSheet(css);
 
             // This has been moved until AFTER the child's menu has been
@@ -391,6 +407,7 @@ void TAction::fillMenu(TEasyButtonBar* pT, QMenu* menu)
             // CHECK: consider using the Child's CSS instead for a menu on it
             // - Slysven:
             // newMenu->setStyleSheet( action->css );
+            // This overrides any Application style sheet:
             newMenu->setStyleSheet(css);
 
             action->fillMenu(pT, newMenu);
