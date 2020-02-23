@@ -1554,6 +1554,7 @@ void mudlet::slot_tab_changed(int tabID)
         QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
         mpMainToolBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
         mpTabBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
+        menuBar()->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
     } else {
         mpCurrentActiveHost = nullptr;
         return;
@@ -2122,6 +2123,7 @@ bool mudlet::setProfileStyleSheet(Host* pHost, const QString& styleSheet)
         }
         mpMainToolBar->setStyleSheet(styleSheet);
         mpTabBar->setStyleSheet(styleSheet);
+        menuBar()->setStyleSheet(styleSheet);
     }
 }
 
