@@ -560,8 +560,17 @@ end
 ---   <pre>
 ---   createConsole("myConsoleWindow", 8, 80, 20, 200, 400)
 ---   </pre>
-function createConsole(consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
-  createMiniConsole(consoleName, 0, 0, 1, 1)
+function createConsole(windowname, consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
+  if Ypos == nil then
+    Ypos = Xpos
+    Xpos = numberOfLines
+    numberOfLines = charsPerLine
+    charsPerLine = fontSize
+    fontSize = consoleName
+    consoleName = windowname
+    windowname = "main"
+  end
+  createMiniConsole(windowname, consoleName, 0, 0, 1, 1)
   setMiniConsoleFontSize(consoleName, fontSize)
   local x, y = calcFontSize( fontSize )
   resizeWindow(consoleName, x * charsPerLine, y * numberOfLines)
