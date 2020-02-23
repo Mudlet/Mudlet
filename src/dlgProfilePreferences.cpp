@@ -2848,8 +2848,9 @@ void dlgProfilePreferences::addActionsToPreview(TAction* pActionParent, std::vec
 // updates latest edbee themes when the user opens up the editor tab
 void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 {
-    // bail out if this is not an editor tab
-    if (tabIndex != 3) {
+    // bail out if this is not the editor tab - or if the Host has gone away
+    Host* pHost = mpHost;
+    if (tabIndex != 3 || !pHost) {
         return;
     }
 
@@ -2894,7 +2895,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
     request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
     // load from cache if possible
     request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
-    mpHost->updateProxySettings(manager);
+    pHost->updateProxySettings(manager);
     QNetworkReply* getReply = manager->get(request);
 
     connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {
