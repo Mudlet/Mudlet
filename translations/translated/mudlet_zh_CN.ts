@@ -5556,12 +5556,12 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="339"/>
       <source>Migrated %1...</source>
       <comment>This notifies the user that progress is being made on profile migration by saying what profile was just migrated to store passwords securely</comment>
-      <translation type="unfinished"/>
+      <translation>已迁移 %1...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="343"/>
       <source>Migrated all passwords to profile storage.</source>
-      <translation type="unfinished"/>
+      <translation>将所有密码迁移到配置文件存储。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="723"/>
@@ -5693,12 +5693,12 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2019"/>
       <source>Migrating passwords to secure storage...</source>
-      <translation type="unfinished"/>
+      <translation>正在将密码迁移到安全存储器...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2026"/>
       <source>Migrating passwords to profiles...</source>
-      <translation type="unfinished"/>
+      <translation>正在将密码迁移到概要文件...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2058"/>
@@ -5871,7 +5871,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="589"/>
       <source>&lt;p&gt;From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;来自字典文件 &lt;tt&gt;%1.dic&lt;/tt&gt; (及其相关的文件 &lt;tt&gt;.aff&lt;/tt&gt; 文件)。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="591"/>
