@@ -264,7 +264,8 @@ unix:!macx {
         -lyajl \
         -lpugixml \
         -lWs2_32 \
-        -L"$${MINGW_BASE_DIR}\\bin"
+        -L"$${MINGW_BASE_DIR}\\bin" \
+        -L"$${MINGW_BASE_DIR}\\lib"
     INCLUDEPATH += \
                    "C:\\Libraries\\boost_1_67_0" \
                    "$${MINGW_BASE_DIR}\\include" \
