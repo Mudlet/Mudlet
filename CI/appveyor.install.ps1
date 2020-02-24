@@ -18,6 +18,10 @@ CheckAndInstallCmake
 CheckAndInstallMingwGet
 CheckAndInstallMsys
 CheckAndInstallBoost
+
+iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/build-images/master/scripts/Windows/install_qt_module.ps1'))
+Install-QtComponent -Version '5.14.1' -Name 'win32_mingw73' -ExcludeDocs -ExcludeExamples
+
 CheckAndInstallQt
 CheckAndInstallPython
 
