@@ -6062,7 +6062,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1919"/>
       <source>&lt;b&gt;Room&lt;/b&gt; Weight of destination: %1.</source>
       <comment>Bold HTML tags are used to emphasis that the value is destination room&apos;s weight whether overridden by a non-zero exit weight here or not.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;房间&lt;/b&gt; 目的地权重： %1。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="147"/>
@@ -6086,18 +6086,18 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="156"/>
       <source>Entered number is invalid, set the number of the room that this special exit leads to, will turn blue for a valid number; if left like this, this exit will be deleted when &amp;lt;i&amp;gt;save&amp;lt;/i&amp;gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>输入的数字无效，设置出口将要指向的房间编号, 某该出效有效, 则会显示蓝色; 如果该输入的房间编号无效, 那么将在 &amp;lt;i&amp;gt;保存&amp;lt;/i&amp;gt时删除此出口。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="220"/>
       <source>Set the number of the room that this special exit leads to, will turn blue for a valid number; if left like this, this exit will be deleted when &amp;lt;i&amp;gt;save&amp;lt;/i&amp;gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>设置出口将要指向的房间编号, 某该出效有效, 则会显示蓝色; 如果该输入的房间编号无效, 那么将在 &amp;lt;i&amp;gt;保存&amp;lt;/i&amp;gt时删除此出口。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="223"/>
       <location filename="../src/dlgRoomExits.cpp" line="1939"/>
       <source>Prevent a route being created via this exit, equivalent to an infinite exit weight.</source>
-      <translation type="unfinished"/>
+      <translation>禁止通过此出口创建的路由，这会创建一个死循环出口权重。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="229"/>
