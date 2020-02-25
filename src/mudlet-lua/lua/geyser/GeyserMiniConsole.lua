@@ -338,7 +338,7 @@ function Geyser.MiniConsole:new (cons, container)
       me:setFont(cons.font)
     end
     if cons.wrapAt == "auto" then
-      me:setAutoWrap()
+      me:enableAutoWrap()
     elseif cons.wrapAt then
       me:setWrap(cons.wrapAt)
     end

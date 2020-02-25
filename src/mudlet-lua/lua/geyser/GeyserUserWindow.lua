@@ -9,7 +9,8 @@
 -- @name Geyser.UserWindow
 --UserWindow is just a MiniConsole
 Geyser.UserWindow = Geyser.MiniConsole:new({
-  name = "UserWindowClass"})
+  name = "UserWindowClass",
+  color = "black"})
 
 --Set Constraints and use main Window (Geyser) as reference
 function Geyser.UserWindow:set_uwconstr()
@@ -69,6 +70,31 @@ function Geyser.UserWindow:new(cons)
   me.docked = me.docked or false
 
   openUserWindow(me.name,me.restoreLayout)
+  -- Set any defined colors
+  Geyser.Color.applyColors(me)
+
+  if cons.fontSize then
+    me:setFontSize(cons.fontSize)
+  elseif container then
+    me:setFontSize(container.fontSize)
+    cons.fontSize = container.fontSize
+  else
+    me:setFontSize(8)
+    cons.fontSize = 8
+  end
+  if cons.scrollBar then
+    me:enableScrollBar()
+  else
+    me:disableScrollBar()
+  end
+  if cons.font then
+    me:setFont(cons.font)
+  end
+  if cons.wrapAt == "auto" then
+    me:enableAutoWrap()
+  elseif cons.wrapAt then
+    me:setWrap(cons.wrapAt)
+  end
 
   --Resizing not possible if docked
   --Docking position not choosable if restoreLayout don't move/resize at start
