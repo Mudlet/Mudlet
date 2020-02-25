@@ -2101,13 +2101,6 @@ bool mudlet::setProfileStyleSheet(Host* pHost, const QString& styleSheet)
         pHost->mpConsole->setStyleSheet(styleSheet);
         pHost->mpEditorDialog->setStyleSheet(styleSheet);
 
-        std::list<QPointer<TToolBar>> hostToolBarMap = pHost->getActionUnit()->getToolBarList();
-        for (TToolBar* pTB : hostToolBarMap) {
-            if (pTB) {
-                pTB->setStyleSheet(styleSheet);
-            }
-        }
-
         if (pHost->mpNotePad) {
             pHost->mpNotePad->setStyleSheet(styleSheet);
             pHost->mpNotePad->notesEdit->setStyleSheet(styleSheet);
@@ -2121,9 +2114,12 @@ bool mudlet::setProfileStyleSheet(Host* pHost, const QString& styleSheet)
             itDockWidget.next();
             itDockWidget.value()->setStyleSheet(styleSheet);
         }
-        mpMainToolBar->setStyleSheet(styleSheet);
-        mpTabBar->setStyleSheet(styleSheet);
-        menuBar()->setStyleSheet(styleSheet);
+        if (pHost == mpCurrentActiveHost) {
+            mpMainToolBar->setStyleSheet(styleSheet);
+            mpTabBar->setStyleSheet(styleSheet);
+            menuBar()->setStyleSheet(styleSheet);
+        }
+        return true;
     }
 }
 
