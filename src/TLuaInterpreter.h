@@ -523,6 +523,7 @@ public:
     static int postHTTP(lua_State* L);
     static int deleteHTTP(lua_State* L);
     static int getConnectionInfo(lua_State* L);
+    static int unzipAsync(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
 
 
