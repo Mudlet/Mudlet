@@ -48,6 +48,9 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper) {
         mpHost->mpMap->mpM->update();
     }
+    QSurfaceFormat fmt;
+    fmt.setSamples(10);
+    QSurfaceFormat::setDefaultFormat(fmt);
     glWidget = new GLWidget(widget);
     glWidget->setObjectName(QString::fromUtf8("glWidget"));
 

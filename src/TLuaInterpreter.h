@@ -344,6 +344,7 @@ public:
     static int setLabelOnEnter(lua_State*);
     static int setLabelOnLeave(lua_State*);
     static int getMainWindowSize(lua_State*);
+    static int getUserWindowSize(lua_State*);
     static int getMousePosition(lua_State*);
     static int setMiniConsoleFontSize(lua_State*);
     static int setProfileIcon(lua_State*);
@@ -522,6 +523,7 @@ public:
     static int postHTTP(lua_State* L);
     static int deleteHTTP(lua_State* L);
     static int getConnectionInfo(lua_State* L);
+    static int unzipAsync(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
 
 

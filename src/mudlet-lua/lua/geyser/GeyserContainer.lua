@@ -114,9 +114,10 @@ end
 -- Called on window resize events.
 function Geyser.Container:reposition ()
   local x, y, w, h = self:get_x(), self:get_y(), self:get_width(), self:get_height()
-  moveWindow(self.name, self:get_x(), self:get_y())
-  resizeWindow(self.name, self:get_width(), self:get_height())
-
+  if self.type ~= "userwindow" then
+    moveWindow(self.name, self:get_x(), self:get_y())
+    resizeWindow(self.name, self:get_width(), self:get_height())
+  end
   -- deal with all children of this container
   for k, v in pairs(self.windowList) do
     if k ~= self and not v.nestLabels then
@@ -159,12 +160,18 @@ function Geyser.Container:show (auto)
   else
     self.hidden = false
   end
+  -- If my container is hidden I stay hidden and put my setting to auto_hidden
+  if self.container.hidden or self.container.auto_hidden then
+    self.auto_hidden = true 
+    return false 
+  end
   if not self.hidden and not self.auto_hidden then
     self:show_impl()
   end
   for _, v in pairs(self.windowList) do
     v:show(true)
   end
+  return true
 end
 
 function Geyser.Container:show_impl()
@@ -229,7 +236,7 @@ function Geyser.Container:flash (time)
   local time = time or 1.0
   local x, y, width, height = self.get_x(), self.get_y(), self.get_width(), self.get_height()
   local name = self.name .. "_dimensions_flash"
-  createLabel(name, x, y, width, height, 1)
+  createLabel(self.windowname ,name, x, y, width, height, 1)
   resizeWindow(name, width, height)
   moveWindow(name, x, y)
   setBackgroundColor(name, 190, 190, 190, 128)
@@ -272,6 +279,19 @@ function Geyser.Container:new(cons, container)
     else
       -- Else assume the root window is my container
       Geyser:add(me)
+      container=Geyser
+    end
+   --Create Root-Container for UserWindow and add Children
+   if (container == Geyser) and (me.windowname) and (me.windowname ~= "main") then
+        container = Geyser.Container:new({name=me.windowname.."Container", type = "userwindow", x=0, y=0, width="100%", height="100%"})
+        container:add(me)
+        container.get_width = function()
+            return getUserWindowSize(me.windowname)
+        end
+        container.get_height = function()
+            local w, h = getUserWindowSize(me.windowname)
+            return h
+        end
     end
   end
 

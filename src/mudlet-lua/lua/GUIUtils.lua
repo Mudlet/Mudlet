@@ -461,7 +461,22 @@ end
 ---   <pre>
 ---   createGauge("healthBar", 300, 20, 30, 300, "Now with some text", "green", "horizontal, vertical, goofy, or batty")
 ---   </pre>
-function createGauge(gaugeName, width, height, x, y, gaugeText, r, g, b, orientation)
+function createGauge(windowname, gaugeName, width, height, x, y, gaugeText, r, g, b, orientation)
+  --Make windowname optional
+  if type(gaugeName) == "number" then
+    orientation = b
+    b = g
+    g = r
+    r = gaugeText
+    gaugeText = y
+    y = x
+    x = height
+    height = width
+    width = gaugeName
+    gaugeName = windowname
+    windowname= nil
+   end
+  windowname = windowname or "main"
   gaugeText = gaugeText or ""
   if type(r) == "string" then
     orientation = g
@@ -475,13 +490,13 @@ function createGauge(gaugeName, width, height, x, y, gaugeText, r, g, b, orienta
   orientation = orientation or "horizontal"
   assert(table.contains({ "horizontal", "vertical", "goofy", "batty" }, orientation), "createGauge: orientation must be horizontal, vertical, goofy, or batty")
   local tbl = { width = width, height = height, x = x, y = y, text = gaugeText, r = r, g = g, b = b, orientation = orientation, value = 1 }
-  createLabel(gaugeName .. "_back", 0, 0, 0, 0, 1)
+  createLabel(windowname, gaugeName .. "_back", 0, 0, 0, 0, 1)
   setBackgroundColor(gaugeName .. "_back", r, g, b, 100)
 
-  createLabel(gaugeName .. "_front", 0, 0, 0, 0, 1)
+  createLabel(windowname, gaugeName .. "_front", 0, 0, 0, 0, 1)
   setBackgroundColor(gaugeName .. "_front", r, g, b, 255)
 
-  createLabel(gaugeName .. "_text", 0, 0, 0, 0, 1)
+  createLabel(windowname, gaugeName .. "_text", 0, 0, 0, 0, 1)
   setBackgroundColor(gaugeName .. "_text", 0, 0, 0, 0)
 
   -- save new values in table
@@ -545,8 +560,17 @@ end
 ---   <pre>
 ---   createConsole("myConsoleWindow", 8, 80, 20, 200, 400)
 ---   </pre>
-function createConsole(consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
-  createMiniConsole(consoleName, 0, 0, 1, 1)
+function createConsole(windowname, consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
+  if Ypos == nil then
+    Ypos = Xpos
+    Xpos = numberOfLines
+    numberOfLines = charsPerLine
+    charsPerLine = fontSize
+    fontSize = consoleName
+    consoleName = windowname
+    windowname = "main"
+  end
+  createMiniConsole(windowname, consoleName, 0, 0, 1, 1)
   setMiniConsoleFontSize(consoleName, fontSize)
   local x, y = calcFontSize( fontSize )
   resizeWindow(consoleName, x * charsPerLine, y * numberOfLines)
@@ -1763,6 +1787,7 @@ function xReplace(window, text, type)
   else
     insertText(window, text)
   end
+
 end
 
 --- version of replace function that allows for color, by way of cinsertText
