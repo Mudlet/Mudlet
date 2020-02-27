@@ -2198,6 +2198,9 @@
               <property name="text">
                <string>Profile name:</string>
               </property>
+              <property name="buddy">
+               <cstring>profile_name_entry</cstring>
+              </property>
              </widget>
             </item>
             <item row="0" column="1" colspan="2">
@@ -2208,9 +2211,6 @@
                 <pointsize>9</pointsize>
                </font>
               </property>
-              <property name="accessibleName">
-               <string>profile name</string>
-              </property>
               <property name="readOnly">
                <bool>false</bool>
               </property>
@@ -2220,6 +2220,9 @@
              <widget class="QLabel" name="label_serverUrl">
               <property name="text">
                <string>Server address:</string>
+              </property>
+              <property name="buddy">
+               <cstring>host_name_entry</cstring>
               </property>
              </widget>
             </item>
@@ -2236,9 +2239,6 @@
                 <family>Bitstream Charter</family>
                 <pointsize>9</pointsize>
                </font>
-              </property>
-              <property name="accessibleName">
-               <string>server address</string>
               </property>
              </widget>
             </item>
