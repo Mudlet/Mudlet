@@ -115,11 +115,14 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Env:MUDLET_VERSION_BUILD.Sta
   npm install -g dblsqd-cli
   dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${Env:DBLSQD_USER}" -p "${Env:DBLSQD_PASS}"
 
-  Write-Output "=== Registering release with Dblsqd ==="
   if ($Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build')) {
-    dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${Env:MUDLET_VERSION_BUILD}"
-    dblsqd push -a mudlet -c public-test-build -r "${Env:MUDLET_VERSION_BUILD}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
+    Write-Output "=== Creating release in Dblsqd ==="
+    dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${Env:VERSION}"
+
+    Write-Output "=== Registering release with Dblsqd ==="
+    dblsqd push -a mudlet -c public-test-build -r "${Env:VERSION}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
   } else {
+    Write-Output "=== Registering release with Dblsqd ==="
     dblsqd push -a mudlet -c release -r "${Env:VERSION}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
   }
 }
