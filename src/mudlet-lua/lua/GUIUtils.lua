@@ -1787,7 +1787,6 @@ function xReplace(window, text, type)
   else
     insertText(window, text)
   end
-
 end
 
 --- version of replace function that allows for color, by way of cinsertText
