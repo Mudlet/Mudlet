@@ -117,10 +117,10 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Env:MUDLET_VERSION_BUILD.Sta
 
   if ($Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build')) {
     Write-Output "=== Creating release in Dblsqd ==="
-    dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${Env:VERSION}.ToLower()${Env:MUDLET_VERSION_BUILD}.ToLower()"
+    dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower()
 
     Write-Output "=== Registering release with Dblsqd ==="
-    dblsqd push -a mudlet -c public-test-build -r "${Env:VERSION}.ToLower()${Env:MUDLET_VERSION_BUILD}.ToLower()" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
+    dblsqd push -a mudlet -c public-test-build -r "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower() -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
   } else {
     Write-Output "=== Registering release with Dblsqd ==="
     dblsqd push -a mudlet -c release -r "${Env:VERSION}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
