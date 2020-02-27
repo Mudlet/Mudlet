@@ -2947,26 +2947,26 @@ int TLuaInterpreter::setModulePriority(lua_State* L)
     QString moduleName;
     int modulePriority;
     if (!lua_isstring(L, 1)) {
-        lua_pushstring(L, "setModulePriority: Module be be a string");
+        lua_pushfstring(L, "setModulePriority: bad argument #1 type (module name as string expected, got %s!)", luaL_typename(L, 1));
         lua_error(L);
         return 1;
     } else {
         moduleName = lua_tostring(L, 1);
     }
     if (!lua_isnumber(L, 2)) {
-        lua_pushstring(L, "setModulePriority: Module priority must be an integer");
+        lua_pushfstring(L, "setModulePriority: bad argument #2 type (module priority as number expected, got %s!)", luaL_typename(L, 2));
         lua_error(L);
         return 1;
     } else {
         modulePriority = lua_tonumber(L, 2);
     }
     Host& host = getHostFromLua(L);
-    if (host.mModulePriorities.contains(moduleName)) {
+    if (host.mInstalledModules.contains(moduleName)) {
         host.mModulePriorities[moduleName] = modulePriority;
     } else {
-        lua_pushstring(L, "setModulePriority: Module doesn't exist");
-        lua_error(L);
-        return 1;
+        lua_pushnil(L);
+        lua_pushstring(L, "module doesn't exist");
+        return 2;
     }
     return 0;
 }

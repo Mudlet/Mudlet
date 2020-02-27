@@ -1535,9 +1535,6 @@ bool Host::installPackage(const QString& fileName, int module)
                 moduleEntry << fileName;
                 moduleEntry << QStringLiteral("0");
                 mInstalledModules[packageName] = moduleEntry;
-                if (module == 1 || module == 3) {
-                    mModulePriorities[packageName] = 0;
-                }
                 mActiveModules.append(packageName);
             } else {
                 mInstalledPackages.append(packageName);
@@ -1551,6 +1548,7 @@ bool Host::installPackage(const QString& fileName, int module)
     } else {
         file2.setFileName(fileName);
         file2.open(QFile::ReadOnly | QFile::Text);
+        //mInstalledPackages.append( packageName );
         QString profileName = getName();
         QString login = getLogin();
         QString pass = getPass();
@@ -1560,9 +1558,6 @@ bool Host::installPackage(const QString& fileName, int module)
             moduleEntry << fileName;
             moduleEntry << QStringLiteral("0");
             mInstalledModules[packageName] = moduleEntry;
-            if (module == 1 || module == 3) {
-                mModulePriorities[packageName] = 0;
-            }
             mActiveModules.append(packageName);
         } else {
             mInstalledPackages.append(packageName);
