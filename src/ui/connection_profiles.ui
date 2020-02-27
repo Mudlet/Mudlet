@@ -2208,9 +2208,6 @@
                 <pointsize>9</pointsize>
                </font>
               </property>
-              <property name="accessibleName">
-               <string>profile name</string>
-              </property>
               <property name="readOnly">
                <bool>false</bool>
               </property>
@@ -2236,9 +2233,6 @@
                 <family>Bitstream Charter</family>
                 <pointsize>9</pointsize>
                </font>
-              </property>
-              <property name="accessibleName">
-               <string>server address</string>
               </property>
              </widget>
             </item>
@@ -2268,9 +2262,6 @@
                 <family>Bitstream Charter</family>
                 <pointsize>9</pointsize>
                </font>
-              </property>
-              <property name="accessibleName">
-               <string>game port</string>
               </property>
               <property name="text">
                <string/>
@@ -2316,12 +2307,6 @@
                 <width>0</width>
                 <height>0</height>
                </size>
-              </property>
-              <property name="toolTip">
-               <string>Load an older version of this profile. A new version is saved every time you save the profile</string>
-              </property>
-              <property name="accessibleName">
-               <string>profile history</string>
               </property>
               <item>
                <property name="text">
@@ -2375,9 +2360,6 @@
               <property name="toolTip">
                <string>The characters name</string>
               </property>
-              <property name="accessibleName">
-               <string>character name</string>
-              </property>
               <property name="echoMode">
                <enum>QLineEdit::Normal</enum>
               </property>
@@ -2416,9 +2398,6 @@
              <widget class="QLineEdit" name="character_password_entry">
               <property name="toolTip">
                <string>Characters password. Note that the password isn't encrypted in storage</string>
-              </property>
-              <property name="accessibleName">
-               <string>password</string>
               </property>
               <property name="echoMode">
                <enum>QLineEdit::Password</enum>
@@ -2537,10 +2516,7 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>Game description or your notes about the game</string>
-              </property>
-              <property name="accessibleName">
-               <string>Game description or your notes about the game</string>
+               <string>Game description</string>
               </property>
               <property name="tabChangesFocus">
                <bool>true</bool>
