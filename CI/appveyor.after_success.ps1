@@ -74,7 +74,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Env:MUDLET_VERSION_BUILD.Sta
 
   if ($Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build')) {
     Write-Output "=== Uploading public test build to make.mudlet.org ==="
-    Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
+    Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.exe";
     Set-Variable -Name "inFile" -Value "${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe";
     Set-Variable -Name "outFile" -Value "upload-location.txt";
     Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
