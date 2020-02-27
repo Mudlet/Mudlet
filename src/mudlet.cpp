@@ -315,7 +315,7 @@ mudlet::mudlet()
     mpMainToolBar->widgetForAction(mpActionVariables)->setObjectName(mpActionVariables->objectName());
 
     mpButtonDiscord = new QToolButton(this);
-    mpButtonDiscord->setText(tr("Discord"));
+    mpButtonDiscord->setText(QStringLiteral("Discord"));
     mpButtonDiscord->setObjectName(QStringLiteral("discord"));
     mpButtonDiscord->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonDiscord->setPopupMode(QToolButton::MenuButtonPopup);
@@ -324,7 +324,7 @@ mudlet::mudlet()
 
     mpActionDiscord = new QAction(tr("Open Discord"), this);
     mpActionDiscord->setIcon(QIcon(QStringLiteral(":/icons/Discord-Logo-Color.png")));
-    mpActionDiscord->setIconText(tr("Discord"));
+    mpActionDiscord->setIconText(QStringLiteral("Discord"));
     mpActionDiscord->setObjectName(QStringLiteral("openDiscord"));
 
     mpActionIRC = new QAction(tr("Open IRC"), this);
@@ -835,6 +835,7 @@ void mudlet::loadDictionaryLanguageMap()
                                   {QStringLiteral("sw"), tr("Swahili")},
                                   {QStringLiteral("sw_ke"), tr("Swahili (Kenya)")},
                                   {QStringLiteral("sw_tz"), tr("Swahili (Tanzania)")},
+                                  {QStringLiteral("tr_TR"), tr("Turkish")},
                                   {QStringLiteral("te"), tr("Telugu")},
                                   {QStringLiteral("te_in"), tr("Telugu (India)")},
                                   {QStringLiteral("th"), tr("Thai")},
@@ -962,6 +963,8 @@ void mudlet::scanForMudletTranslations(const QString& path)
                 currentTranslation.mNativeName = QStringLiteral("Portugês");
             } else if (!languageCode.compare(QLatin1String("pt_BR"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = QStringLiteral("Português (Brasil)");
+            } else if (!languageCode.compare(QLatin1String("tr_TR"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = QStringLiteral("Türkçe");
             } else {
                 currentTranslation.mNativeName = languageCode;
             }
@@ -2579,6 +2582,17 @@ void mudlet::deleteLine(Host* pHost, const QString& name)
     if (pC) {
         pC->skipLine();
     }
+}
+
+std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
+{
+    QImage image(imageLocation);
+
+    if (image.isNull()) {
+        return {};
+    }
+
+    return image.size();
 }
 
 bool mudlet::insertText(Host* pHost, const QString& windowName, const QString& text)

@@ -3960,7 +3960,7 @@ Die alte Version &apos;%2&apos; wird deinstalliert.</translation>
       <location filename="../src/ctelnet.cpp" line="519"/>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: </source>
-      <translation>[ ALARM ] - Verbindung wurde getrennt.
+      <translation>[ ACHTUNG ] - Verbindung wurde getrennt.
 Grund: </translation>
     </message>
     <message>
@@ -7908,12 +7908,12 @@ Starte... Viel Spaß!
       <location filename="../src/ui/main_window.ui" line="311"/>
       <location filename="../src/ui/main_window.ui" line="314"/>
       <source>Report an issue</source>
-      <translation type="unfinished"/>
+      <translation>Problem melden</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="317"/>
       <source>Report an issue about the public test build</source>
-      <translation type="unfinished"/>
+      <translation>Ein Problem mit dem öffentlichen Test-Build melden</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="157"/>
@@ -8504,12 +8504,12 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="410"/>
       <source>Report issue</source>
-      <translation type="unfinished"/>
+      <translation>Problem melden</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="414"/>
       <source>Report an issue about the Mudlet Public Test Build</source>
-      <translation type="unfinished"/>
+      <translation>Ein Problem mit dem öffentlichen Mudlet Test-Build melden</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="697"/>
@@ -9954,32 +9954,32 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="250"/>
       <source>Allow server to download and play media (requires GMCP enabled below)</source>
-      <translation type="unfinished"/>
+      <translation>Erlauben Sie dem Server das Herunterladen und Abspielen von Medien (benötigt GMCP unten aktiviert)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="269"/>
       <source>GMCP - Enable Generic Mud Communication Protocol</source>
-      <translation type="unfinished"/>
+      <translation>GMCP - Aktiviere das Generische-Mud-Kommunikations-Protokoll</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="279"/>
       <source>MSDP - Enable Mud Server Data Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSDP - Aktiviere das Mud-Server-Daten-Protokoll</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="289"/>
       <source>MSSP - Enable Mud Server Status Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSDP - Aktiviere das Mud-Server-Status-Protokoll</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="296"/>
       <source>&lt;p&gt;Enables MSP - provides Mud Sound Protocol messages during game play for supported games&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Aktiviert MSP - bietet während des Spiels Meldungen zum Mud Sound Protocol für unterstützte Spiele&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="299"/>
       <source>MSP - Enable Mud Sound Protocol</source>
-      <translation type="unfinished"/>
+      <translation>MSP - Aktiviere das Mud-Sound-Protokoll</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="498"/>

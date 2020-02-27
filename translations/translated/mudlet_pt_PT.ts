@@ -14,7 +14,7 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="273"/>
       <source>Too many redirects.</source>
-      <translation>Muitos redirecionamentos.</translation>
+      <translation>Demasiados redirecionamentos.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="282"/>
@@ -982,7 +982,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2996"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action)</comment>
-      <translation type="unfinished"/>
+      <translation>use &quot;remover linha&quot; para remover o único segmento que termine num ponto editável</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3002"/>
@@ -1141,7 +1141,7 @@ used is:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4119"/>
       <source>1 {count 0, default}</source>
-      <translation type="unfinished"/>
+      <translation>1 {count 0, default}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4123"/>
@@ -1186,7 +1186,7 @@ rooms:</source>
     <message>
       <location filename="../src/TAlias.cpp" line="252"/>
       <source>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Erro: em &quot;Padrão:&quot;, expressão regular defeituosa, razão: &quot;%1&quot;.</translation>
     </message>
   </context>
   <context>
@@ -1374,42 +1374,42 @@ rooms:</source>
     <message>
       <location filename="../src/TCommandLine.cpp" line="651"/>
       <source>Add to user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>Adicionar ao dicionário do utilizador</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="653"/>
       <source>Remove from user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>Remover do dicionário do utilizador</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="657"/>
       <source>▼Mudlet▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which we have bundled with Mudlet; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼Mudlet▼ │ sugestões do dicionário │ ▲Utilizador▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="667"/>
       <source>▼System▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which is provided as part of the OS; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼Sistema▼ │ sugestões do dicionário │ ▲Utilizador▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="735"/>
       <source>no suggestions (system)</source>
       <comment>used when the command spelling checker using the selected system dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>nenhuma sugestão (sistema)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="761"/>
       <source>no suggestions (shared)</source>
       <comment>used when the command spelling checker using the dictionary shared between profile has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>nenhuma sugestão (partilhada)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="765"/>
       <source>no suggestions (profile)</source>
       <comment>used when the command spelling checker using the profile&apos;s own dictionary has no words to suggest</comment>
-      <translation type="unfinished"/>
+      <translation>nenhuma sugestão (perfil)</translation>
     </message>
   </context>
   <context>
@@ -1472,14 +1472,15 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2470"/>
       <source>System Message: %1</source>
-      <translation type="unfinished"/>
+      <translation>Mensagem do sistema: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2617"/>
       <location filename="../src/TConsole.cpp" line="2656"/>
       <source>No search results, sorry!
 </source>
-      <translation type="unfinished"/>
+      <translation>Nenhum resultado da procura, desculpa!
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="367"/>
@@ -1537,7 +1538,7 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="1051"/>
       <source>&apos;Log session ending at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <comment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Sessão de log terminada às &apos;hh:mm:ss&apos; em &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1064"/>
@@ -1643,21 +1644,21 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14711"/>
       <source>ERROR</source>
-      <translation type="unfinished"/>
+      <translation>ERRO</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14712"/>
       <location filename="../src/TLuaInterpreter.cpp" line="14723"/>
       <source>object</source>
       <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>objecto</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14712"/>
       <location filename="../src/TLuaInterpreter.cpp" line="14723"/>
       <source>function</source>
       <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
-      <translation type="unfinished"/>
+      <translation>função</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15964"/>
@@ -1668,7 +1669,7 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16068"/>
       <location filename="../src/TLuaInterpreter.cpp" line="16244"/>
       <source>no error message available from Lua</source>
-      <translation type="unfinished"/>
+      <translation>nenhuma mensagem de erro disponível do Lua</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15966"/>
@@ -1679,7 +1680,7 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16070"/>
       <location filename="../src/TLuaInterpreter.cpp" line="16246"/>
       <source>Lua error:</source>
-      <translation type="unfinished"/>
+      <translation>Erro Lua:</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15969"/>
@@ -1690,12 +1691,12 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16073"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2</source>
       <comment>%1 is the name of the module. %2 can be an additional message about the expected effect.</comment>
-      <translation type="unfinished"/>
+      <translation>[ ERRO ] - Impossível encontrar módulo Lua %1.%2</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15973"/>
       <source>Some functions may not be available.</source>
-      <translation type="unfinished"/>
+      <translation>Algumas funções podem não estar disponíveis.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15977"/>
@@ -1706,22 +1707,22 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16081"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name of the module.</comment>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Módulo Lua %1 carregado.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16014"/>
       <source>Probably will not be able to access Mudlet Lua code.</source>
-      <translation type="unfinished"/>
+      <translation>Provavelmente não será capaz de aceder ao código Lua do Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16035"/>
       <source>Database support will not be available.</source>
-      <translation type="unfinished"/>
+      <translation>Apoio da base de dados não estará disponível.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16056"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>utf8.* Funções Lua não estarão disponíveis.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16077"/>
@@ -1878,7 +1879,7 @@ Tried these locations:
       <source>[ ALERT ] - Saving map in a format {%1} that is different than the one it was
 loaded as {%2}. This may be an issue if you want to share the resulting
 map with others relying on the original format.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERTA ] - Guardando o mapa no formato {%1} que é diferente do formato carregado, {%2}. Isto pode ser um problema se quiseres partilhar o mapa resultante com outros que usem o formato original.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="188"/>
@@ -2473,17 +2474,17 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="38"/>
       <source>Default Area</source>
-      <translation type="unfinished"/>
+      <translation>Área padrão</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="502"/>
       <source>Area with ID=%1 already exists!</source>
-      <translation type="unfinished"/>
+      <translation>Área com ID=%1 já existe!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="521"/>
       <source>An Unnamed Area is (no longer) permitted!</source>
-      <translation type="unfinished"/>
+      <translation>Uma Área sem nome (não) é permitida!</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="525"/>
@@ -4105,7 +4106,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="46"/>
       <source>Line Settings:</source>
-      <translation type="unfinished"/>
+      <translation>Configurações de linha:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="84"/>
@@ -4163,7 +4164,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="63"/>
       <source>Line Settings:</source>
-      <translation type="unfinished"/>
+      <translation>Configurações de linha:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="97"/>
@@ -4970,7 +4971,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="104"/>
       <source>Copy settings only</source>
-      <translation type="unfinished"/>
+      <translation>Copiar apenas configurações</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="173"/>
@@ -5243,7 +5244,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="57"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliases</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="58"/>
@@ -6276,12 +6277,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="377"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliases</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="378"/>
       <source>Show Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar Aliases</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="382"/>
@@ -6447,7 +6448,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="481"/>
       <source>Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also &quot;synchronizes&quot; modules that are so marked.</source>
-      <translation type="unfinished"/>
+      <translation>Guarda os teus perfis inteiros (gatilhos, aliases, scripts, cronómetros, botões e teclas, mas não o mapa ou configurações específicas de scripts); também &quot;sincroniza&quot; módulos que estão marcados.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="484"/>
@@ -6659,14 +6660,14 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3511"/>
       <source>New alias group</source>
-      <translation type="unfinished"/>
+      <translation>Novo grupo de aliases</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3513"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4125"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="4195"/>
       <source>New alias</source>
-      <translation type="unfinished"/>
+      <translation>Novo alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3602"/>
@@ -7187,7 +7188,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2054"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2084"/>
       <source>Alias</source>
-      <translation type="unfinished"/>
+      <translation>Alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1759"/>
@@ -9165,12 +9166,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="280"/>
       <source>Aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aliases</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="281"/>
       <source>Show and edit aliases</source>
-      <translation type="unfinished"/>
+      <translation>Mostrar e editar aliases</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="286"/>
@@ -9245,7 +9246,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="349"/>
       <source>Settings</source>
-      <translation type="unfinished"/>
+      <translation>Configurações</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="350"/>
@@ -9762,7 +9763,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="716"/>
       <source>Enable anti-aliasing</source>
-      <translation type="unfinished"/>
+      <translation>Activar anti-aliasing</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="732"/>

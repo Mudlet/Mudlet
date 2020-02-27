@@ -14,5 +14,6 @@
         <file>mudlet_el_GR.qm</file>
         <file>mudlet_pt_PT.qm</file>
         <file>mudlet_pt_BR.qm</file>
+        <file>mudlet_tr_TR.qm</file>
     </qresource>
 </RCC>
