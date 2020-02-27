@@ -2431,9 +2431,6 @@
                <bool>false</bool>
               </property>
               <property name="toolTip">
-               <string>Discord integration</string>
-              </property>
-              <property name="accessibleName">
                <string>Enable Discord integration (not supported by game)</string>
               </property>
               <property name="text">
