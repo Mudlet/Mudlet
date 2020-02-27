@@ -727,13 +727,6 @@
            </widget>
           </item>
          </layout>
-         <zorder>label_30</zorder>
-         <zorder>fontComboBox</zorder>
-         <zorder>label_35</zorder>
-         <zorder>fontSize</zorder>
-         <zorder>mNoAntiAlias</zorder>
-         <zorder>label_variableWidthFontWarning</zorder>
-         <zorder>label_invalidFontError</zorder>
         </widget>
        </item>
        <item row="1" column="0">
