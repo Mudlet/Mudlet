@@ -2102,6 +2102,9 @@ bool mudlet::setProfileStyleSheet(Host* pHost, const QString& styleSheet)
     pHost->mpConsole->setStyleSheet(styleSheet);
     pHost->mpEditorDialog->setStyleSheet(styleSheet);
 
+    if (mpProfilePreferencesDlgMap.value(pHost)) {
+        mpProfilePreferencesDlgMap.value(pHost)->setStyleSheet(styleSheet);
+    }
     if (pHost->mpNotePad) {
         pHost->mpNotePad->setStyleSheet(styleSheet);
         pHost->mpNotePad->notesEdit->setStyleSheet(styleSheet);
@@ -2113,7 +2116,6 @@ bool mudlet::setProfileStyleSheet(Host* pHost, const QString& styleSheet)
     for (auto& dockWidget : pHost->mpConsole->mDockWidgetMap) {
         dockWidget->setStyleSheet(styleSheet);
     }
-
     if (pHost == mpCurrentActiveHost) {
         mpMainToolBar->setStyleSheet(styleSheet);
         mpTabBar->setStyleSheet(styleSheet);
@@ -3354,6 +3356,7 @@ void mudlet::show_options_dialog(QString tab)
         connect(mpActionReconnect.data(), &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_specialoption, &QWidget::hide);
         connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_specialoption, &QWidget::hide);
         mpProfilePreferencesDlgMap.value(pHost)->setAttribute(Qt::WA_DeleteOnClose);
+        mpProfilePreferencesDlgMap.value(pHost)->setStyleSheet(pHost->mProfileStyleSheet);
     }
     mpProfilePreferencesDlgMap.value(pHost)->setTab(tab);
     mpProfilePreferencesDlgMap.value(pHost)->raise();
