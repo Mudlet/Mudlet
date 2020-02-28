@@ -2096,31 +2096,30 @@ bool mudlet::setProfileStyleSheet(Host* pHost, const QString& styleSheet)
 {
     if (!pHost || !pHost->mpConsole) {
         return false;
-    } else {
-        pHost->mProfileStyleSheet = styleSheet;
-        pHost->mpConsole->setStyleSheet(styleSheet);
-        pHost->mpEditorDialog->setStyleSheet(styleSheet);
-
-        if (pHost->mpNotePad) {
-            pHost->mpNotePad->setStyleSheet(styleSheet);
-            pHost->mpNotePad->notesEdit->setStyleSheet(styleSheet);
-        }
-        if (pHost->mpDockableMapWidget) {
-            pHost->mpDockableMapWidget->setStyleSheet(styleSheet);
-        }
-
-        QMutableMapIterator<QString, TDockWidget*> itDockWidget(pHost->mpConsole->mDockWidgetMap);
-        while (itDockWidget.hasNext()) {
-            itDockWidget.next();
-            itDockWidget.value()->setStyleSheet(styleSheet);
-        }
-        if (pHost == mpCurrentActiveHost) {
-            mpMainToolBar->setStyleSheet(styleSheet);
-            mpTabBar->setStyleSheet(styleSheet);
-            menuBar()->setStyleSheet(styleSheet);
-        }
-        return true;
     }
+
+    pHost->mProfileStyleSheet = styleSheet;
+    pHost->mpConsole->setStyleSheet(styleSheet);
+    pHost->mpEditorDialog->setStyleSheet(styleSheet);
+
+    if (pHost->mpNotePad) {
+        pHost->mpNotePad->setStyleSheet(styleSheet);
+        pHost->mpNotePad->notesEdit->setStyleSheet(styleSheet);
+    }
+    if (pHost->mpDockableMapWidget) {
+        pHost->mpDockableMapWidget->setStyleSheet(styleSheet);
+    }
+
+    for (auto& dockWidget : pHost->mpConsole->mDockWidgetMap) {
+        dockWidget->setStyleSheet(styleSheet);
+    }
+
+    if (pHost == mpCurrentActiveHost) {
+        mpMainToolBar->setStyleSheet(styleSheet);
+        mpTabBar->setStyleSheet(styleSheet);
+        menuBar()->setStyleSheet(styleSheet);
+    }
+    return true;
 }
 
 
