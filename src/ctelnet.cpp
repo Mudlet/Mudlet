@@ -2043,14 +2043,10 @@ void cTelnet::atcpComposerSave(QString txt)
         output += OPT_GMCP;
         output += "IRE.Composer.SetBuffer";
         if (!txt.isEmpty()) {
-            QString escapedTxt;
-            escapedTxt = txt;
-            escapedTxt.replace('\\', QLatin1String(R"(\\)")); // backslash first; contained in the others
-            escapedTxt.replace('\"', QLatin1String(R"(\")"));
-            escapedTxt.replace('\n', QLatin1String(R"(\n)"));
-            // Skipping tabs, IRE game I tested does not accept \t as tab but does accept 09 byte.
+            // Escape the text for the GMCP message that we will send to the game, put the result inside of quotes.
+            // Backslashes are escaped first because they are contained in the others, then quotes and new lines.
             output += " \"";
-            output += encodeAndCookBytes(escapedTxt.toStdString());
+            output += encodeAndCookBytes(txt.replace('\\', QLatin1String(R"(\\)")).replace('\"', QLatin1String(R"(\")")).replace('\n', QLatin1String(R"(\n)")).toStdString());
             output += "\"";
         }
         output += TN_IAC;

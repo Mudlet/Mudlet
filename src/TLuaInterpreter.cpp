@@ -14502,6 +14502,17 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
             QString title = match.captured(1);
             QString initialText = match.captured(2);
             QRegularExpression codeRegex(QStringLiteral(R"lit(\\n|\\t|\\"|\\\\|\\u[0-9a-cA-C][0-9a-fA-F]{3}|\\u[dD][0-7][0-9a-fA-F]{2}|\\u[efEF][0-9a-fA-F]{3}|\\u[dD][89abAB][0-9a-fA-F]{2}\\u[dD][c-fC-F][0-9a-fA-F]{2})lit"));
+            // We are about to search for 8 escape code strings within the initial text that the game gave us, patterns are:
+            // \n  \t  \"  \\ - new line, tab, quote, backslash
+            // Then there are three patterns for \uXXXX where XXXX is a 4-digit hexadecimal value
+            //   Characters in ranges U+0000-U+D7FF and U+E000-U+FFFD are stored as a single unit.
+            //   0000-CFFF
+            //   D000-D7FF
+            //   D800-DFFF - are reserved for surrogate pairs; will not match a pattern
+            //   E000-FFFF - note that FFFE and FFFF match the pattern but are not valid, will skip those later
+            // Then one pattern for \uXXXX\uXXXX where each XXXX is a 4-digit hexadecimal value
+            //   These are 'surrogate pairs', (U+D800-U+DBFF) followed by (U+DC00-U+DFFF).
+            //   D800-DF00  DC00-DFFF
             int j=0;
             while((j = initialText.indexOf(codeRegex,j)) != -1){
                 uint u;
