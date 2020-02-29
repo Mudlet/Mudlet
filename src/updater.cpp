@@ -130,7 +130,7 @@ void Updater::setupOnMacOS()
 #if defined(Q_OS_WIN32)
 void Updater::setupOnWindows()
 {
-    QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qWarning() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available"; });
+    QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qWarning() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available"; qWarning() << feed->getReleases().size() << "releases in total"; });
 
     // Setup to automatically download the new release when an update is available
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() {
