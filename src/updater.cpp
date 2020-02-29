@@ -48,6 +48,13 @@ Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent)
 
     feed = new dblsqd::Feed(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"),
                             mudlet::scmIsPublicTestVersion ? QStringLiteral("public-test-build") : QStringLiteral("release"));
+
+    auto releasef619d69f = dblsqd::SemVer("4.4.0-public-test-build-pr3369-f619d69f");
+    auto releasedf8845f8 = dblsqd::SemVer("4.4.0-public-test-build-pr3369-df8845f8");
+    auto releaseb2017b76 = dblsqd::SemVer("4.4.0-public-test-build-pr3369-b2017b76");
+    qDebug() << releasef619d69f.toString() << "valid?" << releasef619d69f.isValid();
+    qDebug() << releasedf8845f8.toString() << "valid?" << releasedf8845f8.isValid();
+    qDebug() << releaseb2017b76.toString() << "valid?" << releaseb2017b76.isValid();
 }
 Updater::~Updater()
 {
@@ -192,7 +199,7 @@ void Updater::prepareSetupOnWindows(const QString& downloadedSetupName)
 #if defined(Q_OS_LINUX)
 void Updater::setupOnLinux()
 {
-    QObject::connect(feed, &dblsqd::Feed::ready, this, [=]() { qWarning() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available"; });
+    QObject::connect(feed, &dblsqd::Feed::ready, this, [=]() { qWarning() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available"; ; qWarning() << feed->getReleases().size() << "releases in total"; });
 
     // Setup to automatically download the new release when an update is
     // available or wave a flag when it is to be done manually
