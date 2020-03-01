@@ -369,6 +369,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     auto hostPackage = mudletPackage.append_child("HostPackage");
     auto host = hostPackage.append_child("Host");
 
+    // Some of the data items being stored are simple numbers or other texts
+    // that can be expressed solely with the Latin1 character encoding so that
+    // can be used compared to the more complex Utf8 one needed otherwise:
     host.append_attribute("autoClearCommandLineAfterSend") = pHost->mAutoClearCommandLineAfterSend ? "yes" : "no";
     host.append_attribute("printCommand") = pHost->mPrintCommand ? "yes" : "no";
     host.append_attribute("USE_IRE_DRIVER_BUGFIX") = pHost->mUSE_IRE_DRIVER_BUGFIX ? "yes" : "no";
@@ -392,6 +395,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mFORCE_SAVE_ON_EXIT") = pHost->mFORCE_SAVE_ON_EXIT ? "yes" : "no";
     host.append_attribute("mEnableGMCP") = pHost->mEnableGMCP ? "yes" : "no";
     host.append_attribute("mEnableMSSP") = pHost->mEnableMSSP ? "yes" : "no";
+    host.append_attribute("mEnableMSP") = pHost->mEnableMSP ? "yes" : "no";
     host.append_attribute("mEnableMSDP") = pHost->mEnableMSDP ? "yes" : "no";
     host.append_attribute("mMapStrongHighlight") = pHost->mMapStrongHighlight ? "yes" : "no";
     host.append_attribute("mLogStatus") = pHost->mLogStatus ? "yes" : "no";
@@ -403,6 +407,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mUseSharedDictionary") = useSharedDictionary ? "yes" : "no";
     host.append_attribute("mShowInfo") = pHost->mShowInfo ? "yes" : "no";
     host.append_attribute("mAcceptServerGUI") = pHost->mAcceptServerGUI ? "yes" : "no";
+    host.append_attribute("mAcceptServerMedia") = pHost->mAcceptServerMedia ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
     host.append_attribute("mFORCE_MXP_NEGOTIATION_OFF") = pHost->mFORCE_MXP_NEGOTIATION_OFF ? "yes" : "no";
     host.append_attribute("enableTextAnalyzer") = pHost->mEnableTextAnalyzer ? "yes" : "no";
@@ -434,6 +439,17 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mRequiredDiscordUserDiscriminator") = pHost->mRequiredDiscordUserDiscriminator.toUtf8().constData();
     host.append_attribute("mSGRCodeHasColSpaceId") = pHost->getHaveColorSpaceId() ? "yes" : "no";
     host.append_attribute("mServerMayRedefineColors") = pHost->getMayRedefineColors() ? "yes" : "no";
+    quint8 styleCode = 0;
+    quint8 outerDiameterPercentage = 0;
+    quint8 innerDiameterPercentage = 0;
+    QColor outerColor;
+    QColor innerColor;
+    pHost->getPlayerRoomStyleDetails(styleCode, outerDiameterPercentage, innerDiameterPercentage, outerColor, innerColor);
+    host.append_attribute("playerRoomPrimaryColor") = outerColor.name(QColor::HexArgb).toLatin1().constData();
+    host.append_attribute("playerRoomSecondaryColor") = innerColor.name(QColor::HexArgb).toLatin1().constData();
+    host.append_attribute("playerRoomStyle") = QString::number(styleCode).toLatin1().constData();
+    host.append_attribute("playerRoomOuterDiameter") = QString::number(outerDiameterPercentage).toLatin1().constData();
+    host.append_attribute("playerRoomInnerDiameter") = QString::number(innerDiameterPercentage).toLatin1().constData();
 
     QString ignore;
     QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
@@ -533,6 +549,27 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mRoomSize").text().set(QString::number(pHost->mRoomSize, 'f', 1).toUtf8().constData());
     }
 
+    {
+        auto stopwatches = host.append_child("stopwatches");
+        QListIterator<int> itStopWatchId(pHost->getStopWatchIds());
+        while (itStopWatchId.hasNext()) {
+            auto stopWatchId = itStopWatchId.next();
+            auto pStopWatch = pHost->getStopWatch(stopWatchId);
+            if (pStopWatch->persistent()) {
+                auto stopwatch = stopwatches.append_child("stopwatch");
+                // Three QStrings used here are purely numeric so can be expressed in Latin1 encoding:
+                stopwatch.append_attribute("id") = QString::number(stopWatchId).toLatin1().constData();
+                if (pStopWatch->running()) {
+                    stopwatch.append_attribute("running") = "yes";
+                    stopwatch.append_attribute("effectiveStartDateTimeEpochMSecs") = QString::number(QDateTime::currentMSecsSinceEpoch() - pStopWatch->getElapsedMilliSeconds()).toLatin1().constData();
+                } else {
+                    stopwatch.append_attribute("running") = "no";
+                    stopwatch.append_attribute("elapsedDateTimeMSecs") = QString::number(pStopWatch->getElapsedMilliSeconds()).toLatin1().constData();
+                }
+                stopwatch.append_attribute("name") = pStopWatch->name().toUtf8().constData();
+            }
+        }
+    }
     writeTriggerPackage(pHost, mudletPackage, true);
     writeTimerPackage(pHost, mudletPackage, true);
     writeAliasPackage(pHost, mudletPackage, true);

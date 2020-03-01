@@ -463,9 +463,9 @@ function Geyser.Label:new (cons, container)
   -- Set the metatable.
   setmetatable(me, self)
   self.__index = self
-
+  me.windowname = me.windowname or me.container.windowname or "main"
   -- Create the label using primitives
-  createLabel(me.name, me:get_x(), me:get_y(),
+  createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
   me:get_width(), me:get_height(), me.fillBg)
 
   -- Set any defined colors

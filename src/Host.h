@@ -52,12 +52,75 @@ class dlgTriggerEditor;
 class TEvent;
 class TArea;
 class LuaInterface;
-class TMap;
+class TMedia;
 class TRoom;
 class TConsole;
 class dlgNotepad;
 class TMap;
 
+class stopWatch {
+    friend class XMLimport;
+
+public:
+    stopWatch();
+
+    bool start();
+    bool stop();
+    bool reset();
+    bool running() const {return mIsRunning;}
+    void adjustMilliSeconds(const qint64);
+    qint64 getElapsedMilliSeconds() const;
+    QString getElapsedDayTimeString() const;
+    void setPersistent(const bool state) {mIsPersistent = state;}
+    bool persistent() const {return mIsPersistent;}
+    void setName(const QString& name) {mName = name;}
+    const QString& name() const {return mName;}
+
+#ifndef QT_NO_DEBUG_STREAM
+    // Only used for debugging:
+    bool initialised() const {return mIsInitialised;}
+    qint64 elapsed() const {return mElapsedTime;}
+    QDateTime effectiveStartDateTime() const {return mEffectiveStartDateTime;}
+#endif // QT_NO_DEBUG_STREAM
+
+private:
+    // true once started the first time - but provides some code short cuts if
+    // prior to that:
+    bool mIsInitialised;
+    // true when RUNNING, false when STOPPED:
+    bool mIsRunning;
+    // If true this stopwatch is saved with the profile and reloaded - if it is
+    // running when saved it will seem to continue to run - so can be used to
+    // track real time events outside of the profile, it is intended that the
+    // parent Host class that makes use of it will save and restore the id
+    // number that that class assigns the stopwatch:
+    bool mIsPersistent;
+    // When RUNNING this contains the effective point in time when the stop
+    // watch was started - so that taking a difference between then and
+    // "now" gives the total elapsed time:
+    QDateTime mEffectiveStartDateTime;
+    // When STOPPED this contains the cumulative elasped time in milliSeconds:
+    qint64 mElapsedTime;
+    // As the id is generated according to what other ones have been created but
+    // persists between saves it is useful for the user or script writer to be
+    // able to name a particular stop watch for identification later:
+    QString mName;
+};
+
+#ifndef QT_NO_DEBUG_STREAM
+inline QDebug& operator<<(QDebug& debug, const stopWatch& stopwatch)
+{
+    QDebugStateSaver saver(debug);
+    Q_UNUSED(saver);
+    debug.nospace() << QStringLiteral("stopwatch(mIsRunning: %1 mInitialised: %2 mIsPersistent: %3 mEffectiveStartDateTime: %4 mElapsedTime: %5)")
+                       .arg((stopwatch.running() ? QLatin1String("true") : QLatin1String("false")),
+                            (stopwatch.initialised() ? QLatin1String("true") : QLatin1String("false")),
+                            (stopwatch.persistent() ? QLatin1String("true") : QLatin1String("false")),
+                            stopwatch.effectiveStartDateTime().toString(),
+                            QString::number(stopwatch.elapsed()));
+    return debug;
+}
+#endif // QT_NO_DEBUG_STREAM
 
 class Host : public QObject
 {
@@ -164,11 +227,26 @@ public:
     void disableKey(const QString&);
     bool killTimer(const QString&);
     bool killTrigger(const QString&);
-    double stopStopWatch(int);
-    bool resetStopWatch(int);
-    bool startStopWatch(int);
-    double getStopWatchTime(int);
-    int createStopWatch();
+
+    QPair<int, QString> createStopWatch(const QString&);
+    bool destroyStopWatch(const int);
+    bool adjustStopWatch(const int, const qint64 milliSeconds);
+    QList<int> getStopWatchIds() const;
+    QPair<bool, double> getStopWatchTime(const int) const;
+    QPair<bool, QString> getBrokenDownStopWatchTime(const int) const;
+    bool makeStopWatchPersistent(const int, const bool);
+    QPair<bool, QString> resetStopWatch(const int);
+    QPair<bool, QString> resetStopWatch(const QString&);
+    QPair<bool, QString> startStopWatch(const int);
+    QPair<bool, QString> startStopWatch(const QString&);
+    QPair<bool, QString> stopStopWatch(const int);
+    QPair<bool, QString> stopStopWatch(const QString&);
+    stopWatch* getStopWatch(const int id) const { return mStopWatchMap.value(id); }
+    int findStopWatchId(const QString&) const;
+    QPair<bool, QString> setStopWatchName(const int, const QString&);
+    QPair<bool, QString> setStopWatchName(const QString&, const QString&);
+    QPair<bool, QString> resetAndRestartStopWatch(const int);
+
     void startSpeedWalk();
     void saveModules(int sync, bool backup = true);
     void reloadModule(const QString& reloadModuleName);
@@ -228,6 +306,10 @@ public:
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
+    void setMediaLocationGMCP(const QString& mediaUrl);
+    QString getMediaLocationGMCP() const;
+    void setMediaLocationMSP(const QString& mediaUrl);
+    QString getMediaLocationMSP() const;
     const QFont& getDisplayFont() const { return mDisplayFont; }
     std::pair<bool, QString> setDisplayFont(const QFont& font);
     std::pair<bool, QString> setDisplayFont(const QString& fontName);
@@ -239,6 +321,9 @@ public:
     void updateProxySettings(QNetworkAccessManager* manager);
     std::unique_ptr<QNetworkProxy>& getConnectionProxy();
     void updateAnsi16ColorsInTable();
+    // Store/retrieve all the settings in one call:
+    void setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter = 120, const quint8 innerDiameter = 70, const QColor& outerColor = QColor(), const QColor& innerColor = QColor());
+    void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
 
     cTelnet mTelnet;
     QPointer<TConsole> mpConsole;
@@ -248,7 +333,12 @@ public:
     bool mAlertOnNewData;
     bool mAllowToSendCommand;
     bool mAutoClearCommandLineAfterSend;
+    // Set in constructor and used in (bool) TScript::setScript(const QString&)
+    // to prevent compilation of the script that was being set therein, cleared
+    // after the main TConsole for a new profile has been created during the
+    // period when mIsProfileLoadingSequence has been set:
     bool mBlockScriptCompile;
+    bool mBlockStopWatchCreation;
     bool mEchoLuaErrors;
     int mBorderBottomHeight;
     int mBorderLeftWidth;
@@ -258,8 +348,11 @@ public:
     QString mCommandSeparator;
     bool mEnableGMCP;
     bool mEnableMSSP;
+    bool mEnableMSP;
     bool mEnableMSDP;
     bool mServerMXPenabled;
+    QString mMediaLocationGMCP;
+    QString mMediaLocationMSP;
     QTextStream mErrorLogStream;
     QMap<QString, QList<TScript*>> mEventHandlerMap;
     bool mFORCE_GA_OFF;
@@ -280,6 +373,10 @@ public:
     QString mProxyPassword;
 
     bool mIsGoingDown;
+    // Used to force the test compilation of the scripts for TActions ("Buttons")
+    // that are pushdown buttons that run when they are "pushed down" during
+    // loading even though the buttons start out with themselves NOT being
+    // pushed down:
     bool mIsProfileLoadingSequence;
 
     bool mLF_ON_GA;
@@ -287,6 +384,7 @@ public:
 
     dlgTriggerEditor* mpEditorDialog;
     QScopedPointer<TMap> mpMap;
+    QScopedPointer<TMedia> mpMedia;
     dlgNotepad* mpNotePad;
 
     // This is set when we want commands we typed to be shown on the main
@@ -430,6 +528,7 @@ public:
     QString mServerGUI_Package_version;
     QString mServerGUI_Package_name;
     bool mAcceptServerGUI;
+    bool mAcceptServerMedia;
     QColor mCommandLineFgColor;
     QColor mCommandLineBgColor;
     bool mMapperUseAntiAlias;
@@ -459,9 +558,15 @@ private slots:
 
 private:
     void installPackageFonts(const QString &packageName);
+    void processGMCPDiscordStatus(const QJsonObject& discordInfo);
+    void processGMCPDiscordInfo(const QJsonObject& discordInfo);
+    void updateModuleZips() const;
+    void loadSecuredPassword();
+    void removeAllNonPersistentStopWatches();
+    void updateConsolesFont();
+
     QFont mDisplayFont;
     QStringList mModulesToSync;
-
     QScopedPointer<LuaInterface> mLuaInterface;
 
     TriggerUnit mTriggerUnit;
@@ -494,7 +599,12 @@ private:
 
     QString mUserDefinedName;
 
-    QMap<int, QTime> mStopWatchMap;
+    // To keep things simple for Lua the first stopwatch will be allocated a key
+    // of 1 - and anything less that that will be rejected - and we force
+    // createStopWatch() to return 0 during script loading so that we do not get
+    // superious stopwatches from being created then (when
+    // mIsProfileLoadingSequence is true):
+    QMap<int, stopWatch*> mStopWatchMap;
 
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
 
@@ -550,11 +660,27 @@ private:
     bool mEnableUserDictionary;
     bool mUseSharedDictionary;
 
-    void processGMCPDiscordStatus(const QJsonObject& discordInfo);
-    void processGMCPDiscordInfo(const QJsonObject& discordInfo);
-    void updateModuleZips() const;
-    void updateConsolesFont();
-    void loadSecuredPassword();
+    // These hold values that are needed in the TMap clas which are saved with
+    // the profile - but which cannot be kept there as that class is not
+    // necessarily instantiated when the profile is read.
+    // Base color(s) for the player room in the mappers:
+    // Mode selected:
+    // 0 is closest to original style with adjustable outer diameter
+    // 1 is Fixed red color ring with adjustable outer/inner diameter
+    // 2 is fixed blue/yellow colors ring with adjustable outer/inner diameter
+    // 3 is adjustable outer(primary)/inner(secondary) colors ring with adjustable outer/inner diameter
+    quint8 mPlayerRoomStyle;
+    QColor mPlayerRoomOuterColor;
+    QColor mPlayerRoomInnerColor;
+    // Percentage of the room size (actually width) for the outer diameter of
+    // the circular marking, integer percentage clamped in the preferences
+    // between 200 and 50 - default 120:
+    quint8 mPlayerRoomOuterDiameterPercentage;
+    // Percentage of the outer size for the inner diameter of the circular
+    // marking, integer percentage clamped in the preferences between 83 and 0,
+    // with a default of 70. NOT USED FOR "Original" style marking (the 0'th
+    // one):
+    quint8 mPlayerRoomInnerDiameterPercentage;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

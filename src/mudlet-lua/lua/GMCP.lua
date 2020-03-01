@@ -100,7 +100,11 @@ function gmod.reenableModules()
     sendGMCP("Core.Supports.Add " .. yajl.to_string(list))
   end
 end
-registerAnonymousEventHandler("sysConnectionEvent", "gmod.reenableModules")
+registerAnonymousEventHandler("sysProtocolEnabled", function(_, protocol)
+  if protocol == "GMCP" then
+    gmod.reenableModules()
+  end
+end)
 
 -- Remove a user from a module's user list. Disable the module if nobody is using it.
 function disableModule(user, module)
