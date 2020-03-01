@@ -2325,7 +2325,7 @@ bool TConsole::setLabelToolTip(const QString& name, const QString& text, double 
     if (pL) {
         duration = duration * 1000;
         pL->setToolTip(text);
-        pL->setToolTipDuration((int)duration);
+        pL->setToolTipDuration(duration);
         return true;
     } else {
         return false;
