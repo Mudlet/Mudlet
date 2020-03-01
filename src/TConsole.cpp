@@ -2319,17 +2319,22 @@ std::pair<bool, QString> TConsole::deleteLabel(const QString& name)
     return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
 }
 
-bool TConsole::setLabelToolTip(const QString& name, const QString& text, double duration)
+std::pair<bool, QString> TConsole::setLabelToolTip(const QString& name, const QString& text, double duration)
 {
+    if (name.isEmpty()) {
+        return {false, QLatin1String("a label cannot have an empty string as its name")};
+    }
+
     auto pL = mLabelMap.value(name);
     if (pL) {
         duration = duration * 1000;
         pL->setToolTip(text);
         pL->setToolTipDuration(duration);
-        return true;
-    } else {
-        return false;
+        return {true, QString()};
     }
+
+    // Message is of the form needed for a Lua API function call run-time error
+    return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
 }
 
 void TConsole::createMapper(const QString& windowname, int x, int y, int width, int height)

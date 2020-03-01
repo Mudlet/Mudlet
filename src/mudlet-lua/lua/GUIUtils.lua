@@ -1800,3 +1800,7 @@ end
 function hreplace(window, text)
   xReplace(window, text, 'h')
 end
+
+function resetLabelToolTip(label)
+  return setLabelToolTip(label, "")
+end

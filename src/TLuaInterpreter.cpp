@@ -3747,7 +3747,13 @@ int TLuaInterpreter::setLabelToolTip(lua_State* L)
     double duration = lua_tonumber(L, 3);
     Host& host = getHostFromLua(L);
 
-    lua_pushboolean(L, host.mpConsole->setLabelToolTip(labelName, labelToolTip, duration));
+    if (auto [success, message] = host.mpConsole->setLabelToolTip(labelName, labelToolTip, duration); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
     return 1;
 }
 
