@@ -330,6 +330,7 @@ public:
     static int createMiniConsole(lua_State*);
     static int createLabel(lua_State*);
     static int deleteLabel(lua_State*);
+    static int setLabelToolTip(lua_State*);
     static int moveWindow(lua_State*);
     static int setTextFormat(lua_State*);
     static int setBackgroundImage(lua_State*);

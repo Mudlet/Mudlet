@@ -2319,6 +2319,19 @@ std::pair<bool, QString> TConsole::deleteLabel(const QString& name)
     return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
 }
 
+bool TConsole::setLabelToolTip(const QString& name, const QString& text, double duration)
+{
+    auto pL = mLabelMap.value(name);
+    if (pL) {
+        duration = duration * 1000;
+        pL->setToolTip(text);
+        pL->setToolTipDuration((int)duration);
+        return true;
+    } else {
+        return false;
+    }
+}
+
 void TConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
 {
     auto pW = mDockWidgetMap.value(windowname);
