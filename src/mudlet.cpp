@@ -5653,7 +5653,7 @@ void mudlet::applyAppStyleSheet()
     // profiles loaded later BEFORE earlier loaded one so that priority in
     // styling a widget is given to the styling from the earliest profile loaded
     // that does it.
-    for (auto& hostName: mHostManager.getHostList()) {
+    for (auto& hostName : mHostManager.getHostList()) {
         auto host = mHostManager.getHost(hostName);
         const QString& profileAppStyleSheet = host->getProfileAppStyleSheet();
         if (!profileAppStyleSheet.isEmpty()) {
