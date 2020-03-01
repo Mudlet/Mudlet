@@ -19,7 +19,7 @@ CheckAndInstallMingwGet
 CheckAndInstallMsys
 CheckAndInstallBoost
 
-# Switch to another Qt version w/o waiting for an AppVeyor update
+# Switch to another Qt version w/o waiting for an AppVeyor update. Make sure update QT_BASE_DIR in .appveyor.yml
 # iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/build-images/master/scripts/Windows/install_qt_module.ps1'))
 # Install-QtComponent -Version '5.14.1' -Name 'win32_mingw73' -ExcludeDocs -ExcludeExamples
 # ConfigureQtVersion 'C:\Qt' '5.14.1'
