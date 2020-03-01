@@ -117,6 +117,22 @@ function Geyser.Gauge:disableClickthrough()
     self.text:disableClickthrough()
 end
 
+--- Sets the tooltip of the gauge
+-- @param txt the tooltip txt
+-- @param duration the duration of the tooltip
+function Geyser.Gauge:setToolTip(txt, duration)
+  duration = duration or 0
+  self.front:setToolTip(txt, duration)
+  self.back:setToolTip(txt, duration)
+  self.text:setToolTip(txt, duration)
+end
+
+--- Resets the tooltip of the gauge
+function Geyser.Gauge:resetToolTip()
+  self.front:resetToolTip()
+  self.back:resetToolTip()
+  self.text:resetToolTip()
+end
 -- Save a reference to our parent constructor
 Geyser.Gauge.parent = Geyser.Container
 
