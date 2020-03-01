@@ -10,7 +10,7 @@ YAJL_PATH="$(pkg-config --variable=libdir yajl)"
 echo "Setting search path to $YAJL_PATH"
 luarocks install --local lua-yajl YAJL_LIBDIR="${YAJL_PATH}"
 
-if [ "${TRAVIS_EVENT_TYPE}" == "cron" ] && [ "${TRAVIS_OS_NAME}" = "linux" ] \
+if [ "${TRAVIS_EVENT_TYPE}" == "cron" ] \
   && [ "${CC}" = "gcc" ] && [ "${Q_OR_C_MAKE}" = "qmake" ]; then
   # download coverity tool only for linux cron qmake/gcc jobs
   mkdir coverity
