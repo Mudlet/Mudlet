@@ -3728,6 +3728,36 @@ int TLuaInterpreter::deleteLabel(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::setLabelToolTip(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setLabelToolTip: bad argument #1 type (label name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    if (!lua_isstring(L, 2)) {
+        lua_pushfstring(L, "setLabelToolTip: bad argument #2 type (text as string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+    if ((lua_gettop(L) > 2) && !lua_isnumber(L, 3)) {
+        lua_pushfstring(L, "setLabelToolTip: bad argument #3 type (duration as number expected, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
+    }
+
+    QString labelName{QString::fromUtf8(lua_tostring(L, 1))};
+    QString labelToolTip{QString::fromUtf8(lua_tostring(L, 2))};
+    double duration = lua_tonumber(L, 3);
+    Host& host = getHostFromLua(L);
+
+    if (auto [success, message] = host.mpConsole->setLabelToolTip(labelName, labelToolTip, duration); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMapper
 int TLuaInterpreter::createMapper(lua_State* L)
 {
@@ -15929,6 +15959,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "createMiniConsole", TLuaInterpreter::createMiniConsole);
     lua_register(pGlobalLua, "createLabel", TLuaInterpreter::createLabel);
     lua_register(pGlobalLua, "deleteLabel", TLuaInterpreter::deleteLabel);
+    lua_register(pGlobalLua, "setLabelToolTip", TLuaInterpreter::setLabelToolTip);
     lua_register(pGlobalLua, "raiseWindow", TLuaInterpreter::raiseWindow);
     lua_register(pGlobalLua, "lowerWindow", TLuaInterpreter::lowerWindow);
     lua_register(pGlobalLua, "hideWindow", TLuaInterpreter::hideUserWindow);
