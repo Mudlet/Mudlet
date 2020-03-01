@@ -14494,14 +14494,58 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         host.raiseEvent(event);
     }
     // auto-detect IRE composer
-    if (tokenList.size() == 3 && tokenList.at(0) == "IRE" && tokenList.at(1) == "Composer" && tokenList.at(2) == "Edit") {
-        QRegularExpression rx(QStringLiteral(R"lit(\{ "title": "(.*)", "text": "(.*)" \})lit"));
+    if (tokenList.size() == 3 && tokenList.at(0).toLower() == "ire" && tokenList.at(1).toLower() == "composer" && tokenList.at(2).toLower() == "edit") {
+        QRegularExpression rx(QStringLiteral(R"lit(\{ ?"title": ?"(.*)", ?"text": ?"(.*)" ?\})lit"));
         QRegularExpressionMatch match = rx.match(string_data);
 
         if (match.capturedStart() != -1) {
             QString title = match.captured(1);
             QString initialText = match.captured(2);
-            initialText.replace(QStringLiteral(R"(\n)"), QStringLiteral("\n"));
+            QRegularExpression codeRegex(QStringLiteral(R"lit(\\n|\\t|\\"|\\\\|\\u[0-9a-cA-C][0-9a-fA-F]{3}|\\u[dD][0-7][0-9a-fA-F]{2}|\\u[efEF][0-9a-fA-F]{3}|\\u[dD][89abAB][0-9a-fA-F]{2}\\u[dD][c-fC-F][0-9a-fA-F]{2})lit"));
+            // We are about to search for 8 escape code strings within the initial text that the game gave us, patterns are:
+            // \n  \t  \"  \\ - new line, tab, quote, backslash
+            // Then there are three patterns for \uXXXX where XXXX is a 4-digit hexadecimal value
+            //   Characters in ranges U+0000-U+D7FF and U+E000-U+FFFD are stored as a single unit.
+            //   0000-CFFF
+            //   D000-D7FF
+            //   D800-DFFF - are reserved for surrogate pairs; will not match a pattern
+            //   E000-FFFF - note that FFFE and FFFF match the pattern but are not valid, will skip those later
+            // Then one pattern for \uXXXX\uXXXX where each XXXX is a 4-digit hexadecimal value
+            //   These are 'surrogate pairs', (U+D800-U+DBFF) followed by (U+DC00-U+DFFF).
+            //   D800-DF00  DC00-DFFF
+            int j=0;
+            while((j = initialText.indexOf(codeRegex,j)) != -1){
+                uint u;
+                switch(initialText.at(j+1).unicode()){
+                    case 'n' : initialText.replace(j,2,'\n'); break;
+                    case 't' : initialText.replace(j,2,'\t'); break;
+                    case '\"' : initialText.replace(j,2,'\"'); break;
+                    case '\\' : initialText.replace(j,2,'\\'); break;
+                    case 'u': // handle lone code or pair of codes together
+                        u = initialText.midRef(j+2,4).toUShort(0,16);
+                        if(u > 0xFFFD){
+                            j += 5; // FFFE and FFFF are guaranteed to not be Unicode characters.  Skip it.
+                        }
+                        else if((u < 0xD800) || (0xDFFF < u)){
+                            // Characters in ranges U+0000-U+D7FF and U+E000-U+FFFD are stored as a single unit.
+                            initialText.replace(j,6,QChar(u));
+                        }
+                        else if((0xD7FF < u) && (u < 0xDC00)){
+                            // Non-BMP characters (range U+10000-U+10FFFF) are stored as "surrogate pairs".
+                            // A 'high' surrogate (U+D800-U+DBFF) followed by 'low' surrogate (U+DC00-U+DFFF).
+                            // Surrogates are always written in pairs, a lone one is invalid.
+                            // The regex above should ensure second code is DCxx-DFxx
+                            QChar code[2];
+                            code[0]=QChar(u);
+                            code[1]=QChar(initialText.midRef(j+8,4).toUShort(0,16));
+                            initialText.replace(j,12,code,2);
+                            j++; // in this case we are adding 2 code points for the character
+                        }
+                        // DC00-DFFF should be filtered out by the regex.
+                        break;
+                }
+                j++;
+            }
             Host& host = getHostFromLua(L);
             if (host.mTelnet.mpComposer) {
                 return;
