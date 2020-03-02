@@ -2543,7 +2543,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                      if (!mItalicBeforeBlink) {
                          mItalics = false;
                      }
-                     mItalicBeforeBlink = true;
+                     mItalicBeforeBlink = false;
                     break; // blink off
                 case 27:
                     mReverse = false;
