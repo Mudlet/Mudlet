@@ -168,6 +168,18 @@ end
 function Geyser.Label:setStyleSheet(css)
   setLabelStyleSheet(self.name, css)
 end
+--- Sets the tooltip of the label
+-- @param txt the tooltip txt
+-- @param duration the duration of the tooltip
+function Geyser.Label:setToolTip(txt, duration)
+  duration = duration or 0
+  setLabelToolTip(self.name, txt, duration)
+end
+
+--- Resets the tooltip of the label
+function Geyser.Label:resetToolTip()
+  resetLabelToolTip(self.name)
+end
 
 --- Returns the Geyser object associated with the label name
 -- @param label The name of the label to use
