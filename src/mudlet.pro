@@ -111,7 +111,7 @@ isEmpty( BUILD ) {
 # "-dev" for the development build
 # "-public-test-build" for the public test build
 # "" for the release build
-   BUILD = "-public-test-build"
+   BUILD = "-dev"
 }
 
 # Changing BUILD and VERSION values affects: ctelnet.cpp, main.cpp, mudlet.cpp

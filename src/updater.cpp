@@ -48,13 +48,6 @@ Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent)
 
     feed = new dblsqd::Feed(QStringLiteral("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"),
                             mudlet::scmIsPublicTestVersion ? QStringLiteral("public-test-build") : QStringLiteral("release"));
-
-    auto releasef619d69f = dblsqd::SemVer("4.4.0-public-test-build-pr3369-f619d69f");
-    auto releasedf8845f8 = dblsqd::SemVer("4.4.0-public-test-build-pr3369-df8845f8");
-    auto releaseb2017b76 = dblsqd::SemVer("4.4.0-public-test-build-pr3369-b2017b76");
-    qDebug() << "releasef619d69f" << "valid?" << releasef619d69f.isValid();
-    qDebug() << "releasedf8845f8" << "valid?" << releasedf8845f8.isValid();
-    qDebug() << "releaseb2017b76" << "valid?" << releaseb2017b76.isValid();
 }
 Updater::~Updater()
 {
@@ -200,12 +193,12 @@ void Updater::prepareSetupOnWindows(const QString& downloadedSetupName)
 void Updater::setupOnLinux()
 {
     QObject::connect(feed, &dblsqd::Feed::ready, this, [=]() {
-        qWarning() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available";
-        qWarning() << feed->getReleases().size() << "releases in total";
+        // embed build time so public test releases, which cannot be compared via semver, can be compared via datetime
+        QString buildDateTime = QString(__DATE__) + QString(__TIME__);
+        QDateTime date = QDateTime::fromString(buildDateTime.simplified(), "MMM d yyyyhh:mm:ss");
 
-        auto updates = feed->getUpdates();
-        auto releases = feed->getReleases();
-
+        auto currentRelease = dblsqd::Release(QCoreApplication::applicationVersion(), date);
+        qWarning() << "Checked for updates:" << feed->getUpdates(currentRelease).size() << "update(s) available";
     });
 
     // Setup to automatically download the new release when an update is
