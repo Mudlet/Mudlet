@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2016, 2020 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -19,6 +20,13 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "dlgRoomExits.h"
+
+
+#include "mudlet.h"
+#include "TArea.h"
+#include "TRoomDB.h"
+
 /*
  * Eventually these should be defined for whole application to force explicit
  * definition of all strings as:
@@ -31,15 +39,18 @@
 #define QT_NO_CAST_FROM_ASCII
 #define QT_NO_CAST_TO_ASCII
 
-#include "dlgRoomExits.h"
-
-
-#include "Host.h"
-#include "TArea.h"
-#include "TRoomDB.h"
-
-dlgRoomExits::dlgRoomExits(Host* pH, QWidget* pW) : QDialog(pW), mpHost(pH), mpEditItem(nullptr), pR(), mRoomID(), mEditColumn()
+dlgRoomExits::dlgRoomExits(Host* pH, QWidget* pW)
+: QDialog(pW)
+, mpHost(pH)
+, mpEditItem(nullptr)
+, pR()
+, mRoomID()
+, mEditColumn()
 {
+    // Enable this widget to get stylesheet styling targetting it specifically
+    // for the profile:
+    setProperty(mudlet::scmProperty_ProfileName, mpHost->getName());
+
     setupUi(this);
 }
 

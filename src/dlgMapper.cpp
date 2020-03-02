@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2016, 2019 by Stephen Lyons                        *
+ *   Copyright (C) 2015-2016, 2019-2020 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -24,7 +24,7 @@
 #include "dlgMapper.h"
 
 
-#include "Host.h"
+#include "mudlet.h"
 #include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
@@ -42,6 +42,10 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 , mpHost( pH )
 , mShowDefaultArea( true )
 {
+    // Enable this widget to get stylesheet styling targetting it specifically
+    // for the profile:
+    setProperty(mudlet::scmProperty_ProfileName, mpHost->getName());
+
     setupUi(this);
 
 #if defined(INCLUDE_3DMAPPER)

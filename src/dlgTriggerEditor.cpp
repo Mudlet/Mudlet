@@ -86,6 +86,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 , mSavingAs(false)
 , mAutosaveInterval{}
 {
+    // Enable this widget to get stylesheet styling targetting it specifically
+    // for the profile:
+    const QString& profileName{mpHost->getName()};
+    setProperty(mudlet::scmProperty_ProfileName, profileName);
+
     // init generated dialog
     setupUi(this);
 
@@ -187,6 +192,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     // main areas
     mpTriggersMainArea = new dlgTriggersMainArea(this);
+    // Enable this and other similar widgets to get stylesheet styling
+    // targetting it specifically for the profile:
+    mpTriggersMainArea->setProperty(mudlet::scmProperty_ProfileName, profileName);
+
     layoutColumn->addWidget(mpTriggersMainArea, 1);
     connect(mpTriggersMainArea->pushButtonFgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorizeTriggerSetFgColor);
     connect(mpTriggersMainArea->pushButtonBgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorizeTriggerSetBgColor);
@@ -195,23 +204,29 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpTriggersMainArea->toolButton_clearSoundFile, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_clearSoundFile);
 
     mpTimersMainArea = new dlgTimersMainArea(this);
+    mpTimersMainArea->setProperty(mudlet::scmProperty_ProfileName, profileName);
     layoutColumn->addWidget(mpTimersMainArea, 1);
 
     mpAliasMainArea = new dlgAliasMainArea(this);
+    mpAliasMainArea->setProperty(mudlet::scmProperty_ProfileName, profileName);
     layoutColumn->addWidget(mpAliasMainArea, 1);
 
     mpActionsMainArea = new dlgActionMainArea(this);
+    mpActionsMainArea->setProperty(mudlet::scmProperty_ProfileName, profileName);
     layoutColumn->addWidget(mpActionsMainArea, 1);
     connect(mpActionsMainArea->checkBox_action_button_isPushDown, &QCheckBox::stateChanged, this, &dlgTriggerEditor::slot_toggle_isPushDownButton);
 
     mpKeysMainArea = new dlgKeysMainArea(this);
+    mpKeysMainArea->setProperty(mudlet::scmProperty_ProfileName, profileName);
     layoutColumn->addWidget(mpKeysMainArea, 1);
     connect(mpKeysMainArea->pushButton_key_grabKey, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_key_grab);
 
     mpVarsMainArea = new dlgVarsMainArea(this);
+    mpVarsMainArea->setProperty(mudlet::scmProperty_ProfileName, profileName);
     layoutColumn->addWidget(mpVarsMainArea, 1);
 
     mpScriptsMainArea = new dlgScriptsMainArea(this);
+    mpScriptsMainArea->setProperty(mudlet::scmProperty_ProfileName, profileName);
     layoutColumn->addWidget(mpScriptsMainArea, 1);
 
     mIsScriptsMainAreaEditHandler = false;
@@ -221,6 +236,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     // source editor area
     mpSourceEditorArea = new dlgSourceEditorArea(this);
+    mpSourceEditorArea->setProperty(mudlet::scmProperty_ProfileName, profileName);
     splitter_right->addWidget(mpSourceEditorArea);
 
     // And the new edbee widget
@@ -274,8 +290,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     // option areas
     mpErrorConsole = new TConsole(mpHost, TConsole::ErrorConsole, this);
-    // Needed so that Application Stylesheets can target just a specific profile:
-    mpErrorConsole->setProperty(mudlet::scmProperty_ProfileName, mpHost->getName());
+    mpErrorConsole->setProperty(mudlet::scmProperty_ProfileName, profileName);
     mpErrorConsole->setWrapAt(100);
     mpErrorConsole->mUpperPane->slot_toggleTimeStamps(true);
     mpErrorConsole->mLowerPane->slot_toggleTimeStamps(true);
@@ -310,6 +325,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_triggers->setHost(mpHost);
     treeWidget_triggers->header()->hide();
     treeWidget_triggers->setContextMenuPolicy(Qt::ActionsContextMenu);
+    treeWidget_triggers->setProperty(mudlet::scmProperty_ProfileName, profileName);
     connect(treeWidget_triggers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
 
     treeWidget_aliases->hide();
@@ -319,6 +335,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_aliases->header()->hide();
     treeWidget_aliases->setRootIsDecorated(false);
     treeWidget_aliases->setContextMenuPolicy(Qt::ActionsContextMenu);
+    treeWidget_aliases->setProperty(mudlet::scmProperty_ProfileName, profileName);
     connect(treeWidget_aliases, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
 
     treeWidget_actions->hide();
@@ -328,6 +345,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_actions->header()->hide();
     treeWidget_actions->setRootIsDecorated(false);
     treeWidget_actions->setContextMenuPolicy(Qt::ActionsContextMenu);
+    treeWidget_actions->setProperty(mudlet::scmProperty_ProfileName, profileName);
     connect(treeWidget_actions, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
 
     treeWidget_timers->hide();
@@ -337,6 +355,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_timers->header()->hide();
     treeWidget_timers->setRootIsDecorated(false);
     treeWidget_timers->setContextMenuPolicy(Qt::ActionsContextMenu);
+    treeWidget_timers->setProperty(mudlet::scmProperty_ProfileName, profileName);
     connect(treeWidget_timers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
 
     treeWidget_variables->hide();
@@ -347,6 +366,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_variables->header()->hide();
     treeWidget_variables->setRootIsDecorated(false);
     treeWidget_variables->setContextMenuPolicy(Qt::ActionsContextMenu);
+    treeWidget_variables->setProperty(mudlet::scmProperty_ProfileName, profileName);
     connect(treeWidget_variables, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
 
     treeWidget_keys->hide();
@@ -356,6 +376,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_keys->header()->hide();
     treeWidget_keys->setRootIsDecorated(false);
     treeWidget_keys->setContextMenuPolicy(Qt::ActionsContextMenu);
+    treeWidget_keys->setProperty(mudlet::scmProperty_ProfileName, profileName);
     connect(treeWidget_keys, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
 
     treeWidget_scripts->hide();
@@ -365,6 +386,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_scripts->header()->hide();
     treeWidget_scripts->setRootIsDecorated(false);
     treeWidget_scripts->setContextMenuPolicy(Qt::ActionsContextMenu);
+    treeWidget_scripts->setProperty(mudlet::scmProperty_ProfileName, profileName);
     connect(treeWidget_scripts, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
 
     QAction* viewTriggerAction = new QAction(QIcon(QStringLiteral(":/icons/tools-wizard.png")), tr("Triggers"), this);
@@ -667,6 +689,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
               << tr("Where", "Heading for the third column of the search results")
               << tr("What", "Heading for the fourth column of the search results");
     treeWidget_searchResults->setHeaderLabels(labelList);
+    treeWidget_searchResults->setProperty(mudlet::scmProperty_ProfileName, profileName);
 
     slot_showSearchAreaResults(false);
 
@@ -721,6 +744,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     for (int i = 0; i < 50; i++) {
         auto pItem = new dlgTriggerPatternEdit(HpatternList);
+        pItem->setProperty(mudlet::scmProperty_ProfileName, profileName);
         QComboBox* pBox = pItem->comboBox_patternType;
         pBox->addItems(patternList);
         pBox->setItemData(0, QVariant(i));

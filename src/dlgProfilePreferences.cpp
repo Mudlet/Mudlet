@@ -58,6 +58,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 , mpMenu(nullptr)
 , mUseSharedDictionary(false)
 {
+    // Enable this widget to get stylesheet styling targetting it specifically
+    // for the profile:
+    setProperty(mudlet::scmProperty_ProfileName, mpHost->getName());
+
     // init generated dialog
     setupUi(this);
 

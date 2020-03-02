@@ -47,6 +47,10 @@ TCommandLine::TCommandLine(Host* pHost, TConsole* pConsole, QWidget* parent)
 , mpSystemSuggestionsList()
 , mpUserSuggestionsList()
 {
+    // Enable this widget to get stylesheet styling targetting it specifically
+    // for the profile:
+    setProperty(mudlet::scmProperty_ProfileName, mpHost->getName());
+
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
 

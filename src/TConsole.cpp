@@ -187,6 +187,10 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layout()->setMargin(0);
     setContentsMargins(0, 0, 0, 0);
 
+    if (mpHost) {
+        mpScrollBar->setProperty(mudlet::scmProperty_ProfileName, mProfileName);
+    }
+
     auto topBarLayout = new QHBoxLayout;
     mpTopToolBar->setLayout(topBarLayout);
     mpTopToolBar->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed));
@@ -354,6 +358,9 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpButtonMainLayer->setObjectName(QStringLiteral("mpButtonMainLayer"));
     mpButtonMainLayer->setSizePolicy(sizePolicy);
     mpButtonMainLayer->setContentsMargins(0, 0, 0, 0);
+    if (mpHost) {
+        mpButtonMainLayer->setProperty(mudlet::scmProperty_ProfileName, mProfileName);
+    }
     auto layoutButtonMainLayer = new QVBoxLayout(mpButtonMainLayer);
     layoutButtonMainLayer->setObjectName(QStringLiteral("layoutButtonMainLayer"));
     layoutButtonMainLayer->setMargin(0);
@@ -361,9 +368,13 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     layoutButtonMainLayer->setSpacing(0);
     /*mpButtonMainLayer->setMinimumHeight(31);
-           mpButtonMainLayer->setMaximumHeight(31);*/
+      mpButtonMainLayer->setMaximumHeight(31);*/
     auto buttonLayer = new QWidget;
     buttonLayer->setObjectName(QStringLiteral("buttonLayer"));
+    if (mpHost) {
+        buttonLayer->setProperty(mudlet::scmProperty_ProfileName, mProfileName);
+    }
+
     auto layoutButtonLayer = new QGridLayout(buttonLayer);
     layoutButtonLayer->setObjectName(QStringLiteral("layoutButtonLayer"));
     layoutButtonLayer->setMargin(0);

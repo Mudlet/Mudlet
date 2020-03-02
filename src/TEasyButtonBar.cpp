@@ -22,7 +22,7 @@
 
 #include "TEasyButtonBar.h"
 
-#include "Host.h"
+#include "mudlet.h"
 #include "TAction.h"
 #include "TConsole.h"
 #include "TFlipButton.h"
@@ -190,6 +190,10 @@ void TEasyButtonBar::slot_pressed(const bool isChecked)
 void TEasyButtonBar::clear()
 {
     auto pW = new QWidget;
+    QString profileName;
+    if (mpTAction->mpHost) {
+        profileName = mpTAction->mpHost->getName();
+    }
     for (auto& flipButton : mButtonList) {
         disconnect(flipButton, &QAbstractButton::clicked, this, &TEasyButtonBar::slot_pressed);
     }
@@ -200,6 +204,9 @@ void TEasyButtonBar::clear()
     mpWidget->deleteLater();
     mpWidget = pW;
     mpWidget->setObjectName(widgetObjectName);
+    if (!profileName.isEmpty()) {
+        mpWidget->setProperty(mudlet::scmProperty_ProfileName, profileName);
+    }
 
     if (!mpTAction->mUseCustomLayout) {
         mpLayout = new QGridLayout;
