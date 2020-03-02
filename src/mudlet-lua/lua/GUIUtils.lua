@@ -387,8 +387,6 @@ end
 function setGaugeToolTip(gaugeName, text, duration)
   duration = duration or 0
   assert(gaugesTable[gaugeName], "setGaugeToolTip: no such gauge exists.")
-  setLabelToolTip(gaugeName .. "_back", text, duration)
-  setLabelToolTip(gaugeName .. "_front", text, duration)
   setLabelToolTip(gaugeName .. "_text", text, duration)
 end
 
@@ -396,8 +394,6 @@ end
 --- @param gaugeName
 function resetGaugeToolTip(gaugeName)
   assert(gaugesTable[gaugeName], "resetGaugeToolTip: no such gauge exists.")
-  resetLabelToolTip(gaugeName .. "_back")
-  resetLabelToolTip(gaugeName .. "_front")
   resetLabelToolTip(gaugeName .. "_text")
 end
 
