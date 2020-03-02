@@ -27,43 +27,32 @@ Geyser.Label.numChildren = 0
 function Geyser.Label:echo(message, color, format)
   message = message or self.message
   self.message = message
-  format = format or self.format
-  self.format = format
   color = color or self.fgColor
   self.fgColor = color
+  if format then self:processFormatString(format) end
 
-  local fs = ""
-  local alignment = ""
-  -- check for formatting commands
-  if format then
-    if string.find(format, "b") then
-      message = "<b>" .. message .. "</b>"
-    end
-    if string.find(format, "i") then
-      message = "<i>" .. message .. "</i>"
-    end
-    if string.find(format, "c") then
-      alignment = "center"
-    elseif string.find(format, "l") then
-      alignment = "left"
-    elseif string.find(format, "r") then
-      alignment = "right"
-    end
-    if alignment ~= "" then
-      alignment = string.format([[align="%s" ]], alignment)
-    end
-    if string.find(format, "u") then
-      message = "<u>" .. message .. "</u>"
-    end
-    if string.find(format, 's') then
-      message = "<s>" .. message .. "</s>"
-    end
-    fs = string.gmatch(format, "%d+")()
-    if not fs then
-      fs = tostring(self.fontSize)
-    end
-    fs = "font-size: " .. fs .. "pt; "
+  local ft = self.formatTable
+  local fs = ft.fontSize
+  local alignment = ft.alignment
+  if alignment ~= "" then
+    alignment = string.format([[align="%s" ]], alignment)
   end
+  if ft.bold then
+    message = "<b>" .. message .. "</b>"
+  end
+  if ft.italics then
+    message = "<i>" .. message .. "</i>"
+  end
+  if ft.underline then
+    message = "<u>" .. message .. "</u>"
+  end
+  if ft.strikethrough then
+    message = "<s>" .. message .. "</s>"
+  end
+  if not fs then
+    fs = tostring(self.fontSize)
+  end
+  fs = "font-size: " .. fs .. "pt; "
   message = [[<div ]] .. alignment .. [[ style="color: ]] .. Geyser.Color.hex(self.fgColor) .. "; " .. fs ..
   [[">]] .. message .. [[</div>]]
   echo(self.name, message)
@@ -77,7 +66,133 @@ function Geyser.Label:setFormat(format)
   self:echo(nil, nil, format)
 end
 
+
+-- Internal function used for processing format strings.
+function Geyser.Label:processFormatString(format)
+  local formatType = type(format)
+  assert(formatType == "string", "format as string expected, got " .. formatType)
+  self.format = format
+  self.formatTable = {}
+  self.formatTable.bold = format:find("b") and true or false
+  self.formatTable.italics = format:find("i") and true or false
+  self.formatTable.underline = format:find("u") and true or false
+  self.formatTable.strikethrough = format:find("s") and true or false
+  local fs = format:gmatch("%d+")()
+  if not fs then
+    fs = self.fontSize
+    self.format = self.format .. self.fontSize
+  end
+  self.formatTable.fontSize = fs
+  self.fontSize = fs
+  if format:find("c") then
+    self.formatTable.alignment = "center"
+  elseif format:find("l") then
+    self.formatTable.alignment = "left"
+  elseif format:find("r") then
+    self.formatTable.alignment = "right"
+  else
+    self.formatTable.alignment = ""
+  end
+end
+
+--- Set whether or not the text in the label should be bold
+-- @param bool True for bold
+function Geyser.Label:setBold(bool)
+  if bool then
+    self.formatTable.bold = true
+    if not self.format:find("b") then self.format = self.format .. "b" end
+  else
+    self.formatTable.bold = false
+    if self.format:find("b") then self.format = self.format:gsub("b", "") end
+  end
+  self:echo()
+end
+
+--- Set whether or not the text in the label should be underline
+-- @param bool True for underline
+function Geyser.Label:setUnderline(bool)
+  if bool then
+    self.formatTable.underline = true
+    if not self.format:find("u") then self.format = self.format .. "u" end
+  else
+    self.formatTable.underline = false
+    if self.format:find("u") then self.format = self.format:gsub("u", "") end
+  end
+  self:echo()
+end
+
+--- Set whether or not the text in the label should be italics
+-- @param bool True for italics
+function Geyser.Label:setItalics(bool)
+  if bool then
+    self.formatTable.italics = true
+    if not self.format:find("i") then self.format = self.format .. "i" end
+  else
+    self.formatTable.italics = false
+    if self.format:find("i") then self.format = self.format:gsub("i", "") end
+  end
+  self:echo()
+end
+
+--- Set whether or not the text in the label should be strikethrough
+-- @param bool True for strikethrough
+function Geyser.Label:setStrikethrough(bool)
+  if bool then
+    self.formatTable.strikethrough = true
+    if not self.format:find("s") then self.format = self.format .. "s" end
+  else
+    self.formatTable.strikethrough = false
+    if self.format:find("s") then self.format = self.format:gsub("s", "") end
+  end
+  self:echo()
+end
+
+--- Set the font size for the label to use
+-- @param fontSize the font size to use for the label. Should be a number
+function Geyser.Label:setFontSize(fontSize)
+  local fontSizeType = type(fontSize)
+  fontSize = tonumber(fontSize)
+  assert(fontSize, "fontSize as number expected, got " .. fontSizeType)
+  self.fontSize = fontSize
+  self.formatTable.fontSize = fontSize
+  self.format = self.format:gsub("%d", "")
+  self.format = self.format .. fontSize
+  self:echo()
+end
+
+--- Sets the alignment for the label
+-- @param alignment Valid alignments are 'c', 'center', 'l', 'left', 'r', 'right', or '' to not include the alignment as part of the echo
+function Geyser.Label:setAlignment(alignment)
+  local alignmentType = type(alignment)
+  assert(alignmentType == "string", "alignment as string expected, got " .. alignmentType)
+  local acceptedAlignments = {"c", "center", "l", "left", "r", "right", ""}
+  assert(table.contains(acceptedAlignments, alignment), "invalid alignment sent. Valid alignments are 'c', 'center', 'l', 'left', 'r', 'right', or ''")
+  if alignment:find('c') then
+    self.formatTable.alignment = 'center'
+    self.format = self.format .. "c"
+    self.format = self.format:gsub("l", "")
+    self.format = self.format:gsub("r", "")
+  elseif alignment:find('l') then
+    self.formatTable.alignment = 'left'
+    self.format = self.format:gsub("c", "")
+    self.format = self.format .. "l"
+    self.format = self.format:gsub("r", "")
+  elseif alignment:find('r') then
+    self.formatTable.alignment = 'right'
+    self.format = self.format:gsub("c", "")
+    self.format = self.format:gsub("l", "")
+    self.format = self.format .. "r"
+  else
+    self.formatTable.alignment = ""
+    self.format = self.format:gsub("c", "")
+    self.format = self.format:gsub("l", "")
+    self.format = self.format:gsub("r", "")
+  end
+  self:echo()
+end
+
 function Geyser.Label:clear()
+  self.message = ""
   echo(self.name, "")
 end
 
@@ -468,6 +583,7 @@ function Geyser.Label:new (cons, container)
   cons = cons or {}
   cons.type = cons.type or "label"
   cons.nestParent = cons.nestParent or nil
+  cons.format = cons.format or ""
 
   -- Call parent's constructor
   local me = self.parent:new(cons, container)
@@ -479,6 +595,9 @@ function Geyser.Label:new (cons, container)
   -- Create the label using primitives
   createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
   me:get_width(), me:get_height(), me.fillBg)
+
+  -- parse any given format string and set sensible defaults
+  me:processFormatString(cons.format)
 
   -- Set any defined colors
   Geyser.Color.applyColors(me)
