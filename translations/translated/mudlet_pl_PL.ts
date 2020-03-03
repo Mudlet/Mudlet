@@ -912,7 +912,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2944"/>
       <source>Move</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>Przenieś</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2945"/>
@@ -984,13 +984,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3004"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)</comment>
-      <translation type="unfinished"/>
+      <translation>Właściwości</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3008"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise</comment>
-      <translation type="unfinished"/>
+      <translation>właściwości...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3012"/>
@@ -1255,7 +1255,7 @@ rooms:</source>
       <location filename="../src/TBuffer.cpp" line="266"/>
       <source>ISO 8859-13 (Baltic)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-13 (kraje bałtyckie/Baltic)</translation>
     </message>
     <message>
       <location filename="../src/TBuffer.cpp" line="285"/>
@@ -7573,7 +7573,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="126"/>
       <source>About</source>
-      <translation type="unfinished"/>
+      <translation>O programie</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="134"/>
@@ -10692,7 +10692,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2288"/>
       <source>Background color:</source>
-      <translation type="unfinished"/>
+      <translation>Kolor tła:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2601"/>
