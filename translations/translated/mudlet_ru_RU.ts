@@ -9918,7 +9918,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="342"/>
       <source>Save log files in HTML format instead of plain text</source>
-      <translation>Сохранить лог-файлы в формате HTML вместо обычного текста</translation>
+      <translation>Сохранять лог-файлы в формате HTML вместо простого текста</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="349"/>

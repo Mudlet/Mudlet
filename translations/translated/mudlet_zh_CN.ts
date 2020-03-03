@@ -5556,12 +5556,12 @@ Count</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="339"/>
       <source>Migrated %1...</source>
       <comment>This notifies the user that progress is being made on profile migration by saying what profile was just migrated to store passwords securely</comment>
-      <translation type="unfinished"/>
+      <translation>已迁移 %1...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="343"/>
       <source>Migrated all passwords to profile storage.</source>
-      <translation type="unfinished"/>
+      <translation>将所有密码迁移到配置文件存储。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="723"/>
@@ -5693,12 +5693,12 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2019"/>
       <source>Migrating passwords to secure storage...</source>
-      <translation type="unfinished"/>
+      <translation>正在将密码迁移到安全存储器...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2026"/>
       <source>Migrating passwords to profiles...</source>
-      <translation type="unfinished"/>
+      <translation>正在将密码迁移到概要文件...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2058"/>
@@ -5871,7 +5871,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="589"/>
       <source>&lt;p&gt;From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;来自字典文件 &lt;tt&gt;%1.dic&lt;/tt&gt; (及其相关的文件 &lt;tt&gt;.aff&lt;/tt&gt; 文件)。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="591"/>
@@ -6062,7 +6062,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1919"/>
       <source>&lt;b&gt;Room&lt;/b&gt; Weight of destination: %1.</source>
       <comment>Bold HTML tags are used to emphasis that the value is destination room&apos;s weight whether overridden by a non-zero exit weight here or not.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;房间&lt;/b&gt; 目的地权重： %1。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="147"/>
@@ -6086,24 +6086,24 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="156"/>
       <source>Entered number is invalid, set the number of the room that this special exit leads to, will turn blue for a valid number; if left like this, this exit will be deleted when &amp;lt;i&amp;gt;save&amp;lt;/i&amp;gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>输入的数字无效，设置出口将要指向的房间编号, 某该出效有效, 则会显示蓝色; 如果该输入的房间编号无效, 那么将在 &amp;lt;i&amp;gt;保存&amp;lt;/i&amp;gt时删除此出口。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="220"/>
       <source>Set the number of the room that this special exit leads to, will turn blue for a valid number; if left like this, this exit will be deleted when &amp;lt;i&amp;gt;save&amp;lt;/i&amp;gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>设置出口将要指向的房间编号, 某该出效有效, 则会显示蓝色; 如果该输入的房间编号无效, 那么将在 &amp;lt;i&amp;gt;保存&amp;lt;/i&amp;gt时删除此出口。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="223"/>
       <location filename="../src/dlgRoomExits.cpp" line="1939"/>
       <source>Prevent a route being created via this exit, equivalent to an infinite exit weight.</source>
-      <translation type="unfinished"/>
+      <translation>禁止通过此出口创建的路由，这会创建一个死循环出口权重。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="229"/>
       <location filename="../src/dlgRoomExits.cpp" line="1950"/>
       <source>Set to a positive value to override the default (Room) Weight for using this Exit route, zero value assigns the default.</source>
-      <translation type="unfinished"/>
+      <translation>此出口路径时, 需设置一个非负值以覆盖缺省 (房间) 权重，设为 0 时指定为缺省值。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="231"/>
