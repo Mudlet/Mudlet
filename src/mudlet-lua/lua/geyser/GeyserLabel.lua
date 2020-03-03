@@ -104,13 +104,12 @@ end
 function Geyser.Label:setFont(font)
   local af = getAvailableFonts()
   if not (af[font] or font == "") then
-    local err = "attempt to call setFont with font '" .. font .. "' which is not available, see getAvailableFonts() for valid options\nFont left as " .. self.font .. " in the meantime"
+    local err = "attempt to call setFont with font '" .. font .. "' which is not available, see getAvailableFonts() for valid options\n"
+    err = err .. "In the meantime, Qt will use some font which isn't the one you asked for but we hope is close enough"
     debugc(err)
-    return nil, err
   end
   self.font = font
   self:echo()
-  return true
 end
 
 --- Set whether or not the text in the label should be bold
