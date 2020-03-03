@@ -106,14 +106,15 @@ function Geyser.Color.parse(red, green, blue, alpha)
         next_num = string.gmatch(red, "%d+")
 
         -- fourth case is a named string
-      elseif color_table[red] then
+      elseif Geyser.Color.find_color_name(red) then
+        local col = Geyser.Color.find_color_name(red)
         local i = 0
-        local n = #color_table[red]
+        local n = #color_table[col]
         next_num = function()
           -- create a simple iterator
           i = i + 1
           if i <= n then
-            return color_table[red][i]
+            return color_table[col][i]
           else return nil
           end
         end
@@ -146,6 +147,22 @@ function Geyser.Color.parse(red, green, blue, alpha)
   end
   assign_colors()
   return r, g, b, a
+end
+
+--- Searches for a close match to 'color' in the color_table
+-- @param color the color name you're trying to find
+function Geyser.Color.find_color_name(color)
+  if type(color) ~= string then
+    return false
+  end
+  color = color:lower()
+  color = color:gsub("_", "")
+  for color_name,_ in pairs(color_table) do
+    if color_name:lower() == color then
+      return color_name
+    end
+  end
+  return false
 end
 
 --- Applies colors to a window drawing from defaults and overridden values.
