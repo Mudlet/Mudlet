@@ -183,7 +183,7 @@ Lütfen bekleyin...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="308"/>
       <source>[%1] %2</source>
-      <translation type="unfinished"/>
+      <translation>[%1] %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="320"/>
@@ -203,7 +203,7 @@ Lütfen bekleyin...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="344"/>
       <source>* %1 %2</source>
-      <translation type="unfinished"/>
+      <translation>* %1 %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="350"/>
@@ -228,7 +228,7 @@ Lütfen bekleyin...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="375"/>
       <source>[TOPIC] %1</source>
-      <translation type="unfinished"/>
+      <translation>[TOPIC] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="379"/>
@@ -415,7 +415,7 @@ Lütfen bekleyin...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="462"/>
       <source> (%1)</source>
-      <translation type="unfinished"/>
+      <translation> (%1)</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="399"/>
@@ -927,7 +927,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2947"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>Sil</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2948"/>
@@ -1627,7 +1627,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="12630"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>%1 oynuyor</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15027"/>
@@ -2308,7 +2308,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1328"/>
       <source>%1 {none}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {none}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1331"/>
@@ -2328,7 +2328,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1340"/>
       <source>%1 {invalid}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {invalid}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1344"/>
@@ -3132,19 +3132,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1854"/>
       <source>{variation selector 2}</source>
       <comment>Unicode U+FE01 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1855"/>
       <source>{variation selector 3}</source>
       <comment>Unicode U+FE02 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1856"/>
       <source>{variation selector 4}</source>
       <comment>Unicode U+FE03 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1857"/>
@@ -3264,19 +3264,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1901"/>
       <source>{FitzPatrick modifier 1 or 2}</source>
       <comment>Unicode codepoint U+0001F3FB - FitzPatrick modifier (Emoji Human skin-tone) 1-2.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 1 or 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1902"/>
       <source>{FitzPatrick modifier 3}</source>
       <comment>Unicode codepoint U+0001F3FC - FitzPatrick modifier (Emoji Human skin-tone) 3.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1903"/>
       <source>{FitzPatrick modifier 4}</source>
       <comment>Unicode codepoint U+0001F3FD - FitzPatrick modifier (Emoji Human skin-tone) 4.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1904"/>
@@ -4345,7 +4345,7 @@ Eğer eminseniz, doğrulamak için lütfen profil adını yazınız:</translatio
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="54"/>
       <source>Delete</source>
-      <translation type="unfinished"/>
+      <translation>Sil</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="61"/>
@@ -4401,7 +4401,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16498"/>
       <source>n</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>k</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16500"/>
@@ -4413,7 +4413,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16502"/>
       <source>e</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>d</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16504"/>
@@ -4425,73 +4425,73 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16506"/>
       <source>s</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>g</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16508"/>
       <source>west</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>batı</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16510"/>
       <source>w</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>b</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16512"/>
       <source>northeast</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>kuzeydoğu</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16514"/>
       <source>ne</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>kd</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16516"/>
       <source>southeast</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>güneydoğu</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16518"/>
       <source>se</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>gd</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16520"/>
       <source>southwest</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>güneybatı</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16522"/>
       <source>sw</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>gb</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16524"/>
       <source>northwest</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>kuzeybatı</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16526"/>
       <source>nw</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>kb</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16528"/>
       <source>in</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>i</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16530"/>
@@ -4503,7 +4503,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16532"/>
       <source>out</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>d</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16534"/>
@@ -4515,7 +4515,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16536"/>
       <source>up</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>y</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16538"/>
@@ -4527,7 +4527,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16540"/>
       <source>down</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>a</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16542"/>
@@ -4932,7 +4932,7 @@ Count</source>
       <location filename="../src/dlgColorTrigger.cpp" line="218"/>
       <source>%1 [%2]</source>
       <comment>Color Trigger dialog button in basic 16-color set, the first value is the name of the color, the second is the ANSI color number - for most languages modification is not likely to be needed - this text is used in two places</comment>
-      <translation type="unfinished"/>
+      <translation>%1 [%2]</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="405"/>
@@ -6202,7 +6202,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1746"/>
       <source>up</source>
-      <translation type="unfinished"/>
+      <translation>y</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1747"/>
@@ -6217,7 +6217,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1749"/>
       <source>down</source>
-      <translation type="unfinished"/>
+      <translation>a</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1750"/>
@@ -6237,12 +6237,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1753"/>
       <source>in</source>
-      <translation type="unfinished"/>
+      <translation>i</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1754"/>
       <source>out</source>
-      <translation type="unfinished"/>
+      <translation>d</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1832"/>
@@ -6543,7 +6543,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="664"/>
       <source>Name</source>
       <comment>Heading for the second column of the search results</comment>
-      <translation type="unfinished"/>
+      <translation>İsim</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="665"/>
@@ -7143,7 +7143,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2326"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2400"/>
       <source>Name</source>
-      <translation type="unfinished"/>
+      <translation>İsim</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1394"/>
@@ -7408,7 +7408,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>İsim:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
@@ -7838,7 +7838,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/mapper.ui" line="537"/>
       <source>Area:</source>
-      <translation type="unfinished"/>
+      <translation>Bölge:</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="606"/>
@@ -7848,7 +7848,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/mapper.ui" line="635"/>
       <source>Exits</source>
-      <translation type="unfinished"/>
+      <translation>Çıkışlar</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="664"/>
@@ -9895,12 +9895,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1352"/>
       <source>Foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Ön plan:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1375"/>
       <source>Background:</source>
-      <translation type="unfinished"/>
+      <translation>Arkaplan:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1395"/>
@@ -10696,7 +10696,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2288"/>
       <source>Background color:</source>
-      <translation type="unfinished"/>
+      <translation>Arkaplan rengi:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2601"/>
@@ -10984,7 +10984,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="790"/>
       <source>Weight:</source>
-      <translation type="unfinished"/>
+      <translation>Ağırlık:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="866"/>
@@ -11389,7 +11389,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>İsim:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="40"/>
@@ -11453,7 +11453,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="29"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>İsim:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="69"/>
@@ -11592,7 +11592,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="65"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>İsim:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="85"/>
@@ -11681,12 +11681,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="672"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Arkaplan</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="659"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Ön plan</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="479"/>
@@ -11758,7 +11758,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="109"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>İsim:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="175"/>
