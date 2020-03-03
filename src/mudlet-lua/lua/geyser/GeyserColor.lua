@@ -150,9 +150,10 @@ function Geyser.Color.parse(red, green, blue, alpha)
 end
 
 --- Searches for a close match to 'color' in the color_table
+--  Returns the color found, or false if it can't find one
 -- @param color the color name you're trying to find
 function Geyser.Color.find_color_name(color)
-  if type(color) ~= string then
+  if type(color) ~= "string" then
     return false
   end
   color = color:lower()
