@@ -13,6 +13,7 @@
 Geyser.Label = Geyser.Window:new({
   name = "LabelClass",
   format = "",
+  font = "",
   args = "",
   fillBg = 1, })
 Geyser.Label.currentLabel = nil
@@ -48,6 +49,9 @@ function Geyser.Label:echo(message, color, format)
   end
   if ft.strikethrough then
     message = "<s>" .. message .. "</s>"
+  end
+  if self.font and self.font ~= "" then
+    message = string.format('<font face ="%s">%s</font>', self.font, message)
   end
   if not fs then
     fs = tostring(self.fontSize)
@@ -93,6 +97,15 @@ function Geyser.Label:processFormatString(format)
   else
     self.formatTable.alignment = ""
   end
+end
+
+--- Sets the font face for the label, use empty string to clear the font and use css/default
+-- @param font font face to use
+function Geyser.Label:setFont(font)
+  local af = getAvailableFonts()
+  assert(af[font] or font == "", "attempt to call setFont with font '" .. font .. "' which is not available, see getAvailableFonts() for valid options")
+  self.font = font
+  self:echo()
 end
 
 --- Set whether or not the text in the label should be bold
