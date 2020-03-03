@@ -3631,7 +3631,7 @@ int TLuaInterpreter::createLabel(lua_State* L)
 
     int x = 0;
     if (lua_type(L, ++s) != LUA_TNUMBER) {
-        if (!lua_type(L, s) != LUA_TSTRING) {
+        if (lua_type(L, s) != LUA_TSTRING) {
             lua_pushfstring(L, "createLabel: bad argument #%d type (label name as string or label x-coordinate as number expected, got %s!)", s, luaL_typename(L, s));
             return lua_error(L);
         }
