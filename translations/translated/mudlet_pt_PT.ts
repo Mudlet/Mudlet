@@ -3808,7 +3808,7 @@ Reason: </source>
       <location filename="../src/ctelnet.cpp" line="2103"/>
       <source>ERROR</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>ERRO</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2115"/>
@@ -7374,7 +7374,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/dlgVarsMainArea.cpp" line="83"/>
       <source>function</source>
-      <translation type="unfinished"/>
+      <translation>função</translation>
     </message>
   </context>
   <context>
@@ -10605,7 +10605,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="1975"/>
       <location filename="../src/ui/profile_preferences.ui" line="1979"/>
       <source># {default version}</source>
-      <translation type="unfinished"/>
+      <translation># {default version}</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1990"/>
@@ -11847,7 +11847,7 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="76"/>
       <source>function</source>
-      <translation type="unfinished"/>
+      <translation>função</translation>
     </message>
   </context>
 </TS>
