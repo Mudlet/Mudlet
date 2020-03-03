@@ -105,7 +105,7 @@ function Geyser.Label:setFont(font)
   local af = getAvailableFonts()
   if not (af[font] or font == "") then
     local err = "Geyser.Label:setFont(): attempt to call setFont with font '" .. font .. "' which is not available, see getAvailableFonts() for valid options\n"
-    err = err .. "In the meantime, we'll will use some font which isn't the one you asked for but we hope is close enough"
+    err = err .. "In the meantime, we will use a similar font which isn't the one you asked for but we hope is close enough"
     debugc(err)
   end
   self.font = font
