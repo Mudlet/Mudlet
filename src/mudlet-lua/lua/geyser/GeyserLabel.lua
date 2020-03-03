@@ -99,13 +99,18 @@ function Geyser.Label:processFormatString(format)
   end
 end
 
---- Sets the font face for the label, use empty string to clear the font and use css/default
+--- Sets the font face for the label, use empty string to clear the font and use css/default. Returns true if the font changed, nil+error if not.
 -- @param font font face to use
 function Geyser.Label:setFont(font)
   local af = getAvailableFonts()
-  assert(af[font] or font == "", "attempt to call setFont with font '" .. font .. "' which is not available, see getAvailableFonts() for valid options")
+  if not (af[font] or font == "") then
+    local err = "attempt to call setFont with font '" .. font .. "' which is not available, see getAvailableFonts() for valid options\nFont left as " .. self.font .. " in the meantime"
+    debugc(err)
+    return nil, err
+  end
   self.font = font
   self:echo()
+  return true
 end
 
 --- Set whether or not the text in the label should be bold
