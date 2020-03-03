@@ -3630,13 +3630,13 @@ int TLuaInterpreter::createLabel(lua_State* L)
     windowName = QString::fromUtf8(lua_tostring(L, s));
 
     int x = 0;
-    if (!lua_isnumber(L, ++s)) {
-        if (!lua_isstring(L, s)) {
+    if (lua_type(L, ++s) != LUA_TNUMBER) {
+        if (!lua_type(L, s) != LUA_TSTRING) {
             lua_pushfstring(L, "createLabel: bad argument #%d type (label name as string or label x-coordinate as number expected, got %s!)", s, luaL_typename(L, s));
             return lua_error(L);
         }
         // Second argument is a string so it is the label name and the first
-        // was a window name as we initially assumed
+        // was the window name as we initially assumed
         labelName = QString::fromUtf8(lua_tostring(L, s));
         haveWindowName = true;
 
@@ -3689,7 +3689,7 @@ int TLuaInterpreter::createLabel(lua_State* L)
         }
 
         height = lua_tonumber(L, s);
-    } else if ((++s) < n) {
+    } else if (++s <= n) {
         if (!(lua_isnumber(L, s)||lua_isboolean(L, s))) {
             lua_pushfstring(L, "createLabel: bad argument #%d type (label fillBackground as boolean/number (0/1) expected, got %s!)", s, luaL_typename(L, s));
             return lua_error(L);
