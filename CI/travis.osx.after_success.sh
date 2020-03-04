@@ -73,7 +73,14 @@ if [ "${DEPLOY}" = "deploy" ]; then
     # install dblsqd. NPM must be available here because we use it to install the tool that creates the dmg
     npm install -g dblsqd-cli
     dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
-    dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}"
+
+    if [[ $MUDLET_VERSION_BUILD == -public-test-build* ]] ; then
+      dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${VERSION,,}${MUDLET_VERSION_BUILD,,}"
+
+      dblsqd push -a mudlet -c public-test-build -r "${VERSION,,}${MUDLET_VERSION_BUILD,,}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}"
+    else
+      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}"
+    fi
   fi
 
   # delete keychain just in case
