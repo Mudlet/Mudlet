@@ -9256,7 +9256,7 @@ Avvio in corso... Buon divertimento!
     <message>
       <location filename="../src/mudlet.cpp" line="838"/>
       <source>Turkish</source>
-      <translation type="unfinished"/>
+      <translation>Turco</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="839"/>
@@ -10747,7 +10747,7 @@ tenta di nuovo quando sarà terminato.</translation>
       <location filename="../src/ui/profile_preferences.ui" line="2192"/>
       <location filename="../src/ui/profile_preferences.ui" line="2220"/>
       <source>%</source>
-      <translation type="unfinished"/>
+      <translation>%</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2195"/>
