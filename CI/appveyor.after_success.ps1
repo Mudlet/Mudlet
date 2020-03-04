@@ -47,7 +47,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Env:MUDLET_VERSION_BUILD.Sta
   Write-Output "=== Creating Nuget package ==="
   if ($Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build')) {
     # allow public test builds to be installed side by side with the release builds
-    (Get-Content C:\projects\installers\windows\mudlet.nuspec).replace('<id>Mudlet</id>', '<id>Mudlet.PublicTestBuild</id>') | Set-Content C:\projects\installers\windows\mudlet.nuspec
+    (Get-Content C:\projects\installers\windows\mudlet.nuspec).replace('<id>Mudlet</id>', '<id>Mudlet-PublicTestBuild</id>') | Set-Content C:\projects\installers\windows\mudlet.nuspec
   }
   nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
 
