@@ -10330,7 +10330,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="725"/>
       <source>This font is not monospace, which may not be ideal for playing some text games: you can use it but there could be issues with aligning columns of text</source>
-      <translation type="unfinished"/>
+      <translation>Dies ist keine Monospace-Schriftart, was bei manchen Textspielen vielleicht nicht ideal ist: Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textspalten geben</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="759"/>
@@ -10703,63 +10703,63 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2129"/>
       <source>2D map player room marker style:</source>
-      <translation type="unfinished"/>
+      <translation>Stil der Markierung des Spielerraums auf der 2D-Karte:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2139"/>
       <source>Outer ring color</source>
-      <translation type="unfinished"/>
+      <translation>Farbe des Außenrings</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2149"/>
       <source>Inner ring color</source>
-      <translation type="unfinished"/>
+      <translation>Farbe des Innenrings</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2163"/>
       <source>Original</source>
-      <translation type="unfinished"/>
+      <translation>Original</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2168"/>
       <source>Red ring</source>
-      <translation type="unfinished"/>
+      <translation>Roter Ring</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2173"/>
       <source>Blue/Yellow ring</source>
-      <translation type="unfinished"/>
+      <translation>Blauer/Gelber Ring</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2178"/>
       <source>Custom ring</source>
-      <translation type="unfinished"/>
+      <translation>Benutzerdefinierter Ring</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2186"/>
       <source>&lt;p&gt;Percentage ratio (&lt;i&gt;the default is 120%&lt;/i&gt;) of the marker symbol to the space available for the room.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Prozentuales Verhältnis (&lt;i&gt;der Standardwert ist 120%&lt;/i&gt;) des markierenden Symbols zum verfügbaren Platz des Raumes.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2192"/>
       <location filename="../src/ui/profile_preferences.ui" line="2220"/>
       <source>%</source>
-      <translation type="unfinished"/>
+      <translation>%</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2195"/>
       <source>Outer diameter: </source>
-      <translation type="unfinished"/>
+      <translation>Äußerer Durchmesser: </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2214"/>
       <source>&lt;p&gt;Percentage ratio of the inner diameter of the marker symbol to the outer one (&lt;i&gt;the default is 70%&lt;/i&gt;).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Prozentuales Verhältnis des Innendurchmessers des markierenden Symbols zum äußeren Durchmesser (&lt;i&gt;der Standardwert ist 70%&lt;/i&gt;).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2223"/>
       <source>Inner diameter: </source>
-      <translation type="unfinished"/>
+      <translation>Innerer Durchmesser: </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2607"/>
