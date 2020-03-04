@@ -79,6 +79,8 @@ private:
 #endif
 
 
+    dblsqd::Release getCurrentRelease();
+    
 signals:
     void signal_updateInstalled();
     // Argument is a count of updates available
