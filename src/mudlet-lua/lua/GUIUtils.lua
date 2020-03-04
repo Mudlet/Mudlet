@@ -380,6 +380,23 @@ function disableGaugeClickthrough(gaugeName)
   disableClickthrough(gaugeName .. "_text")
 end
 
+--- Set gauge to have a tooltip
+--- @param gaugeName
+--- @param text the tooltip text
+--- @param duration tooltip duration
+function setGaugeToolTip(gaugeName, text, duration)
+  duration = duration or 0
+  assert(gaugesTable[gaugeName], "setGaugeToolTip: no such gauge exists.")
+  setLabelToolTip(gaugeName .. "_text", text, duration)
+end
+
+--- Reset gauge tooltip
+--- @param gaugeName
+function resetGaugeToolTip(gaugeName)
+  assert(gaugesTable[gaugeName], "resetGaugeToolTip: no such gauge exists.")
+  resetLabelToolTip(gaugeName .. "_text")
+end
+
 --- Pads a hex number to ensure a minimum of 2 digits.
 ---
 --- @usage Following command will returns "F0".
@@ -1808,4 +1825,8 @@ end
 --- @param text The text to replace the selection with.
 function hreplace(window, text)
   xReplace(window, text, 'h')
+end
+
+function resetLabelToolTip(label)
+  return setLabelToolTip(label, "")
 end

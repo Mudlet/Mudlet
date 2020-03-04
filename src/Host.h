@@ -544,6 +544,7 @@ public:
     // An invalid/null value is treated as the "show all"/inactive case:
     QTime mTimerDebugOutputSuppressionInterval;
     std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
+    QString mProfileStyleSheet;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous

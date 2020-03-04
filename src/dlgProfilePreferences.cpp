@@ -260,6 +260,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     label_languageChangeWarning->hide();
     label_invalidFontError->hide();
+    label_variableWidthFontWarning->hide();
 
     comboBox_guiLanguage->clear();
     for (auto& code : pMudlet->getAvailableTranslationCodes()) {
@@ -1613,11 +1614,14 @@ void dlgProfilePreferences::setDisplayFont()
         return;
     }
 
+    label_invalidFontError->hide();
+    label_variableWidthFontWarning->hide();
     if (auto [validFont, errorMessage] = pHost->setDisplayFont(newFont); !validFont) {
         label_invalidFontError->show();
         return;
+    } else if (!QFontInfo(newFont).fixedPitch()) {
+        label_variableWidthFontWarning->show();
     }
-    label_invalidFontError->hide();
 
     QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
     auto* mainConsole = mudlet::self()->mConsoleMap.value(pHost);

@@ -377,6 +377,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPlayerRoomInnerColor(Qt::white)
 , mPlayerRoomOuterDiameterPercentage(120)
 , mPlayerRoomInnerDiameterPercentage(70)
+, mProfileStyleSheet(QString())
 {
     // mLogStatus = mudlet::self()->mAutolog;
     mLuaInterface.reset(new LuaInterface(this));
