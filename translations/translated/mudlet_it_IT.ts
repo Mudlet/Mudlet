@@ -561,7 +561,8 @@ con un nuovo simbolo per questa stanza:</translation>
       <location filename="../src/T2DMap.cpp" line="691"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.
 </source>
-      <translation type="unfinished"/>
+      <translation>Mapper: Impossibile trovare un percorso da %1 a %2 utilizzando le uscite conosciute.
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2208"/>
@@ -2113,7 +2114,10 @@ Consiglio di esaminare il report più recente nel file:
 Please check that you have permissions/access to:
 &quot;%1&quot;
 and there is enough space. The download operation has failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Impossibile usare o creare la cartella per memorizzare i file di mappa.
+Verifica di disporre dei permessi di accesso per:
+&quot;%1&quot;
+e che ci sia sufficiente spazio disco. L'operazione di download è fallita.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2216"/>
@@ -4181,7 +4185,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="101"/>
       <source>profiles list</source>
-      <translation type="unfinished"/>
+      <translation>elenco profili</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2084"/>
@@ -4201,7 +4205,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2183"/>
       <source>welcome message</source>
-      <translation type="unfinished"/>
+      <translation>messaggio di benvenuto</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2199"/>
@@ -4267,7 +4271,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
       <location filename="../src/ui/connection_profiles.ui" line="2546"/>
       <location filename="../src/ui/connection_profiles.ui" line="2549"/>
       <source>Game description or your notes</source>
-      <translation type="unfinished"/>
+      <translation>Descrizione del gioco o note personali</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2365"/>
@@ -4297,7 +4301,7 @@ il messaggio di errore è: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2440"/>
       <source>Discord integration</source>
-      <translation type="unfinished"/>
+      <translation>Integrazione con Discord</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2475"/>
@@ -10248,12 +10252,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="269"/>
       <source>Enable GMCP  (Generic Mud Communication Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>Abilita GMCP  (Generic Mud Communication Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="279"/>
       <source>Enable MSDP  (Mud Server Data Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>Abilita MSDP  (Mud Server Data Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="286"/>
@@ -10263,12 +10267,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="289"/>
       <source>Enable MSSP  (Mud Server Status Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>Abilita MSSP  (Mud Server Status Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="299"/>
       <source>Enable MSP  (Mud Sound Protocol, experimental in Mudlet)</source>
-      <translation type="unfinished"/>
+      <translation>Abilita MSP  (Mud Sound Protocol, sperimentale)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="485"/>
@@ -10752,7 +10756,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2195"/>
       <source>Outer diameter: </source>
-      <translation type="unfinished"/>
+      <translation>Diametro esterno: </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2214"/>
@@ -10762,7 +10766,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2223"/>
       <source>Inner diameter: </source>
-      <translation type="unfinished"/>
+      <translation>Diametro interno: </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2607"/>
