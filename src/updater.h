@@ -79,7 +79,7 @@ private:
     AutoUpdater* msparkleUpdater;
 #endif
 
-    
+
 signals:
     void signal_updateInstalled();
     // Argument is a count of updates available
