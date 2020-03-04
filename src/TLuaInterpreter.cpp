@@ -3722,7 +3722,7 @@ int TLuaInterpreter::createLabelMainWindow(lua_State* L, const QString& labelNam
     }
     int width = 0;
     if (!lua_isnumber(L, 4)) {
-        lua_pushfstring(L, "createLabel: bad argument #5 type (label width as number expected, got %s!)", luaL_typename(L, 4));
+        lua_pushfstring(L, "createLabel: bad argument #4 type (label width as number expected, got %s!)", luaL_typename(L, 4));
         return lua_error(L);
     } else {
         width = lua_tonumber(L, 4);
