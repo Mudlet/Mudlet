@@ -71,6 +71,7 @@ private:
     void recordUpdatedVersion() const;
     QString getPreviousVersion() const;
     void finishSetup();
+    dblsqd::Release getCurrentRelease();
 
 #if defined(Q_OS_LINUX)
     QString unzippedBinaryName;
@@ -78,8 +79,6 @@ private:
     AutoUpdater* msparkleUpdater;
 #endif
 
-
-    dblsqd::Release getCurrentRelease();
     
 signals:
     void signal_updateInstalled();
