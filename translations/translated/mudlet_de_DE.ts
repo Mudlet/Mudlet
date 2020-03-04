@@ -563,7 +563,8 @@ einem neuen Symbol für diesen Raum:</translation>
       <location filename="../src/T2DMap.cpp" line="691"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.
 </source>
-      <translation type="unfinished"/>
+      <translation>Mapper: Kein Weg von %1 nach %2 konnte mit bekannten Ausgängen gefunden werden.
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2208"/>
@@ -2125,7 +2126,10 @@ the file:
 Please check that you have permissions/access to:
 &quot;%1&quot;
 and there is enough space. The download operation has failed.</source>
-      <translation type="unfinished"/>
+      <translation>[FEHLER] - Kann das Verzeichnis nicht nutzen oder erstellen, um die Karte zu speichern.
+Prüfe bitte, dass du die Berechtigungen und Zugriff hast auf:
+&quot;%1&quot;
+und dass es genug Speicherplatz gibt. Der Download ist fehlgeschlagen.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2216"/>
@@ -4173,7 +4177,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="101"/>
       <source>profiles list</source>
-      <translation type="unfinished"/>
+      <translation>Liste der Profile</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2084"/>
@@ -4193,7 +4197,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2183"/>
       <source>welcome message</source>
-      <translation type="unfinished"/>
+      <translation>Willkommensnachricht</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2199"/>
@@ -4259,7 +4263,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
       <location filename="../src/ui/connection_profiles.ui" line="2546"/>
       <location filename="../src/ui/connection_profiles.ui" line="2549"/>
       <source>Game description or your notes</source>
-      <translation type="unfinished"/>
+      <translation>Spielbeschreibung oder Notizen</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2365"/>
@@ -4289,7 +4293,7 @@ Fehlermeldung war: &quot;%2&quot;.</translation>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2440"/>
       <source>Discord integration</source>
-      <translation type="unfinished"/>
+      <translation>Discord-Integration</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2475"/>
@@ -5891,12 +5895,12 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3839"/>
       <source>Set outer color of player room mark.</source>
-      <translation type="unfinished"/>
+      <translation>Wähle die äußere Farbe der Markierung des Spielerraums.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3840"/>
       <source>Set inner color of player room mark.</source>
-      <translation type="unfinished"/>
+      <translation>Wähle die innere Farbe der Markierung des Spielerraums.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="192"/>
@@ -9250,7 +9254,7 @@ Starte... Viel Spaß!
     <message>
       <location filename="../src/mudlet.cpp" line="838"/>
       <source>Turkish</source>
-      <translation type="unfinished"/>
+      <translation>Türkisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="839"/>
@@ -10241,12 +10245,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="269"/>
       <source>Enable GMCP  (Generic Mud Communication Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>GMCP aktivieren (Generic Mud Communication Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="279"/>
       <source>Enable MSDP  (Mud Server Data Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>MSDP aktivieren (Mud Server Data Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="286"/>
@@ -10256,12 +10260,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="289"/>
       <source>Enable MSSP  (Mud Server Status Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>MSSP aktivieren (Mud Server Status Protokoll)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="299"/>
       <source>Enable MSP  (Mud Sound Protocol, experimental in Mudlet)</source>
-      <translation type="unfinished"/>
+      <translation>MSP aktivieren (Mud Sound Protocol, experimentell in Mudlet)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="485"/>
