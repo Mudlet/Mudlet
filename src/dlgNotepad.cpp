@@ -24,6 +24,8 @@
 
 #include "mudlet.h"
 
+#include <QTextCodec>
+
 #include "pre_guard.h"
 #include <QDir>
 #include "post_guard.h"
