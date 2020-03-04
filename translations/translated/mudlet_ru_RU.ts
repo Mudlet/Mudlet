@@ -561,7 +561,8 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="691"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.
 </source>
-      <translation type="unfinished"/>
+      <translation>Mapper: Не удается найти путь от %1 до %2, используя известные выхода.
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2208"/>
@@ -2135,7 +2136,10 @@ the file:
 Please check that you have permissions/access to:
 &quot;%1&quot;
 and there is enough space. The download operation has failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Не удается использовать или создать папку для хранения карты.
+Пожалуйста, проверьте, что у вас есть права доступа/доступ к:
+&quot;%1&quot;
+и достаточно места. Не удалось загрузить файл.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2216"/>
@@ -4215,7 +4219,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="101"/>
       <source>profiles list</source>
-      <translation type="unfinished"/>
+      <translation>список профилей</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2084"/>
@@ -4235,7 +4239,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2183"/>
       <source>welcome message</source>
-      <translation type="unfinished"/>
+      <translation>приветствие</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2199"/>
@@ -4301,7 +4305,7 @@ error message was: &quot;%2&quot;.</source>
       <location filename="../src/ui/connection_profiles.ui" line="2546"/>
       <location filename="../src/ui/connection_profiles.ui" line="2549"/>
       <source>Game description or your notes</source>
-      <translation type="unfinished"/>
+      <translation>Описание игры или ваши заметки</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2365"/>
@@ -4331,7 +4335,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2440"/>
       <source>Discord integration</source>
-      <translation type="unfinished"/>
+      <translation>Интеграция с Discord</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2475"/>
@@ -5920,7 +5924,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3839"/>
       <source>Set outer color of player room mark.</source>
-      <translation type="unfinished"/>
+      <translation>Задать внешний цвет метки комнаты игрока.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3840"/>
