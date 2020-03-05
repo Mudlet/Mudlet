@@ -559,7 +559,8 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="691"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.
 </source>
-      <translation type="unfinished"/>
+      <translation>Mapper: 找不到从房间 %1 到 %2 的有效路径。
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2208"/>
