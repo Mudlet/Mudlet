@@ -4119,7 +4119,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="101"/>
       <source>profiles list</source>
-      <translation type="unfinished"/>
+      <translation>配置文件列表</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2084"/>
@@ -4139,7 +4139,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2183"/>
       <source>welcome message</source>
-      <translation type="unfinished"/>
+      <translation>欢迎信息</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2199"/>
@@ -4205,7 +4205,7 @@ error message was: &quot;%2&quot;.</source>
       <location filename="../src/ui/connection_profiles.ui" line="2546"/>
       <location filename="../src/ui/connection_profiles.ui" line="2549"/>
       <source>Game description or your notes</source>
-      <translation type="unfinished"/>
+      <translation>游戏描述或注释</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2365"/>
@@ -4235,7 +4235,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2440"/>
       <source>Discord integration</source>
-      <translation type="unfinished"/>
+      <translation>Discord 集成</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2475"/>
