@@ -53,3 +53,10 @@ void dlgComposer::init(const QString &newTitle, const QString &newText)
     title->setText(newTitle);
     edit->setPlainText(newText);
 }
+
+void dlgComposer::closeEvent(QCloseEvent* event){
+    // Called when closed via window system, save/cancel buttons, or cTelnet destructor when closing profile
+    // Closing via window system simply closes the composer,
+    // unlike Cancel button which sends "*q\nno\n" to quit the in-game editor
+    mpHost->mTelnet.mpComposer = nullptr;
+}
