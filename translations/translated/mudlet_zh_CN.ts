@@ -2074,7 +2074,10 @@ the file:
 Please check that you have permissions/access to:
 &quot;%1&quot;
 and there is enough space. The download operation has failed.</source>
-      <translation type="unfinished"/>
+      <translation>[ 错误 ] - 无法使用或创建目录来保存地图.
+请检查您的访问权限：
+&quot;%1&quot;
+并且确认空间足够。下载失败。</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2216"/>
@@ -5491,7 +5494,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="494"/>
       <source>Required file &quot;%1&quot; was not found in the staging area. This area contains the Mudlet items chosen for the package, which you selected to be included in the package file. This suggests there may be a problem with that directory: &quot;%2&quot; - Do you have the necessary permissions and free disk-space?</source>
-      <translation type="unfinished"/>
+      <translation>在暂存区域中找不到所需文件 &quot;%1&quot; 此区域包含你选择要包含在包文件中的 Mudlet项目。 这表明该目录可能有问题： &quot;%2&quot; - 您是否拥有必要的权限和足够的磁盘空间？</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="516"/>
@@ -5573,7 +5576,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="334"/>
       <source>Migrated all passwords to secure storage.</source>
-      <translation type="unfinished"/>
+      <translation>正在将密码迁移到安全存储器.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="341"/>
@@ -5832,12 +5835,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3839"/>
       <source>Set outer color of player room mark.</source>
-      <translation type="unfinished"/>
+      <translation>设置玩家房间标记的外部颜色。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3840"/>
       <source>Set inner color of player room mark.</source>
-      <translation type="unfinished"/>
+      <translation>设置玩家房间标记的内部颜色。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="192"/>
