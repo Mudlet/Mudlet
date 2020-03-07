@@ -152,24 +152,18 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     QSizePolicy sizePolicy2(QSizePolicy::Expanding, QSizePolicy::Fixed);
     QSizePolicy sizePolicy4(QSizePolicy::Fixed, QSizePolicy::Expanding);
     QSizePolicy sizePolicy5(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    QPalette mainPalette;
-    mainPalette.setColor(QPalette::Text, QColor(Qt::black));
-    mainPalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
-    mainPalette.setColor(QPalette::Window, QColor(0, 0, 0, 255));
-    QPalette splitterPalette;
-    splitterPalette = mainPalette;
-    splitterPalette.setColor(QPalette::Button, QColor(0, 0, 255, 255));
-    splitterPalette.setColor(QPalette::Window, QColor(Qt::green)); //,255) );
-    splitterPalette.setColor(QPalette::Base, QColor(255, 0, 0, 255));
-    splitterPalette.setColor(QPalette::Window, QColor(Qt::white));
-    //setPalette( mainPalette );
 
-    //QVBoxLayout * layoutFrame = new QVBoxLayout( mainFrame );
     QPalette framePalette;
     framePalette.setColor(QPalette::Text, QColor(Qt::black));
     framePalette.setColor(QPalette::Highlight, QColor(55, 55, 255));
     framePalette.setColor(QPalette::Window, QColor(0, 0, 0, 255));
     mpMainFrame->setPalette(framePalette);
+    // This property is automatically disabled if the widget has a style sheet
+    // with a valid background or a border-image - however if it is usable
+    // Qt will fill the background with the QPalette::Window color from the
+    // widget's palette. In addition WINDOWS are always filled with that color
+    // unless WA_OpaquePaintEvent or WA_NoSystemBackground attributes are set -
+    // and the first of these does *appear* to have been so set.
     mpMainFrame->setAutoFillBackground(true);
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
     auto centralLayout = new QVBoxLayout;
@@ -287,7 +281,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     splitter->setSizePolicy(sizePolicy);
     splitter->setOrientation(Qt::Vertical);
     splitter->setHandleWidth(3);
-    splitter->setPalette(splitterPalette);
     splitter->setParent(layer);
 
     mUpperPane = new TTextEdit(this, splitter, &buffer, mpHost, false);
@@ -1191,14 +1184,6 @@ void TConsole::changeColors()
 #endif
         mUpperPane->setFont(mpHost->getDisplayFont());
         mLowerPane->setFont(mpHost->getDisplayFont());
-        QPalette palette;
-        palette.setColor(QPalette::Text, mpHost->mFgColor);
-        palette.setColor(QPalette::Highlight, QColor(55, 55, 255));
-        palette.setColor(QPalette::Base, mpHost->mBgColor);
-        setPalette(palette);
-        layer->setPalette(palette);
-        mUpperPane->setPalette(palette);
-        mLowerPane->setPalette(palette);
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
         if (mpCommandLine) {
@@ -1208,15 +1193,10 @@ void TConsole::changeColors()
     } else {
         Q_ASSERT_X(false, "TConsole::changeColors()", "invalid TConsole type detected");
     }
-    QPalette palette;
-    palette.setColor(QPalette::Button, QColor(Qt::blue));
-    palette.setColor(QPalette::Window, QColor(Qt::green));
-    palette.setColor(QPalette::Base, QColor(Qt::red));
 
     if (mType & (CentralDebugConsole|MainConsole|Buffer)) {
         mUpperPane->mWrapAt = mWrapAt;
         mLowerPane->mWrapAt = mWrapAt;
-        splitter->setPalette(palette);
     }
 
     buffer.updateColors();
@@ -2341,9 +2321,6 @@ bool TConsole::setBackgroundColor(const QString& name, int r, int g, int b, int 
     auto pC = mSubConsoleMap.value(name);
     auto pL = mLabelMap.value(name);
     if (pC) {
-        QPalette mainPalette;
-        mainPalette.setColor(QPalette::Window, QColor(r, g, b, alpha));
-        pC->setPalette(mainPalette);
         pC->mUpperPane->mBgColor = QColor(r, g, b, alpha);
         pC->mLowerPane->mBgColor = QColor(r, g, b, alpha);
         // update the display properly when color selections change.

@@ -231,8 +231,6 @@ mudlet::mudlet()
     layoutTopLevel->setContentsMargins(0, 0, 0, 0);
     layoutTopLevel->addWidget(mpTabBar);
     mainPane = new QWidget(frame);
-    QPalette mainPalette;
-    mainPane->setPalette(mainPalette);
     mainPane->setAutoFillBackground(true);
     mainPane->setFocusPolicy(Qt::NoFocus);
     layoutTopLevel->addWidget(mainPane);
