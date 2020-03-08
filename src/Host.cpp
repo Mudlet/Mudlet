@@ -898,7 +898,7 @@ QPair<QString, QString> Host::getSearchEngine()
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 {
 #if defined(Q_OS_MACOS)
-    // possible fix for MacOS flickering caused by QOpenGLWidget
+    // Fix for MacOS flickering caused by upgrade to QOpenGLWidget
     mpConsole->finalize();
 #endif
     if (wantPrint && (!mIsRemoteEchoingActive) && mPrintCommand) {
