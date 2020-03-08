@@ -897,7 +897,11 @@ QPair<QString, QString> Host::getSearchEngine()
 // cTelnet::sendData(...) call:
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 {
-    if (wantPrint && (! mIsRemoteEchoingActive) && mPrintCommand) {
+#if defined(Q_OS_MACOS)
+    // Fix for MacOS flickering caused by upgrade to QOpenGLWidget
+    mpConsole->finalize();
+#endif
+    if (wantPrint && (!mIsRemoteEchoingActive) && mPrintCommand) {
         mInsertedMissingLF = true;
         if (!cmd.isEmpty() || !mUSE_IRE_DRIVER_BUGFIX || mUSE_FORCE_LF_AFTER_PROMPT) {
             // used to print the terminal <LF> that terminates a telnet command
