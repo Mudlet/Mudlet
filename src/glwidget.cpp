@@ -80,6 +80,8 @@ GLWidget::GLWidget(QWidget *parent)
     mOx = 0;
     mOy = 0;
     mOz = 0;
+
+    connect(this, &QOpenGLWidget::frameSwapped, this, QOverload<>::of(&QOpenGLWidget::update));
 }
 
 
@@ -107,6 +109,8 @@ GLWidget::GLWidget(TMap* pM, QWidget* parent)
     mOx = 0;
     mOy = 0;
     mOz = 0;
+
+    connect(this, &QOpenGLWidget::frameSwapped, this, QOverload<>::of(&QOpenGLWidget::update));
 }
 
 
