@@ -60,7 +60,11 @@
 #include <QVersionNumber>
 #include "edbee/models/textautocompleteprovider.h"
 #include <../3rdparty/qtkeychain/keychain.h>
+#if defined(OPTIONAL_IS_EXPERIMENTAL)
+#include <experimental/optional>
+#else
 #include <optional>
+#endif
 #include "post_guard.h"
 
 #include <hunspell/hunspell.hxx>
@@ -158,7 +162,11 @@ public:
     bool setLabelOnLeave(Host*, const QString&, const QString&, const TEvent&);
     bool moveWindow(Host*, const QString& name, int, int);
     void deleteLine(Host*, const QString& name);
+#if defined(OPTIONAL_IS_EXPERIMENTAL)
+    std::experimental::optional<QSize> getImageSize(const QString& imageLocation);
+#else
     std::optional<QSize> getImageSize(const QString& imageLocation);
+#endif
     bool insertText(Host*, const QString& windowName, const QString&);
     void replace(Host*, const QString& name, const QString&);
     int selectString(Host*, const QString& name, const QString& what, int);

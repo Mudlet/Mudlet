@@ -2631,7 +2631,11 @@ void mudlet::deleteLine(Host* pHost, const QString& name)
     }
 }
 
+#if defined(OPTIONAL_IS_EXPERIMENTAL)
+std::experimental::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
+#else
 std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
+#endif
 {
     QImage image(imageLocation);
 
