@@ -3582,7 +3582,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTrigger.cpp" line="1065"/>
       <source>Trigger name=%1 will fire %n more time(s).
 </source>
-      <translation type="unfinished">
+      <translation>
         <numerusform>Триггер=%1 сработает ещё %n раз.
 </numerusform>
         <numerusform>Триггер=%1 сработает ещё %n раз.
@@ -9918,7 +9918,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="342"/>
       <source>Save log files in HTML format instead of plain text</source>
-      <translation>Сохранить лог-файлы в формате HTML вместо обычного текста</translation>
+      <translation>Сохранять лог-файлы в формате HTML вместо простого текста</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="349"/>
@@ -9988,7 +9988,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="250"/>
       <source>Allow server to download and play media (requires GMCP enabled below)</source>
-      <translation type="unfinished"/>
+      <translation>Разрешить серверу загружать и воспроизводить звуки (требуется включить GMCP ниже)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="269"/>

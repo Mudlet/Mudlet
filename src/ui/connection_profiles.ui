@@ -97,6 +97,9 @@
              <height>0</height>
             </size>
            </property>
+           <property name="accessibleName">
+            <string>profiles list</string>
+           </property>
            <property name="resizeMode">
             <enum>QListView::Adjust</enum>
            </property>
@@ -2176,6 +2179,9 @@
              <height>16777215</height>
             </size>
            </property>
+           <property name="accessibleName">
+            <string>welcome message</string>
+           </property>
            <property name="openLinks">
             <bool>false</bool>
            </property>
@@ -2198,6 +2204,9 @@
               <property name="text">
                <string>Profile name:</string>
               </property>
+              <property name="buddy">
+               <cstring>profile_name_entry</cstring>
+              </property>
              </widget>
             </item>
             <item row="0" column="1" colspan="2">
@@ -2217,6 +2226,9 @@
              <widget class="QLabel" name="label_serverUrl">
               <property name="text">
                <string>Server address:</string>
+              </property>
+              <property name="buddy">
+               <cstring>host_name_entry</cstring>
               </property>
              </widget>
             </item>
@@ -2240,6 +2252,9 @@
              <widget class="QLabel" name="label_port">
               <property name="text">
                <string>Port:</string>
+              </property>
+              <property name="buddy">
+               <cstring>port_entry</cstring>
               </property>
              </widget>
             </item>
@@ -2291,6 +2306,9 @@
              <widget class="QLabel" name="label_profileHistory">
               <property name="text">
                <string>Profile history:</string>
+              </property>
+              <property name="buddy">
+               <cstring>profile_history</cstring>
               </property>
              </widget>
             </item>
@@ -2346,12 +2364,18 @@
               <property name="text">
                <string>Password:</string>
               </property>
+              <property name="buddy">
+               <cstring>character_password_entry</cstring>
+              </property>
              </widget>
             </item>
             <item row="0" column="0">
              <widget class="QLabel" name="label_characterName">
               <property name="text">
                <string>Character name:</string>
+              </property>
+              <property name="buddy">
+               <cstring>login_entry</cstring>
               </property>
              </widget>
             </item>
@@ -2411,6 +2435,9 @@
               </property>
               <property name="toolTip">
                <string>Enable Discord integration (not supported by game)</string>
+              </property>
+              <property name="accessibleName">
+               <string>Discord integration</string>
               </property>
               <property name="text">
                <string/>
@@ -2516,7 +2543,10 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>Game description</string>
+               <string>Game description or your notes</string>
+              </property>
+              <property name="accessibleName">
+               <string>Game description or your notes</string>
               </property>
               <property name="tabChangesFocus">
                <bool>true</bool>
@@ -2588,8 +2618,22 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>dialog_buttonbox</tabstop>
+  <tabstop>profiles_tree_widget</tabstop>
+  <tabstop>welcome_message</tabstop>
+  <tabstop>profile_name_entry</tabstop>
+  <tabstop>host_name_entry</tabstop>
+  <tabstop>port_entry</tabstop>
+  <tabstop>port_ssl_tsl</tabstop>
+  <tabstop>profile_history</tabstop>
+  <tabstop>login_entry</tabstop>
+  <tabstop>character_password_entry</tabstop>
+  <tabstop>discord_optin_checkBox</tabstop>
+  <tabstop>autologin_checkBox</tabstop>
+  <tabstop>auto_reconnect</tabstop>
+  <tabstop>mud_description_textedit</tabstop>
   <tabstop>remove_profile_button</tabstop>
+  <tabstop>copy_profile_toolbutton</tabstop>
+  <tabstop>new_profile_button</tabstop>
  </tabstops>
  <resources>
   <include location="../mudlet.qrc"/>

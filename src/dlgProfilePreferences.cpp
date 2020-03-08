@@ -42,6 +42,7 @@
 #include <QFileDialog>
 #include <QFontDialog>
 #include <QNetworkDiskCache>
+#include <QPainter>
 #include <QString>
 #include <QTableWidget>
 #include <QToolBar>
@@ -259,6 +260,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     label_languageChangeWarning->hide();
     label_invalidFontError->hide();
+    label_variableWidthFontWarning->hide();
 
     comboBox_guiLanguage->clear();
     for (auto& code : pMudlet->getAvailableTranslationCodes()) {
@@ -1612,11 +1614,14 @@ void dlgProfilePreferences::setDisplayFont()
         return;
     }
 
+    label_invalidFontError->hide();
+    label_variableWidthFontWarning->hide();
     if (auto [validFont, errorMessage] = pHost->setDisplayFont(newFont); !validFont) {
         label_invalidFontError->show();
         return;
+    } else if (!QFontInfo(newFont).fixedPitch()) {
+        label_variableWidthFontWarning->show();
     }
-    label_invalidFontError->hide();
 
     QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
     auto* mainConsole = mudlet::self()->mConsoleMap.value(pHost);
@@ -2847,8 +2852,9 @@ void dlgProfilePreferences::addActionsToPreview(TAction* pActionParent, std::vec
 // updates latest edbee themes when the user opens up the editor tab
 void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
 {
-    // bail out if this is not an editor tab
-    if (tabIndex != 3) {
+    // bail out if this is not the editor tab - or if the Host has gone away
+    Host* pHost = mpHost;
+    if (tabIndex != 3 || !pHost) {
         return;
     }
 
@@ -2893,7 +2899,7 @@ void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
     request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
     // load from cache if possible
     request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
-    mpHost->updateProxySettings(manager);
+    pHost->updateProxySettings(manager);
     QNetworkReply* getReply = manager->get(request);
 
     connect(getReply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), this, [=](QNetworkReply::NetworkError) {

@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -125,7 +125,7 @@ QPointer<QMainWindow> mudlet::mpDebugArea = nullptr;
 bool mudlet::debugMode = false;
 
 const bool mudlet::scmIsReleaseVersion = QByteArray(APP_BUILD).isEmpty();
-const bool mudlet::scmIsPublicTestVersion = QByteArray(APP_BUILD) == QStringLiteral("-public-test-build");
+const bool mudlet::scmIsPublicTestVersion = QByteArray(APP_BUILD).startsWith("-public-test-build");
 const bool mudlet::scmIsDevelopmentVersion = !mudlet::scmIsReleaseVersion && !mudlet::scmIsPublicTestVersion;
 
 QVariantHash mudlet::mLuaFunctionNames;
@@ -315,7 +315,7 @@ mudlet::mudlet()
     mpMainToolBar->widgetForAction(mpActionVariables)->setObjectName(mpActionVariables->objectName());
 
     mpButtonDiscord = new QToolButton(this);
-    mpButtonDiscord->setText(tr("Discord"));
+    mpButtonDiscord->setText(QStringLiteral("Discord"));
     mpButtonDiscord->setObjectName(QStringLiteral("discord"));
     mpButtonDiscord->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonDiscord->setPopupMode(QToolButton::MenuButtonPopup);
@@ -324,7 +324,7 @@ mudlet::mudlet()
 
     mpActionDiscord = new QAction(tr("Open Discord"), this);
     mpActionDiscord->setIcon(QIcon(QStringLiteral(":/icons/Discord-Logo-Color.png")));
-    mpActionDiscord->setIconText(tr("Discord"));
+    mpActionDiscord->setIconText(QStringLiteral("Discord"));
     mpActionDiscord->setObjectName(QStringLiteral("openDiscord"));
 
     mpActionIRC = new QAction(tr("Open IRC"), this);
@@ -835,6 +835,7 @@ void mudlet::loadDictionaryLanguageMap()
                                   {QStringLiteral("sw"), tr("Swahili")},
                                   {QStringLiteral("sw_ke"), tr("Swahili (Kenya)")},
                                   {QStringLiteral("sw_tz"), tr("Swahili (Tanzania)")},
+                                  {QStringLiteral("tr_TR"), tr("Turkish")},
                                   {QStringLiteral("te"), tr("Telugu")},
                                   {QStringLiteral("te_in"), tr("Telugu (India)")},
                                   {QStringLiteral("th"), tr("Thai")},
@@ -962,6 +963,8 @@ void mudlet::scanForMudletTranslations(const QString& path)
                 currentTranslation.mNativeName = QStringLiteral("Portugês");
             } else if (!languageCode.compare(QLatin1String("pt_BR"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = QStringLiteral("Português (Brasil)");
+            } else if (!languageCode.compare(QLatin1String("tr_TR"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = QStringLiteral("Türkçe");
             } else {
                 currentTranslation.mNativeName = languageCode;
             }
@@ -1549,6 +1552,9 @@ void mudlet::slot_tab_changed(int tabID)
         QSize s = QSize(x, y);
         QResizeEvent event(s, s);
         QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
+        mpMainToolBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
+        mpTabBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
+        menuBar()->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
     } else {
         mpCurrentActiveHost = nullptr;
         return;
@@ -1986,6 +1992,7 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         console->layerCommandLine->hide();
         console->mpScrollBar->hide();
         pHost->mpConsole->mSubConsoleMap.insert(name, console);
+        dockwidget->setStyleSheet(pHost->mProfileStyleSheet);
         // TODO: Allow user to specify alternate dock locations - and for it to be floating and not docked initially!
         addDockWidget(Qt::RightDockWidgetArea, dockwidget);
 
@@ -2019,44 +2026,54 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
     return false;
 }
 
-bool mudlet::createMiniConsole(Host* pHost, const QString& name, int x, int y, int width, int height)
+std::pair<bool, QString> mudlet::createMiniConsole(Host* pHost, const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (!pHost || !pHost->mpConsole) {
-        return false;
+        return {false, QString()};
     }
 
     auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    auto pW = pHost->mpConsole->mDockWidgetMap.value(name);
     if (!pC) {
-        pC = pHost->mpConsole->createMiniConsole(name, x, y, width, height);
+        pC = pHost->mpConsole->createMiniConsole(windowname, name, x, y, width, height);
         if (pC) {
             pC->setMiniConsoleFontSize(12);
-            return true;
+            return {true, QString()};
         }
-    } else {
+    } else if (pC) {
         // CHECK: The absence of an explict return statement in this block means that
         // reusing an existing mini console causes the lua function to seem to
         // fail - is this as per Wiki?
-        pC->resize(width, height);
-        pC->move(x, y);
+        // This part was causing problems with UserWindows
+        if (!pW) {
+            pC->resize(width, height);
+            pC->move(x, y);
+            return {false, QStringLiteral("miniconsole \"%1\" exists already. moving/resizing \"%1\".").arg(name)};
+        }
     }
-    return false;
+    return {false, QStringLiteral("miniconsole/userwindow \"%1\" exists already.").arg(name)};
 }
 
-bool mudlet::createLabel(Host* pHost, const QString& name, int x, int y, int width, int height, bool fillBg,
-                         bool clickthrough)
+std::pair<bool, QString> mudlet::createLabel(Host* pHost, const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough)
 {
     if (!pHost || !pHost->mpConsole) {
-        return false;
+        return {false, QString()};
     }
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
-    if (!pL) {
-        pL = pHost->mpConsole->createLabel(name, x, y, width, height, fillBg, clickthrough);
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    if (!pL && !pC) {
+        pL = pHost->mpConsole->createLabel(windowname, name, x, y, width, height, fillBg, clickthrough);
         if (pL) {
-            return true;
+            return {true, QString()};
         }
+    } else if (pL) {
+        return {false, QStringLiteral("label \"%1\" exists already.").arg(name)};
+    } else if (pC) {
+        return {false, QStringLiteral("a miniconsole/userwindow with the name \"%1\" exists already. label name has to be unique.").arg(name)};
     }
-    return false;
+    return {false, QString()};
+
 }
 
 bool mudlet::createBuffer(Host* pHost, const QString& name)
@@ -2074,6 +2091,39 @@ bool mudlet::createBuffer(Host* pHost, const QString& name)
     }
     return false;
 }
+
+bool mudlet::setProfileStyleSheet(Host* pHost, const QString& styleSheet)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+
+    pHost->mProfileStyleSheet = styleSheet;
+    pHost->mpConsole->setStyleSheet(styleSheet);
+    pHost->mpEditorDialog->setStyleSheet(styleSheet);
+
+    if (mpProfilePreferencesDlgMap.value(pHost)) {
+        mpProfilePreferencesDlgMap.value(pHost)->setStyleSheet(styleSheet);
+    }
+    if (pHost->mpNotePad) {
+        pHost->mpNotePad->setStyleSheet(styleSheet);
+        pHost->mpNotePad->notesEdit->setStyleSheet(styleSheet);
+    }
+    if (pHost->mpDockableMapWidget) {
+        pHost->mpDockableMapWidget->setStyleSheet(styleSheet);
+    }
+
+    for (auto& dockWidget : pHost->mpConsole->mDockWidgetMap) {
+        dockWidget->setStyleSheet(styleSheet);
+    }
+    if (pHost == mpCurrentActiveHost) {
+        mpMainToolBar->setStyleSheet(styleSheet);
+        mpTabBar->setStyleSheet(styleSheet);
+        menuBar()->setStyleSheet(styleSheet);
+    }
+    return true;
+}
+
 
 bool mudlet::setBackgroundColor(Host* pHost, const QString& name, int r, int g, int b, int alpha)
 {
@@ -2386,7 +2436,7 @@ bool mudlet::setLabelClickCallback(Host* pHost, const QString& name, const QStri
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setClick(pHost, func, pA);
+        pL->setClick(func, pA);
         return true;
     } else {
         return false;
@@ -2401,7 +2451,7 @@ bool mudlet::setLabelDoubleClickCallback(Host* pHost, const QString& name, const
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setDoubleClick(pHost, func, pA);
+        pL->setDoubleClick(func, pA);
         return true;
     } else {
         return false;
@@ -2416,7 +2466,7 @@ bool mudlet::setLabelReleaseCallback(Host* pHost, const QString& name, const QSt
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setRelease(pHost, func, pA);
+        pL->setRelease(func, pA);
         return true;
     } else {
         return false;
@@ -2431,7 +2481,7 @@ bool mudlet::setLabelMoveCallback(Host* pHost, const QString& name, const QStrin
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setMove(pHost, func, pA);
+        pL->setMove(func, pA);
         return true;
     } else {
         return false;
@@ -2446,7 +2496,7 @@ bool mudlet::setLabelWheelCallback(Host* pHost, const QString& name, const QStri
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setWheel(pHost, func, pA);
+        pL->setWheel(func, pA);
         return true;
     } else {
         return false;
@@ -2461,7 +2511,7 @@ bool mudlet::setLabelOnEnter(Host* pHost, const QString& name, const QString& fu
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setEnter(pHost, func, pA);
+        pL->setEnter(func, pA);
         return true;
     } else {
         return false;
@@ -2476,7 +2526,7 @@ bool mudlet::setLabelOnLeave(Host* pHost, const QString& name, const QString& fu
 
     auto pL = pHost->mpConsole->mLabelMap.value(name);
     if (pL) {
-        pL->setLeave(pHost, func, pA);
+        pL->setLeave(func, pA);
         return true;
     } else {
         return false;
@@ -2579,6 +2629,17 @@ void mudlet::deleteLine(Host* pHost, const QString& name)
     if (pC) {
         pC->skipLine();
     }
+}
+
+std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
+{
+    QImage image(imageLocation);
+
+    if (image.isNull()) {
+        return {};
+    }
+
+    return image.size();
 }
 
 bool mudlet::insertText(Host* pHost, const QString& windowName, const QString& text)
@@ -3295,6 +3356,7 @@ void mudlet::show_options_dialog(QString tab)
         connect(mpActionReconnect.data(), &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_specialoption, &QWidget::hide);
         connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_specialoption, &QWidget::hide);
         mpProfilePreferencesDlgMap.value(pHost)->setAttribute(Qt::WA_DeleteOnClose);
+        mpProfilePreferencesDlgMap.value(pHost)->setStyleSheet(pHost->mProfileStyleSheet);
     }
     mpProfilePreferencesDlgMap.value(pHost)->setTab(tab);
     mpProfilePreferencesDlgMap.value(pHost)->raise();
@@ -3445,6 +3507,7 @@ void mudlet::createMapper(bool loadDefaultMap)
                                      pMap->mPlayerRoomInnerColor);
 
     pMap->mpMapper = new dlgMapper(pHost->mpDockableMapWidget, pHost, pMap); //FIXME: mpHost definieren
+    pMap->mpMapper->setStyleSheet(pHost->mProfileStyleSheet);
 #if defined(INCLUDE_3DMAPPER)
     pMap->mpM = pMap->mpMapper->glWidget;
 #endif
@@ -3536,6 +3599,8 @@ void mudlet::slot_notes()
         pNotes->notesEdit->setCurrentCharFormat(format);
         pNotes->setWindowTitle(tr("%1 - notes").arg(pHost->getName()));
         pNotes->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_notepad.png")));
+        pHost->mpNotePad->setStyleSheet(pHost->mProfileStyleSheet);
+        pHost->mpNotePad->notesEdit->setStyleSheet(pHost->mProfileStyleSheet);
     }
     pNotes->raise();
     pNotes->show();
