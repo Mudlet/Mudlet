@@ -176,6 +176,7 @@ public:
     static int restartIrc(lua_State*);
     static int showUnzipProgress(lua_State*);
     static int setAppStyleSheet(lua_State*);
+    static int setProfileStyleSheet(lua_State*);
     static int setMainWindowSize(lua_State* L);
     static int registerAnonymousEventHandler(lua_State* L);
     static int setRoomChar(lua_State*);
@@ -329,7 +330,10 @@ public:
     static int getStopWatchBrokenDownTime(lua_State*);
     static int createMiniConsole(lua_State*);
     static int createLabel(lua_State*);
+    static int createLabelMainWindow(lua_State* L, const QString& labelName);
+    static int createLabelUserWindow(lua_State* L, const QString& windowName, const QString& labelName);
     static int deleteLabel(lua_State*);
+    static int setLabelToolTip(lua_State*);
     static int moveWindow(lua_State*);
     static int setTextFormat(lua_State*);
     static int setBackgroundImage(lua_State*);
@@ -344,6 +348,7 @@ public:
     static int setLabelOnEnter(lua_State*);
     static int setLabelOnLeave(lua_State*);
     static int getMainWindowSize(lua_State*);
+    static int getUserWindowSize(lua_State*);
     static int getMousePosition(lua_State*);
     static int setMiniConsoleFontSize(lua_State*);
     static int setProfileIcon(lua_State*);
@@ -522,6 +527,7 @@ public:
     static int postHTTP(lua_State* L);
     static int deleteHTTP(lua_State* L);
     static int getConnectionInfo(lua_State* L);
+    static int unzipAsync(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
 
 
