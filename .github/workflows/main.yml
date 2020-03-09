@@ -24,4 +24,4 @@ jobs:
     - name: gh-pages action
       uses: docker://cdssnc/touched-github-action:latest
       with:
-        args: {**cpp, **ui}
+        args: "**cpp, **ui"
