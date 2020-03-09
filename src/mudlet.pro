@@ -737,6 +737,7 @@ LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/GeyserReposition.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserSetConstraints.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserTests.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserUsrerWindow.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserUtil.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserVBox.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserWindow.lua
