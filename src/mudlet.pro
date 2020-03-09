@@ -266,7 +266,7 @@ unix:!macx {
         -lWs2_32 \
         -L"$${MINGW_BASE_DIR}\\bin"
     INCLUDEPATH += \
-                   "C:\\Libraries\\boost_1_67_0" \
+                   "C:\\Libraries\\boost_1_71_0" \
                    "$${MINGW_BASE_DIR}\\include" \
                    "$${MINGW_BASE_DIR}\\lib\include"
 # Leave this undefined so mudlet::readSettings() preprocessing will fall back to
