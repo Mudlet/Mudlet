@@ -39,7 +39,6 @@ public:
     dlgComposer(Host*);
 
     void init(const QString &title, const QString &newText);
-    void closeEvent(QCloseEvent* event) override;
 
 public slots:
     void save();
