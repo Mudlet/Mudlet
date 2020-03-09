@@ -315,17 +315,15 @@ end
 
 --- Returns the Geyser object associated with the label name
 -- @param label The name of the label to use
-function Geyser.Label:getWindow(label)
-  for i, v in pairs(Geyser.windowList) do
+function Geyser.Label:getWindow(label, cont)
+  cont = cont or Geyser
+  for i, v in pairs(cont.windowList) do
     if v.name == label then
       return v
     end
-
-    -- search down one level to enable nesting in a container
-    for key, val in pairs(v.windowList) do
-      if val.name == label then
-        return val
-      end
+    -- search down one or more levels to enable nesting in a container
+    if self:getWindow(label, v) then 
+      return self:getWindow(label, v) 
     end
   end
 end
@@ -343,6 +341,13 @@ function closeAllLevels()
   for i, v in pairs(Geyser.windowList) do
     if v.nestParent then
       v:hide()
+    end
+    if v.type == "userwindow" then
+      for i,v in pairs (v.windowList[v.windows[1]].windowList) do 
+        if v.nestParent then
+          v:hide()
+        end
+      end
     end
   end
 end
@@ -733,6 +738,9 @@ end
 function Geyser.Label:addChild(cons, container)
   cons = cons or {}
   cons.type = cons.type or "nestedLabel"
+  if self.windowname ~= "main" and not container then
+    container = Geyser.windowList[self.windowname.."Container"].windowList[self.windowname]
+  end
   local flyOut = false
   local flyDir, layoutDir
   if cons.layoutDir then
