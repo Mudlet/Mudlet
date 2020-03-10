@@ -65,4 +65,4 @@ jobs:
         USEREMAIL: admin@mudlet.org
         BRANCH_NAME: translations/text-updates
       with:
-        args: "(autocommit) Cleaned up XML file and removed all of the shuffled @line's" 
+        args: "(autocommit) Cleaned up XML file and removed all of the shuffled @lines" 
