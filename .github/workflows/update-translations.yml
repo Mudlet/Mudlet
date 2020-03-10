@@ -47,11 +47,15 @@ jobs:
       with:
         args: ed -P -L --delete //@line translations/mudlet.ts
         
+    - uses: teaminkling/autocommit@master
+      with:
+       commit-message: (autocommit) Cleaned up XML file and removed all of the shuffled lines attributes
+    
     - name: GitHub Push
       uses: ad-m/github-push-action@v0.5.0
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: HEAD:refs/heads/translations/translation-updates
+        branch: translation-updates
         force: true
       
 # action "Commit to a branch and push" {
