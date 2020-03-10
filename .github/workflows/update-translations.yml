@@ -18,14 +18,10 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-#     - uses: actions/checkout@v1
-#       with:
-#         submodules: true
-        
-    - uses: actions/checkout@master 
-      with: 
+    - uses: actions/checkout@v1
+      with:
         submodules: true
-
+        
 # buggy action: https://github.community/t5/GitHub-Actions/Checkout-of-a-bitbucket-org-fails/td-p/49485/jump-to/first-unread-message
 #     - uses: actions/checkout@v2
 #     - name: Checkout submodules
