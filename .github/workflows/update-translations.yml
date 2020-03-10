@@ -51,11 +51,16 @@ jobs:
       with:
        commit-message: (autocommit) Cleaned up XML file and removed all of the shuffled lines attributes
     
-    - name: GitHub Push
+    - name: create texts branch
+      uses: peterjgrainger/action-create-branch@v1.0.0
+      with:
+        branch: updated-text-for-translation
+    
+    - name: push new text
       uses: ad-m/github-push-action@v0.5.0
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: translation-updates
+        branch: updated-text-for-translation
         force: true
       
 # action "Commit to a branch and push" {
