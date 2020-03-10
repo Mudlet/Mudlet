@@ -53,6 +53,8 @@ jobs:
     
     - name: create texts branch
       uses: peterjgrainger/action-create-branch@v1.0.0
+      env: 
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         branch: updated-text-for-translation
     
