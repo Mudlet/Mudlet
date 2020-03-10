@@ -43,8 +43,15 @@ public:
     void save();
     void restore();
 
+private slots:
+    void slot_text_written();
+
 private:
+    void timerEvent(QTimerEvent *event) override;
+    void restoreFile(const QString&, const bool);
+
     QPointer<Host> mpHost;
+    bool mNeedToSave{};
 };
 
 #endif // MUDLET_DLGNOTEPAD_H

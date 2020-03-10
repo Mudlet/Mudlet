@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1" language="nl" sourcelanguage="en">
+<TS version="2.1" language="pt-BR" sourcelanguage="en">
   <context>
     <name>Discord</name>
     <message>
       <location filename="../src/discord.cpp" line="147"/>
       <source>via Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>via Mudlet</translation>
     </message>
   </context>
   <context>
@@ -14,17 +14,17 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="273"/>
       <source>Too many redirects.</source>
-      <translation type="unfinished"/>
+      <translation>Muitos redirecionamentos.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="282"/>
       <source>No data received from server</source>
-      <translation type="unfinished"/>
+      <translation>Nenhum dado recebido do servidor</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="293"/>
       <source>Could not verify download integrity.</source>
-      <translation type="unfinished"/>
+      <translation>Não foi possível verificar a integridade do download.</translation>
     </message>
   </context>
   <context>
@@ -34,35 +34,35 @@
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
-      <translation>Uitpakken module:
+      <translation>Desempacotando o modulo:
 &quot;%1&quot;
-wacht aub...</translation>
+Por favor aguarde...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1476"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
-      <translation>Uitpakken van pakket:
+      <translation>Desempacotando pacote:
 &quot;%1&quot;
-wacht aub...</translation>
+Por favor aguarde...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1480"/>
       <source>Unpacking</source>
-      <translation>Uitpakken</translation>
+      <translation>Desempacotando</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2087"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>Jogando %1</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2089"/>
       <location filename="../src/Host.cpp" line="2095"/>
       <source>%1 at %2:%3</source>
       <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
-      <translation type="unfinished"/>
+      <translation>%1 de %2:%3</translation>
     </message>
   </context>
   <context>
@@ -75,342 +75,344 @@ wacht aub...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="143"/>
       <source>! %1 is away (%2)</source>
-      <translation>! %1 is weg (%2)</translation>
+      <translation>! %1 está ausente (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="144"/>
       <source>! %1 is back</source>
-      <translation>! %1 is terug</translation>
+      <translation>! %1 está de volta</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="150"/>
       <source>! invited %1 to %2</source>
-      <translation>! %1 uitgenodigd naar %2</translation>
+      <translation>! convidado %1 para %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="152"/>
       <source>! %2 invited to %3</source>
-      <translation>! %2 uitgenodigd naar %3</translation>
+      <translation>! %2 convidado para %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="158"/>
       <source>! You have joined %1 as %2</source>
-      <translation type="unfinished"/>
+      <translation>! Você ingressou em %1 como %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="160"/>
       <source>! %1 has joined %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 ingressou em %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="165"/>
       <source>! %1 kicked %2</source>
-      <translation>! %1 heeft %2 eruit gezet</translation>
+      <translation>! %1 chutou %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="172"/>
       <source>! %1 mode is %2 %3</source>
-      <translation type="unfinished"/>
+      <translation>! %1 modo é %2 %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="174"/>
       <source>! %1 sets mode %2 %3 %4</source>
-      <translation type="unfinished"/>
+      <translation>! %1 define o modo %2 %3 %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="190"/>
       <source>[MOTD] %1%2</source>
-      <translation type="unfinished"/>
+      <translation>[MOTD] %1%2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="202"/>
       <source>! %1 has %2 users: %3</source>
-      <translation type="unfinished"/>
+      <translation>! %1 tem %2 utilizadores: %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="204"/>
       <source>! %1 has %2 users</source>
-      <translation type="unfinished"/>
+      <translation>! %1 tem %2 utilizadores</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="210"/>
       <source>! %1 has changed nick to %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 mudou de nick para %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="220"/>
       <source>! %1 replied in %2</source>
-      <translation>! %1 antwoordde in %2</translation>
+      <translation>! %1 respondeu em %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="223"/>
       <location filename="../src/ircmessageformatter.cpp" line="271"/>
       <source>! %1 time is %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 tempo é %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="226"/>
       <location filename="../src/ircmessageformatter.cpp" line="268"/>
       <source>! %1 version is %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 versão é %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="241"/>
       <source>[%1%2] %3</source>
-      <translation type="unfinished"/>
+      <translation>[%1%2] %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="249"/>
       <source>&amp;lt;%1%2&amp;gt; [%3] %4</source>
-      <translation type="unfinished"/>
+      <translation>&amp;lt;%1%2&amp;gt; [%3] %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="263"/>
       <source>[INFO] %1</source>
-      <translation type="unfinished"/>
+      <translation>[INFO] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="289"/>
       <location filename="../src/ircmessageformatter.cpp" line="314"/>
       <source>[ERROR] %1</source>
-      <translation type="unfinished"/>
+      <translation>[ERROR] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="299"/>
       <source>[Channel URL] %1</source>
-      <translation type="unfinished"/>
+      <translation>[URL do canal] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="308"/>
       <source>[%1] %2</source>
-      <translation type="unfinished"/>
+      <translation>[%1] %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="320"/>
       <source>! %1 has left %2</source>
-      <translation type="unfinished"/>
+      <translation>! %1 deixou %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="322"/>
       <source>! %1 has left %2 (%3)</source>
-      <translation type="unfinished"/>
+      <translation>! %1 deixou %2 (%3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="330"/>
       <source>! %1 replied in %2 seconds</source>
-      <translation type="unfinished"/>
+      <translation>! %1 respondeu em %2 segundos</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="344"/>
       <source>* %1 %2</source>
-      <translation type="unfinished"/>
+      <translation>* %1 %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="350"/>
       <source>&lt;b&gt;&amp;lt;%1&amp;gt;&lt;/b&gt; %2</source>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;&amp;lt;%1&amp;gt;&lt;/b&gt; %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="358"/>
       <source>! %1 has quit</source>
-      <translation type="unfinished"/>
+      <translation>! %1 saiu</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="360"/>
       <source>! %1 has quit (%2)</source>
-      <translation type="unfinished"/>
+      <translation>! %1 deixou (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="367"/>
       <source>! no topic</source>
-      <translation type="unfinished"/>
+      <translation>! nenhum tópico</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="375"/>
       <source>[TOPIC] %1</source>
-      <translation type="unfinished"/>
+      <translation>[TOPIC] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="379"/>
       <source>! %2 cleared topic</source>
-      <translation type="unfinished"/>
+      <translation>! %2 limpou o tópico</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="381"/>
       <source>! %2 changed topic</source>
-      <translation type="unfinished"/>
+      <translation>! %2 alterou o tópico</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="386"/>
       <source>? %2 %3 %4</source>
-      <translation type="unfinished"/>
+      <translation>? %2 %3 %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="392"/>
       <source>[WHOIS] %1 is %2@%3 (%4)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 é %2@%3 (%4)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="393"/>
       <source>[WHOIS] %1 is connected via %2 (%3)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 está conectado via %2 (%3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="394"/>
       <source>[WHOIS] %1 is connected since %2 (idle %3)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 está conectado desde %2 (inativo %3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="396"/>
       <source>[WHOIS] %1 is away: %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 está ausente: %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="398"/>
       <source>[WHOIS] %1 is logged in as %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 está logado como %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="400"/>
       <source>[WHOIS] %1 is connected from %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 está conectado através de %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="402"/>
       <source>[WHOIS] %1 is using a secure connection</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 está usando uma conexão segura</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="404"/>
       <source>[WHOIS] %1 is on %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 está em %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="411"/>
       <source>[WHOWAS] %1 was %2@%3 (%4)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOWAS] %1 foi %2@%3 (%4)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="412"/>
       <source>[WHOWAS] %1 was connected via %2 (%3)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOWAS] %1 está conectado via %2 (%3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="414"/>
       <source>[WHOWAS] %1 was logged in as %2</source>
-      <translation type="unfinished"/>
+      <translation>[WHOWAS] %1 está logado como %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="420"/>
       <source>[WHO] %1 (%2)</source>
-      <translation type="unfinished"/>
+      <translation>[WHO] %1 (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="422"/>
       <source> - away</source>
-      <translation type="unfinished"/>
+      <translation> - ausente</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="424"/>
       <source> - server operator</source>
-      <translation type="unfinished"/>
+      <translation> -operador do servidor</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="431"/>
       <source>%1s</source>
-      <translation type="unfinished"/>
+      <translation>%1s</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="438"/>
       <source>%1 days</source>
-      <translation>%1 dagen</translation>
+      <translation>%1 dia(s)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="441"/>
       <source>%1 hours</source>
-      <translation>%1 uren</translation>
+      <translation>%1 hora(s)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="444"/>
       <source>%1 mins</source>
-      <translation>%1 minuten</translation>
+      <translation>%1 minuto(s)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="445"/>
       <source>%1 secs</source>
-      <translation>%1 sec</translation>
+      <translation>%1 segundo(s)</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="55"/>
       <source>Start element not found!</source>
-      <translation>Start element niet gevonden!</translation>
+      <translation>Elemento inicial não encontrado!</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
       <source>line %1: %2</source>
-      <translation>lijn %1: %2</translation>
+      <translation>linha %1: %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="149"/>
       <source>Expected %1 while parsing</source>
-      <translation>Verwacht %1 tijdens het parseren</translation>
+      <translation>Esperado %1 durante a análise</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.cpp" line="145"/>
       <source>%1 @ line %2</source>
-      <translation>%1 @ lijn %2</translation>
+      <translation>%1 @ linha %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="82"/>
       <source>No data found!</source>
-      <translation>Geen gegevens gevonden!</translation>
+      <translation>Nenhum dado encontrado!</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="89"/>
       <source>Expected object in keymap
 </source>
-      <translation type="unfinished"/>
+      <translation>Objeto esperado no mapa de teclas
+</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="129"/>
       <source>Invalid keysequence used %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Sequência de teclas inválida usada %1
+</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="369"/>
       <source>Error parsing %1: %2 </source>
-      <translation type="unfinished"/>
+      <translation>Erro ao analisar %1: %2 </translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/textgrammar.cpp" line="305"/>
       <source>Error reading file %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>Erro lendo o arquivo %1:%2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="435"/>
       <source>%1 ranges</source>
-      <translation type="unfinished"/>
+      <translation>%1 intervalos</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="441"/>
       <source>Line %1, Column %2</source>
-      <translation type="unfinished"/>
+      <translation>Linha %1, Coluna %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="444"/>
       <source>, Offset %1</source>
-      <translation type="unfinished"/>
+      <translation>, Deslocamento %1</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="448"/>
       <source> | %1 chars selected</source>
-      <translation type="unfinished"/>
+      <translation> | %1 caracteres selecionados</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="452"/>
       <source> | scope: </source>
-      <translation type="unfinished"/>
+      <translation> | escopo: </translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="462"/>
@@ -420,12 +422,12 @@ wacht aub...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="399"/>
       <source>Error parsing theme %1:%2</source>
-      <translation>Fout bij het parseren van thema %1:%2</translation>
+      <translation>Erro ao analisar o tema %1:%2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="404"/>
       <source>Error theme not found %1.</source>
-      <translation>Fout, thema niet gevonden %1.</translation>
+      <translation>Erro tema não encontrado %1.</translation>
     </message>
   </context>
   <context>
@@ -433,69 +435,69 @@ wacht aub...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="1240"/>
       <source>No map or no valid position.</source>
-      <translation type="unfinished"/>
+      <translation>Nenhum mapa ou nenhuma posição válida.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2231"/>
       <source>Room Name: %1
 </source>
-      <translation>Kamernaam: %1
+      <translation>Nome da Sala: %1
 </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2844"/>
       <source>Create a new room here</source>
-      <translation type="unfinished"/>
+      <translation>Criar nova sala aqui</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3009"/>
       <source>Change the properties of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>Alterar as propriedades desta linha personalizada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3208"/>
       <location filename="../src/T2DMap.cpp" line="4876"/>
       <source>Solid line</source>
-      <translation type="unfinished"/>
+      <translation>Linha sólida</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3209"/>
       <location filename="../src/T2DMap.cpp" line="4877"/>
       <source>Dot line</source>
-      <translation type="unfinished"/>
+      <translation>Linha de ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3210"/>
       <location filename="../src/T2DMap.cpp" line="4878"/>
       <source>Dash line</source>
-      <translation type="unfinished"/>
+      <translation>Linha tracejada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3211"/>
       <location filename="../src/T2DMap.cpp" line="4879"/>
       <source>Dash-dot line</source>
-      <translation type="unfinished"/>
+      <translation>Linha traço e ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3212"/>
       <location filename="../src/T2DMap.cpp" line="4880"/>
       <source>Dash-dot-dot line</source>
-      <translation type="unfinished"/>
+      <translation>Linha traço-ponto-ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3486"/>
       <source>x coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>coordenada x (era %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3487"/>
       <source>y coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>coordenada y (era %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3488"/>
       <source>z coordinate (was %1):</source>
-      <translation type="unfinished"/>
+      <translation>coordenada z (era %1):</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3627"/>
@@ -503,29 +505,31 @@ wacht aub...</translation>
 delete this to clear the symbol or replace
 it with a new symbol for this room:</source>
       <comment>This is for when applying a new room symbol to one room. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation type="unfinished"/>
+      <translation>O símbolo é &quot;%1&quot; na sala selecionada,
+exclua-o para limpar o símbolo ou substituir
+com um novo símbolo para esta sala:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3655"/>
       <source>%1 {count:%2}</source>
       <comment>Everything after the first parameter (the &apos;%1&apos;) will be removed by processing it as a QRegularExpression programmatically, ensure the translated text has ` {` immediately after the &apos;%1&apos;, and &apos;}&apos; as the very last character, so that the right portion can be extracted if the user clicks on this item when it is shown in the QComboBox it is put in.</comment>
-      <translation type="unfinished"/>
+      <translation>%1 {contagem:%2}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3779"/>
       <source>Delete color</source>
       <comment>Deletes an environment colour</comment>
-      <translation type="unfinished"/>
+      <translation>Excluir cor</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3797"/>
       <source>Define new color</source>
-      <translation type="unfinished"/>
+      <translation>Definir nova cor</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4111"/>
       <source>%1 {count:%2}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {contagem:%2}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1353"/>
@@ -534,24 +538,24 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2380"/>
       <source>no text</source>
       <comment>Default text if a label is created in mapper with no text</comment>
-      <translation type="unfinished"/>
+      <translation>nenhum texto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="142"/>
       <source>ID</source>
       <comment>Room ID in the mapper widget</comment>
-      <translation type="unfinished"/>
+      <translation>ID</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="142"/>
       <source>Name</source>
       <comment>Room name in the mapper widget</comment>
-      <translation>Naam</translation>
+      <translation>Nome</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="144"/>
       <source>&lt;p&gt;Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Clique em uma linha para selecionar ou cancelar a seleção desse número da sala (com o nome dado se as salas forem nomeadas) para incluir ou remover a sala da seleção.  Clique no cabeçalho relevante para classificar por esse método.  Observe que a coluna do nome mostrará apenas se pelo menos um dos espaços tem um nome.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="691"/>
@@ -564,455 +568,463 @@ it with a new symbol for this room:</source>
       <source>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and non-breaking hyphens which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. %2 is the (text) name of the area, %3 is the number for it, %4 to %9 are pairs (min &lt;-&gt; max) of extremes for each of x,y and z coordinates</comment>
-      <translation type="unfinished"/>
+      <translation>Área:%1%2 Id:%1%3 X:%1%4%1&lt;‑&gt;%1%5 Y:%1%6%1&lt;‑&gt;%1%7 Z:%1%8%1&lt;‑&gt;%1%9
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2245"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when NO rooms are selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the current player&apos;s room.</comment>
-      <translation type="unfinished"/>
+      <translation>Quarto%1ID:%1%2 Posição%1 no %1 Mapa: (%3,%4,%5) ‑%1 Localização atual do jogador 
+</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2262"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when ONE room is selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the selected Room.</comment>
-      <translation type="unfinished"/>
+      <translation>Sala%1ID:%1%2 Posição%1oN%1Mapa: (%3,%4,%5) ‑%1sala selecionada
+</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="2280"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms
 </source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handlethem literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected; %1 is the room number for which %2-%4 are the x,y and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Sala%1ID:%1%2 Posição%1 on %1 Mapa: (%3,%4,%5) ‑%1 sala selecionada
+</numerusform>
+        <numerusform>Sala% 1ID: %1%2 Posição %1on%1 Mapa: (%3,%4,%5) ‑%1 sala selecionada
+</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2306"/>
       <source>render time: %1S mO: (%2,%3,%4)</source>
       <comment>This is debug information that is not expected to be seen in release versions, %1 is a decimal time period and %2-%4 are the x,y and z coordinates at the center of the view (but y will be negative compared to previous room related ones as it represents the real coordinate system for this widget which has y increasing in a downward direction!)</comment>
-      <translation type="unfinished"/>
+      <translation>tempo de renderização: %1S mO: (%2,%3,%4)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2370"/>
       <source>Text label or image label?</source>
       <comment>2D Mapper create label dialog text</comment>
-      <translation type="unfinished"/>
+      <translation>Etiqueta de texto ou etiqueta de imagem?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2371"/>
       <source>Text Label</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Etiqueta de texto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2372"/>
       <source>Image Label</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Etiqueta de imagem</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2376"/>
       <source>Enter label text.</source>
       <comment>2D Mapper create label dialog title/text</comment>
-      <translation type="unfinished"/>
+      <translation>Entrar texto da etiqueta.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2383"/>
       <source>Background color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Cor de fundo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2384"/>
       <source>Foreground color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Cor do primeiro plano</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2388"/>
       <source>Select image</source>
       <comment>2D Mapper create label file dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Selecionar Imagem</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2395"/>
       <source>Draw label as background or on top of everything?</source>
       <comment>2D Mapper create label dialog text</comment>
-      <translation type="unfinished"/>
+      <translation>Desenhar etiqueta como fundo ou em cima de tudo?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2396"/>
       <source>Background</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Plano de Fundo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2397"/>
       <source>Foreground</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Primeiro Plano</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2641"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
-      <translation type="unfinished"/>
+      <translation>Arraste para selecionar múltiplos espaços ou etiquetas, solte para terminar...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2791"/>
       <source>Undo</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>Desfazer</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2792"/>
       <source>Undo last point</source>
       <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Voltar ao último ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2799"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)</comment>
-      <translation type="unfinished"/>
+      <translation>Propriedades</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2801"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)</comment>
-      <translation type="unfinished"/>
+      <translation>propriedades...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2802"/>
       <source>Change the properties of this line</source>
       <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Mudar as propriedades desta linha</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2805"/>
       <source>Finish</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>Concluir</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2806"/>
       <source>Finish drawing this line</source>
       <comment>2D Mapper context menu (drawing custom exit line) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Terminar de desenhar esta linha</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2827"/>
       <source>Create new map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>Criar novo mapa</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2830"/>
       <source>Load map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>Carregar mapa</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2843"/>
       <source>Create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Criar sala</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2849"/>
       <source>Move</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Mover</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2850"/>
       <source>Move room</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Mover quarto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2853"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Excluir</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2854"/>
       <source>Delete room</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Remover sala</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2857"/>
       <source>Color</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Cor</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2858"/>
       <source>Change room color</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Mudar a cor da sala</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2861"/>
       <source>Spread</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Espalhar</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2862"/>
       <source>Increase map X-Y spacing for the selected group of rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Aumentar o espaçamento X-Y do mapa para os grupos de quartos selecionados</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2865"/>
       <source>Shrink</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Reduzir</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2866"/>
       <source>Decrease map X-Y spacing for the selected group of rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Diminuir o espaçamento X-Y do mapa para os grupos de quartos selecionados</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2869"/>
       <source>Lock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Travar</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2870"/>
       <source>Lock room for speed walks</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Bloquear o espaço para "speed walks"</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2873"/>
       <source>Unlock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Desbloquear</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2874"/>
       <source>Unlock room for speed walks</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Desbloquear o espaço para "speed walks"</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2877"/>
       <source>Weight</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Peso</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2878"/>
       <source>Set room weight</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Definir peso do quarto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2881"/>
       <source>Exits</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Saídas</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2882"/>
       <source>Set room exits</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Definir saídas das salas</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2885"/>
       <source>Symbol</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Símbolo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2886"/>
       <source>Set one or more symbols or letters to mark special rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Definir um ou mais símbolos ou letras para marcar salas especiais</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2889"/>
       <source>Move to</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Mover para</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2890"/>
       <source>Move selected group to a given position</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Mover grupo selecionado para determinada posição</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2893"/>
       <source>Area</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Área</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2894"/>
       <source>Set room&apos;s area number</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>definir sala&apos;s número da sala</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2897"/>
       <source>Custom exit line</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Linha de saída personalizada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2899"/>
       <source>Replace an exit line with a custom line</source>
       <comment>2D Mapper context menu (room) item tooltip (enabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Substitua uma linha de saída com uma linha personalizada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2903"/>
       <source>Custom exit lines are not shown and are not editable in grid mode</source>
       <comment>2D Mapper context menu (room) item tooltip (disabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Linhas de saída personalizadas não são mostradas e não são editáveis em modo de grade</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2907"/>
       <source>Create Label</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Criar Rótulo</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2908"/>
       <source>Create labels to show text or images</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Criar rótulos para mostrar texto ou imagens</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2911"/>
       <source>Set location</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Definir localização</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2913"/>
       <source>Set player current location to here</source>
       <comment>2D Mapper context menu (room) item tooltip (enabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Definir aqui a posição atual do jogador</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2917"/>
       <source>Can only set location when exactly one room is selected</source>
       <comment>2D Mapper context menu (room) item tooltip (disabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Só é possível configurar o local apenas quando exatamente uma sala estiver selecionada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2944"/>
       <source>Move</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>Mover</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2945"/>
       <source>Move label</source>
       <comment>2D Mapper context menu item (label) tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Mover o Marcador</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2947"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>Excluir</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2948"/>
       <source>Delete label</source>
       <comment>2D Mapper context menu (label) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Remover marcador</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2964"/>
       <source>Add point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Adicionar pontos</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2971"/>
       <source>Divide segment by adding a new point mid-way along</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state)</comment>
-      <translation type="unfinished"/>
+      <translation>Divida o segmento adicionando um novo ponto a meio do caminho</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2974"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state, i.e must do the suggested action first)</comment>
-      <translation type="unfinished"/>
+      <translation>Selecione um ponto primeiro, em seguida, adicione um novo ponto médio ao longo do segmento em direção a sala</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2978"/>
       <source>Remove point</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Remover Ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2985"/>
       <source>Merge pair of segments by removing this point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state but will be able to be done again on this item)</comment>
-      <translation type="unfinished"/>
+      <translation>Junte um par de segmentos removendo este ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2989"/>
       <source>Remove last segment by removing this point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (enabled state but is the last time this action can be done on this item)</comment>
-      <translation type="unfinished"/>
+      <translation>Remova o último segmento removendo este ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2994"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action)</comment>
-      <translation type="unfinished"/>
+      <translation>use &quot;remover linha&quot; para remover o único segmento que termine num ponto editável</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3000"/>
       <source>Select a point first, then remove it</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip (disabled state, user will need to do something before it can be used)</comment>
-      <translation type="unfinished"/>
+      <translation>Primeiro selecione um ponto, em seguida remova-o</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3004"/>
       <source>Properties</source>
       <comment>2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)</comment>
-      <translation type="unfinished"/>
+      <translation>Propriedades</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3008"/>
       <source>properties...</source>
       <comment>2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise</comment>
-      <translation type="unfinished"/>
+      <translation>propriedades...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3012"/>
       <source>Delete line</source>
       <comment>2D Mapper context menu (custom line editing) item</comment>
-      <translation type="unfinished"/>
+      <translation>Apagar linha</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3013"/>
       <source>Delete all of this custom line</source>
       <comment>2D Mapper context menu (custom line editing) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Remover tudo nesta linha personalizada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3479"/>
       <source>Move the selection, centered on
 the highlighted room (%1) to:</source>
       <comment>Use linefeeds as necessary to format text into a reasonable rectangle of text, %1 is a room number</comment>
-      <translation type="unfinished"/>
+      <translation>Mover a seleção, centrada no espaço destacado (%1) para:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3503"/>
@@ -1024,7 +1036,7 @@ the highlighted room (%1) to:</source>
       <location filename="../src/T2DMap.cpp" line="3508"/>
       <source>Cancel</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation>Annuleren</translation>
+      <translation>Cancelar</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3597"/>
@@ -1032,14 +1044,18 @@ the highlighted room (%1) to:</source>
       <location filename="../src/T2DMap.cpp" line="3668"/>
       <source>Enter room symbol</source>
       <comment>Title for room symbol selection/entry dialog (used in three places)</comment>
-      <translation type="unfinished"/>
+      <translation>Introduza o símbolo da sala</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3599"/>
       <source>Enter the symbol to use
 for this/these %n room(s):</source>
       <comment>this is for when applying a new room symbol to one or more rooms and none have a symbol at present; use line feeds to format text into a reasonable rectangle, %n is the number of rooms involved</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Introduza o símbolo para usar neste(s) %n espaço(s):</numerusform>
+        <numerusform>Introduza o símbolo para usar
+neste(s) %n espaço(s):</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/T2DMap.cpp" line="3616"/>
@@ -1070,7 +1086,7 @@ for all of the %n selected room(s):</source>
       <location filename="../src/T2DMap.cpp" line="3810"/>
       <source>Cancel</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation>Annuleren</translation>
+      <translation>Cancelar</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3867"/>
@@ -1129,12 +1145,12 @@ used is:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4109"/>
       <source>%1 {count:%2, default}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {contagem:%2, padrão}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4117"/>
       <source>1 {count 0, default}</source>
-      <translation type="unfinished"/>
+      <translation>! {contador 0, padrão}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4121"/>
@@ -1152,7 +1168,7 @@ rooms:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4170"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Carregar mapa do Mudlet</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4172"/>
@@ -1415,7 +1431,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="821"/>
       <source>Save profile?</source>
-      <translation>Profiel opslaan?</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="821"/>
@@ -1627,7 +1643,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="12630"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>Jogando %1</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15027"/>
@@ -2305,7 +2321,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1328"/>
       <source>%1 {none}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {none}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1331"/>
@@ -2325,7 +2341,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1340"/>
       <source>%1 {invalid}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {invalid}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1344"/>
@@ -2463,12 +2479,12 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="37"/>
       <source>Unnamed Area</source>
-      <translation>Naamloze Gebied</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="38"/>
       <source>Default Area</source>
-      <translation>Standaard Gebied</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="502"/>
@@ -2562,7 +2578,7 @@ Old ==&gt; New</source>
       <location filename="../src/TRoomDB.cpp" line="822"/>
       <location filename="../src/TRoomDB.cpp" line="825"/>
       <source>[ INFO ]  - Area id numbering is satisfactory.</source>
-      <translation>[ INFO ] - Area-id nummering is bevredigend.</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="833"/>
@@ -2595,7 +2611,7 @@ out what new id numbers to use.</source>
       <location filename="../src/TRoomDB.cpp" line="898"/>
       <location filename="../src/TRoomDB.cpp" line="901"/>
       <source>[ INFO ]  - Room id numbering is satisfactory.</source>
-      <translation>[ INFO ] - Kamer id nummering is bevredigend.</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="918"/>
@@ -2901,13 +2917,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1816"/>
       <source>{3-per-em space}</source>
       <comment>Unicode U+2004 codepoint - three-per-em (&apos;m&apos;) wide (thick) space.</comment>
-      <translation type="unfinished"/>
+      <translation>{3-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1817"/>
       <source>{4-per-em space}</source>
       <comment>Unicode U+2005 codepoint - four-per-em (&apos;m&apos;) wide (Middle) space.</comment>
-      <translation type="unfinished"/>
+      <translation>{4-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1818"/>
@@ -3129,19 +3145,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1854"/>
       <source>{variation selector 2}</source>
       <comment>Unicode U+FE01 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1855"/>
       <source>{variation selector 3}</source>
       <comment>Unicode U+FE02 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1856"/>
       <source>{variation selector 4}</source>
       <comment>Unicode U+FE03 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1857"/>
@@ -3261,19 +3277,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1901"/>
       <source>{FitzPatrick modifier 1 or 2}</source>
       <comment>Unicode codepoint U+0001F3FB - FitzPatrick modifier (Emoji Human skin-tone) 1-2.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 1 or 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1902"/>
       <source>{FitzPatrick modifier 3}</source>
       <comment>Unicode codepoint U+0001F3FC - FitzPatrick modifier (Emoji Human skin-tone) 3.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1903"/>
       <source>{FitzPatrick modifier 4}</source>
       <comment>Unicode codepoint U+0001F3FD - FitzPatrick modifier (Emoji Human skin-tone) 4.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1904"/>
@@ -3405,7 +3421,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="149"/>
       <source>You are using version %CURRENT_VERSION%.</source>
-      <translation>U gebruikt maakt van versie %CURRENT_VERSION%.</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="177"/>
@@ -3425,12 +3441,12 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="350"/>
       <source>Cancel</source>
-      <translation>Annuleren</translation>
+      <translation>Cancelar</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="370"/>
       <source>Install update now</source>
-      <translation>Update installeren</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="377"/>
@@ -3440,7 +3456,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="387"/>
       <source>Remind me later</source>
-      <translation>Herinner mij later</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="392"/>
@@ -3460,7 +3476,7 @@ Would you like to update now?</source>
       <location filename="../src/updater.cpp" line="168"/>
       <location filename="../src/updater.cpp" line="236"/>
       <source>Update</source>
-      <translation>Updaten</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="327"/>
@@ -3509,12 +3525,12 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="105"/>
       <source>About Mudlet</source>
-      <translation>Over Mudlet</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="601"/>
       <source>Mudlet</source>
-      <translation>Mudlet</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="728"/>
@@ -3524,7 +3540,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="757"/>
       <source>License</source>
-      <translation>Licentie</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="792"/>
@@ -3537,7 +3553,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="62"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation>Nome:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="115"/>
@@ -3645,7 +3661,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="35"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation>Nome:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="57"/>
@@ -3760,7 +3776,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1826"/>
       <source>Cancel</source>
       <comment>Cancel download of GUI package from Server</comment>
-      <translation>Annuleren</translation>
+      <translation>Cancelar</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1448"/>
@@ -3954,7 +3970,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="123"/>
       <source>Cancel</source>
-      <translation>Annuleren</translation>
+      <translation>Cancelar</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="136"/>
@@ -4121,7 +4137,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="84"/>
       <source>Color:</source>
-      <translation type="unfinished"/>
+      <translation>Cor:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines_properties.ui" line="58"/>
@@ -4189,7 +4205,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="126"/>
       <source>Color:</source>
-      <translation type="unfinished"/>
+      <translation>Cor:</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="47"/>
@@ -4320,7 +4336,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="567"/>
       <source>Cancel</source>
-      <translation>Annuleren</translation>
+      <translation>Cancelar</translation>
     </message>
   </context>
   <context>
@@ -4340,12 +4356,12 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="54"/>
       <source>Delete</source>
-      <translation type="unfinished"/>
+      <translation>Excluir</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="61"/>
       <source>Cancel</source>
-      <translation>Annuleren</translation>
+      <translation>Cancelar</translation>
     </message>
   </context>
   <context>
@@ -4927,7 +4943,7 @@ Count</source>
       <location filename="../src/dlgColorTrigger.cpp" line="218"/>
       <source>%1 [%2]</source>
       <comment>Color Trigger dialog button in basic 16-color set, the first value is the name of the color, the second is the ANSI color number - for most languages modification is not likely to be needed - this text is used in two places</comment>
-      <translation type="unfinished"/>
+      <translation>%1 [%2]</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="405"/>
@@ -5452,7 +5468,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="805"/>
       <source>%1 {Default, recommended}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {Default, recommended}</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="816"/>
@@ -5488,7 +5504,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1959"/>
       <source>Load Mudlet map</source>
-      <translation type="unfinished"/>
+      <translation>Carregar mapa do Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1974"/>
@@ -6536,7 +6552,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="664"/>
       <source>Name</source>
       <comment>Heading for the second column of the search results</comment>
-      <translation>Naam</translation>
+      <translation>Nome</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="665"/>
@@ -7136,7 +7152,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2326"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2400"/>
       <source>Name</source>
-      <translation>Naam</translation>
+      <translation>Nome</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1394"/>
@@ -7401,7 +7417,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation>Nome:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
@@ -7717,7 +7733,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="205"/>
       <source>About Mudlet</source>
-      <translation>Over Mudlet</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="192"/>
@@ -7831,7 +7847,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/mapper.ui" line="537"/>
       <source>Area:</source>
-      <translation type="unfinished"/>
+      <translation>Área:</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="606"/>
@@ -7841,7 +7857,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/mapper.ui" line="635"/>
       <source>Exits</source>
-      <translation type="unfinished"/>
+      <translation>Saídas</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="664"/>
@@ -9888,12 +9904,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1352"/>
       <source>Foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Primeiro Plano:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1375"/>
       <source>Background:</source>
-      <translation type="unfinished"/>
+      <translation>Plano de Fundo:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1395"/>
@@ -10689,7 +10705,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2288"/>
       <source>Background color:</source>
-      <translation type="unfinished"/>
+      <translation>Cor de fundo:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2601"/>
@@ -10972,12 +10988,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="767"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="790"/>
       <source>Weight:</source>
-      <translation type="unfinished"/>
+      <translation>Peso:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="866"/>
@@ -11306,7 +11322,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
       <source>&amp;Cancel</source>
-      <translation>&amp;Annuleren</translation>
+      <translation>&amp;Cancelar</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2001"/>
@@ -11382,7 +11398,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation>Nome:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="40"/>
@@ -11446,7 +11462,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="29"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation>Nome:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="69"/>
@@ -11585,7 +11601,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="65"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation>Nome:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="85"/>
@@ -11674,12 +11690,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="672"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Plano de Fundo</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="659"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Primeiro Plano</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="479"/>
@@ -11751,7 +11767,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="109"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation>Nome:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="175"/>

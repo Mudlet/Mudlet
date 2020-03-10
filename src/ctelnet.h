@@ -140,6 +140,7 @@ public:
     void setATCPVariables(const QByteArray&);
     void setGMCPVariables(const QByteArray&);
     void setMSSPVariables(const QByteArray&);
+    void setMSPVariables(const QByteArray&);
     void atcpComposerCancel();
     void atcpComposerSave(QString);
     void setDisplayDimensions();
@@ -171,6 +172,7 @@ public:
     bool isATCPEnabled() const { return enableATCP; }
     bool isGMCPEnabled() const { return enableGMCP; }
     bool isMSSPEnabled() const { return enableMSSP; }
+    bool isMSPEnabled() const { return enableMSP; }
     bool isChannel102Enabled() const { return enableChannel102; }
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
@@ -289,6 +291,7 @@ private:
     bool enableATCP;
     bool enableGMCP;
     bool enableMSSP;
+    bool enableMSP;
     bool enableChannel102;
     bool mDontReconnect;
     bool mAutoReconnect;

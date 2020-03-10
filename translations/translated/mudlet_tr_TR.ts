@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1" language="nl" sourcelanguage="en">
+<TS version="2.1" language="tr" sourcelanguage="en">
   <context>
     <name>Discord</name>
     <message>
       <location filename="../src/discord.cpp" line="147"/>
       <source>via Mudlet</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet aracılığıyla</translation>
     </message>
   </context>
   <context>
@@ -14,17 +14,17 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="273"/>
       <source>Too many redirects.</source>
-      <translation type="unfinished"/>
+      <translation>Çok fazla yeniden yönlendirme var.</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="282"/>
       <source>No data received from server</source>
-      <translation type="unfinished"/>
+      <translation>Sunucudan veri alınmadı</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="293"/>
       <source>Could not verify download integrity.</source>
-      <translation type="unfinished"/>
+      <translation>İndirilen dosyanın bütünlüğü doğrulanamadı.</translation>
     </message>
   </context>
   <context>
@@ -34,35 +34,35 @@
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
-      <translation>Uitpakken module:
+      <translation>Modül açılıyor:
 &quot;%1&quot;
-wacht aub...</translation>
+Lütfen bekleyin...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1476"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
-      <translation>Uitpakken van pakket:
+      <translation>Paket açılıyor:
 &quot;%1&quot;
-wacht aub...</translation>
+Lütfen bekleyin...</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1480"/>
       <source>Unpacking</source>
-      <translation>Uitpakken</translation>
+      <translation>Paket açılıyor</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2087"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>%1 oynuyor</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2089"/>
       <location filename="../src/Host.cpp" line="2095"/>
       <source>%1 at %2:%3</source>
       <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
-      <translation type="unfinished"/>
+      <translation>%2:%3 de %1</translation>
     </message>
   </context>
   <context>
@@ -75,22 +75,22 @@ wacht aub...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="143"/>
       <source>! %1 is away (%2)</source>
-      <translation>! %1 is weg (%2)</translation>
+      <translation>! %1 şu an bilgisayar başında değil. (%2)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="144"/>
       <source>! %1 is back</source>
-      <translation>! %1 is terug</translation>
+      <translation>! %1 bilgisayar başına geri döndü</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="150"/>
       <source>! invited %1 to %2</source>
-      <translation>! %1 uitgenodigd naar %2</translation>
+      <translation>! %1 %2 ye davet edildi</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="152"/>
       <source>! %2 invited to %3</source>
-      <translation>! %2 uitgenodigd naar %3</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="158"/>
@@ -105,7 +105,7 @@ wacht aub...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="165"/>
       <source>! %1 kicked %2</source>
-      <translation>! %1 heeft %2 eruit gezet</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="172"/>
@@ -140,7 +140,7 @@ wacht aub...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="220"/>
       <source>! %1 replied in %2</source>
-      <translation>! %1 antwoordde in %2</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="223"/>
@@ -157,7 +157,7 @@ wacht aub...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="241"/>
       <source>[%1%2] %3</source>
-      <translation type="unfinished"/>
+      <translation>[%1%2] %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="249"/>
@@ -183,7 +183,7 @@ wacht aub...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="308"/>
       <source>[%1] %2</source>
-      <translation type="unfinished"/>
+      <translation>[%1] %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="320"/>
@@ -203,7 +203,7 @@ wacht aub...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="344"/>
       <source>* %1 %2</source>
-      <translation type="unfinished"/>
+      <translation>* %1 %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="350"/>
@@ -228,7 +228,7 @@ wacht aub...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="375"/>
       <source>[TOPIC] %1</source>
-      <translation type="unfinished"/>
+      <translation>[TOPIC] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="379"/>
@@ -243,7 +243,7 @@ wacht aub...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="386"/>
       <source>? %2 %3 %4</source>
-      <translation type="unfinished"/>
+      <translation>? %2 %3 %4</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="392"/>
@@ -313,7 +313,7 @@ wacht aub...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="424"/>
       <source> - server operator</source>
-      <translation type="unfinished"/>
+      <translation> - sunucu operatörü</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="431"/>
@@ -323,47 +323,47 @@ wacht aub...</translation>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="438"/>
       <source>%1 days</source>
-      <translation>%1 dagen</translation>
+      <translation>%1 gün</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="441"/>
       <source>%1 hours</source>
-      <translation>%1 uren</translation>
+      <translation>%1 saat</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="444"/>
       <source>%1 mins</source>
-      <translation>%1 minuten</translation>
+      <translation>%1 dakika</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="445"/>
       <source>%1 secs</source>
-      <translation>%1 sec</translation>
+      <translation>%1 saniye</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="55"/>
       <source>Start element not found!</source>
-      <translation>Start element niet gevonden!</translation>
+      <translation>Başlangıç öğesi bulunamadı!</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
       <source>line %1: %2</source>
-      <translation>lijn %1: %2</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="149"/>
       <source>Expected %1 while parsing</source>
-      <translation>Verwacht %1 tijdens het parseren</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.cpp" line="145"/>
       <source>%1 @ line %2</source>
-      <translation>%1 @ lijn %2</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="82"/>
       <source>No data found!</source>
-      <translation>Geen gegevens gevonden!</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="89"/>
@@ -420,12 +420,12 @@ wacht aub...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="399"/>
       <source>Error parsing theme %1:%2</source>
-      <translation>Fout bij het parseren van thema %1:%2</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp" line="404"/>
       <source>Error theme not found %1.</source>
-      <translation>Fout, thema niet gevonden %1.</translation>
+      <translation type="unfinished"/>
     </message>
   </context>
   <context>
@@ -433,24 +433,24 @@ wacht aub...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="1240"/>
       <source>No map or no valid position.</source>
-      <translation type="unfinished"/>
+      <translation>Harita ya da geçerli konum yok.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2231"/>
       <source>Room Name: %1
 </source>
-      <translation>Kamernaam: %1
+      <translation>Oda Adı: %1
 </translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2844"/>
       <source>Create a new room here</source>
-      <translation type="unfinished"/>
+      <translation>Burada yeni bir oda oluştur</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3009"/>
       <source>Change the properties of this custom line</source>
-      <translation type="unfinished"/>
+      <translation>Bu satırın özelliklerini değiştir</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3208"/>
@@ -515,12 +515,12 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="3779"/>
       <source>Delete color</source>
       <comment>Deletes an environment colour</comment>
-      <translation type="unfinished"/>
+      <translation>Rengi sil</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3797"/>
       <source>Define new color</source>
-      <translation type="unfinished"/>
+      <translation>Yeni renk tanımla</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4111"/>
@@ -534,7 +534,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2380"/>
       <source>no text</source>
       <comment>Default text if a label is created in mapper with no text</comment>
-      <translation type="unfinished"/>
+      <translation>metin yok</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="142"/>
@@ -546,7 +546,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="142"/>
       <source>Name</source>
       <comment>Room name in the mapper widget</comment>
-      <translation>Naam</translation>
+      <translation>İsim</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="144"/>
@@ -597,43 +597,43 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2370"/>
       <source>Text label or image label?</source>
       <comment>2D Mapper create label dialog text</comment>
-      <translation type="unfinished"/>
+      <translation>Metin etiketi mi, resim etiketi mi?</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2371"/>
       <source>Text Label</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Metin etiketi</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2372"/>
       <source>Image Label</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Resim Etiketi</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2376"/>
       <source>Enter label text.</source>
       <comment>2D Mapper create label dialog title/text</comment>
-      <translation type="unfinished"/>
+      <translation>Etiketin metnini girin.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2383"/>
       <source>Background color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Arkaplan rengi</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2384"/>
       <source>Foreground color</source>
       <comment>2D Mapper create label color dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Ön plan rengi</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2388"/>
       <source>Select image</source>
       <comment>2D Mapper create label file dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Görseli seç</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2395"/>
@@ -645,13 +645,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2396"/>
       <source>Background</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Arkaplan</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2397"/>
       <source>Foreground</source>
       <comment>2D Mapper create label dialog button</comment>
-      <translation type="unfinished"/>
+      <translation>Ön plan</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2641"/>
@@ -663,7 +663,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2791"/>
       <source>Undo</source>
       <comment>2D Mapper context menu (drawing custom exit line) item</comment>
-      <translation type="unfinished"/>
+      <translation>Geri al</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2792"/>
@@ -705,19 +705,19 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2827"/>
       <source>Create new map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>Yeni harita oluştur</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2830"/>
       <source>Load map</source>
       <comment>2D Mapper context menu (no map found) item</comment>
-      <translation type="unfinished"/>
+      <translation>Haritayı yükle</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2843"/>
       <source>Create room</source>
       <comment>Menu option to create a new room in the mapper</comment>
-      <translation type="unfinished"/>
+      <translation>Oda oluştur</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2849"/>
@@ -735,25 +735,25 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2853"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Sil</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2854"/>
       <source>Delete room</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Odayı sil</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2857"/>
       <source>Color</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Renk</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2858"/>
       <source>Change room color</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Odanın rengini değiştir</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2861"/>
@@ -783,7 +783,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2869"/>
       <source>Lock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Kilitle</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2870"/>
@@ -795,7 +795,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2873"/>
       <source>Unlock</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Kilidi aç</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2874"/>
@@ -807,37 +807,37 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2877"/>
       <source>Weight</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Ağırlık</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2878"/>
       <source>Set room weight</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Odanın ağırlığını ayarla</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2881"/>
       <source>Exits</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Çıkışlar</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2882"/>
       <source>Set room exits</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Odanın çıkışlarını ayarla</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2885"/>
       <source>Symbol</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Sembol</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2886"/>
       <source>Set one or more symbols or letters to mark special rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Özel odaları işaretlemek için bir veya daha fazla sembol ya da harf ayarlayın</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2889"/>
@@ -849,13 +849,13 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2890"/>
       <source>Move selected group to a given position</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Seçili grubu belirtilen konuma taşı</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2893"/>
       <source>Area</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Bölge</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2894"/>
@@ -927,7 +927,7 @@ it with a new symbol for this room:</source>
       <location filename="../src/T2DMap.cpp" line="2947"/>
       <source>Delete</source>
       <comment>2D Mapper context menu (label) item</comment>
-      <translation type="unfinished"/>
+      <translation>Sil</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2948"/>
@@ -1018,13 +1018,13 @@ the highlighted room (%1) to:</source>
       <location filename="../src/T2DMap.cpp" line="3503"/>
       <source>OK</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation>OK</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3508"/>
       <source>Cancel</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation>Annuleren</translation>
+      <translation>İptal</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3597"/>
@@ -1064,13 +1064,13 @@ for all of the %n selected room(s):</source>
       <location filename="../src/T2DMap.cpp" line="3805"/>
       <source>OK</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation>OK</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3810"/>
       <source>Cancel</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation>Annuleren</translation>
+      <translation>İptal</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3867"/>
@@ -1415,7 +1415,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="821"/>
       <source>Save profile?</source>
-      <translation>Profiel opslaan?</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="821"/>
@@ -1570,7 +1570,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1710"/>
       <source>[ INFO ]  - Map file located and opened, now parsing it...</source>
-      <translation type="unfinished"/>
+      <translation>[ BİLGİ ] - Harita dosyası bulundu ve açıldı, şimdi inceleniyor...</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1717"/>
@@ -1580,7 +1580,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="1720"/>
       <source>[ INFO ]  - Map file located but it could not opened, please check permissions on:&quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ BİLGİ ] - Harita dosyası bulundu fakat açılamadı, lütfen "%1" 'in izinlerini kontrol edin.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1723"/>
@@ -1627,7 +1627,7 @@ rooms:</source>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="12630"/>
       <source>Playing %1</source>
-      <translation type="unfinished"/>
+      <translation>%1 oynuyor</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15027"/>
@@ -1794,73 +1794,73 @@ Tried these locations:
       <location filename="../src/TMap.cpp" line="995"/>
       <source>n</source>
       <comment>This translation converts the direction that DIR_NORTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>k</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="996"/>
       <source>ne</source>
       <comment>This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>kd</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="997"/>
       <source>e</source>
       <comment>This translation converts the direction that DIR_EAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>d</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="998"/>
       <source>se</source>
       <comment>This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>gd</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="999"/>
       <source>s</source>
       <comment>This translation converts the direction that DIR_SOUTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>g</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1000"/>
       <source>sw</source>
       <comment>This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>gb</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1001"/>
       <source>w</source>
       <comment>This translation converts the direction that DIR_WEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>b</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1002"/>
       <source>nw</source>
       <comment>This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>kb</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1003"/>
       <source>up</source>
       <comment>This translation converts the direction that DIR_UP codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>y</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1004"/>
       <source>down</source>
       <comment>This translation converts the direction that DIR_DOWN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>a</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1005"/>
       <source>in</source>
       <comment>This translation converts the direction that DIR_IN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>i</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1006"/>
       <source>out</source>
       <comment>This translation converts the direction that DIR_OUT codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>d</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1045"/>
@@ -1873,30 +1873,33 @@ map with others relying on the original format.</source>
       <location filename="../src/TMap.cpp" line="188"/>
       <source>[MAP ERROR:]%1
 </source>
-      <translation type="unfinished"/>
+      <translation>[HARİTA HATASI:]%1
+</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="440"/>
       <source>[ INFO ]  - Map audit starting...</source>
-      <translation type="unfinished"/>
+      <translation>[ BİLGİ ] - Harita denetimi başlıyor...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1029"/>
       <source>[ ERROR ] - The format {%1} you are trying to save the map with is too new
 for this version of Mudlet. Supported are only formats up to version {%2}.</source>
-      <translation type="unfinished"/>
+      <translation>[ HATA ]-Haritayı kaydetmeye çalıştığınız {%1} biçimi, Mudlet 'in bu sürümü için çok yeni.
+Yalnızca {%2 } sürümüne kadar olan sürümler desteklenmektedir.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1055"/>
       <source>[ WARN ]  - Saving map in a format {%1} different from the
 recommended format {%2} for this version of Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>[ UYARI ] - Haritayı kaydettiğiniz {%1} formatı, Mudlet'in bu sürümü
+için tavsiye edilen {%2} formatından farklıdır.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1345"/>
       <location filename="../src/TMap.cpp" line="1650"/>
       <source>[ ERROR ] - Unable to open (for reading) map file: &quot;%1&quot;!</source>
-      <translation type="unfinished"/>
+      <translation>[ HATA ] - Harita dosyası açılamıyor (Okumak İçin) : &quot;%1&quot;!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1367"/>
@@ -1957,12 +1960,12 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1607"/>
       <source>Download the map</source>
-      <translation type="unfinished"/>
+      <translation>Haritayı indirin</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1608"/>
       <source>Start my own</source>
-      <translation type="unfinished"/>
+      <translation>Kendi haritama başlayacağım</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1666"/>
@@ -1972,12 +1975,12 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2077"/>
       <source>Map issues</source>
-      <translation type="unfinished"/>
+      <translation>Harita sorunları</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2084"/>
       <source>Area issues</source>
-      <translation type="unfinished"/>
+      <translation>Bölge sorunları</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2090"/>
@@ -2007,7 +2010,7 @@ consistency details...</source>
     <message>
       <location filename="../src/TMap.cpp" line="2120"/>
       <source>End of report</source>
-      <translation type="unfinished"/>
+      <translation>Raporun sonu</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2126"/>
@@ -2175,41 +2178,41 @@ in main console!</source>
       <location filename="../src/TRoom.cpp" line="114"/>
       <location filename="../src/TRoom.cpp" line="1064"/>
       <source>West</source>
-      <translation type="unfinished"/>
+      <translation>Batı</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="115"/>
       <location filename="../src/TRoom.cpp" line="1078"/>
       <source>Up</source>
-      <translation type="unfinished"/>
+      <translation>Yukarı</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="116"/>
       <location filename="../src/TRoom.cpp" line="1092"/>
       <source>Down</source>
-      <translation type="unfinished"/>
+      <translation>Aşağı</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="117"/>
       <location filename="../src/TRoom.cpp" line="1106"/>
       <source>In</source>
-      <translation type="unfinished"/>
+      <translation>İçeri</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="118"/>
       <location filename="../src/TRoom.cpp" line="1120"/>
       <source>Out</source>
-      <translation type="unfinished"/>
+      <translation>Dışarı</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="119"/>
       <source>Other</source>
-      <translation type="unfinished"/>
+      <translation>Diğer</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="121"/>
       <source>Unknown</source>
-      <translation type="unfinished"/>
+      <translation>Bilinmeyen</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="252"/>
@@ -2224,22 +2227,22 @@ in main console!</source>
     <message>
       <location filename="../src/TRoom.cpp" line="980"/>
       <source>Northeast</source>
-      <translation type="unfinished"/>
+      <translation>Kuzeydoğu</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="994"/>
       <source>Northwest</source>
-      <translation type="unfinished"/>
+      <translation>Kuzeybatı</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1022"/>
       <source>Southeast</source>
-      <translation type="unfinished"/>
+      <translation>Güneydoğu</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1036"/>
       <source>Southwest</source>
-      <translation type="unfinished"/>
+      <translation>Güneybatı</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1141"/>
@@ -2305,12 +2308,12 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1328"/>
       <source>%1 {none}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {none}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1331"/>
       <source>%1 (open)</source>
-      <translation type="unfinished"/>
+      <translation>%1 (açık)</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1334"/>
@@ -2325,7 +2328,7 @@ room user data under a key:
     <message>
       <location filename="../src/TRoom.cpp" line="1340"/>
       <source>%1 {invalid}</source>
-      <translation type="unfinished"/>
+      <translation>%1 {invalid}</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1344"/>
@@ -2463,12 +2466,12 @@ it has not been possible to salvage this, it has been lost!</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="37"/>
       <source>Unnamed Area</source>
-      <translation>Naamloze Gebied</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="38"/>
       <source>Default Area</source>
-      <translation>Standaard Gebied</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="502"/>
@@ -2562,7 +2565,7 @@ Old ==&gt; New</source>
       <location filename="../src/TRoomDB.cpp" line="822"/>
       <location filename="../src/TRoomDB.cpp" line="825"/>
       <source>[ INFO ]  - Area id numbering is satisfactory.</source>
-      <translation>[ INFO ] - Area-id nummering is bevredigend.</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="833"/>
@@ -2595,7 +2598,7 @@ out what new id numbers to use.</source>
       <location filename="../src/TRoomDB.cpp" line="898"/>
       <location filename="../src/TRoomDB.cpp" line="901"/>
       <source>[ INFO ]  - Room id numbering is satisfactory.</source>
-      <translation>[ INFO ] - Kamer id nummering is bevredigend.</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="918"/>
@@ -2753,7 +2756,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1210"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopyala</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1221"/>
@@ -2763,7 +2766,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1225"/>
       <source>Copy as image</source>
-      <translation type="unfinished"/>
+      <translation>Resim olarak kopyala</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1228"/>
@@ -3123,25 +3126,25 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1853"/>
       <source>{variation selector 1}</source>
       <comment>Unicode U+FE00 codepoint.</comment>
-      <translation>{variation selector 1}</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1854"/>
       <source>{variation selector 2}</source>
       <comment>Unicode U+FE01 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1855"/>
       <source>{variation selector 3}</source>
       <comment>Unicode U+FE02 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1856"/>
       <source>{variation selector 4}</source>
       <comment>Unicode U+FE03 codepoint.</comment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1857"/>
@@ -3261,19 +3264,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="1901"/>
       <source>{FitzPatrick modifier 1 or 2}</source>
       <comment>Unicode codepoint U+0001F3FB - FitzPatrick modifier (Emoji Human skin-tone) 1-2.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 1 or 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1902"/>
       <source>{FitzPatrick modifier 3}</source>
       <comment>Unicode codepoint U+0001F3FC - FitzPatrick modifier (Emoji Human skin-tone) 3.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1903"/>
       <source>{FitzPatrick modifier 4}</source>
       <comment>Unicode codepoint U+0001F3FD - FitzPatrick modifier (Emoji Human skin-tone) 4.</comment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1904"/>
@@ -3405,7 +3408,7 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="149"/>
       <source>You are using version %CURRENT_VERSION%.</source>
-      <translation>U gebruikt maakt van versie %CURRENT_VERSION%.</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="177"/>
@@ -3425,22 +3428,22 @@ Would you like to update now?</source>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="350"/>
       <source>Cancel</source>
-      <translation>Annuleren</translation>
+      <translation>İptal</translation>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="370"/>
       <source>Install update now</source>
-      <translation>Update installeren</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="377"/>
       <source>OK</source>
-      <translation>OK</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="387"/>
       <source>Remind me later</source>
-      <translation>Herinner mij later</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/update_dialog.ui" line="392"/>
@@ -3460,7 +3463,7 @@ Would you like to update now?</source>
       <location filename="../src/updater.cpp" line="168"/>
       <location filename="../src/updater.cpp" line="236"/>
       <source>Update</source>
-      <translation>Updaten</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/updater.cpp" line="327"/>
@@ -3509,12 +3512,12 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="105"/>
       <source>About Mudlet</source>
-      <translation>Over Mudlet</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="601"/>
       <source>Mudlet</source>
-      <translation>Mudlet</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="728"/>
@@ -3524,7 +3527,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="757"/>
       <source>License</source>
-      <translation>Licentie</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/about_dialog.ui" line="792"/>
@@ -3537,7 +3540,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="62"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="115"/>
@@ -3645,7 +3648,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="35"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="57"/>
@@ -3760,7 +3763,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="1826"/>
       <source>Cancel</source>
       <comment>Cancel download of GUI package from Server</comment>
-      <translation>Annuleren</translation>
+      <translation>İptal</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1448"/>
@@ -3771,7 +3774,7 @@ Uninstalling old version &apos;%2&apos;.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="382"/>
       <source>[ INFO ]  - Looking up the IP address of server: %1:%2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ BİLGİ ] - Sunucunun IP adresi araştırılıyor:%1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="506"/>
@@ -3826,7 +3829,7 @@ Reason: </source>
       <location filename="../src/ctelnet.cpp" line="2159"/>
       <source>OK</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation>OK</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2348"/>
@@ -3954,7 +3957,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="123"/>
       <source>Cancel</source>
-      <translation>Annuleren</translation>
+      <translation>İptal</translation>
     </message>
     <message>
       <location filename="../src/ui/composer.ui" line="136"/>
@@ -3972,7 +3975,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="20"/>
       <source>Select a profile to connect with</source>
-      <translation type="unfinished"/>
+      <translation>Bağlanmak için bir profil seçin</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="101"/>
@@ -3982,77 +3985,77 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2084"/>
       <source>Remove</source>
-      <translation type="unfinished"/>
+      <translation>Kaldır</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2103"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopyala</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2128"/>
       <source>New</source>
-      <translation type="unfinished"/>
+      <translation>Yeni</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2183"/>
-      <source>welcome message</source>
-      <translation type="unfinished"/>
+     <location filename="../src/ui/connection_profiles.ui" line="2193"/>
+      <source>Required</source>
+      <translation>Zorunlu</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2199"/>
       <source>Required</source>
-      <translation type="unfinished"/>
+      <translation>Zorunlu</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2205"/>
       <source>Profile name:</source>
-      <translation type="unfinished"/>
+      <translation>Profil adı:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2228"/>
       <source>Server address:</source>
-      <translation type="unfinished"/>
+      <translation>Sunucu adresi:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2254"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>Bağlantı noktası:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2301"/>
       <source>Secure:</source>
-      <translation type="unfinished"/>
+      <translation>Güvenli:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2308"/>
       <source>Profile history:</source>
-      <translation type="unfinished"/>
+      <translation>Profil geçmişi:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2331"/>
       <source>load newest profile</source>
-      <translation type="unfinished"/>
+      <translation>en yeni profili yükle</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2336"/>
       <source>load oldest profile</source>
-      <translation type="unfinished"/>
+      <translation>en eski profili yükle</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2359"/>
       <source>Optional</source>
-      <translation type="unfinished"/>
+      <translation>İsteğe Bağlı</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2375"/>
       <source>Character name:</source>
-      <translation type="unfinished"/>
+      <translation>Karakter adı:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2385"/>
       <source>The characters name</source>
-      <translation type="unfinished"/>
+      <translation>Karakterin adı</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2437"/>
@@ -4060,15 +4063,9 @@ error message was: &quot;%2&quot;.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2546"/>
-      <location filename="../src/ui/connection_profiles.ui" line="2549"/>
-      <source>Game description or your notes</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
       <location filename="../src/ui/connection_profiles.ui" line="2365"/>
       <source>Password:</source>
-      <translation type="unfinished"/>
+      <translation>Şifre:</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2424"/>
@@ -4083,27 +4080,17 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2407"/>
       <source>Open profile on Mudlet start</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet başlatıldığında profili aç</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2417"/>
       <source>Reconnect automatically</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2440"/>
-      <source>Discord integration</source>
-      <translation type="unfinished"/>
+      <translation>Otomatik olarak yeniden bağlan</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2475"/>
       <source>Informational</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2502"/>
-      <source>Website:</source>
-      <translation type="unfinished"/>
+      <translation>Bilgilendirici</translation>
     </message>
   </context>
   <context>
@@ -4320,7 +4307,7 @@ custom line?</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="567"/>
       <source>Cancel</source>
-      <translation>Annuleren</translation>
+      <translation>İptal</translation>
     </message>
   </context>
   <context>
@@ -4335,17 +4322,19 @@ custom line?</source>
       <source>Are you sure that you&apos;d like to delete this profile? Everything (aliases, triggers, backups, etc) will be gone.
 
 If you are, please type in the profile name as a confirmation:</source>
-      <translation type="unfinished"/>
+      <translation>Bu profili silmek istediğinize emin misiniz? Profile dair bütün (aliaslar, triggerlar, yedekler vs) dosyalar silinecektir.
+
+Eğer eminseniz, doğrulamak için lütfen profil adını yazınız:</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="54"/>
       <source>Delete</source>
-      <translation type="unfinished"/>
+      <translation>Sil</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="61"/>
       <source>Cancel</source>
-      <translation>Annuleren</translation>
+      <translation>İptal</translation>
     </message>
   </context>
   <context>
@@ -4396,7 +4385,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16498"/>
       <source>n</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>k</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16500"/>
@@ -4408,7 +4397,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16502"/>
       <source>e</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>d</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16504"/>
@@ -4420,73 +4409,73 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16506"/>
       <source>s</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>g</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16508"/>
       <source>west</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>batı</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16510"/>
       <source>w</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>b</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16512"/>
       <source>northeast</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>kuzeydoğu</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16514"/>
       <source>ne</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>kd</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16516"/>
       <source>southeast</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>güneydoğu</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16518"/>
       <source>se</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>gd</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16520"/>
       <source>southwest</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>güneybatı</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16522"/>
       <source>sw</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>gb</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16524"/>
       <source>northwest</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>kuzeybatı</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16526"/>
       <source>nw</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>kb</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16528"/>
       <source>in</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>i</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16530"/>
@@ -4498,7 +4487,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16532"/>
       <source>out</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>d</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16534"/>
@@ -4510,7 +4499,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16536"/>
       <source>up</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>y</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16538"/>
@@ -4522,7 +4511,7 @@ Count</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16540"/>
       <source>down</source>
       <comment>Entering this direction will move the player in the game</comment>
-      <translation type="unfinished"/>
+      <translation>a</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16542"/>
@@ -4927,7 +4916,7 @@ Count</source>
       <location filename="../src/dlgColorTrigger.cpp" line="218"/>
       <source>%1 [%2]</source>
       <comment>Color Trigger dialog button in basic 16-color set, the first value is the name of the color, the second is the ANSI color number - for most languages modification is not likely to be needed - this text is used in two places</comment>
-      <translation type="unfinished"/>
+      <translation>%1 [%2]</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="405"/>
@@ -4940,7 +4929,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="79"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>Bağlan</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1197"/>
@@ -4955,7 +4944,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2324"/>
       <source>This profile name is already in use.</source>
-      <translation type="unfinished"/>
+      <translation>Bu profil adı zaten kullanılıyor.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="473"/>
@@ -4966,22 +4955,22 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="89"/>
       <source>&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;Welcome to Mudlet!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;b&gt;Click on one of the games on the list to play.&lt;/b&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;To play a game not in the list, click on %1 &lt;span style=&quot; color:#555753;&quot;&gt;New&lt;/span&gt;, fill in the &lt;i&gt;Profile Name&lt;/i&gt;, &lt;i&gt;Server address&lt;/i&gt;, and &lt;i&gt;Port&lt;/i&gt; fields in the &lt;i&gt;Required &lt;/i&gt; area.&lt;/p&gt;&lt;p&gt;After that, click %2 &lt;span style=&quot; color:#555753;&quot;&gt;Connect&lt;/span&gt; to play.&lt;/p&gt;&lt;p&gt;Have fun!&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;The Mudlet Team &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</source>
       <comment>Welcome message. Both %1 and %2 may be replaced by icons when this text is used.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;&lt;center&gt;&lt;big&gt;&lt;b&gt;Mudlet'e hoşgeldiniz!&lt;/b&gt;&lt;/big&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;&lt;center&gt;&lt;b&gt;Oynamaya başlamak için listede bulunan oyunlardan bir tanesine tıklayın.&lt;/b&gt;&lt;/center&gt;&lt;/p&gt;&lt;p&gt;Listede bulunmayan bir oyunu oynamak için %1 e tıklayın &lt;span style=&quot; color:#555753;&quot;&gt;Yeni&lt;/span&gt;, Doldurun &lt;i&gt;Profil Adı&lt;/i&gt;, &lt;i&gt;Sunucu adresi&lt;/i&gt;, ve &lt;i&gt;Port&lt;/i&gt; içerisinde bulunan &lt;i&gt;Zorunlu &lt;/i&gt; alan.&lt;/p&gt;&lt;p&gt;Daha sonra %2 ye tıklayın&lt;span style=&quot; color:#555753;&quot;&gt;Bağlan&lt;/span&gt; Oynamak için.&lt;/p&gt;&lt;p&gt;Bol eğlenceler!&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-family:&apos;Sans&apos;;&quot;&gt;Mudlet Ekibi &lt;/span&gt;&lt;img src=&quot;:/icons/mudlet_main_16px.png&quot;/&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="80"/>
       <source>Offline</source>
-      <translation type="unfinished"/>
+      <translation>Çevrimdışı</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="102"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopyala</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="104"/>
       <source>Copy settings only</source>
-      <translation type="unfinished"/>
+      <translation>Yalnızca ayarları kopyala</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="173"/>
@@ -5001,7 +4990,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="576"/>
       <source>new profile name</source>
-      <translation type="unfinished"/>
+      <translation>yeni profil adı</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="674"/>
@@ -5066,12 +5055,12 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2423"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before loading.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Yüklemeden önce, lütfen geçerli bir profil adı, oyun sunucu adresi ve oyun portunu ayarlayın.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2427"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before connecting.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Bağlanmadan önce lütfen geçerli bir profil adı, oyun sunucu adresi ve oyun portunu ayarlayın.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2479"/>
@@ -5107,7 +5096,9 @@ Count</source>
       <source>Please enter the URL or IP address of the Game server.
 
 %1</source>
-      <translation type="unfinished"/>
+      <translation>Lütfen Oyun sunucusunun URL'sini veya IP adresini girin.
+
+%1</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2388"/>
@@ -5182,7 +5173,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="416"/>
       <source>! Connected to %1.</source>
-      <translation type="unfinished"/>
+      <translation>! %1 e bağlanıldı.</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="417"/>
@@ -5192,7 +5183,7 @@ Count</source>
     <message>
       <location filename="../src/dlgIRC.cpp" line="422"/>
       <source>! Connecting %1...</source>
-      <translation type="unfinished"/>
+      <translation>! %1 e bağlanılıyor...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="427"/>
@@ -6195,7 +6186,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1746"/>
       <source>up</source>
-      <translation type="unfinished"/>
+      <translation>y</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1747"/>
@@ -6210,7 +6201,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1749"/>
       <source>down</source>
-      <translation type="unfinished"/>
+      <translation>a</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1750"/>
@@ -6230,12 +6221,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1753"/>
       <source>in</source>
-      <translation type="unfinished"/>
+      <translation>i</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1754"/>
       <source>out</source>
-      <translation type="unfinished"/>
+      <translation>d</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1832"/>
@@ -6416,7 +6407,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="8550"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8556"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopyala</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="437"/>
@@ -6536,7 +6527,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="664"/>
       <source>Name</source>
       <comment>Heading for the second column of the search results</comment>
-      <translation>Naam</translation>
+      <translation>İsim</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="665"/>
@@ -7136,7 +7127,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2326"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2400"/>
       <source>Name</source>
-      <translation>Naam</translation>
+      <translation>İsim</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1394"/>
@@ -7375,7 +7366,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="507"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>Kopyala</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="508"/>
@@ -7401,7 +7392,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation>İsim:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="33"/>
@@ -7682,12 +7673,12 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="157"/>
       <source>Disconnect</source>
-      <translation type="unfinished"/>
+      <translation>Bağlantıyı kes</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="165"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Yeniden bağlan</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="173"/>
@@ -7717,7 +7708,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/main_window.ui" line="205"/>
       <source>About Mudlet</source>
-      <translation>Over Mudlet</translation>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="192"/>
@@ -7831,7 +7822,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/mapper.ui" line="537"/>
       <source>Area:</source>
-      <translation type="unfinished"/>
+      <translation>Bölge:</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="606"/>
@@ -7841,7 +7832,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/ui/mapper.ui" line="635"/>
       <source>Exits</source>
-      <translation type="unfinished"/>
+      <translation>Çıkışlar</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="664"/>
@@ -9150,17 +9141,23 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="261"/>
       <location filename="../src/mudlet.cpp" line="263"/>
       <source>Connect</source>
-      <translation type="unfinished"/>
+      <translation>Bağlan</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="266"/>
       <source>Disconnect</source>
-      <translation type="unfinished"/>
+      <translation>Bağlantıyı kes</translation>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="317"/>
+      <location filename="../src/mudlet.cpp" line="326"/>
+      <source>Discord</source>
+      <translation>Discord</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="325"/>
       <source>Open Discord</source>
-      <translation type="unfinished"/>
+      <translation>Discord'u Aç</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="330"/>
@@ -9303,7 +9300,7 @@ Starting... Have fun!
     <message>
       <location filename="../src/mudlet.cpp" line="397"/>
       <source>Reconnect</source>
-      <translation type="unfinished"/>
+      <translation>Yeniden bağlan</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="398"/>
@@ -9888,12 +9885,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1352"/>
       <source>Foreground:</source>
-      <translation type="unfinished"/>
+      <translation>Ön plan:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1375"/>
       <source>Background:</source>
-      <translation type="unfinished"/>
+      <translation>Arkaplan:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1395"/>
@@ -10689,7 +10686,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2288"/>
       <source>Background color:</source>
-      <translation type="unfinished"/>
+      <translation>Arkaplan rengi:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2601"/>
@@ -10818,7 +10815,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2853"/>
       <source>Port:</source>
-      <translation type="unfinished"/>
+      <translation>Bağlantı noktası:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2891"/>
@@ -10833,7 +10830,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2836"/>
       <source>Server address:</source>
-      <translation type="unfinished"/>
+      <translation>Sunucu adresi:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2884"/>
@@ -10878,7 +10875,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3011"/>
       <source>Connection</source>
-      <translation type="unfinished"/>
+      <translation>Bağlantı</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5075"/>
@@ -10977,7 +10974,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="790"/>
       <source>Weight:</source>
-      <translation type="unfinished"/>
+      <translation>Ağırlık:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="866"/>
@@ -11306,7 +11303,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1994"/>
       <source>&amp;Cancel</source>
-      <translation>&amp;Annuleren</translation>
+      <translation>&amp;İptal</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2001"/>
@@ -11382,7 +11379,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="23"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation>İsim:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="40"/>
@@ -11446,7 +11443,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="29"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation>İsim:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="69"/>
@@ -11585,7 +11582,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="65"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation>İsim:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="85"/>
@@ -11674,12 +11671,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="672"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Arkaplan</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="659"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Ön plan</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="479"/>
@@ -11751,7 +11748,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="109"/>
       <source>Name:</source>
-      <translation>Naam:</translation>
+      <translation>İsim:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="175"/>
