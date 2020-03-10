@@ -470,6 +470,9 @@ function _comp(a, b)
     return false
   end
   if type(a) == 'table' then
+    if table.size(a) ~= table.size(b) then
+      return false
+    end
     for k, v in pairs(a) do
       if not b[k] then
         return false
