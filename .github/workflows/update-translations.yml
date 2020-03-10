@@ -47,14 +47,18 @@ jobs:
       uses: ad-m/github-push-action@v0.5.0
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: updated-text-${{ github.sha }}
+        branch: updated-text-${GITHUB_SHA:0:9}
         force: true
 
     - name: pull-request
       uses: repo-sync/pull-request@v2
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        source_branch: updated-text-${{ github.sha }}
+        source_branch: updated-text-${GITHUB_SHA:0:9}
         destination_branch: development
-        pr_title: "Make new translation ${{ github.ref }} text available for Crowdin"
-        pr_body: ":crown: An automated PR to make new text available for translation in Crowdin."
+        pr_title: ":crown: An automated PR to make new text available for translation in Crowdin."
+        pr_body: |
+          #### Brief overview of PR changes/additions \n
+          :crown: An automated PR to make new text available for translation in Crowdin.
+          #### Motivation for adding to Mudlet
+          So translators can translate the new text before the upcoming release.
