@@ -11,7 +11,7 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
-  update-text:
+  update-translations-text:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
@@ -64,3 +64,5 @@ jobs:
         USERNAME: mudlet-bot
         USEREMAIL: admin@mudlet.org
         BRANCH_NAME: translations/text-updates
+      with:
+        args: "(autocommit) Cleaned up XML file and removed all of the shuffled @line's" 
