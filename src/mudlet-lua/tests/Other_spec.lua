@@ -15,7 +15,7 @@ describe("Tests Other.lua functions", function()
       end
     end)
 
-    it("should send one command if it is only given one parametes", function()
+    it("should send one command if it is only given one parameter", function()
       local send = spy.on(_G, "send")
       sendAll("look")
       assert.spy(send).was.called(1)
@@ -283,7 +283,6 @@ describe("Tests Other.lua functions", function()
       -- undo my sins
       _G.cecho = _G.oldcecho
       _G.oldcecho = nil
-      cecho("TESTING!!!")
     end)
   end)
 
@@ -362,14 +361,12 @@ describe("Tests Other.lua functions", function()
       getColorWildcard()
       lockExit()
       hasExitLock()
-      shms()
       registerAnonymousEventHandler()
       killAnonymousEventHandler()
-      dispathEventToFunctions()
+      dispatchEventToFunctions()
       timeframe()
       killtimeframe()
       creplaceLine()? should be moved to GUIUtils.lua I think
       translateTable()
   ]]
 end)
-
