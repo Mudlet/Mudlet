@@ -1,29 +1,23 @@
 name: Update translations
 
-# Controls when the action will run. Triggers the workflow on push or pull request
-# events but only for the master branch
 on:
   pull_request:
 
   push:
-    branches: [ development ]
+    branches:
+      - 'release-**'
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   update-and-commit-text:
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
 #     - uses: actions/checkout@v1
 #       with:
 #         submodules: true
 
-    - uses: actions/checkout@master 
-      with: 
+    - uses: actions/checkout@master
+      with:
         submodules: true
         fetch-depth: 0
 
@@ -32,10 +26,10 @@ jobs:
       with:
         args: -recursive ./src/ ./3rdparty/dblsqd/dblsqd ./3rdparty/edbee-lib/edbee-lib -ts ./translations/mudlet.ts
 
-    - name: muffle line shuffling in updated text
-      uses: Mudlet/xmlstarlet-action@master
-      with:
-        args: ed -P -L --delete //@line translations/mudlet.ts
+    # - name: muffle line shuffling in updated text
+    #   uses: Mudlet/xmlstarlet-action@master
+    #   with:
+    #     args: ed -P -L --delete //@line translations/mudlet.ts
 
     - name: commit changes
       uses: teaminkling/autocommit@master
@@ -47,11 +41,19 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        branch: updated-text-for-translation
+        branch: updated-text-${{ github.sha }}
 
     - name: push new text
       uses: ad-m/github-push-action@v0.5.0
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: updated-text-for-translation
+        branch: updated-text-${{ github.sha }}
         force: true
+
+    - name: pull-request
+      uses: repo-sync/pull-request@v2
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        source_branch: updated-text-${{ github.sha }}
+        pr_title: "Make new translation ${{ github.ref }} text available for Crowdin"
+        pr_body: ":crown: An automated PR to make new text available for translation in Crowdin."
