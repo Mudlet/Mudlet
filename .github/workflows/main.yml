@@ -19,9 +19,15 @@ jobs:
     steps:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v2
-
+    
     # Runs a single command using the runners shell
-    - name: gh-pages action
-      uses: docker://cdssnc/touched-github-action:latest
+#     - name: filter
+#       uses: docker://cdssnc/touched-github-action:latest
+#       with:
+#         args: "**cpp, **ui"    
+    
+    - name: run lupdate
+      uses: "Mudlet/lupdate-action@master"
+#         needs = ["cpp or ui files updated"]
       with:
-        args: "**cpp, **ui"
+        args: -recursive ./src/ ./3rdparty/dblsqd/dblsqd ./3rdparty/edbee-lib/edbee-lib -ts ./translations/mudlet.ts
