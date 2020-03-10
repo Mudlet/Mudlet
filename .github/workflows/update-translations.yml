@@ -1,6 +1,5 @@
 name: Update translations
 on:
-  pull_request:
   push:
     branches:
       - 'release-**'
@@ -9,9 +8,6 @@ jobs:
   update-and-commit-text:
     runs-on: ubuntu-latest
     steps:
-#     - uses: actions/checkout@v1
-#       with:
-#         submodules: true
     - uses: actions/checkout@master
       with:
         submodules: true
@@ -21,10 +17,6 @@ jobs:
       uses: Mudlet/lupdate-action@master
       with:
         args: -recursive ./src/ ./3rdparty/dblsqd/dblsqd ./3rdparty/edbee-lib/edbee-lib -ts ./translations/mudlet.ts
-    # - name: muffle line shuffling in updated text
-    #   uses: Mudlet/xmlstarlet-action@master
-    #   with:
-    #     args: ed -P -L --delete //@line translations/mudlet.ts
 
     - name: commit changes
       uses: teaminkling/autocommit@master
