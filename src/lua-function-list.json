@@ -330,6 +330,7 @@
     "setOverline": "setOverline([windowName], boolean)",
     "setPopup": "setPopup(windowName, {lua code}, {hints})",
     "setProfileIcon": "setProfileIcon(iconPath)",
+    "setProfileStyleSheet": "setProfileStyleSheet(stylesheet)",
     "setReverse": "setReverse([windowName], boolean)",
     "setRoomArea": "setRoomArea(roomID, newAreaID or newAreaName)",
     "setRoomChar": "setRoomChar(roomID, character)",
@@ -397,7 +398,7 @@
     "unHighlightRoom": "unHighlightRoom(roomID)",
     "uninstallModule": "uninstallModule(name)",
     "uninstallPackage": "uninstallPackage(name)",
-    "unzip": "unzip(path,location)",
+    "unzipAsync": "unzipAsync(path, location)",
     "updateMap": "updateMap()",
     "wrapLine": "wrapLine(windowName, lineNumber)"
 }

@@ -3998,9 +3998,9 @@ error message was: &quot;%2&quot;.</source>
       <translation>Yeni</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2183"/>
-      <source>welcome message</source>
-      <translation type="unfinished"/>
+     <location filename="../src/ui/connection_profiles.ui" line="2193"/>
+      <source>Required</source>
+      <translation>Zorunlu</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2199"/>
@@ -4063,12 +4063,6 @@ error message was: &quot;%2&quot;.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2546"/>
-      <location filename="../src/ui/connection_profiles.ui" line="2549"/>
-      <source>Game description or your notes</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
       <location filename="../src/ui/connection_profiles.ui" line="2365"/>
       <source>Password:</source>
       <translation>Şifre:</translation>
@@ -4094,19 +4088,9 @@ error message was: &quot;%2&quot;.</source>
       <translation>Otomatik olarak yeniden bağlan</translation>
     </message>
     <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2440"/>
-      <source>Discord integration</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
       <location filename="../src/ui/connection_profiles.ui" line="2475"/>
       <source>Informational</source>
       <translation>Bilgilendirici</translation>
-    </message>
-    <message>
-      <location filename="../src/ui/connection_profiles.ui" line="2502"/>
-      <source>Website:</source>
-      <translation type="unfinished"/>
     </message>
   </context>
   <context>
@@ -9163,6 +9147,12 @@ Starting... Have fun!
       <location filename="../src/mudlet.cpp" line="266"/>
       <source>Disconnect</source>
       <translation>Bağlantıyı kes</translation>
+    </message>
+    <message>
+      <location filename="../src/mudlet.cpp" line="317"/>
+      <location filename="../src/mudlet.cpp" line="326"/>
+      <source>Discord</source>
+      <translation>Discord</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="325"/>
