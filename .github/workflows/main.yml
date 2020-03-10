@@ -1,4 +1,4 @@
-name: CI
+name: Update translations
 
 # Controls when the action will run. Triggers the workflow on push or pull request
 # events but only for the master branch
@@ -19,6 +19,8 @@ jobs:
     steps:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v2
+      with:
+        submodules: true
     
     # Runs a single command using the runners shell
 #     - name: filter
