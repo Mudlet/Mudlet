@@ -46,8 +46,9 @@ jobs:
       uses: Mudlet/xmlstarlet-action@master
       with:
         args: ed -P -L --delete //@line translations/mudlet.ts
-        
-    - uses: teaminkling/autocommit@master
+    
+    - name: commit changes
+      uses: teaminkling/autocommit@master
       with:
        commit-message: (autocommit) Cleaned up XML file and removed all of the shuffled lines attributes
     
