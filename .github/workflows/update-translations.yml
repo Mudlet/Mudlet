@@ -55,5 +55,6 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         source_branch: updated-text-${{ github.sha }}
+        destination_branch: development
         pr_title: "Make new translation ${{ github.ref }} text available for Crowdin"
         pr_body: ":crown: An automated PR to make new text available for translation in Crowdin."
