@@ -10026,6 +10026,21 @@ try again when it has finished.</source>
       <translation>Разрешить серверу загружать и воспроизводить звуки (требуется включить GMCP ниже)</translation>
     </message>
     <message>
+      <location filename="../src/ui/profile_preferences.ui" line="269"/>
+      <source>GMCP - Enable Generic Mud Communication Protocol</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="279"/>
+      <source>MSDP - Enable Mud Server Data Protocol</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ui/profile_preferences.ui" line="289"/>
+      <source>MSSP - Enable Mud Server Status Protocol</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/ui/profile_preferences.ui" line="296"/>
       <source>&lt;p&gt;Enables MSP - provides Mud Sound Protocol messages during game play for supported games&lt;/p&gt;</source>
       <translation type="unfinished"/>
