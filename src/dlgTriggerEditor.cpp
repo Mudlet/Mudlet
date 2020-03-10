@@ -1252,7 +1252,8 @@ void dlgTriggerEditor::slot_searchMudletItems(const QString& s)
     searchActions(s);
     searchTimers(s);
     searchKeys(s);
-    searchVariables(s);
+    if (mpHost->mSearchIncludesVariables)
+        searchVariables(s);
 
 
     // TODO: Edbee search term highlighter

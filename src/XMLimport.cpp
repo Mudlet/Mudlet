@@ -822,6 +822,9 @@ void XMLimport::readHostPackage(Host* pHost)
     if (attributes().hasAttribute(QStringLiteral("mEditorAutoComplete"))) {
         pHost->mEditorAutoComplete = (attributes().value(QStringLiteral("mEditorAutoComplete")) == "yes");
     }
+    if (attributes().hasAttribute(QStringLiteral("mSearchIncludesVariables"))) {
+        pHost->mSearchIncludesVariables = (attributes().value(QStringLiteral("mSearchIncludesVariables")) == "yes");
+    }
     if (attributes().hasAttribute(QLatin1String("mEditorTheme"))) {
         pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     }

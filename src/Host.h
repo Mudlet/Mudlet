@@ -444,6 +444,7 @@ public:
     int mWrapIndentCount;
 
     bool mEditorAutoComplete;
+    bool mSearchIncludesVariables;
 
     // code editor theme (human-friendly name)
     QString mEditorTheme;

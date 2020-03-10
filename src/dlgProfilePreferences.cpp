@@ -1311,6 +1311,7 @@ void dlgProfilePreferences::loadEditorTab()
     theme_download_label->hide();
 
     checkBox_autocompleteLuaCode->setChecked(pHost->mEditorAutoComplete);
+    checkBox_searchIncludesVariables->setChecked(pHost->mSearchIncludesVariables);
 
     // changes the theme being previewed
     connect(code_editor_theme_selection_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_theme_selected);
@@ -2533,6 +2534,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mEditorTheme = code_editor_theme_selection_combobox->currentText();
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
         pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();
+        pHost->mSearchIncludesVariables = checkBox_searchIncludesVariables->isChecked();
         if (pHost->mpEditorDialog) {
             pHost->mpEditorDialog->setThemeAndOtherSettings(pHost->mEditorTheme);
         }
