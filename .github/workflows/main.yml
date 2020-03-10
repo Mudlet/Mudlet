@@ -50,5 +50,5 @@ jobs:
     - name: muffle line shuffling
       uses: Mudlet/xmlstarlet-action@master
       with:
-        args: ed -P -L -d translations/mudlet.ts //@line
+        args: ed -P -L --delete //@line translations/mudlet.ts
       
