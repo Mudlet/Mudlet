@@ -37,18 +37,30 @@ jobs:
 #       with:
 #         args: "**cpp, **ui"    
     
-    - name: run lupdate
+    - name: update text for translation
       uses: Mudlet/lupdate-action@master
       with:
         args: -recursive ./src/ ./3rdparty/dblsqd/dblsqd ./3rdparty/edbee-lib/edbee-lib -ts ./translations/mudlet.ts
         
-# action "xmlstarlet" {
-#   uses = "Mudlet/xmlstarlet-action@master"
-#   needs = ["run lupdate"]
-#   args = "ed -P -L -d translations/mudlet.ts //@line"
-# }
-    - name: muffle line shuffling
+    - name: muffle line shuffling in updated text
       uses: Mudlet/xmlstarlet-action@master
       with:
         args: ed -P -L --delete //@line translations/mudlet.ts
       
+# action "Commit to a branch and push" {
+#   uses = "Mudlet/commit-action-branch@master"
+#   needs = ["xmlstarlet"]
+#   secrets = ["GITHUB_TOKEN"]
+#   env = {
+#     USERNAME = "mudlet-bot"
+#     USEREMAIL = "info@mudlet.org"
+#     BRANCH_NAME = "translations/translation-updates"
+#   }
+# }
+
+    - name: commit to a branch and push
+      uses: Mudlet/commit-action-branch@master
+      env:
+        USERNAME: mudlet-bot
+        USEREMAIL: info@mudlet.org
+        BRANCH_NAME: translations/text-updates
