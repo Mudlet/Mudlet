@@ -4,7 +4,7 @@ name: Update translations
 # events but only for the master branch
 on:
   pull_request:
-    
+
   push:
     branches: [ development ]
 
@@ -21,35 +21,29 @@ jobs:
     - uses: actions/checkout@v1
       with:
         submodules: true
-        
-# only works on push
-#     - name: filter
-#       uses: docker://cdssnc/touched-github-action:latest
-#       with:
-#         args: "**cpp, **ui"    
-    
+
     - name: update text for translation
       uses: Mudlet/lupdate-action@master
       with:
         args: -recursive ./src/ ./3rdparty/dblsqd/dblsqd ./3rdparty/edbee-lib/edbee-lib -ts ./translations/mudlet.ts
-        
+
     - name: muffle line shuffling in updated text
       uses: Mudlet/xmlstarlet-action@master
       with:
         args: ed -P -L --delete //@line translations/mudlet.ts
-    
+
     - name: commit changes
       uses: teaminkling/autocommit@master
       with:
        commit-message: (autocommit) Updated text for translation
-    
+
     - name: create texts branch
       uses: peterjgrainger/action-create-branch@v1.0.0
-      env: 
+      env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         branch: updated-text-for-translation
-    
+
     - name: push new text
       uses: ad-m/github-push-action@v0.5.0
       with:
