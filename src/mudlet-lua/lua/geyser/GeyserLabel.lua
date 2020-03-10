@@ -609,9 +609,16 @@ function Geyser.Label:new (cons, container)
   setmetatable(me, self)
   self.__index = self
   me.windowname = me.windowname or me.container.windowname or "main"
-  -- Create the label using primitives
-  createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
-  me:get_width(), me:get_height(), me.fillBg)
+
+  -- workaround for createLabel possibly being overwritten and not understanding the new parent argument
+  -- see https://github.com/Mudlet/Mudlet/issues/3393
+  if me.windowname == "main" then
+    createLabel(me.name, me:get_x(), me:get_y(),
+      me:get_width(), me:get_height(), me.fillBg)
+  else
+    createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
+      me:get_width(), me:get_height(), me.fillBg)
+  end
 
   -- parse any given format string and set sensible defaults
   me:processFormatString(cons.format)
@@ -686,10 +693,10 @@ function Geyser.Label:new (cons, container)
   if me.onLeave then
     me:setOnLeave(me.onLeave, me.args)
   end
-  
+
   -- Set clickthrough if included in constructor
   if cons.clickthrough then me:enableClickthrough() end
-  
+
   --print("  New in " .. self.name .. " : " .. me.name)
   return me
 end
