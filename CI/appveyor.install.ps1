@@ -7,8 +7,6 @@ $global:ErrorActionPreference = "Stop"
 
 . .\appveyor.functions.ps1
 
-SetQtBaseDir "$logFile"
-
 $Env:PATH = "$CMakePath;C:\MinGW\bin;C:\MinGW\msys\1.0\bin;C:\Program Files\7-Zip;$Env:PATH"
 
 # install dependencies
@@ -28,6 +26,7 @@ CheckAndInstallQt
 CheckAndInstallPython
 
 # Adapt the PATH variable again as we may have installed some dependencies just now and can determine their location.
+SetQtBaseDir "$logFile"
 SetMingwBaseDir "$logFile"
 $ShPath = "$Env:MINGW_BASE_DIR\bin;C:\Python27;$Env:PATH"
 $Env:PATH = $ShPath

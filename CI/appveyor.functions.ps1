@@ -1,7 +1,6 @@
 # Some global variables / settings
 $workingBaseDir = "C:\src\"
 $logFile = "$workingBaseDir\verbose_output.log"
-$ciScriptDir = (Get-Item -Path ".\" -Verbose).FullName
 
 if (-not $(Test-Path "$workingBaseDir")) {
     New-Item "$workingBaseDir" -ItemType "directory"
@@ -14,16 +13,24 @@ if($64Bit){
   $CMakePath = "C:\Program Files\CMake\bin"
 }
 
+# Load Script to handle Qt installation
+(New-Object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/build-images/master/scripts/Windows/install_qt_module.ps1') | Invoke-Expression
+
+if(!(Test-Path Env:QT_VERSION)){
+    $Env:QT_VERSION = "5.14.1"
+}
+if(!(Test-Path Env:QT_PLATFORM)){
+    $Env:QT_PLATFORM = "win32_mingw73"
+}
+
 function SetQtBaseDir([string] $logFile) {
   if(!(Test-Path Env:QT_BASE_DIR)){
-    try
-    {
-      $Env:QT_BASE_DIR = Get-Command "qmake.exe" -ErrorAction Stop | Select-Object -ExpandProperty definition | Split-Path -Parent | Split-Path -Parent
-    }
-    catch
-    {
-      $Env:QT_BASE_DIR = "C:\Qt\5.13.2\mingw73_32"
-    }
+    $log = & { ConfigureQtVersion 'C:\Qt' "$Env:QT_VERSION" } 6>&1
+    $logLineWithEnvFile = $log | ForEach-Object { $_.ToString() } | Where-Object { $_.EndsWith("qtenv2.bat") }
+    $envFile = $logLineWithEnvFile.Split(" ")[-1]
+    $pathParts = $envFile.Split("\\")
+    # Base dir is everything but the last two items in the path
+    $Env:QT_BASE_DIR = $pathParts[0..($pathParts.Length-3)] -join "\"
   }
   Write-Output "Using $Env:QT_BASE_DIR as QT base directory." | Tee-Object -File "$logFile" -Append
 }
@@ -137,7 +144,7 @@ function RunMake([string] $makefile = "Makefile"){
   For ($retries=1; $retries -le 3; $retries++){
     Step "Running make"
     try{
-      exec "mingw32-make" @("-f", "$makefile", "-j", $(Get-WmiObject win32_processor | Select -ExpandProperty "NumberOfLogicalProcessors"))
+      exec "mingw32-make" @("-f", "$makefile", "-j", $(Get-WmiObject win32_processor | Select-Object -ExpandProperty "NumberOfLogicalProcessors"))
       break
     }Catch{
       Write-Output "Attempt $retries failed." | Tee-Object -File "$logFile" -Append
@@ -215,9 +222,16 @@ function InstallBoost() {
 }
 
 function InstallQt() {
-  DownloadFile "http://download.qt.io/official_releases/online_installers/qt-unified-windows-x86-online.exe" "qt-installer.exe"
-  Step "Installing"
-  exec ".\qt-installer.exe" @("--script=`"$(split-path -parent $script:MyInvocation.MyCommand.Path)\qt-silent-install.qs`"")
+    $global:ErrorActionPreference = "Continue"
+    ConfigureQtVersion 'C:\Qt' "$Env:QT_VERSION"
+    if($error -ne $null){
+        Step "Installing Qt using external appveyor script"
+        # Exception was thrown, which means the version is not yet installed.
+        & { Install-QtComponent -Version "$Env:QT_VERSION" -Name "$Env:QT_PLATFORM" -ExcludeDocs -ExcludeExamples } >> "$logFile" 2>&1 6>&1
+    } else {
+        Step "Qt is already installed, skipping..."
+    }
+    $global:ErrorActionPreference = "Stop"
 }
 
 function InstallPython() {
@@ -441,7 +455,8 @@ function CheckAndInstallBoost(){
 }
 
 function CheckAndInstallQt(){
-    CheckAndInstall "Qt" "$Env:QT_BASE_DIR\bin\qmake.exe" { InstallQt }
+    #Use some pseudo file, because we have our own way of checking for Qt.
+    CheckAndInstall "Qt" "C:\some_file.foo" { InstallQt }
 }
 
 function CheckAndInstallPython(){
