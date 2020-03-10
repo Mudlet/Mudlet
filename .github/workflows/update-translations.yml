@@ -22,15 +22,6 @@ jobs:
       with:
         submodules: true
         
-# buggy action: https://github.community/t5/GitHub-Actions/Checkout-of-a-bitbucket-org-fails/td-p/49485/jump-to/first-unread-message
-#     - uses: actions/checkout@v2
-#     - name: Checkout submodules
-#       shell: bash
-#       run: |
-#         auth_header="$(git config --local --get http.https://github.com/.extraheader)"
-#         git submodule sync --recursive
-#         git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1  
-    
 # only works on push
 #     - name: filter
 #       uses: docker://cdssnc/touched-github-action:latest
@@ -50,7 +41,7 @@ jobs:
     - name: commit changes
       uses: teaminkling/autocommit@master
       with:
-       commit-message: (autocommit) Cleaned up XML file and removed all of the shuffled lines attributes
+       commit-message: (autocommit) Updated text for translation
     
     - name: create texts branch
       uses: peterjgrainger/action-create-branch@v1.0.0
@@ -65,23 +56,3 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         branch: updated-text-for-translation
         force: true
-      
-# action "Commit to a branch and push" {
-#   uses = "Mudlet/commit-action-branch@master"
-#   needs = ["xmlstarlet"]
-#   secrets = ["GITHUB_TOKEN"]
-#   env = {
-#     USERNAME = "mudlet-bot"
-#     USEREMAIL = "info@mudlet.org"
-#     BRANCH_NAME = "translations/translation-updates"
-#   }
-# }
-
-#     - name: commit to a branch and push
-#       uses: Mudlet/commit-branch-action@master
-#       env:
-#         USERNAME: mudlet-machine-account
-#         USEREMAIL: admin@mudlet.org
-#         BRANCH_NAME: translations/text-updates
-#       with:
-#         args: "(autocommit) Cleaned up XML file and removed all of the shuffled lines attributes"
