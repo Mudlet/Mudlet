@@ -2428,7 +2428,7 @@ std::pair<bool, QString> mudlet::openMapWidget(Host* pHost, const QString& area,
         return {true, QString()};
     }
 
-    if (area == "f") {
+    if (area == "f" || area == "floating") {
         if (!pM->isFloating()) {
             // Undock a docked window
             // Change of position or size is only possible when floating
@@ -2442,19 +2442,19 @@ std::pair<bool, QString> mudlet::openMapWidget(Host* pHost, const QString& area,
         }
         return {true, QString()};
     } else {
-        if (area == "r") {
+        if (area == "r" || area == "right") {
             pM->setFloating(false);
             addDockWidget(Qt::RightDockWidgetArea, pM);
             return {true, QString()};
-        } else if (area == "l") {
+        } else if (area == "l" || area == "left") {
             pM->setFloating(false);
             addDockWidget(Qt::LeftDockWidgetArea, pM);
             return {true, QString()};
-        } else if (area == "t") {
+        } else if (area == "t" || area == "top") {
             pM->setFloating(false);
             addDockWidget(Qt::TopDockWidgetArea, pM);
             return {true, QString()};
-        } else if (area == "b") {
+        } else if (area == "b" || area == "bottom") {
             pM->setFloating(false);
             addDockWidget(Qt::BottomDockWidgetArea, pM);
             return {true, QString()};

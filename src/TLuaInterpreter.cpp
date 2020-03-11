@@ -4371,7 +4371,7 @@ int TLuaInterpreter::openMapWidget(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    if (auto [success, message] = mudlet::self()->openMapWidget(&host, area, x, y, width, height); !success) {
+    if (auto [success, message] = mudlet::self()->openMapWidget(&host, area.toLower(), x, y, width, height); !success) {
         lua_pushnil(L);
         lua_pushfstring(L, message.toUtf8().constData());
         return 2;

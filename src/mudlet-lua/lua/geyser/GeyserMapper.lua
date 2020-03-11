@@ -65,7 +65,7 @@ function Geyser.Mapper:show_impl()
   end
 end
 
-function Geyser.Mapper:setDockPos(pos)
+function Geyser.Mapper:setDockPosition(pos)
   if self.mapWidget then
     return openMapWidget(pos)
   end
@@ -87,16 +87,20 @@ function Geyser.Mapper:new (cons, container)
 
   -----------------------------------------------------------
   -- Now create the Mapper using primitives
-  if not me.mapWidget and not me.docked and not me.dockPos then
+  if me.dockPosition and me.dockPosition:lower() == "floating" then
+    me.dockPosition = "f"
+  end
+
+  if not me.mapWidget and not me.docked and not me.dockPosition then
     createMapper(me.windowname, me:get_x(), me:get_y(),
     me:get_width(), me:get_height())
   else
     me.mapWidget = true
-    if me.docked or (me.dockPos and me.dockPos ~= "f") then
+    if me.docked or (me.dockPosition and me.dockPosition ~= "f") then
       me.docked = true
-      me.dockPos = me.dockPos or "r"
-      openMapWidget(me.dockPos)
-    elseif me.dockPos == "f" or cons.x or cons.y or cons.width or cons.height then 
+      me.dockPosition = me.dockPosition or "r"
+      openMapWidget(me.dockPosition)
+    elseif me.dockPosition == "f" or cons.x or cons.y or cons.width or cons.height then 
       openMapWidget(me:get_x(), me:get_y(),
       me:get_width(), me:get_height())
     else
