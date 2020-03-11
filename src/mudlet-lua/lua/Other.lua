@@ -470,13 +470,18 @@ function _comp(a, b)
     return false
   end
   if type(a) == 'table' then
+    local a_size = 0
     for k, v in pairs(a) do
+      a_size = a_size + 1
       if not b[k] then
         return false
       end
       if not _comp(v, b[k]) then
         return false
       end
+    end
+    if a_size ~= table.size(b) then
+      return false
     end
   else
     if a ~= b then

@@ -346,6 +346,26 @@ describe("Tests Other.lua functions", function()
       assert.is_true(_comp(tableA, tableB))
       assert.is_false(_comp(tableB, tableC))
     end)
+
+    it("should return the same regardless of the order of the arguments", function()
+      local tableA = {
+        "One",
+        { "First", "Second" },
+        "Three"
+      }
+      local tableB = {
+        "One",
+        { "First", "Second" },
+        "Three"
+      }
+      local tableC = {
+        "One",
+        { "First", "2nd" },
+        "Three"
+      }
+      assert.are.same(_comp(tableA, tableB), _comp(tableB, tableA))
+      assert.are.same(_comp(tableB, tableC), _comp(tableC, tableB))
+    end)
   end)
 
     --[[ 
