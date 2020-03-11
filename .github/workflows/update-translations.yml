@@ -4,6 +4,9 @@ on:
     branches:
       - 'release-**'
 
+  schedule:
+    - cron:  '0 0 * * fri'
+
 jobs:
   update-and-commit-text:
     runs-on: ubuntu-latest
