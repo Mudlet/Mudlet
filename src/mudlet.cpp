@@ -2408,6 +2408,81 @@ bool mudlet::moveWindow(Host* pHost, const QString& name, int x1, int y1)
     return false;
 }
 
+std::pair<bool, QString> mudlet::openMapWidget(Host* pHost, const QString& area, int x, int y, int width, int height)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pM = pHost->mpDockableMapWidget;
+    auto pMapper = pHost->mpMap.data()->mpMapper;
+    if (!pM && !pMapper) {
+        createMapper(true);
+        pM = pHost->mpDockableMapWidget;
+    }
+    if (!pM) {
+        return {false, "cannot create map widget. do you already use an embedded mapper?"};
+    }
+    pM->show();
+    if (area.isEmpty()) {
+        return {true, QString()};
+    }
+
+    if (area == "f") {
+        if (!pM->isFloating()) {
+            // Undock a docked window
+            // Change of position or size is only possible when floating
+            pM->setFloating(true);
+        }
+        if ((x != -1) && (y != -1)) {
+            pM->move(x, y);
+        }
+        if ((width != -1) && (height != -1)) {
+            pM->resize(width, height);
+        }
+        return {true, QString()};
+    } else {
+        if (area == "r") {
+            pM->setFloating(false);
+            addDockWidget(Qt::RightDockWidgetArea, pM);
+            return {true, QString()};
+        } else if (area == "l") {
+            pM->setFloating(false);
+            addDockWidget(Qt::LeftDockWidgetArea, pM);
+            return {true, QString()};
+        } else if (area == "t") {
+            pM->setFloating(false);
+            addDockWidget(Qt::TopDockWidgetArea, pM);
+            return {true, QString()};
+        } else if (area == "b") {
+            pM->setFloating(false);
+            addDockWidget(Qt::BottomDockWidgetArea, pM);
+            return {true, QString()};
+        } else {
+            return {false, QStringLiteral("docking option \"%1\" not available. available docking options are \"t\" top, \"b\" bottom, \"r\" right, \"l\" left and \"f\" floating").arg(area)};
+        }
+    }
+
+    return {false, QString()};
+}
+
+std::pair<bool, QString> mudlet::closeMapWidget(Host* pHost)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pM = pHost->mpDockableMapWidget;
+    if (!pM) {
+        return {false, "no map widget found to close"};
+    }
+    if (!pM->isVisible()) {
+        return {false, "map widget already closed"};
+    }
+    pM->hide();
+    return {true,QString()};
+}
+
 bool mudlet::closeWindow(Host* pHost, const QString& name)
 {
     if (!pHost || !pHost->mpConsole) {

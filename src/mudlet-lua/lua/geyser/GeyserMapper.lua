@@ -18,19 +18,57 @@ Geyser.Mapper = Geyser.Window:new({
 Geyser.Mapper.parent = Geyser.Window
 
 -- Overridden reposition function - mapper does it differently right now
+-- automatic repositioning/resizing won't work with map widget
 function Geyser.Mapper:reposition()
   if self.hidden or self.auto_hidden then
     return
   end
-  createMapper(self.windowname, self:get_x(), self:get_y(), self:get_width(), self:get_height())
+  if not self.mapWidget then
+    createMapper(self.windowname, self:get_x(), self:get_y(), self:get_width(), self:get_height())
+  end
+end
+
+-- Overridden move and resize function - map widget does it differently right now
+function Geyser.Mapper:move(x, y)
+  if self.hidden or self.auto_hidden then
+    return
+  end
+  Geyser.Container.move (self, x, y)
+  if self.mapWidget then
+    moveMapWidget(self:get_x(), self:get_y())
+  end
+end
+
+function Geyser.Mapper:resize(width, height)
+  if self.hidden or self.auto_hidden then
+    return
+  end
+  Geyser.Container.resize (self, width, height)
+  if self.mapWidget then
+    resizeMapWidget(self:get_width(), self:get_height())
+  end
 end
 
 function Geyser.Mapper:hide_impl()
-  createMapper(self.windowname, self:get_x(), self:get_y(), 0, 0)
+  if not self.mapWidget then
+    createMapper(self.windowname, self:get_x(), self:get_y(), 0, 0)
+  else
+    closeMapWidget()
+  end
 end
 
 function Geyser.Mapper:show_impl()
-  createMapper(self.windowname, self:get_x(), self:get_y(), self:get_width(), self:get_height())
+  if not self.mapWidget then
+    createMapper(self.windowname, self:get_x(), self:get_y(), self:get_width(), self:get_height())
+  else
+    openMapWidget()
+  end
+end
+
+function Geyser.Mapper:setDockPos(pos)
+  if self.mapWidget then
+    return openMapWidget(pos)
+  end
 end
 
 -- Overridden constructor
@@ -49,8 +87,22 @@ function Geyser.Mapper:new (cons, container)
 
   -----------------------------------------------------------
   -- Now create the Mapper using primitives
-  createMapper(me.windowname, me:get_x(), me:get_y(),
-  me:get_width(), me:get_height())
+  if not me.mapWidget and not me.docked and not me.dockPos then
+    createMapper(me.windowname, me:get_x(), me:get_y(),
+    me:get_width(), me:get_height())
+  else
+    me.mapWidget = true
+    if me.docked or (me.dockPos and me.dockPos ~= "f") then
+      me.docked = true
+      me.dockPos = me.dockPos or "r"
+      openMapWidget(me.dockPos)
+    elseif me.dockPos == "f" or cons.x or cons.y or cons.width or cons.height then 
+      openMapWidget(me:get_x(), me:get_y(),
+      me:get_width(), me:get_height())
+    else
+      openMapWidget()
+    end
+  end
 
   -- Set any defined colors
   Geyser.Color.applyColors(me)
