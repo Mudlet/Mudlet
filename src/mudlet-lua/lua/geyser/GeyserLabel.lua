@@ -382,7 +382,7 @@ function closeNest(label)
   local lNestLabels = label.nestedLabels
   if lNestLabels then
     for i, v in pairs(lNestLabels) do
-      if v.name == Geyser.Label.currentLabel then
+      if v == Geyser.Label.currentLabel then
         --  echo("new element is nested of prior table\n")
         --if so, don't do anything
         return
@@ -390,9 +390,9 @@ function closeNest(label)
     end
   end
   --is the current label the parent of the prior label?
-  if (lParent.name ~= Geyser.Label.currentLabel) then
+  if (lParent ~= Geyser.Label.currentLabel) then
     -- echo("new element isn't parent of prior element\n")
-    closeNestChildren(lParent.name)
+    closeNestChildren(lParent)
   end
 end
 
