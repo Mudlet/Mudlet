@@ -7648,7 +7648,8 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <source>%1 %2%3 (with debug symbols, without optimisations)
 </source>
       <comment>%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev</comment>
-      <translation type="unfinished"/>
+      <translation>%1 %2%3 (带有调试符号，没有优化)
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="211"/>
