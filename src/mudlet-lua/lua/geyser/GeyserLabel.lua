@@ -313,41 +313,19 @@ function Geyser.Label:resetToolTip()
   resetLabelToolTip(self.name)
 end
 
---- Returns the Geyser object associated with the label name
--- @param label The name of the label to use
-function Geyser.Label:getWindow(label, cont)
-  cont = cont or Geyser
-  for i, v in pairs(cont.windowList) do
-    if v.name == label then
-      return v
-    end
-    -- search down one or more levels to enable nesting in a container
-    if self:getWindow(label, v) then 
-      return self:getWindow(label, v) 
-    end
-  end
-end
-
 --- closes all nested labels
-function closeAllLevels()
-  for i, v in pairs(Geyser.Label.scrollV) do
+function closeAllLevels(label)
+  for i, v in pairs(label.container.Label.scrollV) do
     v[1]:hide()
     v[2]:hide()
   end
-  for i, v in pairs(Geyser.Label.scrollH) do
+  for i, v in pairs(label.container.Label.scrollH) do
     v[1]:hide()
     v[2]:hide()
   end
-  for i, v in pairs(Geyser.windowList) do
+  for i, v in pairs(label.container.windowList) do
     if v.nestParent then
       v:hide()
-    end
-    if v.type == "userwindow" then
-      for i,v in pairs (v.windowList[v.windows[1]].windowList) do 
-        if v.nestParent then
-          v:hide()
-        end
-      end
     end
   end
 end
@@ -356,12 +334,12 @@ end
 --- nested children those children might possess
 -- @param label The name of the label to use
 function closeNestChildren(label)
-  local nLabels = Geyser.Label:getWindow(label).nestedLabels
+  local nLabels = label.nestedLabels
   if nLabels then
     for i, v in pairs(nLabels) do
       v:hide()
       if v.nestedLabels then
-        closeNestChildren(v.name)
+        closeNestChildren(v)
       end
       if Geyser.Label.scrollV[v.nestParent] then
         Geyser.Label.scrollV[v.nestParent][1]:hide()
@@ -382,12 +360,12 @@ end
 function closeNest(label)
   --if we aren't in any label, close em all
   if not Geyser.Label.currentLabel then
-    closeAllLevels()
+    closeAllLevels(label)
     return
   end
   --is the current label on the same level of the prior label?
-  local lParent = Geyser.Label:getWindow(label).nestParent
-  local cLabel = Geyser.Label:getWindow(Geyser.Label.currentLabel)
+  local lParent = label.nestParent
+  local cLabel = Geyser.Label.currentLabel
   if not cLabel then
     return
   end
@@ -401,7 +379,7 @@ function closeNest(label)
     end
   end
   --is the current label a nested element of the prior table?
-  local lNestLabels = Geyser.Label:getWindow(label).nestedLabels
+  local lNestLabels = label.nestedLabels
   if lNestLabels then
     for i, v in pairs(lNestLabels) do
       if v.name == Geyser.Label.currentLabel then
@@ -423,16 +401,16 @@ end
 -- @param label The name of the scrollbar
 function doNestScroll(label)
   local scrollDir = 0
-  if string.find(label, "forScroll") then
+  if string.find(label.name, "forScroll") then
     scrollDir = 1
   else
     scrollDir = -1
   end
   local bothScrolls
-  if (string.sub(label, -1, -1) == "V") then
-    bothScrolls = Geyser.Label.scrollV[Geyser.Label:getWindow(label).nestParent]
+  if (string.sub(label.name, -1, -1) == "V") then
+    bothScrolls = Geyser.Label.scrollV[label.nestParent]
   else
-    bothScrolls = Geyser.Label.scrollH[Geyser.Label:getWindow(label).nestParent]
+    bothScrolls = Geyser.Label.scrollH[label.nestParent]
   end
   local bscroll = bothScrolls[1]
   local fscroll = bothScrolls[2]
@@ -447,7 +425,7 @@ function doNestScroll(label)
     fscroll.scroll = fscroll.maxScroll
     bscroll.scroll = fscroll.scroll - scrollDiff
   end
-  Geyser.Label:displayNest(bscroll.nestParent.name)
+  Geyser.Label:displayNest(bscroll.nestParent)
 end
 
 --- Displays the nested elements within label, and orients them
@@ -457,7 +435,7 @@ function Geyser.Label:displayNest(label)
   local maxDim = {}
   local flyMap = { R = { 1, 0 }, L = { -1, 0 }, T = { 0, -1 }, B = { 0, 1 } }
   maxDim["H"], maxDim["V"] = getMainWindowSize()
-  local parent = Geyser.Label:getWindow(label)
+  local parent = label
   --build a list of the labels we can use until we hit the max
   local nestedLabels = {}
   nestedLabels["V"] = {}
@@ -577,7 +555,7 @@ end
 --- only active if flyOut is true
 -- @param label The name of the label to use
 function doNestEnter(label)
-  local window = Geyser.Label:getWindow(label)
+  local window = label
   --echo("entering window"..window.name.."\n")
   --Geyser.display(window)
   Geyser.Label.currentLabel = label
@@ -593,7 +571,7 @@ function doNestLeave(label)
   if Geyser.Label.currentLabel == label then
     Geyser.Label.currentLabel = nil
   end
-  tempTimer(0.1, "closeNest(\"" .. label .. "\")")
+  tempTimer(0.1, function() closeNest(label) end)
 end
 
 -- Save a reference to our parent constructor
@@ -614,9 +592,16 @@ function Geyser.Label:new (cons, container)
   setmetatable(me, self)
   self.__index = self
   me.windowname = me.windowname or me.container.windowname or "main"
-  -- Create the label using primitives
-  createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
-  me:get_width(), me:get_height(), me.fillBg)
+
+  -- workaround for createLabel possibly being overwritten and not understanding the new parent argument
+  -- see https://github.com/Mudlet/Mudlet/issues/3393
+  if me.windowname == "main" then
+    createLabel(me.name, me:get_x(), me:get_y(),
+      me:get_width(), me:get_height(), me.fillBg)
+  else
+    createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
+      me:get_width(), me:get_height(), me.fillBg)
+  end
 
   -- parse any given format string and set sensible defaults
   me:processFormatString(cons.format)
@@ -627,11 +612,11 @@ function Geyser.Label:new (cons, container)
 
   -- Set up mouse hover as the callback if we have one
   if cons.nestflyout then
-    setLabelOnEnter(me.name, "doNestShow", me.name)
+    me:setOnEnter("doNestShow", me)
   end
   -- Set up the callback if we have one
   if cons.nestable then
-    setLabelClickCallback(me.name, "doNestShow", me.name)
+    me:setClickCallback("doNestShow", me)
   end
   if me.clickCallback then
     if type(me.clickArgs) == "string" or type(me.clickArgs) == "number" then
@@ -691,10 +676,10 @@ function Geyser.Label:new (cons, container)
   if me.onLeave then
     me:setOnLeave(me.onLeave, me.args)
   end
-  
+
   -- Set clickthrough if included in constructor
   if cons.clickthrough then me:enableClickthrough() end
-  
+
   --print("  New in " .. self.name .. " : " .. me.name)
   return me
 end
@@ -713,15 +698,15 @@ function Geyser.Label:addScrollbars(parent, layout)
   local forward = Geyser.Label:new(cons, parent.container)
   forward.nestParent = parent
   forward.maxScroll = #parent.nestedLabels + 1
-  setLabelOnEnter(forward.name, "doNestEnter", forward.name)
-  setLabelOnLeave(forward.name, "doNestLeave", forward.name)
-  forward:setClickCallback("doNestScroll", forward.name)
+  forward:setOnEnter("doNestEnter", forward)
+  forward:setOnLeave("doNestLeave", forward)
+  forward:setClickCallback("doNestScroll", forward)
   cons.name = "backScroll" .. label.name .. layout
   local backward = Geyser.Label:new(cons, label.container)
   backward.nestParent = parent
-  setLabelOnEnter(backward.name, "doNestEnter", backward.name)
-  setLabelOnLeave(backward.name, "doNestLeave", backward.name)
-  backward:setClickCallback("doNestScroll", backward.name)
+  backward:setOnEnter("doNestEnter", backward)
+  backward:setOnLeave("doNestLeave", backward)
+  backward:setClickCallback("doNestScroll", backward)
   return { backward, forward }
 end
 
@@ -758,8 +743,8 @@ function Geyser.Label:addChild(cons, container)
   --this is our parent
   me.nestParent = self
   if cons.flyOut == true then
-    setLabelOnEnter(me.name, "doNestEnter", me.name)
-    setLabelOnLeave(me.name, "doNestLeave", me.name)
+    me:setOnEnter("doNestEnter", me)
+    me:setOnLeave("doNestLeave", me)
   end
   if me.clickCallback then
     me:setClickCallback(me.clickCallback, me.clickArgs)
