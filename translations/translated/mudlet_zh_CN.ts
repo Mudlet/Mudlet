@@ -1967,7 +1967,7 @@ please wait...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1398"/>
       <source>[ INFO ]  - Reading map (format version:%1) file: &quot;%2&quot;.</source>
-      <translation>[信息] - 读取地图文件中 (版本: %1) 文件: &quot;%2&quot;.</translation>
+      <translation>[ 信息 ]  - 读取地图文件中 (版本: %1) 文件: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1507"/>
@@ -7450,7 +7450,7 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="1586"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="2262"/>
       <source>Action</source>
-      <translation type="unfinished"/>
+      <translation>操作</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="1586"/>
