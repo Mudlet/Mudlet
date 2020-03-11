@@ -2480,7 +2480,7 @@ std::pair<bool, QString> mudlet::closeMapWidget(Host* pHost)
         return {false, "map widget already closed"};
     }
     pM->hide();
-    return {true,QString()};
+    return {true, QString()};
 }
 
 bool mudlet::closeWindow(Host* pHost, const QString& name)
