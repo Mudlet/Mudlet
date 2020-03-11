@@ -287,9 +287,6 @@ describe("Tests TableUtils.lua functions", function()
       local actual = table.union(tblA, tblB, tblC)
       assert.same(expected,actual)
     end)
-
-    it("should return the union of more than two tables", function()
-    end)
   end)
 
   describe("table.n_union(tblA, tblB, ...)", function()
