@@ -2,7 +2,7 @@
   <br>
   <a href="https://github.com/Mudlet/Mudlet"><img src="https://bazaar.launchpad.net/~mudlet-makers/mudlet/artwork/download/head:/mudlet_main_256px.pn-20171109060211-hidv2woj9dffwyql-11/mudlet_main_256px.png" alt="Mudlet"></a>
   <br>
-  Mudlet
+  Mudlet   
   <br>
 </h1>
 
