@@ -3553,7 +3553,7 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
             luaSendWindow.clear();
         }
     }
-    if (!lua_isnumber(L, 2)) {      
+    if (!lua_isnumber(L, 2)) {
         if (!lua_isstring(L, 2)) {
             lua_pushfstring(L, "createMiniConsole: bad argument #2 type (miniconsole name as string expected, got %s!)", luaL_typename(L, 2));
             lua_error(L);
@@ -4341,7 +4341,7 @@ int TLuaInterpreter::openMapWidget(lua_State* L)
         }
     }
     if (n > 1) {
-        area = QLatin1String("f");
+        area = QStringLiteral("f");
         if (!lua_isnumber(L, 1)) {
             lua_pushfstring(L, "openMapWidget: bad argument #1 type (x-coordinate as number expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
