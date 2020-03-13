@@ -155,7 +155,7 @@ describe("Tests StringUtils.lua functions", function()
     it("should error if given something other than a string", function()
       local str = {}
       local errfn = function() string.title(str) end
-      assert.has_error(errfn, "string.title(str): str as string expected, got table")
+      assert.has_error(errfn, "string.title: bad argument #1 type. (String to title as string expected, got table!)")
     end)
   end)
 
