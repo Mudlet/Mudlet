@@ -1,5 +1,5 @@
 name: Update translations
-on:    
+on:
   push:
     branches:
       - 'release-**'
@@ -21,7 +21,7 @@ jobs:
       uses: Mudlet/lupdate-action@master
       with:
         args: -recursive ./src/ ./3rdparty/dblsqd/dblsqd ./3rdparty/edbee-lib/edbee-lib -ts ./translations/mudlet.ts
-        
+
     - name: check if translation strings were modified
       id: getdiff
       run: |
@@ -30,7 +30,7 @@ jobs:
         lines_changed=$(cat diff.txt | wc --lines | xargs echo -n)
         echo "$lines_changed lines changed."
         echo ::set-output name=lines_changed::$lines_changed
-        
+
     - name: commit changes
       uses: teaminkling/autocommit@master
       if: steps.getdiff.outputs.lines_changed > 0
