@@ -88,7 +88,7 @@ end
 --- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.title
 function string:title()
   local strType = type(self)
-  assert(strType == "string", string.format("string.title: bad argument #1 type. (String to title as string expected, got %s!)", strType))
+  assert(strType == "string", string.format("string.title: bad argument #1 type (string to title as string expected, got %s!)", strType))
   self = self:gsub("^%l", string.upper, 1)
   return self
 end
