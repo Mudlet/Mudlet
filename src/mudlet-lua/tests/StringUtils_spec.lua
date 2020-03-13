@@ -171,9 +171,15 @@ describe("Tests StringUtils.lua functions", function()
 
     it("should return whatever you pass in if it's falsey", function()
       local str = false
-      assert.is_false(string.trim(str))
+      assert.equals(str, string.trim(str))
       str = nil
-      assert.is_nil(string.trim(str))
+      assert.equals(str, string.trim(str))
+    end)
+
+    it("should return the same string if str has no spaces at front or back", function()
+      local str = "This is a test"
+      assert.equals(str, string.trim(str))
+      assert.equals(str, str:trim())
     end)
   end)
 end)
