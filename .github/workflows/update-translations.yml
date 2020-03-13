@@ -22,17 +22,21 @@ jobs:
         args: -recursive ./src/ ./3rdparty/dblsqd/dblsqd ./3rdparty/edbee-lib/edbee-lib -ts ./translations/mudlet.ts
         
     - name: check if translation strings were modified
+      id: getdiff
       run: |
         git diff --patch --unified=0 > diff.txt
         cat diff.txt | grep -v "<location" | grep -v "^@@" | grep -v "^diff" | grep -v "^index" | grep -v "^\-\-\-" | egrep -v '^\+\+\+'
-
+        echo ::set-output name=lines_changed::$(cat diff.txt | wc --lines)
+        
     - name: commit changes
       uses: teaminkling/autocommit@master
+      if: steps.getdiff.outputs.lines_changed > 0
       with:
        commit-message: (autocommit) Updated text for translation
 
     - name: create texts branch
       uses: peterjgrainger/action-create-branch@v1.0.0
+      if: steps.getdiff.outputs.lines_changed > 0
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -40,6 +44,7 @@ jobs:
 
     - name: push new text
       uses: ad-m/github-push-action@v0.5.0
+      if: steps.getdiff.outputs.lines_changed > 0
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         branch: updated-text-${{ github.sha }}
@@ -47,6 +52,7 @@ jobs:
 
     - name: pull-request
       uses: repo-sync/pull-request@v2
+      if: steps.getdiff.outputs.lines_changed > 0
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         source_branch: updated-text-${{ github.sha }}
