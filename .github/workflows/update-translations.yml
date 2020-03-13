@@ -29,7 +29,7 @@ jobs:
       run: |
         git diff --patch --unified=0 > diff.txt
         cat diff.txt | grep -v "<location" | grep -v "^@@" | grep -v "^diff" | grep -v "^index" | grep -v "^\-\-\-" | egrep -v '^\+\+\+'
-        lines_changed=$(cat diff.txt | wc --lines)
+        lines_changed=$(cat diff.txt | wc --lines | xargs echo -n)
         echo "$lines_changed lines changed."
         echo ::set-output name=lines_changed::$lines_changed
         
