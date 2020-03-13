@@ -31,7 +31,7 @@ jobs:
         cat diff.txt | grep -v "<location" | grep -v "^@@" | grep -v "^diff" | grep -v "^index" | grep -v "^\-\-\-" | egrep -v '^\+\+\+'
         lines_changed=$(cat diff.txt | wc --lines)
         echo "$lines_changed lines changed."
-        echo ::set-output name=lines_changed::$(lines_changed)
+        echo ::set-output name=lines_changed::$lines_changed
         
     - name: commit changes
       uses: teaminkling/autocommit@master
