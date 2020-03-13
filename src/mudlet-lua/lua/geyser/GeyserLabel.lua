@@ -16,7 +16,6 @@ Geyser.Label = Geyser.Window:new({
   font = "",
   args = "",
   fillBg = 1, })
-Geyser.Label.currentLabel = nil
 Geyser.Label.scrollV = {}
 Geyser.Label.scrollH = {}
 Geyser.Label.numChildren = 0
@@ -356,49 +355,6 @@ function closeNestChildren(label)
   end
 end
 
---- Internal function.  This is a timer callback from a nested
---- labels OnLeave function which takes care of renesting
---- labels
--- @param label The name of the label to use
-function closeNest(label)
-  --if we aren't in any label, close em all
-  if not Geyser.Label.currentLabel then
-    closeNestChildren(label.nestParent)
-    return
-  end
-  --is the current label on the same level of the prior label?
-  local lParent = label.nestParent
-  local cLabel = Geyser.Label.currentLabel
-  if not cLabel then
-    return
-  end
-  local cParent = cLabel.nestParent
-  if lParent and cParent then
-    if lParent == cParent then
-      --if so, don't do anything, but close any fly outs of the label
-      --echo("on same level\n")
-      closeNestChildren(label)
-      return
-    end
-  end
-  --is the current label a nested element of the prior table?
-  local lNestLabels = label.nestedLabels
-  if lNestLabels then
-    for i, v in pairs(lNestLabels) do
-      if v == Geyser.Label.currentLabel then
-        --  echo("new element is nested of prior table\n")
-        --if so, don't do anything
-        return
-      end
-    end
-  end
-  --is the current label the parent of the prior label?
-  if (lParent ~= Geyser.Label.currentLabel) then
-    -- echo("new element isn't parent of prior element\n")
-    closeNestChildren(lParent)
-  end
-end
-
 --- Internal function.  This is a callback from a nested
 --- labels scrollbar.
 -- @param label The name of the scrollbar
@@ -583,10 +539,12 @@ end
 function doNestShow(label)
   --Check if children are visible
   local lhidden = true
-  if Geyser.Label.closeNestTimer then
-    killTimer(Geyser.Label.closeNestTimer)
+  if Geyser.Label.closeAllTimer then
+    killTimer(Geyser.Label.closeAllTimer)
   end
-  Geyser.Label.closeNestTimer = tempTimer(5, function() closeNestChildren(label) end)
+
+  Geyser.Label.closeAllTimer = tempTimer(5, function() closeAllLevels(label) end)
+
   if label.nestedLabels and #label.nestedLabels > 0 then 
     lhidden = label.nestedLabels[1].hidden 
   end
@@ -609,38 +567,34 @@ end
 
 --- Internal function when a nested element is moused over
 --- to lay out the nested elements within that nested element
---- only active if flyOut is true
 -- @param label The name of the label to use
 function doNestEnter(label)
   local window = label
-  if Geyser.Label.closeNestTimer then
-    killTimer(Geyser.Label.closeNestTimer)
+  if Geyser.Label.closeAllTimer then
+    killTimer(Geyser.Label.closeAllTimer)
   end
 
-  if not label.nestParent then
-    closeAllLevels(label)
-  else
-    closeNeighbourChildren(label)
-  end
-  --echo("entering window"..window.name.."\n")
-  --Geyser.display(window)
-  Geyser.Label.currentLabel = label
-  if window and window.nestedLabels then
-    label:displayNest()
-  end
+  if window.flyOut and window and window.nestedLabels then
+    if not label.nestParent then
+      closeAllLevels(label)
+    else
+      closeNeighbourChildren(label)
+    end
+    --echo("entering window"..window.name.."\n")
+    --Geyser.display(window)
+    
+      label:displayNest()
+    end
 end
 
 --- Internal function when a nested element is left
 --- to renest elements and restore order
 -- @param label The name of the label to use
 function doNestLeave(label)
-  if Geyser.Label.currentLabel == label then
-    Geyser.Label.currentLabel = nil
+  if Geyser.Label.closeAllTimer then
+    killTimer(Geyser.Label.closeAllTimer)
   end
-  if Geyser.Label.closeNestTimer then
-    killTimer(Geyser.Label.closeNestTimer)
-  end
-  Geyser.Label.closeNestTimer = tempTimer(2, function() closeNest(label) end)
+  Geyser.Label.closeAllTimer = tempTimer(2, function() closeAllLevels(label) end)
 end
 
 -- Save a reference to our parent constructor
@@ -811,10 +765,8 @@ function Geyser.Label:addChild(cons, container)
   local me = Geyser.Label:new(cons, container)
   --this is our parent
   me.nestParent = self
-  if cons.flyOut == true then
-    me:setOnEnter("doNestEnter", me)
-    me:setOnLeave("doNestLeave", me)
-  end
+  me:setOnEnter("doNestEnter", me)
+  me:setOnLeave("doNestLeave", me)
   
   if not me.clickCallback then
     --used in instances where an element only meant to serve as
