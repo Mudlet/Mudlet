@@ -1,7 +1,5 @@
 name: Update translations
-on:
-  pull_request:
-    
+on:    
   push:
     branches:
       - 'release-**'
