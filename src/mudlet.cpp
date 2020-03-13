@@ -2421,14 +2421,14 @@ std::pair<bool, QString> mudlet::openMapWidget(Host* pHost, const QString& area,
         pM = pHost->mpDockableMapWidget;
     }
     if (!pM) {
-        return {false, "cannot create map widget. do you already use an embedded mapper?"};
+        return {false, "cannot create map widget. Do you already use an embedded mapper?"};
     }
     pM->show();
     if (area.isEmpty()) {
         return {true, QString()};
     }
 
-    if (area == "f" || area == "floating") {
+    if (area == QLatin1String("f") || area == QLatin1String("floating")) {
         if (!pM->isFloating()) {
             // Undock a docked window
             // Change of position or size is only possible when floating
@@ -2442,24 +2442,24 @@ std::pair<bool, QString> mudlet::openMapWidget(Host* pHost, const QString& area,
         }
         return {true, QString()};
     } else {
-        if (area == "r" || area == "right") {
+        if (area == QLatin1String("r") || area == QLatin1String("right")) {
             pM->setFloating(false);
             addDockWidget(Qt::RightDockWidgetArea, pM);
             return {true, QString()};
-        } else if (area == "l" || area == "left") {
+        } else if (area == QLatin1String("l") || area == QLatin1String("left")) {
             pM->setFloating(false);
             addDockWidget(Qt::LeftDockWidgetArea, pM);
             return {true, QString()};
-        } else if (area == "t" || area == "top") {
+        } else if (area == QLatin1String("t") || area == QLatin1String("top")) {
             pM->setFloating(false);
             addDockWidget(Qt::TopDockWidgetArea, pM);
             return {true, QString()};
-        } else if (area == "b" || area == "bottom") {
+        } else if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
             pM->setFloating(false);
             addDockWidget(Qt::BottomDockWidgetArea, pM);
             return {true, QString()};
         } else {
-            return {false, QStringLiteral("docking option \"%1\" not available. available docking options are \"t\" top, \"b\" bottom, \"r\" right, \"l\" left and \"f\" floating").arg(area)};
+            return {false, QStringLiteral(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
         }
     }
 
