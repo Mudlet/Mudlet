@@ -1,0 +1,309 @@
+diff --git a/translations/mudlet.ts b/translations/mudlet.ts
+index 75336fbf..16519839 100644
+--- a/translations/mudlet.ts
++++ b/translations/mudlet.ts
+@@ -33 +33 @@
+-        <location filename="../src/Host.cpp" line="1474"/>
++        <location filename="../src/Host.cpp" line="1478"/>
+@@ -40 +40 @@ please wait...</source>
+-        <location filename="../src/Host.cpp" line="1476"/>
++        <location filename="../src/Host.cpp" line="1480"/>
+@@ -47 +47 @@ please wait...</source>
+-        <location filename="../src/Host.cpp" line="1480"/>
++        <location filename="../src/Host.cpp" line="1484"/>
+@@ -52 +52 @@ please wait...</source>
+-        <location filename="../src/Host.cpp" line="2087"/>
++        <location filename="../src/Host.cpp" line="2091"/>
+@@ -57,2 +57,2 @@ please wait...</source>
+-        <location filename="../src/Host.cpp" line="2089"/>
+-        <location filename="../src/Host.cpp" line="2095"/>
++        <location filename="../src/Host.cpp" line="2093"/>
++        <location filename="../src/Host.cpp" line="2099"/>
+@@ -1631 +1631 @@ rooms:</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="12630"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="12695"/>
+@@ -1636 +1636 @@ rooms:</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="15027"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="15092"/>
+@@ -1641,2 +1641,2 @@ rooms:</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="15028"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="15039"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="15093"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="15104"/>
+@@ -1648,2 +1648,2 @@ rooms:</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="15028"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="15039"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="15093"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="15104"/>
+@@ -1655,7 +1655,7 @@ rooms:</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16347"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16368"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16388"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16409"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16430"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16451"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16627"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16412"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16433"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16453"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16474"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16495"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16516"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16692"/>
+@@ -1666,7 +1666,7 @@ rooms:</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16349"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16370"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16390"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16411"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16432"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16453"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16629"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16414"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16435"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16455"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16476"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16497"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16518"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16694"/>
+@@ -1677,6 +1677,6 @@ rooms:</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16352"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16373"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16393"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16414"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16435"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16456"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16417"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16438"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16458"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16479"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16500"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16521"/>
+@@ -1688 +1688 @@ rooms:</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16356"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16421"/>
+@@ -1693,6 +1693,6 @@ rooms:</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16360"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16380"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16401"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16422"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16443"/>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16464"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16425"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16445"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16466"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16487"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16508"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16529"/>
+@@ -1704 +1704 @@ rooms:</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16397"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16462"/>
+@@ -1709 +1709 @@ rooms:</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16418"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16483"/>
+@@ -1714 +1714 @@ rooms:</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16439"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16504"/>
+@@ -1719 +1719 @@ rooms:</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16460"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16525"/>
+@@ -1724 +1724 @@ rooms:</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16632"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16697"/>
+@@ -1730 +1730 @@ rooms:</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16664"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16729"/>
+@@ -1736 +1736 @@ rooms:</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16671"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16736"/>
+@@ -1742 +1742 @@ rooms:</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16677"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16742"/>
+@@ -1747 +1747 @@ rooms:</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16685"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16750"/>
+@@ -3705 +3705 @@ and this one cannot read it, you need a newer Mudlet!</source>
+-        <location filename="../src/ctelnet.cpp" line="569"/>
++        <location filename="../src/ctelnet.cpp" line="572"/>
+@@ -3711 +3711 @@ and this one cannot read it, you need a newer Mudlet!</source>
+-        <location filename="../src/ctelnet.cpp" line="578"/>
++        <location filename="../src/ctelnet.cpp" line="581"/>
+@@ -3719 +3719 @@ or your nameservers are not working properly.</source>
+-        <location filename="../src/ctelnet.cpp" line="413"/>
++        <location filename="../src/ctelnet.cpp" line="416"/>
+@@ -3724 +3724 @@ or your nameservers are not working properly.</source>
+-        <location filename="../src/ctelnet.cpp" line="440"/>
++        <location filename="../src/ctelnet.cpp" line="443"/>
+@@ -3729 +3729 @@ or your nameservers are not working properly.</source>
+-        <location filename="../src/ctelnet.cpp" line="442"/>
++        <location filename="../src/ctelnet.cpp" line="445"/>
+@@ -3734 +3734 @@ or your nameservers are not working properly.</source>
+-        <location filename="../src/ctelnet.cpp" line="478"/>
++        <location filename="../src/ctelnet.cpp" line="481"/>
+@@ -3740 +3740 @@ or your nameservers are not working properly.</source>
+-        <location filename="../src/ctelnet.cpp" line="517"/>
++        <location filename="../src/ctelnet.cpp" line="520"/>
+@@ -3745 +3745 @@ or your nameservers are not working properly.</source>
+-        <location filename="../src/ctelnet.cpp" line="562"/>
++        <location filename="../src/ctelnet.cpp" line="565"/>
+@@ -3751,2 +3751,2 @@ or your nameservers are not working properly.</source>
+-        <location filename="../src/ctelnet.cpp" line="1439"/>
+-        <location filename="../src/ctelnet.cpp" line="1806"/>
++        <location filename="../src/ctelnet.cpp" line="1442"/>
++        <location filename="../src/ctelnet.cpp" line="1809"/>
+@@ -3758,2 +3758,2 @@ Uninstalling old version &apos;%2&apos;.</source>
+-        <location filename="../src/ctelnet.cpp" line="1450"/>
+-        <location filename="../src/ctelnet.cpp" line="1817"/>
++        <location filename="../src/ctelnet.cpp" line="1453"/>
++        <location filename="../src/ctelnet.cpp" line="1820"/>
+@@ -3764,2 +3764,2 @@ Uninstalling old version &apos;%2&apos;.</source>
+-        <location filename="../src/ctelnet.cpp" line="1459"/>
+-        <location filename="../src/ctelnet.cpp" line="1826"/>
++        <location filename="../src/ctelnet.cpp" line="1462"/>
++        <location filename="../src/ctelnet.cpp" line="1829"/>
+@@ -3770,2 +3770,2 @@ Uninstalling old version &apos;%2&apos;.</source>
+-        <location filename="../src/ctelnet.cpp" line="1459"/>
+-        <location filename="../src/ctelnet.cpp" line="1826"/>
++        <location filename="../src/ctelnet.cpp" line="1462"/>
++        <location filename="../src/ctelnet.cpp" line="1829"/>
+@@ -3777,2 +3777,2 @@ Uninstalling old version &apos;%2&apos;.</source>
+-        <location filename="../src/ctelnet.cpp" line="1448"/>
+-        <location filename="../src/ctelnet.cpp" line="1815"/>
++        <location filename="../src/ctelnet.cpp" line="1451"/>
++        <location filename="../src/ctelnet.cpp" line="1818"/>
+@@ -3783 +3783 @@ Uninstalling old version &apos;%2&apos;.</source>
+-        <location filename="../src/ctelnet.cpp" line="382"/>
++        <location filename="../src/ctelnet.cpp" line="385"/>
+@@ -3788,2 +3788,2 @@ Uninstalling old version &apos;%2&apos;.</source>
+-        <location filename="../src/ctelnet.cpp" line="506"/>
+-        <location filename="../src/ctelnet.cpp" line="519"/>
++        <location filename="../src/ctelnet.cpp" line="509"/>
++        <location filename="../src/ctelnet.cpp" line="522"/>
+@@ -3795 +3795 @@ Reason: </source>
+-        <location filename="../src/ctelnet.cpp" line="571"/>
++        <location filename="../src/ctelnet.cpp" line="574"/>
+@@ -3801 +3801 @@ Reason: </source>
+-        <location filename="../src/ctelnet.cpp" line="573"/>
++        <location filename="../src/ctelnet.cpp" line="576"/>
+@@ -3807 +3807 @@ Reason: </source>
+-        <location filename="../src/ctelnet.cpp" line="2103"/>
++        <location filename="../src/ctelnet.cpp" line="2106"/>
+@@ -3813 +3813 @@ Reason: </source>
+-        <location filename="../src/ctelnet.cpp" line="2115"/>
++        <location filename="../src/ctelnet.cpp" line="2118"/>
+@@ -3819 +3819 @@ Reason: </source>
+-        <location filename="../src/ctelnet.cpp" line="2126"/>
++        <location filename="../src/ctelnet.cpp" line="2129"/>
+@@ -3825 +3825 @@ Reason: </source>
+-        <location filename="../src/ctelnet.cpp" line="2137"/>
++        <location filename="../src/ctelnet.cpp" line="2140"/>
+@@ -3831 +3831 @@ Reason: </source>
+-        <location filename="../src/ctelnet.cpp" line="2148"/>
++        <location filename="../src/ctelnet.cpp" line="2151"/>
+@@ -3837 +3837 @@ Reason: </source>
+-        <location filename="../src/ctelnet.cpp" line="2159"/>
++        <location filename="../src/ctelnet.cpp" line="2162"/>
+@@ -3843 +3843 @@ Reason: </source>
+-        <location filename="../src/ctelnet.cpp" line="2348"/>
++        <location filename="../src/ctelnet.cpp" line="2351"/>
+@@ -3849 +3849 @@ Reason: </source>
+-        <location filename="../src/ctelnet.cpp" line="2367"/>
++        <location filename="../src/ctelnet.cpp" line="2370"/>
+@@ -3854 +3854 @@ Reason: </source>
+-        <location filename="../src/ctelnet.cpp" line="2369"/>
++        <location filename="../src/ctelnet.cpp" line="2372"/>
+@@ -3860 +3860 @@ Try again when it has finished.</source>
+-        <location filename="../src/ctelnet.cpp" line="2377"/>
++        <location filename="../src/ctelnet.cpp" line="2380"/>
+@@ -3865 +3865 @@ Try again when it has finished.</source>
+-        <location filename="../src/ctelnet.cpp" line="2380"/>
++        <location filename="../src/ctelnet.cpp" line="2383"/>
+@@ -3871 +3871 @@ error message was: &quot;%2&quot;.</source>
+-        <location filename="../src/ctelnet.cpp" line="2408"/>
++        <location filename="../src/ctelnet.cpp" line="2411"/>
+@@ -4401 +4401 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16496"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16561"/>
+@@ -4407 +4407 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16498"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16563"/>
+@@ -4413 +4413 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16500"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16565"/>
+@@ -4419 +4419 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16502"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16567"/>
+@@ -4425 +4425 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16504"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16569"/>
+@@ -4431 +4431 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16506"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16571"/>
+@@ -4437 +4437 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16508"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16573"/>
+@@ -4443 +4443 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16510"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16575"/>
+@@ -4449 +4449 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16512"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16577"/>
+@@ -4455 +4455 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16514"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16579"/>
+@@ -4461 +4461 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16516"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16581"/>
+@@ -4467 +4467 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16518"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16583"/>
+@@ -4473 +4473 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16520"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16585"/>
+@@ -4479 +4479 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16522"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16587"/>
+@@ -4485 +4485 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16524"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16589"/>
+@@ -4491 +4491 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16526"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16591"/>
+@@ -4497 +4497 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16528"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16593"/>
+@@ -4503 +4503 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16530"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16595"/>
+@@ -4509 +4509 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16532"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16597"/>
+@@ -4515 +4515 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16534"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16599"/>
+@@ -4521 +4521 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16536"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16601"/>
+@@ -4527 +4527 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16538"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16603"/>
+@@ -4533 +4533 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16540"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16605"/>
+@@ -4539 +4539 @@ Count</source>
+-        <location filename="../src/TLuaInterpreter.cpp" line="16542"/>
++        <location filename="../src/TLuaInterpreter.cpp" line="16607"/>
+@@ -5063,6 +5062,0 @@ Count</source>
+-</source>
+-        <translation type="unfinished"></translation>
+-    </message>
+-    <message>
+-        <location filename="../src/dlgConnectionProfiles.cpp" line="2345"/>
+-        <source>Port number must be above zero and below 65535.<byte value="xd"/>
+@@ -5101,0 +5096,7 @@ Count</source>
++    <message>
++        <location filename="../src/dlgConnectionProfiles.cpp" line="2345"/>
++        <source>Port number must be above zero and below 65535.
++
++</source>
++        <translation type="unfinished"></translation>
++    </message>
