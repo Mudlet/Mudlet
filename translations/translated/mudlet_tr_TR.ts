@@ -173,7 +173,7 @@ Lütfen bekleyin...</translation>
       <location filename="../src/ircmessageformatter.cpp" line="289"/>
       <location filename="../src/ircmessageformatter.cpp" line="314"/>
       <source>[ERROR] %1</source>
-      <translation type="unfinished"/>
+      <translation>[ERROR] %1</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="299"/>
