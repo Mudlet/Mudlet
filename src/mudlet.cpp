@@ -3508,9 +3508,6 @@ void mudlet::createMapper(bool loadDefaultMap)
 
     pMap->mpMapper = new dlgMapper(pHost->mpDockableMapWidget, pHost, pMap); //FIXME: mpHost definieren
     pMap->mpMapper->setStyleSheet(pHost->mProfileStyleSheet);
-#if defined(INCLUDE_3DMAPPER)
-    pMap->mpM = pMap->mpMapper->glWidget;
-#endif
     pHost->mpDockableMapWidget->setWidget(pMap->mpMapper);
 
     if (loadDefaultMap && pMap->mpRoomDB->getRoomIDList().isEmpty()) {

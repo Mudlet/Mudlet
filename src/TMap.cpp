@@ -2007,7 +2007,9 @@ void TMap::postMessage(const QString text)
 void TMap::set3DViewCenter(const int areaId, const int xPos, const int yPos, const int zPos)
 {
 #if defined(INCLUDE_3DMAPPER)
-    mpM->setViewCenter(areaId, xPos, yPos, zPos);
+    if (mpM) {
+        mpM->setViewCenter(areaId, xPos, yPos, zPos);
+    }
 #endif
 }
 
