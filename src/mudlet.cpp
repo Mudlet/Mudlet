@@ -218,8 +218,10 @@ mudlet::mudlet()
     addToolBarBreak();
     auto frame = new QWidget(this);
     frame->setFocusPolicy(Qt::NoFocus);
+    frame->setObjectName(QStringLiteral("frame"));
     setCentralWidget(frame);
     mpTabBar = new TTabBar(frame);
+    mpTabBar->setObjectName(QStringLiteral("mpTabBar"));
     mpTabBar->setMaximumHeight(30);
     mpTabBar->setFocusPolicy(Qt::NoFocus);
     mpTabBar->setTabsClosable(true);
@@ -228,13 +230,16 @@ mudlet::mudlet()
     mpTabBar->setMovable(true);
     connect(mpTabBar, &QTabBar::currentChanged, this, &mudlet::slot_tab_changed);
     auto layoutTopLevel = new QVBoxLayout(frame);
+    layoutTopLevel->setObjectName(QStringLiteral("layoutTopLevel"));
     layoutTopLevel->setContentsMargins(0, 0, 0, 0);
     layoutTopLevel->addWidget(mpTabBar);
     mainPane = new QWidget(frame);
+    mainPane->setObjectName(QStringLiteral("mainPain"));
     mainPane->setAutoFillBackground(true);
     mainPane->setFocusPolicy(Qt::NoFocus);
     layoutTopLevel->addWidget(mainPane);
     auto layout = new QHBoxLayout(mainPane);
+    layout->setObjectName(QStringLiteral("layout"));
     layout->setContentsMargins(0, 0, 0, 0);
 
     mainPane->setContentsMargins(0, 0, 0, 0);

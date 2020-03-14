@@ -110,6 +110,9 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     ps->setKey(Qt::CTRL + Qt::Key_W);
     ps->setContext(Qt::WidgetShortcut);
 
+    // This will very likely be overwritten by the method that creates this
+    // TConsole instance:
+    setObjectName(QStringLiteral("TConsole"));
     if (mType & CentralDebugConsole) {
         setWindowTitle(tr("Debug Console"));
         // Probably will not show up as this is used inside a QMainWindow widget
