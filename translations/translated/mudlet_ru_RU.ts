@@ -5336,7 +5336,9 @@ Count</source>
       <source>Port number must be above zero and below 65535.
 
 </source>
-      <translation type="unfinished"/>
+      <translation>Номер порта должен быть выше нуля и ниже 65535.
+
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2356"/>
