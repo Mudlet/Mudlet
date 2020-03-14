@@ -32,38 +32,54 @@ jobs:
         echo "$lines_changed lines changed."
         echo ::set-output name=lines_changed::$lines_changed
 
-    - name: commit changes
-      uses: teaminkling/autocommit@master
-      if: steps.getdiff.outputs.lines_changed > 0
-      with:
-       commit-message: (autocommit) Updated text for translation
+#     - name: commit changes
+#       uses: teaminkling/autocommit@master
+#       with:
+#        commit-message: (autocommit) Updated text for translation
 
-    - name: create texts branch
-      uses: peterjgrainger/action-create-branch@v1.0.0
+    - name: send in a pull request
+      uses: gr2m/create-or-update-pull-request-action@v1.x
       if: steps.getdiff.outputs.lines_changed > 0
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        branch: updated-text-${{ github.sha }}
-
-    - name: push new text
-      uses: ad-m/github-push-action@v0.5.0
-      if: steps.getdiff.outputs.lines_changed > 0
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: updated-text-${{ github.sha }}
-        force: true
-
-    - name: make a PR
-      uses: repo-sync/pull-request@v2
-      if: steps.getdiff.outputs.lines_changed > 0
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        source_branch: updated-text-${{ github.sha }}
-        destination_branch: development
-        pr_title: "Update text for translation in Crowdin"
-        pr_body: |
+        title: "Update text for translation in Crowdin"
+        body: |
           #### Brief overview of PR changes/additions
           :crown: An automated PR to make new text available for translation in Crowdin from ${{ github.ref }} (${{ github.sha }}).
           #### Motivation for adding to Mudlet
-          So translators can translate the new text before the upcoming release.
+          So translators can translate the new text before the upcoming release.:  
+        branch: development
+        path: translations/
+        commit-message: (autocommit) Updated text for translation
+        author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
+
+#     - name: create texts branch
+#       uses: peterjgrainger/action-create-branch@v1.0.0
+#       if: steps.getdiff.outputs.lines_changed > 0
+#       env:
+#         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#       with:
+#         branch: updated-text-${{ github.sha }}
+
+#     - name: push new text
+#       uses: ad-m/github-push-action@v0.5.0
+#       if: steps.getdiff.outputs.lines_changed > 0
+#       with:
+#         github_token: ${{ secrets.GITHUB_TOKEN }}
+#         branch: updated-text-${{ github.sha }}
+#         force: true
+
+#     - name: make a PR
+#       uses: repo-sync/pull-request@v2
+#       if: steps.getdiff.outputs.lines_changed > 0
+#       with:
+#         github_token: ${{ secrets.GITHUB_TOKEN }}
+#         source_branch: updated-text-${{ github.sha }}
+#         destination_branch: development
+#         pr_title: "Update text for translation in Crowdin"
+#         pr_body: |
+#           #### Brief overview of PR changes/additions
+#           :crown: An automated PR to make new text available for translation in Crowdin from ${{ github.ref }} (${{ github.sha }}).
+#           #### Motivation for adding to Mudlet
+#           So translators can translate the new text before the upcoming release.
