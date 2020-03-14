@@ -322,6 +322,7 @@ private:
     bool mReverse;
     bool mStrikeOut;
     bool mUnderline;
+    bool mItalicBeforeBlink;
 
     QString mMudLine;
     std::deque<TChar> mMudBuffer;
