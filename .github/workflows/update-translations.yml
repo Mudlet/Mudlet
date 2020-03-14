@@ -25,11 +25,9 @@ jobs:
     - name: check if translation strings were modified
       id: getdiff
       run: |
-        git diff --patch --unified=0 > diff.txt
-        cat diff.txt | grep -v "<location" | grep -v "^@@" | grep -v "^diff" | grep -v "^index" | grep -v "^\-\-\-" | egrep -v '^\+\+\+'
-        lines_changed=$(cat diff.txt | wc --lines | xargs echo -n)
+        # see if we had any changes in the diff, ignoring the <location... changes
+        lines_changed=$(git diff --patch --unified=0 translations/mudlet.ts | awk '! /^((@@|diff|index|---|\+\+\+)|((-|+) *<location))/ { count++ } END { print count " lines changed." }')
         echo "$lines_changed lines changed."
-        rm diff.txt
         echo ::set-output name=lines_changed::$lines_changed
 
     - name: commit changes
