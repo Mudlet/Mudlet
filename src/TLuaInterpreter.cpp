@@ -3826,16 +3826,18 @@ int TLuaInterpreter::setLabelToolTip(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMapper
 int TLuaInterpreter::createMapper(lua_State* L)
 {
+    int n = lua_gettop(L);
     std::string luaSendWindow = "";
     int x, y, width, height, counter;
     counter = 1;
-    if (!lua_isstring(L, 1) && !lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "createMapper: bad argument #1 type (number or string expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
-    } else if (!lua_isnumber(L, 1)) {
+
+    if (n > 4 && lua_type(L, 1) != LUA_TSTRING) {
+        lua_pushfstring(L, "createMapper: bad argument #1 type (parent window name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    if (n > 4 && lua_type(L, 1) == LUA_TSTRING) {
         luaSendWindow = lua_tostring(L, 1);
-        counter = 2;
+        counter++;
         if (luaSendWindow == "main") {
             // QString::compare is zero for a match on the "default"
             // case so clear the variable - to flag this as the main
@@ -3843,41 +3845,44 @@ int TLuaInterpreter::createMapper(lua_State* L)
             luaSendWindow.clear();
         }
     }
+
     if (!lua_isnumber(L, counter)) {
         lua_pushfstring(L, "createMapper: bad argument #%d type (mapper x-coordinate as number expected, got %s!)", counter, luaL_typename(L, counter));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         x = lua_tonumber(L, counter);
         counter++;
     }
     if (!lua_isnumber(L, counter)) {
         lua_pushfstring(L, "createMapper: bad argument #%d type (mapper y-coordinate as number expected, got %s!)", counter, luaL_typename(L, counter));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         y = lua_tonumber(L, counter);
         counter++;
     }
     if (!lua_isnumber(L, counter)) {
         lua_pushfstring(L, "createMapper: bad argument #%d type (mapper width as number expected, got %s!)", counter, luaL_typename(L, counter));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         width = lua_tonumber(L, counter);
         counter++;
     }
     if (!lua_isnumber(L, counter)) {
         lua_pushfstring(L, "createMapper: bad argument #%d type (mapper height as number expected, got %s!)", counter, luaL_typename(L, counter));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         height = lua_tonumber(L, counter);
     }
     Host& host = getHostFromLua(L);
     QString windowname(luaSendWindow.c_str());
-    host.mpConsole->createMapper(windowname, x, y, width, height);
-    return 0;
+    if (auto [success, message] = host.mpConsole->createMapper(windowname, x, y, width, height); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createButton

@@ -105,7 +105,7 @@ public:
     void luaWrapLine(std::string& buf, int line);
 
     int getColumnNumber();
-    void createMapper(const QString &windowname, int, int, int, int);
+    std::pair<bool, QString> createMapper(const QString &windowname, int, int, int, int);
 
     void setWrapAt(int pos)
     {
