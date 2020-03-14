@@ -23,7 +23,7 @@ function Geyser.Mapper:reposition()
   if self.hidden or self.auto_hidden then
     return
   end
-  if not self.mapWidget then
+  if self.embedded then
     createMapper(self.windowname, self:get_x(), self:get_y(), self:get_width(), self:get_height())
   end
 end
@@ -34,7 +34,7 @@ function Geyser.Mapper:move(x, y)
     return
   end
   Geyser.Container.move (self, x, y)
-  if self.mapWidget then
+  if not self.embedded then
     moveMapWidget(self:get_x(), self:get_y())
   end
 end
@@ -44,13 +44,13 @@ function Geyser.Mapper:resize(width, height)
     return
   end
   Geyser.Container.resize (self, width, height)
-  if self.mapWidget then
+  if not self.embedded then
     resizeMapWidget(self:get_width(), self:get_height())
   end
 end
 
 function Geyser.Mapper:hide_impl()
-  if not self.mapWidget then
+  if self.embedded then
     createMapper(self.windowname, self:get_x(), self:get_y(), 0, 0)
   else
     closeMapWidget()
@@ -58,7 +58,7 @@ function Geyser.Mapper:hide_impl()
 end
 
 function Geyser.Mapper:show_impl()
-  if not self.mapWidget then
+  if self.embedded then
     createMapper(self.windowname, self:get_x(), self:get_y(), self:get_width(), self:get_height())
   else
     openMapWidget()
@@ -66,7 +66,7 @@ function Geyser.Mapper:show_impl()
 end
 
 function Geyser.Mapper:setDockPosition(pos)
-  if self.mapWidget then
+  if not self.embedded then
     return openMapWidget(pos)
   end
 end
@@ -84,21 +84,20 @@ function Geyser.Mapper:new (cons, container)
   -- Set the metatable.
   setmetatable(me, self)
   self.__index = self
-
+  
+  if me.embedded == nil then
+     me.embedded = true 
+  end
   -----------------------------------------------------------
   -- Now create the Mapper using primitives
   if me.dockPosition and me.dockPosition:lower() == "floating" then
     me.dockPosition = "f"
   end
-
-  if not me.mapWidget and not me.docked and not me.dockPosition then
+  if me.embedded then
     createMapper(me.windowname, me:get_x(), me:get_y(),
     me:get_width(), me:get_height())
   else
-    me.mapWidget = true
-    if me.docked or (me.dockPosition and me.dockPosition ~= "f") then
-      me.docked = true
-      me.dockPosition = me.dockPosition or "r"
+    if me.dockPosition and me.dockPosition ~= "f" then
       openMapWidget(me.dockPosition)
     elseif me.dockPosition == "f" or cons.x or cons.y or cons.width or cons.height then 
       openMapWidget(me:get_x(), me:get_y(),
