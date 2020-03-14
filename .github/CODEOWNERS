@@ -28,6 +28,7 @@
 .travis.yml                     @Mudlet/infrastructure
 .appveyor.yml                   @Mudlet/infrastructure
 /CI/                            @Mudlet/infrastructure
+/.github/workflows              @Mudlet/infrastructure
 *.pro                           @Mudlet/infrastructure
 *.pri                           @Mudlet/infrastructure
 CMakeLists.txt                  @Mudlet/infrastructure
