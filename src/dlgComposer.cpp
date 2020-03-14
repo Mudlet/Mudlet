@@ -34,6 +34,7 @@ dlgComposer::dlgComposer(Host* pH) : mpHost(pH)
     edit->setFont(f);
     connect(saveButton, &QAbstractButton::pressed, this, &dlgComposer::save);
     connect(cancelButton, &QAbstractButton::pressed, this, &dlgComposer::cancel);
+    setAttribute(Qt::WA_DeleteOnClose);
 }
 
 void dlgComposer::cancel()

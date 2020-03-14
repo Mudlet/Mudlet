@@ -160,18 +160,12 @@ function Geyser.Container:show (auto)
   else
     self.hidden = false
   end
-  -- If my container is hidden I stay hidden and put my setting to auto_hidden
-  if self.container.hidden or self.container.auto_hidden then
-    self.auto_hidden = true 
-    return false 
-  end
   if not self.hidden and not self.auto_hidden then
     self:show_impl()
   end
   for _, v in pairs(self.windowList) do
     v:show(true)
   end
-  return true
 end
 
 function Geyser.Container:show_impl()
