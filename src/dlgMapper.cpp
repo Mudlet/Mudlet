@@ -49,7 +49,6 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     fmt.setSamples(10);
     QSurfaceFormat::setDefaultFormat(fmt);
 #endif
-
     mp2dMap->mpMap = pM;
     mp2dMap->mpHost = pH;
     // Have to do this here rather than in the T2DMap constructor because that

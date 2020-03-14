@@ -2337,9 +2337,13 @@ std::pair<bool, QString> TConsole::setLabelToolTip(const QString& name, const QS
     return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
 }
 
-void TConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
+std::pair<bool, QString> TConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
 {
     auto pW = mDockWidgetMap.value(windowname);
+    auto pM = mpHost->mpDockableMapWidget;
+    if (pM) {
+        return {false, "cannot create mapper. Do you already use a map window?"};
+    }
     if (!mpMapper) {
         // Arrange for TMap member values to be copied from the Host masters so they
         // are in place when the 2D mapper is created:
@@ -2368,7 +2372,7 @@ void TConsole::createMapper(const QString& windowname, int x, int y, int width, 
 
         mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
 
-        TEvent mapOpenEvent {};
+        TEvent mapOpenEvent{};
         mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
         mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(mapOpenEvent);
@@ -2391,6 +2395,7 @@ void TConsole::createMapper(const QString& windowname, int x, int y, int width, 
 #else
     mpMapper->show();
 #endif
+    return {true, QString()};
 }
 
 bool TConsole::setBackgroundImage(const QString& name, const QString& path)
