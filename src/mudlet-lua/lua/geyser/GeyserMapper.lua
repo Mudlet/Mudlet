@@ -85,7 +85,7 @@ function Geyser.Mapper:new (cons, container)
   setmetatable(me, self)
   self.__index = self
   
-  if me.embedded == nil then
+  if me.embedded == nil and not me.dockPosition then
      me.embedded = true 
   end
   -----------------------------------------------------------
@@ -97,6 +97,7 @@ function Geyser.Mapper:new (cons, container)
     createMapper(me.windowname, me:get_x(), me:get_y(),
     me:get_width(), me:get_height())
   else
+    me.embedded = false
     if me.dockPosition and me.dockPosition ~= "f" then
       openMapWidget(me.dockPosition)
     elseif me.dockPosition == "f" or cons.x or cons.y or cons.width or cons.height then 
