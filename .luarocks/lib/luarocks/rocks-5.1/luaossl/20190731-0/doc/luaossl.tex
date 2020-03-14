@@ -1,0 +1,1699 @@
+\documentclass[11pt, oneside]{memoir}
+
+\usepackage{fullpage}
+\usepackage{xspace}
+\usepackage{makeidx}
+\usepackage{listings}
+\usepackage{multicol}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, linkcolor=blue]{hyperref}
+
+\setlength{\parindent}{0pt}
+\nonzeroparskip
+
+% add padding to ctabular tables
+\renewcommand{\arraystretch}{1.2}
+
+\makeindex
+
+%
+% COMMANDS
+%
+\newcommand*{\luaossl}[0]{\texttt{luaossl}\xspace}
+\newcommand*{\key}[1]{#1\index{#1}\xspace}
+\newcommand*{\syscall}[1]{\texttt{#1}\xspace}
+\newcommand*{\routine}[1]{\texttt{#1}\xspace}
+\newcommand*{\fn}[1]{\texttt{#1}\xspace}
+\newcommand*{\method}[1]{\texttt{#1}\xspace}
+\newcommand*{\module}[1]{\texttt{#1}\xspace}
+\newcommand*{\errno}[1]{\texttt{#1}\xspace}
+\newcommand*{\crlf}[0]{$\backslash$r$\backslash$n\xspace}
+\newcommand*{\lf}[0]{$\backslash$n\xspace}
+
+%
+% ENVIRONMENTS
+%
+\lstdefinelanguage{lua}{
+morekeywords={break,goto,do,end,while,repeat,until,if,then,elseif,else,for,in,function,local,nil,false,true,and,or,not},
+sensitive=true,
+morestring=[b]"
+}
+
+\lstnewenvironment{code}[1]{
+	\lstset{language=#1}
+}{
+}
+
+\lstnewenvironment{example}[1]{
+	\lstset{language=#1,numbers=left,numberstyle=\tiny,stepnumber=2,tabsize=4}
+	\ttfamily\small
+}{
+}
+
+\newcounter{toccols}
+\setcounter{toccols}{2}
+\newenvironment{Module}[1]{
+	\subsection{\texttt{#1}}
+	\addtocontents{toc}{
+		\protect\begin{multicols}{\value{toccols}}
+		%\renewcommand*{\cftsubsubsectiondotsep}{\cftnodots}%
+	}
+}{
+	\addtocontents{toc}{\protect\end{multicols}}
+}
+
+
+\lstdefinelanguage{lua}{morekeywords={break,goto,do,end,while,repeat,until,if,then,elseif,else,for,in,function,local,nil,false,true,and,or,not},sensitive=true,morestring=[b]"}
+
+
+\begin{document}
+
+%\pagestyle{empty}
+
+\title{
+
+\vspace*{10ex}
+
+\HUGE\sffamily User Guide to \luaossl, \\
+
+%\vspace*{20pt}
+%\hrule
+
+\HUGE Comprehensive OpenSSL Module for Lua \\
+
+\vspace*{30pt}
+\hrule
+}
+
+\date{\today}
+\author{
+	William Ahern
+	\and
+	Daurnimator
+}
+%\setlength{\droptitle}{85pt}
+\maketitle
+\thispagestyle{empty}
+\clearpage
+
+\maxtocdepth{subsubsection}
+\setsecnumdepth{subsection}
+\setcounter{page}{1}
+\pagenumbering{roman}
+\tableofcontents
+
+\clearpage
+
+\setcounter{page}{1}
+\pagenumbering{arabic}
+
+\chapterstyle{section}
+\setlength{\beforechapskip}{1ex}
+\setlength{\afterchapskip}{1ex}
+
+\chapter{Dependencies}
+
+\section{Operating Systems}
+
+\luaossl targets modern POSIX-conformant systems. A Windows port is feasible and patches welcome.
+Note however that the module employs the POSIX thread API, POSIX dlopen, and the non-POSIX dladdr interface to protect OpenSSL in threaded environments.
+
+\section{Libraries}
+
+\subsection{Lua 5.1, 5.2, 5.3}
+
+\luaossl targets Lua 5.1 and above.
+
+\subsection{OpenSSL}
+
+\luaossl targets modern OpenSSL versions as installed on OS X, Linux, Solaris, OpenBSD, and similar platforms.
+
+\subsection{pthreads}
+
+Because it's not possible to detect threading use at runtime, or to \emph{safely} and dynamically enable locking, this protection is builtin by default. At present the module only understands the POSIX threading API.
+
+\paragraph{Linking}
+Note that on some systems, such as NetBSD and FreeBSD, the loading application must be linked against pthreads (using -lpthread or -pthread). It is not enough for the \luaossl module to pull in the dependency at load time. In particular, if using the stock Lua interpreter, it must have been linked against pthreads at build time. Add the appropriate linker flag to MYLIBS in lua-5.2.x/src/Makefile.
+
+\subsection{libdl}
+
+In multithreaded environments the module will initialize OpenSSL mutexes if they've not already been initialized. If the mutexes are initialized then the module must pin itself in memory to prevent unloading by the Lua garbage collector. The module first uses the non-standard but widely supported dladdr routine to derive the module's load path, and then increments the reference count to the module using dlopen. This is the safest and most portable method that I'm aware of.
+
+\section{GNU Make}
+
+The Makefile requires GNU Make, usually installed as gmake on platforms other than Linux or OS X. The actual \texttt{Makefile} proxies to \texttt{GNUmakefile}. As long as \texttt{gmake} is installed on non-GNU systems you can invoke your system's \texttt{make}.
+
+\chapter{Installation}
+
+All the C modules are built into a single core C library. The core routines are then wrapped and extended through Lua modules. Because there several extant versions of Lua often used in parallel on the same system, there are individual targets to build and install for each supported Lua version. The targets \texttt{all} and \texttt{install} will attempt to build and install both Lua 5.1 and 5.2 modules.
+
+Note that building and installation and can accomplished in a single step by simply invoking one of the install targets with all the necessary variables defined.
+
+\section{Building}
+
+There is no separate \texttt{./configure} step. System introspection occurs during compile-time. However, the ``\texttt{configure}'' make target can be used to cache the build environment so one needn't continually use a long command-line invocation.
+
+All the common GNU-style compiler variables are supported, including \texttt{CC}, \texttt{CPPFLAGS}, \texttt{CFLAGS}, \texttt{LDFLAGS}, and \texttt{SOFLAGS}. Note that you can specify the path to Lua 5.1, Lua 5.2, and Lua 5.3 include headers at the same time in CPPFLAGS; the build system will work things out to ensure the correct headers are loaded when compiling each version of the module.
+
+\subsection{Targets}
+
+\begin{description}
+\item[\texttt{all}] \hfill \\
+Build modules for Lua 5.1 and 5.2.
+
+\item[\texttt{all5.1}] \hfill \\
+Build Lua 5.1 module.
+
+\item[\texttt{all5.2}] \hfill \\
+Build Lua 5.2 module.
+
+\item[\texttt{all5.3}] \hfill \\
+Build Lua 5.3 module.
+
+\end{description}
+
+\section{Installing}
+
+All the common GNU-style installation path variables are supported, including \texttt{prefix}, \texttt{bindir}, \texttt{libdir}, \texttt{datadir}, \texttt{includedir}, and \texttt{DESTDIR}. These additional path variables are also allowed:
+
+\begin{description}
+
+\item[\texttt{lua51path}]  \hfill \\
+Install path for Lua 5.1 modules, e.g. \texttt{\$(prefix)/share/lua/5.1}
+
+\item[\texttt{lua51cpath}]  \hfill \\
+Install path for Lua 5.1 C modules, e.g. \texttt{\$(prefix)/lib/lua/5.1}
+
+\item[\texttt{lua52path}]  \hfill \\
+Install path for Lua 5.2 modules, e.g. \texttt{\$(prefix)/share/lua/5.2}
+
+\item[\texttt{lua52cpath}]  \hfill \\
+Install path for Lua 5.2 C modules, e.g. \texttt{\$(prefix)/lib/lua/5.2}
+
+\item[\texttt{lua53path}]  \hfill \\
+Install path for Lua 5.3 modules, e.g. \texttt{\$(prefix)/share/lua/5.3}
+
+\item[\texttt{lua53cpath}]  \hfill \\
+Install path for Lua 5.3 C modules, e.g. \texttt{\$(prefix)/lib/lua/5.3}
+
+\end{description}
+
+\subsection{Targets}
+
+\begin{description}
+
+\item[\texttt{install}] \hfill \\
+Install modules for Lua 5.1 and 5.2.
+
+\item[\texttt{install5.1}] \hfill \\
+Install Lua 5.1 module.
+
+\item[\texttt{install5.2}] \hfill \\
+Install Lua 5.2 module.
+
+\item[\texttt{install5.3}] \hfill \\
+Install Lua 5.3 module.
+
+\end{description}
+
+
+\chapter{Usage}
+
+\section{Modules}
+
+\begin{Module}{openssl}
+
+Binds various global interfaces, including version and build information.
+
+\subsubsection[\fn{openssl[]}]{\fn{openssl[]}}
+
+Table of various compile-time constant values. See also \fn{openssl.version}.
+
+\begin{ctabular}{ c | p{12cm} }
+name & description \\\hline
+\small{\texttt{SSLEAY\_VERSION\_NUMBER}} & OpenSSL version as an integer. \\
+\small{\texttt{LIBRESSL\_VERSION\_NUMBER}} & LibreSSL version as an integer. \\
+\small{\texttt{NO\_[feature]}} & If defined, signals that this installation of OpenSSL was compiled without [feature]. \\
+\end{ctabular}
+
+
+\subsubsection[\fn{openssl.version}]{\fn{openssl.version($info$)}}
+
+Returns information about the run-time version of OpenSSL, as opposed to the compile-time version used to build the Lua module. If $info$ is not specified, returns the version number as an integer. Otherwise, $info$ may be one of the following constants.
+
+\begin{ctabular}{ c | p{12cm} }
+name & description \\\hline
+\small{\texttt{SSLEAY\_VERSION}} & OpenSSL version description as a string. \\
+\small{\texttt{SSLEAY\_CFLAGS}} & Description of compiler flags used to build OpenSSL as a string. \\
+\small{\texttt{SSLEAY\_BUILT\_ON}} & Compilation date description as a string. \\
+\small{\texttt{SSLEAY\_PLATFORM}} & Platform description as a string. \\
+\small{\texttt{SSLEAY\_DIR}} & OpenSSL installation directory description as a string. \\
+\end{ctabular}
+
+\subsubsection[\fn{openssl.extensionSupported}]{\fn{openssl.extensionSupported($ext\_type$)}}
+
+Returns a boolean indicating if the extension $ext\_type$ is handled internally by OpenSSL.
+
+\end{Module}
+
+
+\begin{Module}{openssl.bignum}
+
+\module{openssl.bignum} binds OpenSSL's libcrypto bignum library. It supports all the standard arithmetic operations. Regular number operands in a mixed arithmetic expression are upgraded as-if \method{bignum.new} was used explicitly. The \fn{\_\_tostring} metamethod generates a decimal encoded represention.
+
+\subsubsection[\fn{bignum.new}]{\fn{bignum.new($number$)}}
+
+Wraps the sign and integral part of $number$ as a bignum object, discarding any fractional part.
+
+\subsubsection[\fn{bignum.interpose}]{\fn{bignum.interpose($name$, $function$)}}
+
+Add or interpose a bignum class method. Returns the previous method, if any.
+
+\end{Module}
+
+
+\begin{Module}{openssl.pkey}
+
+\module{openssl.pkey} binds OpenSSL's libcrypto public-private key library. The \fn{\_\_tostring} metamethod generates a PEM encoded representation of the public key---excluding the private key.
+
+\subsubsection[\fn{pkey.new}]{\fn{pkey.new($string$[, $format$])}}
+
+Initializes a new pkey object from the PEM- or DER-encoded key in $string$. $format$ defaults to ``*'', which means to automatically test the input encoding. If $format$ is explicitly ``PEM'' or ``DER'', then only that decoding format is used.
+
+On failure throws an error.
+
+\subsubsection[\fn{pkey.new}]{\fn{pkey.new\{ $\ldots$ \}}}
+
+Generates a new pkey object according to the specified parameters.
+
+\begin{ctabular}{ c | c | p{5in}}
+field & type:default & description\\\hline
+.type & string:RSA & public key algorithm---``RSA'', ``DSA'', ``EC'', ``DH'', or an internal OpenSSL identifier of a subclass of one of those basic types \\
+
+.bits & number:1024 & private key size \\
+
+.exp & number:65537 & RSA exponent \\
+
+.generator & number:2 & Diffie-Hellman generator \\
+
+.dhparam & string & PEM encoded string with precomputed DH parameters \\
+
+.curve & string:prime192v1 & for elliptic curve keys, the OpenSSL string identifier of the curve
+\end{ctabular}
+
+The DH parameters ``dhparam'' will be generated on the fly, ``bits'' wide. This is a slow process, and especially for larger sizes, you would precompute those; for example: ``openssl dhparam -2 -out dh-2048.pem -outform PEM 2048''. Using the field ``dhparam'' overrides the ``bits'' field.
+
+\subsubsection[\fn{pkey.interpose}]{\fn{pkey.interpose($name$, $function$)}}
+
+Add or interpose a pkey class method. Returns the previous method, if any.
+
+\subsubsection[\fn{pkey:type}]{\fn{pkey:type()}}
+
+Returns the OpenSSL string identifier for the type of key.
+
+\subsubsection[\fn{pkey:setPublicKey}]{\fn{pkey:setPublicKey($string$[, $format$])}}
+
+Set the public key component to that described by the PEM- or DER-encoded public key in $string$. $format$ is as described in \fn{openssl.pkey.new}---``PEM'', ``DER'', or ``*'' (default).
+
+\subsubsection[\fn{pkey:setPrivateKey}]{\fn{pkey:setPrivateKey($string$[, $format$])}}
+
+Set the private key component to that described by the PEM encoded private key in $string$. $format$ is as described in \fn{openssl.pkey.new}.
+
+\subsubsection[\fn{pkey:sign}]{\fn{pkey:sign($digest$)}}
+
+Sign data which has been consumed by the specified \module{openssl.digest} $digest$. Digests and keys are not all interchangeable.
+
+Returns the signature as an opaque binary string\footnote{Elliptic curve signatures are two X.509 DER-encoded numbers, for example, while RSA signatures are encrypted DER structures.} on success, and throws an error otherwise.
+
+\subsubsection[\fn{pkey:verify}]{\fn{pkey:verify($signature$, $digest$)}}
+
+Verify the string $signature$ as signing the document consumed by \module{openssl.digest} $digest$. See the :sign method for constraints on the format and type of the parameters.
+
+Returns true on success, false for properly formatted but invalid signatures, and throws an error otherwise. Because the structure of the signature is opaque and not susceptible to sanity checking before passing to OpenSSL, an application should always be prepared for an error to be thrown when verifying untrusted signatures. OpenSSL, of course, should be able to handle all malformed inputs. But the module does not attempt to differentiate local system errors from errors triggered by malformed signatures because the set of such errors may change in the future.
+
+\subsubsection[\fn{pkey:toPEM}]{\fn{pkey:toPEM($which$[, $which$])}}
+
+Returns the PEM encoded string representation(s) of the specified key component. $which$ must be one of ``public'', ``PublicKey'', ``private'', or ``PrivateKey''. For the two argument form, returns two values.
+
+\end{Module}
+
+
+\begin{Module}{openssl.x509.name}
+
+Binds the X.509 distinguished name OpenSSL ASN.1 object, used for representing certificate subject and issuer names.
+
+\subsubsection[\fn{name.new}]{\fn{name.new()}}
+
+Returns an empty name object.
+
+\subsubsection[\fn{name.interpose}]{\fn{name.interpose($name$, $function$)}}
+
+Add or interpose a name class method. Returns the previous method, if any.
+
+\subsubsection[\fn{name:add}]{\fn{name:add($type$, $value$)}}
+
+Add a distinguished name component. $type$ is the OpenSSL string identifier of the component type---short, long, or OID forms. $value$ is the string value of the component. DN components are free-form, and are encoded raw.
+
+\subsubsection[\fn{name:all}]{\fn{name:all()}}
+
+Returns a table array of the distinguished name components. Each element is a table with four fields:
+
+\begin{tabular}{ l | l}
+field & description\\\hline
+.sn & short name identifier, if available\\
+.ln & long name identifier, if available\\
+.id & OID identifier\\
+.blob & raw string value of the component
+\end{tabular}
+
+\subsubsection[\fn{name:each}]{\fn{name:each()}}
+
+Returns a key-value iterator over the distinguished name components. The key is either the short, long, or OID identifier, with preference for the former.
+
+\subsubsection[\fn{name:\_\_pairs}]{\fn{name:\_\_pairs()}}
+
+Equal to \module{name:each}
+
+\end{Module}
+
+
+\begin{Module}{openssl.x509.altname}
+
+Binds the X.509 alternative names (a.k.a ``general names'') OpenSSL ASN.1 object, used for representing certificate subject and issuer alternative names.
+
+\subsubsection[\fn{altname.new}]{\fn{altname.new()}}
+
+Returns an empty altname object.
+
+\subsubsection[\fn{altname.interpose}]{\fn{altname.interpose($name$, $function$)}}
+
+Add or interpose an altname class method. Returns the previous method, if any.
+
+\subsubsection[\fn{altname:add}]{\fn{altname:add($type$, $value$)}}
+
+Add an alternative name. $type$ must specify one of the five basic types identified by ``RFC822Name'', ``RFC822'', ``email'', ``UniformResourceIdentifier'', ``URI'', ``DNSName'', ``DNS'', ``IPAddress'', ``IP'', or ``DirName''.
+
+For all types except ``DirName'', $value$ is a string acceptable to OpenSSL's sanity checks. For an IP address, $value$ must be parseable by the system's \fn{inet\_pton} routine, as IP addresses are stored as raw 4- or 16-byte octets. ``DirName'' takes an \module{openssl.x509.name} object.
+
+\subsubsection[\fn{name:\_\_pairs}]{\fn{name:\_\_pairs()}}
+
+Returns a key-value iterator over the alternative names. The key is one of ``email'', ``URI'', ``DNS'', ``IP'', or ``DirName''. The value is the string representation of the name.
+
+\end{Module}
+
+
+\begin{Module}{openssl.x509.extension}
+
+Binds the X.509 extension OpenSSL object.
+
+\subsubsection[\fn{extension.new}]{\fn{extension.new($name$, $value$ [, $data$])}}
+
+Returns a new X.509 extension.
+If $value$ is the string ``DER'' or ``critical,DER'', then $data$ is an ASN.1-encoded octet string.
+Otherwise, $name$ and $value$ are plain text strings in \href{https://www.openssl.org/docs/apps/x509v3_config.html#ARBITRARY_EXTENSIONS}{OpenSSL's arbitrary extension format}; and if specified, $data$ is either an OpenSSL configuration string defining any referenced identifiers in $value$, or a table with members:
+
+\begin{ctabular}{ l | l | p{8cm} }
+field & type:default & description\\\hline
+.db & string:$nil$ & OpenSSL configuration string\\
+.issuer & \module{openssl.x509}:$nil$ & issuer certificate\\
+.subject & \module{openssl.x509}:$nil$ & subject certificate\\
+.request & \module{openssl.x509.csr}:$nil$ & certificate signing request\\
+.crl & \module{openssl.x509.crl}:$nil$ & certificate revocation list\\
+.flags & integer:$0$ & a bitwise combination of flags
+\end{ctabular}
+
+\subsubsection[\fn{extension.interpose}]{\fn{extension.interpose($name$, $function$)}}
+
+Add or interpose an extension class method. Returns the previous method, if any.
+
+\subsubsection[\fn{extension:getID}]{\fn{extension:getID()}}
+
+Returns the ASN.1 OID as a plain text string.
+
+\subsubsection[\fn{extension:getName}]{\fn{extension:getName()}}
+
+Returns a more human-readable name as a plain text string in the following order of preference: OpenSSL's short name, OpenSSL's long name, ASN.1 OID.
+
+\subsubsection[\fn{extension:getShortName}]{\fn{extension:getShortName()}}
+
+Returns OpenSSL's short name as a plain text string if available.
+
+\subsubsection[\fn{extension:getLongName}]{\fn{extension:getLongName()}}
+
+Returns OpenSSL's long name as a plain text string if available.
+
+\subsubsection[\fn{extension:getData}]{\fn{extension:getData()}}
+
+Returns the extension value as an ASN.1-encoded octet string.
+
+\subsubsection[\fn{extension:getCritical}]{\fn{extension:getCritical()}}
+
+Returns the extension critical flag as a boolean.
+
+\end{Module}
+
+
+\begin{Module}{openssl.x509}
+
+Binds the X.509 certificate OpenSSL ASN.1 object.
+
+\subsubsection[\fn{x509.new}]{\fn{x509.new([$string$[, $format$]])}}
+
+Returns a new x509 object, optionally initialized to the PEM- or DER-encoded certificate specified by $string$. $format$ is as described in \fn{openssl.pkey.new}--``PEM'', ``DER'', or ``*'' (default).
+
+\subsubsection[\fn{x509.interpose}]{\fn{x509.interpose($name$, $function$)}}
+
+Add or interpose an x509 class method. Returns the previous method, if any.
+
+\subsubsection[\fn{x509:getVersion}]{\fn{x509:getVersion()}}
+
+Returns the X.509 version of the certificate.
+
+\subsubsection[\fn{x509:setVersion}]{\fn{x509:setVersion($number$)}}
+
+Sets the X.509 version of the certificate.
+
+\subsubsection[\fn{x509:getSerial}]{\fn{x509:getSerial()}}
+
+Returns the serial of the certificate as an \module{openssl.bignum}.
+
+\subsubsection[\fn{x509:setSerial}]{\fn{x509:setSerial($number$)}}
+
+Sets the serial of the certificate. $number$ is a Lua or \module{openssl.bignum} number.
+
+\subsubsection[\fn{x509:digest}]{\fn{x509:digest([$type$[, $format$]])}}
+
+Returns the cryptographic one-way message digest of the certificate. $type$ is the OpenSSL string identifier of the hash type---e.g. ``md5'', ``sha1'' (default), ``sha256'', etc. $format$ specifies the representation of the digest---``s'' for an octet string, ``x'' for a hexadecimal string (default), and ``n'' for an \module{openssl.bignum} number.
+
+\subsubsection[\fn{x509:getLifetime}]{\fn{x509:getLifetime()}}
+
+Returns the certificate validity ``Not Before'' and ``Not After'' dates as two Unix timestamp numbers.
+
+\subsubsection[\fn{x509:setLifetime}]{\fn{x509:setLifetime([$notbefore$][, $notafter$])}}
+
+Sets the certificate validity dates. $notbefore$ and $notafter$ should be UNIX timestamps. A nil value leaves the particular date unchanged.
+
+\subsubsection[\fn{x509:getIssuer}]{\fn{x509:getIssuer()}}
+
+Returns the issuer distinguished name as an \module{x509.name} object.
+
+\subsubsection[\fn{x509:setIssuer}]{\fn{x509:setIssuer($name$)}}
+
+Sets the issuer distinguished name.
+
+\subsubsection[\fn{x509:getSubject}]{\fn{x509:getSubject()}}
+
+Returns the subject distinguished name as an \module{x509.name} object.
+
+\subsubsection[\fn{x509:setSubject}]{\fn{x509:setSubject($name$)}}
+
+Sets the subject distinguished name.
+
+\subsubsection[\fn{x509:getIssuerAlt}]{\fn{x509:getIssuerAlt()}}
+
+Returns the issuer alternative names as an \module{x509.altname} object.
+
+\subsubsection[\fn{x509:setIssuerAlt}]{\fn{x509:setIssuer($altname$)}}
+
+Sets the issuer alternative names.
+
+\subsubsection[\fn{x509:getSubjectAlt}]{\fn{x509:getSubjectAlt()}}
+
+Returns the subject alternative names as an \module{x509.name} object.
+
+\subsubsection[\fn{x509:setSubjectAlt}]{\fn{x509:setSubjectAlt($name$)}}
+
+Sets the subject alternative names.
+
+\subsubsection[\fn{x509:getIssuerAltCritical}]{\fn{x509:getIssuerAltCritical()}}
+
+Returns the issuer alternative names critical flag as a boolean.
+
+\subsubsection[\fn{x509:setIssuerAltCritical}]{\fn{x509:setIssuerAltCritical($boolean$)}}
+
+Sets the issuer alternative names critical flag.
+
+\subsubsection[\fn{x509:getSubjectAltCritical}]{\fn{x509:getSubjectAltCritical()}}
+
+Returns the subject alternative names critical flag as a boolean.
+
+\subsubsection[\fn{x509:setSubjectAltCritical}]{\fn{x509:setSubjectAltCritical($boolean$)}}
+
+Sets the subject alternative names critical flag.
+
+\subsubsection[\fn{x509:getBasicConstraints}]{\fn{x509:getBasicConstraints([$which$[, $which$ $\ldots$ ]])}}
+
+Returns the X.509 `basic constraint' flags. If specified, $which$ should be one of ``CA'' or ``pathLen'', which returns the specified constraint---respectively, a boolean and a number.  If no parameters are specified, returns a table with fields ``CA'' and ``pathLen''.
+
+\subsubsection[\fn{x509:setBasicConstraints}]{\fn{x509:setBasicConstraints\{ $\ldots$ \}}}
+
+Sets the basic constraint flag according to the defined field values for ``CA'' (boolean) and ``pathLen'' (number).
+
+\subsubsection[\fn{x509:getBasicConstraintsCritical}]{\fn{x509:getBasicConstraintsCritical()}}
+
+Returns the basic constraints critical flag as a boolean.
+
+\subsubsection[\fn{x509:setBasicConstraintsCritical}]{\fn{x509:setBasicConstraintsCritical($boolean$)}}
+
+Sets the basic constraints critical flag.
+
+\subsubsection[\fn{x509:addExtension}]{\fn{x509:addExtension($ext$)}}
+
+Adds a copy of the \module{x509.extension} object to the certificate.
+
+\subsubsection[\fn{x509:getExtension}]{\fn{x509:getExtension($key$)}}
+
+Returns a copy of the \module{x509.extension} object identified by $key$ where $key$ is the plain text string of the OID, long name, or short name; or the integer index (1-based) of the extension. Returns nothing if no such extension was found by that name or at that index.
+
+\subsubsection[\fn{x509:getExtensionCount}]{\fn{x509:getExtensionCount()}}
+
+Returns the integer count of the number of extensions.
+
+\subsubsection[\fn{x509:getOCSP}]{\fn{x509:getOCSP()}}
+
+Returns the OCSP urls for the certificate.
+
+\subsubsection[\fn{x509:isIssuedBy}]{\fn{x509:isIssuedBy($issuer$)}}
+
+Returns a boolean according to whether the specified issuer---an \module{openssl.x509.name} object---signed the instance certificate.
+
+\subsubsection[\fn{x509:getPublicKey}]{\fn{x509:getPublicKey()}}
+
+Returns the public key component as an \module{openssl.pkey} object.
+
+\subsubsection[\fn{x509:setPublicKey}]{\fn{x509:setPublicKey($key$)}}
+
+Sets the public key component referenced by the \module{openssl.pkey} object $key$.
+
+\subsubsection[\fn{x509:getPublicKeyDigest}]{\fn{x509:getPublicKeyDigest([$type$])}}
+
+Returns the digest of the public key as a binary string. $type$ is an optional string describing the digest type, and defaults to ``sha1''.
+
+\subsubsection[\fn{x509:getSignatureName}]{\fn{x509:getSignatureName()}}
+
+Returns the type of signature used to sign the certificate as a string. e.g. ``RSA-SHA1''
+
+\subsubsection[\fn{x509:sign}]{\fn{x509:sign($key$ [, $type$])}}
+
+Signs and updates the instance certificate using the \module{openssl.pkey} $key$. $type$ is an optional string describing the digest type. See \module{pkey:sign}, regarding which types of digests are valid. If $type$ is omitted than a default type is used---``sha1'' for RSA keys, ``dss1'' for DSA keys, and ``ecdsa-with-SHA1'' for EC keys.
+
+\subsubsection[\fn{x509:verify}]{\fn{x509:verify\{ $\ldots$ \}}}
+
+Verifies the certificate against to the specified parameters.
+
+\begin{ctabular}{ c | c | p{9cm}}
+field & type & description\\\hline
+.store & \module{openssl.x509.store} & The certificate store to verify against, any custom settings from the store will be used. \\
+.chain & \module{openssl.x509.chain} & A collection of additional certificates to consider \\
+.params & \module{openssl.x509.verify\_param} & The verification parameters to use; overrides any parameters in $.store$
+\end{ctabular}
+
+Returns two values. The first is a boolean value for whether the specified certificate $crt$ was verified. If true, the second value is a \module{openssl.x509.chain} object validation chain. If false, the second value is a string describing why verification failed.
+
+\subsubsection[\fn{x509:text}]{\fn{x509:text()}}
+
+Returns a human-readable textual representation of the X.509 certificate.
+
+\subsubsection[\fn{x509:\_\_tostring}]{\fn{x509:\_\_tostring}}
+
+Returns the PEM encoded representation of the instance certificate.
+
+\end{Module}
+
+
+\begin{Module}{openssl.x509.csr}
+
+Binds the X.509 certificate signing request OpenSSL ASN.1 object.
+
+\subsubsection[\fn{csr.new}]{\fn{csr.new([$x509$|$string$[, $format$]])}}
+
+Returns a new request object, optionally initialized to the specified \module{openssl.x509} certificate $x509$ or the PEM- or DER-encoded certificate signing request $string$. $format$ is as described in \fn{openssl.pkey.new}---``PEM'', ``DER'', or ``*'' (default).
+
+\subsubsection[\fn{csr.interpose}]{\fn{csr.interpose($name$, $function$)}}
+
+Add or interpose a request class method. Returns the previous method, if any.
+
+\subsubsection[\fn{csr:getVersion}]{\fn{csr:getVersion()}}
+
+Returns the X.509 version of the request.
+
+\subsubsection[\fn{csr:setVersion}]{\fn{csr:setVersion($number$)}}
+
+Sets the X.509 version of the request.
+
+\subsubsection[\fn{csr:getSubject}]{\fn{csr:getSubject()}}
+
+Returns the subject distinguished name as an \module{x509.name} object.
+
+\subsubsection[\fn{csr:setSubject}]{\fn{csr:setSubject($name$)}}
+
+Sets the subject distinguished name. $name$ should be an \module{x509.name} object.
+
+\subsubsection[\fn{csr:getSubjectAlt}]{\fn{csr:getSubjectAlt()}}
+
+Returns the subject alternative name as an \module{x509.altname} object.
+
+\subsubsection[\fn{csr:setSubjectAlt}]{\fn{csr:setSubjectAlt($name$)}}
+
+Sets the subject alternative names. $name$ should be an \module{x509.altname} object.
+
+\subsubsection[\fn{csr:getPublicKey}]{\fn{csr:getPublicKey()}}
+
+Returns the public key component as an \module{openssl.pkey} object.
+
+\subsubsection[\fn{csr:setPublicKey}]{\fn{csr:setPublicKey($key$)}}
+
+Sets the public key component referenced by the \module{openssl.pkey} object $key$.
+
+\subsubsection[\fn{csr:sign}]{\fn{csr:sign($key$)}}
+
+Signs the instance request using the \module{openssl.pkey} $key$.
+
+\subsubsection[\fn{csr:\_\_tostring}]{\fn{csr:\_\_tostring}}
+
+Returns the PEM encoded representation of the instance request.
+
+\end{Module}
+
+
+\begin{Module}{openssl.x509.crl}
+
+Binds the X.509 certificate revocation list OpenSSL ASN.1 object.
+
+\subsubsection[\fn{crl.new}]{\fn{crl.new([$string$[, $format$]])}}
+
+Returns a new CRL object, optionally initialized to the specified PEM- or DER-encoded CRL $string$. $format$ is as described in \fn{openssl.pkey.new}---``PEM'', ``DER'', or ``*'' (default).
+
+\subsubsection[\fn{crl.interpose}]{\fn{crl.interpose($name$, $function$)}}
+
+Add or interpose a request class method. Returns the previous method, if any.
+
+\subsubsection[\fn{crl:getVersion}]{\fn{crl:getVersion()}}
+
+Returns the CRL version.
+
+\subsubsection[\fn{crl:setVersion}]{\fn{crl:setVersion($number$)}}
+
+Sets the CRL version.
+
+\subsubsection[\fn{crl:getLastUpdate}]{\fn{crl:getLastUpdate()}}
+
+Returns the Last Update time of the CRL as a Unix timestamp, or $nil$ if not set.
+
+\subsubsection[\fn{crl:setLastUpdate}]{\fn{crl:setLastUpdate($time$)}}
+
+Sets the Last Update time of the CRL. $time$ should be a Unix timestamp.
+
+\subsubsection[\fn{crl:getNextUpdate}]{\fn{crl:getNextUpdate()}}
+
+Returns the Next Update time of the CRL as a Unix timestamp, or $nil$ if not set.
+
+\subsubsection[\fn{crl:setNextUpdate}]{\fn{crl:setNextUpdate($time$)}}
+
+Sets the Next Update time of the CRL. $time$ should be a Unix timestamp.
+
+\subsubsection[\fn{crl:getIssuer}]{\fn{crl:getIssuer()}}
+
+Returns the issuer distinguished name as an \module{x509.name} object.
+
+\subsubsection[\fn{crl:setIssuer}]{\fn{crl:setIssuer($name$)}}
+
+Sets the issuer distinguished name. $name$ should be an \module{x509.name} object.
+
+\subsubsection[\fn{crl:add}]{\fn{crl:add($serial$ [, $time$])}}
+
+Add the certificate identified by $serial$ to the revocation list. $serial$ should be a \module{openssl.bignum} object, as returned by \fn{x509:getSerial}. $time$ is the revocation date as a Unix timestamp. If unspecified $time$ defaults to the current time.
+
+\subsubsection[\fn{crl:addExtension}]{\fn{crl:addExtension($ext$)}}
+
+Adds a copy of the \module{x509.extension} object to the revocation list.
+
+\subsubsection[\fn{crl:getExtension}]{\fn{crl:getExtension($key$)}}
+
+Returns a copy of the \module{x509.extension} object identified by $key$ where $key$ is the plain text string of the OID, long name, or short name; or the integer index (1-based) of the extension. Returns nothing if no such extension was found by that name or at that index.
+
+\subsubsection[\fn{crl:getExtensionCount}]{\fn{crl:getExtensionCount()}}
+
+Returns the integer count of the number of extensions.
+
+\subsubsection[\fn{crl:sign}]{\fn{crl:sign($key$)}}
+
+Signs the instance CRL using the \module{openssl.pkey} $key$.
+
+\subsubsection[\fn{crl:verify}]{\fn{crl:verify($publickey$)}}
+
+Verifies the instance CRL using a public key.
+
+\subsubsection[\fn{crl:text}]{\fn{crl:text()}}
+
+Returns a human-readable textual representation of the instance CRL.
+
+\subsubsection[\fn{crl:\_\_tostring}]{\fn{crl:\_\_tostring}}
+
+Returns the PEM encoded representation of the instance CRL.
+
+\end{Module}
+
+
+\begin{Module}{openssl.x509.chain}
+
+Binds the ``STACK\_OF(X509)'' OpenSSL object, principally used in the OpenSSL library for representing a validation chain.
+
+\subsubsection[\fn{chain.new}]{\fn{chain.new()}}
+
+Returns a new chain object.
+
+\subsubsection[\fn{chain.interpose}]{\fn{chain.interpose($name$, $function$)}}
+
+Add or interpose a chain class method. Returns the previous method, if any.
+
+\subsubsection[\fn{chain:add}]{\fn{chain:add($crt$)}}
+
+Append the X.509 certificate $crt$.
+
+\subsubsection[\fn{chain:\_\_ipairs}]{\fn{chain:\_\_ipairs()}}
+
+Returns an iterator over the stored certificates.
+
+\end{Module}
+
+
+\begin{Module}{openssl.x509.store}
+
+Binds the X.509 certificate ``X509\_STORE'' OpenSSL object, principally used for loading and storing trusted certificates, paths to trusted certificates, and verification policy.
+
+\subsubsection[\fn{store.new}]{\fn{store.new()}}
+
+Returns a new store object.
+
+\subsubsection[\fn{store.interpose}]{\fn{store.interpose($name$, $function$)}}
+
+Add or interpose a store class method. Returns the previous method, if any.
+
+\subsubsection[\fn{store:add}]{\fn{store:add($crt$|$filepath$|$dirpath$)}}
+
+Add the X.509 certificate $crt$ to the store, load the certificates from the file $filepath$, or set the OpenSSL `hashdir' certificate path $dirpath$.
+
+\subsubsection[\fn{store:verify}]{\fn{store:verify($crt$[, $chain$])}}
+
+Returns two values. The first is a boolean value for whether the specified certificate $crt$ was verified. If true, the second value is a \module{openssl.x509.chain} object validation chain. If false, the second value is a string describing why verification failed. The optional parameter $chain$ is an \module{openssl.x509.chain} object of untrusted certificates linking the certificate $crt$ to one of the trusted certificates in the instance store.
+
+\end{Module}
+
+\begin{Module}{openssl.x509.verify\_param}
+
+Binds the ``X509\_VERIFY\_PARAM'' OpenSSL object, principally used for setting parameters to be used during certificate verification operations.
+
+\subsubsection[\fn{verify\_param.new}]{\fn{verify\_param.new()}}
+
+Returns a new verify\_param object.
+
+\subsubsection[\fn{verify\_param.interpose}]{\fn{verify\_param.interpose($name$, $function$)}}
+
+Add or interpose a verify\_param class method. Returns the previous method, if any.
+
+\subsubsection[\fn{verify\_param:inherit}]{\fn{verify\_param:inherit($src$)}}
+
+Inherit flags from $src$. $src$ can be either another \fn{verify\_param} object to inherit from, or a string referring to one of the OpenSSL predefined parameters:
+
+\begin{ctabular}{ l | p{5cm} }
+name & description \\\hline
+default & X509 default parameters \\
+smime\_sign & S/MIME sign parameters \\
+pkcs7 & Identical to $smime\_sign$ \\
+ssl\_client & SSL/TLS client parameters \\
+ssl\_server & SSL/TLS server parameters
+\end{ctabular}
+
+\subsubsection[\fn{verify\_param:setPurpose}]{\fn{verify\_param:setPurpose($id\_or\_name$)}}
+
+Sets the verification purpose of the $verify\_param$. Valid argument can be either an integer which corresponds to OpenSSL's internal purpose ID, or string indicating predefined purposes:
+
+\begin{ctabular}{ l | p{4cm} }
+name & description \\\hline
+sslclient & SSL/TLS client \\
+sslserver & SSL/TLS server \\
+nssslserver & Netscape SSL server \\
+smimeencrypt & S/MIME encryption \\
+any & Any Purpose \\
+ocsphelper & OCSP helper \\
+timestampsign & Time Stamp signing
+\end{ctabular}
+
+\subsubsection[\fn{verify\_param:setTime}]{\fn{verify\_param:setTime([$timestamp$])}}
+
+Sets the verification time in $verify\_param$ to the provided Unix timestamp. By default the current system time is used.
+
+\subsubsection[\fn{verify\_param:setDepth}]{\fn{verify\_param:setDepth($depth$)}}
+
+Sets the maximum verification depth to $depth$. That is the maximum number of untrusted CA certificates that can appear in a chain.\footnote{OpenSSL's behaviour in regards to depth changed between OpenSSL 1.0.1 and OpenSSL 1.0.2; similarly for LibreSSL}
+
+\subsubsection[\fn{verify\_param:getDepth}]{\fn{verify\_param:getDepth()}}
+
+Returns the current maximum verification depth.
+
+\subsubsection[\fn{verify\_param:setAuthLevel}]{\fn{verify\_param:setAuthLevel($auth\_level$)}}
+
+Sets the authentication security level to $auth\_level$. The authentication security level determines the acceptable signature and public key strength when verifying certificate chains. For a certificate chain to validate, the public keys of all the certificates must meet the specified security level. The signature algorithm security level is not enforced for the chain's trust anchor certificate, which is either directly trusted or validated by means other than its signature. See \href{https://www.openssl.org/docs/man1.1.1/man3/SSL_CTX_set_security_level.html}{$SSL\_CTX\_set\_security\_level(3)$} for the definitions of the available levels. The default security level is -1, or "not set". At security level 0 or lower all algorithms are acceptable. Security level 1 requires at least 80-bit-equivalent security and is broadly interoperable, though it will, for example, reject MD5 signatures or RSA keys shorter than 1024 bits.
+
+\emph{Only supported since OpenSSL 1.1.0.}
+
+\subsubsection[\fn{verify\_param:getAuthLevel}]{\fn{verify\_param:getAuthLevel()}}
+
+Returns the current authentication security level.
+
+\emph{Only supported since OpenSSL 1.1.0.}
+
+\subsubsection[\fn{verify\_param:setHost}]{\fn{verify\_param:setHost($name$)}}
+
+Sets the expected DNS hostname to the string $name$, overriding any previously specified host name or names. If $name$ is $nil$ then name checks will not be performed on the peer certificate.
+
+\emph{Only supported since OpenSSL 1.1.0.}
+
+\subsubsection[\fn{verify\_param:addHost}]{\fn{verify\_param:addHost($name$)}}
+
+Adds $name$ as an additional reference identifier that can match the peer's certificate. Any previous names set via \fn{verify\_param:setHost} or \fn{verify\_param:addHost} are retained. When multiple names are configured, the peer is considered verified when any name matches.
+
+\emph{Only supported since OpenSSL 1.1.0.}
+
+\subsubsection[\fn{verify\_param:setEmail}]{\fn{verify\_param:setEmail($email$)}}
+
+Sets the expected RFC822 email address to the string $email$, overriding any previously specified email address.
+
+\emph{Only supported since OpenSSL 1.1.0.}
+
+\subsubsection[\fn{verify\_param:setIP}]{\fn{verify\_param:setIP($address$)}}
+
+Sets the expected IP address to $address$. Can be dotted decimal quad for IPv4 and colon-separated hexadecimal for IPv6. The condensed "::" notation is supported for IPv6 addresses.
+
+\emph{Only supported since OpenSSL 1.1.0.}
+
+\end{Module}
+
+\begin{Module}{openssl.pkcs12}
+
+Binds the PKCS \#12 container OpenSSL object.
+
+\subsubsection[\fn{pkcs12.new}]{\fn{pkcs12.new\{ $\ldots$ \}}}
+
+Returns a new PKCS12 object initialized according to the named parameters---$password$, $key$, $certs$.
+
+FIXME.
+
+\subsubsection[\fn{pkcs12.interpose}]{\fn{pkcs12.interpose($name$, $function$)}}
+
+Add or interpose a store class method. Returns the previous method, if any.
+
+\subsubsection[\fn{pkcs12:\_\_tostring}]{\fn{pkcs12:\_\_tostring()}}
+
+Returns a PKCS \#12 binary encoded string.
+
+\subsubsection[\fn{pkcs12.parse}]{\fn{pkcs12.parse($bag$[, $passphrase$])}}
+
+Parses a PKCS\#12 bag, presented as a binary string $bag$. The second parameter $passphrase$ is the passphrase required to decrypt the PKCS\#12 bag. The function returns three items; namely the key, certificate and the CA chain, as their respective objects. If an item is absent, it will be substituted with nil.
+
+\end{Module}
+
+
+\begin{Module}{openssl.ssl.context}
+
+Binds the ``SSL\_CTX'' OpenSSL object, used as a configuration prototype for SSL connection instances. See \method{socket.starttls}.
+
+\subsubsection[\fn{context[]}]{\fn{context[]}}
+
+A table mapping OpenSSL named constants. The available constants are documented with the relevant method.
+
+\subsubsection[\fn{context.new}]{\fn{context.new([$protocol$][, $server$])}}
+
+Returns a new context object. $protocol$ is an optional string identifier selecting the OpenSSL constructor, defaulting to ``TLS''. If $server$ is true, then SSL connections instantiated using this context will be placed into server mode, otherwise they behave as clients.
+
+\begin{ctabular}{ c | p{14cm} }
+\multicolumn{2}{c}{$protocol$ identifiers}\\\hline\hline
+name & \href{https://www.openssl.org/docs/ssl/SSL_CTX_new.html}{description} \\\hline
+TLS & Supports TLS 1.0 \emph{and above}. Internally uses \fn{SSLv23\_method} and disables SSLv2 and
+SSLv3 using \texttt{SSL\_OP\_NO\_SSLv2} and \texttt{SSL\_OP\_NO\_SSLv3}.\\
+
+SSL & Supports SSL 3.0 \emph{and above}. Internally uses \fn{SSLv23\_method} and disables SSLv2 using \texttt{SSL\_OP\_NO\_SSLv2}.\\
+
+SSLv23 & A catchall for all versions of SSL/TLS supported by OpenSSL. Individual versions can be disabled using \method{context:setOptions}. Internally uses \fn{SSLv23\_method}.\\
+
+TLSv1\_2 & Supports \emph{only} TLS 1.2. Internally uses \fn{TLSv1\_2\_method}.\\
+
+TLSv1\_1 & Supports \emph{only} TLS 1.1. Internally uses \fn{TLSv1\_1\_method}.\\
+
+TLSv1 & Supports \emph{only} TLS 1.0. Internally uses \fn{TLSv1\_method}.\\
+
+SSLv3 & Supports \emph{only} SSL 3.0. Internally uses \fn{SSLv3\_method}.\\
+
+SSLv2 & Supports \emph{only} SSL 2.0. Internally uses \fn{SSLv2\_method}. \\
+DTLS & Supports DTLS 1.0 \emph{and above}. Internally uses \fn{DTLS\_method}. \\
+DTLSv1 & Supports \emph{only} DTLS 1.0. Internally uses \fn{DTLSv1\_method}. \\
+DTLSv1\_2 & Supports \emph{only} DTLS 1.2. Internally uses \fn{DTLSv1\_2\_method}.
+\end{ctabular}
+
+
+\subsubsection[\fn{context.interpose}]{\fn{context.interpose($name$, $function$)}}
+
+Add or interpose a context class method. Returns the previous method, if any.
+
+\subsubsection[\fn{context:setOptions}]{\fn{context:setOptions($flags$)}}
+
+Adds the option flags to the context instance. $flags$ is a bit-wise set of option flags to be ORd with the current set. The resultant option flags of the context instance will be the union of the old and new flags.\footnote{This idiosyncratic union behavior is how the OpenSSL routine works.}
+
+\begin{ctabular}{ c | p{8cm} }
+name & \href{https://www.openssl.org/docs/ssl/SSL_CTX_set_options.html}{description} \\\hline
+\small{\texttt{OP\_MICROSOFT\_SESS\_ID\_BUG}} & When talking SSLv2, if session-id reuse is performed, the session-id passed back in the server-finished message is different from the one decided upon. \\
+\small{\texttt{OP\_NETSCAPE\_CHALLENGE\_BUG}} & Workaround for Netscape-Commerce/1.12 servers. \\
+\small{\texttt{OP\_LEGACY\_SERVER\_CONNECT}} & $\ldots$ \\
+\small{\texttt{OP\_NETSCAPE\_REUSE\_CIPHER\_CHANGE\_BUG}} & As of OpenSSL 0.9.8q and 1.0.0c, this option has no effect. \\
+\small{\texttt{OP\_SSLREF2\_REUSE\_CERT\_TYPE\_BUG}} & $\ldots$ \\
+\small{\texttt{OP\_TLSEXT\_PADDING}} & $\ldots$ \\
+\small{\texttt{OP\_MICROSOFT\_BIG\_SSLV3\_BUFFER}} & $\ldots$ \\
+\small{\texttt{OP\_SAFARI\_ECDHE\_ECDSA\_BUG}} & $\ldots$ \\
+\small{\texttt{OP\_MSIE\_SSLV2\_RSA\_PADDING}} & $\ldots$ \\
+\small{\texttt{OP\_SSLEAY\_080\_CLIENT\_DH\_BUG}} & $\ldots$ \\
+\small{\texttt{OP\_TLS\_D5\_BUG}} & $\ldots$ \\
+\small{\texttt{OP\_TLS\_BLOCK\_PADDING\_BUG}} & $\ldots$ \\
+\small{\texttt{OP\_ALLOW\_NO\_DHE\_KEX}} & Allow a non-(ec)dhe based kex\_mode. \\
+\small{\texttt{OP\_DONT\_INSERT\_EMPTY\_FRAGMENTS}} & Disables a countermeasure against a SSL 3.0/TLS 1.0 protocol vulnerability affecting CBC ciphers, which cannot be handled by some broken SSL implementations. This option has no effect for connections using other ciphers. \\
+\small{\texttt{OP\_NO\_QUERY\_MTU}} & $\ldots$ \\
+\small{\texttt{OP\_COOKIE\_EXCHANGE}} & $\ldots$ \\
+\small{\texttt{OP\_NO\_TICKET}} & Disable RFC4507bis ticket stateless session resumption. \\
+\small{\texttt{OP\_CISCO\_ANYCONNECT}} & $\ldots$ \\
+\small{\texttt{OP\_NO\_SESSION\_RESUMPTION\_ON\_RENEGOTIATION}} & When performing renegotiation as a server, always start a new session (i.e., session resumption requests are only accepted in the initial handshake). This option is not needed for clients. \\
+\small{\texttt{OP\_NO\_COMPRESSION}} & $\ldots$ \\
+\small{\texttt{OP\_ALLOW\_UNSAFE\_LEGACY\_RENEGOTIATION}} & $\ldots$ \\
+\small{\texttt{OP\_SINGLE\_ECDH\_USE}} & Always create a new key when using temporary/ephemeral ECDH parameters. \\
+\small{\texttt{OP\_NO\_ENCRYPT\_THEN MAC}} & $\ldots$ \\
+\small{\texttt{OP\_SINGLE\_DH\_USE}} & Always create a new key when using temporary/ephemeral DH parameters. \\
+\small{\texttt{OP\_EPHEMERAL\_RSA}} & Always use ephemeral (temporary) RSA key when doing RSA operations. \\
+\small{\texttt{OP\_PRIORITIZE\_CHACHA}} & Prioritize ChaCha20Poly1305 on servers when client does. \\
+\small{\texttt{OP\_ENABLE\_MIDDLEBOX\_COMPAT}} & TLSv1.3 Compatibility mode. \\
+\small{\texttt{OP\_NO\_ANTI\_REPLAY}} & TLSv1.3 anti-replay protection for early data. \\
+\small{\texttt{OP\_CIPHER\_SERVER\_PREFERENCE}} & When choosing a cipher, use the server's preferences instead of the client preferences. \\
+\small{\texttt{OP\_TLS\_ROLLBACK\_BUG}} & Disable version rollback attack detection. \\
+\small{\texttt{OP\_NO\_SSLv2}} & Do not use the SSLv2 protocol. \\
+\small{\texttt{OP\_NO\_SSLv3}} & Do not use the SSLv3 protocol. \\
+\small{\texttt{OP\_NO\_TLSv1}/\texttt{OP\_NO\_DTLSv1}} & Do not use the (D)TLSv1.0 protocol. \\
+\small{\texttt{OP\_NO\_TLSv1\_2}/\texttt{OP\_NO\_DTLSv1\_2}} & Do not use the (D)TLSv1.2 protocol. \\
+\small{\texttt{OP\_NO\_TLSv1\_1}} & Do not use the TLSv1.1 protocol. \\
+\small{\texttt{OP\_NETSCAPE\_CA\_DN\_BUG}} & $\ldots$ \\
+\small{\texttt{OP\_NO\_TLSv1\_3}} & $\ldots$ \\
+\small{\texttt{OP\_NETSCAPE\_DEMO\_CIPHER\_CHANGE\_BUG}} & $\ldots$ \\
+\small{\texttt{OP\_NO\_RENEGOTIATION}} & $\ldots$ \\
+\small{\texttt{OP\_CRYPTOPRO\_TLSEXT\_BUG}} & $\ldots$ \\
+\small{\texttt{OP\_PKCS1\_CHECK\_1}} & $\ldots$ \\
+\small{\texttt{OP\_PKCS1\_CHECK\_2}} & $\ldots$ \\
+\small{\texttt{OP\_NO\_SSL\_MASK}} & $\ldots$ \\
+\small{\texttt{OP\_ALL}} & All of the bug workarounds. \\
+\end{ctabular}
+
+\subsubsection[\fn{context:getOptions}]{\fn{context:getOptions()}}
+
+Returns the option flags of the context instance as an integer.
+
+\subsubsection[\fn{context:clearOptions}]{\fn{context:clearOptions()}}
+
+Clears the option flags of the context instance.
+
+\subsubsection[\fn{context:setReadAhead}]{\fn{context:setReadAhead($yes$)}}
+
+Sets if read ahead is enabled for the context, $yes$ should be a boolean.
+
+\subsubsection[\fn{context:getReadAhead}]{\fn{context:getReadAhead()}}
+
+Returns if read ahead is enabled for the context instance as a boolean.
+
+\subsubsection[\fn{context:setStore}]{\fn{context:setStore($store$)}}
+
+Associate the \module{openssl.x509.store} object $store$ with $context$. Replaces any existing store.
+
+\subsubsection[\fn{context:getStore}]{\fn{context:getStore()}}
+
+Returns the \module{openssl.x509.store} object associated with $context$.
+
+\subsubsection[\fn{context:setParam}]{\fn{context:setParam($params$)}}
+
+Causes $context$ to inherit the parameters from the \module{openssl.x509.verify\_param} object $params$.
+Only parameters set in $params$ will take effect (others will stay unchanged).
+
+\subsubsection[\fn{context:getParam}]{\fn{context:getParam()}}
+
+Returns an \module{openssl.x509.verify\_param} object containing a copy of $context$'s parameters.
+
+\subsubsection[\fn{context:setVerify}]{\fn{context:setVerify([$mode$][, $depth$])}}
+
+Sets the verification mode flags and maximum validation chain depth.
+
+\begin{tabular}{ c | l }
+name & description \\\hline
+VERIFY\_NONE & disable client peer certificate verification \\
+VERIFY\_PEER & enable client peer certificate verification \\
+VERIFY\_FAIL\_IF\_NO\_PEER\_CERT & require a peer certificate \\
+VERIFY\_CLIENT\_ONCE & do not request peer certificates after initial handshake
+\end{tabular}
+
+See the \href{http://www.openssl.org/docs/ssl/SSL_CTX_set_verify.html#NOTES}{NOTES section} in the OpenSSL documentation for \fn{SSL\_CTX\_set\_verify\_mode}.
+
+\subsubsection[\fn{context:getVerify}]{\fn{context:getVerify()}}
+
+Returns two values: the bitwise verification mode flags, and the maximum validation depth.
+
+\subsubsection[\fn{context:setCertificate}]{\fn{context:setCertificate($crt$)}}
+
+Sets the X.509 certificate \module{openssl.x509} object $crt$ to send during SSL connection instance handshakes.
+
+\subsubsection[\fn{context:getCertificate}]{\fn{context:getCertificate()}}
+
+Returns the X.509 certificate \module{openssl.x509} object to be sent during SSL connection instance handshakes.
+
+\emph{Only supported since OpenSSL 1.0.2.}
+
+\subsubsection[\fn{context:setCertificateChain}]{\fn{context:setCertificateChain($chain$)}}
+
+Sets the X.509 certificate chain \module{openssl.x509.chain} object $chain$ to send during SSL connection instance handshakes.
+
+\emph{Only supported since OpenSSL 1.0.2.}
+
+\subsubsection[\fn{context:getCertificateChain}]{\fn{context:getCertificateChain()}}
+
+Returns the X.509 certificate chain \module{openssl.x509.chain} object to be sent during SSL connection instance handshakes.
+
+\emph{Only supported since OpenSSL 1.0.2.}
+
+\subsubsection[\fn{context:setPrivateKey}]{\fn{context:setPrivateKey($key$)}}
+
+Sets the private key \module{openssl.pkey} object $key$ for use during SSL connection instance handshakes.
+
+\subsubsection[\fn{context:setCipherList}]{\fn{context:setCipherList($string$ [, ...])}}
+
+Sets the allowed public key and private key algorithm(s). The string format is documented in the \href{http://www.openssl.org/docs/apps/ciphers.html#CIPHER_LIST_FORMAT}{OpenSSL ciphers(1) utility documentation}.
+
+\subsubsection[\fn{context:setCipherSuites}]{\fn{context:setCipherSuites($string$ [, ...])}}
+
+Sets the supported TLS 1.3 cipher suites. The string format is a list of colon separated curve names similar to \texttt{ctx:setCipherList(...)}.
+
+\emph{Only supported since OpenSSL 1.1.1.}
+
+\subsubsection[\fn{context:setGroups}]{\fn{context:setGroups($string$ [, ...])}}
+
+Sets the supported groups. The string format is a list of colon separated group names similar to \texttt{ctx:setCipherList(...)}.
+A list of supported EC groups can be found by running \texttt{openssl ecparam -list\_curves}.
+
+\emph{Only supported since OpenSSL 1.0.2.}
+
+\subsubsection[\fn{context:setEphemeralKey}]{\fn{context:setEphemeralKey($key$)}}
+
+Sets \module{openssl.pkey} object $key$ as the ephemeral key during key exchanges which use that particular key type. Typically $key$ will be either a Diffie-Hellman or Elliptic Curve key.
+
+\emph{In older version of OpenSSL, in order to configure an SSL server to support an ephemeral key exchange cipher suite (i.e. DHE-* and ECDHE-*), the application must explicitly set the ephemeral keys. Simply enabling the cipher suite is not sufficient. The application can statically generate Diffie-Hellman public key parameters, and many servers ship with such a key compiled into the software. Elliptic curve keys are necessarily static, and instantiated by curve name\footnote{OpenSSL < 1.0.2 only supports a single curve, \href{http://en.wikipedia.org/w/index.php?title=Comparison\_of\_TLS\_implementations&oldid=629779090\#Supported\_elliptic\_curves}{according to Wikipedia} the most widely supported curve is prime256v1, so to enable ECDHE-*, applications can simply do \texttt{ctx:setEphemeralKey(pkey.new\{ type = ``EC'', curve = ``prime256v1'' \})}. For OpenSSL versions >= 1.0.2, see \fn{context:setGroups} instead. To achieve Perfect Forward Secrecy for ECDHE-*, applications must also do \texttt{ctx:setOptions(context.OP\_SINGLE\_ECDH\_USE)}. The \texttt{ctx} object must then be used to configure each SSL session, such as by passing it to \fn{cqueues.socket:starttls()}.}.}
+
+\emph{In addition, to attain Perfect Forward Secrecy the options \texttt{OP\_SINGLE\_DH\_USE} and \texttt{OP\_SINGLE\_ECDH\_USE} must be set so that OpenSSL discards and regenerates the secret keying parameters for each key exchange.}
+
+\subsubsection[\fn{context:setAlpnProtos}]{\fn{context:setAlpnProtos($table$)}}
+
+Sets the advertised ALPN protocols. $table$ is an array of protocol string identifiers.
+
+\emph{Only supported since OpenSSL 1.0.2.}
+
+\subsubsection[\fn{context:setAlpnSelect}]{\fn{context:setAlpnSelect($cb$)}}
+
+Sets the callback used to select an ALPN protocol. $cb$ should be a function that takes two arguments: an \module{openssl.ssl} object and a table containing a sequence of ALPN protocol strings; it should return the ALPN protocol string it selected or $nil$ to select none of them.
+
+\emph{Only supported since OpenSSL 1.0.2.}
+
+\subsubsection[\fn{context:setHostNameCallback}]{\fn{context:setHostNameCallback($cb$)}}
+
+Sets the callback used to process the SNI in a ClientHello. $cb$ should be a function that one argument: a \module{openssl.ssl} object; it should return $true$ to indicate success, $false$ if no acknowledgement should be send to the client, or $nil$ and an integer to send an error to the peer.
+
+\emph{Only supported since OpenSSL 1.0.0.}
+
+\subsubsection[\fn{context:setTLSextStatusType}]{\fn{context:setTLSextStatusType($type$)}}
+
+Sets the default TLS extension status for SSL objects derived from this context.
+See \fn{ssl:setTLSextStatusType}
+
+\emph{Only supported since OpenSSL 1.1.0.}
+
+\subsubsection[\fn{context:getTLSextStatusType}]{\fn{context:getTLSextStatusType()}}
+
+Gets the default TLS extension status for SSL objects derived from this context as a string.
+See \fn{ssl:getTLSextStatusType}
+
+\emph{Only supported since OpenSSL 1.1.0.}
+
+\subsubsection[\fn{context:getTicketKeysLength}]{\fn{context:getTicketKeysLength()}}
+
+Returns the expected length of ticket keys data.
+See \fn{context:setTicketKeys}
+
+\emph{Only supported since OpenSSL 1.0.0.}
+
+\subsubsection[\fn{context:setTicketKeys}]{\fn{context:setTicketKeys($keys$)}}
+
+Sets the current random data used to generate tickets. $keys$ should be a string of the length returned by \fn{context:getTicketKeysLength}.
+
+\emph{Only supported since OpenSSL 1.0.0.}
+
+\subsubsection[\fn{context:getTicketKeys}]{\fn{context:getTicketKeys()}}
+
+Returns the current random data used to generate tickets.
+See \fn{context:setTicketKeys}
+
+\emph{Only supported since OpenSSL 1.0.0.}
+
+\subsubsection[\fn{context:useServerInfo}]{\fn{context:useServerInfo($version$, $serverinfo$)}}
+
+If version is $1$ then the extensions in the array must consist of a 2-byte Extension Type, a 2-byte length, and then length bytes of extension data. The type value has the same meaning as for \fn{context:addCustomExtension}.
+
+If version is $2$ then the extensions in the array must consist of a 4-byte context, a 2-byte Extension Type, a 2-byte length, and then length bytes of extension\_data. The context and type values have the same meaning as for \fn{context:addCustomExtension}. If serverinfo is being loaded for extensions to be added to a Certificate message, then the extension will only be added for the first certificate in the message (which is always the end-entity certificate).
+
+\emph{Only supported since OpenSSL 1.0.2, ServerInfo version 2 is only supported since OpenSSL 1.1.1}
+
+\subsubsection[\fn{context:useServerInfoFile}]{\fn{context:useServerInfoFile($file$)}}
+
+Loads one or more serverinfo extensions from $file$ into $context$. The extensions must be in PEM format. Each extension must be in a format as described above for \fn{context:useServerInfo}. Each PEM extension name must begin with the phrase ``BEGIN SERVERINFOV2 FOR '' for version 2 data or ``BEGIN SERVERINFO FOR '' for version 1 data.
+
+\emph{Only supported since OpenSSL 1.0.2}
+
+\subsubsection[\fn{context:addCustomExtension}]{\fn{context:addCustomExtension($ext\_type$, $ext\_context$, $add\_cb$, $parse\_cb$)}}
+
+Adds a custom extension with the TLS extension type (see RFC 5246) $ext\_type$ that may be present in the context(s) specifed by $ext\_context$, which should be a bitmask of the flags:
+
+\begin{ctabular}{ l | p{8cm} }
+name & description \\\hline
+EXT\_TLS\_ONLY & The extension is only allowed in TLS \\
+EXT\_DTLS\_ONLY & The extension is only allowed in DTLS \\
+EXT\_TLS\_IMPLEMENTATION\_ONLY & The extension is allowed in DTLS, but there is only a TLS implementation available (so it is ignored in DTLS). \\
+EXT\_SSL3\_ALLOWED & Extensions are not typically defined for SSLv3. Setting this value will allow the extension in SSLv3. Applications will not typically need to use this. \\
+EXT\_TLS1\_2\_AND\_BELOW\_ONLY & The extension is only defined for TLSv1.2/DTLSv1.2 and below. Servers will ignore this extension if it is present in the ClientHello and TLSv1.3 is negotiated. \\
+EXT\_TLS1\_3\_ONLY & The extension is only defined for TLS1.3 and above. Servers will ignore this extension if it is present in the ClientHello and TLSv1.2 or below is negotiated. \\
+EXT\_IGNORE\_ON\_RESUMPTION & The extension will be ignored during parsing if a previous session is being successfully resumed. \\
+EXT\_CLIENT\_HELLO & The extension may be present in the ClientHello message. \\
+EXT\_TLS1\_2\_SERVER\_HELLO & The extension may be present in a TLSv1.2 or below compatible ServerHello message. \\
+EXT\_TLS1\_3\_SERVER\_HELLO & The extension may be present in a TLSv1.3 compatible ServerHello message. \\
+EXT\_TLS1\_3\_ENCRYPTED\_EXTENSIONS & The extension may be present in an EncryptedExtensions message. \\
+EXT\_TLS1\_3\_HELLO\_RETRY\_REQUEST & The extension may be present in a HelloRetryRequest message. \\
+EXT\_TLS1\_3\_CERTIFICATE & The extension may be present in a TLSv1.3 compatible Certificate message. \\
+EXT\_TLS1\_3\_NEW\_SESSION\_TICKET & The extension may be present in a TLSv1.3 compatible NewSessionTicket message. \\
+EXT\_TLS1\_3\_CERTIFICATE\_REQUEST & The extension may be present in a TLSv1.3 compatible CertificateRequest message.
+\end{ctabular}
+
+$add\_cb$ should be a function with signature \fn{add\_cb($ssl$, $ext\_type$, $ext\_context$, $x509$, $chainidx$)}; it will be called from the relevant context to allow you to insert extension data.
+It receives the $ssl$ object of the connection, the $ext\_type$ you registered the callback for, the current $context$ and, for only some contexts, the current \module{openssl.x509} certificate and chain index (as an integer). You should return the extension data as a string, $false$ if you don't want to add your extension, or $nil$ and an optional integer specifying the TLS error code to raise an error.
+
+$parse\_cb$ should be a function with signature \fn{parse\_cb($ssl$, $ext\_type$, $ext\_context$, $data$, $x509$, $chainidx$)}; it will be called from the relevant context to allow you to parse extension data.
+It receives the $ssl$ object of the connection, the $ext\_type$ you registered the callback for, the current $context$, the extension $data$ as a string, and for only some contexts, the current \module{openssl.x509} certificate and chain index (as an integer). You should return $true$ on success, or $nil$ and an optional integer specifying the TLS error code to raise an error.
+
+\emph{Only supported since OpenSSL 1.1.1.}
+
+\end{Module}
+
+
+\begin{Module}{openssl.ssl}
+
+Binds the ``SSL'' OpenSSL object, which represents an SSL connection instance. See \method{cqueues.socket:checktls}.
+
+\subsubsection[\fn{ssl[]}]{\fn{ssl[]}}
+
+A table mapping OpenSSL named constants. Includes all constants provided by \module{openssl.ssl.context}. Additional constants are documented with the relevant method.
+
+\subsubsection[\fn{ssl.interpose}]{\fn{ssl.interpose($name$, $function$)}}
+Add or interpose an ssl class method. Returns the previous method, if any.
+
+\subsubsection[\fn{ssl:setContext}]{\fn{ssl:setContext($context$)}}
+
+Replaces the \module{openssl.ssl.context} used by $ssl$ with $context$.
+
+\subsubsection[\fn{ssl:getContext}]{\fn{ssl:getContext()}}
+
+Returns the \module{openssl.ssl.context} used by $ssl$.
+
+\subsubsection[\fn{ssl:setOptions}]{\fn{ssl:setOptions($flags$)}}
+
+Adds the option flags of the SSL connection instance. See \fn{openssl.ssl.context:setOptions}.
+
+\subsubsection[\fn{ssl:getOptions}]{\fn{ssl:getOptions()}}
+
+Returns the option flags of the SSL connection instance. See \fn{openssl.ssl.context:getOptions}.
+
+\subsubsection[\fn{ssl:clearOptions}]{\fn{ssl:clearOptions()}}
+
+Clears the option flags of the SSL connection instance. See \fn{openssl.ssl.context:clearOptions}.
+
+\subsubsection[\fn{ssl:setReadAhead}]{\fn{ssl:setReadAhead($yes$)}}
+
+Sets if read ahead is enabled for the SSL connection instance, $yes$ should be a boolean.
+
+\subsubsection[\fn{ssl:getReadAhead}]{\fn{ssl:getReadAhead()}}
+
+Returns if read ahead is enabled for the SSL connection instance as a boolean.
+
+\subsubsection[\fn{ssl:setStore}]{\fn{ssl:setStore($store$)}}
+
+Associate the \module{openssl.x509.store} object $store$ with $ssl$ for both verification and chain building. Replaces any existing stores.
+
+\emph{Only supported since OpenSSL 1.0.2.}
+
+\subsubsection[\fn{ssl:setChainStore}]{\fn{ssl:setChainStore($store$)}}
+
+Associate the \module{openssl.x509.store} object $store$ with $ssl$ for chain building. Replaces any existing store.
+
+\emph{Only supported since OpenSSL 1.0.2.}
+
+\subsubsection[\fn{ssl:setVerifyStore}]{\fn{ssl:setVerifyStore($store$)}}
+
+Associate the \module{openssl.x509.store} object $store$ with $ssl$ for verification. Replaces any existing store.
+
+\emph{Only supported since OpenSSL 1.0.2.}
+
+\subsubsection[\fn{ssl:setVerify}]{\fn{ssl:setVerify([$mode$][, $depth$])}}
+
+Sets the verification mode flags and maximum validation chain depth.
+See \fn{openssl.ssl.context:setVerify}.
+
+\subsubsection[\fn{ssl:getVerify}]{\fn{ssl:getVerify()}}
+
+Returns two values: the bitwise verification mode flags, and the maximum validation depth.
+See \fn{openssl.ssl.context:getVerify}.
+
+\subsubsection[\fn{ssl:getVerifyResult}]{\fn{ssl:getVerifyResult()}}
+
+Returns two values: the integer verification result code and the string representation of that code.
+
+\subsubsection[\fn{ssl:setCertificate}]{\fn{ssl:setCertificate($crt$)}}
+
+Sets the X.509 certificate \module{openssl.x509} object $crt$ to send during SSL connection instance handshakes.
+See \fn{openssl.ssl.context:setCertificate}.
+
+\subsubsection[\fn{ssl:setCertificateChain}]{\fn{ssl:setCertificateChain($chain$)}}
+
+Sets the X.509 certificate chain \module{openssl.x509.chain} object $chain$ to send during SSL connection instance handshakes.
+See \fn{openssl.ssl.context:setCertificateChain}.
+
+\emph{Only supported since OpenSSL 1.0.2.}
+
+\subsubsection[\fn{context:getCertificateChain}]{\fn{context:getCertificateChain()}}
+
+Returns the X.509 certificate chain \module{openssl.x509.chain} object to be sent during SSL connection instance handshakes.
+See \fn{openssl.ssl.context:getCertificateChain}.
+
+\emph{Only supported since OpenSSL 1.0.2.}
+
+\subsubsection[\fn{ssl:setPrivateKey}]{\fn{ssl:setPrivateKey($key$)}}
+
+Sets the private key \module{openssl.pkey} object $key$ for use during SSL connection instance handshakes.
+See \fn{openssl.ssl.context:setPrivateKey}.
+
+\subsubsection[\fn{ssl:getPeerCertificate}]{\fn{ssl:getPeerCertificate()}}
+
+Returns the X.509 peer certificate as an \module{openssl.x509} object. If no peer certificate is available, returns $nil$.
+
+\subsubsection[\fn{ssl:getPeerChain}]{\fn{ssl:getPeerChain()}}
+
+Similar to :getPeerCertifiate, but returns the entire chain sent by the peer as an \module{openssl.x509.chain} object.
+
+\subsubsection[\fn{ssl:getCipherInfo}]{\fn{ssl:getCipherInfo()}}
+
+Returns a table of information on the current cipher.
+
+\begin{tabular}{ c | l }
+field & description\\\hline
+.name & cipher name returned by \fn{SSL\_CIPHER\_get\_name}\\
+.bits & number of secret bits returned by \fn{SSL\_CIPHER\_get\_bits}\\
+.version & SSL/TLS version string returned by \fn{SSL\_CIPHER\_get\_version}\\
+.description & key:value cipher description returned by \fn{SSL\_CIPHER\_description}
+\end{tabular}
+
+\subsubsection[\fn{ssl:setHostName}]{\fn{ssl:setHostName($host$)}}
+
+Sets the Server Name Indication (SNI) host name. Using the SNI TLS extension, clients tells the server which domain they're contacting so the server can select the proper certificate and key. This permits SSL virtual hosting. This routine is only relevant for clients.
+
+\subsubsection[\fn{ssl:getHostName}]{\fn{ssl:getHostName()}}
+
+Returns the Server Name Indication (SNI) host name sent by the client. If no host name was sent, returns $nil$. This routine is only relevant for servers.
+
+\subsubsection[\fn{ssl:getVersion}]{\fn{ssl:getVersion([$format$])}}
+
+Returns the SSL/TLS version of the negotiated SSL connection. By default returns a 16-bit integer where the top 8 bits are the major version number and the bottom 8 bits the minor version number. For example, SSL 3.0 is 0x0300 and TLS 1.1 is 0x0302. SSL 2.0 is 0x0002.
+
+If $format$ is ``.'' returns a floating point number. 0x0300 becomes 3.0, and 0x0302 becomes 3.2. If the minor version is $\geq$ 10 an error is thrown.\footnote{This condition shouldn't be possible.}
+
+The following OpenSSL named constants can be used.
+
+\begin{tabular}{ c | l }
+name & description \\\hline
+SSL2\_VERSION & 16-bit SSLv2 identifier (0x0002).  \\
+SSL3\_VERSION & 16-bit SSLv3 identifier (0x0300).  \\
+TLS1\_VERSION & 16-bit TLSv1.0 identifier (0x0301).  \\
+TLS1\_1\_VERSION & 16-bit TLSv1.1 identifier (0x0302).  \\
+TLS1\_2\_VERSION & 16-bit TLSv1.2 identifier (0x0303).  \\
+\end{tabular}
+
+\subsubsection[\fn{ssl:getClientVersion}]{\fn{ssl:getClientVersion([$format$])}}
+
+Returns the SSL/TLS version supported by the client, which should be greater than or equal to the negotiated version. See \fn{ssl:getVersion}.
+
+\subsubsection[\fn{ssl:setCipherList}]{\fn{ssl:setCipherList($string$ [, ...])}}
+
+Sets the allowed public key and private key algorithm(s). See \fn{openssl.ssl.context:setCipherList}.
+
+\subsubsection[\fn{ssl:setCipherSuites}]{\fn{ssl:setCipherSuites($string$ [, ...])}}
+
+Sets the supported TLS 1.3 cipher suites for this SSL connection instance. See \fn{openssl.ssl.context:setCipherSuites}.
+
+\emph{Only supported since OpenSSL 1.1.1.}
+
+\subsubsection[\fn{ssl:setGroups}]{\fn{ssl:setGroups($string$ [, ...])}}
+
+Sets the supported groups for this SSL connection instance. See \fn{openssl.ssl.context:setGroups}.
+
+\emph{Only supported since OpenSSL 1.0.2.}
+
+\subsubsection[\fn{ssl:getAlpnSelected}]{\fn{ssl:getAlpnSelected()}}
+
+Returns the negotiated ALPN protocol as a string.
+
+\emph{Only supported since OpenSSL 1.0.2.}
+
+\subsubsection[\fn{ssl:setAlpnProtos}]{\fn{ssl:setAlpnProtos($table$)}}
+
+Sets the advertised ALPN protocols. $table$ is an array of protocol string identifiers.
+
+\emph{Only supported since OpenSSL 1.0.2.}
+
+\subsubsection[\fn{ssl:setTLSextStatusType}]{\fn{ssl:setTLSextStatusType($type$)}}
+
+Sets the TLS extension status.
+
+Only the $type$ ``ocsp'' is currently supported, this is used by a client to request that a server sends a stapled OCSP response as part of the TLS handshake.
+
+See also: \fn{context:setTLSextStatusType()}
+
+\subsubsection[\fn{ssl:getTLSextStatusType}]{\fn{ssl:getTLSextStatusType()}}
+
+Gets the TLS extension status. As set by \fn{ssl:setTLSextStatusType} or \fn{context:setTLSextStatusType}.
+
+Only the type ``ocsp'' is currently known.
+
+\emph{Only supported since OpenSSL 1.1.0.}
+
+\subsubsection[\fn{ssl:setTLSextStatusOCSPResp}]{\fn{ssl:setTLSextStatusOCSPResp($or$)}}
+
+Sets an \module{openssl.ocsp.response}. Used by a server to staple an OCSP response into a TLS handshake.
+
+\subsubsection[\fn{ssl:getTLSextStatusOCSPResp}]{\fn{ssl:getTLSextStatusOCSPResp()}}
+
+Returns the \module{openssl.ocsp.response} associated with the ssl object (or $nil$ if one has not been set).
+
+\end{Module}
+
+
+\begin{Module}{openssl.digest}
+
+Binds the ``EVP\_MD\_CTX'' OpenSSL object, which represents a cryptographic message digest (i.e. hashing) algorithm instance.
+
+\subsubsection[\fn{digest.interpose}]{\fn{digest.interpose($name$, $function$)}}
+
+Add or interpose a digest class method. Returns the previous method, if any.
+
+\subsubsection[\fn{digest.new}]{\fn{digest.new([$type$])}}
+
+Return a new digest instance using the specified algorithm $type$. $type$ is a string suitable for passing to the OpenSSL routine EVP\_get\_digestbyname, and defaults to ``sha1''.
+
+\subsubsection[\fn{digest:update}]{\fn{digest:update([$string$ [, ...]])}}
+
+Update the digest with the specified string(s). Returns the digest object.
+
+\subsubsection[\fn{digest:final}]{\fn{digest:final([$string$ [, ...]])}}
+
+Update the digest with the specified string(s). Returns the final message digest as a binary string.
+
+\end{Module}
+
+
+\begin{Module}{openssl.hmac}
+
+Binds the ``HMAC\_CTX'' OpenSSL object, which represents a cryptographic HMAC algorithm instance.
+
+\subsubsection[\fn{hmac.interpose}]{\fn{hmac.interpose($name$, $function$)}}
+
+Add or interpose an HMAC class method. Returns the previous method, if any.
+
+\subsubsection[\fn{hmac.new}]{\fn{hmac.new($key$ [, $type$])}}
+
+Return a new HMAC instance using the specified $key$ and $type$. $key$ is the secret used for HMAC authentication. $type$ is a string suitable for passing to the OpenSSL routine EVP\_get\_digestbyname, and defaults to ``sha1''.
+
+\subsubsection[\fn{hmac:update}]{\fn{hmac:update([$string$ [, ...]])}}
+
+Update the HMAC with the specified string(s). Returns the HMAC object.
+
+\subsubsection[\fn{hmac:final}]{\fn{hmac:final([$string$ [, ...]])}}
+
+Update the HMAC with the specified string(s). Returns the final HMAC checksum as a binary string.
+
+\end{Module}
+
+
+\begin{Module}{openssl.cipher}
+
+Binds the ``EVP\_CIPHER\_CTX'' OpenSSL object, which represents a cryptographic cipher instance.
+
+\subsubsection[\fn{cipher.interpose}]{\fn{cipher.interpose($name$, $function$)}}
+
+Add or interpose a cipher class method. Returns the previous method, if any.
+
+\subsubsection[\fn{cipher.new}]{\fn{cipher.new($type$)}}
+
+Return a new, uninitialized cipher instance. $type$ is a string suitable for passing to the OpenSSL routine EVP\_get\_cipherbyname, typically of a form similar to ``AES-128-CBC''.
+
+The cipher is uninitialized because some algorithms support or require additional \textit{ad hoc} parameters before key initialization. The API still allows one-shot encryption like ``cipher.new(type):encrypt(key, iv):final(plaintext)''.
+
+\subsubsection[\fn{cipher:encrypt}]{\fn{cipher:encrypt($key$ [, $iv$] [, $padding$])}}
+
+Initialize the cipher in encryption mode. $key$ and $iv$ are binary strings with lengths equal to that required by the cipher instance as configured. In other words, key stretching and other transformations must be done explicitly. If the mode does not take an IV or equivalent, such as in ECB mode, then it may be nil. $padding$ is a boolean which controls whether PKCS padding is applied, and defaults to true. Returns the cipher instance.
+
+\subsubsection[\fn{cipher:decrypt}]{\fn{cipher:decrypt($key$ [, $iv$] [, $padding$])}}
+
+Initialize the cipher in decryption mode. $key$, $iv$, and $padding$ are as described in \fn{:encrypt}. Returns the cipher instance.
+
+\subsubsection[\fn{cipher:update}]{\fn{cipher:update([$string$ [, ...]])}}
+
+Update the cipher instance with the specified string(s). Returns a string on success, or nil and an error message on failure. The returned string may be empty if no blocks can be flushed.
+
+\subsubsection[\fn{cipher:final}]{\fn{cipher:final([$string$ [, ...]])}}
+
+Update the cipher with the specified string(s). Returns the final output string on success, or nil and an error message on failure. The returned string may be empty if all blocks have already been flushed in prior \fn{:update} calls.
+
+\end{Module}
+
+
+\begin{Module}{openssl.ocsp.response}
+
+Binds OpenSSL's \texttt{OCSP\_RESPONSE} object.
+
+\subsubsection[\fn{response:getBasic}]{\fn{response:getBasic()}}
+
+Returns a \module{openssl.ocsp.basic} representation of the object contained within the OCSP response.
+
+\subsubsection[\fn{response:tostring}]{\fn{response:tostring()}}
+
+Returns a human readable description of the OCSP response as a string.
+
+\subsubsection[\fn{response:toPEM}]{\fn{response:toPEM()}}
+
+Returns the OCSP response as a PEM encoded string.
+
+\end{Module}
+
+
+\begin{Module}{openssl.ocsp.basic}
+
+Binds OpenSSL's \texttt{OCSP\_BASICRESP} object.
+
+\subsubsection[\fn{basic:verify}]{\fn{basic:verify([$certs$ [, $store$[, $flags$]]])}}
+
+Verifies that the OCSP response is signed by a certificate in the \module{openssl.x509.chain} $certs$ or a trusted certificate in \module{openssl.x509.store} $store$.
+
+\end{Module}
+
+
+\begin{Module}{openssl.rand}
+
+Binds OpenSSL's random number interfaces.
+
+OpenSSL will automatically attempt to seed itself from the system. The only time this could theoretically fail is if /dev/urandom (or similar) were not visible or could not be opened. This might happen if within a chroot jail, or if a file descriptor limit were reached.
+
+\subsubsection[\fn{rand.bytes}]{\fn{rand.bytes($count$)}}
+
+Returns $count$ cryptographically-strong bytes as a single string. Throws an error if OpenSSL could  not complete the request---e.g. because the CSPRNG could not be seeded.
+
+\subsubsection[\fn{rand.ready}]{\fn{rand.ready()}}
+
+Returns a boolean describing whether the CSPRNG has been properly seeded.
+
+In the default CSPRNG engine this routine will also attempt to seed the system if not already. Because seeding only needs to happen once per process to ensure a successful RAND\_bytes invocation\footnote{At least this appeared to be the case when examining the source code of OpenSSL 1.0.1. See md\_rand.c near line 407---``Once we've had enough initial seeding we don't bother to adjust the entropy count, though, because we're not ambitious to provide *information-theoretic* randomness.''}, it may be prudent to assert on rand:ready() at application startup.
+
+\subsubsection[\fn{rand.uniform}]{\fn{rand.uniform([$n$])}}
+
+Returns a cryptographically strong uniform random integer in the interval $[0, n-1]$. If $n$ is omitted, the interval is $[0, 2^{64}-1]$.
+
+The routine operates internally on 64-bit unsigned integers.\footnote{Actually, \texttt{unsigned long long}.} Because neither Lua 5.1 nor 5.2 support 64-bit integers, it's probably best to generate numbers that fit the integral range of your Lua implementation. Lua 5.3 supports a new arithmetic type for 64-bit signed integers in two's-complement representation. This new arithmetic type will be used for argument and return values when available.
+
+\end{Module}
+
+
+\begin{Module}{openssl.des}
+
+Binds OpenSSL's DES interfaces. These bindings are incomplete. No modern protocol would ever need to use these directly. However, legacy protocols like Windows LAN Manager authentication require some of these low-level interfaces.
+
+\subsubsection[\fn{des.string\_to\_key}]{\fn{des.string\_to\_key($password$)}}
+
+Converts an arbitrary length string, $password$, to a DES key using DES\_string\_to\_key. Returns an 8-byte string.
+
+Note that OpenSSL's DES\_string\_to\_key is not compatible with Windows LAN Manager hashing scheme. Use \fn{des.set\_odd\_parity} instead. See examples/lm.hash.
+
+\subsubsection[\fn{des.set\_odd\_parity}]{\fn{des.set\_odd\_parity($key$)}}
+
+Applies DES\_set\_odd\_parity to the string $key$. Only the first 8 bytes of $key$ are processed. Returns an 8-byte string.
+
+\end{Module}
+
+
+\begin{Module}{openssl.kdf}
+
+Binds OpenSSL's Key Derivation Function interfaces.
+
+\subsubsection[\fn{kdf.derive}]{\fn{kdf.derive($options$)}}
+
+Derive a key given the table of $options$, different KDF types require different options. Accepted options are:
+
+\begin{ctabular}{ c | c | p{5in}}
+field & type & description\\\hline
+.type & string & key derivation algorithm---``PBKDF2'', ``id-scrypt'', ``hkdf'', ``TLS-PRF1'' or other depending on your version of OpenSSL \\
+.outlen & number & the desired output size \\
+.pass & string & password \\
+.salt & string & salt \\
+.iter & number & iteration count \\
+.md & string & digest to use \\
+.key & string & key \\
+.maxmem\_bytes & number & amount of RAM key derivation may maximally use (in bytes) \\
+.secret & string & TLS1-PRF secret \\
+.seed & string & TLS1-PRF seed \\
+.hkdf\_mode & string & the HKDF mode to use, one of ``extract\_and\_expand'', ``extract\_only'' or ``expand\_only'' \\
+.info & string & HKDF info value \\
+.N & number & scrypt ``N'' parameter to use \\
+.r & number & scrypt ``r'' parameter to use \\
+.p & number & scrypt ``p'' parameter to use
+\end{ctabular}
+
+
+\end{Module}
+
+
+\chapter{Examples}
+
+These examples and others are made available under examples/ in the source tree.
+
+\section{Self-Signed Certificate}
+
+\begin{example}{lua}
+--
+-- Example self-signed X.509 certificate generation.
+--
+-- Skips intermediate CSR object, which is just an antiquated way for
+-- specifying subject DN and public key to CAs. See API documentation for
+-- CSR generation.
+--
+local pkey = require"openssl.pkey"
+local x509 = require"openssl.x509"
+local name = require"openssl.x509.name"
+local altname = require"openssl.x509.altname"
+
+-- generate our public/private key pair
+local key = pkey.new{ type = "EC", curve = "prime192v1" }
+
+-- our Subject and Issuer DN (self-signed, so same)
+local dn = name.new()
+dn:add("C", "US")
+dn:add("ST", "California")
+dn:add("L", "San Francisco")
+dn:add("O", "Acme, Inc")
+dn:add("CN", "acme.inc")
+
+-- our Alternative Names
+local alt = altname.new()
+alt:add("DNS", "acme.inc")
+alt:add("DNS", "*.acme.inc")
+
+-- build our certificate
+local crt = x509.new()
+
+crt:setVersion(3)
+crt:setSerial(42)
+
+crt:setSubject(dn)
+crt:setIssuer(crt:getSubject())
+crt:setSubjectAlt(alt)
+
+local issued, expires = crt:getLifetime()
+crt:setLifetime(issued, expires + 60) -- good for 60 seconds
+
+crt:setBasicConstraints{ CA = true, pathLen = 2 }
+crt:setBasicConstraintsCritical(true)
+
+crt:setPublicKey(key)
+crt:sign(key)
+
+-- pretty-print using openssl command-line utility.
+io.popen("openssl x509 -text -noout", "w"):write(tostring(crt))
+
+
+\end{example}
+
+
+\clearpage
+
+\section{Signature Generation \& Verification}
+
+\begin{example}{lua}
+--
+-- Example public-key signature verification.
+--
+local pkey = require"openssl.pkey"
+local digest = require"openssl.digest"
+
+-- generate a public/private key pair
+local key = pkey.new{ type = "EC", curve = "prime192v1" }
+
+-- digest our message using an appropriate digest
+local data = digest.new "sha1"
+data:update(... or "hello world")
+
+-- generate a signature for our data
+local sig = key:sign(data)
+
+-- to prove verification works, instantiate a new object holding just
+-- the public key
+local pub = pkey.new(key:toPEM"public")
+
+-- a utility routine to output our signature
+local function tohex(b)
+	local x = ""
+	for i = 1, #b do
+		x = x .. string.format("%.2x", string.byte(b, i))
+	end
+	return x
+end
+
+print("okay", pub:verify(sig, data))
+print("type", pub:type())
+print("sig", tohex(sig))
+\end{example}
+
+
+
+\appendix
+\printindex
+
+\end{document}

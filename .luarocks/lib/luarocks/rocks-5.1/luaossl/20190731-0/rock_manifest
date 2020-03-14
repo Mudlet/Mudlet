@@ -1,0 +1,45 @@
+rock_manifest = {
+   doc = {
+      ["luaossl.pdf"] = "9ca24284566151f8bcdcd8bbad35598a",
+      ["luaossl.tex"] = "065d99487105de03836b6863d4a5b2cd"
+   },
+   lib = {
+      ["_openssl.so"] = "c9f45953a1d39bd70aec072a07d04b2d"
+   },
+   lua = {
+      openssl = {
+         ["auxlib.lua"] = "0e9ca5f929ba037f01c88ea38422cbdd",
+         ["bignum.lua"] = "e69a7c6d3a60e7dca885748da8ea570b",
+         ["cipher.lua"] = "a0d630d8d078bd4fa061dfca3e34686e",
+         ["des.lua"] = "aedc66a3feeae5bbf9718b28bed3a8ce",
+         ["digest.lua"] = "768ed780ce9524532bb5bb01d70d9512",
+         ["hmac.lua"] = "dc6bb7e6a9a36635271e9e894c3d04b7",
+         ["kdf.lua"] = "bb978bf40c50a765e2dfd0dd37f5c9c3",
+         ocsp = {
+            ["basic.lua"] = "3ccd9f1aeb357de54cb1b559fb8eefe6",
+            ["response.lua"] = "e24227c6f889928d43afe15473b6ba4d"
+         },
+         ["pkcs12.lua"] = "a52af17760990a4a445a7c60fa7b3d9a",
+         ["pkey.lua"] = "21ac211ae59f1a774d5dbb268999797d",
+         ["pubkey.lua"] = "1cf0bf1b3bdd74d0fd0f6aaf6957c0f7",
+         ["rand.lua"] = "391435bf3ae7d66104248b19f9fe6992",
+         ssl = {
+            ["context.lua"] = "7c8ad6efa1784e2460680586b1c24c52"
+         },
+         ["ssl.lua"] = "c697d51857143b1e4b2174158643b285",
+         x509 = {
+            ["altname.lua"] = "3cda354ad41ea2662208ddefd107a07c",
+            ["chain.lua"] = "bb72ed205598fc9df22d24b73ad2d961",
+            ["crl.lua"] = "b5a44c814950a5bb001db8fad9bc0188",
+            ["csr.lua"] = "d4f1ec72b889db343bd75b96466dcb41",
+            ["extension.lua"] = "2e1fa411ee8a8ff39921bb5b43a99dc7",
+            ["name.lua"] = "ca48a7892538b8b9ddc4df086c358f45",
+            ["store.lua"] = "e3a19ad7330b3813c85ff27c409731b8",
+            ["verify_param.lua"] = "20078a15c1e8545e6dbaa6ee2b19b17c"
+         },
+         ["x509.lua"] = "5c34936d29d5eefaaaca53fa8da1e856"
+      },
+      ["openssl.lua"] = "1ed2c863c8d7b5b378b71f22263adba2"
+   },
+   ["luaossl-20190731-0.rockspec"] = "5a52b420f2bc50db5233b54506c53620"
+}

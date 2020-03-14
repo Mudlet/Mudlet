@@ -1,0 +1,15 @@
+
+language: node_js
+
+node_js: 8.1
+
+git:
+  depth: 8
+
+install: npm install
+
+before_script: npm run build
+
+script: npm test
+
+# End.

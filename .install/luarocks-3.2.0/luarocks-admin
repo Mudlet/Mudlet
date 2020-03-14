@@ -1,0 +1,3 @@
+#!/bin/sh
+unset LUA_PATH LUA_PATH_5_2 LUA_PATH_5_3 LUA_PATH_5_4 LUA_CPATH LUA_CPATH_5_2 LUA_CPATH_5_3 LUA_CPATH_5_4
+LUAROCKS_SYSCONFDIR="/home/runner/work/Mudlet/Mudlet/.luarocks/etc/luarocks" LUA_PATH="/home/runner/work/Mudlet/Mudlet/.install/luarocks-3.2.0/src/?.lua;;" exec "/home/runner/work/Mudlet/Mudlet/.lua/bin/lua" "/home/runner/work/Mudlet/Mudlet/.install/luarocks-3.2.0/src/bin/luarocks-admin" --project-tree="/home/runner/work/Mudlet/Mudlet/.install/luarocks-3.2.0/lua_modules" "$@"

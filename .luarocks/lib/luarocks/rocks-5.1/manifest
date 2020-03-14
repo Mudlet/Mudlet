@@ -1,0 +1,750 @@
+commands = {}
+dependencies = {
+   basexx = {
+      ["0.4.1-1"] = {
+         {
+            constraints = {
+               {
+                  op = ">=",
+                  version = {
+                     5, 1, string = "5.1"
+                  }
+               }
+            },
+            name = "lua"
+         }
+      }
+   },
+   binaryheap = {
+      ["0.4-1"] = {
+         {
+            constraints = {
+               {
+                  op = ">=",
+                  version = {
+                     5, 1, string = "5.1"
+                  }
+               }
+            },
+            name = "lua"
+         }
+      }
+   },
+   bit32 = {
+      ["5.3.0-1"] = {
+         {
+            constraints = {
+               {
+                  op = ">=",
+                  version = {
+                     5, 1, string = "5.1"
+                  }
+               },
+               {
+                  op = "<=",
+                  version = {
+                     5, 3, string = "5.3"
+                  }
+               }
+            },
+            name = "lua"
+         }
+      }
+   },
+   compat53 = {
+      ["0.7-1"] = {
+         {
+            constraints = {
+               {
+                  op = ">=",
+                  version = {
+                     5, 1, string = "5.1"
+                  }
+               },
+               {
+                  op = "<",
+                  version = {
+                     5, 4, string = "5.4"
+                  }
+               }
+            },
+            name = "lua"
+         }
+      }
+   },
+   cqueues = {
+      ["20190813.51-0"] = {
+         {
+            constraints = {
+               {
+                  op = "==",
+                  version = {
+                     5, 1, string = "5.1"
+                  }
+               }
+            },
+            name = "lua"
+         }
+      }
+   },
+   fifo = {
+      ["0.2-0"] = {
+         {
+            constraints = {},
+            name = "lua"
+         }
+      }
+   },
+   http = {
+      ["0.3-0"] = {
+         {
+            constraints = {
+               {
+                  op = ">=",
+                  version = {
+                     5, 1, string = "5.1"
+                  }
+               }
+            },
+            name = "lua"
+         },
+         {
+            constraints = {
+               {
+                  op = ">=",
+                  version = {
+                     0, 3, string = "0.3"
+                  }
+               }
+            },
+            name = "compat53"
+         },
+         {
+            constraints = {},
+            name = "bit32"
+         },
+         {
+            constraints = {
+               {
+                  op = ">=",
+                  version = {
+                     20161214, string = "20161214"
+                  }
+               }
+            },
+            name = "cqueues"
+         },
+         {
+            constraints = {
+               {
+                  op = ">=",
+                  version = {
+                     20161208, string = "20161208"
+                  }
+               }
+            },
+            name = "luaossl"
+         },
+         {
+            constraints = {
+               {
+                  op = ">=",
+                  version = {
+                     0, 2, 0, string = "0.2.0"
+                  }
+               }
+            },
+            name = "basexx"
+         },
+         {
+            constraints = {},
+            name = "lpeg"
+         },
+         {
+            constraints = {
+               {
+                  op = ">=",
+                  version = {
+                     0, 5, string = "0.5"
+                  }
+               }
+            },
+            name = "lpeg_patterns"
+         },
+         {
+            constraints = {
+               {
+                  op = ">=",
+                  version = {
+                     0, 3, string = "0.3"
+                  }
+               }
+            },
+            name = "binaryheap"
+         },
+         {
+            constraints = {},
+            name = "fifo"
+         }
+      }
+   },
+   lpeg = {
+      ["1.0.2-1"] = {
+         {
+            constraints = {
+               {
+                  op = ">=",
+                  version = {
+                     5, 1, string = "5.1"
+                  }
+               }
+            },
+            name = "lua"
+         }
+      }
+   },
+   lpeg_patterns = {
+      ["0.5-0"] = {
+         {
+            constraints = {},
+            name = "lua"
+         },
+         {
+            constraints = {},
+            name = "lpeg"
+         }
+      }
+   },
+   luaossl = {
+      ["20190731-0"] = {
+         {
+            constraints = {},
+            name = "lua"
+         }
+      }
+   },
+   lunajson = {
+      ["1.2.2-1"] = {
+         {
+            constraints = {
+               {
+                  op = ">=",
+                  version = {
+                     5, 1, string = "5.1"
+                  }
+               }
+            },
+            name = "lua"
+         }
+      }
+   }
+}
+modules = {
+   _cqueues = {
+      "cqueues/20190813.51-0"
+   },
+   _openssl = {
+      "luaossl/20190731-0"
+   },
+   basexx = {
+      "basexx/0.4.1-1"
+   },
+   binaryheap = {
+      "binaryheap/0.4-1"
+   },
+   bit32 = {
+      "bit32/5.3.0-1"
+   },
+   ["compat53.init"] = {
+      "compat53/0.7-1"
+   },
+   ["compat53.module"] = {
+      "compat53/0.7-1"
+   },
+   ["compat53.string"] = {
+      "compat53/0.7-1"
+   },
+   ["compat53.table"] = {
+      "compat53/0.7-1"
+   },
+   ["compat53.utf8"] = {
+      "compat53/0.7-1"
+   },
+   cqueues = {
+      "cqueues/20190813.51-0"
+   },
+   ["cqueues.auxlib"] = {
+      "cqueues/20190813.51-0"
+   },
+   ["cqueues.condition"] = {
+      "cqueues/20190813.51-0"
+   },
+   ["cqueues.dns"] = {
+      "cqueues/20190813.51-0"
+   },
+   ["cqueues.dns.config"] = {
+      "cqueues/20190813.51-0"
+   },
+   ["cqueues.dns.hints"] = {
+      "cqueues/20190813.51-0"
+   },
+   ["cqueues.dns.hosts"] = {
+      "cqueues/20190813.51-0"
+   },
+   ["cqueues.dns.packet"] = {
+      "cqueues/20190813.51-0"
+   },
+   ["cqueues.dns.record"] = {
+      "cqueues/20190813.51-0"
+   },
+   ["cqueues.dns.resolver"] = {
+      "cqueues/20190813.51-0"
+   },
+   ["cqueues.dns.resolvers"] = {
+      "cqueues/20190813.51-0"
+   },
+   ["cqueues.errno"] = {
+      "cqueues/20190813.51-0"
+   },
+   ["cqueues.notify"] = {
+      "cqueues/20190813.51-0"
+   },
+   ["cqueues.promise"] = {
+      "cqueues/20190813.51-0"
+   },
+   ["cqueues.signal"] = {
+      "cqueues/20190813.51-0"
+   },
+   ["cqueues.socket"] = {
+      "cqueues/20190813.51-0"
+   },
+   ["cqueues.thread"] = {
+      "cqueues/20190813.51-0"
+   },
+   fifo = {
+      "fifo/0.2-0"
+   },
+   ["http.bit"] = {
+      "http/0.3-0"
+   },
+   ["http.client"] = {
+      "http/0.3-0"
+   },
+   ["http.compat.prosody"] = {
+      "http/0.3-0"
+   },
+   ["http.compat.socket"] = {
+      "http/0.3-0"
+   },
+   ["http.connection_common"] = {
+      "http/0.3-0"
+   },
+   ["http.cookie"] = {
+      "http/0.3-0"
+   },
+   ["http.h1_connection"] = {
+      "http/0.3-0"
+   },
+   ["http.h1_reason_phrases"] = {
+      "http/0.3-0"
+   },
+   ["http.h1_stream"] = {
+      "http/0.3-0"
+   },
+   ["http.h2_connection"] = {
+      "http/0.3-0"
+   },
+   ["http.h2_error"] = {
+      "http/0.3-0"
+   },
+   ["http.h2_stream"] = {
+      "http/0.3-0"
+   },
+   ["http.headers"] = {
+      "http/0.3-0"
+   },
+   ["http.hpack"] = {
+      "http/0.3-0"
+   },
+   ["http.hsts"] = {
+      "http/0.3-0"
+   },
+   ["http.proxies"] = {
+      "http/0.3-0"
+   },
+   ["http.request"] = {
+      "http/0.3-0"
+   },
+   ["http.server"] = {
+      "http/0.3-0"
+   },
+   ["http.socks"] = {
+      "http/0.3-0"
+   },
+   ["http.stream_common"] = {
+      "http/0.3-0"
+   },
+   ["http.tls"] = {
+      "http/0.3-0"
+   },
+   ["http.util"] = {
+      "http/0.3-0"
+   },
+   ["http.version"] = {
+      "http/0.3-0"
+   },
+   ["http.websocket"] = {
+      "http/0.3-0"
+   },
+   ["http.zlib"] = {
+      "http/0.3-0"
+   },
+   lpeg = {
+      "lpeg/1.0.2-1"
+   },
+   ["lpeg_patterns.IPv4"] = {
+      "lpeg_patterns/0.5-0"
+   },
+   ["lpeg_patterns.IPv6"] = {
+      "lpeg_patterns/0.5-0"
+   },
+   ["lpeg_patterns.core"] = {
+      "lpeg_patterns/0.5-0"
+   },
+   ["lpeg_patterns.email"] = {
+      "lpeg_patterns/0.5-0"
+   },
+   ["lpeg_patterns.http"] = {
+      "lpeg_patterns/0.5-0"
+   },
+   ["lpeg_patterns.language"] = {
+      "lpeg_patterns/0.5-0"
+   },
+   ["lpeg_patterns.phone"] = {
+      "lpeg_patterns/0.5-0"
+   },
+   ["lpeg_patterns.uri"] = {
+      "lpeg_patterns/0.5-0"
+   },
+   ["lpeg_patterns.util"] = {
+      "lpeg_patterns/0.5-0"
+   },
+   lunajson = {
+      "lunajson/1.2.2-1"
+   },
+   ["lunajson.decoder"] = {
+      "lunajson/1.2.2-1"
+   },
+   ["lunajson.encoder"] = {
+      "lunajson/1.2.2-1"
+   },
+   ["lunajson.sax"] = {
+      "lunajson/1.2.2-1"
+   },
+   openssl = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.auxlib"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.bignum"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.cipher"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.des"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.digest"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.hmac"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.kdf"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.ocsp.basic"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.ocsp.response"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.pkcs12"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.pkey"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.pubkey"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.rand"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.ssl"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.ssl.context"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.x509"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.x509.altname"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.x509.chain"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.x509.crl"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.x509.csr"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.x509.extension"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.x509.name"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.x509.store"] = {
+      "luaossl/20190731-0"
+   },
+   ["openssl.x509.verify_param"] = {
+      "luaossl/20190731-0"
+   },
+   re = {
+      "lpeg/1.0.2-1"
+   }
+}
+repository = {
+   basexx = {
+      ["0.4.1-1"] = {
+         {
+            arch = "installed",
+            commands = {},
+            dependencies = {},
+            modules = {
+               basexx = "basexx.lua"
+            }
+         }
+      }
+   },
+   binaryheap = {
+      ["0.4-1"] = {
+         {
+            arch = "installed",
+            commands = {},
+            dependencies = {},
+            modules = {
+               binaryheap = "binaryheap.lua"
+            }
+         }
+      }
+   },
+   bit32 = {
+      ["5.3.0-1"] = {
+         {
+            arch = "installed",
+            commands = {},
+            dependencies = {},
+            modules = {
+               bit32 = "bit32.so"
+            }
+         }
+      }
+   },
+   compat53 = {
+      ["0.7-1"] = {
+         {
+            arch = "installed",
+            commands = {},
+            dependencies = {},
+            modules = {
+               ["compat53.init"] = "compat53/init.lua",
+               ["compat53.module"] = "compat53/module.lua",
+               ["compat53.string"] = "compat53/string.so",
+               ["compat53.table"] = "compat53/table.so",
+               ["compat53.utf8"] = "compat53/utf8.so"
+            }
+         }
+      }
+   },
+   cqueues = {
+      ["20190813.51-0"] = {
+         {
+            arch = "installed",
+            commands = {},
+            dependencies = {},
+            modules = {
+               _cqueues = "_cqueues.so",
+               cqueues = "cqueues.lua",
+               ["cqueues.auxlib"] = "cqueues/auxlib.lua",
+               ["cqueues.condition"] = "cqueues/condition.lua",
+               ["cqueues.dns"] = "cqueues/dns.lua",
+               ["cqueues.dns.config"] = "cqueues/dns/config.lua",
+               ["cqueues.dns.hints"] = "cqueues/dns/hints.lua",
+               ["cqueues.dns.hosts"] = "cqueues/dns/hosts.lua",
+               ["cqueues.dns.packet"] = "cqueues/dns/packet.lua",
+               ["cqueues.dns.record"] = "cqueues/dns/record.lua",
+               ["cqueues.dns.resolver"] = "cqueues/dns/resolver.lua",
+               ["cqueues.dns.resolvers"] = "cqueues/dns/resolvers.lua",
+               ["cqueues.errno"] = "cqueues/errno.lua",
+               ["cqueues.notify"] = "cqueues/notify.lua",
+               ["cqueues.promise"] = "cqueues/promise.lua",
+               ["cqueues.signal"] = "cqueues/signal.lua",
+               ["cqueues.socket"] = "cqueues/socket.lua",
+               ["cqueues.thread"] = "cqueues/thread.lua"
+            }
+         }
+      }
+   },
+   fifo = {
+      ["0.2-0"] = {
+         {
+            arch = "installed",
+            commands = {},
+            dependencies = {},
+            modules = {
+               fifo = "fifo.lua"
+            }
+         }
+      }
+   },
+   http = {
+      ["0.3-0"] = {
+         {
+            arch = "installed",
+            commands = {},
+            dependencies = {
+               basexx = "0.4.1-1",
+               binaryheap = "0.4-1",
+               bit32 = "5.3.0-1",
+               compat53 = "0.7-1",
+               cqueues = "20190813.51-0",
+               fifo = "0.2-0",
+               lpeg = "1.0.2-1",
+               lpeg_patterns = "0.5-0",
+               luaossl = "20190731-0"
+            },
+            modules = {
+               ["http.bit"] = "http/bit.lua",
+               ["http.client"] = "http/client.lua",
+               ["http.compat.prosody"] = "http/compat/prosody.lua",
+               ["http.compat.socket"] = "http/compat/socket.lua",
+               ["http.connection_common"] = "http/connection_common.lua",
+               ["http.cookie"] = "http/cookie.lua",
+               ["http.h1_connection"] = "http/h1_connection.lua",
+               ["http.h1_reason_phrases"] = "http/h1_reason_phrases.lua",
+               ["http.h1_stream"] = "http/h1_stream.lua",
+               ["http.h2_connection"] = "http/h2_connection.lua",
+               ["http.h2_error"] = "http/h2_error.lua",
+               ["http.h2_stream"] = "http/h2_stream.lua",
+               ["http.headers"] = "http/headers.lua",
+               ["http.hpack"] = "http/hpack.lua",
+               ["http.hsts"] = "http/hsts.lua",
+               ["http.proxies"] = "http/proxies.lua",
+               ["http.request"] = "http/request.lua",
+               ["http.server"] = "http/server.lua",
+               ["http.socks"] = "http/socks.lua",
+               ["http.stream_common"] = "http/stream_common.lua",
+               ["http.tls"] = "http/tls.lua",
+               ["http.util"] = "http/util.lua",
+               ["http.version"] = "http/version.lua",
+               ["http.websocket"] = "http/websocket.lua",
+               ["http.zlib"] = "http/zlib.lua"
+            }
+         }
+      }
+   },
+   lpeg = {
+      ["1.0.2-1"] = {
+         {
+            arch = "installed",
+            commands = {},
+            dependencies = {},
+            modules = {
+               lpeg = "lpeg.so",
+               re = "re.lua"
+            }
+         }
+      }
+   },
+   lpeg_patterns = {
+      ["0.5-0"] = {
+         {
+            arch = "installed",
+            commands = {},
+            dependencies = {
+               lpeg = "1.0.2-1"
+            },
+            modules = {
+               ["lpeg_patterns.IPv4"] = "lpeg_patterns/IPv4.lua",
+               ["lpeg_patterns.IPv6"] = "lpeg_patterns/IPv6.lua",
+               ["lpeg_patterns.core"] = "lpeg_patterns/core.lua",
+               ["lpeg_patterns.email"] = "lpeg_patterns/email.lua",
+               ["lpeg_patterns.http"] = "lpeg_patterns/http.lua",
+               ["lpeg_patterns.language"] = "lpeg_patterns/language.lua",
+               ["lpeg_patterns.phone"] = "lpeg_patterns/phone.lua",
+               ["lpeg_patterns.uri"] = "lpeg_patterns/uri.lua",
+               ["lpeg_patterns.util"] = "lpeg_patterns/util.lua"
+            }
+         }
+      }
+   },
+   luaossl = {
+      ["20190731-0"] = {
+         {
+            arch = "installed",
+            commands = {},
+            dependencies = {},
+            modules = {
+               _openssl = "_openssl.so",
+               openssl = "openssl.lua",
+               ["openssl.auxlib"] = "openssl/auxlib.lua",
+               ["openssl.bignum"] = "openssl/bignum.lua",
+               ["openssl.cipher"] = "openssl/cipher.lua",
+               ["openssl.des"] = "openssl/des.lua",
+               ["openssl.digest"] = "openssl/digest.lua",
+               ["openssl.hmac"] = "openssl/hmac.lua",
+               ["openssl.kdf"] = "openssl/kdf.lua",
+               ["openssl.ocsp.basic"] = "openssl/ocsp/basic.lua",
+               ["openssl.ocsp.response"] = "openssl/ocsp/response.lua",
+               ["openssl.pkcs12"] = "openssl/pkcs12.lua",
+               ["openssl.pkey"] = "openssl/pkey.lua",
+               ["openssl.pubkey"] = "openssl/pubkey.lua",
+               ["openssl.rand"] = "openssl/rand.lua",
+               ["openssl.ssl"] = "openssl/ssl.lua",
+               ["openssl.ssl.context"] = "openssl/ssl/context.lua",
+               ["openssl.x509"] = "openssl/x509.lua",
+               ["openssl.x509.altname"] = "openssl/x509/altname.lua",
+               ["openssl.x509.chain"] = "openssl/x509/chain.lua",
+               ["openssl.x509.crl"] = "openssl/x509/crl.lua",
+               ["openssl.x509.csr"] = "openssl/x509/csr.lua",
+               ["openssl.x509.extension"] = "openssl/x509/extension.lua",
+               ["openssl.x509.name"] = "openssl/x509/name.lua",
+               ["openssl.x509.store"] = "openssl/x509/store.lua",
+               ["openssl.x509.verify_param"] = "openssl/x509/verify_param.lua"
+            }
+         }
+      }
+   },
+   lunajson = {
+      ["1.2.2-1"] = {
+         {
+            arch = "installed",
+            commands = {},
+            dependencies = {},
+            modules = {
+               lunajson = "lunajson.lua",
+               ["lunajson.decoder"] = "lunajson/decoder.lua",
+               ["lunajson.encoder"] = "lunajson/encoder.lua",
+               ["lunajson.sax"] = "lunajson/sax.lua"
+            }
+         }
+      }
+   }
+}

@@ -1,0 +1,37 @@
+rock_manifest = {
+   ["cqueues-20190813.51-0.rockspec"] = "ffe32aafdac079e1d85356cdeef59bd2",
+   doc = {
+      art = {
+         ["lua.pdf"] = "b88e531eb20e3323dd7c17ef1c25d39a",
+         ["lua.ps"] = "5609025d666d0b24a75d390cad1362d9"
+      },
+      ["cqueues.pdf"] = "864ba74cb953b1d4cc34e5092bc7e038",
+      ["cqueues.tex"] = "ebf268592d278452f5551e4be997afd0"
+   },
+   lib = {
+      ["_cqueues.so"] = "f54ac55c55fb0aed17f0b6af78d39f52"
+   },
+   lua = {
+      cqueues = {
+         ["auxlib.lua"] = "f4011bd31cbf05354877368be3f648fd",
+         ["condition.lua"] = "2632754d7a2873c17cdf874160eacec6",
+         dns = {
+            ["config.lua"] = "be0ead4e6394eff9370f8e69fc9289f8",
+            ["hints.lua"] = "8ea26834cb6d809a521193bdb35dbc28",
+            ["hosts.lua"] = "c53021bbce9cb40b1a614f7de359b3bf",
+            ["packet.lua"] = "cf0bd63c6186216ba783a5c9a90fc105",
+            ["record.lua"] = "006c904c990f9fb50ce457d6a0dfd4d0",
+            ["resolver.lua"] = "1ae73b9136f1d793991b5749c708e4c7",
+            ["resolvers.lua"] = "9cb053b8a8064e676c27c24fcd005d2b"
+         },
+         ["dns.lua"] = "ae346aaaba3f531a0cca3c223a3883a3",
+         ["errno.lua"] = "9e5f4bde24532cc5cf0ae1e93742820a",
+         ["notify.lua"] = "86173f9d234d1de8ee3c1deb41012509",
+         ["promise.lua"] = "243f1200dbab0dd4ce4b85af9e5cd148",
+         ["signal.lua"] = "4d509b33ad24664d8fa7a94690cd4a6e",
+         ["socket.lua"] = "a0e87891d542012fb059a384fd7a4d15",
+         ["thread.lua"] = "bcd0f853a7f0608615ba6787d8ac8944"
+      },
+      ["cqueues.lua"] = "7ff0d2c9baddd698b52671e84a93dac7"
+   }
+}

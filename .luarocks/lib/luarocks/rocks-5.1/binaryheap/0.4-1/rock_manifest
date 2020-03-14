@@ -1,0 +1,9 @@
+rock_manifest = {
+   ["binaryheap-0.4-1.rockspec"] = "7193750717dffd74acc097f0620d3493",
+   doc = {
+      ["README.md"] = "b9bb4c8ef43f1a88ba6a763d3280d2e5"
+   },
+   lua = {
+      ["binaryheap.lua"] = "b6ac9f779ae4728b1ded736502d6a95d"
+   }
+}

@@ -1,0 +1,9 @@
+rock_manifest = {
+   doc = {
+      ["index.md"] = "81bf337ae80ed45e794705007475761e"
+   },
+   ["fifo-0.2-0.rockspec"] = "f4fc29e6a771505d828a8af6b083cfa3",
+   lua = {
+      ["fifo.lua"] = "47f76d071b2b0afe9080b10b7ce138a5"
+   }
+}

@@ -1,0 +1,156 @@
+* {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box
+}
+html,
+body {
+    height: 100%
+}
+article,
+aside,
+figure,
+footer,
+header,
+hgroup,
+menu,
+nav,
+section {
+    display: block
+}
+body {
+    margin: 0
+}
+h1,
+h2,
+h3 {
+    margin: 1rem 0
+}
+h4,
+h5,
+h6,
+ul,
+ol,
+dl,
+blockquote,
+address,
+p,
+figure {
+    margin: 0 0 1rem 0
+}
+img {
+    max-width: 100%
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-weight: 700
+}
+h1 {
+    font-size: 2.5rem;
+    line-height: 3rem
+}
+h2 {
+    font-size: 1.5rem;
+    line-height: 2rem
+}
+h3 {
+    font-size: 1.25rem;
+    line-height: 1.5rem
+}
+h4,
+h5,
+h6 {
+    font-size: 1rem;
+    line-height: 1.25rem
+}
+hr {
+    border: 0;
+    border-bottom: 1px solid;
+    margin-top: -1px;
+    margin-bottom: 1rem
+}
+a:hover {
+    color: inherit
+}
+small {
+    font-size: .875rem
+}
+ul,
+ol {
+    padding-left: 1rem
+}
+ul ul,
+ul ol,
+ol ol,
+ol ul {
+    margin: 0
+}
+dt {
+    font-weight: 700
+}
+dd {
+    margin: 0
+}
+blockquote {
+    border-left: 1px solid;
+    padding-left: 1rem
+}
+address {
+    font-style: normal
+}
+html {
+    color: #333;
+    font: 100%/1.5  Avenir, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+    background: #FFF;
+}
+a {
+    color: #999;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+a > h1,
+a > h2,
+a > h3 {
+    color: #333;
+}
+
+body > * {
+    padding: 0 1rem;
+}
+.subtitle {
+    font-size: 1rem;
+    line-height: 1.5rem
+}
+.author {
+    display: none
+}
+@media screen and (min-width: 55rem) {
+    .meta {
+        position: fixed;
+        width: 20rem;
+        height: 100%;
+        overflow: auto;
+        background: #FFF;
+        z-index: 1;
+    }
+    main {
+        display: block; /* required for e.g. konqueror */
+        margin-left: 20rem;
+        overflow: auto;
+    }
+}
+@media print {
+    section.level1 {
+        page-break-inside: avoid
+    }
+    nav a::after {
+        content: leader('.') target-counter(attr(href url), page, decimal)
+    }
+}

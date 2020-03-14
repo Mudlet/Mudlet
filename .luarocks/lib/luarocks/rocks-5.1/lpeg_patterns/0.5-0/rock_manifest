@@ -1,0 +1,20 @@
+rock_manifest = {
+   doc = {
+      ["LICENSE.md"] = "d6826f09b61003ecaae3057e5d17061d",
+      ["README.md"] = "97dcb54c242ec5530106c433b8862197"
+   },
+   ["lpeg_patterns-0.5-0.rockspec"] = "ad74b9bed95dea4b63e7a5faabe1bba4",
+   lua = {
+      lpeg_patterns = {
+         ["IPv4.lua"] = "71e01bc44a52ee72ae969d13173ecb5e",
+         ["IPv6.lua"] = "86948e0b1089a77c2c5a2ce9b4f19189",
+         ["core.lua"] = "44aca4d589142b7ece85502e5199af73",
+         ["email.lua"] = "0a5303751993d93d5e9fbf3f3261fdb1",
+         ["http.lua"] = "52d4b6033628c9c7018b382f17348e0b",
+         ["language.lua"] = "5f0448bb2b96bfe3b46a8292fc76a278",
+         ["phone.lua"] = "43abf31630783826312a6111232fadcd",
+         ["uri.lua"] = "0925bd94191e257d65e1954e8c2aaec8",
+         ["util.lua"] = "4359cf832fe7462b0bdaa3a96c0b2d8d"
+      }
+   }
+}

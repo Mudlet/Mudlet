@@ -1,0 +1,16 @@
+rock_manifest = {
+   doc = {
+      ["CHANGELOG.md"] = "a1eea8186b848f47ff39ec738ecdcc8b",
+      LICENSE = "2001d13200cac722635f81768f80463e",
+      ["README.md"] = "c6d5d3393e5d54b40abd764d1eb24dcb"
+   },
+   lua = {
+      lunajson = {
+         ["decoder.lua"] = "0e9706008e3ba20e1151475448c24148",
+         ["encoder.lua"] = "197d6edcbc03cea7db3d918493c11616",
+         ["sax.lua"] = "e1a7c99393774fba34483ab13bf68ddc"
+      },
+      ["lunajson.lua"] = "64bce3b8bcfa53c02e64fd924c1cf4b4"
+   },
+   ["lunajson-1.2.2-1.rockspec"] = "c840a0ced41ad17e3ab4b8fdb7b3ea5c"
+}

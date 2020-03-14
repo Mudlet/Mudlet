@@ -1,0 +1,15 @@
+rock_manifest = {
+   ["basexx-0.4.1-1.rockspec"] = "1dfd65be61de7d66f548a3a9a632bf24",
+   lua = {
+      ["basexx.lua"] = "7e71a963dca3fc375f8c57c0858845e0"
+   },
+   test = {
+      ["base32_spec.lua"] = "d9ccba1bf46ca87e74601064535be099",
+      ["base64_spec.lua"] = "28038538c690354ea8cff51ecd55b1ce",
+      ["bit_spec.lua"] = "7ccb1852cbf302892f2f16a59198afea",
+      ["crockford_spec.lua"] = "2361c4d5607689ec3dca5a3a8ce92427",
+      ["hex_spec.lua"] = "caec9e5c73e479b9abc8bca1cba6fc31",
+      ["url64_spec.lua"] = "eafabea49f0bfc908e7932e6362fe7a3",
+      ["z85_spec.lua"] = "61715b65cfcb7a352b943fc4a20efa63"
+   }
+}
