@@ -2353,9 +2353,6 @@ void TConsole::createMapper(const QString& windowname, int x, int y, int width, 
         } else {
             mpMapper = new dlgMapper(pW->widget(), mpHost, mpHost->mpMap.data());
         }
-#if defined(INCLUDE_3DMAPPER)
-        mpHost->mpMap->mpM = mpMapper->glWidget;
-#endif
         mpHost->mpMap->mpHost = mpHost;
         mpHost->mpMap->mpMapper = mpMapper;
         qDebug() << "TConsole::createMapper() - restore map case 2.";
