@@ -232,7 +232,7 @@ void dlgMapper::show2dView()
         if (glWidget->isVisible()) {
             d3buttons->setVisible(true);
         } else {
-            // Use timer do not let the buttons dissappear
+            // workaround for buttons reloading oddly
             QTimer::singleShot(100, [this]() {d3buttons->setVisible(false);});
         }
     }
