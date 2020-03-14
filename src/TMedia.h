@@ -130,8 +130,8 @@ public:
 
 private:
     QUrl parseUrl(TMediaData& mediaData);
-    bool isValidUrl(QUrl& url);
-    bool isFileRelative(TMediaData& mediaData);
+    static bool isValidUrl(QUrl& url);
+    static bool isFileRelative(TMediaData& mediaData);
     QStringList parseFileNameList(TMediaData& mediaData, QDir& dir);
     QStringList getFileNameList(TMediaData& mediaData);
     QUrl getFileUrl(TMediaData& mediaData);
@@ -141,21 +141,21 @@ private:
     QString setupMediaAbsolutePathFileName(TMediaData& mediaData);
     QList<TMediaPlayer> getMediaPlayerList(TMediaData& mediaData);
     TMediaPlayer getMediaPlayer(TMediaData& mediaData);
-    TMediaPlayer matchMediaPlayer(TMediaData& mediaData, QString absolutePathFileName);
-    bool doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolutePathFileName);
-    void matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, QString absolutePathFileName);
+    TMediaPlayer matchMediaPlayer(TMediaData& mediaData, const QString& absolutePathFileName);
+    bool doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& absolutePathFileName);
+    void matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QString& absolutePathFileName);
 
     void play(TMediaData& mediaData);
 
-    TMediaData::MediaType parseJSONByMediaType(QJsonObject& json);
-    QString parseJSONByMediaFileName(QJsonObject& json);
-    int parseJSONByMediaVolume(QJsonObject& json);
-    int parseJSONByMediaPriority(QJsonObject& json);
-    int parseJSONByMediaLoops(QJsonObject& json);
-    TMediaData::MediaContinue parseJSONByMediaContinue(QJsonObject& json);
-    QString parseJSONByMediaTag(QJsonObject& json);
-    QString parseJSONByMediaUrl(QJsonObject& json);
-    QString parseJSONByMediaKey(QJsonObject& json);
+    static TMediaData::MediaType parseJSONByMediaType(QJsonObject& json);
+    static QString parseJSONByMediaFileName(QJsonObject& json);
+    static int parseJSONByMediaVolume(QJsonObject& json);
+    static int parseJSONByMediaPriority(QJsonObject& json);
+    static int parseJSONByMediaLoops(QJsonObject& json);
+    static TMediaData::MediaContinue parseJSONByMediaContinue(QJsonObject& json);
+    static QString parseJSONByMediaTag(QJsonObject& json);
+    static QString parseJSONByMediaUrl(QJsonObject& json);
+    static QString parseJSONByMediaKey(QJsonObject& json);
 
     void parseJSONForMediaDefault(QJsonObject& json);
     void parseJSONForMediaLoad(QJsonObject& json);
