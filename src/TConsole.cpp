@@ -167,14 +167,21 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpMainFrame->setAutoFillBackground(true);
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
     auto centralLayout = new QVBoxLayout;
+    centralLayout->setObjectName(QStringLiteral("centralLayout"));
     setLayout(centralLayout);
+
     auto baseVFrameLayout = new QVBoxLayout;
+    baseVFrameLayout->setObjectName(QStringLiteral("baseVFrameLayout"));
     mpBaseVFrame->setLayout(baseVFrameLayout);
+    mpBaseVFrame->setObjectName(QStringLiteral("mpBaseVFrame"));
     baseVFrameLayout->setMargin(0);
     baseVFrameLayout->setSpacing(0);
     centralLayout->addWidget(mpBaseVFrame);
+
     auto baseHFrameLayout = new QHBoxLayout;
+    baseHFrameLayout->setObjectName(QStringLiteral("baseHFrameLayout"));
     mpBaseHFrame->setLayout(baseHFrameLayout);
+    mpBaseHFrame->setObjectName(QStringLiteral("mpBaseHFrame"));
     baseHFrameLayout->setMargin(0);
     baseHFrameLayout->setSpacing(0);
     layout()->setSpacing(0);
@@ -182,7 +189,9 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     setContentsMargins(0, 0, 0, 0);
 
     auto topBarLayout = new QHBoxLayout;
+    topBarLayout->setObjectName(QStringLiteral("topBarLayout"));
     mpTopToolBar->setLayout(topBarLayout);
+    mpTopToolBar->setObjectName(QStringLiteral("mpTopToolBar"));
     mpTopToolBar->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed));
     mpTopToolBar->setContentsMargins(0, 0, 0, 0);
     mpTopToolBar->setAutoFillBackground(true);
@@ -197,6 +206,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     topBarLayout->setMargin(0);
     topBarLayout->setSpacing(0);
     auto leftBarLayout = new QVBoxLayout;
+    leftBarLayout->setObjectName(QStringLiteral("leftBarLayout"));
     mpLeftToolBar->setLayout(leftBarLayout);
     mpLeftToolBar->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding));
     mpLeftToolBar->setAutoFillBackground(true);
@@ -204,6 +214,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     leftBarLayout->setSpacing(0);
     mpLeftToolBar->setContentsMargins(0, 0, 0, 0);
     auto rightBarLayout = new QVBoxLayout;
+    rightBarLayout->setObjectName(QStringLiteral("rightBarLayout"));
     mpRightToolBar->setLayout(rightBarLayout);
     mpRightToolBar->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding));
     mpRightToolBar->setAutoFillBackground(true);
@@ -218,7 +229,9 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     baseVFrameLayout->addWidget(mpBaseHFrame);
     baseHFrameLayout->addWidget(mpLeftToolBar);
     auto mpCorePane = new QWidget(mpBaseHFrame);
+    mpCorePane->setObjectName(QStringLiteral("mpCorePane"));
     auto coreSpreadLayout = new QVBoxLayout;
+    coreSpreadLayout->setObjectName(QStringLiteral("coreSpreadLayout"));
     mpCorePane->setLayout(coreSpreadLayout);
     mpCorePane->setContentsMargins(0, 0, 0, 0);
     coreSpreadLayout->setMargin(0);
@@ -242,6 +255,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
     mpMainDisplay->setContentsMargins(0, 0, 0, 0);
     auto layout = new QVBoxLayout;
+    layout->setObjectName(QStringLiteral("layout"));
     mpMainDisplay->setLayout(layout);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
@@ -257,26 +271,28 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     if (mType == MainConsole) {
         mpCommandLine = new TCommandLine(pH, this, mpMainDisplay);
+        mpCommandLine->setObjectName(QStringLiteral("mpCommandLine"));
         mpCommandLine->setContentsMargins(0, 0, 0, 0);
         mpCommandLine->setSizePolicy(sizePolicy);
         mpCommandLine->setFocusPolicy(Qt::StrongFocus);
     }
 
     layer = new QWidget(mpMainDisplay);
+    layer->setObjectName(QStringLiteral("layer"));
     layer->setContentsMargins(0, 0, 0, 0);
-    layer->setContentsMargins(0, 0, 0, 0); //neu rc1
     layer->setSizePolicy(sizePolicy);
     layer->setFocusPolicy(Qt::NoFocus);
 
     auto layoutLayer = new QHBoxLayout;
+    layoutLayer->setObjectName(QStringLiteral("layoutLayer"));
     layer->setLayout(layoutLayer);
     layoutLayer->setMargin(0);  //neu rc1
     layoutLayer->setSpacing(0); //neu rc1
-    layoutLayer->setMargin(0);  //neu rc1
 
     mpScrollBar->setFixedWidth(15);
 
     splitter = new TSplitter(Qt::Vertical);
+    splitter->setObjectName(QStringLiteral("splitter"));
     splitter->setContentsMargins(0, 0, 0, 0);
     splitter->setSizePolicy(sizePolicy);
     splitter->setOrientation(Qt::Vertical);
@@ -284,11 +300,13 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     splitter->setParent(layer);
 
     mUpperPane = new TTextEdit(this, splitter, &buffer, mpHost, false);
+    mUpperPane->setObjectName(QStringLiteral("mUpperPane"));
     mUpperPane->setContentsMargins(0, 0, 0, 0);
     mUpperPane->setSizePolicy(sizePolicy3);
     mUpperPane->setFocusPolicy(Qt::NoFocus);
 
     mLowerPane = new TTextEdit(this, splitter, &buffer, mpHost, true);
+    mLowerPane->setObjectName(QStringLiteral("mLowerPane"));
     mLowerPane->setContentsMargins(0, 0, 0, 0);
     mLowerPane->setSizePolicy(sizePolicy3);
     mLowerPane->setFocusPolicy(Qt::NoFocus);
@@ -316,13 +334,15 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layoutLayer->setContentsMargins(0, 0, 0, 0);
     layoutLayer->setSpacing(1); // nicht naeher dran, da es sonst performance probleme geben koennte beim display
 
-    layerCommandLine = new QWidget; //( mpMainFrame );//layer );
+    layerCommandLine = new QWidget;
+    layerCommandLine->setObjectName(QStringLiteral("layerCommandLine"));
     layerCommandLine->setContentsMargins(0, 0, 0, 0);
     layerCommandLine->setSizePolicy(sizePolicy2);
     layerCommandLine->setMaximumHeight(31);
     layerCommandLine->setMinimumHeight(31);
 
     auto layoutLayer2 = new QHBoxLayout(layerCommandLine);
+    layoutLayer2->setObjectName(QStringLiteral("layoutLayer2"));
     layoutLayer2->setMargin(0);
     layoutLayer2->setSpacing(0);
 
@@ -346,11 +366,13 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layoutButtonLayer->setSpacing(0);
 
     auto buttonLayerSpacer = new QWidget(buttonLayer);
+    buttonLayerSpacer->setObjectName(QStringLiteral("buttonLayerSpacer"));
     buttonLayerSpacer->setSizePolicy(sizePolicy4);
     layoutButtonMainLayer->addWidget(buttonLayerSpacer);
     layoutButtonMainLayer->addWidget(buttonLayer);
 
     auto timeStampButton = new QToolButton;
+    timeStampButton->setObjectName(QStringLiteral("timeStampButton"));
     timeStampButton->setCheckable(true);
     timeStampButton->setMinimumSize(QSize(30, 30));
     timeStampButton->setMaximumSize(QSize(30, 30));
@@ -363,6 +385,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     connect(timeStampButton, &QAbstractButton::toggled, mLowerPane, &TTextEdit::slot_toggleTimeStamps);
 
     auto replayButton = new QToolButton;
+    replayButton->setObjectName(QStringLiteral("replayButton"));
     replayButton->setCheckable(true);
     replayButton->setMinimumSize(QSize(30, 30));
     replayButton->setMaximumSize(QSize(30, 30));
@@ -374,6 +397,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     connect(replayButton, &QAbstractButton::pressed, this, &TConsole::slot_toggleReplayRecording);
 
     logButton = new QToolButton;
+    logButton->setObjectName(QStringLiteral("logButton"));
     logButton->setMinimumSize(QSize(30, 30));
     logButton->setMaximumSize(QSize(30, 30));
     logButton->setCheckable(true);
@@ -2244,6 +2268,7 @@ void TConsole::createMapper(int x, int y, int width, int height)
                                           mpHost->mpMap->mPlayerRoomOuterColor,
                                           mpHost->mpMap->mPlayerRoomInnerColor);
         mpMapper = new dlgMapper(mpMainFrame, mpHost, mpHost->mpMap.data());
+        mpMapper->setObjectName(QStringLiteral("mpMapper"));
 #if defined(INCLUDE_3DMAPPER)
         mpHost->mpMap->mpM = mpMapper->glWidget;
 #endif
