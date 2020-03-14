@@ -1,4 +1,4 @@
-name: Update translations
+name: Update texts for translators
 on:
   pull_request:
     
@@ -24,11 +24,11 @@ jobs:
       with:
         args: -recursive ./src/ ./3rdparty/dblsqd/dblsqd ./3rdparty/edbee-lib/edbee-lib -ts ./translations/mudlet.ts
 
-    - name: check if translation strings were modified
+    - name: check if any UI text was modified
       id: getdiff
       run: |
         # see if we had any changes in the diff, ignoring the <location... changes
-        lines_changed=$(git diff --patch --unified=0 translations/mudlet.ts | awk '! /^((@@|diff|index|---|\+\+\+)|((-|+) *<location))/ { count++ } END { print count " lines changed." }')
+        lines_changed=$(git diff --patch --unified=0 translations/mudlet.ts | awk '! /^((@@|diff|index|---|\+\+\+)|((-|+) *<location))/ { count++ } END { print count }')
         echo "$lines_changed lines changed."
         echo ::set-output name=lines_changed::$lines_changed
 
@@ -54,7 +54,7 @@ jobs:
         branch: updated-text-${{ github.sha }}
         force: true
 
-    - name: pull-request
+    - name: make a PR
       uses: repo-sync/pull-request@v2
       if: steps.getdiff.outputs.lines_changed > 0
       with:
