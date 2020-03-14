@@ -1,6 +1,6 @@
 name: Run Busted out-of-client testsa github action to
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   test:
@@ -15,10 +15,10 @@ jobs:
 
     - uses: leafo/gh-actions-luarocks@v2
 
-    - name: build
+    - name: install busted
       run: |
         luarocks install busted
 
-    - name: test
+    - name: run tests
       run: |
         busted -o utfTerminal src/mudlet-lua/tests
