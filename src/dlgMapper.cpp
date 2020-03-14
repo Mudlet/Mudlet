@@ -48,7 +48,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper) {
         mpHost->mpMap->mpM->update();
     }
-    glWidget = new GLWidget(widget);
+    glWidget = new GLWidget(frame_mapper);
     glWidget->setObjectName(QString::fromUtf8("glWidget"));
 
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -56,7 +56,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     sizePolicy.setVerticalStretch(0);
     sizePolicy.setHeightForWidth(glWidget->sizePolicy().hasHeightForWidth());
     glWidget->setSizePolicy(sizePolicy);
-    verticalLayout_widget->insertWidget(0, glWidget);
+    verticalLayout_frame_mapper->insertWidget(0, glWidget);
 
     glWidget->mpMap = pM;
 #endif
