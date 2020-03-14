@@ -5306,7 +5306,9 @@ Nutzungen</translation>
       <source>Port number must be above zero and below 65535.
 
 </source>
-      <translation type="unfinished"/>
+      <translation>Die Portnummer muss über Null und unter 65535 liegen.
+
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2356"/>
