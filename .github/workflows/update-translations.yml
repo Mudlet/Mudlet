@@ -14,10 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     # have to use v1 due to https://github.com/repo-sync/pull-request/issues/17
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@master
       with:
         ref: development
         submodules: true
+        fetch-depth: 0
 
     - name: update text for translation
       uses: Mudlet/lupdate-action@master
