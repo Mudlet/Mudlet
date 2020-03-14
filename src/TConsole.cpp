@@ -2342,7 +2342,7 @@ std::pair<bool, QString> TConsole::createMapper(const QString& windowname, int x
     auto pW = mDockWidgetMap.value(windowname);
     auto pM = mpHost->mpDockableMapWidget;
     if (pM) {
-        return {false, "cannot create mapper. Do you already use a map window?"};
+        return {false, QStringLiteral("cannot create mapper. Do you already use a map window?")};
     }
     if (!mpMapper) {
         // Arrange for TMap member values to be copied from the Host masters so they
