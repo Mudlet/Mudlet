@@ -21,11 +21,15 @@ jobs:
         key: ${{runner.os}}-qt-${{env.qt}}
         restore-keys: |
           ${{runner.os}}-qt-
-    - uses: ouuan/install-qt-action@v2.3.1
+          
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v2
       if: steps.cache-qt.outputs.cache-hit != 'true'
       with:
         version: ${{env.qt}}
         dir: ${{runner.workspace}}
+        arch: win64_mingw73 # only affects windows
+        cached: ${{ steps.cache-qt.outputs.cache-hit }}
         
     - uses: actions/checkout@master
       with:
