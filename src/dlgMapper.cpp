@@ -45,6 +45,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     setupUi(this);
 
 #if defined(INCLUDE_3DMAPPER)
+    glWidget = nullptr;
     QSurfaceFormat fmt;
     fmt.setSamples(10);
     QSurfaceFormat::setDefaultFormat(fmt);
@@ -191,7 +192,7 @@ void dlgMapper::show2dView()
     if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper) {
         mpHost->mpMap->mpM->update();
     }
-    if (!mpHost->mpMap->mpM) {
+    if (!glWidget) {
         glWidget = new GLWidget(widget);
         glWidget->setObjectName(QString::fromUtf8("glWidget"));
 
@@ -226,7 +227,7 @@ void dlgMapper::show2dView()
         connect(zRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setZRotation);
     }
 
-    if (mpHost->mpMap->mpM) {
+    if (glWidget) {
         mp2dMap->setVisible(!mp2dMap->isVisible());
         glWidget->setVisible(!glWidget->isVisible());
         if (glWidget->isVisible()) {
