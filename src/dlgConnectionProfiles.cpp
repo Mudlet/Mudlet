@@ -2352,9 +2352,9 @@ bool dlgConnectionProfiles::validateProfile()
         if (!port.isEmpty() && (num > 65536 && ok)) {
             notificationAreaIconLabelError->show();
             notificationAreaMessageBox->setText(
-                QStringLiteral("%1\n%2").arg(
+                QStringLiteral("%1\n%2\n\n").arg(
                     notificationAreaMessageBox->text(), 
-                    QStringLiteral("%1\n\n").arg(tr("Port number must be above zero and below 65535."))));
+                    tr("Port number must be above zero and below 65535.")));
             port_entry->setPalette(mErrorPalette);
             validPort = false;
             valid = false;
@@ -2366,9 +2366,9 @@ bool dlgConnectionProfiles::validateProfile()
         if (port_ssl_tsl->isChecked()) {
             notificationAreaIconLabelError->show();
             notificationAreaMessageBox->setText(
-                QStringLiteral("%1\n%2").arg(
+                QStringLiteral("%1\n%2\n\n").arg(
                     notificationAreaMessageBox->text(), 
-                    QStringLiteral("%1\n\n").arg(tr("Mudlet is not configured for secure connections."))));
+                    tr("Mudlet is not configured for secure connections.")));
             port_ssl_tsl->setEnabled(true);
             validPort = false;
             valid = false;
@@ -2378,9 +2378,9 @@ bool dlgConnectionProfiles::validateProfile()
             if (port_ssl_tsl->isChecked()) {
                 notificationAreaIconLabelError->show();
                 notificationAreaMessageBox->setText(
-                    QStringLiteral("%1\n%2").arg(
+                    QStringLiteral("%1\n%2\n\n").arg(
                         notificationAreaMessageBox->text(),
-                        QStringLiteral("%1\n\n").arg(tr("Mudlet can not load support for secure connections."))));
+                        tr("Mudlet can not load support for secure connections.")));
                 validPort = false;
                 valid = false;
             }
@@ -2395,9 +2395,10 @@ bool dlgConnectionProfiles::validateProfile()
         if (!check.isValid()) {
             notificationAreaIconLabelError->show();
             notificationAreaMessageBox->setText(
-                QStringLiteral("%1\n%2").arg(
+                QStringLiteral("%1\n%2\n\n%3").arg(
                     notificationAreaMessageBox->text(), 
-                    QStringLiteral("%1\n\n%2").arg(tr("Please enter the URL or IP address of the Game server."), check.errorString())));
+                    tr("Please enter the URL or IP address of the Game server."), 
+                    check.errorString()));
             host_name_entry->setPalette(mErrorPalette);
             validUrl = false;
             valid = false;
@@ -2407,9 +2408,10 @@ bool dlgConnectionProfiles::validateProfile()
             if (port_ssl_tsl->isChecked()) {
                 notificationAreaIconLabelError->show();
                 notificationAreaMessageBox->setText(
-                    QStringLiteral("%1\n%2").arg(
+                    QStringLiteral("%1\n%2\n\n%3").arg(
                         notificationAreaMessageBox->text(), 
-                        QStringLiteral("%1\n\n%2").arg(tr("SSL connections require the URL of the Game server.", check.errorString()))));
+                        tr("SSL connections require the URL of the Game server.", 
+                        check.errorString())));
                 host_name_entry->setPalette(mErrorPalette);
                 validUrl = false;
                 valid = false;
