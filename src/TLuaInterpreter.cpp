@@ -3553,7 +3553,7 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
             luaSendWindow.clear();
         }
     }
-    if (!lua_isnumber(L, 2)) {      
+    if (!lua_isnumber(L, 2)) {
         if (!lua_isstring(L, 2)) {
             lua_pushfstring(L, "createMiniConsole: bad argument #2 type (miniconsole name as string expected, got %s!)", luaL_typename(L, 2));
             lua_error(L);
@@ -4330,6 +4330,71 @@ int TLuaInterpreter::moveWindow(lua_State* L)
     QString text(luaSendText.c_str());
     mudlet::self()->moveWindow(&host, text, static_cast<int>(x1), static_cast<int>(y1));
     return 0;
+}
+
+int TLuaInterpreter::openMapWidget(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString area = QString();
+    int x = -1, y = -1, width = -1, height = -1;
+    if (n == 1) {
+        if (lua_type(L, 1) != LUA_TSTRING) {
+            lua_pushfstring(L, "openMapWidget: bad argument #1 type (area as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        } else {
+            area = QString::fromUtf8(lua_tostring(L, 1));
+        }
+    }
+    if (n > 1) {
+        area = QStringLiteral("f");
+        if (!lua_isnumber(L, 1)) {
+            lua_pushfstring(L, "openMapWidget: bad argument #1 type (x-coordinate as number expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        } else {
+            x = lua_tonumber(L, 1);
+        }
+        if (!lua_isnumber(L, 2)) {
+            lua_pushfstring(L, "openMapWidget: bad argument #2 type (y-coordinate as number expected, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        } else {
+            y = lua_tonumber(L, 2);
+        }
+    }
+    if (n > 2) {
+        if (!lua_isnumber(L, 3)) {
+            lua_pushfstring(L, "openMapWidget: bad argument #3 type (width as number expected, got %s!)", luaL_typename(L, 3));
+            return lua_error(L);
+        } else {
+            width = lua_tonumber(L, 3);
+        }
+        if (!lua_isnumber(L, 4)) {
+            lua_pushfstring(L, "openMapWidget: bad argument #4 type (height as number expected, got %s!)", luaL_typename(L, 4));
+            return lua_error(L);
+        } else {
+            height = lua_tonumber(L, 4);
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = mudlet::self()->openMapWidget(&host, area.toLower(), x, y, width, height); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::closeMapWidget(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = mudlet::self()->closeMapWidget(&host); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMainWindowSize
@@ -16076,6 +16141,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setLabelOnLeave", TLuaInterpreter::setLabelOnLeave);
     lua_register(pGlobalLua, "getImageSize", TLuaInterpreter::getImageSize);
     lua_register(pGlobalLua, "moveWindow", TLuaInterpreter::moveWindow);
+    lua_register(pGlobalLua, "openMapWidget", TLuaInterpreter::openMapWidget);
+    lua_register(pGlobalLua, "closeMapWidget", TLuaInterpreter::closeMapWidget);
     lua_register(pGlobalLua, "setTextFormat", TLuaInterpreter::setTextFormat);
     lua_register(pGlobalLua, "getMainWindowSize", TLuaInterpreter::getMainWindowSize);
     lua_register(pGlobalLua, "getUserWindowSize", TLuaInterpreter::getUserWindowSize);

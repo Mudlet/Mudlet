@@ -1830,3 +1830,17 @@ end
 function resetLabelToolTip(label)
   return setLabelToolTip(label, "")
 end
+
+-- functions to move and resize Map Widget
+-- be aware that moving or resizing Map Widget puts the Map Widget in floating state
+function moveMapWidget(x, y)
+  assert(type(x) == 'number', 'moveMapWidget: bad argument #1 type (x-coordinate as number expected, got '..type(x)..'!)')
+  assert(type(y) == 'number', 'moveMapWidget: bad argument #2 type (y-coordinate as number expected, got '..type(y)..'!)')
+  openMapWidget(x, y)
+end
+
+function resizeMapWidget(width, height)
+  assert(type(width) == 'number', 'resizeMapWidget: bad argument #1 type (width as number expected, got '..type(width)..'!)')
+  assert(type(height) == 'number', 'resizeMapWidget: bad argument #2 type (height as number expected, got '..type(height)..'!)')
+  openMapWidget(-1, -1, width, height)
+end
