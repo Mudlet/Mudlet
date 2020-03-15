@@ -3553,7 +3553,7 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
             luaSendWindow.clear();
         }
     }
-    if (!lua_isnumber(L, 2)) {      
+    if (!lua_isnumber(L, 2)) {
         if (!lua_isstring(L, 2)) {
             lua_pushfstring(L, "createMiniConsole: bad argument #2 type (miniconsole name as string expected, got %s!)", luaL_typename(L, 2));
             lua_error(L);
@@ -16376,8 +16376,7 @@ void TLuaInterpreter::initLuaGlobals()
     QChar separator = QDir::separator();
     QString nativeHomeDirectory = mudlet::getMudletPath(mudlet::profileHomePath, hostName);
 
-    luaL_dostring(pGlobalLua, QStringLiteral("package.path = [[%1%2?%2init.lua;]] .. package.path").arg(nativeHomeDirectory, separator).toUtf8().constData());
-    luaL_dostring(pGlobalLua, QStringLiteral("package.path = [[%1%2?.lua;]] .. package.path").arg(nativeHomeDirectory, separator).toUtf8().constData());
+    luaL_dostring(pGlobalLua, QStringLiteral("package.path = [[%1%2?.lua;%1%2?%2init.lua;]] .. package.path").arg(nativeHomeDirectory, separator).toUtf8().constData());
 
     luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = [[%1%2?;]] .. package.cpath").arg(nativeHomeDirectory, separator).toUtf8().constData());
 
