@@ -34,6 +34,7 @@
 #include "TConsole.h"
 #include "TEvent.h"
 #include "TMap.h"
+#include "TMedia.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
@@ -88,6 +89,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
 , enableATCP(false)
 , enableGMCP(false)
 , enableMSSP(false)
+, enableMSP(false)
 , enableChannel102(false)
 , mAutoReconnect(false)
 , loadingReplay(false)
@@ -217,6 +219,9 @@ cTelnet::~cTelnet()
             qWarning("%s\n------------", qPrintable(message));
 #endif
         }
+    }
+    if (mpComposer) {
+        mpComposer->deleteLater();
     }
     socket.deleteLater();
 }
@@ -743,7 +748,7 @@ void cTelnet::sendTelnetOption(char type, char option)
         break;
     default:
         _type = "ERROR wrong telnet type";
-    };
+    }
 
     qDebug().noquote().nospace() << "WE send telnet IAC " << _type << " " << decodeOption(option);
 #endif
@@ -913,7 +918,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
         break;
     default:
         _type = QString::number((quint8)ch);
-    };
+    }
     if (command.size() > 2) {
         qDebug() << "SERVER sent telnet (" << command.size() << " bytes):" << _type << " + " << decodeOption(command[2]);
     } else {
@@ -1026,7 +1031,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
             output = TN_IAC;
             output += TN_SB;
             output += OPT_GMCP;
-            output += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1", "External.Discord 1"])";
+            output += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1", "External.Discord 1", "Client.Media 1"])";
             output += TN_IAC;
             output += TN_SE;
             socketOutRaw(output);
@@ -1055,6 +1060,18 @@ void cTelnet::processTelnetCommand(const std::string& command)
             sendTelnetOption(TN_DO, OPT_MSSP);
             qDebug() << "MSSP enabled";
             raiseProtocolEvent("sysProtocolEnabled", "MSSP");
+            break;
+        }
+
+        if (option == OPT_MSP) {
+            if (!mpHost->mEnableMSP) {
+                break;
+            }
+
+            enableMSP = true;
+            sendTelnetOption(TN_DO, OPT_MSP);
+            qDebug() << "MSP enabled";
+            raiseProtocolEvent("sysProtocolEnabled", "MSP");
             break;
         }
 
@@ -1162,6 +1179,12 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 raiseProtocolEvent("sysProtocolDisabled", "MSSP");
             }
 
+            if (option == OPT_MSP) {
+                // MSP got turned off
+                enableMSP = false;
+                raiseProtocolEvent("sysProtocolDisabled", "MSP");
+            }
+
             if (option == OPT_MXP) {
                 // MXP got turned off
                 mpHost->mServerMXPenabled = false;
@@ -1233,6 +1256,14 @@ void cTelnet::processTelnetCommand(const std::string& command)
             enableMSSP = true;
             sendTelnetOption(TN_WILL, OPT_MSSP);
             raiseProtocolEvent("sysProtocolEnabled", "MSSP");
+            break;
+        }
+
+        if (option == OPT_MSP && mpHost->mEnableMSP) {
+            // MSP support
+            enableMSP = true;
+            sendTelnetOption(TN_WILL, OPT_MSP);
+            raiseProtocolEvent("sysProtocolEnabled", "MSP");
             break;
         }
 
@@ -1313,6 +1344,12 @@ void cTelnet::processTelnetCommand(const std::string& command)
             // MSSP got turned off
             enableMSSP = false;
             raiseProtocolEvent("sysProtocolDisabled", "MSSP");
+        }
+
+        if (option == OPT_MSP) {
+            // MSP got turned off
+            enableMSP = false;
+            raiseProtocolEvent("sysProtocolDisabled", "MSP");
         }
 
         if (option == OPT_MXP) {
@@ -1458,9 +1495,25 @@ void cTelnet::processTelnetCommand(const std::string& command)
             // bytes from beginning (3) and end (2):
             payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
 
-            // strip first 3 characters to get rid of <IAC><SB><201>
+            // strip first 3 characters to get rid of <IAC><SB><70>
             // and strip the last 2 characters to get rid of <IAC><TN_SE>
             setMSSPVariables(payload);
+            return;
+        }
+
+        // MSP
+        if (option == OPT_MSP) {
+            QByteArray payload = command.c_str();
+            if (payload.size() < 6) {
+                return;
+            }
+            // payload is in the Mud Server's encoding, trim off the Telnet suboption
+            // bytes from beginning (3) and end (2):
+            payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
+
+            // strip first 3 characters to get rid of <IAC><SB><90>
+            // and strip the last 2 characters to get rid of <IAC><TN_SE>
+            setMSPVariables(payload);
             return;
         }
 
@@ -1550,10 +1603,10 @@ void cTelnet::processTelnetCommand(const std::string& command)
         }
         //other cmds should not arrive, as they were not negotiated.
         //if they do, they are merely ignored
-        }; //end switch 2
+        } //end switch 2
         //other commands are simply ignored (NOP and such, see .h file for list)
     }
-    }; //end switch 1
+    } //end switch 1
 
     // raise sysTelnetEvent for all unhandled protocols
     // EXCEPT TN_GA / TN_EOR, which come at the end of every transmission, for performance reaons
@@ -1792,6 +1845,10 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         mpHost->processDiscordGMCP(packageMessage, data);
     }
 
+    if (mpHost->mAcceptServerMedia && transcodedMsg.startsWith(QStringLiteral("Client.Media"))) {
+        mpHost->mpMedia->parseGMCP(packageMessage, data);
+    }
+
     mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
 }
 
@@ -1814,6 +1871,122 @@ void cTelnet::setMSSPVariables(const QByteArray& msg)
     transcodedMsg.remove(QChar::CarriageReturn);
 
     mpHost->mLuaInterpreter.setMSSPTable(transcodedMsg);
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#MSP
+void cTelnet::setMSPVariables(const QByteArray& msg)
+{
+    QString transcodedMsg;
+
+    if (mpOutOfBandDataIncomingCodec) {
+        // Message is encoded
+        transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(msg);
+    } else {
+        // Message is in ASCII (though this can handle Utf-8):
+        transcodedMsg = QString::fromUtf8(msg);
+    }
+
+    // MSP specification: https://www.zuggsoft.com/zmud/msp.htm#MSP%20Specification
+
+    // remove \r and \n from the data.  They are part of the standard, but not needed.
+    transcodedMsg.remove(QChar::CarriageReturn);
+    transcodedMsg.remove(QChar::LineFeed);
+    // replace ANSI escape character with escaped version, to handle improperly passed ANSI codes
+    transcodedMsg.replace(QLatin1String("\u001B"), QLatin1String("\\u001B"));
+
+    if (!transcodedMsg.endsWith(QStringLiteral(")"))) {
+        return;
+    } else {
+        // Met the MSP standard so far. Remove this last right parenthesis.
+        transcodedMsg.chop(1);
+    }
+
+    TMediaData mediaData {};
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolMSP);
+
+    if (transcodedMsg.startsWith(QStringLiteral("!!SOUND("))) {
+        mediaData.setMediaType(TMediaData::MediaTypeSound);
+        transcodedMsg.remove(QStringLiteral("!!SOUND("));
+    } else if (transcodedMsg.startsWith(QStringLiteral("!!MUSIC("))) {
+        mediaData.setMediaType(TMediaData::MediaTypeMusic);
+        transcodedMsg.remove(QStringLiteral("!!MUSIC("));
+    } else {
+        // Does not meet the MSP standard.
+        return;
+    }
+
+    if (transcodedMsg == "Off") {
+        mpHost->mpMedia->stopMedia(mediaData);
+        return;
+    }
+
+    QStringList argumentList = transcodedMsg.split(QChar::Space);
+
+    if (argumentList.size() > 0) {
+        for (int i = 0; i < argumentList.size(); i++) {
+            if (i < 1) {
+                mediaData.setMediaFileName(argumentList[i]);
+            } else {
+                QStringList payloadList = argumentList[i].split('=');
+
+                if (payloadList.size() != 2) {
+                    return; // Invalid MSP.
+                }
+
+                QString mspVAR;
+                QString mspVAL;
+
+                for (int j = 0; j < payloadList.size(); j++) {
+                    if (j < 1) {
+                        mspVAR = payloadList[j];
+                    } else {
+                        mspVAL = payloadList[j];
+                    }
+                }
+
+                if (mspVAR == "V") {
+                    mediaData.setMediaVolume(mspVAL.toInt());
+
+                    if (mediaData.getMediaVolume() == TMediaData::MediaVolumePreload) {
+                        continue; // Support preloading
+                    } else if (mediaData.getMediaVolume() > TMediaData::MediaVolumeMax) {
+                        mediaData.setMediaVolume(TMediaData::MediaVolumeMax);
+                    } else if (mediaData.getMediaVolume() < TMediaData::MediaVolumeMin) {
+                        mediaData.setMediaVolume(TMediaData::MediaVolumeMin);
+                    }
+                } else if (mspVAR == "L") {
+                    mediaData.setMediaLoops(mspVAL.toInt());
+
+                    if (mediaData.getMediaLoops() < TMediaData::MediaLoopsRepeat || mediaData.getMediaLoops() == 0) {
+                        mediaData.setMediaLoops(TMediaData::MediaLoopsDefault);
+                    }
+                } else if (mspVAR == "P") {
+                    mediaData.setMediaPriority(mspVAL.toInt());
+
+                    if (mediaData.getMediaPriority() > TMediaData::MediaPriorityMax) {
+                        mediaData.setMediaPriority(TMediaData::MediaPriorityMax);
+                    } else if (mediaData.getMediaPriority() < TMediaData::MediaPriorityMin) {
+                        mediaData.setMediaPriority(TMediaData::MediaPriorityMin);
+                    }
+                } else if (mspVAR == "C") {
+                    if (mspVAL.toInt() == 0) {
+                        mediaData.setMediaContinue(TMediaData::MediaContinueRestart);
+                    } else {
+                        mediaData.setMediaContinue(TMediaData::MediaContinueDefault);
+                    }
+                } else if (mspVAR == "T") {
+                    mediaData.setMediaTag(mspVAL.toLower()); // To provide case insensitivity of MSP spec
+                } else if (mspVAR == "U") {
+                    mediaData.setMediaUrl(mspVAL);
+                } else {
+                    return; // Invalid MSP.
+                }
+            }
+        }
+    }
+
+    mpHost->mpMedia->playMedia(mediaData);
 }
 
 void cTelnet::setChannel102Variables(const QString& msg)
@@ -1873,9 +2046,11 @@ void cTelnet::atcpComposerSave(QString txt)
         output += OPT_GMCP;
         output += "IRE.Composer.SetBuffer";
         if (!txt.isEmpty()) {
-            output += "  ";
-            output += encodeAndCookBytes(txt.toStdString());
-            output += " ";
+            // Escape the text for the GMCP message that we will send to the game, put the result inside of quotes.
+            // Backslashes are escaped first because they are contained in the others, then quotes and new lines.
+            output += " \"";
+            output += encodeAndCookBytes(txt.replace('\\', QLatin1String(R"(\\)")).replace('\"', QLatin1String(R"(\")")).replace('\n', QLatin1String(R"(\n)")).toStdString());
+            output += "\"";
         }
         output += TN_IAC;
         output += TN_SE;

@@ -1018,23 +1018,39 @@ void TTextEdit::slot_popupMenu()
     mpHost->mLuaInterpreter.compileAndExecuteScript(cmd);
 }
 
-void TTextEdit::raiseMousePressEvent(QMouseEvent* event)
+void TTextEdit::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const bool isPressEvent)
 {
     TEvent mudletEvent{};
-    mudletEvent.mArgumentList.append(QStringLiteral("sysWindowMousePressEvent"));
+    mudletEvent.mArgumentList.append(isPressEvent ? QStringLiteral("sysWindowMousePressEvent") : QStringLiteral("sysWindowMouseReleaseEvent"));
     switch (event->button()) {
-    case Qt::LeftButton:
-        mudletEvent.mArgumentList.append(QString::number(1));
-        break;
-    case Qt::RightButton:
-        mudletEvent.mArgumentList.append(QString::number(2));
-        break;
-    case Qt::MidButton:
-        mudletEvent.mArgumentList.append(QString::number(3));
-        break;
-    default: // TODO: What about those of us with more than three mouse buttons?
-        mudletEvent.mArgumentList.append(QString());
-        break;
+    case Qt::LeftButton:    mudletEvent.mArgumentList.append(QString::number(1));   break;
+    case Qt::RightButton:   mudletEvent.mArgumentList.append(QString::number(2));   break;
+    case Qt::MidButton:     mudletEvent.mArgumentList.append(QString::number(3));   break;
+    case Qt::BackButton:    mudletEvent.mArgumentList.append(QString::number(4));   break;
+    case Qt::ForwardButton: mudletEvent.mArgumentList.append(QString::number(5));   break;
+    case Qt::TaskButton:    mudletEvent.mArgumentList.append(QString::number(6));   break;
+    case Qt::ExtraButton4:  mudletEvent.mArgumentList.append(QString::number(7));   break;
+    case Qt::ExtraButton5:  mudletEvent.mArgumentList.append(QString::number(8));   break;
+    case Qt::ExtraButton6:  mudletEvent.mArgumentList.append(QString::number(9));   break;
+    case Qt::ExtraButton7:  mudletEvent.mArgumentList.append(QString::number(10));  break;
+    case Qt::ExtraButton8:  mudletEvent.mArgumentList.append(QString::number(11));  break;
+    case Qt::ExtraButton9:  mudletEvent.mArgumentList.append(QString::number(12));  break;
+    case Qt::ExtraButton10: mudletEvent.mArgumentList.append(QString::number(13));  break;
+    case Qt::ExtraButton11: mudletEvent.mArgumentList.append(QString::number(14));  break;
+    case Qt::ExtraButton12: mudletEvent.mArgumentList.append(QString::number(15));  break;
+    case Qt::ExtraButton13: mudletEvent.mArgumentList.append(QString::number(16));  break;
+    case Qt::ExtraButton14: mudletEvent.mArgumentList.append(QString::number(17));  break;
+    case Qt::ExtraButton15: mudletEvent.mArgumentList.append(QString::number(18));  break;
+    case Qt::ExtraButton16: mudletEvent.mArgumentList.append(QString::number(19));  break;
+    case Qt::ExtraButton17: mudletEvent.mArgumentList.append(QString::number(20));  break;
+    case Qt::ExtraButton18: mudletEvent.mArgumentList.append(QString::number(21));  break;
+    case Qt::ExtraButton19: mudletEvent.mArgumentList.append(QString::number(22));  break;
+    case Qt::ExtraButton20: mudletEvent.mArgumentList.append(QString::number(23));  break;
+    case Qt::ExtraButton21: mudletEvent.mArgumentList.append(QString::number(24));  break;
+    case Qt::ExtraButton22: mudletEvent.mArgumentList.append(QString::number(25));  break;
+    case Qt::ExtraButton23: mudletEvent.mArgumentList.append(QString::number(26));  break;
+    case Qt::ExtraButton24: mudletEvent.mArgumentList.append(QString::number(27));  break;
+    default:                mudletEvent.mArgumentList.append(QString::number(0));
     }
     mudletEvent.mArgumentList.append(QString::number(event->x()));
     mudletEvent.mArgumentList.append(QString::number(event->y()));
@@ -1047,8 +1063,8 @@ void TTextEdit::raiseMousePressEvent(QMouseEvent* event)
 
 void TTextEdit::mousePressEvent(QMouseEvent* event)
 {
-    if (mpConsole->getType() & (TConsole::MainConsole | TConsole::Buffer)) {
-        raiseMousePressEvent(event);
+    if (mpConsole->getType() == TConsole::MainConsole) {
+        raiseMudletMousePressOrReleaseEvent(event, true);
     }
 
     if (event->button() == Qt::LeftButton) {
@@ -1547,11 +1563,16 @@ QString TTextEdit::getSelectedText(char newlineChar)
     normaliseSelection();
 
     QString text;
+    int x, y, total;
 
+
+    if(!mpBuffer->buffer[0].size()) {
+        return text;
+    }
     // for each selected line
     bool isSingleLine = (mPA.y() == mPB.y());
     // CHECKME: the <= together with the +1 in the test looks suspecious:
-    for (int y = mPA.y(), total = mPB.y() + 1; y <= total; ++y) {
+    for (y = mPA.y(), total = mPB.y() + 1; y <= total; ++y) {
         // stop if we are at the end of the buffer lines
         if (y >= static_cast<int>(mpBuffer->buffer.size())) {
             mSelectedRegion = QRegion(0, 0, 0, 0);
@@ -1559,12 +1580,14 @@ QString TTextEdit::getSelectedText(char newlineChar)
             return text;
         }
 
-        int x = 0;
+        x = 0;
         // if the selection started on this line
         if (y == mPA.y()) {
             // start from the column where the selection started
-            if (!mpBuffer->buffer.at(y).at(0).isSelected()) {
-                x = mPA.x();
+            if (mpBuffer->lineBuffer.at(y).size()) {
+                if (!mpBuffer->buffer.at(y).at(0).isSelected()) {
+                    x = mPA.x();
+                }
             }
             if (!isSingleLine) {
                 // insert the number of spaces to push the first line to the right
@@ -1604,29 +1627,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
     }
 
     if (mpConsole->getType() == TConsole::MainConsole) {
-        TEvent mudletEvent{};
-        mudletEvent.mArgumentList.append(QLatin1String("sysWindowMouseReleaseEvent"));
-        switch (event->button()) {
-        case Qt::LeftButton:
-            mudletEvent.mArgumentList.append(QString::number(1));
-            break;
-        case Qt::RightButton:
-            mudletEvent.mArgumentList.append(QString::number(2));
-            break;
-        case Qt::MidButton:
-            mudletEvent.mArgumentList.append(QString::number(3));
-            break;
-        default:
-            mudletEvent.mArgumentList.append(QString::number(0));
-            break;
-        }
-        mudletEvent.mArgumentList.append(QString::number(event->x()));
-        mudletEvent.mArgumentList.append(QString::number(event->y()));
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        mpHost->raiseEvent(mudletEvent);
+        raiseMudletMousePressOrReleaseEvent(event, false);
     } else if (mpConsole->getType() == TConsole::UserWindow && mpConsole->mpDockWidget && mpConsole->mpDockWidget->isFloating()) {
         // Need to take an extra step to return focus to main profile TConsole's
         // instance - using same method as TAction::execute():

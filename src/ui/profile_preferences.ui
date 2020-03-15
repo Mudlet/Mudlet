@@ -244,6 +244,13 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QCheckBox" name="acceptServerMedia">
+            <property name="text">
+             <string>Allow server to download and play media (requires GMCP enabled below)</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -259,7 +266,7 @@
              <string>&lt;p&gt;Enables GMCP - note that if you have MSDP enabled as well, some servers will prefer one over the other&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Enable GMCP</string>
+             <string>Enable GMCP  (Generic Mud Communication Protocol)</string>
             </property>
            </widget>
           </item>
@@ -269,7 +276,7 @@
              <string>&lt;p&gt;Enables MSDP - note that if you have GMCP enabled as well, some servers will prefer one over the other&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Enable MSDP</string>
+             <string>Enable MSDP  (Mud Server Data Protocol)</string>
             </property>
            </widget>
           </item>
@@ -279,11 +286,21 @@
              <string>&lt;p&gt;Enables MSSP - provides Mud Server Status Protocol information upon connection for supported games&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Enable MSSP</string>
+             <string>Enable MSSP  (Mud Server Status Protocol)</string>
             </property>
            </widget>
           </item>
           <item row="3" column="0">
+           <widget class="QCheckBox" name="mEnableMSP">
+            <property name="toolTip">
+             <string>&lt;p&gt;Enables MSP - provides Mud Sound Protocol messages during game play for supported games&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable MSP  (Mud Sound Protocol, experimental in Mudlet)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
            <widget class="QLabel" name="need_reconnect_for_data_protocol">
             <property name="enabled">
              <bool>true</bool>
@@ -663,9 +680,6 @@
             <property name="maxVisibleItems">
              <number>20</number>
             </property>
-            <property name="fontFilters">
-             <set>QFontComboBox::MonospacedFonts</set>
-            </property>
            </widget>
           </item>
           <item row="0" column="2">
@@ -678,7 +692,7 @@
           <item row="0" column="3">
            <widget class="QComboBox" name="fontSize"/>
           </item>
-          <item row="1" column="0" colspan="4">
+          <item row="1" column="0" colspan="2">
            <widget class="QLabel" name="label_invalidFontError">
             <property name="font">
              <font>
@@ -690,13 +704,25 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="4">
+          <item row="3" column="0">
            <widget class="QCheckBox" name="mNoAntiAlias">
             <property name="toolTip">
              <string>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </string>
             </property>
             <property name="text">
              <string>Enable anti-aliasing</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="4">
+           <widget class="QLabel" name="label_variableWidthFontWarning">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>This font is not monospace, which may not be ideal for playing some text games: you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
@@ -2080,6 +2106,131 @@
             <property name="text">
              <string>Show symbol usage...</string>
             </property>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="2">
+           <widget class="QWidget" name="widget_playerRoomStyle" native="true">
+            <layout class="QGridLayout" name="gridLayout_playerRoomStyle">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_playerRoomStyle">
+               <property name="text">
+                <string>2D map player room marker style:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QPushButton" name="pushButton_playerRoomPrimaryColor">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Outer ring color</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QPushButton" name="pushButton_playerRoomSecondaryColor">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Inner ring color</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QComboBox" name="comboBox_playerRoomStyle">
+               <property name="currentIndex">
+                <number>0</number>
+               </property>
+               <property name="sizeAdjustPolicy">
+                <enum>QComboBox::AdjustToMinimumContentsLengthWithIcon</enum>
+               </property>
+               <item>
+                <property name="text">
+                 <string>Original</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Red ring</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Blue/Yellow ring</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Custom ring</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QSpinBox" name="spinBox_playerRoomOuterDiameter">
+               <property name="toolTip">
+                <string>&lt;p&gt;Percentage ratio (&lt;i&gt;the default is 120%&lt;/i&gt;) of the marker symbol to the space available for the room.&lt;/p&gt;</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+               <property name="suffix">
+                <string>%</string>
+               </property>
+               <property name="prefix">
+                <string>Outer diameter: </string>
+               </property>
+               <property name="minimum">
+                <number>50</number>
+               </property>
+               <property name="maximum">
+                <number>200</number>
+               </property>
+               <property name="value">
+                <number>120</number>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2">
+              <widget class="QSpinBox" name="spinBox_playerRoomInnerDiameter">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="toolTip">
+                <string>&lt;p&gt;Percentage ratio of the inner diameter of the marker symbol to the outer one (&lt;i&gt;the default is 70%&lt;/i&gt;).&lt;/p&gt;</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+               <property name="suffix">
+                <string>%</string>
+               </property>
+               <property name="prefix">
+                <string>Inner diameter: </string>
+               </property>
+               <property name="maximum">
+                <number>83</number>
+               </property>
+               <property name="value">
+                <number>70</number>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
          </layout>
@@ -5081,6 +5232,7 @@
   <tabstop>mAlertOnNewData</tabstop>
   <tabstop>mFORCE_SAVE_ON_EXIT</tabstop>
   <tabstop>acceptServerGUI</tabstop>
+  <tabstop>acceptServerMedia</tabstop>
   <tabstop>mEnableGMCP</tabstop>
   <tabstop>mEnableMSDP</tabstop>
   <tabstop>mEnableMSSP</tabstop>

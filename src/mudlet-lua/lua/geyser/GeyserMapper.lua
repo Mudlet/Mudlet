@@ -22,15 +22,15 @@ function Geyser.Mapper:reposition()
   if self.hidden or self.auto_hidden then
     return
   end
-  createMapper(self:get_x(), self:get_y(), self:get_width(), self:get_height())
+  createMapper(self.windowname, self:get_x(), self:get_y(), self:get_width(), self:get_height())
 end
 
 function Geyser.Mapper:hide_impl()
-  createMapper(self:get_x(), self:get_y(), 0, 0)
+  createMapper(self.windowname, self:get_x(), self:get_y(), 0, 0)
 end
 
 function Geyser.Mapper:show_impl()
-  createMapper(self:get_x(), self:get_y(), self:get_width(), self:get_height())
+  createMapper(self.windowname, self:get_x(), self:get_y(), self:get_width(), self:get_height())
 end
 
 -- Overridden constructor
@@ -40,7 +40,7 @@ function Geyser.Mapper:new (cons, container)
 
   -- Call parent's constructor
   local me = self.parent:new(cons, container)
-
+  me.windowname = me.windowname or me.container.windowname or "main"
   me.was_hidden = false
 
   -- Set the metatable.
@@ -49,7 +49,7 @@ function Geyser.Mapper:new (cons, container)
 
   -----------------------------------------------------------
   -- Now create the Mapper using primitives
-  createMapper(me:get_x(), me:get_y(),
+  createMapper(me.windowname, me:get_x(), me:get_y(),
   me:get_width(), me:get_height())
 
   -- Set any defined colors

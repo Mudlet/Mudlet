@@ -108,14 +108,14 @@ dlgIRC::dlgIRC(Host* pHost) : mReadyForSending(false), mpHost(pHost), mIrcStarte
 dlgIRC::~dlgIRC()
 {
     writeQSettings();
-    
+
     if (connection->isActive()) {
         const QString quitMsg = tr("%1 closed their client.").arg(mNickName);
         connection->quit(quitMsg);
         connection->close();
     }
 
-    if (mudlet::self()->mpIrcClientMap.value(mpHost)) {
+    if (mudlet::self() && mudlet::self()->mpIrcClientMap.value(mpHost)) {
         mudlet::self()->mpIrcClientMap.remove(mpHost);
     }
 }
@@ -818,6 +818,9 @@ QPair<bool, QString> dlgIRC::writeIrcChannels(Host* pH, const QStringList& chann
     return pH->writeProfileData(dlgIRC::ChannelsCfgItem, channels.join(QStringLiteral(" ")));
 }
 
-void dlgIRC::writeQSettings() {
-    mudlet::self()->mpSettings->setValue("ircMessageBufferLimit", mMessageBufferLimit);
+void dlgIRC::writeQSettings()
+{
+    if (mudlet::self()) {
+        mudlet::self()->mpSettings->setValue("ircMessageBufferLimit", mMessageBufferLimit);
+    }
 }
