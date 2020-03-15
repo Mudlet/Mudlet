@@ -465,7 +465,7 @@ END : {
     return true;
 }
 
-bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QString& pattern, int regexNumber, int posOffset)
+bool TTrigger::match_begin_of_line_substring(const QString& toMatch, QStringView pattern, int regexNumber, int posOffset)
 {
     if (toMatch.startsWith(pattern)) {
         std::list<std::string> captureList;

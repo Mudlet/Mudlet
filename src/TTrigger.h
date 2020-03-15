@@ -122,7 +122,7 @@ public:
     bool match_perl(char*, const QString&, int, int posOffset = 0);
     bool match_wildcard(const QString&, int);
     bool match_exact_match(const QString&, const QString&, int, int posOffset = 0);
-    bool match_begin_of_line_substring(const QString& toMatch, const QString& pattern, int regexNumber, int posOffset = 0);
+    bool match_begin_of_line_substring(const QString& toMatch, QStringView pattern, int regexNumber, int posOffset = 0);
     bool match_lua_code(int);
     bool match_line_spacer(int regexNumber);
     bool match_color_pattern(int, int);
