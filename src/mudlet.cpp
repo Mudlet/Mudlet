@@ -2421,7 +2421,7 @@ std::pair<bool, QString> mudlet::openMapWidget(Host* pHost, const QString& area,
         pM = pHost->mpDockableMapWidget;
     }
     if (!pM) {
-        return {false, "cannot create map widget. Do you already use an embedded mapper?"};
+        return {false, QStringLiteral("cannot create map widget. Do you already use an embedded mapper?")};
     }
     pM->show();
     if (area.isEmpty()) {
@@ -2474,10 +2474,10 @@ std::pair<bool, QString> mudlet::closeMapWidget(Host* pHost)
 
     auto pM = pHost->mpDockableMapWidget;
     if (!pM) {
-        return {false, "no map widget found to close"};
+        return {false, QStringLiteral("no map widget found to close")};
     }
     if (!pM->isVisible()) {
-        return {false, "map widget already closed"};
+        return {false, QStringLiteral("map widget already closed")};
     }
     pM->hide();
     return {true, QString()};
