@@ -2410,8 +2410,8 @@ bool dlgConnectionProfiles::validateProfile()
                 notificationAreaMessageBox->setText(
                     QStringLiteral("%1\n%2\n\n%3").arg(
                         notificationAreaMessageBox->text(), 
-                        tr("SSL connections require the URL of the Game server.", 
-                        check.errorString())));
+                        tr("SSL connections require the URL of the Game server."), 
+                        check.errorString()));
                 host_name_entry->setPalette(mErrorPalette);
                 validUrl = false;
                 valid = false;
