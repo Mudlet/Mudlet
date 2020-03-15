@@ -380,6 +380,23 @@ function disableGaugeClickthrough(gaugeName)
   disableClickthrough(gaugeName .. "_text")
 end
 
+--- Set gauge to have a tooltip
+--- @param gaugeName
+--- @param text the tooltip text
+--- @param duration tooltip duration
+function setGaugeToolTip(gaugeName, text, duration)
+  duration = duration or 0
+  assert(gaugesTable[gaugeName], "setGaugeToolTip: no such gauge exists.")
+  setLabelToolTip(gaugeName .. "_text", text, duration)
+end
+
+--- Reset gauge tooltip
+--- @param gaugeName
+function resetGaugeToolTip(gaugeName)
+  assert(gaugesTable[gaugeName], "resetGaugeToolTip: no such gauge exists.")
+  resetLabelToolTip(gaugeName .. "_text")
+end
+
 --- Pads a hex number to ensure a minimum of 2 digits.
 ---
 --- @usage Following command will returns "F0".
@@ -461,7 +478,22 @@ end
 ---   <pre>
 ---   createGauge("healthBar", 300, 20, 30, 300, "Now with some text", "green", "horizontal, vertical, goofy, or batty")
 ---   </pre>
-function createGauge(gaugeName, width, height, x, y, gaugeText, r, g, b, orientation)
+function createGauge(windowname, gaugeName, width, height, x, y, gaugeText, r, g, b, orientation)
+  --Make windowname optional
+  if type(gaugeName) == "number" then
+    orientation = b
+    b = g
+    g = r
+    r = gaugeText
+    gaugeText = y
+    y = x
+    x = height
+    height = width
+    width = gaugeName
+    gaugeName = windowname
+    windowname= nil
+   end
+  windowname = windowname or "main"
   gaugeText = gaugeText or ""
   if type(r) == "string" then
     orientation = g
@@ -475,13 +507,13 @@ function createGauge(gaugeName, width, height, x, y, gaugeText, r, g, b, orienta
   orientation = orientation or "horizontal"
   assert(table.contains({ "horizontal", "vertical", "goofy", "batty" }, orientation), "createGauge: orientation must be horizontal, vertical, goofy, or batty")
   local tbl = { width = width, height = height, x = x, y = y, text = gaugeText, r = r, g = g, b = b, orientation = orientation, value = 1 }
-  createLabel(gaugeName .. "_back", 0, 0, 0, 0, 1)
+  createLabel(windowname, gaugeName .. "_back", 0, 0, 0, 0, 1)
   setBackgroundColor(gaugeName .. "_back", r, g, b, 100)
 
-  createLabel(gaugeName .. "_front", 0, 0, 0, 0, 1)
+  createLabel(windowname, gaugeName .. "_front", 0, 0, 0, 0, 1)
   setBackgroundColor(gaugeName .. "_front", r, g, b, 255)
 
-  createLabel(gaugeName .. "_text", 0, 0, 0, 0, 1)
+  createLabel(windowname, gaugeName .. "_text", 0, 0, 0, 0, 1)
   setBackgroundColor(gaugeName .. "_text", 0, 0, 0, 0)
 
   -- save new values in table
@@ -545,8 +577,17 @@ end
 ---   <pre>
 ---   createConsole("myConsoleWindow", 8, 80, 20, 200, 400)
 ---   </pre>
-function createConsole(consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
-  createMiniConsole(consoleName, 0, 0, 1, 1)
+function createConsole(windowname, consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
+  if Ypos == nil then
+    Ypos = Xpos
+    Xpos = numberOfLines
+    numberOfLines = charsPerLine
+    charsPerLine = fontSize
+    fontSize = consoleName
+    consoleName = windowname
+    windowname = "main"
+  end
+  createMiniConsole(windowname, consoleName, 0, 0, 1, 1)
   setMiniConsoleFontSize(consoleName, fontSize)
   local x, y = calcFontSize( fontSize )
   resizeWindow(consoleName, x * charsPerLine, y * numberOfLines)
@@ -1739,30 +1780,53 @@ function moveCursorDown(window, lines, keep_horizontal)
   if keep_horizontal then x = getColumnNumber(window) end
   moveCursor(window, x, math.min(curLine + lines, getLastLineNumber(window)))
 end
-  
-  -- version of replace function that allows for color, by way of cinsertText
-function creplace(window, text)
-	if not text then text, window = window, nil end
-	window = window or "main"
-	local str, start, stop = getSelection(window)
+
+-- internal function that handles coloured replace variants
+function xReplace(window, text, type)
+  if not text then
+    text = window
+    window = "main"
+  end
+  local str, start, stop = getSelection(window)
 	if window ~= "main" then
 		replace(window, "")
+    moveCursor(window, start, getLineNumber(window))
 	else
 		replace("")
+    moveCursor(start, getLineNumber())
 	end
-	moveCursor(window, start, getLineNumber(window))
-	cinsertText(window, text)
+  if type == 'c' then
+    cinsertText(window, text)
+  elseif type == 'd' then
+    dinsertText(window, text)
+  elseif type == 'h' then
+    hinsertText(window, text)
+  else
+    insertText(window, text)
+  end
 end
 
+--- version of replace function that allows for color, by way of cinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
+function creplace(window, text)
+  xReplace(window, text, 'c')
+end
+
+--- version of replace function that allows for color, by way of dinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
 function dreplace(window, text)
-	if not text then text, window = window, nil end
-	window = window or "main"
-	local str, start, stop = getSelection(window)
-	if window ~= "main" then
-		replace(window, "")
-	else
-		replace("")
-	end
-	moveCursor(window, start, getLineNumber(window))
-	dinsertText(window, text)
+  xReplace(window, text, 'd')
+end
+
+--- version of replace function that allows for color, by way of hinsertText
+--- @param windowName Optional name of the window to replace on
+--- @param text The text to replace the selection with.
+function hreplace(window, text)
+  xReplace(window, text, 'h')
+end
+
+function resetLabelToolTip(label)
+  return setLabelToolTip(label, "")
 end

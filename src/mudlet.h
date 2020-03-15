@@ -60,6 +60,7 @@
 #include <QVersionNumber>
 #include "edbee/models/textautocompleteprovider.h"
 #include <../3rdparty/qtkeychain/keychain.h>
+#include <optional>
 #include "post_guard.h"
 
 #include <hunspell/hunspell.hxx>
@@ -129,9 +130,9 @@ public:
     int getFontSize(Host*, const QString&);
     QSize calcFontSize(Host* pHost, const QString& windowName);
     bool openWindow(Host*, const QString&, bool loadLayout = true);
-    bool createMiniConsole(Host*, const QString&, int, int, int, int);
-    bool createLabel(Host* pHost, const QString& name, int x, int y, int width, int height, bool fillBg,
-                         bool clickthrough);
+    bool setProfileStyleSheet(Host* pHost, const QString& styleSheet);
+    std::pair<bool, QString> createMiniConsole(Host*, const QString& windowname, const QString& name, int, int, int, int);
+    std::pair<bool, QString> createLabel(Host* pHost, const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
     bool echoWindow(Host*, const QString&, const QString&);
     bool echoLink(Host* pHost, const QString& name, const QString& text, QStringList&, QStringList&, bool customFormat = false);
     void insertLink(Host*, const QString&, const QString&, QStringList&, QStringList&, bool customFormat = false);
@@ -157,6 +158,7 @@ public:
     bool setLabelOnLeave(Host*, const QString&, const QString&, const TEvent&);
     bool moveWindow(Host*, const QString& name, int, int);
     void deleteLine(Host*, const QString& name);
+    std::optional<QSize> getImageSize(const QString& imageLocation);
     bool insertText(Host*, const QString& windowName, const QString&);
     void replace(Host*, const QString& name, const QString&);
     int selectString(Host*, const QString& name, const QString& what, int);
@@ -327,6 +329,12 @@ public:
         // directory for that profile - does NOT end in a '/' unless the
         // supplied profle name does:
         profileHomePath,
+        // Takes one extra argument (profile name) that returns the directory
+        // for the profile game save media files - does NOT end in a '/'
+        profileMediaPath,
+        // Takes two extra arguments (profile name, mediaFileName) that returns
+        // the pathFile name for any media file:
+        profileMediaPathFileName,
         // Takes one extra argument (profile name) that returns the directory
         // for the profile game save XML files - ends in a '/':
         profileXmlFilesPath,
