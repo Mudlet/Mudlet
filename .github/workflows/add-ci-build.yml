@@ -4,9 +4,15 @@ on:
   - push
 
 jobs:
-  update-and-commit-text:
+  compile-mudlet:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@master
+      with:
+        ref: development
+        submodules: true
+        fetch-depth: 0
+
     - name: 'Run CMake with Ninja'
       uses: lukka/run-cmake@v0
       with:
