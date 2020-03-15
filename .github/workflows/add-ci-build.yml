@@ -1,18 +1,15 @@
 name: Build Mudlet in Github Actions CI
-
-  pull_request
+on: pull_request
 
 jobs:
   update-and-commit-text:
-  - name: 'Run CMake with Ninja'
+    runs-on: ubuntu-latest
+    steps:
+    - name: 'Run CMake with Ninja'
       uses: lukka/run-cmake@v0
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
-        cmakeListsTxtPath: '${{ github.workspace }}/cmakesettings.json/CMakeLists.txt'
-        useVcpkgToolchainFile: true
+        cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
+        useVcpkgToolchainFile: false
         buildDirectory: '${{ runner.workspace }}/b//unixmakefiles'
         cmakeAppendedArgs: '-G "Ninja" '
-        # Or build multiple configurations out of a CMakeSettings.json file created with Visual Studio.
-        # cmakeListsOrSettingsJson: CMakeSettingsJson
-        # cmakeSettingsJsonPath: '${{ github.workspace }}/cmakesettings.json/CMakeSettings.json'
-        # configurationRegexFilter: '${{ matrix.configuration }}'
