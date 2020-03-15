@@ -335,6 +335,8 @@ public:
     static int deleteLabel(lua_State*);
     static int setLabelToolTip(lua_State*);
     static int moveWindow(lua_State*);
+    static int openMapWidget(lua_State*);
+    static int closeMapWidget(lua_State*);
     static int setTextFormat(lua_State*);
     static int setBackgroundImage(lua_State*);
     static int setBackgroundColor(lua_State*);
