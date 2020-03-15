@@ -6,7 +6,22 @@ on:
 jobs:
   compile-mudlet:
     runs-on: ubuntu-latest
+    env:
+      qt: "5.14.1" 
     steps:
+    - uses: actions/cache@v1
+      id: cache-qt
+      with:
+        path: ${{runner.workspace}}/Qt/${{env.qt}}
+        key: ${{runner.os}}-qt-${{env.qt}}
+        restore-keys: |
+          ${{runner.os}}-qt-
+    - uses: ouuan/install-qt-action@v2.3.1
+      if: steps.cache-qt.outputs.cache-hit != 'true'
+      with:
+        version: ${{env.qt}}
+        dir: ${{runner.workspace}}
+        
     - uses: actions/checkout@master
       with:
         ref: development
