@@ -465,12 +465,12 @@ END : {
     return true;
 }
 
-bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QString& regex, int regexNumber, int posOffset)
+bool TTrigger::match_begin_of_line_substring(const QString& toMatch, const QString& pattern, int regexNumber, int posOffset)
 {
-    if (toMatch.startsWith(regex)) {
+    if (toMatch.startsWith(pattern)) {
         std::list<std::string> captureList;
         std::list<int> posList;
-        captureList.emplace_back(regex.toUtf8().constData());
+        captureList.emplace_back(pattern.toUtf8().constData());
         posList.push_back(0 + posOffset);
         if (mudlet::debugMode) {
             TDebug(QColor(Qt::darkCyan), QColor(Qt::black)) << "Trigger name=" << mName << "(" << mRegexCodeList.value(regexNumber) << ") matched.\n" >> 0;
