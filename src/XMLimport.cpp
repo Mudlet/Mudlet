@@ -800,10 +800,13 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mFORCE_GA_OFF = (attributes().value("mFORCE_GA_OFF") == "yes");
     pHost->mFORCE_SAVE_ON_EXIT = (attributes().value("mFORCE_SAVE_ON_EXIT") == "yes");
     pHost->mEnableGMCP = (attributes().value("mEnableGMCP") == "yes");
+    pHost->mEnableMSDP = (attributes().value("mEnableMSDP") == "yes");
     if (attributes().hasAttribute(QLatin1String("mEnableMSSP"))) {
         pHost->mEnableMSSP = (attributes().value(QStringLiteral("mEnableMSSP")) == "yes");
     }
-    pHost->mEnableMSDP = (attributes().value("mEnableMSDP") == "yes");
+    if (attributes().hasAttribute(QLatin1String("mEnableMSP"))) {
+        pHost->mEnableMSP = (attributes().value(QStringLiteral("mEnableMSP")) == "yes");
+    }
     pHost->mMapStrongHighlight = (attributes().value("mMapStrongHighlight") == "yes");
     pHost->mLogStatus = (attributes().value("mLogStatus") == "yes");
     pHost->mEnableSpellCheck = (attributes().value("mEnableSpellCheck") == "yes");
@@ -812,6 +815,9 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     pHost->mShowInfo = (attributes().value("mShowInfo") == "yes");
     pHost->mAcceptServerGUI = (attributes().value("mAcceptServerGUI") == "yes");
+    if (attributes().hasAttribute(QLatin1String("mAcceptServerMedia"))) {
+        pHost->mAcceptServerMedia = (attributes().value("mAcceptServerMedia") == "yes");
+    }
     pHost->mMapperUseAntiAlias = (attributes().value("mMapperUseAntiAlias") == "yes");
     if (attributes().hasAttribute(QStringLiteral("mEditorAutoComplete"))) {
         pHost->mEditorAutoComplete = (attributes().value(QStringLiteral("mEditorAutoComplete")) == "yes");
@@ -867,6 +873,32 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->setMayRedefineColors(attributes().value(QLatin1String("mServerMayRedefineColors")).toString() == QLatin1String("yes"));
     } else {
         pHost->setMayRedefineColors(false);
+    }
+
+    if (attributes().hasAttribute(QLatin1String("playerRoomStyle"))) {
+        quint8 styleCode = 0;
+        quint8 outerDiameterPercentage = 0;
+        quint8 innerDiameterPercentage = 0;
+        QColor outerColor;
+        QColor innerColor;
+        // Retrieve current (possibly default) settings:
+        pHost->getPlayerRoomStyleDetails(styleCode, outerDiameterPercentage, innerDiameterPercentage, outerColor, innerColor);
+        // Gather values from file:
+        styleCode = static_cast<quint8>(qBound(0, attributes().value(QLatin1String("playerRoomStyle")).toInt(), 255));
+        outerDiameterPercentage = static_cast<quint8>(qBound(0, attributes().value(QLatin1String("playerRoomOuterDiameter")).toInt(), 255));
+        innerDiameterPercentage = static_cast<quint8>(qBound(0, attributes().value(QLatin1String("playerRoomInnerDiameter")).toInt(), 255));
+        outerColor.setNamedColor(attributes().value(QLatin1String("playerRoomPrimaryColor")).toString());
+        innerColor.setNamedColor(attributes().value(QLatin1String("playerRoomSecondaryColor")).toString());
+        // Store all the settings in the Host instance:
+        pHost->setPlayerRoomStyleDetails(styleCode, outerDiameterPercentage, innerDiameterPercentage, outerColor, innerColor);
+        if (pHost->mpMap) {
+            // And the TMap instance:
+            pHost->mpMap->mPlayerRoomStyle = styleCode;
+            pHost->mpMap->mPlayerRoomOuterDiameterPercentage = outerDiameterPercentage;
+            pHost->mpMap->mPlayerRoomInnerDiameterPercentage = innerDiameterPercentage;
+            pHost->mpMap->mPlayerRoomOuterColor = outerColor;
+            pHost->mpMap->mPlayerRoomInnerColor = innerColor;
+        }
     }
 
     pHost->mFORCE_MXP_NEGOTIATION_OFF = (attributes().value("mFORCE_MXP_NEGOTIATION_OFF") == "yes");
@@ -1059,6 +1091,8 @@ void XMLimport::readHostPackage(Host* pHost)
                 // QDebug() error reporting associated with the following
                 // readUnknownHostElement() for "anything not otherwise parsed"
                 Q_UNUSED(readElementText());
+            } else if (name() == "stopwatches") {
+                readStopWatchMap();
             } else {
                 readUnknownHostElement();
             }
@@ -1755,6 +1789,40 @@ void XMLimport::remapColorsToAnsiNumber(QStringList & patternList, const QList<i
         } else {
             // Must advance the pattern interator if it isn't a colour pattern
             itPattern.next();
+        }
+    }
+}
+
+void XMLimport::readStopWatchMap()
+{
+    while (!atEnd()) {
+        readNext();
+
+        if (isEndElement()) {
+            break;
+        } else if (isStartElement()) {
+            if (name() == "stopwatch") {
+                int watchId = attributes().value("id").toInt();
+                auto pStopWatch = new stopWatch();
+                pStopWatch->setName(attributes().value("name").toString());
+                pStopWatch->mIsPersistent = true;
+                pStopWatch->mIsInitialised = true;
+                if (attributes().value("running") == "yes") {
+                    pStopWatch->mIsRunning = true;
+                    // The stored value is the point in epoch time that the
+                    // stopwatch appears to have been started so we need to
+                    // make that into a QDateTime that is the equivalent:
+                    pStopWatch->mEffectiveStartDateTime.setMSecsSinceEpoch(attributes().value("effectiveStartDateTimeEpochMSecs").toLongLong());
+                } else {
+                    pStopWatch->mIsRunning = false;
+                    pStopWatch->mElapsedTime = attributes().value("elapsedDateTimeMSecs").toLongLong();
+                }
+                mpHost->mStopWatchMap.insert(watchId, pStopWatch);
+                // A dummy read as there should not be any text for this element:
+                readElementText();
+            } else {
+                readUnknownHostElement();
+            }
         }
     }
 }

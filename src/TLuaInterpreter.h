@@ -3,7 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016, 2018-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2016, 2018-2020 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -176,6 +176,7 @@ public:
     static int restartIrc(lua_State*);
     static int showUnzipProgress(lua_State*);
     static int setAppStyleSheet(lua_State*);
+    static int setProfileStyleSheet(lua_State*);
     static int setMainWindowSize(lua_State* L);
     static int registerAnonymousEventHandler(lua_State* L);
     static int setRoomChar(lua_State*);
@@ -321,14 +322,25 @@ public:
     static int getStopWatchTime(lua_State*);
     static int startStopWatch(lua_State*);
     static int resetStopWatch(lua_State*);
+    static int adjustStopWatch(lua_State*);
+    static int deleteStopWatch(lua_State*);
+    static int setStopWatchPersistence(lua_State*);
+    static int getStopWatches(lua_State*);
+    static int setStopWatchName(lua_State*);
+    static int getStopWatchBrokenDownTime(lua_State*);
     static int createMiniConsole(lua_State*);
     static int createLabel(lua_State*);
+    static int createLabelMainWindow(lua_State* L, const QString& labelName);
+    static int createLabelUserWindow(lua_State* L, const QString& windowName, const QString& labelName);
+    static int deleteLabel(lua_State*);
+    static int setLabelToolTip(lua_State*);
     static int moveWindow(lua_State*);
     static int setTextFormat(lua_State*);
     static int setBackgroundImage(lua_State*);
     static int setBackgroundColor(lua_State*);
     static int createButton(lua_State*);
     static int setLabelClickCallback(lua_State*);
+    static int getImageSize(lua_State*);
     static int setLabelDoubleClickCallback(lua_State*);
     static int setLabelReleaseCallback(lua_State*);
     static int setLabelMoveCallback(lua_State*);
@@ -336,6 +348,7 @@ public:
     static int setLabelOnEnter(lua_State*);
     static int setLabelOnLeave(lua_State*);
     static int getMainWindowSize(lua_State*);
+    static int getUserWindowSize(lua_State*);
     static int getMousePosition(lua_State*);
     static int setMiniConsoleFontSize(lua_State*);
     static int setProfileIcon(lua_State*);
@@ -411,6 +424,7 @@ public:
     static int setPopup(lua_State*);
     static int sendATCP(lua_State*);
     static int sendGMCP(lua_State*);
+    static int receiveMSP(lua_State*);
     static int saveMap(lua_State* L);
     static int loadMap(lua_State* L);
     static int setExitStub(lua_State* L);
@@ -513,6 +527,7 @@ public:
     static int postHTTP(lua_State* L);
     static int deleteHTTP(lua_State* L);
     static int getConnectionInfo(lua_State* L);
+    static int unzipAsync(lua_State* L);
     // PLACEMARKER: End of Lua functions declarations
 
 
@@ -538,9 +553,12 @@ private:
     void handleHttpOK(QNetworkReply*);
 #if defined(Q_OS_WIN32)
     void loadUtf8Filenames();
-
 #endif
     void insertColorTableEntry(lua_State*, const QColor&, const QString&);
+    // The last argument is only needed if the third one is true:
+    static void generateElapsedTimeTable(lua_State*, const QStringList&, const bool, const qint64 elapsedTimeMilliSeconds = 0);
+    static std::tuple<bool, int> getWatchId(lua_State*, Host&);
+
 
     QNetworkAccessManager* mpFileDownloader;
     std::list<std::string> mCaptureGroupList;

@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -659,6 +659,24 @@ void TConsole::resizeEvent(QResizeEvent* event)
         mudletEvent.mArgumentList.append(QLatin1String("sysWindowResizeEvent"));
         mudletEvent.mArgumentList.append(QString::number(x - mMainFrameLeftWidth - mMainFrameRightWidth));
         mudletEvent.mArgumentList.append(QString::number(y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height()));
+        mudletEvent.mArgumentList.append(mConsoleName);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(mudletEvent);
+    }
+//create the sysUserWindowResize Event for automatic resizing with Geyser
+    if (mType & (UserWindow)) {
+        TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
+        QString func = "handleWindowResizeEvent";
+        QString n = "WindowResizeEvent";
+        pLua->call(func, n);
+
+        TEvent mudletEvent {};
+        mudletEvent.mArgumentList.append(QLatin1String("sysUserWindowResizeEvent"));
+        mudletEvent.mArgumentList.append(QString::number(x));
+        mudletEvent.mArgumentList.append(QString::number(y));
         mudletEvent.mArgumentList.append(mConsoleName);
         mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -2187,6 +2205,14 @@ TConsole* TConsole::createBuffer(const QString& name)
 
 void TConsole::resetMainConsole()
 {
+    //resetProfile should reset also UserWindows
+    QMutableMapIterator<QString, TDockWidget*> itDockWidget(mDockWidgetMap);
+    while (itDockWidget.hasNext()) {
+        itDockWidget.next();
+        itDockWidget.value()->close();
+        itDockWidget.remove();
+    }
+
     QMutableMapIterator<QString, TConsole*> itSubConsole(mSubConsoleMap);
     while (itSubConsole.hasNext()) {
         itSubConsole.next();
@@ -2204,11 +2230,17 @@ void TConsole::resetMainConsole()
 }
 
 // This is a sub-console overlaid on to the main console
-TConsole* TConsole::createMiniConsole(const QString& name, int x, int y, int width, int height)
+TConsole* TConsole::createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
+    //if pW then add Console as Overlay to the Userwindow
+    auto pW = mDockWidgetMap.value(windowname);
     auto pC = mSubConsoleMap.value(name);
     if (!pC) {
-        pC = new TConsole(mpHost, SubConsole, mpMainFrame);
+        if (!pW) {
+            pC = new TConsole(mpHost, SubConsole, mpMainFrame);
+        } else {
+            pC = new TConsole(mpHost, SubConsole, pW->widget());
+        }
         if (!pC) {
             return nullptr;
         }
@@ -2234,11 +2266,17 @@ TConsole* TConsole::createMiniConsole(const QString& name, int x, int y, int wid
     }
 }
 
-TLabel* TConsole::createLabel(const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
+TLabel* TConsole::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
 {
+    //if pW put Label in Userwindow
     auto pL = mLabelMap.value(name);
+    auto pW = mDockWidgetMap.value(windowname);
     if (!pL) {
-        pL = new TLabel(mpMainFrame);
+        if (!pW) {
+            pL = new TLabel(mpHost, mpMainFrame);
+        } else {
+            pL = new TLabel(mpHost, pW->widget());
+        }
         mLabelMap[name] = pL;
         pL->setObjectName(name);
         pL->setAutoFillBackground(fillBackground);
@@ -2253,13 +2291,72 @@ TLabel* TConsole::createLabel(const QString& name, int x, int y, int width, int 
     }
 }
 
-void TConsole::createMapper(int x, int y, int width, int height)
+std::pair<bool, QString> TConsole::deleteLabel(const QString& name)
 {
+    if (name.isEmpty()) {
+        return {false, QLatin1String("a label cannot have an empty string as its name")};
+    }
+
+    auto pL = mLabelMap.take(name);
+    if (pL) {
+        // Using deleteLater() rather than delete as it seems a safer option
+        // given that this item is likely to be linked to some events and
+        // suchlike:
+        pL->deleteLater();
+
+        // It remains to be seen if the label has "gone" as a result of the
+        // above by the time the Lua subsystem processes the following:
+        TEvent mudletEvent{};
+        mudletEvent.mArgumentList.append(QLatin1String("sysLabelDeleted"));
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mudletEvent.mArgumentList.append(name);
+        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(mudletEvent);
+        return {true, QString()};
+    }
+
+    // Message is of the form needed for a Lua API function call run-time error
+    return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
+}
+
+std::pair<bool, QString> TConsole::setLabelToolTip(const QString& name, const QString& text, double duration)
+{
+    if (name.isEmpty()) {
+        return {false, QLatin1String("a label cannot have an empty string as its name")};
+    }
+
+    auto pL = mLabelMap.value(name);
+    if (pL) {
+        duration = duration * 1000;
+        pL->setToolTip(text);
+        pL->setToolTipDuration(duration);
+        return {true, QString()};
+    }
+
+    // Message is of the form needed for a Lua API function call run-time error
+    return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
+}
+
+std::pair<bool, QString> TConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
+{
+    auto pW = mDockWidgetMap.value(windowname);
+    auto pM = mpHost->mpDockableMapWidget;
+    if (pM) {
+        return {false, "cannot create mapper. Do you already use a map window?"};
+    }
     if (!mpMapper) {
-        mpMapper = new dlgMapper(mpMainFrame, mpHost, mpHost->mpMap.data());
-#if defined(INCLUDE_3DMAPPER)
-        mpHost->mpMap->mpM = mpMapper->glWidget;
-#endif
+        // Arrange for TMap member values to be copied from the Host masters so they
+        // are in place when the 2D mapper is created:
+        mpHost->getPlayerRoomStyleDetails(mpHost->mpMap->mPlayerRoomStyle,
+                                          mpHost->mpMap->mPlayerRoomOuterDiameterPercentage,
+                                          mpHost->mpMap->mPlayerRoomInnerDiameterPercentage,
+                                          mpHost->mpMap->mPlayerRoomOuterColor,
+                                          mpHost->mpMap->mPlayerRoomInnerColor);
+        if (!pW) {
+            mpMapper = new dlgMapper(mpMainFrame, mpHost, mpHost->mpMap.data());
+        } else {
+            mpMapper = new dlgMapper(pW->widget(), mpHost, mpHost->mpMap.data());
+        }
         mpHost->mpMap->mpHost = mpHost;
         mpHost->mpMap->mpMapper = mpMapper;
         qDebug() << "TConsole::createMapper() - restore map case 2.";
@@ -2275,7 +2372,7 @@ void TConsole::createMapper(int x, int y, int width, int height)
 
         mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
 
-        TEvent mapOpenEvent {};
+        TEvent mapOpenEvent{};
         mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
         mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(mapOpenEvent);
@@ -2298,23 +2395,7 @@ void TConsole::createMapper(int x, int y, int width, int height)
 #else
     mpMapper->show();
 #endif
-}
-
-bool TConsole::createButton(const QString& name, int x, int y, int width, int height, bool fillBackground)
-{
-    if (!mLabelMap.contains(name)) {
-        auto pC = new TLabel(mpMainFrame);
-        mLabelMap[name] = pC;
-        pC->setObjectName(name);
-        pC->setAutoFillBackground(fillBackground);
-        pC->resize(width, height);
-        pC->setContentsMargins(0, 0, 0, 0);
-        pC->move(x, y);
-        pC->show();
-        return true;
-    } else {
-        return false;
-    }
+    return {true, QString()};
 }
 
 bool TConsole::setBackgroundImage(const QString& name, const QString& path)
@@ -2665,6 +2746,17 @@ QSize TConsole::getMainWindowSize() const
     QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
     return mainWindowSize;
 }
+//getUserWindowSize for resizing in Geyser
+QSize TConsole::getUserWindowSize(const QString& windowname) const
+{
+    auto pW = mDockWidgetMap.value(windowname);
+    if (pW){
+        QSize windowSize = pW->widget()->size();
+        QSize userWindowSize(windowSize.width(), windowSize.height());
+        return userWindowSize;
+    }
+    return getMainWindowSize();
+}
 
 void TConsole::slot_reloadMap(QList<QString> profilesList)
 {
@@ -2857,4 +2949,3 @@ void TConsole::setProfileName(const QString& newName)
         pC->setProfileName(newName);
     }
 }
-

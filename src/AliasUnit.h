@@ -49,6 +49,7 @@ public:
     bool enableAlias(const QString&);
     bool disableAlias(const QString&);
     bool killAlias(const QString& name);
+    void removeAllTempAliases();
     bool registerAlias(TAlias* pT);
     void unregisterAlias(TAlias* pT);
     void uninstall(const QString&);
