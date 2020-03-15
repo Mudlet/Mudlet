@@ -5,9 +5,14 @@ on:
 
 jobs:
   compile-mudlet:
-    runs-on: ubuntu-latest
+    name: Compile on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     env:
-      qt: "5.14.1" 
+      qt: "5.14.1"
+
     steps:
     - uses: actions/cache@v1
       id: cache-qt
