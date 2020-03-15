@@ -2309,9 +2309,10 @@ bool dlgConnectionProfiles::validateProfile()
             if (!allowedChars.contains(name.at(i))) {
                 notificationAreaIconLabelWarning->show();
                 notificationAreaMessageBox->setText(
-                        QStringLiteral("%1\n%2").arg(
-                            notificationAreaMessageBox->text(), 
-                            QStringLiteral("%1\n%2\n").arg(tr("The %1 character is not permitted. Use one of the following:").arg(name.at(i)), allowedChars)));
+                    QStringLiteral("%1\n%2\n%3\n").arg(
+                        notificationAreaMessageBox->text(), 
+                        tr("The %1 character is not permitted. Use one of the following:").arg(name.at(i)), 
+                        allowedChars));
                 name.replace(name.at(i--), QString());
                 profile_name_entry->setText(name);
                 validName = false;
