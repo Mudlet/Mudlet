@@ -5247,7 +5247,9 @@ Count</source>
       <source>Port number must be above zero and below 65535.
 
 </source>
-      <translation type="unfinished"/>
+      <translation>端口号必须在0 ~ 65535之间.
+
+</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2356"/>
