@@ -325,6 +325,10 @@ public:
     void setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter = 120, const quint8 innerDiameter = 70, const QColor& outerColor = QColor(), const QColor& innerColor = QColor());
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
 
+    // Apply a style-sheet set from this profile's Lua interpreter to THIS
+    // profile's widgets and some global application ones:
+    void setProfileStyleSheet(const QString&);
+
     // Apply a style-sheet set from this profile's Lua interpreter - will be
     // combined with those from:
     // * other profiles
@@ -560,6 +564,13 @@ public:
     // An invalid/null value is treated as the "show all"/inactive case:
     QTime mTimerDebugOutputSuppressionInterval;
     std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
+    // The profile specific style sheet applied to many widgets (some outside of
+    // the profile itself) by the setProfileStyleSheet(...) Lua API call - not
+    // to be confused with mProfileAppStyleSheet which is the entry made by the
+    // setAppStyleSheet(...) and which is combined with any other profile's
+    // similar entries, any command line provided style-sheet file and (in the
+    // future) any that Mudlet itself might provide:
+    QString mProfileStyleSheet;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous

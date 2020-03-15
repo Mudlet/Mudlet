@@ -28,6 +28,7 @@
 #include "LuaInterface.h"
 #include "TConsole.h"
 #include "TCommandLine.h"
+#include "TDockWidget.h"
 #include "TEvent.h"
 #include "TMap.h"
 #include "TMedia.h"
@@ -35,6 +36,7 @@
 #include "TScript.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
+#include "dlgNotepad.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
@@ -896,7 +898,11 @@ QPair<QString, QString> Host::getSearchEngine()
 // cTelnet::sendData(...) call:
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 {
-    if (wantPrint && (! mIsRemoteEchoingActive) && mPrintCommand) {
+#if defined(Q_OS_MACOS)
+    // Fix for MacOS flickering caused by upgrade to QOpenGLWidget
+    mpConsole->finalize();
+#endif
+    if (wantPrint && (!mIsRemoteEchoingActive) && mPrintCommand) {
         mInsertedMissingLF = true;
         if (!cmd.isEmpty() || !mUSE_IRE_DRIVER_BUGFIX || mUSE_FORCE_LF_AFTER_PROMPT) {
             // used to print the terminal <LF> that terminates a telnet command
@@ -2473,6 +2479,29 @@ void Host::getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, q
     locker.unlock();
 }
 
+// This handles the profile specific part of the setProfileStyleSheet call from
+// the Lua API - via mudlet::setProfileStyleSheet(...):
+void Host::setProfileStyleSheet(const QString& styleSheet)
+{
+    mProfileStyleSheet = styleSheet;
+    mpConsole->setStyleSheet(styleSheet);
+    mpEditorDialog->setStyleSheet(styleSheet);
+
+    if (mpNotePad) {
+        mpNotePad->setStyleSheet(styleSheet);
+        mpNotePad->notesEdit->setStyleSheet(styleSheet);
+    }
+
+    if (mpDockableMapWidget) {
+        mpDockableMapWidget->setStyleSheet(styleSheet);
+    }
+
+    for (auto& dockWidget : mpConsole->mDockWidgetMap) {
+        dockWidget->setStyleSheet(styleSheet);
+    }
+}
+
+// This handles the global setAppStyleSheet call from the Lua API
 bool Host::setProfileAppStyleSheet(const QString& styleSheet, const bool isFromPreferences)
 {
     QMutexLocker locker(& mLock);

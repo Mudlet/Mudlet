@@ -27,6 +27,7 @@
 
 #include "pre_guard.h"
 #include <QDir>
+#include <QTextCodec>
 #include "post_guard.h"
 
 using namespace std::chrono;

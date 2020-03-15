@@ -220,6 +220,9 @@ cTelnet::~cTelnet()
 #endif
         }
     }
+    if (mpComposer) {
+        mpComposer->deleteLater();
+    }
     socket.deleteLater();
 }
 

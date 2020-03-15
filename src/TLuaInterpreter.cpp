@@ -14,7 +14,7 @@
 *                                                                         *
 *   This program is distributed in the hope that it will be useful,       *
 *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the          *
 *   GNU General Public License for more details.                          *
 *                                                                         *
 *   You should have received a copy of the GNU General Public License     *
@@ -1969,8 +1969,11 @@ int TLuaInterpreter::createStopWatch(lua_State* L)
         } else if (lua_type(L, s) == LUA_TSTRING) {
             autoStart = false;
             name = QString::fromUtf8(lua_tostring(L, 1));
+        } else if (lua_type(L, s) == LUA_TNIL) {
+            ; // fallthrough for compatibility with old-style stopwatches in case createStopWatch(nil) is passed
+            // note that 'nil' will still count towards the stack's gettop amount
         } else {
-            lua_pushfstring(L, "createStopWatch: bad argument #%d type (name as string or autostart as boolean are optional, got %s!)", luaL_typename(L, s));
+            lua_pushfstring(L, "createStopWatch: bad argument #%d type (name as string or autostart as boolean are optional, got %s!)", s, luaL_typename(L, s));
             return lua_error(L);
         }
 
@@ -1978,7 +1981,7 @@ int TLuaInterpreter::createStopWatch(lua_State* L)
             if (lua_type(L, ++s) == LUA_TBOOLEAN) {
                 autoStart = lua_toboolean(L, s);
             } else {
-                lua_pushfstring(L, "createStopWatch: bad argument #%d type (autostart as boolean is optional, got %s!)", luaL_typename(L, s));
+                lua_pushfstring(L, "createStopWatch: bad argument #%d type (autostart as boolean is optional, got %s!)", s,  luaL_typename(L, s));
                 return lua_error(L);
             }
         }
@@ -3610,97 +3613,159 @@ int TLuaInterpreter::createMiniConsole(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createLabel
 int TLuaInterpreter::createLabel(lua_State* L)
 {
-    std::string luaSendText = "";
-    std::string luaSendWindow = "";
-    int x, y, width, height, counter;
-    counter = 3;
+    QString labelName;
+    QString windowName = QLatin1String("main");
 
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "createLabel: bad argument #1 type (label name as string expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
+    if (lua_type(L, 1) != LUA_TSTRING) {
+        lua_pushfstring(L, "createLabel: bad argument #1 type (label or parent window name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else if ((lua_type(L, 1) == LUA_TSTRING) && (lua_type(L, 2) == LUA_TSTRING)) {
+        windowName = QString::fromUtf8(lua_tostring(L, 1));
+        labelName = QString::fromUtf8(lua_tostring(L, 2));
+        createLabelUserWindow(L, windowName, labelName);
+    } else if ((lua_type(L, 1) == LUA_TSTRING) && (lua_type(L, 2) == LUA_TNUMBER)) {
+        labelName = QString::fromUtf8(lua_tostring(L, 1));
+        createLabelMainWindow(L, labelName);
     } else {
-        luaSendWindow = lua_tostring(L, 1);
-        if (luaSendWindow == "main") {
-            // QString::compare is zero for a match on the "default"
-            // case so clear the variable - to flag this as the main
-            // window case - as is the case for an empty string
-            luaSendWindow.clear();
-        }
+        lua_pushfstring(L, "createLabel: bad argument #2 type (label name as string or label x-coordinate as number expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
     }
 
-    if (!lua_isnumber(L, 2)) {
-        if (!lua_isstring(L, 2)) {
-            lua_pushfstring(L, "createLabel: bad argument #2 type (label name as string expected, got %s!)", luaL_typename(L, 2));
-            lua_error(L);
-            return 1;
-        }
-        luaSendText = lua_tostring(L, 2);
-    } else {
-        luaSendText = luaSendWindow;
-        luaSendWindow.clear();
-        counter = 2;
-    }
+    return 1;
+}
 
-    bool fillBackground, clickthrough = false;
-    if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createLabel: bad argument #%d type (label x-coordinate as number expected, got %s!)", counter, luaL_typename(L, counter));
-        lua_error(L);
-        return 1;
+// Internal Function createLabel in an UserWindow
+int TLuaInterpreter::createLabelUserWindow(lua_State* L, const QString& windowName, const QString& labelName)
+{
+    int n = lua_gettop(L);
+    int x = 0;
+    if (!lua_isnumber(L, 3)) {
+        lua_pushfstring(L, "createLabel: bad argument #3 type (label x-coordinate as number expected, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
     } else {
-        x = lua_tonumber(L, counter);
-        counter++;
+        x = lua_tonumber(L, 3);
     }
-
-    if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createLabel: bad argument #%d type (label y-coordinate as number expected, got %s!)", counter, luaL_typename(L, counter));
-        lua_error(L);
-        return 1;
+    int y = 0;
+    if (!lua_isnumber(L, 4)) {
+        lua_pushfstring(L, "createLabel: bad argument #4 type (label y-coordinate as number expected, got %s!)", luaL_typename(L, 4));
+        return lua_error(L);
     } else {
-        y = lua_tonumber(L, counter);
-        counter++;
+        y = lua_tonumber(L, 4);
     }
-
-    if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createLabel: bad argument #%d type (label width as number expected, got %s!)", counter, luaL_typename(L, counter));
-        lua_error(L);
-        return 1;
+    int width = 0;
+    if (!lua_isnumber(L, 5)) {
+        lua_pushfstring(L, "createLabel: bad argument #5 type (label width as number expected, got %s!)", luaL_typename(L, 5));
+        return lua_error(L);
     } else {
-        width = lua_tonumber(L, counter);
-        counter++;
+        width = lua_tonumber(L, 5);
     }
-
-    if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createLabel: bad argument #%d type (label height as number expected, got %s!)", counter, luaL_typename(L, counter));
-        lua_error(L);
-        return 1;
+    int height = 0;
+    if (!lua_isnumber(L, 6)) {
+        lua_pushfstring(L, "createLabel: bad argument #6 type (label height as number expected, got %s!)", luaL_typename(L, 6));
+        return lua_error(L);
     } else {
-        height = lua_tonumber(L, counter);
-        counter++;
+        height = lua_tonumber(L, 6);
     }
-
-    if (!lua_isnumber(L, counter)) {
-        lua_pushfstring(L, "createLabel: bad argument #%d type (label fillBackground as boolean/number (0/1) expected, got %s!)", counter, luaL_typename(L, counter));
-        lua_error(L);
-        return 1;
+    bool fillBackground = false;
+    if ((!lua_isnumber(L, 7)) && (!lua_isboolean(L, 7))) {
+        lua_pushfstring(L, "createLabel: bad argument #7 type (label fillBackground as boolean/number (0/1) expected, got %s!)", luaL_typename(L, 7));
+        return lua_error(L);
     } else {
-        fillBackground = lua_toboolean(L, counter);
-        counter++;
-    }
-    if (lua_gettop(L) > counter) {
-        counter++;
-        if (!lua_isboolean(L, counter)) {
-            lua_pushfstring(L, "createLabel: bad argument #%d type (label clickthrough as boolean/number (0/1) expected, got %s!)", counter, luaL_typename(L, counter));
-            lua_error(L);
-            return 1;
+        if (lua_isboolean(L, 7)) {
+            fillBackground = lua_toboolean(L, 7);
         } else {
-            clickthrough = lua_toboolean(L, counter);
+            fillBackground = (lua_tointeger(L, 7) != 0);
         }
     }
+    bool clickthrough = false;
+    if (n >= 8) {
+        if ((!lua_isnumber(L, 8)) && (!lua_isboolean(L, 8))) {
+            lua_pushfstring(L, "createLabel: bad argument #8 type (label clickthrough as boolean/number (0/1) expected, got %s!)", luaL_typename(L, 8));
+            return lua_error(L);
+        } else {
+            if (lua_isboolean(L, 8)) {
+                clickthrough = lua_toboolean(L, 8);
+            } else {
+                clickthrough = (lua_tointeger(L, 8) != 0);
+            }
+        }
+    }
+
     Host& host = getHostFromLua(L);
-    QString name(luaSendText.c_str());
-    QString windowname(luaSendWindow.c_str());
-    if (auto [success, message] = mudlet::self()->createLabel(&host, windowname, name, x, y, width, height, fillBackground, clickthrough); !success) {
+    if (auto [success, message] = mudlet::self()->createLabel(&host, windowName, labelName, x, y, width, height, fillBackground, clickthrough); !success) {
+        // We should, perhaps be returning a nil here but the published API
+        // says the function returns true or false and we cannot change that now
+        lua_pushboolean(L, false);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Internal Function create Label in MainWindow
+int TLuaInterpreter::createLabelMainWindow(lua_State* L, const QString& labelName)
+{
+    QString windowName = QLatin1String("main");
+    int n = lua_gettop(L);
+    int x = 0;
+    if (!lua_isnumber(L, 2)) {
+        lua_pushfstring(L, "createLabel: bad argument #2 type (label x-coordinate as number expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    } else {
+        x = lua_tonumber(L, 2);
+    }
+    int y = 0;
+    if (!lua_isnumber(L, 3)) {
+        lua_pushfstring(L, "createLabel: bad argument #3 type (label y-coordinate as number expected, got %s!)", luaL_typename(L, 3));
+        return lua_error(L);
+    } else {
+        y = lua_tonumber(L, 3);
+    }
+    int width = 0;
+    if (!lua_isnumber(L, 4)) {
+        lua_pushfstring(L, "createLabel: bad argument #4 type (label width as number expected, got %s!)", luaL_typename(L, 4));
+        return lua_error(L);
+    } else {
+        width = lua_tonumber(L, 4);
+    }
+    int height = 0;
+    if (!lua_isnumber(L, 5)) {
+        lua_pushfstring(L, "createLabel: bad argument #5 type (label height as number expected, got %s!)", luaL_typename(L, 5));
+        return lua_error(L);
+    } else {
+        height = lua_tonumber(L, 5);
+    }
+    bool fillBackground = false;
+    if ((!lua_isnumber(L, 6)) && (!lua_isboolean(L, 6))) {
+        lua_pushfstring(L, "createLabel: bad argument #6 type (label fillBackground as boolean/number (0/1) expected, got %s!)", luaL_typename(L, 6));
+        return lua_error(L);
+    } else {
+        if (lua_isboolean(L, 6)) {
+            fillBackground = lua_toboolean(L, 6);
+        } else {
+            fillBackground = (lua_tointeger(L, 6) != 0);
+        }
+    }
+    bool clickthrough = false;
+    if (n >= 7) {
+        if ((!lua_isnumber(L, 7)) && (!lua_isboolean(L, 7))) {
+            lua_pushfstring(L, "createLabel: bad argument #7 type (label clickthrough as boolean/number (0/1) expected, got %s!)", luaL_typename(L, 7));
+            return lua_error(L);
+        } else {
+            if (lua_isboolean(L, 7)) {
+                clickthrough = lua_toboolean(L, 7);
+            } else {
+                clickthrough = (lua_tointeger(L, 7) != 0);
+            }
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = mudlet::self()->createLabel(&host, windowName, labelName, x, y, width, height, fillBackground, clickthrough); !success) {
+        // We should, perhaps be returning a nil here but the published API
+        // says the function returns true or false and we cannot change that now
         lua_pushboolean(L, false);
         lua_pushfstring(L, message.toUtf8().constData());
         return 2;
@@ -3761,16 +3826,18 @@ int TLuaInterpreter::setLabelToolTip(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMapper
 int TLuaInterpreter::createMapper(lua_State* L)
 {
+    int n = lua_gettop(L);
     std::string luaSendWindow = "";
     int x, y, width, height, counter;
     counter = 1;
-    if (!lua_isstring(L, 1) && !lua_isnumber(L, 1)) {
-        lua_pushfstring(L, "createMapper: bad argument #1 type (number or string expected, got %s!)", luaL_typename(L, 1));
-        lua_error(L);
-        return 1;
-    } else if (!lua_isnumber(L, 1)) {
+
+    if (n > 4 && lua_type(L, 1) != LUA_TSTRING) {
+        lua_pushfstring(L, "createMapper: bad argument #1 type (parent window name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    if (n > 4 && lua_type(L, 1) == LUA_TSTRING) {
         luaSendWindow = lua_tostring(L, 1);
-        counter = 2;
+        counter++;
         if (luaSendWindow == "main") {
             // QString::compare is zero for a match on the "default"
             // case so clear the variable - to flag this as the main
@@ -3778,41 +3845,44 @@ int TLuaInterpreter::createMapper(lua_State* L)
             luaSendWindow.clear();
         }
     }
+
     if (!lua_isnumber(L, counter)) {
         lua_pushfstring(L, "createMapper: bad argument #%d type (mapper x-coordinate as number expected, got %s!)", counter, luaL_typename(L, counter));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         x = lua_tonumber(L, counter);
         counter++;
     }
     if (!lua_isnumber(L, counter)) {
         lua_pushfstring(L, "createMapper: bad argument #%d type (mapper y-coordinate as number expected, got %s!)", counter, luaL_typename(L, counter));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         y = lua_tonumber(L, counter);
         counter++;
     }
     if (!lua_isnumber(L, counter)) {
         lua_pushfstring(L, "createMapper: bad argument #%d type (mapper width as number expected, got %s!)", counter, luaL_typename(L, counter));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         width = lua_tonumber(L, counter);
         counter++;
     }
     if (!lua_isnumber(L, counter)) {
         lua_pushfstring(L, "createMapper: bad argument #%d type (mapper height as number expected, got %s!)", counter, luaL_typename(L, counter));
-        lua_error(L);
-        return 1;
+        return lua_error(L);
     } else {
         height = lua_tonumber(L, counter);
     }
     Host& host = getHostFromLua(L);
     QString windowname(luaSendWindow.c_str());
-    host.mpConsole->createMapper(windowname, x, y, width, height);
-    return 0;
+    if (auto [success, message] = host.mpConsole->createMapper(windowname, x, y, width, height); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createButton
@@ -6244,6 +6314,21 @@ int TLuaInterpreter::getAppStyleSheet(lua_State* L)
         Host& host = getHostFromLua(L);
         lua_pushstring(L, host.getProfileAppStyleSheet().toUtf8().constData());
     }
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setProfileStyleSheet
+int TLuaInterpreter::setProfileStyleSheet(lua_State* L)
+{
+    QString styleSheet;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setProfileStyleSheet: bad argument #1 type (style sheet as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    styleSheet = QString::fromUtf8(lua_tostring(L, 1));
+
+    Host& host = getHostFromLua(L);
+    lua_pushboolean(L, mudlet::self()->setProfileStyleSheet(&host, styleSheet));
     return 1;
 }
 
@@ -16175,6 +16260,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize);
     lua_register(pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet);
     lua_register(pGlobalLua, "getAppStyleSheet", TLuaInterpreter::getAppStyleSheet);
+    lua_register(pGlobalLua, "setProfileStyleSheet", TLuaInterpreter::setProfileStyleSheet);
     lua_register(pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc);
     lua_register(pGlobalLua, "getIrcNick", TLuaInterpreter::getIrcNick);
     lua_register(pGlobalLua, "getIrcServer", TLuaInterpreter::getIrcServer);

@@ -680,9 +680,6 @@
             <property name="maxVisibleItems">
              <number>20</number>
             </property>
-            <property name="fontFilters">
-             <set>QFontComboBox::MonospacedFonts</set>
-            </property>
            </widget>
           </item>
           <item row="0" column="2">
@@ -695,7 +692,7 @@
           <item row="0" column="3">
            <widget class="QComboBox" name="fontSize"/>
           </item>
-          <item row="1" column="0" colspan="4">
+          <item row="1" column="0" colspan="2">
            <widget class="QLabel" name="label_invalidFontError">
             <property name="font">
              <font>
@@ -707,13 +704,25 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="4">
+          <item row="3" column="0">
            <widget class="QCheckBox" name="mNoAntiAlias">
             <property name="toolTip">
              <string>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </string>
             </property>
             <property name="text">
              <string>Enable anti-aliasing</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="4">
+           <widget class="QLabel" name="label_variableWidthFontWarning">
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>This font is not monospace, which may not be ideal for playing some text games: you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
