@@ -5167,7 +5167,7 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2335"/>
       <source>You have to enter a number. Other characters are not permitted.</source>
-      <translation>Sie müssen eine Zahl eingeben. Andere Zeichen sind nicht zulässig.</translation>
+      <translation>Du musst eine Zahl eingeben. Andere Zeichen sind nicht erlaubt.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2324"/>
@@ -5228,12 +5228,12 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1250"/>
       <source>Discord integration not available on this platform</source>
-      <translation>Discord Integration nicht verfügbar auf dieser Plattform</translation>
+      <translation>Discord Integration ist auf dieser Plattform nicht verfügbar</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1256"/>
       <source>Discord integration not supported by game</source>
-      <translation>Discord Integration nicht unterstützt durch dieses Spiel</translation>
+      <translation>Discord Integration wird durch dieses Spiel nicht unterstützt</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1259"/>
@@ -5267,7 +5267,7 @@ Nutzungen</translation>
       <source>The %1 character is not permitted. Use one of the following:
 &quot;%2&quot;.
 </source>
-      <translation>Das Zeichen %1 ist nicht gestattet. Verwenden Sie eines der folgenden:
+      <translation>Das Zeichen %1 ist nicht erlaubt. Verwende eines der folgenden:
 &quot;%2&quot;.
 </translation>
     </message>
@@ -5279,12 +5279,12 @@ Nutzungen</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2423"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before loading.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Bitte setze einen gültigen Profilnamen sowie Adresse und Port des Spielservers vor dem Laden.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Bitte stelle vor dem Laden einen gültigen Profilnamen ein, sowie Adresse und Port des Spielservers.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2427"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before connecting.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Bitte setze einen gültigen Profilnamen sowie Adresse und Port des Spielservers vor dem Verbinden.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Bitte stelle vor dem Verbinden einen gültigen Profilnamen ein, sowie Adresse und Port des Spielservers.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2479"/>
