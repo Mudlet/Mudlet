@@ -3437,7 +3437,7 @@ void mudlet::show_options_dialog(QString tab)
     // case {when there is no profile loaded}:
     if (pHost) {
         mpProfilePreferencesDlgMap.value(pHost)->setStyleSheet(pHost->mProfileStyleSheet);
-    }        mpProfilePreferencesDlgMap.value(pHost)->setStyleSheet(pHost->mProfileStyleSheet);
+    }
     mpProfilePreferencesDlgMap.value(pHost)->setTab(tab);
     mpProfilePreferencesDlgMap.value(pHost)->raise();
     mpProfilePreferencesDlgMap.value(pHost)->show();
