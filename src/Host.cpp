@@ -905,7 +905,7 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
             mpConsole->printCommand(cmd);
         }
         //If 3D Mapper is active mpConsole->update(); seems to be superfluous and even cause problems in MacOS
-        if (!mpMap->mpMapper->glWidget) {
+        if (!mpMap->mpMapper || !mpMap->mpMapper->glWidget) {
             mpConsole->update();
         }
     }
