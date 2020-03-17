@@ -8,7 +8,9 @@ windeployqt.exe --release mudlet.exe
 
 Remove-Item * -include *.cpp, *.o
 
-if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build')) {
+$public_test_build = if ($Env:MUDLET_VERSION_BUILD) { $public_test_build } else { $FALSE }
+
+if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
   cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip "%APPVEYOR_BUILD_FOLDER%\src\release\*"
 
   Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
@@ -18,7 +20,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Env:MUDLET_VERSION_BUILD.Sta
 
   $DEPLOY_URL = Get-Content -Path $outFile -Raw
 } else {
-  if ($Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build')) {
+  if ($public_test_build) {
     Write-Output "=== Creating a Public Test build ==="
   } else {
     Write-Output "=== Creating a Release build ==="
@@ -45,14 +47,14 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Env:MUDLET_VERSION_BUILD.Sta
   Move-Item $Env:APPVEYOR_BUILD_FOLDER\src\release\* $SQUIRRELWINBIN
 
   Write-Output "=== Creating Nuget package ==="
-  if ($Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build')) {
+  if ($public_test_build) {
     # allow public test builds to be installed side by side with the release builds
     (Get-Content C:\projects\installers\windows\mudlet.nuspec).replace('<id>Mudlet</id>', '<id>Mudlet.PublicTestBuild</id>') | Set-Content C:\projects\installers\windows\mudlet.nuspec
   }
   nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
 
   Write-Output "=== Creating installers from Nuget package ==="
-  if ($Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build')) {
+  if ($public_test_build) {
     $TestBuildString = ".PublicTestBuild"
   } else {
     $TestBuildString = ""
@@ -72,9 +74,9 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Env:MUDLET_VERSION_BUILD.Sta
   Tree C:\projects\squirreloutput
   Write-Output "=== Done printing"
 
-  if ($Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build')) {
+  if ($public_test_build) {
     Write-Output "=== Uploading public test build to make.mudlet.org ==="
-    Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-ptb-windows.zip";
+    Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
     Set-Variable -Name "inFile" -Value "${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe";
     Set-Variable -Name "outFile" -Value "upload-location.txt";
     Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
@@ -116,8 +118,9 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Env:MUDLET_VERSION_BUILD.Sta
   dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${Env:DBLSQD_USER}" -p "${Env:DBLSQD_PASS}"
 
   Write-Output "=== Registering release with Dblsqd ==="
-  if ($Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build')) {
-    dblsqd push -a mudlet -c public-test-build -r "${Env:VERSION}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
+  if ($public_test_build) {
+    dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${Env:MUDLET_VERSION_BUILD}"
+    dblsqd push -a mudlet -c public-test-build -r "${Env:MUDLET_VERSION_BUILD}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
   } else {
     dblsqd push -a mudlet -c release -r "${Env:VERSION}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
   }

@@ -380,6 +380,23 @@ function disableGaugeClickthrough(gaugeName)
   disableClickthrough(gaugeName .. "_text")
 end
 
+--- Set gauge to have a tooltip
+--- @param gaugeName
+--- @param text the tooltip text
+--- @param duration tooltip duration
+function setGaugeToolTip(gaugeName, text, duration)
+  duration = duration or 0
+  assert(gaugesTable[gaugeName], "setGaugeToolTip: no such gauge exists.")
+  setLabelToolTip(gaugeName .. "_text", text, duration)
+end
+
+--- Reset gauge tooltip
+--- @param gaugeName
+function resetGaugeToolTip(gaugeName)
+  assert(gaugesTable[gaugeName], "resetGaugeToolTip: no such gauge exists.")
+  resetLabelToolTip(gaugeName .. "_text")
+end
+
 --- Pads a hex number to ensure a minimum of 2 digits.
 ---
 --- @usage Following command will returns "F0".
@@ -560,8 +577,17 @@ end
 ---   <pre>
 ---   createConsole("myConsoleWindow", 8, 80, 20, 200, 400)
 ---   </pre>
-function createConsole(consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
-  createMiniConsole(consoleName, 0, 0, 1, 1)
+function createConsole(windowname, consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)
+  if Ypos == nil then
+    Ypos = Xpos
+    Xpos = numberOfLines
+    numberOfLines = charsPerLine
+    charsPerLine = fontSize
+    fontSize = consoleName
+    consoleName = windowname
+    windowname = "main"
+  end
+  createMiniConsole(windowname, consoleName, 0, 0, 1, 1)
   setMiniConsoleFontSize(consoleName, fontSize)
   local x, y = calcFontSize( fontSize )
   resizeWindow(consoleName, x * charsPerLine, y * numberOfLines)
@@ -1799,4 +1825,22 @@ end
 --- @param text The text to replace the selection with.
 function hreplace(window, text)
   xReplace(window, text, 'h')
+end
+
+function resetLabelToolTip(label)
+  return setLabelToolTip(label, "")
+end
+
+-- functions to move and resize Map Widget
+-- be aware that moving or resizing Map Widget puts the Map Widget in floating state
+function moveMapWidget(x, y)
+  assert(type(x) == 'number', 'moveMapWidget: bad argument #1 type (x-coordinate as number expected, got '..type(x)..'!)')
+  assert(type(y) == 'number', 'moveMapWidget: bad argument #2 type (y-coordinate as number expected, got '..type(y)..'!)')
+  openMapWidget(x, y)
+end
+
+function resizeMapWidget(width, height)
+  assert(type(width) == 'number', 'resizeMapWidget: bad argument #1 type (width as number expected, got '..type(width)..'!)')
+  assert(type(height) == 'number', 'resizeMapWidget: bad argument #2 type (height as number expected, got '..type(height)..'!)')
+  openMapWidget(-1, -1, width, height)
 end

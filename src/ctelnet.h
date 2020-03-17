@@ -187,7 +187,7 @@ public:
     bool mAlertOnNewData;
     bool mGA_Driver;
     bool mFORCE_GA_OFF;
-    dlgComposer* mpComposer;
+    QPointer<dlgComposer> mpComposer;
     QNetworkAccessManager* mpDownloader;
     QProgressDialog* mpProgressDialog;
     QString mServerPackage;

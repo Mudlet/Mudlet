@@ -1552,6 +1552,9 @@ void mudlet::slot_tab_changed(int tabID)
         QSize s = QSize(x, y);
         QResizeEvent event(s, s);
         QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
+        mpMainToolBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
+        mpTabBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
+        menuBar()->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
     } else {
         mpCurrentActiveHost = nullptr;
         return;
@@ -1989,6 +1992,7 @@ bool mudlet::openWindow(Host* pHost, const QString& name, bool loadLayout)
         console->layerCommandLine->hide();
         console->mpScrollBar->hide();
         pHost->mpConsole->mSubConsoleMap.insert(name, console);
+        dockwidget->setStyleSheet(pHost->mProfileStyleSheet);
         // TODO: Allow user to specify alternate dock locations - and for it to be floating and not docked initially!
         addDockWidget(Qt::RightDockWidgetArea, dockwidget);
 
@@ -2087,6 +2091,39 @@ bool mudlet::createBuffer(Host* pHost, const QString& name)
     }
     return false;
 }
+
+bool mudlet::setProfileStyleSheet(Host* pHost, const QString& styleSheet)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return false;
+    }
+
+    pHost->mProfileStyleSheet = styleSheet;
+    pHost->mpConsole->setStyleSheet(styleSheet);
+    pHost->mpEditorDialog->setStyleSheet(styleSheet);
+
+    if (mpProfilePreferencesDlgMap.value(pHost)) {
+        mpProfilePreferencesDlgMap.value(pHost)->setStyleSheet(styleSheet);
+    }
+    if (pHost->mpNotePad) {
+        pHost->mpNotePad->setStyleSheet(styleSheet);
+        pHost->mpNotePad->notesEdit->setStyleSheet(styleSheet);
+    }
+    if (pHost->mpDockableMapWidget) {
+        pHost->mpDockableMapWidget->setStyleSheet(styleSheet);
+    }
+
+    for (auto& dockWidget : pHost->mpConsole->mDockWidgetMap) {
+        dockWidget->setStyleSheet(styleSheet);
+    }
+    if (pHost == mpCurrentActiveHost) {
+        mpMainToolBar->setStyleSheet(styleSheet);
+        mpTabBar->setStyleSheet(styleSheet);
+        menuBar()->setStyleSheet(styleSheet);
+    }
+    return true;
+}
+
 
 bool mudlet::setBackgroundColor(Host* pHost, const QString& name, int r, int g, int b, int alpha)
 {
@@ -2369,6 +2406,81 @@ bool mudlet::moveWindow(Host* pHost, const QString& name, int x1, int y1)
     }
 
     return false;
+}
+
+std::pair<bool, QString> mudlet::openMapWidget(Host* pHost, const QString& area, int x, int y, int width, int height)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pM = pHost->mpDockableMapWidget;
+    auto pMapper = pHost->mpMap.data()->mpMapper;
+    if (!pM && !pMapper) {
+        createMapper(true);
+        pM = pHost->mpDockableMapWidget;
+    }
+    if (!pM) {
+        return {false, QStringLiteral("cannot create map widget. Do you already use an embedded mapper?")};
+    }
+    pM->show();
+    if (area.isEmpty()) {
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("f") || area == QLatin1String("floating")) {
+        if (!pM->isFloating()) {
+            // Undock a docked window
+            // Change of position or size is only possible when floating
+            pM->setFloating(true);
+        }
+        if ((x != -1) && (y != -1)) {
+            pM->move(x, y);
+        }
+        if ((width != -1) && (height != -1)) {
+            pM->resize(width, height);
+        }
+        return {true, QString()};
+    } else {
+        if (area == QLatin1String("r") || area == QLatin1String("right")) {
+            pM->setFloating(false);
+            addDockWidget(Qt::RightDockWidgetArea, pM);
+            return {true, QString()};
+        } else if (area == QLatin1String("l") || area == QLatin1String("left")) {
+            pM->setFloating(false);
+            addDockWidget(Qt::LeftDockWidgetArea, pM);
+            return {true, QString()};
+        } else if (area == QLatin1String("t") || area == QLatin1String("top")) {
+            pM->setFloating(false);
+            addDockWidget(Qt::TopDockWidgetArea, pM);
+            return {true, QString()};
+        } else if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
+            pM->setFloating(false);
+            addDockWidget(Qt::BottomDockWidgetArea, pM);
+            return {true, QString()};
+        } else {
+            return {false, QStringLiteral(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
+        }
+    }
+
+    return {false, QString()};
+}
+
+std::pair<bool, QString> mudlet::closeMapWidget(Host* pHost)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pM = pHost->mpDockableMapWidget;
+    if (!pM) {
+        return {false, QStringLiteral("no map widget found to close")};
+    }
+    if (!pM->isVisible()) {
+        return {false, QStringLiteral("map widget already closed")};
+    }
+    pM->hide();
+    return {true, QString()};
 }
 
 bool mudlet::closeWindow(Host* pHost, const QString& name)
@@ -3319,6 +3431,7 @@ void mudlet::show_options_dialog(QString tab)
         connect(mpActionReconnect.data(), &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_specialoption, &QWidget::hide);
         connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_specialoption, &QWidget::hide);
         mpProfilePreferencesDlgMap.value(pHost)->setAttribute(Qt::WA_DeleteOnClose);
+        mpProfilePreferencesDlgMap.value(pHost)->setStyleSheet(pHost->mProfileStyleSheet);
     }
     mpProfilePreferencesDlgMap.value(pHost)->setTab(tab);
     mpProfilePreferencesDlgMap.value(pHost)->raise();
@@ -3469,9 +3582,7 @@ void mudlet::createMapper(bool loadDefaultMap)
                                      pMap->mPlayerRoomInnerColor);
 
     pMap->mpMapper = new dlgMapper(pHost->mpDockableMapWidget, pHost, pMap); //FIXME: mpHost definieren
-#if defined(INCLUDE_3DMAPPER)
-    pMap->mpM = pMap->mpMapper->glWidget;
-#endif
+    pMap->mpMapper->setStyleSheet(pHost->mProfileStyleSheet);
     pHost->mpDockableMapWidget->setWidget(pMap->mpMapper);
 
     if (loadDefaultMap && pMap->mpRoomDB->getRoomIDList().isEmpty()) {
@@ -3560,6 +3671,8 @@ void mudlet::slot_notes()
         pNotes->notesEdit->setCurrentCharFormat(format);
         pNotes->setWindowTitle(tr("%1 - notes").arg(pHost->getName()));
         pNotes->setWindowIcon(QIcon(QStringLiteral(":/icons/mudlet_notepad.png")));
+        pHost->mpNotePad->setStyleSheet(pHost->mProfileStyleSheet);
+        pHost->mpNotePad->notesEdit->setStyleSheet(pHost->mProfileStyleSheet);
     }
     pNotes->raise();
     pNotes->show();
