@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@master
         with:
           ref: development
-        
+
       - name: Download latest IRE mapper
         uses: carlosperate/download-file-action@v1.0.0
         with:
@@ -30,14 +30,14 @@ jobs:
           lines_changed=$(git diff --patch --unified=0 src/mudlet-mapper.xml | wc --lines)
           echo "$lines_changed lines changed."
           echo ::set-output name=lines_changed::$lines_changed
-          
+
       - name: send in a pull request
         uses: gr2m/create-or-update-pull-request-action@v1.x
         if: steps.getdiff.outputs.lines_changed > 0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          title: "Update bundled IRE mapper script"
+          title: "Update bundled IRE mapper script to latest upstream"
           body: |
             #### Brief overview of PR changes/additions
             :crown: An automated PR to update the IRE mapper script to the latest version.
@@ -52,7 +52,7 @@ jobs:
 
   update-edbee-fork:
     runs-on: ubuntu-latest
-    steps:      
+    steps:
       - uses: actions/checkout@master
         with:
           ref: development
@@ -61,7 +61,7 @@ jobs:
 
       - name: update submodule to latest
         run: git submodule update --remote 3rdparty/edbee-lib/
-        
+
       # strictly speaking this step isn't necessary since the PR action can filter as well, but it's easier
       # to see in github UI's if PR creation was skipped when we have an explicit pre-check
       - name: check if we have any updates
@@ -70,14 +70,14 @@ jobs:
           lines_changed=$(git diff --patch --unified=0 3rdparty/edbee-lib/ | wc --lines)
           echo "$lines_changed lines changed."
           echo ::set-output name=lines_changed::$lines_changed
-          
+
       - name: send in a pull request
         uses: gr2m/create-or-update-pull-request-action@v1.x
         if: steps.getdiff.outputs.lines_changed > 0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          title: "Update edbee to latest"
+          title: "Update edbee to latest in our fork"
           body: |
             #### Brief overview of PR changes/additions
             :crown: An automated PR to update edbee to its latest version in our fork.
@@ -92,7 +92,7 @@ jobs:
 
   update-sparkle-glue-fork:
     runs-on: ubuntu-latest
-    steps:      
+    steps:
       - uses: actions/checkout@master
         with:
           ref: development
@@ -101,7 +101,7 @@ jobs:
 
       - name: update submodule to latest
         run: git submodule update --remote 3rdparty/sparkle-glue/
-        
+
       # strictly speaking this step isn't necessary since the PR action can filter as well, but it's easier
       # to see in github UI's if PR creation was skipped when we have an explicit pre-check
       - name: check if we have any updates
@@ -110,14 +110,14 @@ jobs:
           lines_changed=$(git diff --patch --unified=0 3rdparty/sparkle-glue | wc --lines)
           echo "$lines_changed lines changed."
           echo ::set-output name=lines_changed::$lines_changed
-          
+
       - name: send in a pull request
         uses: gr2m/create-or-update-pull-request-action@v1.x
         if: steps.getdiff.outputs.lines_changed > 0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          title: "Update sparkle-glue to latest"
+          title: "Update sparkle-glue to latest in our fork"
           body: |
             #### Brief overview of PR changes/additions
             :crown: An automated PR to update sparkle-glue to its latest in our fork.
@@ -132,7 +132,7 @@ jobs:
 
   update-dblsqd-source:
     runs-on: ubuntu-latest
-    steps:      
+    steps:
       - uses: actions/checkout@master
         with:
           ref: development
@@ -141,7 +141,7 @@ jobs:
 
       - name: update submodule to latest
         run: git submodule update --remote 3rdparty/dblsqd/
-        
+
       # strictly speaking this step isn't necessary since the PR action can filter as well, but it's easier
       # to see in github UI's if PR creation was skipped when we have an explicit pre-check
       - name: check if we have any updates
@@ -150,14 +150,14 @@ jobs:
           lines_changed=$(git diff --patch --unified=0 3rdparty/dblsqd/ | wc --lines)
           echo "$lines_changed lines changed."
           echo ::set-output name=lines_changed::$lines_changed
-          
+
       - name: send in a pull request
         uses: gr2m/create-or-update-pull-request-action@v1.x
         if: steps.getdiff.outputs.lines_changed > 0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          title: "Update dblsqd to latest"
+          title: "Update dblsqd to latest upstream"
           body: |
             #### Brief overview of PR changes/additions
             :crown: An automated PR to update dblsqd to its latest version in upstream.
@@ -172,7 +172,7 @@ jobs:
 
   update-qtkeychain-fork:
     runs-on: ubuntu-latest
-    steps:      
+    steps:
       - uses: actions/checkout@master
         with:
           ref: development
@@ -181,7 +181,7 @@ jobs:
 
       - name: update submodule to latest
         run: git submodule update --remote 3rdparty/qtkeychain/
-        
+
       # strictly speaking this step isn't necessary since the PR action can filter as well, but it's easier
       # to see in github UI's if PR creation was skipped when we have an explicit pre-check
       - name: check if we have any updates
@@ -190,14 +190,14 @@ jobs:
           lines_changed=$(git diff --patch --unified=0 3rdparty/qtkeychain/ | wc --lines)
           echo "$lines_changed lines changed."
           echo ::set-output name=lines_changed::$lines_changed
-          
+
       - name: send in a pull request
         uses: gr2m/create-or-update-pull-request-action@v1.x
         if: steps.getdiff.outputs.lines_changed > 0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          title: "Update qtkeychain to latest"
+          title: "Update qtkeychain to latest in our fork"
           body: |
             #### Brief overview of PR changes/additions
             :crown: An automated PR to update qtkeychain to its latest version in our fork.
@@ -212,7 +212,7 @@ jobs:
 
   update-lcf-source-51:
     runs-on: ubuntu-latest
-    steps:      
+    steps:
       - uses: actions/checkout@master
         with:
           ref: development
@@ -224,7 +224,7 @@ jobs:
           cd 3rdparty/lcf/
           git checkout 5.1
           git pull
-        
+
       # strictly speaking this step isn't necessary since the PR action can filter as well, but it's easier
       # to see in github UI's if PR creation was skipped when we have an explicit pre-check
       - name: check if we have any updates
@@ -233,14 +233,14 @@ jobs:
           lines_changed=$(git diff --patch --unified=0 3rdparty/lcf/ | wc --lines)
           echo "$lines_changed lines changed."
           echo ::set-output name=lines_changed::$lines_changed
-          
+
       - name: send in a pull request
         uses: gr2m/create-or-update-pull-request-action@v1.x
         if: steps.getdiff.outputs.lines_changed > 0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          title: "Update Lua code formatter to latest"
+          title: "Update Lua code formatter to latest upstream 5.1 branch"
           body: |
             #### Brief overview of PR changes/additions
             :crown: An automated PR to update the built-in Lua code formatter to its latest version in upstream `5.1` branch.
