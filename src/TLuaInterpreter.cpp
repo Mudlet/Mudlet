@@ -16373,8 +16373,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "unzipAsync", TLuaInterpreter::unzipAsync);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
-    QChar separator = QDir::separator();
-    QString nativeHomeDirectory = mudlet::getMudletPath(mudlet::profileHomePath, hostName);
+    const auto separator = QDir::separator();
+    const auto nativeHomeDirectory = mudlet::getMudletPath(mudlet::profileHomePath, hostName);
 
     luaL_dostring(pGlobalLua, QStringLiteral("package.path = [[%1%2?.lua;%1%2?%2init.lua;]] .. package.path").arg(nativeHomeDirectory, separator).toUtf8().constData());
 
