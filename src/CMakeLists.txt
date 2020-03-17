@@ -355,10 +355,14 @@ if(APPLE)
   if(USE_UPDATER)
     target_link_libraries(mudlet
       cocoa-qt-glue
-      "-framework Sparkle"
       "-framework AppKit"
-      "-F${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
+    )
   endif(USE_UPDATER)
+  set_target_properties(mudlet
+    PROPERTIES
+      MACOSX_BUNDLE ON
+      MACOSX_BUNDLE_BUNDLE_NAME Mudlet
+  )
 endif()
 
 target_compile_options(mudlet
@@ -367,7 +371,7 @@ target_compile_options(mudlet
   )
 
 # *nix "make install" provision:
-if(UNIX)
+if(UNIX AND NOT APPLE)
   # CMAKE_INSTALL_PREFIX is automagically set on Unix to DESTDIR environment
   # variable and is prefixed onto relative DESTINATION values
   install(
