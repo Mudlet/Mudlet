@@ -72,7 +72,7 @@ class TLuaInterpreter : public QThread
 
 public:
     Q_DISABLE_COPY(TLuaInterpreter)
-    TLuaInterpreter(Host* mpHost, int id);
+    TLuaInterpreter(Host* pH, const QString& hostName, int id);
     ~TLuaInterpreter();
     void setMSDPTable(QString& key, const QString& string_data);
     void parseJSON(QString& key, const QString& string_data, const QString& protocol);
@@ -581,6 +581,7 @@ private:
 
     std::unique_ptr<lua_State, lua_state_deleter> pIndenterState;
     QPointer<Host> mpHost;
+    QString hostName;
     int mHostID;
     QList<QObject*> objectsToDelete;
     QTimer purgeTimer;

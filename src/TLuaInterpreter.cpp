@@ -100,7 +100,7 @@ int speechState = QTextToSpeech::Ready;
 QString speechCurrent;
 #endif // QT_TEXTTOSPEECH_LIB
 
-TLuaInterpreter::TLuaInterpreter(Host* pH, int id) : mpHost(pH), mHostID(id), purgeTimer(this)
+TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id) : mpHost(pH), hostName(hostName), mHostID(id), purgeTimer(this)
 {
     pGlobalLua = nullptr;
 
@@ -16445,18 +16445,12 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "unzipAsync", TLuaInterpreter::unzipAsync);
     // PLACEMARKER: End of main Lua interpreter functions registration
 
-    // prepend profile path to package.path and package.cpath
-    // with a singleShot Timer to avoid crash on startup.
-    // crash caused by calling Host::getName() too early.
-    QTimer::singleShot(0, this, [this]() {
-        QChar separator = QDir::separator();
+    const auto separator = QDir::separator();
+    const auto nativeHomeDirectory = mudlet::getMudletPath(mudlet::profileHomePath, hostName);
 
-        luaL_dostring(pGlobalLua, QStringLiteral("package.path = getMudletHomeDir() .. [[%1?%1init.lua;]] .. package.path").arg(separator).toUtf8().constData());
-        luaL_dostring(pGlobalLua, QStringLiteral("package.path = getMudletHomeDir() .. [[%1?.lua;]] .. package.path").arg(separator).toUtf8().constData());
+    luaL_dostring(pGlobalLua, QStringLiteral("package.path = [[%1%2?.lua;%1%2?%2init.lua;]] .. package.path").arg(nativeHomeDirectory, separator).toUtf8().constData());
 
-        luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = getMudletHomeDir() .. [[%1?;]] .. package.cpath").arg(separator).toUtf8().constData());
-    });
-
+    luaL_dostring(pGlobalLua, QStringLiteral("package.cpath = [[%1%2?;]] .. package.cpath").arg(nativeHomeDirectory, separator).toUtf8().constData());
 
 #ifdef Q_OS_MAC
     luaopen_zip(pGlobalLua);
