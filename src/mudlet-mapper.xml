@@ -755,7 +755,7 @@ raiseEvent("mmapper updated pdb")</script>
 					</regexCodePropertyList>
 				</Trigger>
 				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="yes" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-					<name>View </name>
+					<name>View</name>
 					<script>mmp.locateAndEcho(multimatches[2][3], multimatches[2][2])</script>
 					<triggerType>0</triggerType>
 					<conditonLineDelta>0</conditonLineDelta>
@@ -1632,7 +1632,7 @@ mmp.pdb_lastupdate = {}</script>
 						<string>You snort and snuffle at the air, sensing through a ridiculous pig nose upon your face the faint traces of others in the surrounding area.</string>
 						<string>A pert little nose takes in a delicate whiff of your surroundings, sensing the faint traces of others in the nearby area.</string>
 						<string>You tilt back your head and inhale deeply through your nose, the whiskers of a wolf's snout upon your face twitching as you sense the faint traces of others in the surrounding area.</string>
-						<string>Your snout twitches and trembles at the air, sensing through a cute little rabbit nose upon your face the faint traces of others in the surrounding area.</string>
+						<string>You flutter your nose at the air, sensing through a cute little rabbit nose upon your face the faint traces of others in the surrounding area.</string>
 						<string>You sniff disdainfully at the air with a snobby snoot, wrinkling your nose as you sense the faint traces of others in the nearby area.</string>
 						<string>Your snout twitches and trembles at the air, sensing through a striped badger nose upon your face the faint traces of others in the surrounding area.</string>
 						<string>You twitch your snout and scent the air, sensing through a scaled fink nose upon your face the faint traces of others in the surrounding area.</string>
@@ -1932,7 +1932,7 @@ raiseEvent("mmapper updated pdb")</script>
 						<integer>1</integer>
 					</regexCodePropertyList>
 				</Trigger>
-				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="yes" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<Trigger isActive="no" isFolder="no" isTempTrigger="no" isMultiline="yes" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 					<name>Map artefact</name>
 					<script>mmp.gotoRoom(multimatches[4][2])</script>
 					<triggerType>0</triggerType>
@@ -2479,8 +2479,9 @@ cecho("&lt;orange_red&gt;)")</script>
 					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 						<name>Succesful transverse</name>
 						<script>if mmp.game~= "lusternia" then return end
-mmp.registerTransverseExit()
-</script>
+if validTransverse then
+  mmp.registerTransverseExit()
+end</script>
 						<triggerType>0</triggerType>
 						<conditonLineDelta>0</conditonLineDelta>
 						<mStayOpen>0</mStayOpen>
@@ -2492,7 +2493,7 @@ mmp.registerTransverseExit()
 						<colorTriggerFgColor>#000000</colorTriggerFgColor>
 						<colorTriggerBgColor>#000000</colorTriggerBgColor>
 						<regexCodeList>
-							<string>^You place your hands on .+ and find the link to .+\. Pulsating energy flares throughout your field of vision, and you find yourself tumbling through the aether pathways\.$</string>
+							<string>^You (place your hands on|reach out to) .+ and find the link to .+\. Pulsating energy flares throughout your field of vision, and you find yourself tumbling through the aether pathways\.$</string>
 						</regexCodeList>
 						<regexCodePropertyList>
 							<integer>1</integer>
@@ -2501,7 +2502,8 @@ mmp.registerTransverseExit()
 					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 						<name>Failed transverse</name>
 						<script>if mmp.game~= "lusternia" then return end
-mmp.clearTransverse()</script>
+mmp.clearTransverse()
+validTransverse = false</script>
 						<triggerType>0</triggerType>
 						<conditonLineDelta>0</conditonLineDelta>
 						<mStayOpen>0</mStayOpen>
@@ -2522,7 +2524,10 @@ mmp.clearTransverse()</script>
 					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 						<name>Succesful pathfind</name>
 						<script>if mmp.game~= "lusternia" then return end
-mmp.registerPathfind()</script>
+if validTransverse then
+  mmp.clearPathfind()
+  mmp.registerPathfind()
+end</script>
 						<triggerType>0</triggerType>
 						<conditonLineDelta>0</conditonLineDelta>
 						<mStayOpen>0</mStayOpen>
@@ -2543,7 +2548,8 @@ mmp.registerPathfind()</script>
 					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 						<name>failed pathfind</name>
 						<script>if mmp.game~= "lusternia" then return end
-mmp.clearPathfind()</script>
+mmp.clearPathfind()
+validTransverse = false</script>
 						<triggerType>0</triggerType>
 						<conditonLineDelta>0</conditonLineDelta>
 						<mStayOpen>0</mStayOpen>
@@ -2833,6 +2839,229 @@ mmp.roomEcho(matches[3]) </script>
 				<colorTriggerBgColor>#000000</colorTriggerBgColor>
 				<regexCodeList />
 				<regexCodePropertyList />
+				<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Lifts</name>
+					<script></script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList />
+					<regexCodePropertyList />
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>No Lift to ENTER</name>
+						<script>mmp.customwalkdelay(15)</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string>The interface changes color, calling the lift car to your location.</string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>3</integer>
+						</regexCodePropertyList>
+					</Trigger>
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>Lift moving</name>
+						<script>if mmp.autowalking then
+	mmp.customwalkdelay(15)
+end</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string>The ground beneath your feet seems to shift for a split second as the lift begins to move.</string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>3</integer>
+						</regexCodePropertyList>
+					</Trigger>
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>Lift at correct floor</name>
+						<script>if mmp.autowalking then 
+	mmp.liftFloor(nil,nil,true)
+	mmp.customwalkdelay(0)
+	mmp.deleteLineP()
+end</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string>Nothing happens, as the lift is already at the requested destination.</string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>3</integer>
+						</regexCodePropertyList>
+					</Trigger>
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>Lift arrival (inside)</name>
+						<script>if mmp.autowalking then
+	send("KEY LIFT", false)
+end</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string>The lift comes to a complete stop, a ping echoing from the control interface. You can now EXIT LIFT.</string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>3</integer>
+						</regexCodePropertyList>
+					</Trigger>
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>Lift arrival (outside)</name>
+						<script>mmp.customwalkdelay(0)
+mmp.move()</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string>An indicator light flashes above the lift as it arrives at this floor. You can ENTER LIFT to board the lift.</string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>3</integer>
+						</regexCodePropertyList>
+					</Trigger>
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>Lift interaction failed</name>
+						<script>mmp.customwalkdelay(6)
+mmp.deleteLineP()</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string>The lift is currently in motion and the interface is locked down.</string>
+							<string>You may not exit the lift while it is in motion if you wish to remain in one piece.</string>
+							<string>The lift is already moving, further attempts will not speed up the process.</string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>3</integer>
+							<integer>3</integer>
+							<integer>3</integer>
+						</regexCodePropertyList>
+					</Trigger>
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>KEY LIFT table</name>
+						<script>if mmp.autowalking then
+	mmp.deleteLineP()
+end</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>30</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string>Linking into the interface of lift network</string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>2</integer>
+						</regexCodePropertyList>
+						<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+							<name>each lift floor</name>
+							<script>if mmp.autowalking then
+  if matches[4] == "HERE" then 
+  	mmp.liftFloor(matches[3],matches[2],true)
+		mmp.correctLiftFloor = true
+  else
+		if not mmp.correctLiftFloor then
+  		mmp.liftFloor(matches[3],matches[2],false)
+		end
+  end
+	mmp.deleteLineP()
+end</script>
+							<triggerType>0</triggerType>
+							<conditonLineDelta>0</conditonLineDelta>
+							<mStayOpen>0</mStayOpen>
+							<mCommand></mCommand>
+							<packageName></packageName>
+							<mFgColor>#ff0000</mFgColor>
+							<mBgColor>#ffff00</mBgColor>
+							<mSoundFile></mSoundFile>
+							<colorTriggerFgColor>#000000</colorTriggerFgColor>
+							<colorTriggerBgColor>#000000</colorTriggerBgColor>
+							<regexCodeList>
+								<string>\((\d)\).+"(.+)"(?:\s\[)?(HERE)?(?:]\s)?</string>
+							</regexCodeList>
+							<regexCodePropertyList>
+								<integer>1</integer>
+							</regexCodePropertyList>
+						</Trigger>
+						<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="yes" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+							<name>Stop (Key Lift)</name>
+							<script>setTriggerStayOpen("KEY LIFT table", 0)
+mmp.correctLiftFloor = nil</script>
+							<triggerType>0</triggerType>
+							<conditonLineDelta>0</conditonLineDelta>
+							<mStayOpen>0</mStayOpen>
+							<mCommand></mCommand>
+							<packageName></packageName>
+							<mFgColor>#ff0000</mFgColor>
+							<mBgColor>#ffff00</mBgColor>
+							<mSoundFile></mSoundFile>
+							<colorTriggerFgColor>#000000</colorTriggerFgColor>
+							<colorTriggerBgColor>#000000</colorTriggerBgColor>
+							<regexCodeList>
+								<string>return isPrompt()</string>
+							</regexCodeList>
+							<regexCodePropertyList>
+								<integer>4</integer>
+							</regexCodePropertyList>
+						</Trigger>
+					</Trigger>
+				</TriggerGroup>
 				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 					<name>Login</name>
 					<script>raiseEvent("mmp logged in", "Starmourn")
@@ -2872,6 +3101,69 @@ mmp.game = "starmourn"</script>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+			</TriggerGroup>
+			<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>Flying</name>
+				<script></script>
+				<triggerType>0</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList />
+				<regexCodePropertyList />
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>move indoors failed by flying</name>
+					<script>--this will force land
+--may be preferable to fail pathfinding or have option to determine users desire
+
+if mmp.game == "starmourn" then
+		send("queue land")
+		mmp.customwalkdelay(4)
+end
+</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>You must land before you can move indoors.</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>3</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Wait for landing</name>
+					<script>mmp.customwalkdelay(4)</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>You continue your descent.</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>3</integer>
 					</regexCodePropertyList>
 				</Trigger>
 			</TriggerGroup>
@@ -3153,8 +3445,10 @@ mmp.echo("We're connected to Lithmeria.")</script>
 						<string>Not recognising you as cast or crew, stagehands firmly close the door on you.</string>
 						<string>You push against the door in vain as you try to open it.</string>
 						<string>You do not have access to open this door.</string>
+						<string>The door beeps quietly. It appears to be locked.</string>
 					</regexCodeList>
 					<regexCodePropertyList>
+						<integer>3</integer>
 						<integer>3</integer>
 						<integer>3</integer>
 						<integer>3</integer>
@@ -4071,7 +4365,7 @@ end</script>
 				</Alias>
 				<Alias isActive="yes" isFolder="no">
 					<name>Add area to continent</name>
-					<script>-- ac continent [optional area]
+					<script>-- aca continent [optional area]
 
 local continent = matches[2]:title()
 local area
@@ -4095,7 +4389,7 @@ else
 end</script>
 					<command></command>
 					<packageName></packageName>
-					<regex>^ac ([\w']+)(?: (.+))?$</regex>
+					<regex>^aca ([\w']+)(?: (.+))?$</regex>
 				</Alias>
 				<Alias isActive="yes" isFolder="no">
 					<name>remove area from continent</name>
@@ -4263,7 +4557,7 @@ if mmp.game == "starmourn" then
     ["I"] = "insurance office",
     ["T"] = "transport",
     ["J"] = "junk",
-    ["M"] = "mall",
+    ["M"] = "mail",
     ["L"] = "lift",
     ["P"] = "ptp",
     ["TT"] = "trade terminal",
@@ -4784,7 +5078,7 @@ else
 	mmp.echo("Invalid city")
 	return
 end
-if gmcp.Room.Info.area~="an aether manse" then
+if not gmcp.Room.Info.area:find("(manse)") then
 	mmp.echo("You are not in a manse")
 else
 	if	searchRoom(gmcp.Room.Info.num):sub(0,11)=="searchRoom:" then
@@ -4992,7 +5286,7 @@ speedWalkCounter = 0
 mmp.speedWalk = mmp.speedWalk or {}
 mmp.speedWalkPath = mmp.speedWalkPath or {}
 mmp.speedWalkDir = mmp.speedWalkDir or {}
-local newversion = "19.7.1"
+local newversion = "19.11.3"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo(
@@ -5027,7 +5321,7 @@ function mmp.startup()
       {"boolean"},
       "Use a crowd-sourced map instead of IREs default?",
       nil,
-      {achaea = true, starmourn = true}
+      {achaea = true, starmourn = true, lusternia = true}
     )
   private_settings["showcmds"] =
     createOption(true, mmp.changeBoolFunc, {"boolean"}, "Show walking commands?")
@@ -6229,18 +6523,22 @@ end</script>
 					<packageName></packageName>
 					<script>local exitsCreated = exitsCreated or {}
 
-function mmp.tempSpecialExit(destination, command, weight)
-  table.insert(exitsCreated, command)
-  addSpecialExit(mmp.currentroom, destination, command)
+function mmp.tempSpecialExit(start, destination, command, weight)
+  if type(destination) == "string" then
+    -- no start room given, so shift all arguments one to the right
+    start, destination, command, weight = mmp.currentroom, start, destination, command
+  end
+  table.insert(exitsCreated, {room = start, command = command})
+  addSpecialExit(start, destination, command)
   if weight then
-    setExitWeight(mmp.currentroom, command, weight)
+    setExitWeight(start, command, weight)
   end
 end
 
 function mmp.removeWings()
   --remove all special exits that were created by addWings, then resets the table.
-  for _, command in ipairs(exitsCreated) do
-    removeSpecialExit(mmp.currentroom, command)
+  for _, exit in ipairs(exitsCreated) do
+    removeSpecialExit(exit.room, exit.command)
   end
   exitsCreated = {}
 end
@@ -6454,6 +6752,23 @@ end</script>
 					<name>Lusternia</name>
 					<packageName></packageName>
 					<script>registerAnonymousEventHandler("mmp link externals", "mmp.addWingsLusternia")
+
+local function linkBubblix(area, entranceRoom, command)
+  -- always add this link to allow pathfinding to the bubble regardless of indoor/outdoor
+  mmp.tempSpecialExit(148, entranceRoom, command)
+  -- always add this link to allow pathfinding from the bubbe regardless of indoor/outdoor
+  mmp.tempSpecialExit(entranceRoom, 6831, command)
+  if mmp.usebubblix() then
+    if not table.contains(gmcp.Room.Info.details, "an Aetherbubble") then
+      -- we are not in an Aetherbubble and could use a bubblix, so allow its use from here
+      mmp.tempSpecialExit(entranceRoom, command)
+    elseif gmcp.Room.Info.area == area then
+      -- we are in an Aetherbubble and it's the one the bubblix belongs to and we could use a bubblix, so allow its use from here
+      mmp.tempSpecialExit(6831, command)
+    end
+  end
+end
+
 function mmp.addWingsLusternia()
   if mmp.game ~= "lusternia" then
     return
@@ -6531,63 +6846,29 @@ function mmp.addWingsLusternia()
     end
   end
   --all the bubblixes!
-  if mmp.usebubblix() then
-    if mmp.settings.screwdriver then
-      if gmcp.Room.Info.area == "the Facility" then
-        mmp.tempSpecialExit(6831, "touch screwdriver")
-      elseif not table.contains(gmcp.Room.Info.details, "an Aetherbubble") then
-        mmp.tempSpecialExit(10185, "touch screwdriver")
-      end
-    end
-    if mmp.settings.wheel then
-      if gmcp.Room.Info.area == "the Dramube Triangle" then
-        mmp.tempSpecialExit(6831, "touch wheel")
-      elseif not table.contains(gmcp.Room.Info.details, "an Aetherbubble") then
-        mmp.tempSpecialExit(10509, "touch wheel")
-      end
-    end
-    if mmp.settings.mud then
-      if gmcp.Room.Info.area == "Mucklemarsh" then
-        mmp.tempSpecialExit(6831, "touch mud")
-      elseif not table.contains(gmcp.Room.Info.details, "an Aetherbubble") then
-        mmp.tempSpecialExit(9985, "touch mud")
-      end
-    end
-    if mmp.settings.snowglobe then
-      if gmcp.Room.Info.area == "the Great Spirit Tree" then
-        mmp.tempSpecialExit(6831, "shake snowglobe")
-      elseif not table.contains(gmcp.Room.Info.details, "an Aetherbubble") then
-        mmp.tempSpecialExit(10992, "shake snowglobe")
-      end
-    end
-    if mmp.settings.cookie then
-      if gmcp.Room.Info.area == "Crumkindivia" then
-        mmp.tempSpecialExit(6831, "touch cookie")
-      elseif not table.contains(gmcp.Room.Info.details, "an Aetherbubble") then
-        mmp.tempSpecialExit(9888, "touch cookie")
-      end
-    end
-    if mmp.settings.head then
-      if gmcp.Room.Info.area == "the Bubble of Bottledowns" then
-        mmp.tempSpecialExit(6831, "touch doll")
-      elseif not table.contains(gmcp.Room.Info.details, "an Aetherbubble") then
-        mmp.tempSpecialExit(11811, "touch doll")
-      end
-    end
-    if mmp.settings.icicle then
-      if gmcp.Room.Info.area == "Frosticia" then
-        mmp.tempSpecialExit(6831, "touch icicle")
-      elseif not table.contains(gmcp.Room.Info.details, "an Aetherbubble") then
-        mmp.tempSpecialExit(10457, "touch icicle")
-      end
-    end
-    if mmp.settings.tibia then
-      if gmcp.Room.Info.area == "the Cankermore Battlegrounds" then
-        mmp.tempSpecialExit(6831, "touch tibia")
-      elseif not table.contains(gmcp.Room.Info.details, "an Aetherbubble") then
-        mmp.tempSpecialExit(11600, "touch tibia")
-      end
-    end
+  if mmp.settings.screwdriver then
+    linkBubblix("the Facility", 10185, "touch screwdriver")
+  end
+  if mmp.settings.wheel then
+    linkBubblix("the Dramube Triangle", 10509, "touch wheel")
+  end
+  if mmp.settings.mud then
+    linkBubblix("Mucklemarsh", 9985, "touch mud")
+  end
+  if mmp.settings.snowglobe then
+    linkBubblix("the Great Spirit Tree", 10992, "shake snowglobe")
+  end
+  if mmp.settings.cookie then
+    linkBubblix("Crumkindivia", 9888, "touch cookie")
+  end
+  if mmp.settings.head then
+    linkBubblix("the Bubble of Bottledowns", 11811, "touch doll")
+  end
+  if mmp.settings.icicle then
+    linkBubblix("Frosticia", 10457, "touch icicle")
+  end
+  if mmp.settings.tibia then
+    linkBubblix("the Cankermore Battlegrounds", 11600, "touch tibia")
   end
   mmp.clearpathcache()
 end</script>
@@ -7206,64 +7487,126 @@ end</script>
 					<name>Aliases</name>
 					<packageName></packageName>
 					<script>function mmp.roomWhoFind(query)
-  if query:ends('.') then query = query:sub(1,-2) end
+  if query:ends('.') then
+    query = query:sub(1, -2)
+  end
   local result = mmp.searchRoomExact(query)
-
   if type(result) == "string" or not next(result) then
-    cecho("&lt;CadetBlue&gt;  You have no recollection of any room with that name.") return end
-
-  if not tonumber(select(2, next(result))) then -- old style
-    for roomid, roomname in pairs(result) do roomid = tonumber(roomid)
-      cecho(string.format("  &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt; (",
-        tostring(roomname)))
-      cechoLink("&lt;"..mmp.settings.echocolour.."&gt;"..roomid, 'mmp.gotoRoom('..roomid..')', string.format("Go to %s (%s)", roomid, tostring(roomname)), true)
-      cecho(string.format("&lt;DarkSlateGrey&gt;) &lt;white&gt;%s&lt;DarkSlateGrey&gt;.\n", tostring(mmp.areatabler[getRoomArea(roomid)])))
+    cecho("&lt;CadetBlue&gt;  You have no recollection of any room with that name.")
+    return
+  end
+  if not tonumber(select(2, next(result))) then
+    -- old style
+    for roomid, roomname in pairs(result) do
+      roomid = tonumber(roomid)
+      cecho(string.format("  &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt; (", tostring(roomname)))
+      cechoLink(
+        "&lt;" .. mmp.settings.echocolour .. "&gt;" .. roomid,
+        'mmp.gotoRoom(' .. roomid .. ')',
+        string.format("Go to %s (%s)", roomid, tostring(roomname)),
+        true
+      )
+      cecho(
+        string.format(
+          "&lt;DarkSlateGrey&gt;) &lt;white&gt;%s&lt;DarkSlateGrey&gt;.\n",
+          tostring(mmp.areatabler[getRoomArea(roomid)])
+        )
+      )
     end
-
-  else -- new style
-    for roomname, roomid in pairs(result) do roomid = tonumber(roomid)
-      cecho(string.format("  &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt; (",
-        tostring(roomname)))
-      cechoLink("&lt;"..mmp.settings.echocolour.."&gt;"..roomid, 'mmp.gotoRoom('..roomid..')', string.format("Go to %s (%s)", roomid, tostring(roomname)), true)
-      cecho(string.format("&lt;DarkSlateGrey&gt;) &lt;white&gt;%s&lt;DarkSlateGrey&gt;.\n", tostring(mmp.areatabler[getRoomArea(roomid)])))
+  else
+    -- new style
+    for roomname, roomid in pairs(result) do
+      roomid = tonumber(roomid)
+      cecho(string.format("  &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt; (", tostring(roomname)))
+      cechoLink(
+        "&lt;" .. mmp.settings.echocolour .. "&gt;" .. roomid,
+        'mmp.gotoRoom(' .. roomid .. ')',
+        string.format("Go to %s (%s)", roomid, tostring(roomname)),
+        true
+      )
+      cecho(
+        string.format(
+          "&lt;DarkSlateGrey&gt;) &lt;white&gt;%s&lt;DarkSlateGrey&gt;.\n",
+          tostring(mmp.areatabler[getRoomArea(roomid)])
+        )
+      )
     end
   end
 end
 
 function mmp.roomFind(query)
-  if query:ends('.') then query = query:sub(1,-2) end
+  if query:ends('.') then
+    query = query:sub(1, -2)
+  end
   local result = mmp.searchRoom(query)
-
   if type(result) == "string" or not next(result) then
-    cecho("&lt;grey&gt;You have no recollection of any room with that name.") return end
-
+    cecho("&lt;grey&gt;You have no recollection of any room with that name.")
+    return
+  end
   cecho("&lt;DarkSlateGrey&gt;You know the following relevant rooms:\n")
 
   local function showmeropis(roomid)
-    if mmp.game ~= "achaea" then return '' end
-
+    if mmp.game ~= "achaea" then
+      return ''
+    end
     return mmp.oncontinent(getRoomArea(roomid), "Main") and '' or ' (Meropis)'
   end
 
-  if not tonumber(select(2, next(result))) then -- old style
-    for roomid, roomname in pairs(result) do roomid = tonumber(roomid)
-      cecho(string.format("  &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt; (",
-        tostring(roomname)))
-      cechoLink("&lt;"..mmp.settings.echocolour.."&gt;"..roomid, 'mmp.gotoRoom('..roomid..')', string.format("Go to %s (%s)", roomid, tostring(roomname)), true)
-      cecho(string.format("&lt;DarkSlateGrey&gt;) in &lt;LightSlateGray&gt;%s%s&lt;DarkSlateGrey&gt;.", mmp.cleanAreaName(tostring(mmp.areatabler[getRoomArea(roomid)])), showmeropis(roomid)))
-      fg("DarkSlateGrey") echoLink(" &gt; Show path\n", [[mmp.echoPath(mmp.currentroom, ]]..roomid..[[)]], "Display directions from here to "..roomname, true) resetFormat()
+  if not tonumber(select(2, next(result))) then
+    -- old style
+    for roomid, roomname in pairs(result) do
+      roomid = tonumber(roomid)
+      cecho(string.format("  &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt; (", tostring(roomname)))
+      cechoLink(
+        "&lt;" .. mmp.settings.echocolour .. "&gt;" .. roomid,
+        'mmp.gotoRoom(' .. roomid .. ')',
+        string.format("Go to %s (%s)", roomid, tostring(roomname)),
+        true
+      )
+      cecho(
+        string.format(
+          "&lt;DarkSlateGrey&gt;) in &lt;LightSlateGray&gt;%s%s&lt;DarkSlateGrey&gt;.",
+          mmp.cleanAreaName(tostring(mmp.areatabler[getRoomArea(roomid)])),
+          showmeropis(roomid)
+        )
+      )
+      fg("DarkSlateGrey")
+      echoLink(
+        " &gt; Show path\n",
+        [[mmp.echoPath(mmp.currentroom, ]] .. roomid .. [[)]],
+        "Display directions from here to " .. roomname,
+        true
+      )
+      resetFormat()
     end
-
-  else -- new style
-    for roomname, roomid in pairs(result) do roomid = tonumber(roomid)
-      cecho(string.format("  &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt; (",
-        tostring(roomname)))
-      cechoLink("&lt;"..mmp.settings.echocolour.."&gt;"..roomid, 'mmp.gotoRoom('..roomid..')', string.format("Go to %s (%s)", roomid, tostring(roomname)), true)
-      cecho(string.format("&lt;DarkSlateGrey&gt;) in &lt;LightSlateGray&gt;%s%s&lt;DarkSlateGrey&gt;.", mmp.cleanAreaName(tostring(mmp.areatabler[getRoomArea(roomid)])), showmeropis(roomid)))
-      fg("DarkSlateGrey") echoLink(" &gt; Show path\n", [[mmp.echoPath(mmp.currentroom, ]]..roomid..[[)]], "Display directions from here to "..roomname, true) resetFormat()
+  else
+    -- new style
+    for roomname, roomid in pairs(result) do
+      roomid = tonumber(roomid)
+      cecho(string.format("  &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt; (", tostring(roomname)))
+      cechoLink(
+        "&lt;" .. mmp.settings.echocolour .. "&gt;" .. roomid,
+        'mmp.gotoRoom(' .. roomid .. ')',
+        string.format("Go to %s (%s)", roomid, tostring(roomname)),
+        true
+      )
+      cecho(
+        string.format(
+          "&lt;DarkSlateGrey&gt;) in &lt;LightSlateGray&gt;%s%s&lt;DarkSlateGrey&gt;.",
+          mmp.cleanAreaName(tostring(mmp.areatabler[getRoomArea(roomid)])),
+          showmeropis(roomid)
+        )
+      )
+      fg("DarkSlateGrey")
+      echoLink(
+        " &gt; Show path\n",
+        [[mmp.echoPath(mmp.currentroom, ]] .. roomid .. [[)]],
+        "Display directions from here to " .. roomname,
+        true
+      )
+      resetFormat()
     end
   end
-
   cecho(string.format("  &lt;DarkSlateGrey&gt;%d rooms found.\n", table.size(result)))
 end
 
@@ -7271,35 +7614,51 @@ function mmp.echoRoomList(areaname, exact)
   local areaid, msg, multiples = mmp.findAreaID(areaname, exact)
   if areaid then
     local roomlist, endresult = getAreaRooms(areaid) or {}, {}
-
     -- obtain a room list for each of the room IDs we got
     local getRoomName = getRoomName
     for _, id in pairs(roomlist) do
       endresult[id] = getRoomName(id)
     end
-
     -- sort room IDs so we can display them in order
     table.sort(roomlist)
-
     -- now display something half-decent looking
-    cecho(string.format(
-      "&lt;DarkSlateGrey&gt;List of all rooms in &lt;grey&gt;%s&lt;DarkSlateGrey&gt; (areaid &lt;grey&gt;%s&lt;DarkSlateGrey&gt; - &lt;grey&gt;%d&lt;DarkSlateGrey&gt; rooms):\n", msg, areaid, table.size(endresult)))
+    cecho(
+      string.format(
+        "&lt;DarkSlateGrey&gt;List of all rooms in &lt;grey&gt;%s&lt;DarkSlateGrey&gt; (areaid &lt;grey&gt;%s&lt;DarkSlateGrey&gt; - &lt;grey&gt;%d&lt;DarkSlateGrey&gt; rooms):\n",
+        msg,
+        areaid,
+        table.size(endresult)
+      )
+    )
     local echoLink, sformat, fg, echo = echoLink, string.format, fg, cecho
     -- use pairs, as we can have gaps between room IDs
     for _, roomid in pairs(roomlist) do
       local roomname = endresult[roomid]
-      fg("blue") cechoLink("&lt;"..mmp.settings.echocolour.."&gt;"..sformat("%6s", roomid), 'mmp.gotoRoom('..roomid..')', string.format("Go to %s (%s)", roomid, tostring(roomname)), true)
-       cecho(string.format("&lt;DarkSlateGrey&gt;: &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt;.\n", roomname))
+      fg("blue")
+      cechoLink(
+        "&lt;" .. mmp.settings.echocolour .. "&gt;" .. sformat("%6s", roomid),
+        'mmp.gotoRoom(' .. roomid .. ')',
+        string.format("Go to %s (%s)", roomid, tostring(roomname)),
+        true
+      )
+      cecho(string.format("&lt;DarkSlateGrey&gt;: &lt;LightSlateGray&gt;%s&lt;DarkSlateGrey&gt;.\n", roomname))
     end
-
   elseif not id and #multiples &gt; 0 then
     mmp.echo("For which area would you want to list rooms for?")
     fg("DimGrey")
     for _, areaname in ipairs(multiples) do
-      echo"  "; setUnderline(true) echoLink(areaname, 'mmp.echoRoomList("'..areaname..'", true)', "Click to view the room list for "..areaname, true) setUnderline(false) echo"\n"
+      echo("  ");
+      setUnderline(true)
+      echoLink(
+        areaname,
+        'mmp.echoRoomList("' .. areaname .. '", true)',
+        "Click to view the room list for " .. areaname,
+        true
+      )
+      setUnderline(false)
+      echo("\n")
     end
     resetFormat()
-
   else
     mmp.echo(string.format("Don't know of any area named '%s'.", areaname))
   end
@@ -7310,13 +7669,16 @@ function mmp.echoAreaList()
   local ids, rlist = {}, {}
   local totalroomcount = 0
   for area, id in pairs(list) do
-    if id ~= 0 then ids[#ids+1] = id; rlist[id] = area end end
+    if id ~= 0 then
+      ids[#ids + 1] = id;
+      rlist[id] = area
+    end
+  end
   table.sort(ids)
-
-
   -- count the amount of rooms in an area, taking care to count the room in the 0th
   -- index as well if there is one
   -- saves the total room count on the side as well
+
   local function countrooms(areaid)
     local allrooms = getAreaRooms(areaid) or {}
     local areac = (#allrooms or 0) + (allrooms[0] and 1 or 0)
@@ -7324,113 +7686,125 @@ function mmp.echoAreaList()
     return areac
   end
 
-  cecho(string.format(
-      "&lt;DarkSlateGrey&gt;List of all areas we know of (click to view room list):\n"))
-  local getAreaRooms, cecho, fg, echoLink, format, rep = getAreaRooms, cecho, fg, echoLink, string.format, string.rep
+  cecho(string.format("&lt;DarkSlateGrey&gt;List of all areas we know of (click to view room list):\n"))
+  local getAreaRooms, cecho, fg, echoLink, format, rep =
+    getAreaRooms, cecho, fg, echoLink, string.format, string.rep
   for _, id in pairs(ids) do
-    cecho(format("&lt;"..mmp.settings.echocolour.."&gt;%s%d ", rep(" ", (7-#tostring(id))), id))
+    cecho(format("&lt;" .. mmp.settings.echocolour .. "&gt;%s%d ", rep(" ", (7 - #tostring(id))), id))
     -- +1 because getAreaRooms starts counting at 0
-    fg("DarkSlateGrey") echoLink(rlist[id]..(" "):rep(40-#rlist[id]).."("..mmp.comma_value(countrooms(id)).." rooms)", 'mmp.echoRoomList("'..rlist[id]..'", true)', "View the room list for "..rlist[id], true) echo("\n")
+    fg("DarkSlateGrey")
+    echoLink(
+      rlist[id] .. (" "):rep(40 - #rlist[id]) .. "(" .. mmp.comma_value(countrooms(id)) .. " rooms)",
+      'mmp.echoRoomList("' .. rlist[id] .. '", true)',
+      "View the room list for " .. rlist[id],
+      true
+    )
+    echo("\n")
   end
-  cecho(string.format(
-      "&lt;DarkSlateGrey&gt;Total amount of rooms in this map: %s\n", mmp.comma_value(totalroomcount)))
+  cecho(
+    string.format(
+      "&lt;DarkSlateGrey&gt;Total amount of rooms in this map: %s\n", mmp.comma_value(totalroomcount)
+    )
+  )
 end
 
 function mmp.clearLabels(areaid)
   local function clearlabels(areaid)
     local t = getMapLabels(areaid)
-    if type(t) ~= "table" then return end
-
-    for labelid, _ in pairs(t) do deleteMapLabel(areaid, labelid) end
+    if type(t) ~= "table" then
+      return
+    end
+    for labelid, _ in pairs(t) do
+      deleteMapLabel(areaid, labelid)
+    end
   end
 
   if areaid == "map" then
     for areaid in pairs(mmp.areatabler) do
       clearlabels(areaid)
     end
-
     mmp.echo("Cleared labels in all of the map.")
     return
   end
-
   clearlabels(areaid)
   mmp.echo(string.format("Cleared all labels in '%s'.", mmp.areatabler[areaid]))
 end
 
 function mmp.deleteArea(name, exact)
   local id, fname, ma = mmp.findAreaID(name, exact)
-
   if id then
     mmp.doareadelete(id)
   elseif next(ma) then
     mmp.echo("Which one of these specifically would you like to delete?")
-
     fg("DimGrey")
-    for _,name in ipairs(ma) do
-    echo "  " setUnderline(true) echoLink(name, [[mmp.deleteArea("]]..name..[[", true)]], "Delete "..name, true) setUnderline(false) echo"\n"
+    for _, name in ipairs(ma) do
+      echo("  ")
+      setUnderline(true)
+      echoLink(name, [[mmp.deleteArea("]] .. name .. [[", true)]], "Delete " .. name, true)
+      setUnderline(false)
+      echo("\n")
     end
     resetFormat()
-    else
-      mmp.echo("Don't know of that area.")
+  else
+    mmp.echo("Don't know of that area.")
   end
-
   raiseEvent("mmp areas changed")
 end
 
 -- the function actually doing area deletion
+
 function mmp.doareadelete(areaid)
   mmp.deletingarea = {}
-
   local t = mmp.deletingarea
-
   local rooms = getAreaRooms(areaid)
   t.roomcount = table.size(rooms)
   t.roombatches = {}
   t.currentbatch = 1
   t.areaid = areaid
   t.areaname = getAreaTableSwap()[areaid]
-
   -- delete the area right away if there's nothing in it
   if t.roomcount == 0 then
     deleteArea(t.areaid)
     mmp.echo("All done! The area was already gone/empty.")
   end
-
   local rooms_per_batch = 100
-
   -- split up rooms into tables of tables, to be deleted in batches so
   -- that our print statements in between get a chance to be processed
   for batch = 1, t.roomcount, 100 do
-    t.roombatches[#t.roombatches+1] = {}
+    t.roombatches[#t.roombatches + 1] = {}
     local onebatch = t.roombatches[#t.roombatches]
     for inbatch = 1, 100 do
-      onebatch[#onebatch+1] = rooms[batch+inbatch]
+      onebatch[#onebatch + 1] = rooms[batch + inbatch]
     end
   end
 
   function mmp.deletenextbatch()
     local t = mmp.deletingarea
-    if not t then return end
-
+    if not t then
+      return
+    end
     local currentbatch = t.roombatches[t.currentbatchi]
-
     if currentbatch == nil then
       deleteArea(t.areaid)
-      mmp.echo("All done! Deleted the '"..t.areaname.."' area.")
+      mmp.echo("All done! Deleted the '" .. t.areaname .. "' area.")
       mmp.deletingarea = nil
       centerview(mmp.currentroom)
       return
     end
-
     local deleteRoom = deleteRoom
     for i = 1, #currentbatch do
       deleteRoom(currentbatch[i])
     end
-
-    mmp.echo(string.format("Deleted %d batch%s so far, %d left to go - %.2f%% done out of %d needed",
-          t.currentbatchi, (t.currentbatchi == 1 and '' or 'es'), #t.roombatches - t.currentbatchi,
-          (100/#t.roombatches)*t.currentbatchi, #t.roombatches))
-
+    mmp.echo(
+      string.format(
+        "Deleted %d batch%s so far, %d left to go - %.2f%% done out of %d needed",
+        t.currentbatchi,
+        (t.currentbatchi == 1 and '' or 'es'),
+        #t.roombatches - t.currentbatchi,
+        (100 / #t.roombatches) * t.currentbatchi,
+        #t.roombatches
+      )
+    )
     t.currentbatchi = t.currentbatchi + 1
     tempTimer(0.010, mmp.deletenextbatch)
   end
@@ -7444,61 +7818,93 @@ function mmp.renameArea(name, exact)
   if not (mmp.currentroom or getRoomArea(mmp.currentroom)) then
     mmp.echo("Don't know what area are we in at the moment, to rename it.")
   else
-  setAreaName(getRoomArea(mmp.currentroom), name)
-  mmp.echo(string.format("Renamed %s to %s (%d).", mmp.areatabler[getRoomArea(mmp.currentroom)], name, getRoomArea(mmp.currentroom)))
-  centerview(mmp.currentroom)
+    setAreaName(getRoomArea(mmp.currentroom), name)
+    mmp.echo(
+      string.format(
+        "Renamed %s to %s (%d).",
+        mmp.areatabler[getRoomArea(mmp.currentroom)],
+        name,
+        getRoomArea(mmp.currentroom)
+      )
+    )
+    centerview(mmp.currentroom)
   end
-
   raiseEvent("mmp areas changed")
 end
 
 function mmp.roomArea(otherroom, name, exact)
-    local id,fname,ma
-    if tonumber(name) then id = tonumber(name); fname = mmp.areatabler[id]
-    else id, fname, ma = mmp.findAreaID(name, exact) end
-
-    if otherroom ~= "" and not mmp.roomexists(otherroom) then
-      mmp.echo("Room id "..otherroom.." doesn't seem to exist.")
-      return
-    elseif otherroom == "" and not mmp.roomexists(mmp.currentroom) then
-      mmp.echo("Don't know where we are at the moment.")
-      return
-    end
-
-   otherroom = otherroom ~= "" and otherroom or mmp.currentroom
-
+  local id, fname, ma
+  if tonumber(name) then
+    id = tonumber(name);
+    fname = mmp.areatabler[id]
+  else
+    id, fname, ma = mmp.findAreaID(name, exact)
+  end
+  if otherroom ~= "" and not mmp.roomexists(otherroom) then
+    mmp.echo("Room id " .. otherroom .. " doesn't seem to exist.")
+    return
+  elseif otherroom == "" and not mmp.roomexists(mmp.currentroom) then
+    mmp.echo("Don't know where we are at the moment.")
+    return
+  end
+  otherroom = otherroom ~= "" and otherroom or mmp.currentroom
   if id then
     setRoomArea(otherroom, id)
-    mmp.echo(string.format("Moved %s to %s (%d).", (getRoomName(otherroom) ~= "" and getRoomName(otherroom) or "''"), fname, id))
+    mmp.echo(
+      string.format(
+        "Moved %s to %s (%d).",
+        (getRoomName(otherroom) ~= "" and getRoomName(otherroom) or "''"),
+        fname,
+        id
+      )
+    )
     centerview(otherroom)
   elseif next(ma) then
     mmp.echo("Into which area exactly would you like to move the room?")
-
     fg("DimGrey")
-    for _,name in ipairs(ma) do
-    echo "  " setUnderline(true) echoLink(name, [[mmp.roomArea('', "]]..name..[[", true)]], "Move the room to "..name, true) setUnderline(false) echo"\n"
+    for _, name in ipairs(ma) do
+      echo("  ")
+      setUnderline(true)
+      echoLink(
+        name, [[mmp.roomArea('', "]] .. name .. [[", true)]], "Move the room to " .. name, true
+      )
+      setUnderline(false)
+      echo("\n")
     end
     resetFormat()
-    else
-      mmp.echo("Don't know of that area.")
+  else
+    mmp.echo("Don't know of that area.")
   end
 end
 
 function mmp.getAreaBorders(areaid)
-    if mmp.debug then
-        mmp.getAreaBordersTimer = mmp.getAreaBordersTimer or createStopWatch()
-        startStopWatch(mmp.getAreaBordersTimer)
-    end
-    
+  if mmp.debug then
+    mmp.getAreaBordersTimer = mmp.getAreaBordersTimer or createStopWatch()
+    startStopWatch(mmp.getAreaBordersTimer)
+  end
+  -- make sure we have all exits into the area.
+  raiseEvent("mmp link externals")
   local roomlist, endresult = getAreaRooms(areaid), {}
   -- sometimes getAreaRooms can give us no result :(
-  if not roomlist then mmp.echo("Sorry, seems we can't go there - getAreaRooms("..areaid..") didn't give us any results (Mudlet problem - redownloading the map might help fix it)") return end
-  if table.is_empty(roomlist) then mmp.echo("Sorry, seems we can't go there - "..getRoomAreaName(areaid).." has no rooms in it.") return end
-						
+  if not roomlist then
+    mmp.echo(
+      "Sorry, seems we can't go there - getAreaRooms(" ..
+      areaid ..
+      ") didn't give us any results (Mudlet problem - redownloading the map might help fix it)"
+    )
+    return
+  end
+  if table.is_empty(roomlist) then
+    mmp.echo(
+      "Sorry, seems we can't go there - " .. getRoomAreaName(areaid) .. " has no rooms in it."
+    )
+    return
+  end
   -- make a key-value list of room IDs
   local reverselist = {}
-  for i = 0, #roomlist do reverselist[roomlist[i]] = true end
-  
+  for i = 0, #roomlist do
+    reverselist[roomlist[i]] = true
+  end
   local getRoomName, contains, pairs = getRoomName, table.contains, pairs
   if getAllRoomEntrances then
     for i = 0, #roomlist do
@@ -7512,51 +7918,65 @@ function mmp.getAreaBorders(areaid)
     end
   else
     local getRoomExits, getSpecialExitsSwap = getRoomExits, getSpecialExitsSwap
-
-      -- obtain a room list for each of the room IDs we got
-      --for _, id in pairs(roomlist) do
-      for i = 0, #roomlist do
-        local id = roomlist[i]
-        local exits = getRoomExits(id)
-        for _, to in pairs(exits) do
-          if not reverselist[to] then
-            endresult[id] = getRoomName(id)
-          end
-        end
-        local specialexits = getSpecialExitsSwap(id)
-        for _, to in pairs(specialexits) do
-          if not reverselist[to] then
-            endresult[id] = getRoomName(id)
-          end
+    -- obtain a room list for each of the room IDs we got
+    --for _, id in pairs(roomlist) do
+    for i = 0, #roomlist do
+      local id = roomlist[i]
+      local exits = getRoomExits(id)
+      for _, to in pairs(exits) do
+        if not reverselist[to] then
+          endresult[id] = getRoomName(id)
         end
       end
-  end
-
-    if mmp.debug then
-        mmp.echo("mmp.getAreaBordersTimer() on areaid "..areaid.." took "..stopStopWatch(mmp.getAreaBordersTimer).."s to run. Returned "..table.size(endresult).." results.")
+      local specialexits = getSpecialExitsSwap(id)
+      for _, to in pairs(specialexits) do
+        if not reverselist[to] then
+          endresult[id] = getRoomName(id)
+        end
+      end
     end
-
-    return endresult
+  end
+  if mmp.debug then
+    mmp.echo(
+      "mmp.getAreaBordersTimer() on areaid " ..
+      areaid ..
+      " took " ..
+      stopStopWatch(mmp.getAreaBordersTimer) ..
+      "s to run. Returned " ..
+      table.size(endresult) ..
+      " results."
+    )
+  end
+  -- clean up external exits
+  raiseEvent("mmp clear externals")
+  return endresult
 end
 
-
-function mmp.viewArea (where, exact)
-  if not where or not type(where)=="string" then
-    mmp.echo("Which area would you like to view?") return end
-
-
+function mmp.viewArea(where, exact)
+  if not where or not type(where) == "string" then
+    mmp.echo("Which area would you like to view?")
+    return
+  end
   local areaid, msg, multiples = mmp.findAreaID(where, exact)
   if areaid then
     -- center on the first room ID, which typically is the start of an area
     local rooms = getAreaRooms(areaid) or {}
-    if not rooms[1] then mmp.echo("The area has no rooms in it.") else
-    centerview(rooms[1]) end
-
+    if not rooms[1] then
+      mmp.echo("The area has no rooms in it.")
+    else
+      centerview(rooms[1])
+    end
   elseif not areaid and #multiples &gt; 0 then
     mmp.echo("Which area would you like to view exactly?")
     fg("DimGrey")
     for _, areaname in ipairs(multiples) do
-      echo"  "; setUnderline(true) echoLink(areaname, 'mmp.viewArea("'..areaname..'", true)', "Click to view "..areaname, true) setUnderline(false) echo"\n"
+      echo("  ");
+      setUnderline(true)
+      echoLink(
+        areaname, 'mmp.viewArea("' .. areaname .. '", true)', "Click to view " .. areaname, true
+      )
+      setUnderline(false)
+      echo("\n")
     end
     resetFormat()
     return
@@ -7574,62 +7994,65 @@ end
 -- how it works: split input string into tokens by space, then determine
 -- what to do by checking first few tokens, and finally call the local
 -- function with the proper arguments
+
 function mmp.roomLabel(input)
   if not createMapLabel then
-    mmp.echo("Your Mudlet doesn't support createMapLabel() yet - please update to 2.0-test3 or better.") return
+    mmp.echo(
+      "Your Mudlet doesn't support createMapLabel() yet - please update to 2.0-test3 or better."
+    )
+    return
   end
-
   local tk = input:split(" ")
   local room, fg, bg, message = mmp.currentroom, "yellow", "red", "Some room label"
-
   -- input always have to be something, so tk[1] at least always exists
   if tonumber(tk[1]) then
-    room = tonumber(table.remove(tk, 1)) -- remove the number, so we're left with the colors or msg
+    room = tonumber(table.remove(tk, 1))
+    -- remove the number, so we're left with the colors or msg
   end
-
   -- next: is this a foreground color?
   if tk[1] and color_table[tk[1]] then
     fg = table.remove(tk, 1)
   end
-
   -- next: is this a backround color?
   if tk[1] and color_table[tk[1]] then
     bg = table.remove(tk, 1)
   end
-
   -- the rest would be our message
   if tk[1] then
     message = table.concat(tk, " ")
   end
-
   -- if we haven't provided a room ID and we don't know where we are yet, we can't make a label
   if not room then
-    mmp.echo("We don't know where we are to make a label here.") return
+    mmp.echo("We don't know where we are to make a label here.")
+    return
   end
-
-  local x,y = getRoomCoordinates(room)
-  local f1,f2,f3 = unpack(color_table[fg])
-  local b1,b2,b3 = unpack(color_table[bg])
-
+  local x, y = getRoomCoordinates(room)
+  local f1, f2, f3 = unpack(color_table[fg])
+  local b1, b2, b3 = unpack(color_table[bg])
   -- finally: do it :)
-
-  local lid = createMapLabel(getRoomArea(room), message, x, y, f1,f2,f3, b1,b2,b3)
-  mmp.echo(string.format("Created new label #%d '%s' in %s.", lid, message, getRoomAreaName(getRoomArea(room))))
+  local lid = createMapLabel(getRoomArea(room), message, x, y, f1, f2, f3, b1, b2, b3)
+  mmp.echo(
+    string.format(
+      "Created new label #%d '%s' in %s.", lid, message, getRoomAreaName(getRoomArea(room))
+    )
+  )
 end
 
-function mmp.areaLabels (where, exact)
+function mmp.areaLabels(where, exact)
   if not getMapLabels then
-    mmp.echo("Your Mudlet doesn't support getMapLabels() yet - please update to 2.0-test3 or better.") return
+    mmp.echo(
+      "Your Mudlet doesn't support getMapLabels() yet - please update to 2.0-test3 or better."
+    )
+    return
   end
-
-  if (not where or not type(where)=="string") and not mmp.currentroom then
-    mmp.echo("For which area would you like to view labels?") return end
-
+  if (not where or not type(where) == "string") and not mmp.currentroom then
+    mmp.echo("For which area would you like to view labels?")
+    return
+  end
   if not where then
-  exact = true
+    exact = true
     where = getRoomAreaName(getRoomArea(mmp.currentroom))
   end
-
   local areaid, msg, multiples = mmp.findAreaID(where, exact)
   if areaid then
     local t = getMapLabels(areaid)
@@ -7637,21 +8060,37 @@ function mmp.areaLabels (where, exact)
       mmp.echo(string.format("'%s' doesn't seem to have any labels.", getRoomAreaName(areaid)))
       return
     end
-
     mmp.echo(string.format("Area labels for '%s'", getRoomAreaName(areaid)))
     for labelid, labeltext in pairs(t) do
       fg("DimGrey")
       echo(string.format("  %d) %s (", labelid, labeltext))
-      fg"orange_red" setUnderline(true) echoLink('delete', string.format('deleteMapLabel(%d, %d); mmp.echo("Deleted label #'..labelid..'")', areaid, labelid), "Delete label #"..labelid.." from "..getRoomAreaName(areaid))
-      setUnderline(false) echo")\n"
+      fg("orange_red")
+      setUnderline(true)
+      echoLink(
+        'delete',
+        string.format(
+          'deleteMapLabel(%d, %d); mmp.echo("Deleted label #' .. labelid .. '")', areaid, labelid
+        ),
+        "Delete label #" .. labelid .. " from " .. getRoomAreaName(areaid)
+      )
+      setUnderline(false)
+      echo(")\n")
     end
     resetFormat()
-
   elseif not areaid and #multiples &gt; 0 then
     mmp.echo("Which area would you like to view exactly?")
     fg("DimGrey")
     for _, areaname in ipairs(multiples) do
-      echo"  "; setUnderline(true) echoLink(areaname, 'mmp.areaLabels("'..areaname..'", true)', "Click to view labels in "..areaname, true) setUnderline(false) echo"\n"
+      echo("  ");
+      setUnderline(true)
+      echoLink(
+        areaname,
+        'mmp.areaLabels("' .. areaname .. '", true)',
+        "Click to view labels in " .. areaname,
+        true
+      )
+      setUnderline(false)
+      echo("\n")
     end
     resetFormat()
     return
@@ -7662,45 +8101,81 @@ function mmp.areaLabels (where, exact)
 end
 
 function mmp.echoPath(from, to)
-	assert(tonumber(from) and tonumber(to), "mmp.getPath: both from and to have to be room IDs")
-	if mmp.getPath(from, to) then
-		mmp.echo("&lt;white&gt;Directions from &lt;yellow&gt;" .. string.upper(searchRoom(from)) .. " &lt;white&gt;to &lt;yellow&gt;" .. string.upper(searchRoom(to)) .. "&lt;white&gt;:")
-		mmp.echo(table.concat(speedWalkDir, ", "))
-		return mmp.speedWalkDir
-	else
-	  mmp.echo("&lt;white&gt;I can't find a way from &lt;yellow&gt;" .. string.upper(searchRoom(from)) .. " &lt;white&gt;to &lt;yellow&gt;" .. string.upper(searchRoom(to)) .. "&lt;white&gt;")
-	end
+  assert(tonumber(from) and tonumber(to), "mmp.getPath: both from and to have to be room IDs")
+  if mmp.getPath(from, to) then
+    mmp.echo(
+      "&lt;white&gt;Directions from &lt;yellow&gt;" ..
+      string.upper(searchRoom(from)) ..
+      " &lt;white&gt;to &lt;yellow&gt;" ..
+      string.upper(searchRoom(to)) ..
+      "&lt;white&gt;:"
+    )
+    mmp.echo(table.concat(speedWalkDir, ", "))
+    return mmp.speedWalkDir
+  else
+    mmp.echo(
+      "&lt;white&gt;I can't find a way from &lt;yellow&gt;" ..
+      string.upper(searchRoom(from)) ..
+      " &lt;white&gt;to &lt;yellow&gt;" ..
+      string.upper(searchRoom(to)) ..
+      "&lt;white&gt;"
+    )
+  end
 end
 
 function mmp.listSpecialExits(filter)
   local c = 0
-
   mmp.echo("Listing special exits...")
   for area, areaname in pairs(mmp.areatabler) do
     local rooms = getAreaRooms(area) or {}
     for i = 0, #rooms do
       local exits = getSpecialExits(rooms[i] or 0)
-
-       if exits and next(exits) then
-         for exit, cmd in pairs(exits) do
-           if type(cmd) == "table" then cmd = next(cmd) end
-           if cmd:match("^%d") then cmd = cmd:sub(2) end
-
-           if not filter or cmd:lower():find(filter, 1, true) then
+      if exits and next(exits) then
+        for exit, cmd in pairs(exits) do
+          if type(cmd) == "table" then
+            cmd = next(cmd)
+          end
+          if cmd:match("^%d") then
+            cmd = cmd:sub(2)
+          end
+          if not filter or cmd:lower():find(filter, 1, true) then
             if getRoomArea(exit) ~= area then
-              cecho(string.format("&lt;dark_slate_grey&gt;%s &lt;LightSlateGray&gt;(%d, in %s)&lt;dark_slate_grey&gt; &lt;MediumSlateBlue&gt;-&gt; &lt;coral&gt;%s -&lt;MediumSlateBlue&gt;&gt;&lt;dark_slate_grey&gt; %s &lt;LightSlateGray&gt;(%d, in %s)\n", getRoomName(rooms[i]), rooms[i], areaname,
-                cmd, getRoomName(exit), exit, mmp.areatabler[getRoomArea(exit)] or '?'))
+              cecho(
+                string.format(
+                  "&lt;dark_slate_grey&gt;%s &lt;LightSlateGray&gt;(%d, in %s)&lt;dark_slate_grey&gt; &lt;MediumSlateBlue&gt;-&gt; &lt;coral&gt;%s -&lt;MediumSlateBlue&gt;&gt;&lt;dark_slate_grey&gt; %s &lt;LightSlateGray&gt;(%d, in %s)\n",
+                  getRoomName(rooms[i]),
+                  rooms[i],
+                  areaname,
+                  cmd,
+                  getRoomName(exit),
+                  exit,
+                  mmp.areatabler[getRoomArea(exit)] or '?'
+                )
+              )
             else
-              cecho(string.format("&lt;dark_slate_grey&gt;%s &lt;LightSlateGray&gt;(%d)&lt;dark_slate_grey&gt; &lt;MediumSlateBlue&gt;-&gt; &lt;coral&gt;%s &lt;MediumSlateBlue&gt;-&gt;&lt;dark_slate_grey&gt; %s &lt;LightSlateGray&gt;(%d)&lt;dark_slate_grey&gt; in %s\n", getRoomName(rooms[i]), rooms[i], cmd, getRoomName(exit), exit, areaname))
+              cecho(
+                string.format(
+                  "&lt;dark_slate_grey&gt;%s &lt;LightSlateGray&gt;(%d)&lt;dark_slate_grey&gt; &lt;MediumSlateBlue&gt;-&gt; &lt;coral&gt;%s &lt;MediumSlateBlue&gt;-&gt;&lt;dark_slate_grey&gt; %s &lt;LightSlateGray&gt;(%d)&lt;dark_slate_grey&gt; in %s\n",
+                  getRoomName(rooms[i]),
+                  rooms[i],
+                  cmd,
+                  getRoomName(exit),
+                  exit,
+                  areaname
+                )
+              )
             end
             c = c + 1
-           end
-         end
-       end
+          end
+        end
+      end
     end
   end
-
-  mmp.echo(string.format("%d exits listed%s.", c, (not filter and '' or ", with for the filter '"..filter.."'")))
+  mmp.echo(
+    string.format(
+      "%d exits listed%s.", c, (not filter and '' or ", with for the filter '" .. filter .. "'")
+    )
+  )
 end
 
 function mmp.delSpecialExits(filter)
@@ -7709,22 +8184,24 @@ function mmp.delSpecialExits(filter)
     local rooms = getAreaRooms(area) or {}
     for i = 0, #rooms do
       local exits = getSpecialExits(rooms[i] or 0)
-
-       if exits and next(exits) then
-         for exit, cmd in pairs(exits) do
-           if type(cmd) == "table" then cmd = next(cmd) end
-           if cmd:match("^%d") then cmd = cmd:sub(2) end
-
-           if not filter or cmd:lower():find(filter, 1, true) then
+      if exits and next(exits) then
+        for exit, cmd in pairs(exits) do
+          if type(cmd) == "table" then
+            cmd = next(cmd)
+          end
+          if cmd:match("^%d") then
+            cmd = cmd:sub(2)
+          end
+          if not filter or cmd:lower():find(filter, 1, true) then
             local rid, action
             local originalExits = {}
             local e = getSpecialExits(rooms[i])
-            for t,n in pairs(e) do
+            for t, n in pairs(e) do
               rid = tonumber(t)
-              for a,l in pairs(n) do
+              for a, l in pairs(n) do
                 action = tostring(a)
               end
-              if not action:find(filter,1,true) then
+              if not action:find(filter, 1, true) then
                 originalExits[rid] = action
               end
             end
@@ -7733,13 +8210,16 @@ function mmp.delSpecialExits(filter)
               addSpecialExit(rooms[i], tonumber(rid), tostring(act))
             end
             c = c + 1
-           end
-         end
-       end
+          end
+        end
+      end
     end
   end
-
-  mmp.echo(string.format("%d exits deleted%s.", c, (not filter and '' or ", with for the filter '"..filter.."'")))
+  mmp.echo(
+    string.format(
+      "%d exits deleted%s.", c, (not filter and '' or ", with for the filter '" .. filter .. "'")
+    )
+  )
 end</script>
 					<eventHandlerList />
 				</Script>
@@ -7949,7 +8429,7 @@ end
 
 function mmp.chageMapSource()
   local use = mmp.settings.crowdmap and true or false
-  if use and not (mmp.game == "achaea" or mmp.game == "starmourn") then
+  if use and not (mmp.game == "achaea" or mmp.game == "starmourn" or mmp.game == "lusternia") then
     mmp.echo("Sorry - the crowdsourced map is only available for use in Achaea or Starmourn. If you'd like to help start one for your game, please post at http://forums.mudlet.org/viewtopic.php?f=13&amp;t=1696. If you are playing one of the games, then it is likely that you just downloaded the script - and it doesn't know what you are playing. Reconnect and it'll know.")
     mmp.settings.crowdmap = false
   elseif use and not loadMap then
@@ -10135,110 +10615,106 @@ end</script>
 					<Script isActive="yes" isFolder="no">
 						<name>Transverse and pathfind</name>
 						<packageName></packageName>
-						<script>local planes = {
-["the Prime Material Plane"]="prime",
-["the Ethereal Plane"]="ethereal",
-["the Water Elemental Plane"]="elemental",
-["the Earth Elemental Plane"]="elemental",
-["the Air Elemental Plane"]="elemental",
-["the Fire Elemental Plane"]="elemental",
-["Celestia, Plane of Light"]="cosmic",
-["the Cosmic Plane of Vortex"]="cosmic",
-["the Cosmic Plane of Continuum"]="cosmic",
-["the Tainted Plane of Nil"]="cosmic",
-["the Astral Plane"]="astral",
-}
-
-local transverseCMD = transverseCMD
-local transversedFrom = transversedFrom
-local lastPlane = lastPlane
-function testytest()
-	echo(transversedFrom)
-	echo(transverseCMD)
-	echo(lastPlane)
-end
+						<script>local planes =
+  {
+    ["the Prime Material Plane"] = "prime",
+    ["the Ethereal Plane"] = "ethereal",
+    ["the Water Elemental Plane"] = "elemental",
+    ["the Earth Elemental Plane"] = "elemental",
+    ["the Air Elemental Plane"] = "elemental",
+    ["the Fire Elemental Plane"] = "elemental",
+    ["Celestia, Plane of Light"] = "cosmic",
+    ["the Cosmic Plane of Vortex"] = "cosmic",
+    ["the Cosmic Plane of Continuum"] = "cosmic",
+    ["the Tainted Plane of Nil"] = "cosmic",
+    ["the Astral Plane"] = "astral",
+  }
 
 function mmp.transverse(_, command)
-	command = command:lower()
-	if command:sub(0,11)=="transverse " or command=="pathfind" then
-		transverseCMD = command
-		transversedFrom=gmcp.Room.Info.num
-		lastPlane = planes[gmcp.Room.Info.details[1]]
-	end
+  command = command:lower()
+  if command:sub(0, 11) == "transverse " or command == "pathfind" then
+    transverseCMD = command
+    transversedFrom = gmcp.Room.Info.num
+    lastPlane = planes[gmcp.Room.Info.details[1]]
+    validTransverse = true
+  end
 end
-registerAnonymousEventHandler("sysDataSendRequest","mmp.transverse")
+
+registerAnonymousEventHandler("sysDataSendRequest", "mmp.transverse")
 
 function mmp.registerTransverseExit()
-	if transversedFrom~=gmcp.Room.Info.num then
-		addSpecialExit(transversedFrom,gmcp.Room.Info.num,transverseCMD)
-		setExitWeight(transversedFrom,transverseCMD,10)
-		if lastPlane then
-			addSpecialExit(gmcp.Room.Info.num,transversedFrom,"transverse "..lastPlane)
-			setExitWeight(gmcp.Room.Info.num,"transverse "..lastPlane,10)
-		end
-	end
+  if transversedFrom ~= gmcp.Room.Info.num then
+    addSpecialExit(transversedFrom, gmcp.Room.Info.num, transverseCMD)
+    setExitWeight(transversedFrom, transverseCMD, 20)
+    if lastPlane then
+      addSpecialExit(gmcp.Room.Info.num, transversedFrom, "transverse " .. lastPlane)
+      setExitWeight(gmcp.Room.Info.num, "transverse " .. lastPlane, 20)
+    end
+    validTransverse = false
+  end
 end
 
 function mmp.clearTransverse()
-	local otherSide = 0
-	for room, command in pairs(getSpecialExits(gmcp.Room.Info.num)) do
-		if next(command)==transverseCMD then
-			otherSide=room
-		end
-	end
-	for room, command in pairs(getSpecialExits(otherSide) or {}) do
-		if room == gmcp.Room.Info.num and string.sub(next(command),0,11)=="transverse " then
-			removeSpecialExit(otherSide,next(command))
-		end
-	end
-	removeSpecialExit(gmcp.Room.Info.num,transverseCMD)
-	if mmp.autowalking then
-		mmp.autowalking = false
-		mmp.gotoRoom(string.split(next(mmp.showpathcache()),"_")[2])
-	end
+  local otherSide = 0
+  for room, command in pairs(getSpecialExits(gmcp.Room.Info.num)) do
+    if next(command) == transverseCMD then
+      otherSide = room
+    end
+  end
+  for room, command in pairs(getSpecialExits(otherSide) or {}) do
+    if room == gmcp.Room.Info.num and string.sub(next(command), 0, 11) == "transverse " then
+      removeSpecialExit(otherSide, next(command))
+    end
+  end
+  removeSpecialExit(gmcp.Room.Info.num, transverseCMD)
+  if mmp.autowalking then
+    mmp.autowalking = false
+    mmp.gotoRoom(string.split(next(mmp.showpathcache()), "_")[2])
+  end
 end
 
 function mmp.registerPathfind()
-	addSpecialExit(transversedFrom,gmcp.Room.Info.num,"pathfind")
-	setExitWeight(transversedFrom,"pathfind",6)
-	addSpecialExit(gmcp.Room.Info.num,transversedFrom,"pathfind")
-	setExitWeight(gmcp.Room.Info.num,"pathfind",6)
+  addSpecialExit(transversedFrom, gmcp.Room.Info.num, "pathfind")
+  setExitWeight(transversedFrom, "pathfind", 15)
+  addSpecialExit(gmcp.Room.Info.num, transversedFrom, "pathfind")
+  setExitWeight(gmcp.Room.Info.num, "pathfind", 15)
+  validTransverse = false
 end
 
 function mmp.clearPathfind()
-	local otherSide = 0
-	for room, command in pairs(getSpecialExits(gmcp.Room.Info.num)) do
-		if next(command)=="pathfind" then
-			otherSide=room
-		end
-	end
-	for room, command in pairs(getSpecialExits(otherSide) or {}) do
-		if room == gmcp.Room.Info.num and next(command)=="pathfind" then
-			removeSpecialExit(otherSide,next(command))
-		end
-	end
-	removeSpecialExit(gmcp.Room.Info.num,"pathfind")
-	if mmp.autowalking then
-		mmp.autowalking = false
-		mmp.gotoRoom(string.split(next(mmp.showpathcache()),"_")[2])
-	end
+  local otherSide = 0
+  for room, command in pairs(getSpecialExits(gmcp.Room.Info.num)) do
+    if next(command) == "pathfind" then
+      otherSide = room
+    end
+  end
+  for room, command in pairs(getSpecialExits(otherSide) or {}) do
+    if room == gmcp.Room.Info.num and next(command) == "pathfind" then
+      removeSpecialExit(otherSide, next(command))
+    end
+  end
+  removeSpecialExit(gmcp.Room.Info.num, "pathfind")
+  if mmp.autowalking then
+    mmp.autowalking = false
+    mmp.gotoRoom(string.split(next(mmp.showpathcache()), "_")[2])
+  end
 end
 
 function mmp.lockpaths(lock)
-	local count=0
-	for area, areaname in pairs(mmp.areatabler) do
-		local rooms = getAreaRooms(area) or {}
-		for i = 0, #rooms do
-			local exits = getSpecialExits(rooms[i] or 0)
-			for room,command in pairs(exits or {}) do
-				if next(command)=="pathfind" then
-					count = count+1
-					lockSpecialExit(rooms[i],room,"pathfind",lock)
-				end
-			end
-		end
-	end
-	mmp.echo((lock and "Locked " or "Unlocked ")..count.." pathfinding exits.")
+  local count = 0
+  for area, areaname in pairs(mmp.areatabler) do
+    local rooms = getAreaRooms(area) or {}
+    for i = 0, #rooms do
+      local exits = getSpecialExits(rooms[i] or 0)
+      for room, command in pairs(exits or {}) do
+        if next(command) == "pathfind" then
+          count = count + 1
+          lockSpecialExit(rooms[i], room, "pathfind", lock)
+        end
+      end
+    end
+  end
+  mmp.echo((lock and "Locked " or "Unlocked ") .. count .. " pathfinding exits.")
 end</script>
 						<eventHandlerList />
 					</Script>
@@ -10388,6 +10864,39 @@ end</script>
 -------------------------------------------------
 </script>
 					<eventHandlerList />
+					<Script isActive="yes" isFolder="no">
+						<name>Lifts</name>
+						<packageName></packageName>
+						<script>-------------------------------------------------
+--         Put your Lua functions here.        --
+--                                             --
+-- Note that you can also use external Scripts --
+-------------------------------------------------
+function mmp.liftFloor(roomname,floornum,currentfloor) --string,int,bool
+	if not mmp.autowalking then
+		return
+	end
+
+	--get room name of next in speedwalkpath
+	if not speedWalkCounter then
+    speedWalkCounter = 1
+  end
+	local destRoomName = getRoomName(mmp.speedWalkPath[speedWalkCounter])
+	if roomname == nil then roomname = destRoomName end
+
+	if roomname == destRoomName then
+		if currentfloor then
+			send("EXIT LIFT",false) --Lift is on correct floor, can EXIT LIFT
+			if mmp.liftTimer then killTimer(mmp.liftTimer) end
+		else
+			mmp.customwalkdelay(2) --Lift is on incorrect floor arbitrary wait for next trigger line
+			if mmp.liftTimer then killTimer(mmp.liftTimer) end
+			mmp.liftTimer = tempTimer(1, function() send("KEY LIFT ".. floornum,false) end )	--wait one second before requesting the correct floor (allows other users to enter/exit)
+		end
+	end
+end</script>
+						<eventHandlerList />
+					</Script>
 					<Script isActive="yes" isFolder="no">
 						<name>register_starmourn_envdata</name>
 						<packageName></packageName>
@@ -10837,6 +11346,10 @@ function mmp.checkforupdate()
         downloadFile(
           mmp.mapfile, "http://ire-mudlet-mapping.github.io/StarmournCrowdmap/Map/version.txt"
         )
+      elseif game == "lusternia" then
+        downloadFile(
+          mmp.mapfile, "http://ire-mudlet-mapping.github.io/LusterniaCrowdmap/Map/version.txt"
+        )
       end
     elseif mmp.settings.updatemap then
       downloadFile(mmp.mapfile, "http://www." .. game .. ".com/maps/MD5SUM")
@@ -10881,6 +11394,11 @@ function mmp.retrievecrowdchangelog()
     downloadFile(
       mmp.crowdchangelogfile,
       "http://ire-mudlet-mapping.github.io/StarmournCrowdmap/Map/changelog.txt"
+    )
+  elseif mmp.game == "lusternia" then
+    downloadFile(
+      mmp.crowdchangelogfile,
+      "http://ire-mudlet-mapping.github.io/LusterniaCrowdmap/Map/changelog.txt"
     )
   end
 end
@@ -10937,6 +11455,8 @@ function mmp.downloadcrowdmap(newversion)
     downloadFile(mmp.crowdmapfile, "http://ire-mudlet-mapping.github.io/AchaeaCrowdmap/Map/map")
   elseif mmp.game == "starmourn" then
     downloadFile(mmp.crowdmapfile, "http://ire-mudlet-mapping.github.io/StarmournCrowdmap/Map/map")
+  elseif mmp.game == "lusternia" then
+    downloadFile(mmp.crowdmapfile, "http://ire-mudlet-mapping.github.io/LusterniaCrowdmap/Map/map")
   end
   mmp.echo("Downloading the latest crowdmap...")
 end
