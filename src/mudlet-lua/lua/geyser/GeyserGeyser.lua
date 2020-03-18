@@ -85,3 +85,32 @@ function Geyser:remove (window)
   index = table.index_of(self.windows, window.name) or 0
   table.remove(self.windows, index)
 end
+
+--- Removes a window from the parent it is in and put's it in a new one
+-- This is used internally, don't use it. Use changeContainer instead
+-- @param window The new parents windowname 
+local function setContainerWindow(self, windowname)
+  local name
+  self.windowname = windowname
+  windowname = windowname or "main"
+  for k,v in pairs(self.windowList) do
+    name = v.name
+    if v.type == "mapper" then
+      name = v.type
+    end
+    setWindow(windowname, name, 0, 0)
+    v:reposition()
+    setContainerWindow(v, windowname)
+  end
+end
+
+--- Removes a window from the container that it manages
+-- @param container The new container the window will be set in
+function Geyser:changeContainer (container)
+  
+  self.container:remove(self)
+  if self.windowname ~= container.windowname then
+    setContainerWindow(self, container.windowname)
+  end
+  container:add(self)
+end
