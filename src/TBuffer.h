@@ -141,6 +141,13 @@ class TBuffer
 
     static const QMap<QString, QVector<QString>> mSupportedMxpElements;
 
+    // TChar is 44bytes on a 64bit system and in testing ends up taking ~60 bytes per character
+    // with all other resources included
+    inline static const int TCHAR_IN_BYTES = 60;
+
+    // arbitrary limit on how many characters a single echo can accept. On an average screen,
+    // a line is usually set to wrap at 200 max
+    inline static const int MAX_CHARACTERS_PER_ECHO = 10000;
 
 public:
     TBuffer(Host* pH);
@@ -174,7 +181,7 @@ public:
     void translateToPlainText(std::string& s, bool isFromServer=false);
     void append(const QString& chunk, int sub_start, int sub_end, const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
     // Only the bits within TChar::TestMask are considered for formatting:
-    void append(const QString& chunk, const int sub_start, const int sub_end, const TChar format, const int linkID = 0);
+    void append(const QString &chunk, const int sub_start, const int sub_end, const TChar format, const int linkID = 0);
     void appendLine(const QString& chunk, const int sub_start, const int sub_end, const QColor& fg, const QColor& bg, TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
     void setWrapAt(int i) { mWrapAt = i; }
     void setWrapIndent(int i) { mWrapIndent = i; }
@@ -183,6 +190,7 @@ public:
     TBuffer cut(QPoint&, QPoint&);
     void paste(QPoint&, TBuffer);
     void setBufferSize(int s, int batch);
+    int getMaxBufferSize();
     static const QList<QString> getComputerEncodingNames() { return csmEncodingTable.keys(); }
     static const QList<QString> getFriendlyEncodingNames();
     static const QString& getComputerEncoding(const QString& encoding);
