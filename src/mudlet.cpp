@@ -3431,6 +3431,11 @@ void mudlet::show_options_dialog(QString tab)
         connect(mpActionReconnect.data(), &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_specialoption, &QWidget::hide);
         connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_specialoption, &QWidget::hide);
         mpProfilePreferencesDlgMap.value(pHost)->setAttribute(Qt::WA_DeleteOnClose);
+    }
+
+    // pHost can be a nullptr here so we do not want to dereference it in that
+    // case {when there is no profile loaded}:
+    if (pHost) {
         mpProfilePreferencesDlgMap.value(pHost)->setStyleSheet(pHost->mProfileStyleSheet);
     }
     mpProfilePreferencesDlgMap.value(pHost)->setTab(tab);
