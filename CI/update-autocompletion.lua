@@ -39,7 +39,6 @@ local function scrapeLuaFunctions(htmlbody)
     end
   end
 
-  table.sort(funcs, function (a,b) return a.name < b.name end)
   funcsHash = {}
   local count = 0
   for i, v in ipairs(funcs) do
