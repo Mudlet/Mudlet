@@ -11,6 +11,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Whitespace linter
-      uses: hexrabbit/test-action@v0.0.1
+      uses: hexrabbit/whitespace-lint@v0.0.1
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
