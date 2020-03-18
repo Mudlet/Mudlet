@@ -2408,7 +2408,7 @@ bool mudlet::moveWindow(Host* pHost, const QString& name, int x1, int y1)
     return false;
 }
 
-std::pair<bool, QString> mudlet::setWindow(Host* pHost, const QString& windowname, const QString& name, int x1, int y1)
+std::pair<bool, QString> mudlet::setWindow(Host* pHost, const QString& windowname, const QString& name, int x1, int y1, bool show)
 {
     if (!pHost || !pHost->mpConsole) {
         return {false, QString()};
@@ -2431,19 +2431,25 @@ std::pair<bool, QString> mudlet::setWindow(Host* pHost, const QString& windownam
     if (pL) {
         pL->setParent(pW);
         pL->move(x1, y1);
-        pL->show();
+        if (show) {
+            pL->show();
+        }
         return {true, QString()};
     } else if (pC) {
         pC->setParent(pW);
         pC->move(x1, y1);
         pC->mOldX = x1;
         pC->mOldY = y1;
-        pC->show();
+        if (show) {
+            pC->show();
+        }
         return {true, QString()};
     } else if (pM && name.toLower() == QLatin1String("mapper")) {
         pM->setParent(pW);
         pM->move(x1, y1);
-        pM->show();
+        if (show) {
+            pM->show();
+        }
         return {true, QString()};
     }
 

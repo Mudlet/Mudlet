@@ -86,20 +86,46 @@ function Geyser:remove (window)
   table.remove(self.windows, index)
 end
 
+
 --- Removes a window from the parent it is in and put's it in a new one
 -- This is used internally, don't use it. Use changeContainer instead
 -- @param window The new parents windowname 
-local function setContainerWindow(self, windowname)
-  local name
-  self.windowname = windowname
+local function setMyWindow(self, windowname)
   windowname = windowname or "main"
-  for k,v in pairs(self.windowList) do
-    name = v.name
-    if v.type == "mapper" then
-      name = v.type
+  local name
+  name = self.name
+  if self.type == "mapper" then
+    name = self.type
+  end
+
+  -- Change containerwindow for nested Labels
+  if self.type == "label" and self.nestedLabels then
+    for k,v in ipairs(self.nestedLabels) do
+      if windowname ~= "main" then
+        v:changeContainer(Geyser.windowList[windowname.."Container"].windowList[windowname])
+      else
+        v:changeContainer(Geyser)
+      end
     end
-    setWindow(windowname, name, 0, 0)
-    v:reposition()
+    closeAllLevels(self)
+  end
+  
+  -- Prevent hidden children to get visible  
+  if self.hidden or self.auto_hidden then
+    setWindow(windowname, name, 0, 0, 0)
+  else 
+    setWindow(windowname, name, 0, 0, 1)
+  end
+end
+
+
+--- Removes all containers windows from the parent they are in and put's them in a new one
+-- This is used internally, don't use it. Use changeContainer instead
+-- @param window The new parents windowname 
+local function setContainerWindow(self, windowname)
+  self.windowname = windowname
+  for k,v in pairs(self.windowList) do
+    setMyWindow(v, windowname)
     setContainerWindow(v, windowname)
   end
 end
@@ -107,9 +133,17 @@ end
 --- Removes a window from the container that it manages
 -- @param container The new container the window will be set in
 function Geyser:changeContainer (container)
-  
+  --Nothing to change
+  if self.container == container then
+    return
+  end 
+  --If there is no windowname then windowname is main
+  local windowname = container.windowname
+  windowname = windowname or "main"
+
   self.container:remove(self)
   if self.windowname ~= container.windowname then
+    setMyWindow(self, container.windowname)
     setContainerWindow(self, container.windowname)
   end
   container:add(self)
