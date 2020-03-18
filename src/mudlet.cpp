@@ -161,7 +161,6 @@ mudlet::mudlet()
 , mShowIconsOnMenuCheckedState(Qt::PartiallyChecked)
 , mEnableFullScreenMode(false)
 , mCopyAsImageTimeout{3}
-, mInterfaceLanguage(QStringLiteral("en_US"))
 , mUsingMudletDictionaries(false)
 , mIsGoingDown(false)
 , mMenuBarVisibility(visibleAlways)
@@ -194,6 +193,11 @@ mudlet::mudlet()
 
     scanForMudletTranslations(QStringLiteral(":/lang"));
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
+
+    if (firstLaunch()) {
+        mInterfaceLanguage = autodetectPreferredLanguage();
+    }
+
     loadTranslators(mInterfaceLanguage);
 
     setupUi(this);
@@ -884,6 +888,12 @@ void mudlet::migrateDebugConsole(Host* currentHost)
     mpDebugArea->close();
 }
 
+// returns true if this is the first launch of Mudlet on this machine
+bool mudlet::firstLaunch()
+{
+    return !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
+}
+
 // As we are currently only using files from a resource file we only need to
 // analyse them once per application run - if we were loading from a user
 // selectable location, or even from a read-only part of their computer's
@@ -934,7 +944,7 @@ void mudlet::scanForMudletTranslations(const QString& path)
                 }
             }
             // PLACEMARKER: Start of locale codes to native language decoding - insert an entry here for any futher Mudlet supported languages
-            translation currentTranslation(percentageTranslated);
+            translation currentTranslation(percentageTranslated, languageCode);
             if (!languageCode.compare(QLatin1String("en_US"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = QStringLiteral("English (American)");
             } else if (!languageCode.compare(QLatin1String("en_GB"), Qt::CaseInsensitive)) {
@@ -5180,6 +5190,30 @@ void mudlet::setInterfaceLanguage(const QString& languageCode)
         // within the Mudlet application code}...
         emit signal_guiLanguageChanged(languageCode);
     }
+}
+
+// return the user's desktop language if we have a quality translation for it
+// or a back-up language they've specified
+QString mudlet::autodetectPreferredLanguage()
+{
+    QVector<QString> availableQualityTranslations;
+    for (auto& code : getAvailableTranslationCodes()) {
+        auto& translation = mTranslationsMap.value(code);
+        if (translation.fromResourceFile()) {
+            auto& translatedPc = translation.getTranslatedPercentage();
+            if (translatedPc >= mTranslationGoldStar) {
+                availableQualityTranslations.append(translation.getLocaleCode());
+            }
+        }
+    }
+
+    for (auto language : QLocale::system().uiLanguages()) {
+        if (availableQualityTranslations.contains(language.replace(QStringLiteral("-"), QStringLiteral("_")))) {
+            return language;
+        }
+    }
+
+    return QStringLiteral("en_US");
 }
 
 bool mudlet::setClickthrough(Host* pHost, const QString& name, bool clickthrough)

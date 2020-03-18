@@ -572,6 +572,8 @@ private:
     void loadTranslators(const QString &languageCode);
     void loadDictionaryLanguageMap();
     void migrateDebugConsole(Host* currentHost);
+    static bool firstLaunch();
+    QString autodetectPreferredLanguage();
 
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
@@ -671,7 +673,7 @@ private:
     // Has default form of "en_US" but can be just an ISO langauge code e.g. "fr" for french,
     // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
     // file for GUI translation
-    QString mInterfaceLanguage;
+    QString mInterfaceLanguage {};
     // The next pair retains the path argument supplied to the corresponding
     // scanForXxxTranslations(...) method so it is available to the subsquent
     // loadTranslators(...) call
@@ -719,9 +721,10 @@ class translation
     friend void mudlet::scanForQtTranslations(const QString&);
 
 public:
-    translation(const int translationPercent = -1) : mTranslatedPercentage(translationPercent) {}
+    translation(const int translationPercent = -1, const QString localeCode = {}) : mTranslatedPercentage(translationPercent), mLocaleCode(localeCode) {}
 
     const QString& getNativeName() const { return mNativeName; }
+    const QString& getLocaleCode() const { return mLocaleCode; }
     const QString& getMudletTranslationFileName() const { return mMudletTranslationFileName; }
     const QString& getQtTranslationFileName() const { return mQtTranslationFileName; }
     const int& getTranslatedPercentage() const { return mTranslatedPercentage; }
@@ -743,9 +746,8 @@ private:
     // cases the loaded file will be a "xx" language only file even though it
     // is an "xx_YY" one here:
     QString mQtTranslationFileName;
-    // Further items like the above pair may be needed should some of the
-    // separate libraries with a textual content have their own translations
-    // that we do not provide ourselves.
+
+    QString mLocaleCode {};
 };
 
 #endif // MUDLET_MUDLET_H
