@@ -142,9 +142,9 @@ function Geyser:changeContainer (container)
   windowname = windowname or "main"
 
   self.container:remove(self)
-  if self.windowname ~= container.windowname then
-    setMyWindow(self, container.windowname)
-    setContainerWindow(self, container.windowname)
+  if self.windowname ~= windowname then
+    setMyWindow(self, windowname)
+    setContainerWindow(self, windowname)
   end
   container:add(self)
 end
