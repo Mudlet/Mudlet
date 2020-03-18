@@ -1,8 +1,8 @@
 name: Update 3rdparty sources
 on:
   push:
-#     branches:
-#       - 'release-**'
+    branches:
+      - 'release-**'
 
   schedule:
     - cron:  '0 0 * * fri'
