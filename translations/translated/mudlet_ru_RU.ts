@@ -4234,7 +4234,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2128"/>
       <source>New</source>
-      <translation>Новый</translation>
+      <translation>Новый профиль</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="2183"/>
