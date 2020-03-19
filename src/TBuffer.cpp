@@ -779,20 +779,29 @@ TBuffer::TBuffer(Host* pH)
 #endif
 }
 
+// user-defined literal to represent megabytes
 auto operator""_MB(unsigned long long const x)
         -> long
 { return 1024L*1024L*x; }
 
-void TBuffer::setBufferSize(int s, int batch)
+void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
 {
-    if (s < 100) {
-        s = 100;
+    if (requestedLinesLimit < 100) {
+        requestedLinesLimit = 100;
     }
-    if (batch >= s) {
-        batch = s / 10;
+    if (batch >= requestedLinesLimit) {
+        batch = requestedLinesLimit / 10;
     }
     // clip the maximum to something reasonable, else users will abuse this, and then complain
-    mLinesLimit = std::min(s, getMaxBufferSize());
+    auto max = getMaxBufferSize();
+    if (requestedLinesLimit > max) {
+        qWarning().nospace() << "setBufferSize(): " << requestedLinesLimit <<
+                "lines for buffer requested but your computer can only handle " << max << ", clipping it";
+        mLinesLimit = max;
+    } else {
+        mLinesLimit = requestedLinesLimit;
+    }
+
     mBatchDeleteSize = batch;
 }
 

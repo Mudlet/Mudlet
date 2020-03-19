@@ -189,7 +189,7 @@ public:
     TBuffer copy(QPoint&, QPoint&);
     TBuffer cut(QPoint&, QPoint&);
     void paste(QPoint&, TBuffer);
-    void setBufferSize(int s, int batch);
+    void setBufferSize(int requestedLinesLimit, int batch);
     int getMaxBufferSize();
     static const QList<QString> getComputerEncodingNames() { return csmEncodingTable.keys(); }
     static const QList<QString> getFriendlyEncodingNames();

@@ -69,7 +69,6 @@
 // for system physical memory info
 #ifdef WIN32
 #include <Windows.h>
-
 #include <Psapi.h>
 #elif defined(__APPLE__)
 #include <sys/param.h>
@@ -78,12 +77,8 @@
 #include <unistd.h>
 #include <array>
 #else
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/resource.h>
 #include <sys/sysinfo.h>
-#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 #endif
