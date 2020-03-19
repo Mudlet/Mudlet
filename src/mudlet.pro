@@ -187,6 +187,13 @@ isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
     DEFINES += INCLUDE_3DMAPPER
 }
 
+
+# Some temporary tests to see whether either of these are present in the
+# AppVeyor CI environment, the second is true on a local Desktop MSYS2 Windows
+# OS:
+cygwin : message("A 'cygwin' qmake scope is defined.")
+mingw : message("A 'mingw' qmake scope is defined.")
+
 ###################### Platform Specific Paths and related #####################
 # Specify default location for Lua files, in OS specific LUA_DEFAULT_DIR value
 # below, if this is not done then a hardcoded default of a ./mudlet-lua/lua
@@ -251,11 +258,12 @@ unix:!macx {
 
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32 {
-    MINGW_BASE_DIR = $$(MINGW_BASE_DIR)
-    isEmpty(MINGW_BASE_DIR) {
-        MINGW_BASE_DIR = "C:\\Qt\\Tools\\mingw730_32"
+    MINGW_BASE_DIR_TEST = $$(MINGW_BASE_DIR)
+    isEmpty( MINGW_BASE_DIR_TEST ) {
+        MINGW_BASE_DIR_TEST = "C:\\Qt\\Tools\\mingw730_32"
     }
     LIBS +=  \
+        -L"$${MINGW_BASE_DIR_TEST}\\bin" \
         -llua51 \
         -lpcre-1 \
         -llibhunspell-1.6 \
@@ -263,15 +271,13 @@ unix:!macx {
         -lz \                   # for ctelnet.cpp
         -lyajl \
         -lpugixml \
-        -lWs2_32 \
-        -L"$${MINGW_BASE_DIR}\\bin"
+        -lWs2_32
     INCLUDEPATH += \
-                   "C:\\Libraries\\boost_1_71_0" \
-                   "$${MINGW_BASE_DIR}\\include" \
-                   "$${MINGW_BASE_DIR}\\lib\include"
-# Leave this undefined so mudlet::readSettings() preprocessing will fall back to
-# hard-coded executable's /mudlet-lua/lua/ subdirectory
-#    LUA_DEFAULT_DIR = $$clean_path($$system(echo %ProgramFiles%)/lua)
+         "C:\\Libraries\\boost_1_71_0" \
+         "$${MINGW_BASE_DIR_TEST}\\include" \
+         "$${MINGW_BASE_DIR_TEST}\\lib\include"
+    # Leave this unset - we do not need it on Windows:
+    # LUA_DEFAULT_DIR =
 }
 
 unix:!macx {

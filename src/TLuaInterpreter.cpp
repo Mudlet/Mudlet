@@ -6363,27 +6363,22 @@ int TLuaInterpreter::getMudletHomeDir(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMudletLuaDefaultPaths
 int TLuaInterpreter::getMudletLuaDefaultPaths(lua_State* L)
 {
-    int index = 1;
+    int index = 0;
+    // This is a static method so does not have a this pointer - so go and get
+    // the one used by the profile so we can read the instance's data:
+    auto& host = getHostFromLua(L);
+    auto* pLua = host.getLuaInterpreter();
+    Q_ASSERT_X(pLua, "TLuaInterpreter::getMudletLuaDefaultPaths", "nullptr received when looking for the instantiated instance of TLuaInterpreter for a Host.");
+
+    QStringListIterator itPath(pLua->mPossiblePaths);
     lua_newtable(L);
-#if defined(Q_OS_MACOS)
-    lua_createtable(L, 3, 0);
-#else
-    lua_createtable(L, 2, 0);
-#endif
-    // add filepath relative to the binary itself (one usecase is AppImage on Linux)
-    QString nativePath = QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/mudlet-lua/lua/");
-    lua_pushstring(L, nativePath.toUtf8().constData());
-    lua_rawseti(L, -2, index++);
-#if defined(Q_OS_MACOS)
-    // add macOS lua path relative to the binary itself, which is part of the Mudlet.app package
-    nativePath = QDir::toNativeSeparators(QCoreApplication::applicationDirPath() + "/../Resources/mudlet-lua/lua/");
-    lua_pushstring(L, nativePath.toUtf8().constData());
-    lua_rawseti(L, -2, index++);
-#endif
-    // add the default search path as specified by build file
-    nativePath = QDir::toNativeSeparators(LUA_DEFAULT_PATH "/");
-    lua_pushstring(L, nativePath.toUtf8().constData());
-    lua_rawseti(L, -2, index++);
+    while (itPath.hasNext()) {
+        // We are hoping that backslashes are not going to be a problem in reporting the details:
+        QString nativePath = QDir::toNativeSeparators(itPath.next());
+        lua_pushnumber(L, ++index); // Lua indexes start at 1 not 0 so preincrement it:
+        lua_pushstring(L, nativePath.toUtf8().constData());
+        lua_settable(L, -3);
+    }
     return 1;
 }
 
@@ -16664,7 +16659,9 @@ void TLuaInterpreter::initIndenterGlobals()
     lua_pop(pIndenterState.get(), lua_gettop(pIndenterState.get()));
 }
 
-// No documentation available in wiki - internal function
+// No documentation available in wiki - internal function called AFTER
+// initLuaGlobals() {it depends on that to load up some Lua libraries, including
+// the LFS "Lua File System" one first}:
 void TLuaInterpreter::loadGlobal()
 {
 #if defined(Q_OS_WIN32)
@@ -16673,20 +16670,48 @@ void TLuaInterpreter::loadGlobal()
 
     setupLanguageData();
 
-    QStringList pathsToTry = {
+    const QString executablePath{QCoreApplication::applicationDirPath()};
+    // Initialise the list of paths so that getMudletLuaDefaultPaths() can
+    // report them later if asked:
+    mPossiblePaths = QStringList{
 #if defined(Q_OS_MACOS)
-        QCoreApplication::applicationDirPath() + "/../Resources/mudlet-lua/lua/LuaGlobal.lua",
+        // Load relatively to MacOS inside Resources when we're in a .app
+        // bundle, as mudlet-lua always gets copied in by the build script into
+        // the bundle for the Mac installer build:
+        QStringLiteral("%1/../Resources/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath),
 #endif
-        QCoreApplication::applicationDirPath() + "/mudlet-lua/lua/LuaGlobal.lua",
-        "../src/mudlet-lua/lua/LuaGlobal.lua",
-        "mudlet-lua/lua/LuaGlobal.lua",
-        LUA_DEFAULT_PATH "/LuaGlobal.lua"
+
+        // For the installer we put the lua files under the executable's
+        // location. This is the case for the Windows install:
+        QDir::toNativeSeparators(QStringLiteral("%1/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath)),
+
+        // Although a no-op for an in source build an additional "../src/"
+        // allows location of lua code when object code is in a directory
+        // alongside the src directory as occurs using Qt Creator "Shadow
+        // Builds":
+        QDir::toNativeSeparators(QStringLiteral("%1/../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath)),
+
+        // Windows builds (or others where the qmake project file has CONFIG
+        // containing debug_and_release AND debug_and_release_target options)
+        // may be an additional sub-directory down:
+        QDir::toNativeSeparators(QStringLiteral("%1/../../src/mudlet-lua/lua/LuaGlobal.lua").arg(executablePath))
     };
+
+    // Although it is relatively easy to detect whether something is #define d
+    // it is not so easy to detect what it contains at the preprocessor stage,
+    // so leave checking for it's contents to run-time - this one is the one
+    // for Linux/FreeBSD where the read-only shared Lua files go into the
+    // /usr/share part of the file-system:
+#if defined(LUA_DEFAULT_PATH)
+    if (!QStringLiteral(LUA_DEFAULT_PATH).isEmpty()) {
+        mPossiblePaths <<  QDir::toNativeSeparators(QStringLiteral(LUA_DEFAULT_PATH "/LuaGlobal.lua"));
+    };
+#endif
     QStringList failedMessages{};
 
 
     int error;
-    for (const auto& path : qAsConst(pathsToTry)) {
+    for (const auto& path : qAsConst(mPossiblePaths)) {
         if (!QFileInfo::exists(path)) {
             failedMessages << tr("%1 (doesn't exist)", "This file doesn't exist").arg(path);
             continue;
