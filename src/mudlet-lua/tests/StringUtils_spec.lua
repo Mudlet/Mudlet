@@ -124,6 +124,20 @@ describe("Tests StringUtils.lua functions", function()
       local actual = str:split(":")
       assert.same(expected, actual)
     end)
+
+    it("should default to splitting on a space", function()
+      local str = "This is a test"
+      local expected = { "This", "is", "a", "test" }
+      local actual = str:split()
+      assert.same(expected, actual)
+    end)
+
+    it("should return a table with the characters that make up the string if empty string is used for the delimiter", function()
+      local str = "This is a test"
+      local expected = {"T", "h", "i", "s", " ", "i", "s", " ", "a", " ", "t", "e", "s", "t"}
+      local actual = str:split("")
+      assert.same(expected, actual)
+    end)
   end)
 
   describe("string.starts(str, prefix)", function()
