@@ -1,0 +1,68 @@
+name: Update autocompletion in Mudlet
+
+on:
+  push:
+    branches:
+      - 'release-**'
+
+  schedule:
+    - cron:  '0 0 * * fri'
+
+jobs:
+  update-autocompletion:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@master
+    - uses: leafo/gh-actions-lua@v5
+      with:
+        luaVersion: "5.1.5"
+    - uses: actions/setup-node@v1.1.0
+    - uses: leafo/gh-actions-luarocks@v2
+
+    - name: install Lua dependencies
+      run: |
+        luarocks install http
+        luarocks install lunajson
+
+    - name: update autocompletion data
+      run: lua CI/update-autocompletion.lua src/lua-function-list.json
+
+    - name: sort autocompletion data
+      run: |
+          npm install jsonabc
+
+          cat > sort.js <<EOT
+            const fs = require('fs');
+            const jsonabc = require('jsonabc');
+            const data = fs.readFileSync('src/lua-function-list.json');
+            const parseddata = JSON.parse(data);
+            const sorted = jsonabc.sortObj(parseddata);
+            fs.writeFileSync('src/lua-function-list.json', JSON.stringify(sorted, null, '    ') + '\n');
+          EOT
+
+          node sort.js
+
+    - name: check if any autocompletion data was modified
+      id: getdiff
+      run: |
+        lines_changed=$(git diff --patch --unified=0 src/lua-function-list.json | wc --lines)
+        echo "$lines_changed lines changed."
+        echo ::set-output name=lines_changed::$lines_changed
+
+    - name: send in a pull request
+      uses: gr2m/create-or-update-pull-request-action@v1.x
+      if: steps.getdiff.outputs.lines_changed > 0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        title: "Update autocompletion data in Mudlet"
+        body: |
+          #### Brief overview of PR changes/additions
+          :crown: An automated PR to update autocompletion data in Mudlet from ${{ github.ref }} (${{ github.sha }}).
+          #### Motivation for adding to Mudlet
+          So autocompletion works as expected.
+        branch: update-autocompletion-data-${{ github.sha }}
+        path: src/
+        commit-message: (autocommit) Updated autocompletion data
+        author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
