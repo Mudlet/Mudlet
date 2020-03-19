@@ -2954,8 +2954,7 @@ void TConsole::setProfileName(const QString& newName)
 
 void TConsole::dragEnterEvent(QDragEnterEvent* e)
 {
-    if (e->mimeData()->hasUrls())
-    {
+    if (e->mimeData()->hasUrls()) {
         e->acceptProposedAction();
     }
 }
@@ -2967,13 +2966,13 @@ void TConsole::dropEvent(QDropEvent* e)
     accepted_types << "jpeg"
                    << "jpg"
                    << "png";
-    foreach (const QUrl& url, e->mimeData()->urls()) {
+    foreach(const QUrl& url, e->mimeData()->urls()) {
         QString fname = url.toLocalFile();
         QFileInfo info(fname);
         if (info.exists()) {
             if (accepted_types.contains(info.suffix().trimmed(), Qt::CaseInsensitive)) {
                 QPoint pos = e->pos();
-                TEvent mudletEvent {};
+                TEvent mudletEvent{};
                 mudletEvent.mArgumentList.append(QLatin1String("sysImageDropEvent"));
                 mudletEvent.mArgumentList.append(fname);
                 mudletEvent.mArgumentList.append(QString::number(pos.x()));
