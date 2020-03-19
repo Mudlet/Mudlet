@@ -227,16 +227,16 @@ void dlgMapper::show2dView()
         connect(zRot, &QAbstractSlider::valueChanged, glWidget, &GLWidget::setZRotation);
     }
 
-    if (glWidget) {
-        mp2dMap->setVisible(!mp2dMap->isVisible());
-        glWidget->setVisible(!glWidget->isVisible());
-        if (glWidget->isVisible()) {
-            d3buttons->setVisible(true);
-        } else {
-            // workaround for buttons reloading oddly
-            QTimer::singleShot(100, [this]() {d3buttons->setVisible(false);});
-        }
+
+    mp2dMap->setVisible(!mp2dMap->isVisible());
+    glWidget->setVisible(!glWidget->isVisible());
+    if (glWidget->isVisible()) {
+        d3buttons->setVisible(true);
+    } else {
+        // workaround for buttons reloading oddly
+        QTimer::singleShot(100, [this]() { d3buttons->setVisible(false); });
     }
+
 #else
     mp2dMap->setVisible(true);
     d3buttons->setVisible(false);

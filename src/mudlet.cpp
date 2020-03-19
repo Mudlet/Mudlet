@@ -2462,8 +2462,6 @@ std::pair<bool, QString> mudlet::openMapWidget(Host* pHost, const QString& area,
             return {false, QStringLiteral(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
         }
     }
-
-    return {false, QString()};
 }
 
 std::pair<bool, QString> mudlet::closeMapWidget(Host* pHost)
