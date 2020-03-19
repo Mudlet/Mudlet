@@ -944,7 +944,7 @@ void mudlet::scanForMudletTranslations(const QString& path)
                 }
             }
             // PLACEMARKER: Start of locale codes to native language decoding - insert an entry here for any futher Mudlet supported languages
-            translation currentTranslation(percentageTranslated, languageCode);
+            translation currentTranslation(percentageTranslated);
             if (!languageCode.compare(QLatin1String("en_US"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = QStringLiteral("English (American)");
             } else if (!languageCode.compare(QLatin1String("en_GB"), Qt::CaseInsensitive)) {
@@ -5202,7 +5202,7 @@ QString mudlet::autodetectPreferredLanguage()
         if (translation.fromResourceFile()) {
             auto& translatedPc = translation.getTranslatedPercentage();
             if (translatedPc >= mTranslationGoldStar) {
-                availableQualityTranslations.append(translation.getLocaleCode());
+                availableQualityTranslations.append(code);
             }
         }
     }
