@@ -7011,8 +7011,9 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     if (lua_isnumber(L, 14)) {
         expiryCount = lua_tonumber(L, 14);
 
-        if (expiryCount <= 0) {
-            expiryCount = -1;
+        if (expiryCount < 1) {
+            lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #14 value (trigger expiration count must be greater than zero, got %d)", expiryCount);
+            return lua_error(L);
         }
     }
 
