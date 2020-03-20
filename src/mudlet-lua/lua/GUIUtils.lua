@@ -1847,6 +1847,4 @@ end
 
 --wrapper for createButton 
 -- createButton is deprecated better use createLabel instead
-function createButton(...)
-    return createLabel(...)
-end
+createButton = createLabel
