@@ -326,8 +326,8 @@ public slots:
     void slot_reloadMap(QList<QString>);
 
 protected:
-    void dragEnterEvent(QDragEnterEvent *e);
-    void dropEvent(QDropEvent *e);
+    void dragEnterEvent(QDragEnterEvent* e);
+    void dropEvent(QDropEvent* e);
 
 private:
     void refreshMiniConsole() const;
