@@ -811,9 +811,12 @@ int TBuffer::getMaxBufferSize()
     const int64_t physicalMemoryTotal = mudlet::self()->getPhysicalMemoryTotal();
     // Mudlet is 32bit mainly on Windows, see where the practical limit for a process 2GB:
     // https://docs.microsoft.com/en-us/windows/win32/memory/memory-limits-for-windows-releases#memory-and-address-space-limits
-    // set to 80% of what is available to us, ignoring that swap can exist
+    // 64bit: set to 80% of what is available to us, swap not included
     const int64_t maxProcessMemoryBytes = (QSysInfo::WordSize == 32) ? 1600_MB : (physicalMemoryTotal * 0.80);
-    const auto maxLines = (maxProcessMemoryBytes / TCHAR_IN_BYTES) / mpHost->mWrapAt;
+    auto maxLines = (maxProcessMemoryBytes / TCHAR_IN_BYTES) / mpHost->mWrapAt;
+    // now we've calculated how many lines can we fit in 80% of memory, ignoring memory use for other things like triggers/aliases, Lua scripts, etc
+    // so shave that down by 20%
+    maxLines = (maxLines / 100) * 80;
 
     return maxLines;
 }
