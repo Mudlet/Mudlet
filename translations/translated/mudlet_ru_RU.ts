@@ -5197,7 +5197,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2314"/>
       <source>The %1 character is not permitted. Use one of the following:</source>
-      <translation type="unfinished"/>
+      <translation>Символ %1 не допускается. Используйте один из следующих:</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2344"/>
@@ -5305,17 +5305,17 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2383"/>
       <source>Mudlet can not load support for secure connections.</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet не может загрузить поддержку защищенных соединений.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2400"/>
       <source>Please enter the URL or IP address of the Game server.</source>
-      <translation type="unfinished"/>
+      <translation>Пожалуйста, введите URL-адрес или IP-адрес игрового сервера.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2413"/>
       <source>SSL connections require the URL of the Game server.</source>
-      <translation type="unfinished"/>
+      <translation>SSL-соединения требуют URL сервера игры.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2435"/>
