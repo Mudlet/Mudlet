@@ -11,7 +11,7 @@ jobs:
   update-iremapper-source:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v2
         with:
           ref: development
 
@@ -53,7 +53,7 @@ jobs:
   update-edbee-fork:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v2
         with:
           ref: development
           submodules: true
@@ -93,7 +93,7 @@ jobs:
   update-sparkle-glue-fork:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v2
         with:
           ref: development
           submodules: true
@@ -133,7 +133,7 @@ jobs:
   update-dblsqd-source:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v2
         with:
           ref: development
           submodules: true
@@ -173,7 +173,7 @@ jobs:
   update-qtkeychain-fork:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v2
         with:
           ref: development
           submodules: true
@@ -213,7 +213,7 @@ jobs:
   update-lcf-source-51:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v2
         with:
           ref: development
           submodules: true
