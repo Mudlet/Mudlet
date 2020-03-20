@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 if [ -z "${TRAVIS_TAG}" ]; then
   exit 0
 fi
@@ -8,7 +10,7 @@ function validate_qmake() {
   VALID_QMAKE=$(cat src/mudlet.pro | pcregrep --only-matching=1 "^VERSION ? = ?(\d+\.\d+\.\d+)$")
 
   if [ -z "${VALID_QMAKE}" ]; then
-  echo "mudlet.pro isn't set to a valid version in a release build."
+  echo "mudlet.pro isn't set to a valid semantic version in a release build."
   exit 1
   fi
 }
@@ -17,7 +19,7 @@ function validate_cmake() {
   VALID_CMAKE=$(cat CMakeLists.txt | pcregrep --only-matching=1 "set\(APP_VERSION (\d+\.\d+\.\d+)\)$")
 
   if [ -z "${VALID_CMAKE}" ]; then
-    echo "CMakeLists.txt isn't set to a valid version in a release build."
+    echo "CMakeLists.txt isn't set to a valid semantic version in a release build."
     exit 1
   fi
 }
