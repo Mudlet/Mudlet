@@ -5068,7 +5068,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2400"/>
       <source>Please enter the URL or IP address of the Game server.</source>
-      <translation type="unfinished"/>
+      <translation>Lütfen Oyun sunucusunun URL'sini veya IP adresini girin.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2413"/>
@@ -10850,7 +10850,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5110"/>
       <source>port</source>
-      <translation type="unfinished"/>
+      <translation>bağlantı noktası</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5120"/>
