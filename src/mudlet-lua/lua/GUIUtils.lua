@@ -1844,3 +1844,7 @@ function resizeMapWidget(width, height)
   assert(type(height) == 'number', 'resizeMapWidget: bad argument #2 type (height as number expected, got '..type(height)..'!)')
   openMapWidget(-1, -1, width, height)
 end
+
+--wrapper for createButton 
+-- createButton is deprecated better use createLabel instead
+createButton = createLabel
