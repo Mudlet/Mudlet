@@ -36,7 +36,6 @@
     "connectToServer": "connectToServer(host, port, [save])",
     "copy": "copy([windowName])",
     "createBuffer": "createBuffer(name)",
-    "createButton": "createConsole(consoleName, fontSize, charsPerLine, numberOfLines, Xpos, Ypos)",
     "createGauge": "createGauge(name, width, height, Xpos, Ypos, gaugeText, r, g, b, orientation)",
     "createLabel": "createLabel(name, Xpos, Ypos, width, height, fillBackground)",
     "createMapImageLabel": "labelID = createMapImageLabel(areaID, filePath, posx, posy, posz, width, height, zoom, showOnTop)",
