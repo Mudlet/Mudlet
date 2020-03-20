@@ -30,32 +30,32 @@
 <context>
     <name>Host</name>
     <message>
-        <location filename="../src/Host.cpp" line="1478"/>
+        <location filename="../src/Host.cpp" line="1477"/>
         <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="1480"/>
+        <location filename="../src/Host.cpp" line="1479"/>
         <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="1484"/>
+        <location filename="../src/Host.cpp" line="1483"/>
         <source>Unpacking</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="2091"/>
+        <location filename="../src/Host.cpp" line="2090"/>
         <source>Playing %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/Host.cpp" line="2093"/>
-        <location filename="../src/Host.cpp" line="2099"/>
+        <location filename="../src/Host.cpp" line="2092"/>
+        <location filename="../src/Host.cpp" line="2098"/>
         <source>%1 at %2:%3</source>
         <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
         <translation type="unfinished"></translation>
@@ -1464,13 +1464,13 @@ rooms:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2549"/>
+        <location filename="../src/TConsole.cpp" line="2551"/>
         <source>System Message: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2696"/>
-        <location filename="../src/TConsole.cpp" line="2735"/>
+        <location filename="../src/TConsole.cpp" line="2698"/>
+        <location filename="../src/TConsole.cpp" line="2737"/>
         <source>No search results, sorry!
 </source>
         <translation type="unfinished"></translation>
@@ -1592,27 +1592,27 @@ rooms:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2362"/>
+        <location filename="../src/TConsole.cpp" line="2363"/>
         <source>Pre-Map loading(2) report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2372"/>
+        <location filename="../src/TConsole.cpp" line="2373"/>
         <source>Loading map(2) at %1 report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2771"/>
+        <location filename="../src/TConsole.cpp" line="2773"/>
         <source>[ INFO ]  - Map reload request received from system...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2776"/>
+        <location filename="../src/TConsole.cpp" line="2778"/>
         <source>[  OK  ]  - ... System Map reload request completed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TConsole.cpp" line="2778"/>
+        <location filename="../src/TConsole.cpp" line="2780"/>
         <source>[ WARN ]  - ... System Map reload request failed.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1628,123 +1628,123 @@ rooms:</source>
 <context>
     <name>TLuaInterpreter</name>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="12695"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="12765"/>
         <source>Playing %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15092"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15162"/>
         <source>ERROR</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15093"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="15104"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15163"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15174"/>
         <source>object</source>
         <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="15093"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="15104"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15163"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="15174"/>
         <source>function</source>
         <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16412"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16433"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16453"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16474"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16495"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16516"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16692"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16478"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16499"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16519"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16540"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16561"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16582"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16758"/>
         <source>no error message available from Lua</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16414"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16435"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16455"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16476"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16497"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16518"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16694"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16480"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16501"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16521"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16542"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16563"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16584"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16760"/>
         <source>Lua error:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16417"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16438"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16458"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16479"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16500"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16521"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16483"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16504"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16524"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16545"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16566"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16587"/>
         <source>[ ERROR ] - Cannot find Lua module %1.%2</source>
         <comment>%1 is the name of the module. %2 can be an additional message about the expected effect.</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16421"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16487"/>
         <source>Some functions may not be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16425"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16445"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16466"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16487"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16508"/>
-        <location filename="../src/TLuaInterpreter.cpp" line="16529"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16491"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16511"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16532"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16553"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16574"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16595"/>
         <source>[  OK  ]  - Lua module %1 loaded.</source>
         <comment>%1 is the name of the module.</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16462"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16528"/>
         <source>Probably will not be able to access Mudlet Lua code.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16483"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16549"/>
         <source>Database support will not be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16504"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16570"/>
         <source>utf8.* Lua functions won&apos;t be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16525"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16591"/>
         <source>yajl.* Lua functions won&apos;t be available.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16697"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16763"/>
         <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16729"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16795"/>
         <source>%1 (doesn&apos;t exist)</source>
         <comment>This file doesn&apos;t exist</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16736"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16802"/>
         <source>%1 (couldn&apos;t read file)</source>
         <comment>This file could not be read for some reason (for example, no permission)</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16742"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16808"/>
         <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16750"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16816"/>
         <source>[ ERROR ] - Couldn&apos;t find and load LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
@@ -1973,47 +1973,47 @@ consistency details...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2077"/>
+        <location filename="../src/TMap.cpp" line="2079"/>
         <source>Map issues</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2084"/>
+        <location filename="../src/TMap.cpp" line="2086"/>
         <source>Area issues</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2090"/>
+        <location filename="../src/TMap.cpp" line="2092"/>
         <source>Area id: %1 &quot;%2&quot;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2092"/>
+        <location filename="../src/TMap.cpp" line="2094"/>
         <source>Area id: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2101"/>
+        <location filename="../src/TMap.cpp" line="2103"/>
         <source>Room issues</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2108"/>
+        <location filename="../src/TMap.cpp" line="2110"/>
         <source>Room id: %1 &quot;%2&quot;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2110"/>
+        <location filename="../src/TMap.cpp" line="2112"/>
         <source>Room id: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2120"/>
+        <location filename="../src/TMap.cpp" line="2122"/>
         <source>End of report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2126"/>
+        <location filename="../src/TMap.cpp" line="2128"/>
         <source>[ ALERT ] - At least one thing was detected during that last map operation
 that it is recommended that you review the most recent report in
 the file:
@@ -2023,7 +2023,7 @@ the file:
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2134"/>
+        <location filename="../src/TMap.cpp" line="2136"/>
         <source>[ INFO ]  - The equivalent to the above information about that last map
 operation has been saved for review as the most recent report in
 the file:
@@ -2033,7 +2033,7 @@ the file:
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2190"/>
+        <location filename="../src/TMap.cpp" line="2192"/>
         <source>[ ERROR ] - Unable to use or create directory to store map.
 Please check that you have permissions/access to:
 &quot;%1&quot;
@@ -2041,94 +2041,94 @@ and there is enough space. The download operation has failed.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2216"/>
+        <location filename="../src/TMap.cpp" line="2218"/>
         <source>[ INFO ]  - Map download initiated, please wait...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2227"/>
+        <location filename="../src/TMap.cpp" line="2229"/>
         <source>Map download</source>
         <comment>This is a title of a progress window.</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2287"/>
+        <location filename="../src/TMap.cpp" line="2289"/>
         <source>Map import</source>
         <comment>This is a title of a progress dialog.</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2226"/>
+        <location filename="../src/TMap.cpp" line="2228"/>
         <source>Abort</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2224"/>
+        <location filename="../src/TMap.cpp" line="2226"/>
         <source>Downloading map file for use in %1...</source>
         <comment>%1 is the name of the current Mudlet profile</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2254"/>
+        <location filename="../src/TMap.cpp" line="2256"/>
         <source>loadMap: unable to perform request, a map is already being downloaded or
 imported at user request.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2286"/>
+        <location filename="../src/TMap.cpp" line="2288"/>
         <source>Importing XML map file for use in %1...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2314"/>
+        <location filename="../src/TMap.cpp" line="2316"/>
         <source>loadMap: failure to import XML map file, further information may be available
 in main console!</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2349"/>
+        <location filename="../src/TMap.cpp" line="2351"/>
         <source>[ ALERT ] - Map download was canceled, on user&apos;s request.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2368"/>
+        <location filename="../src/TMap.cpp" line="2370"/>
         <source>[ ERROR ] - Map download encountered an error:
 %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2400"/>
+        <location filename="../src/TMap.cpp" line="2402"/>
         <source>[ ALERT ] - Map download failed, error reported was:
 %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2408"/>
+        <location filename="../src/TMap.cpp" line="2410"/>
         <source>[ ALERT ] - Map download failed, unable to open destination file:
 %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2413"/>
+        <location filename="../src/TMap.cpp" line="2415"/>
         <source>[ ALERT ] - Map download failed, unable to write destination file:
 %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2426"/>
-        <location filename="../src/TMap.cpp" line="2443"/>
+        <location filename="../src/TMap.cpp" line="2428"/>
+        <location filename="../src/TMap.cpp" line="2445"/>
         <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2434"/>
-        <location filename="../src/TMap.cpp" line="2469"/>
+        <location filename="../src/TMap.cpp" line="2436"/>
+        <location filename="../src/TMap.cpp" line="2471"/>
         <source>[ ERROR ] - Map download problem, failure in parsing destination file:
 %1.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TMap.cpp" line="2474"/>
+        <location filename="../src/TMap.cpp" line="2476"/>
         <source>[ ERROR ] - Map download problem, unable to read destination file:
 %1.</source>
         <translation type="unfinished"></translation>
@@ -4398,145 +4398,145 @@ Count</source>
 <context>
     <name>directions</name>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16561"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16627"/>
         <source>north</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16563"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16629"/>
         <source>n</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16565"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16631"/>
         <source>east</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16567"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16633"/>
         <source>e</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16569"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16635"/>
         <source>south</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16571"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16637"/>
         <source>s</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16573"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16639"/>
         <source>west</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16575"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16641"/>
         <source>w</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16577"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16643"/>
         <source>northeast</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16579"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16645"/>
         <source>ne</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16581"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16647"/>
         <source>southeast</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16583"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16649"/>
         <source>se</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16585"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16651"/>
         <source>southwest</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16587"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16653"/>
         <source>sw</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16589"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16655"/>
         <source>northwest</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16591"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16657"/>
         <source>nw</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16593"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16659"/>
         <source>in</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16595"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16661"/>
         <source>i</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16597"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16663"/>
         <source>out</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16599"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16665"/>
         <source>o</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16601"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16667"/>
         <source>up</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16603"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16669"/>
         <source>u</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16605"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16671"/>
         <source>down</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/TLuaInterpreter.cpp" line="16607"/>
+        <location filename="../src/TLuaInterpreter.cpp" line="16673"/>
         <source>d</source>
         <comment>Entering this direction will move the player in the game</comment>
         <translation type="unfinished"></translation>
@@ -4959,12 +4959,17 @@ Count</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="2335"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="2314"/>
+        <source>The %1 character is not permitted. Use one of the following:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="2344"/>
         <source>You have to enter a number. Other characters are not permitted.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="2324"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="2330"/>
         <source>This profile name is already in use.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -5057,75 +5062,54 @@ Count</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="2312"/>
-        <source>The %1 character is not permitted. Use one of the following:
-&quot;%2&quot;.
-</source>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="2357"/>
+        <source>Port number must be above zero and below 65535.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="2409"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="2383"/>
+        <source>Mudlet can not load support for secure connections.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="2400"/>
+        <source>Please enter the URL or IP address of the Game server.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="2413"/>
+        <source>SSL connections require the URL of the Game server.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="2435"/>
         <source>&lt;p&gt;Load profile without connecting.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="2423"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="2449"/>
         <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before loading.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="2427"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="2453"/>
         <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before connecting.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="2479"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="2505"/>
         <source>&lt;p&gt;Click to hide the password; it will also hide if another profile is selected.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="2483"/>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="2509"/>
         <source>&lt;p&gt;Click to reveal the password for this profile.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="2353"/>
-        <source>Mudlet is not configured for secure connections.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="2345"/>
-        <source>Port number must be above zero and below 65535.
-
-</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="2356"/>
-        <source>Mudlet is not configured for secure connections.
-
-</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <location filename="../src/dlgConnectionProfiles.cpp" line="2365"/>
-        <source>Mudlet can not load support for secure connections.
-
-</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="2379"/>
-        <source>Please enter the URL or IP address of the Game server.
-
-%1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/dlgConnectionProfiles.cpp" line="2388"/>
-        <source>SSL connections require the URL of the Game server.
-
-%1</source>
+        <location filename="../src/dlgConnectionProfiles.cpp" line="2371"/>
+        <source>Mudlet is not configured for secure connections.</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -5235,12 +5219,12 @@ Count</source>
 <context>
     <name>dlgMapper</name>
     <message>
-        <location filename="../src/dlgMapper.cpp" line="139"/>
+        <location filename="../src/dlgMapper.cpp" line="244"/>
         <source>3D mapper is not available in this version of Mudlet</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/dlgMapper.cpp" line="262"/>
+        <location filename="../src/dlgMapper.cpp" line="264"/>
         <source>Cannot find a path to this room.
 </source>
         <translation type="unfinished"></translation>
@@ -7528,39 +7512,6 @@ less likely to be useful for normal use of this application:
         <source>Version: %1</source>
         <translation type="unfinished"></translation>
     </message>
-    <message>
-        <location filename="../src/main.cpp" line="365"/>
-        <source>Mudlet comes with
-ABSOLUTELY NO WARRANTY!
-This is free software, and you are
-welcome to redistribute it under
-certain conditions; select the
-&apos;About&apos; item for details.</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/main.cpp" line="373"/>
-        <source>Locating profiles...</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/main.cpp" line="390"/>
-        <source>Done.
-
-Loading font files...</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/main.cpp" line="464"/>
-        <source>Done.
-
-All data has been loaded successfully.
-
-Starting... Have fun!
-
-</source>
-        <translation type="unfinished"></translation>
-    </message>
 </context>
 <context>
     <name>main_window</name>
@@ -9334,19 +9285,19 @@ Starting... Have fun!
     </message>
     <message>
         <location filename="../src/mudlet.cpp" line="422"/>
-        <location filename="../src/mudlet.cpp" line="4761"/>
+        <location filename="../src/mudlet.cpp" line="4836"/>
         <source>About</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../src/mudlet.cpp" line="423"/>
-        <location filename="../src/mudlet.cpp" line="4744"/>
+        <location filename="../src/mudlet.cpp" line="4819"/>
         <source>&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</source>
         <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="3803"/>
+        <location filename="../src/mudlet.cpp" line="3878"/>
         <source>Central Debug Console</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9420,7 +9371,7 @@ Starting... Have fun!
     </message>
     <message>
         <location filename="../src/mudlet.cpp" line="1744"/>
-        <location filename="../src/mudlet.cpp" line="4191"/>
+        <location filename="../src/mudlet.cpp" line="4266"/>
         <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
@@ -9430,92 +9381,92 @@ Starting... Have fun!
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="3499"/>
+        <location filename="../src/mudlet.cpp" line="3577"/>
         <source>Map - %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="3518"/>
+        <location filename="../src/mudlet.cpp" line="3593"/>
         <source>Pre-Map loading(3) report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="3528"/>
+        <location filename="../src/mudlet.cpp" line="3603"/>
         <source>Loading map(3) at %1 report</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="3600"/>
+        <location filename="../src/mudlet.cpp" line="3675"/>
         <source>%1 - notes</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="3705"/>
+        <location filename="../src/mudlet.cpp" line="3780"/>
         <source>Select Replay</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="3707"/>
+        <location filename="../src/mudlet.cpp" line="3782"/>
         <source>*.dat</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="3989"/>
+        <location filename="../src/mudlet.cpp" line="4064"/>
         <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4014"/>
-        <location filename="../src/mudlet.cpp" line="4033"/>
+        <location filename="../src/mudlet.cpp" line="4089"/>
+        <location filename="../src/mudlet.cpp" line="4108"/>
         <source>Compact input line</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4018"/>
-        <location filename="../src/mudlet.cpp" line="4036"/>
+        <location filename="../src/mudlet.cpp" line="4093"/>
+        <location filename="../src/mudlet.cpp" line="4111"/>
         <source>Standard input line</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4093"/>
+        <location filename="../src/mudlet.cpp" line="4168"/>
         <source>&lt;p&gt;Cannot load a replay as one is already in progress in this or another profile.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4110"/>
+        <location filename="../src/mudlet.cpp" line="4185"/>
         <source>Faster</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4113"/>
+        <location filename="../src/mudlet.cpp" line="4188"/>
         <source>&lt;p&gt;Replay each step with a shorter time interval between steps.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4117"/>
+        <location filename="../src/mudlet.cpp" line="4192"/>
         <source>Slower</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4120"/>
+        <location filename="../src/mudlet.cpp" line="4195"/>
         <source>&lt;p&gt;Replay each step with a longer time interval between steps.&lt;/p&gt;</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4130"/>
-        <location filename="../src/mudlet.cpp" line="4199"/>
-        <location filename="../src/mudlet.cpp" line="4212"/>
+        <location filename="../src/mudlet.cpp" line="4205"/>
+        <location filename="../src/mudlet.cpp" line="4274"/>
+        <location filename="../src/mudlet.cpp" line="4287"/>
         <source>Speed: X%1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4137"/>
-        <location filename="../src/mudlet.cpp" line="4154"/>
+        <location filename="../src/mudlet.cpp" line="4212"/>
+        <location filename="../src/mudlet.cpp" line="4229"/>
         <source>Time: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/mudlet.cpp" line="4755"/>
+        <location filename="../src/mudlet.cpp" line="4830"/>
         <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
         <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
         <translation type="unfinished">
@@ -9523,7 +9474,7 @@ Starting... Have fun!
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/mudlet.cpp" line="4773"/>
+        <location filename="../src/mudlet.cpp" line="4848"/>
         <source>Review %n update(s)...</source>
         <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
         <translation type="unfinished">
@@ -9531,7 +9482,7 @@ Starting... Have fun!
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/mudlet.cpp" line="4778"/>
+        <location filename="../src/mudlet.cpp" line="4853"/>
         <source>&lt;p&gt;Review the update(s) available...&lt;/p&gt;</source>
         <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
         <translation type="unfinished">
@@ -9539,7 +9490,7 @@ Starting... Have fun!
         </translation>
     </message>
     <message>
-        <location filename="../src/mudlet.cpp" line="4877"/>
+        <location filename="../src/mudlet.cpp" line="4952"/>
         <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
         <translation type="unfinished"></translation>
