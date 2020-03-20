@@ -70,7 +70,7 @@ public:
     void setMediaTag(QString mediaTag) { mMediaTag = mediaTag; }
     QString getMediaUrl() { return mMediaUrl; }
     void setMediaUrl(QString mediaUrl) { mMediaUrl = mediaUrl; }
-    QString getMediaKey() { return mMediaUrl; }
+    QString getMediaKey() { return mMediaKey; }
     void setMediaKey(QString mediaKey) { mMediaKey = mediaKey; }
     QString getMediaAbsolutePathFileName() { return mMediaAbsolutePathFileName; }
     void setMediaAbsolutePathFileName(QString mediaAbsolutePathFileName) { mMediaAbsolutePathFileName = mediaAbsolutePathFileName; }
