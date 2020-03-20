@@ -25,7 +25,7 @@ function validate_cmake() {
 }
 
 function validate_updater_environment_variable() {
-  if [ "$WITH_UPDATER" != "NO" ]; then
+  if [ "$WITH_UPDATER" == "NO" ]; then
      echo "Updater is disabled in a release build."
      exit 1
   fi
