@@ -5868,12 +5868,12 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3839"/>
       <source>Set outer color of player room mark.</source>
-      <translation type="unfinished"/>
+      <translation>Imposta il colore esterno della stanza del giocatore.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3840"/>
       <source>Set inner color of player room mark.</source>
-      <translation type="unfinished"/>
+      <translation>Imposta il colore interno della stanza del giocatore.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="192"/>
@@ -10265,7 +10265,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="725"/>
       <source>This font is not monospace, which may not be ideal for playing some text games: you can use it but there could be issues with aligning columns of text</source>
-      <translation type="unfinished"/>
+      <translation>Questo font non è monospaziato, perciò potrebbe non essere l'ideale per alcuni giochi testuali: è possibile utilizzarlo, ma potrebbero esserci problemi con l'allineamento delle colonne del testo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="759"/>
@@ -10638,42 +10638,42 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2129"/>
       <source>2D map player room marker style:</source>
-      <translation type="unfinished"/>
+      <translation>Simbolo della stanza del giocatore nella mappa 2D:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2139"/>
       <source>Outer ring color</source>
-      <translation type="unfinished"/>
+      <translation>Colore esterno del cerchio</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2149"/>
       <source>Inner ring color</source>
-      <translation type="unfinished"/>
+      <translation>Colore interno del cerchio</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2163"/>
       <source>Original</source>
-      <translation type="unfinished"/>
+      <translation>Originale</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2168"/>
       <source>Red ring</source>
-      <translation type="unfinished"/>
+      <translation>Cerchio rosso</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2173"/>
       <source>Blue/Yellow ring</source>
-      <translation type="unfinished"/>
+      <translation>Cerchio blu/giallo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2178"/>
       <source>Custom ring</source>
-      <translation type="unfinished"/>
+      <translation>Cerchio personalizzato</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2186"/>
       <source>&lt;p&gt;Percentage ratio (&lt;i&gt;the default is 120%&lt;/i&gt;) of the marker symbol to the space available for the room.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Rapporto percentuale (&lt;i&gt;il valore predefinito è 120%&lt;/i&gt;) del simbolo rispetto allo spazio disponibile per la stanza.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2192"/>
@@ -10689,7 +10689,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2214"/>
       <source>&lt;p&gt;Percentage ratio of the inner diameter of the marker symbol to the outer one (&lt;i&gt;the default is 70%&lt;/i&gt;).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Rapporto percentuale tra il diametro interno del simbolo e quello esterno (&lt;i&gt;il valore predefinito è 70%&lt;/i&gt;).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2223"/>
