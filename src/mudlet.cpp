@@ -3881,7 +3881,7 @@ int64_t mudlet::getPhysicalMemoryTotal()
     int64_t memInfo{0};
     auto len = sizeof(memInfo);
 
-    if(sysctl(mib, 2, &memInfo, &len, nullptr, 0) == 0)
+    if (sysctl(mib, 2, &memInfo, &len, nullptr, 0) == 0)
     {
         return memInfo;
     }
