@@ -5270,7 +5270,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2357"/>
       <source>Port number must be above zero and below 65535.</source>
-      <translation type="unfinished"/>
+      <translation>Il numero di porta deve essere superiore a 0 e inferiore a 65535.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2383"/>
