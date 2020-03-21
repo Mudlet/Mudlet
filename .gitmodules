@@ -6,7 +6,7 @@
 	url = https://github.com/martin-eden/lua_code_formatter.git
 [submodule "3rdparty/dblsqd"]
 	path = 3rdparty/dblsqd
-	url = https://bitbucket.org/pentacent/dblsqd-sdk-qt.git
+	url = https://github.com/Mudlet/dblsqd-sdk-qt.git
 [submodule "3rdparty/sparkle-glue"]
 	path = 3rdparty/sparkle-glue
 	url = https://github.com/Mudlet/mixing-cocoa-and-qt.git
