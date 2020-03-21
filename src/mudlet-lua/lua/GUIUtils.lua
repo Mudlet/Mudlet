@@ -1848,3 +1848,8 @@ end
 --wrapper for createButton 
 -- createButton is deprecated better use createLabel instead
 createButton = createLabel
+
+function resetLabelCursor(name)
+  assert(type(name) == 'string', 'resetLabelCursor: bad argument #1 type (name as string expected, got '..type(name)..'!)')
+  return setLabelCursor(name, -1)
+end
