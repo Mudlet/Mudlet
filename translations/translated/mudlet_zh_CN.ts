@@ -9069,32 +9069,32 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="827"/>
       <source>Serbian (Serbia - Latin-alphabet)</source>
-      <translation type="unfinished"/>
+      <translation>塞尔维亚语 (塞尔维亚-拉丁字母)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="828"/>
       <source>Serbian (former state of Yugoslavia)</source>
-      <translation type="unfinished"/>
+      <translation>塞尔维亚 (前南斯拉夫)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="829"/>
       <source>Swati</source>
-      <translation type="unfinished"/>
+      <translation>斯瓦特语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="830"/>
       <source>Swati (Swaziland)</source>
-      <translation type="unfinished"/>
+      <translation>斯瓦蒂 (斯威士兰)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="831"/>
       <source>Swati (South Africa)</source>
-      <translation type="unfinished"/>
+      <translation>南非荷兰语(南非)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="832"/>
       <source>Swedish</source>
-      <translation type="unfinished"/>
+      <translation>瑞典语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="833"/>
@@ -9124,7 +9124,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="838"/>
       <source>Turkish</source>
-      <translation type="unfinished"/>
+      <translation>土耳其语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="839"/>
@@ -10111,27 +10111,27 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="269"/>
       <source>Enable GMCP  (Generic Mud Communication Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>启用 GMCP (通用 Mud 通信协议)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="279"/>
       <source>Enable MSDP  (Mud Server Data Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>启用 MSDP (Mud 服务器数据协议)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="286"/>
       <source>&lt;p&gt;Enables MSSP - provides Mud Server Status Protocol information upon connection for supported games&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;启用 MSSP - 在支持的游戏连接时提供 Mud 服务器状态协议信息&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="289"/>
       <source>Enable MSSP  (Mud Server Status Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>启用 MSSP (Mud Server 状态协议)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="299"/>
       <source>Enable MSP  (Mud Sound Protocol, experimental in Mudlet)</source>
-      <translation type="unfinished"/>
+      <translation>启用 MSP (Mud 声音协议， 处于实验阶段)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="485"/>
@@ -10156,12 +10156,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="560"/>
       <source>System/Mudlet dictionary:</source>
-      <translation type="unfinished"/>
+      <translation>系统/Mudlet 字典:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="567"/>
       <source>&lt;p&gt;Select one dictionary which will be available on the command line and in the lua sub-system.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;选择一个字典，该字典将在命令行和 lua 子系统中可用。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="595"/>
@@ -10191,12 +10191,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="703"/>
       <source>The selected font doesn&apos;t work with Mudlet, please pick another</source>
-      <translation type="unfinished"/>
+      <translation>所选字体无法在 Mudlet 里使用，请选择另一个字体</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="725"/>
       <source>This font is not monospace, which may not be ideal for playing some text games: you can use it but there could be issues with aligning columns of text</source>
-      <translation type="unfinished"/>
+      <translation>这个字体不是等宽字体，在玩一些文字游戏时, 可能有文本不对齐的问题.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="759"/>
