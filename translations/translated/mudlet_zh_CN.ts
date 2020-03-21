@@ -10569,37 +10569,37 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2129"/>
       <source>2D map player room marker style:</source>
-      <translation type="unfinished"/>
+      <translation>2D 地图玩家房间标记样式：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2139"/>
       <source>Outer ring color</source>
-      <translation type="unfinished"/>
+      <translation>外圈颜色</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2149"/>
       <source>Inner ring color</source>
-      <translation type="unfinished"/>
+      <translation>内圈颜色</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2163"/>
       <source>Original</source>
-      <translation type="unfinished"/>
+      <translation>原始</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2168"/>
       <source>Red ring</source>
-      <translation type="unfinished"/>
+      <translation>红圈</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2173"/>
       <source>Blue/Yellow ring</source>
-      <translation type="unfinished"/>
+      <translation>蓝/黄圈</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2178"/>
       <source>Custom ring</source>
-      <translation type="unfinished"/>
+      <translation>自定义圈</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2186"/>
@@ -10615,17 +10615,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2195"/>
       <source>Outer diameter: </source>
-      <translation type="unfinished"/>
+      <translation>外径: </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2214"/>
       <source>&lt;p&gt;Percentage ratio of the inner diameter of the marker symbol to the outer one (&lt;i&gt;the default is 70%&lt;/i&gt;).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;标记符号内部直径与外部直径的百分比 (&lt;i&gt;默认是 70%&lt;/i&gt;)。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2223"/>
       <source>Inner diameter: </source>
-      <translation type="unfinished"/>
+      <translation>内径： </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2607"/>
@@ -10635,12 +10635,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2936"/>
       <source>the computer&apos;s password manager (secure)</source>
-      <translation type="unfinished"/>
+      <translation>计算机密码管理器 (安全)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2941"/>
       <source>plaintext with the profile (portable)</source>
-      <translation type="unfinished"/>
+      <translation>带有配置文件的明文（便携式）</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2949"/>
@@ -10665,7 +10665,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3017"/>
       <source>TLS/SSL secure connection</source>
-      <translation type="unfinished"/>
+      <translation>TLS/SSL 安全连接</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5045"/>
