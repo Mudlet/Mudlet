@@ -286,12 +286,13 @@ int main(int argc, char* argv[])
     // activity even if the quiet, no splashscreen startup has been used
     app->setOverrideCursor(QCursor(Qt::WaitCursor));
     app->setOrganizationName(QStringLiteral("Mudlet"));
-    app->setApplicationVersion(APP_VERSION);
 
     if (mudlet::scmIsPublicTestVersion) {
         app->setApplicationName(QStringLiteral("Mudlet Public Test Build"));
+        app->setApplicationVersion(APP_VERSION APP_BUILD);
     } else {
         app->setApplicationName(QStringLiteral("Mudlet"));
+        app->setApplicationVersion(APP_VERSION);
     }
 
 
