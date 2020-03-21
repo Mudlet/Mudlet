@@ -64,6 +64,7 @@ end
 --- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.split
 function string:split(delimiter)
   delimiter = delimiter or " "
+  if delimiter == "" then return {self:match( (self:gsub(".", "(.)")) )} end
   local result = { }
   local from = 1
   local delim_from, delim_to = string.find( self, delimiter, from  )

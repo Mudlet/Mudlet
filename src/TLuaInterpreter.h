@@ -340,7 +340,6 @@ public:
     static int setTextFormat(lua_State*);
     static int setBackgroundImage(lua_State*);
     static int setBackgroundColor(lua_State*);
-    static int createButton(lua_State*);
     static int setLabelClickCallback(lua_State*);
     static int getImageSize(lua_State*);
     static int setLabelDoubleClickCallback(lua_State*);

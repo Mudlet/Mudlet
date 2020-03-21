@@ -2472,8 +2472,6 @@ std::pair<bool, QString> mudlet::openMapWidget(Host* pHost, const QString& area,
             return {false, QStringLiteral(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
         }
     }
-
-    return {false, QString()};
 }
 
 std::pair<bool, QString> mudlet::closeMapWidget(Host* pHost)
@@ -3441,6 +3439,11 @@ void mudlet::show_options_dialog(QString tab)
         connect(mpActionReconnect.data(), &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_specialoption, &QWidget::hide);
         connect(dactionReconnect, &QAction::triggered, mpProfilePreferencesDlgMap.value(pHost)->need_reconnect_for_specialoption, &QWidget::hide);
         mpProfilePreferencesDlgMap.value(pHost)->setAttribute(Qt::WA_DeleteOnClose);
+    }
+
+    // pHost can be a nullptr here so we do not want to dereference it in that
+    // case {when there is no profile loaded}:
+    if (pHost) {
         mpProfilePreferencesDlgMap.value(pHost)->setStyleSheet(pHost->mProfileStyleSheet);
     }
     mpProfilePreferencesDlgMap.value(pHost)->setTab(tab);
