@@ -5108,7 +5108,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2314"/>
       <source>The %1 character is not permitted. Use one of the following:</source>
-      <translation type="unfinished"/>
+      <translation>不允许 %1 字符。 使用下列其中一项:</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2344"/>
@@ -5211,22 +5211,22 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2357"/>
       <source>Port number must be above zero and below 65535.</source>
-      <translation type="unfinished"/>
+      <translation>端口号必须在0 ~ 65535之间。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2383"/>
       <source>Mudlet can not load support for secure connections.</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet 无法加载安全连接支持。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2400"/>
       <source>Please enter the URL or IP address of the Game server.</source>
-      <translation type="unfinished"/>
+      <translation>请输入游戏服务器的URL或IP地址。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2413"/>
       <source>SSL connections require the URL of the Game server.</source>
-      <translation type="unfinished"/>
+      <translation>SSL连接需要游戏服务器的URL。</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2435"/>
