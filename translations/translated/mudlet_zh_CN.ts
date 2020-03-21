@@ -10610,7 +10610,7 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="2192"/>
       <location filename="../src/ui/profile_preferences.ui" line="2220"/>
       <source>%</source>
-      <translation type="unfinished"/>
+      <translation>%</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2195"/>
@@ -10730,7 +10730,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1943"/>
       <source>An action above happened</source>
-      <translation type="unfinished"/>
+      <translation>发生上述操作</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1950"/>
@@ -10786,17 +10786,17 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="184"/>
       <source>&lt;p&gt;Can you help translate Mudlet?&lt;/p&gt;&lt;p&gt;If so, please visit: &lt;b&gt;https://www.mudlet.org/translate&lt;/b&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;bp&gt;你能帮忙翻译Mudlet吗？&lt;bspan style=&quot;font-weight:600;&quot;&gt;https://www.mudlet.org/translate&lt;b/span&gt;&lt;b/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1915"/>
       <source>&lt;p&gt;Select profiles that you want to copy map to, then press the Copy button to the right&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;选择要复制地图到哪个配置文件，然后按下&lt;/p&gt; 右侧的复制按钮</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1928"/>
       <source>&lt;p&gt;Copy map into the selected profiles on the left&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;复制地图至选定的配置文件&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1996"/>
@@ -10807,7 +10807,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2080"/>
       <source>Show the default area in map area selection</source>
-      <translation type="unfinished"/>
+      <translation>显示地图区域中的默认区域</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2100"/>
@@ -10878,7 +10878,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2705"/>
       <source>Don&apos;t hide small icon or tooltip</source>
-      <translation type="unfinished"/>
+      <translation>不要隐藏的小图标或工具提示</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2710"/>
@@ -10911,7 +10911,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2679"/>
       <source>Don&apos;t hide large icon or tooltip</source>
-      <translation type="unfinished"/>
+      <translation>不要隐藏的大图标或工具提示</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2684"/>
@@ -10946,7 +10946,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2730"/>
       <source>Hide party details</source>
-      <translation type="unfinished"/>
+      <translation>隐藏参与方详细信息</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2697"/>
@@ -11364,52 +11364,52 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1874"/>
       <source>Exit RoomID number</source>
-      <translation type="unfinished"/>
+      <translation>出口房间 Id</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1901"/>
       <source>No door</source>
-      <translation type="unfinished"/>
+      <translation>没有门</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1916"/>
       <source>Open door</source>
-      <translation type="unfinished"/>
+      <translation>开启的门</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1928"/>
       <source>Closed door</source>
-      <translation type="unfinished"/>
+      <translation>关上的门</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1940"/>
       <source>Locked door</source>
-      <translation type="unfinished"/>
+      <translation>被锁住的门</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1975"/>
       <source>&lt;p&gt;Use this button to save any changes, will also remove any invalid Special exits.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;使用此按钮来保存更改，同时将除去任何无效的特殊出口。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1991"/>
       <source>&lt;p&gt;Use this button to close the dialogue without changing anything.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;使用此按钮来关闭对话,但不更改任何内容。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2010"/>
       <source>&lt;p&gt;Click on an item to edit/change it, to DELETE a Special Exit set its Exit Room ID to zero.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;单击项目以编辑/更改它，以 删除 特殊出口将其 " 出口房间标识 " 设置为零。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2048"/>
       <source>&lt;p&gt;Set the number of the room that this exit leads to, if set to zero the exit will be removed on saving the exits.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;设置此出口通向的房间ID，如果设置为零，将在保存出口时被移除。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2075"/>
       <source>&lt;p&gt;No door symbol is drawn on 2D Map for this exit (only functional choice currently).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>在2D 地图上没有为此出口绘制门符号（目前该选项仅供选择）。</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2084"/>
@@ -11465,7 +11465,8 @@ try again when it has finished.</source>
       <location filename="../src/ui/room_exits.ui" line="2044"/>
       <source>Exit
 Room ID</source>
-      <translation type="unfinished"/>
+      <translation>出口
+房间ID</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2053"/>
@@ -11500,13 +11501,15 @@ Open</source>
       <location filename="../src/ui/room_exits.ui" line="2089"/>
       <source>Door
 Closed</source>
-      <translation type="unfinished"/>
+      <translation>门
+被关上</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2098"/>
       <source>Door
 Locked</source>
-      <translation type="unfinished"/>
+      <translation>门
+被锁住</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2107"/>
@@ -11779,7 +11782,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="357"/>
       <source>Match all occurences of the pattern in the line.</source>
-      <translation type="unfinished"/>
+      <translation>匹配行中模式的所有实例。</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="412"/>
@@ -11904,7 +11907,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="175"/>
       <source>⏴ Key type:</source>
-      <translation type="unfinished"/>
+      <translation>⏴ 键类型:</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="125"/>
