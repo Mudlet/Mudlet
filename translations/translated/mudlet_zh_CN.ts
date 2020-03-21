@@ -6125,19 +6125,19 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="234"/>
       <location filename="../src/dlgRoomExits.cpp" line="1961"/>
       <source>Green (Open) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).</source>
-      <translation type="unfinished"/>
+      <translation>绿色 (打开) 门符号将在 2D Map 上的此出口的定制出口线上绘制 ( 但当前不存在) 。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="237"/>
       <location filename="../src/dlgRoomExits.cpp" line="1966"/>
       <source>Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).</source>
-      <translation type="unfinished"/>
+      <translation>橙色 (关闭) 门符号将在 2D Map 上的此出口的定制出口线上绘制 ( 但当前不存在) 。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="240"/>
       <location filename="../src/dlgRoomExits.cpp" line="1969"/>
       <source>Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).</source>
-      <translation type="unfinished"/>
+      <translation>红色 (锁住) 门符号将在 2D Map 上的此出口的定制出口线上绘制 ( 但当前不存在) 。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="87"/>
@@ -6736,7 +6736,8 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <location filename="../src/dlgTriggerEditor.cpp" line="2839"/>
       <source>&lt;p&gt;&lt;b&gt;Unable to activate an offset timer or timer or the part of a module &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; that contains them; reason: %2.&lt;/b&gt;&lt;/p&gt;
                      &lt;p&gt;&lt;i&gt;You will need to reactivate this after the problem has been corrected.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;无法激活定时器或其相关模块 &quot;&lt;tt&gt;%1&lt;/tt&gt;&quot; 及包含的组件； 原因： %2&lt;/b&gt;&lt;/p&gt;
+                     &lt;p&gt;&lt;i&gt;您需要在修复后重新激活。&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="2877"/>
@@ -7644,7 +7645,9 @@ It will not save to disk, so changes will be lost in case of a computer/program 
       <source>This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.
 </source>
-      <translation type="unfinished"/>
+      <translation>这是自由软件：你可以自由改变和重新分配。
+请在法律允许的范围内使用。
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="221"/>
@@ -7761,7 +7764,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="232"/>
       <source>&lt;p&gt;Load a previous saved game session that can be used to test Mudlet lua systems (off-line!).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;加载之前保存的游戏会话，该会话可用于测试 Mudlet lua 系统(离线!)。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="240"/>
@@ -7791,7 +7794,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="293"/>
       <source>&lt;p&gt;Share the screen area between multiple open profiles.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;在多个打开的配置文件之间共享屏幕区域。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="301"/>
@@ -7807,12 +7810,12 @@ less likely to be useful for normal use of this application:
       <location filename="../src/ui/main_window.ui" line="311"/>
       <location filename="../src/ui/main_window.ui" line="314"/>
       <source>Report an issue</source>
-      <translation type="unfinished"/>
+      <translation>报告此问题</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="317"/>
       <source>Report an issue about the public test build</source>
-      <translation type="unfinished"/>
+      <translation>报告有关公共测试的问题</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="157"/>
@@ -7862,7 +7865,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/main_window.ui" line="200"/>
       <source>&lt;p&gt;Opens the Mudlet manual in your web browser.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;在浏览器中打开Mudlet手册。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="208"/>
@@ -7996,7 +7999,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="878"/>
       <source>top + 1</source>
-      <translation type="unfinished"/>
+      <translation>top+1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="891"/>
@@ -8327,12 +8330,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="683"/>
       <source>German (Belgium)</source>
-      <translation type="unfinished"/>
+      <translation>德语 (比利时)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="684"/>
       <source>German (Switzerland)</source>
-      <translation type="unfinished"/>
+      <translation>德语(瑞士)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="685"/>
@@ -9061,7 +9064,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="826"/>
       <source>Serbian (Serbia)</source>
-      <translation type="unfinished"/>
+      <translation>塞尔维亚 (塞尔维亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="827"/>
