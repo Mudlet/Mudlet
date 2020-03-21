@@ -42,7 +42,7 @@ for(file, TS_FILES_NOEXT) {
     }
 }
 STATS_GENERATOR = $$system_path("$${PWD}/generate-translation-stats.lua")
-message("Will use \"$${STATS_GENERATOR}\" to parse translation statistics...")
+# message("Will use \"$${STATS_GENERATOR}\" to parse translation statistics...")
 
 win32 {
     CMD = "where"
@@ -66,7 +66,7 @@ isEmpty(LUA_SEARCH_OUT) {
     }
 } else {
     win32 {
-        # The '.' in the file name confuses the QMake system() utility or the
+        # The '.1' in the file name confuses the QMake system() utility or the
         # shell used in the Windows case as it is considered to be an extension
         # unless we put in the actual 'exe' extension as well:
         LUA_COMMAND = "lua5.1.exe"
@@ -75,5 +75,5 @@ isEmpty(LUA_SEARCH_OUT) {
     }
 }
 
-message("Running: $$LUA_COMMAND $$STATS_GENERATOR ...")
+# message("Running: $$LUA_COMMAND $$STATS_GENERATOR ...")
 system("$$LUA_COMMAND $$STATS_GENERATOR")
