@@ -193,11 +193,6 @@ mudlet::mudlet()
 
     scanForMudletTranslations(QStringLiteral(":/lang"));
     scanForQtTranslations(getMudletPath(qtTranslationsPath));
-
-    if (firstLaunch()) {
-        mInterfaceLanguage = autodetectPreferredLanguage();
-    }
-
     loadTranslators(mInterfaceLanguage);
 
     setupUi(this);
@@ -3115,7 +3110,7 @@ void mudlet::readEarlySettings(const QSettings& settings)
         mEnableFullScreenMode = file_use_smallscreen.exists();
     }
 
-    mInterfaceLanguage = settings.value("interfaceLanguage", QStringLiteral("en_US")).toString();
+    mInterfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
 }
 
 void mudlet::readLateSettings(const QSettings& settings)
@@ -5199,8 +5194,9 @@ void mudlet::setInterfaceLanguage(const QString& languageCode)
 // or a back-up language they've specified
 QString mudlet::autodetectPreferredLanguage()
 {
-    // en_UK is a special exception due to its likeness to en_US
-    QVector<QString> availableQualityTranslations {QStringLiteral("en_UK")};
+    // en_GB is a temporary special exception due to its likeness to en_US, while its
+    // translation is still only at 20%
+    QVector<QString> availableQualityTranslations {QStringLiteral("en_GB")};
     for (auto& code : getAvailableTranslationCodes()) {
         auto& translation = mTranslationsMap.value(code);
         if (translation.fromResourceFile()) {
