@@ -8345,12 +8345,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="686"/>
       <source>German (Germany/Belgium/Luxemburg)</source>
-      <translation type="unfinished"/>
+      <translation>德语 (德语/比利时/卢森堡)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="687"/>
       <source>German (Germany/Belgium/Luxemburg, revised by F M Baumann)</source>
-      <translation type="unfinished"/>
+      <translation>德文（德国/比利时/卢森堡，经 Fm Baumann 修订）</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="688"/>
@@ -8380,7 +8380,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="693"/>
       <source>English (Antigua/Barbuda)</source>
-      <translation type="unfinished"/>
+      <translation>英语 (安提瓜/巴布达)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="694"/>
@@ -9019,47 +9019,47 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="817"/>
       <source>Slovak (Slovakia)</source>
-      <translation type="unfinished"/>
+      <translation>斯洛伐克语(斯洛伐克)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="818"/>
       <source>Slovenian</source>
-      <translation type="unfinished"/>
+      <translation>斯洛文尼亚语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="819"/>
       <source>Slovenian (Slovenia)</source>
-      <translation type="unfinished"/>
+      <translation>斯洛文尼亚语(斯洛文尼亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="820"/>
       <source>Somali</source>
-      <translation type="unfinished"/>
+      <translation>索马里语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="821"/>
       <source>Somali (Somalia)</source>
-      <translation type="unfinished"/>
+      <translation>索马里 (索马里)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="822"/>
       <source>Albanian</source>
-      <translation type="unfinished"/>
+      <translation>阿尔巴尼亚语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="823"/>
       <source>Albanian (Albania)</source>
-      <translation type="unfinished"/>
+      <translation>阿尔巴尼亚语(阿尔巴尼亚)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="824"/>
       <source>Serbian</source>
-      <translation type="unfinished"/>
+      <translation>塞尔维亚语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="825"/>
       <source>Serbian (Montenegro)</source>
-      <translation type="unfinished"/>
+      <translation>塞尔维亚语 (黑山)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="826"/>
