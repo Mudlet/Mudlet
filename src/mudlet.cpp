@@ -5196,7 +5196,8 @@ void mudlet::setInterfaceLanguage(const QString& languageCode)
 // or a back-up language they've specified
 QString mudlet::autodetectPreferredLanguage()
 {
-    QVector<QString> availableQualityTranslations;
+    // en_UK is a special exception due to its likeness to en_US
+    QVector<QString> availableQualityTranslations {QStringLiteral("en_UK")};
     for (auto& code : getAvailableTranslationCodes()) {
         auto& translation = mTranslationsMap.value(code);
         if (translation.fromResourceFile()) {
