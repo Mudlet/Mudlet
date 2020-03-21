@@ -48,8 +48,10 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
 
   Write-Output "=== Creating Nuget package ==="
   if ($public_test_build) {
-    # allow public test builds to be installed side by side with the release builds
-    (Get-Content C:\projects\installers\windows\mudlet.nuspec).replace('<id>Mudlet</id>', '<id>Mudlet.PublicTestBuild</id>') | Set-Content C:\projects\installers\windows\mudlet.nuspec
+    # allow public test builds to be installed side by side with the release builds by renaming the app
+    # no dots in the <id>: https://github.com/Squirrel/Squirrel.Windows/blob/master/docs/using/naming.md
+    (Get-Content C:\projects\installers\windows\mudlet.nuspec).replace('<id>Mudlet</id>', '<id>Mudlet-PublicTestBuild</id>') | Set-Content C:\projects\installers\windows\mudlet.nuspec
+    (Get-Content C:\projects\installers\windows\mudlet.nuspec).replace('<title>Mudlet</title>', '<title>Mudlet (Public Test Build)</title>') | Set-Content C:\projects\installers\windows\mudlet.nuspec
   }
   nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
 
@@ -76,7 +78,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
 
   if ($public_test_build) {
     Write-Output "=== Uploading public test build to make.mudlet.org ==="
-    Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
+    Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.exe";
     Set-Variable -Name "inFile" -Value "${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe";
     Set-Variable -Name "outFile" -Value "upload-location.txt";
     Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
@@ -117,11 +119,14 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
   npm install -g dblsqd-cli
   dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${Env:DBLSQD_USER}" -p "${Env:DBLSQD_PASS}"
 
-  Write-Output "=== Registering release with Dblsqd ==="
   if ($public_test_build) {
-    dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${Env:MUDLET_VERSION_BUILD}"
-    dblsqd push -a mudlet -c public-test-build -r "${Env:MUDLET_VERSION_BUILD}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
+    Write-Output "=== Creating release in Dblsqd ==="
+    dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower()
+
+    Write-Output "=== Registering release with Dblsqd ==="
+    dblsqd push -a mudlet -c public-test-build -r "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower() -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
   } else {
+    Write-Output "=== Registering release with Dblsqd ==="
     dblsqd push -a mudlet -c release -r "${Env:VERSION}" -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
   }
 }
