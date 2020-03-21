@@ -5983,7 +5983,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="3358"/>
       <source>Party max</source>
       <comment>Discord Rich Presence maximum party size</comment>
-      <translation type="unfinished"/>
+      <translation>最大参与方</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3359"/>
@@ -7984,7 +7984,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="664"/>
       <source>Round</source>
-      <translation type="unfinished"/>
+      <translation>圆角</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="683"/>
@@ -8004,22 +8004,22 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="891"/>
       <source>bottom + 1</source>
-      <translation type="unfinished"/>
+      <translation>bottom + 1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="904"/>
       <source>bottom -1</source>
-      <translation type="unfinished"/>
+      <translation>bottom -1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="917"/>
       <source>top - 1</source>
-      <translation type="unfinished"/>
+      <translation>top - 1</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="930"/>
       <source>1 level</source>
-      <translation type="unfinished"/>
+      <translation>1 level</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="949"/>
@@ -8029,7 +8029,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/ui/mapper.ui" line="962"/>
       <source>top view</source>
-      <translation type="unfinished"/>
+      <translation>顶部显示</translation>
     </message>
     <message>
       <location filename="../src/ui/mapper.ui" line="975"/>
@@ -8340,7 +8340,7 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="685"/>
       <source>German (Switzerland, revised by F M Baumann)</source>
-      <translation type="unfinished"/>
+      <translation>德语(奥地利，经 F M Baumann修订)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="686"/>
@@ -8355,12 +8355,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="688"/>
       <source>German (Liechtenstein)</source>
-      <translation type="unfinished"/>
+      <translation>德语(列支敦士登)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="689"/>
       <source>German (Luxembourg)</source>
-      <translation type="unfinished"/>
+      <translation>德语(卢森堡)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="690"/>
@@ -8370,12 +8370,12 @@ less likely to be useful for normal use of this application:
     <message>
       <location filename="../src/mudlet.cpp" line="691"/>
       <source>Greek (Greece)</source>
-      <translation type="unfinished"/>
+      <translation>希腊语(希腊)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="692"/>
       <source>English</source>
-      <translation type="unfinished"/>
+      <translation>英语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="693"/>
