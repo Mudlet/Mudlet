@@ -30,7 +30,7 @@
   <context>
     <name>Host</name>
     <message>
-      <location filename="../src/Host.cpp" line="1474"/>
+      <location filename="../src/Host.cpp" line="1477"/>
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
@@ -39,7 +39,7 @@ please wait...</source>
 attendere prego...</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1476"/>
+      <location filename="../src/Host.cpp" line="1479"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
@@ -48,18 +48,18 @@ please wait...</source>
 attendere prego...</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1480"/>
+      <location filename="../src/Host.cpp" line="1483"/>
       <source>Unpacking</source>
       <translation>Decompressione</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="2087"/>
+      <location filename="../src/Host.cpp" line="2090"/>
       <source>Playing %1</source>
       <translation>Gioca a %1</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="2089"/>
-      <location filename="../src/Host.cpp" line="2095"/>
+      <location filename="../src/Host.cpp" line="2092"/>
+      <location filename="../src/Host.cpp" line="2098"/>
       <source>%1 at %2:%3</source>
       <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
       <translation>%1 a %2:%3</translation>
@@ -1512,13 +1512,13 @@ per le stanze selezionate:</translation>
       <translation>Mudlet, File di log del profilo %1</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="2549"/>
+      <location filename="../src/TConsole.cpp" line="2551"/>
       <source>System Message: %1</source>
       <translation>Messaggio di Sistema: %1</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="2696"/>
-      <location filename="../src/TConsole.cpp" line="2735"/>
+      <location filename="../src/TConsole.cpp" line="2698"/>
+      <location filename="../src/TConsole.cpp" line="2737"/>
       <source>No search results, sorry!
 </source>
       <translation>Nessun risultato di ricerca, mi dispiace!
@@ -1644,27 +1644,27 @@ per le stanze selezionate:</translation>
 &quot;%1&quot; non può essere aperto in lettura).</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="2362"/>
+      <location filename="../src/TConsole.cpp" line="2363"/>
       <source>Pre-Map loading(2) report</source>
       <translation>Rapporto del pre-caricamento della Mappa(2)</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="2372"/>
+      <location filename="../src/TConsole.cpp" line="2373"/>
       <source>Loading map(2) at %1 report</source>
       <translation>Rapporto del caricamento della mappa(2) a %1</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="2771"/>
+      <location filename="../src/TConsole.cpp" line="2773"/>
       <source>[ INFO ]  - Map reload request received from system...</source>
       <translation>[ INFO ]  - Richiesta di ricarica della mappa ricevuta dal sistema...</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="2776"/>
+      <location filename="../src/TConsole.cpp" line="2778"/>
       <source>[  OK  ]  - ... System Map reload request completed.</source>
       <translation>[  OK  ]  - ... Richiesta di ricarica mappa completata.</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="2778"/>
+      <location filename="../src/TConsole.cpp" line="2780"/>
       <source>[ WARN ]  - ... System Map reload request failed.</source>
       <translation>[ WARN ] - ... Caricamento mappa di sistema non riuscita.</translation>
     </message>
@@ -1680,124 +1680,124 @@ per le stanze selezionate:</translation>
   <context>
     <name>TLuaInterpreter</name>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="12630"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="12765"/>
       <source>Playing %1</source>
       <translation>Gioca a %1</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15027"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15162"/>
       <source>ERROR</source>
       <translation>ERROR</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15028"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="15039"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15163"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15174"/>
       <source>object</source>
       <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
       <translation>object</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15028"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="15039"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15163"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15174"/>
       <source>function</source>
       <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
       <translation>funzione</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16347"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16368"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16388"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16409"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16430"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16451"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16627"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16478"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16499"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16519"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16540"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16561"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16582"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16758"/>
       <source>no error message available from Lua</source>
       <translation>nessun messaggio di errore disponibile da Lua</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16349"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16370"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16390"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16411"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16432"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16453"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16629"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16480"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16501"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16521"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16542"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16563"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16584"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16760"/>
       <source>Lua error:</source>
       <translation>Errore Lua:</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16352"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16373"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16393"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16414"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16435"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16456"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16483"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16504"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16524"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16545"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16566"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16587"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2</source>
       <comment>%1 is the name of the module. %2 can be an additional message about the expected effect.</comment>
       <translation>[ ERROR ] - Impossibile trovare il modulo %1.%2</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16356"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16487"/>
       <source>Some functions may not be available.</source>
       <translation>Alcune funzioni non saranno disponibili.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16360"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16380"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16401"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16422"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16443"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="16464"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16491"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16511"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16532"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16553"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16574"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16595"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name of the module.</comment>
       <translation>[  OK  ]  - Modulo Lua %1 caricato.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16397"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16528"/>
       <source>Probably will not be able to access Mudlet Lua code.</source>
       <translation>Probabilmente non sarai in grado di utilizzare le funzioni Lua di Mudlet.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16418"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16549"/>
       <source>Database support will not be available.</source>
       <translation>Il supporto ai database non è disponibile.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16439"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16570"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
       <translation>Funzioni Lua utf8.* non disponibili.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16460"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16591"/>
       <source>yajl.* Lua functions won&apos;t be available.</source>
       <translation>Funzioni Lua yajl.* non disponibili.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16632"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16763"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
 </source>
       <translation>[ ERROR ] - Impossibile caricare il modulo di formattazione codice, l'indentazione automatico non sarà disponibile.
 </translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16664"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16795"/>
       <source>%1 (doesn&apos;t exist)</source>
       <comment>This file doesn&apos;t exist</comment>
       <translation>%1 (file non esistente)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16671"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16802"/>
       <source>%1 (couldn&apos;t read file)</source>
       <comment>This file could not be read for some reason (for example, no permission)</comment>
       <translation>%1 (impossibile leggere il file)</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16677"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16808"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
       <translation>[  OK  ]  - Modulo Lua API &amp; Geyser Layout caricato.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16685"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16816"/>
       <source>[ ERROR ] - Couldn&apos;t find and load LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
@@ -2041,47 +2041,47 @@ consistency details...</source>
       <translation>[ INFO ]  - Controllo del file di mappa: &quot;%1&quot;, versione:%2...</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2077"/>
+      <location filename="../src/TMap.cpp" line="2079"/>
       <source>Map issues</source>
       <translation>Errori mappa</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2084"/>
+      <location filename="../src/TMap.cpp" line="2086"/>
       <source>Area issues</source>
       <translation>Errori area</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2090"/>
+      <location filename="../src/TMap.cpp" line="2092"/>
       <source>Area id: %1 &quot;%2&quot;</source>
       <translation>AreaID: %1 &quot;%2&quot;</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2092"/>
+      <location filename="../src/TMap.cpp" line="2094"/>
       <source>Area id: %1</source>
       <translation>ID Area: %1</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2101"/>
+      <location filename="../src/TMap.cpp" line="2103"/>
       <source>Room issues</source>
       <translation>Errori camera</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2108"/>
+      <location filename="../src/TMap.cpp" line="2110"/>
       <source>Room id: %1 &quot;%2&quot;</source>
       <translation>StanzaID: %1 &quot;%2&quot;</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2110"/>
+      <location filename="../src/TMap.cpp" line="2112"/>
       <source>Room id: %1</source>
       <translation>ID Stanza: %1</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2120"/>
+      <location filename="../src/TMap.cpp" line="2122"/>
       <source>End of report</source>
       <translation>Fine Rapporto</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2126"/>
+      <location filename="../src/TMap.cpp" line="2128"/>
       <source>[ ALERT ] - At least one thing was detected during that last map operation
 that it is recommended that you review the most recent report in
 the file:
@@ -2095,7 +2095,7 @@ di mappa. Consiglio di esaminare il report più recente nel file:
 &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2134"/>
+      <location filename="../src/TMap.cpp" line="2136"/>
       <source>[ INFO ]  - The equivalent to the above information about that last map
 operation has been saved for review as the most recent report in
 the file:
@@ -2109,7 +2109,7 @@ Consiglio di esaminare il report più recente nel file:
 &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2190"/>
+      <location filename="../src/TMap.cpp" line="2192"/>
       <source>[ ERROR ] - Unable to use or create directory to store map.
 Please check that you have permissions/access to:
 &quot;%1&quot;
@@ -2120,101 +2120,101 @@ Verifica di disporre dei permessi di accesso per:
 e che ci sia sufficiente spazio disco. L'operazione di download è fallita.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2216"/>
+      <location filename="../src/TMap.cpp" line="2218"/>
       <source>[ INFO ]  - Map download initiated, please wait...</source>
       <translation>[ INFO ]  - Download del file di mappa avviato, attendere prego...</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2227"/>
+      <location filename="../src/TMap.cpp" line="2229"/>
       <source>Map download</source>
       <comment>This is a title of a progress window.</comment>
       <translation>Download mappa</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2287"/>
+      <location filename="../src/TMap.cpp" line="2289"/>
       <source>Map import</source>
       <comment>This is a title of a progress dialog.</comment>
       <translation>Importa mappa</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2226"/>
+      <location filename="../src/TMap.cpp" line="2228"/>
       <source>Abort</source>
       <translation>Annulla</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2224"/>
+      <location filename="../src/TMap.cpp" line="2226"/>
       <source>Downloading map file for use in %1...</source>
       <comment>%1 is the name of the current Mudlet profile</comment>
       <translation>Download del file di mappa da utilizzare in %1...</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2254"/>
+      <location filename="../src/TMap.cpp" line="2256"/>
       <source>loadMap: unable to perform request, a map is already being downloaded or
 imported at user request.</source>
       <translation>loadMap: impossibile eseguire la richiesta, una mappa è già stata scaricata o
 importata su richiesta dell'utente.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2286"/>
+      <location filename="../src/TMap.cpp" line="2288"/>
       <source>Importing XML map file for use in %1...</source>
       <translation>Importazione del file di mappa XML da utilizzare in %1...</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2314"/>
+      <location filename="../src/TMap.cpp" line="2316"/>
       <source>loadMap: failure to import XML map file, further information may be available
 in main console!</source>
       <translation>loadMap: non è stato possibile importare il file di mappa XML, ulteriori informazioni sono disponibili
 nella finestra principale!</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2349"/>
+      <location filename="../src/TMap.cpp" line="2351"/>
       <source>[ ALERT ] - Map download was canceled, on user&apos;s request.</source>
       <translation>[ ALERT ] - Il download del file di mappa è stato annullato su richiesta dell'utente.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2368"/>
+      <location filename="../src/TMap.cpp" line="2370"/>
       <source>[ ERROR ] - Map download encountered an error:
 %1.</source>
       <translation>[ ERROR ] - Il download del file di mappa ha generato un errore:
 %1.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2400"/>
+      <location filename="../src/TMap.cpp" line="2402"/>
       <source>[ ALERT ] - Map download failed, error reported was:
 %1.</source>
       <translation>[ ALERT ] - Download del file di mappa non riuscito, l'errore generato era:
 %1.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2408"/>
+      <location filename="../src/TMap.cpp" line="2410"/>
       <source>[ ALERT ] - Map download failed, unable to open destination file:
 %1.</source>
       <translation>[ ALERT ] - Download file di mappa non riuscito, impossibile aprire il file di destinazione:
 %1.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2413"/>
+      <location filename="../src/TMap.cpp" line="2415"/>
       <source>[ ALERT ] - Map download failed, unable to write destination file:
 %1.</source>
       <translation>[ALERT] - Download del file di mappa non riuscito, impossibile scrivere il file di destinazione:
 %1.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2426"/>
-      <location filename="../src/TMap.cpp" line="2443"/>
+      <location filename="../src/TMap.cpp" line="2428"/>
+      <location filename="../src/TMap.cpp" line="2445"/>
       <source>[ INFO ]  - ... map downloaded and stored, now parsing it...</source>
       <translation>[ INFO ]  - File di mappa scaricato e salvato, analisi in corso...</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2434"/>
-      <location filename="../src/TMap.cpp" line="2469"/>
+      <location filename="../src/TMap.cpp" line="2436"/>
+      <location filename="../src/TMap.cpp" line="2471"/>
       <source>[ ERROR ] - Map download problem, failure in parsing destination file:
 %1.</source>
       <translation>[ ERROR ] - Problemi con il download del file di mappa, impossibile analizzare il file di destinazione:
 %1.</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="2474"/>
+      <location filename="../src/TMap.cpp" line="2476"/>
       <source>[ ERROR ] - Map download problem, unable to read destination file:
 %1.</source>
       <translation>[ ERROR ] - Problemi con il download dei file di mappa, impossibile leggere il file di destinazione:
@@ -3884,14 +3884,14 @@ per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
   <context>
     <name>cTelnet</name>
     <message>
-      <location filename="../src/ctelnet.cpp" line="569"/>
+      <location filename="../src/ctelnet.cpp" line="572"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2
 </source>
       <translation>[ INFO ]  - L'indirizzo IP di %1 è stato trovato: %2
 </translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="578"/>
+      <location filename="../src/ctelnet.cpp" line="581"/>
       <source>[ ERROR ] - Host name lookup Failure!
 Connection cannot be established.
 The server name is not correct, not working properly,
@@ -3902,167 +3902,167 @@ Il nome server non è corretto o non funziona correttamente
 o il tuo DNS non è raggiungibile.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="413"/>
+      <location filename="../src/ctelnet.cpp" line="416"/>
       <source>[ ERROR ] - TCP/IP socket ERROR:</source>
       <translation>[ ERROR ] - Errore del socket TCP/IP:</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="440"/>
+      <location filename="../src/ctelnet.cpp" line="443"/>
       <source>[ INFO ]  - A secure connection has been established successfully.</source>
       <translation>[ INFO ]  - La connessione sicura è stata stabilita con successo.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="442"/>
+      <location filename="../src/ctelnet.cpp" line="445"/>
       <source>[ INFO ]  - A connection has been established successfully.</source>
       <translation>[ INFO ]  - La connessione è stata stabilita con successo.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="478"/>
+      <location filename="../src/ctelnet.cpp" line="481"/>
       <source>[ INFO ]  - Connection time: %1
     </source>
       <translation>[ INFO ]  - Tempo di connessione: %1
     </translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="517"/>
+      <location filename="../src/ctelnet.cpp" line="520"/>
       <source>Secure connections aren&apos;t supported by this game on this port - try turning the option off.</source>
       <translation>Le connessioni sicure non sono supportate da questo gioco o da questa porta - prova a disattivare l'opzione.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="562"/>
+      <location filename="../src/ctelnet.cpp" line="565"/>
       <source>[ INFO ]  - Trying secure connection to %1: %2 ...
 </source>
       <translation>[ INFO ]  - Tentativo di connessione sicura a %1: %2 ...
 </translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1439"/>
-      <location filename="../src/ctelnet.cpp" line="1806"/>
+      <location filename="../src/ctelnet.cpp" line="1442"/>
+      <location filename="../src/ctelnet.cpp" line="1809"/>
       <source>[ INFO ]  - The server wants to upgrade the GUI to new version &apos;%1&apos;.
 Uninstalling old version &apos;%2&apos;.</source>
       <translation>[ INFO ]  - Il server vuole aggiornare la GUI alla nuova versione &apos;%1&apos;.
 Disinstallazione della vecchia versione &apos;%2&apos;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1450"/>
-      <location filename="../src/ctelnet.cpp" line="1817"/>
+      <location filename="../src/ctelnet.cpp" line="1453"/>
+      <location filename="../src/ctelnet.cpp" line="1820"/>
       <source>[  OK  ]  - Package is already installed.</source>
       <translation>[  OK  ]  - Il package è già installato.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1459"/>
-      <location filename="../src/ctelnet.cpp" line="1826"/>
+      <location filename="../src/ctelnet.cpp" line="1462"/>
+      <location filename="../src/ctelnet.cpp" line="1829"/>
       <source>downloading game GUI from server</source>
       <translation>download GUI del gioco dal server</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1459"/>
-      <location filename="../src/ctelnet.cpp" line="1826"/>
+      <location filename="../src/ctelnet.cpp" line="1462"/>
+      <location filename="../src/ctelnet.cpp" line="1829"/>
       <source>Cancel</source>
       <comment>Cancel download of GUI package from Server</comment>
       <translation>Annulla</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="1448"/>
-      <location filename="../src/ctelnet.cpp" line="1815"/>
+      <location filename="../src/ctelnet.cpp" line="1451"/>
+      <location filename="../src/ctelnet.cpp" line="1818"/>
       <source>[ INFO ]  - Server offers downloadable GUI (url=&apos;%1&apos;) (package=&apos;%2&apos;).</source>
       <translation>[ INFO ]  - Il server offre una GUI scaricabile (url=&apos;%1&apos;) (package=&apos;%2&apos;).</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="382"/>
+      <location filename="../src/ctelnet.cpp" line="385"/>
       <source>[ INFO ]  - Looking up the IP address of server: %1:%2 ...</source>
       <translation>[ INFO ]  - Ricerca dell'indirizzo IP del server: %1:%2 ...</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="506"/>
-      <location filename="../src/ctelnet.cpp" line="519"/>
+      <location filename="../src/ctelnet.cpp" line="509"/>
+      <location filename="../src/ctelnet.cpp" line="522"/>
       <source>[ ALERT ] - Socket got disconnected.
 Reason: </source>
       <translation>[ ALERT ] - Socket disconnesso.
 Motivo: </translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="571"/>
+      <location filename="../src/ctelnet.cpp" line="574"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 ...
 </source>
       <translation>[ INFO ]  - Tentativo di connessione a %1:%2 ...
 </translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="573"/>
+      <location filename="../src/ctelnet.cpp" line="576"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 via proxy...
 </source>
       <translation>[ INFO ]  - Tentativo di connessione a %1:%2 tramite proxy...
 </translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2103"/>
+      <location filename="../src/ctelnet.cpp" line="2106"/>
       <source>ERROR</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>ERROR</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2115"/>
+      <location filename="../src/ctelnet.cpp" line="2118"/>
       <source>LUA</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>LUA</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2126"/>
+      <location filename="../src/ctelnet.cpp" line="2129"/>
       <source>WARN</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>WARN</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2137"/>
+      <location filename="../src/ctelnet.cpp" line="2140"/>
       <source>ALERT</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>ALERT</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2148"/>
+      <location filename="../src/ctelnet.cpp" line="2151"/>
       <source>INFO</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>INFO</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2159"/>
+      <location filename="../src/ctelnet.cpp" line="2162"/>
       <source>OK</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
       <translation>OK</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2348"/>
+      <location filename="../src/ctelnet.cpp" line="2351"/>
       <source>[ INFO ]  - Loading replay file:
 &quot;%1&quot;.</source>
       <translation>[ INFO ]  - Caricamento file di replay:
 &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2367"/>
+      <location filename="../src/ctelnet.cpp" line="2370"/>
       <source>Cannot perform replay, another one may already be in progress. Try again when it has finished.</source>
       <translation>Impossibile avviare il file di replay, un altro potrebbe già essere in esecuzione. Tenta di nuovo quando sarà terminato.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2369"/>
+      <location filename="../src/ctelnet.cpp" line="2372"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress.
 Try again when it has finished.</source>
       <translation>[ WARN ] - Impossibile avviare il file di replay, un altro potrebbe già essere in esecuzione. Tenta di nuovo quando sarà terminato.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2377"/>
+      <location filename="../src/ctelnet.cpp" line="2380"/>
       <source>Cannot read file &quot;%1&quot;, error message was: &quot;%2&quot;.</source>
       <translation>Impossibile leggere il file &quot;%1&quot;, il messaggio di errore è: &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2380"/>
+      <location filename="../src/ctelnet.cpp" line="2383"/>
       <source>[ ERROR ] - Cannot read file &quot;%1&quot;,
 error message was: &quot;%2&quot;.</source>
       <translation>[ ERROR ] - Impossibile leggere il file &quot;%1&quot;,
 il messaggio di errore è: &quot;%2&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/ctelnet.cpp" line="2408"/>
+      <location filename="../src/ctelnet.cpp" line="2411"/>
       <source>[  OK  ]  - The replay has ended.</source>
       <translation>[  OK  ]  - Il file di replay è terminato.</translation>
     </message>
@@ -4601,145 +4601,145 @@ Utilizzi</translation>
   <context>
     <name>directions</name>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16496"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16627"/>
       <source>north</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>nord</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16498"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16629"/>
       <source>n</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>n</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16500"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16631"/>
       <source>east</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>est</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16502"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16633"/>
       <source>e</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>e</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16504"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16635"/>
       <source>south</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>sud</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16506"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16637"/>
       <source>s</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>s</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16508"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16639"/>
       <source>west</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>ovest</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16510"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16641"/>
       <source>w</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>o</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16512"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16643"/>
       <source>northeast</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>nord-est</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16514"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16645"/>
       <source>ne</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>ne</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16516"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16647"/>
       <source>southeast</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>sud-est</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16518"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16649"/>
       <source>se</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>se</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16520"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16651"/>
       <source>southwest</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>sud-ovest</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16522"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16653"/>
       <source>sw</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>so</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16524"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16655"/>
       <source>northwest</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>nord-ovest</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16526"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16657"/>
       <source>nw</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>no</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16528"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16659"/>
       <source>in</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>dentro</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16530"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16661"/>
       <source>i</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>i</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16532"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16663"/>
       <source>out</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>fuori</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16534"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16665"/>
       <source>o</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>o</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16536"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16667"/>
       <source>up</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>alto</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16538"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16669"/>
       <source>u</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>u</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16540"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16671"/>
       <source>down</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>basso</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="16542"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="16673"/>
       <source>d</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>d</translation>
@@ -5165,12 +5165,17 @@ Utilizzi</translation>
       <translation>Questo profilo è attualmente caricato - devi chiuderlo prima di cambiare i parametri di connessione.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2335"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2314"/>
+      <source>The %1 character is not permitted. Use one of the following:</source>
+      <translation>Il carattere %1 non è consentito. Utilizza uno dei seguenti:</translation>
+    </message>
+    <message>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2344"/>
       <source>You have to enter a number. Other characters are not permitted.</source>
       <translation>Devi inserire un numero. Non sono consentiti altri caratteri.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2324"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2330"/>
       <source>This profile name is already in use.</source>
       <translation>Questo nome profilo è già in uso.</translation>
     </message>
@@ -5263,86 +5268,55 @@ Utilizzi</translation>
       <translation>Immagini (%1)</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2312"/>
-      <source>The %1 character is not permitted. Use one of the following:
-&quot;%2&quot;.
-</source>
-      <translation>Il carattere %1 non è permesso. Utilizza uno dei seguenti:
-&quot;%2&quot;.
-</translation>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2357"/>
+      <source>Port number must be above zero and below 65535.</source>
+      <translation>Il numero di porta deve essere superiore a 0 e inferiore a 65535.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2345"/>
-      <source>Port number must be above zero and below 65535.<byte value="xd"/>
-</source>
-      <translation>Il numero di porta deve essere superiore a 0 e inferiore a 65535.
-</translation>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2383"/>
+      <source>Mudlet can not load support for secure connections.</source>
+      <translation>Mudlet non può caricare il supporto per connessioni sicure.</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2409"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2400"/>
+      <source>Please enter the URL or IP address of the Game server.</source>
+      <translation>Inserire l'URL o l'indirizzo IP del server di gioco.</translation>
+    </message>
+    <message>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2413"/>
+      <source>SSL connections require the URL of the Game server.</source>
+      <translation>Le connessioni SSL richiedono l'URL del server di gioco.</translation>
+    </message>
+    <message>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2435"/>
       <source>&lt;p&gt;Load profile without connecting.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Carica il profilo senza connetterti al gioco.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2423"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2449"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before loading.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Per favore imposta un nome profilo valido, l'indirizzo e la porta del server di gioco prima del caricamento.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2427"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2453"/>
       <source>&lt;p&gt;Please set a valid profile name, game server address and the game port before connecting.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Per favore imposta un nome profilo valido, l'indirizzo e la porta del server di gioco prima del caricamento.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2479"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2505"/>
       <source>&lt;p&gt;Click to hide the password; it will also hide if another profile is selected.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Fai clic per nascondere la password; verrà nascosta automaticamente se selezioni un altro profilo.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2483"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2509"/>
       <source>&lt;p&gt;Click to reveal the password for this profile.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Fai clic per mostrare la password di questo profilo.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2353"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2365"/>
+      <location filename="../src/dlgConnectionProfiles.cpp" line="2371"/>
       <source>Mudlet is not configured for secure connections.</source>
       <translation>Mudlet non è configurato per connessioni sicure.</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2356"/>
-      <source>Mudlet is not configured for secure connections.
-
-</source>
-      <translation>Mudlet non è configurato per connessioni sicure.
-
-</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2365"/>
-      <source>Mudlet can not load support for secure connections.
-
-</source>
-      <translation>Mudlet non può caricare il supporto per connessioni sicure.
-
-</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2379"/>
-      <source>Please enter the URL or IP address of the Game server.
-
-%1</source>
-      <translation>Inserire l'URL o l'indirizzo IP del server del gioco.
-
-%1</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgConnectionProfiles.cpp" line="2388"/>
-      <source>SSL connections require the URL of the Game server.
-
-%1</source>
-      <translation>Le connessioni SSL richiedono l'URL del server di gioco.
-
-%1</translation>
     </message>
   </context>
   <context>
@@ -5451,12 +5425,12 @@ Utilizzi</translation>
   <context>
     <name>dlgMapper</name>
     <message>
-      <location filename="../src/dlgMapper.cpp" line="139"/>
+      <location filename="../src/dlgMapper.cpp" line="244"/>
       <source>3D mapper is not available in this version of Mudlet</source>
       <translation>Il mapper 3D non è disponibile in questa versione di Mudlet</translation>
     </message>
     <message>
-      <location filename="../src/dlgMapper.cpp" line="262"/>
+      <location filename="../src/dlgMapper.cpp" line="264"/>
       <source>Cannot find a path to this room.
 </source>
       <translation>Impossibile trovare un percorso per questa stanza.
@@ -5894,12 +5868,12 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3839"/>
       <source>Set outer color of player room mark.</source>
-      <translation type="unfinished"/>
+      <translation>Imposta il colore esterno della stanza del giocatore.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3840"/>
       <source>Set inner color of player room mark.</source>
-      <translation type="unfinished"/>
+      <translation>Imposta il colore interno della stanza del giocatore.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="192"/>
@@ -7776,52 +7750,6 @@ meno utili per un uso normale di questa applicazione:
       <source>Version: %1</source>
       <translation>Versione: %1</translation>
     </message>
-    <message>
-      <location filename="../src/main.cpp" line="365"/>
-      <source>Mudlet comes with
-ABSOLUTELY NO WARRANTY!
-This is free software, and you are
-welcome to redistribute it under
-certain conditions; select the
-&apos;About&apos; item for details.</source>
-      <translation>Mudlet viene fornito
-SENZA ALCUNA GARANZIA!
-Questo è un software gratuito e puoi
-distribuirlo rispettando alcune
-condizioni; visita la voce di menù
-&apos;Altro&apos; per informazioni.</translation>
-    </message>
-    <message>
-      <location filename="../src/main.cpp" line="373"/>
-      <source>Locating profiles...</source>
-      <translation>Ricerca profili...</translation>
-    </message>
-    <message>
-      <location filename="../src/main.cpp" line="390"/>
-      <source>Done.
-
-Loading font files...</source>
-      <translation>Fatto.
-
-Caricamento file dei font...</translation>
-    </message>
-    <message>
-      <location filename="../src/main.cpp" line="464"/>
-      <source>Done.
-
-All data has been loaded successfully.
-
-Starting... Have fun!
-
-</source>
-      <translation>Fatto.
-
-Tutti i dati sono stati caricati correttamente.
-
-Avvio in corso... Buon divertimento!
-
-</translation>
-    </message>
   </context>
   <context>
     <name>main_window</name>
@@ -9600,19 +9528,19 @@ Avvio in corso... Buon divertimento!
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="422"/>
-      <location filename="../src/mudlet.cpp" line="4761"/>
+      <location filename="../src/mudlet.cpp" line="4836"/>
       <source>About</source>
       <translation>Altro</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="423"/>
-      <location filename="../src/mudlet.cpp" line="4744"/>
+      <location filename="../src/mudlet.cpp" line="4819"/>
       <source>&lt;p&gt;Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.&lt;/p&gt;</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
       <translation>&lt;p&gt;Informati su questa versione di Mudlet, le persone che l'hanno creato e la licenza con cui puoi condividerlo.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3803"/>
+      <location filename="../src/mudlet.cpp" line="3878"/>
       <source>Central Debug Console</source>
       <translation>Console di Debug Principale</translation>
     </message>
@@ -9687,7 +9615,7 @@ Avvio in corso... Buon divertimento!
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1744"/>
-      <location filename="../src/mudlet.cpp" line="4191"/>
+      <location filename="../src/mudlet.cpp" line="4266"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Carica un replay di Mudlet.&lt;/p&gt;</translation>
     </message>
@@ -9697,92 +9625,92 @@ Avvio in corso... Buon divertimento!
       <translation>Finestra Utente - %1 - %2</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3499"/>
+      <location filename="../src/mudlet.cpp" line="3577"/>
       <source>Map - %1</source>
       <translation>Mappa - %1</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3518"/>
+      <location filename="../src/mudlet.cpp" line="3593"/>
       <source>Pre-Map loading(3) report</source>
       <translation>Rapporto del pre-caricamento della Mappa(3)</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3528"/>
+      <location filename="../src/mudlet.cpp" line="3603"/>
       <source>Loading map(3) at %1 report</source>
       <translation>Rapporto del caricamento della mappa(3) a %1</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3600"/>
+      <location filename="../src/mudlet.cpp" line="3675"/>
       <source>%1 - notes</source>
       <translation>%1 - note</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3705"/>
+      <location filename="../src/mudlet.cpp" line="3780"/>
       <source>Select Replay</source>
       <translation>Seleziona Replay</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3707"/>
+      <location filename="../src/mudlet.cpp" line="3782"/>
       <source>*.dat</source>
       <translation>*.dat</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3989"/>
+      <location filename="../src/mudlet.cpp" line="4064"/>
       <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
       <translation>[  OK  ]  - Profilo &quot;%1&quot; caricato in modalità offline.</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4014"/>
-      <location filename="../src/mudlet.cpp" line="4033"/>
+      <location filename="../src/mudlet.cpp" line="4089"/>
+      <location filename="../src/mudlet.cpp" line="4108"/>
       <source>Compact input line</source>
       <translation>Compatta linea dei comandi</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4018"/>
-      <location filename="../src/mudlet.cpp" line="4036"/>
+      <location filename="../src/mudlet.cpp" line="4093"/>
+      <location filename="../src/mudlet.cpp" line="4111"/>
       <source>Standard input line</source>
       <translation>Espandi linea dei comandi</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4093"/>
+      <location filename="../src/mudlet.cpp" line="4168"/>
       <source>&lt;p&gt;Cannot load a replay as one is already in progress in this or another profile.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Impossibile caricare una replay perchè è già in corso una riproduzione in questo o un altro profilo.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4110"/>
+      <location filename="../src/mudlet.cpp" line="4185"/>
       <source>Faster</source>
       <translation>Più veloce</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4113"/>
+      <location filename="../src/mudlet.cpp" line="4188"/>
       <source>&lt;p&gt;Replay each step with a shorter time interval between steps.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Riproduci ogni passaggio con un intervallo di esecuzione più breve.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4117"/>
+      <location filename="../src/mudlet.cpp" line="4192"/>
       <source>Slower</source>
       <translation>Più lento</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4120"/>
+      <location filename="../src/mudlet.cpp" line="4195"/>
       <source>&lt;p&gt;Replay each step with a longer time interval between steps.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Riproduci ogni passaggio con un intervallo di esecuzione più lugo.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4130"/>
-      <location filename="../src/mudlet.cpp" line="4199"/>
-      <location filename="../src/mudlet.cpp" line="4212"/>
+      <location filename="../src/mudlet.cpp" line="4205"/>
+      <location filename="../src/mudlet.cpp" line="4274"/>
+      <location filename="../src/mudlet.cpp" line="4287"/>
       <source>Speed: X%1</source>
       <translation>Velocità: X%1</translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4137"/>
-      <location filename="../src/mudlet.cpp" line="4154"/>
+      <location filename="../src/mudlet.cpp" line="4212"/>
+      <location filename="../src/mudlet.cpp" line="4229"/>
       <source>Time: %1</source>
       <translation>Tempo: %1</translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="4755"/>
+      <location filename="../src/mudlet.cpp" line="4830"/>
       <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
       <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
       <translation>
@@ -9791,7 +9719,7 @@ Avvio in corso... Buon divertimento!
       </translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="4773"/>
+      <location filename="../src/mudlet.cpp" line="4848"/>
       <source>Review %n update(s)...</source>
       <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
       <translation>
@@ -9800,7 +9728,7 @@ Avvio in corso... Buon divertimento!
       </translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="4778"/>
+      <location filename="../src/mudlet.cpp" line="4853"/>
       <source>&lt;p&gt;Review the update(s) available...&lt;/p&gt;</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
       <translation>
@@ -9809,7 +9737,7 @@ Avvio in corso... Buon divertimento!
       </translation>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4877"/>
+      <location filename="../src/mudlet.cpp" line="4952"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
       <translation>[ WARN ] - Impossibile avviare il file di replay, un altro potrebbe già essere in esecuzione,
@@ -10337,7 +10265,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="725"/>
       <source>This font is not monospace, which may not be ideal for playing some text games: you can use it but there could be issues with aligning columns of text</source>
-      <translation type="unfinished"/>
+      <translation>Questo font non è monospaziato, perciò potrebbe non essere l'ideale per alcuni giochi testuali: è possibile utilizzarlo, ma potrebbero esserci problemi con l'allineamento delle colonne del testo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="759"/>
@@ -10710,42 +10638,42 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2129"/>
       <source>2D map player room marker style:</source>
-      <translation type="unfinished"/>
+      <translation>Simbolo della stanza del giocatore nella mappa 2D:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2139"/>
       <source>Outer ring color</source>
-      <translation type="unfinished"/>
+      <translation>Colore esterno del cerchio</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2149"/>
       <source>Inner ring color</source>
-      <translation type="unfinished"/>
+      <translation>Colore interno del cerchio</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2163"/>
       <source>Original</source>
-      <translation type="unfinished"/>
+      <translation>Originale</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2168"/>
       <source>Red ring</source>
-      <translation type="unfinished"/>
+      <translation>Cerchio rosso</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2173"/>
       <source>Blue/Yellow ring</source>
-      <translation type="unfinished"/>
+      <translation>Cerchio blu/giallo</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2178"/>
       <source>Custom ring</source>
-      <translation type="unfinished"/>
+      <translation>Cerchio personalizzato</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2186"/>
       <source>&lt;p&gt;Percentage ratio (&lt;i&gt;the default is 120%&lt;/i&gt;) of the marker symbol to the space available for the room.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Rapporto percentuale (&lt;i&gt;il valore predefinito è 120%&lt;/i&gt;) del simbolo rispetto allo spazio disponibile per la stanza.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2192"/>
@@ -10761,7 +10689,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2214"/>
       <source>&lt;p&gt;Percentage ratio of the inner diameter of the marker symbol to the outer one (&lt;i&gt;the default is 70%&lt;/i&gt;).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Rapporto percentuale tra il diametro interno del simbolo e quello esterno (&lt;i&gt;il valore predefinito è 70%&lt;/i&gt;).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2223"/>
