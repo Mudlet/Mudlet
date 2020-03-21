@@ -105,7 +105,7 @@ public:
     void luaWrapLine(std::string& buf, int line);
 
     int getColumnNumber();
-    void createMapper(const QString &windowname, int, int, int, int);
+    std::pair<bool, QString> createMapper(const QString &windowname, int, int, int, int);
 
     void setWrapAt(int pos)
     {
@@ -149,6 +149,7 @@ public:
     createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
     std::pair<bool, QString> deleteLabel(const QString&);
+    std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration);
     bool raiseWindow(const QString& name);
     bool lowerWindow(const QString& name);
     bool showWindow(const QString& name);

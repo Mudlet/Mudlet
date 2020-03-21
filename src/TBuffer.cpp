@@ -750,6 +750,7 @@ TBuffer::TBuffer(Host* pH)
 , mReverse(false)
 , mStrikeOut(false)
 , mUnderline(false)
+, mItalicBeforeBlink(false)
 , lastLoggedFromLine(0)
 , lastloggedToLine(0)
 , mEncoding()
@@ -1272,11 +1273,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
                 if ((openT > 0) && (closeT == openT)) {
                     mAssemblingToken = false;
-		    // If we were in temp secure mode, then we switch back to default after the next tag
+                    // If we were in temp secure mode, then we switch back to default after the next tag
                     if (mMXP_MODE == MXP_MODE_TEMP_SECURE) {
                        mMXP_MODE = mMXP_DEFAULT;
                     }
-		    std::string::size_type _pfs = currentToken.find_first_of(' ');
+                    std::string::size_type _pfs = currentToken.find_first_of(' ');
                     QString _tn;
                     if (_pfs == std::string::npos) {
                         _tn = currentToken.c_str();
@@ -1293,8 +1294,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         mpHost->mTelnet.sendData(payload);
                     }
                     if (_tn == "BR") {
-		        // a <BR> is a newline, but doesn't reset the MXP mode
-		        ch = '\n';
+                        // a <BR> is a newline, but doesn't reset the MXP mode
+                        ch = '\n';
                         openT = 0;
                         closeT = 0;
                         currentToken.clear();
@@ -1612,7 +1613,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
         if (mMXP && ((ch == '\n') || (ch == '\xff') || (ch == '\r'))) {
             // after a newline (but not a <br>) return to default mode
-	    mMXP_MODE = mMXP_DEFAULT;
+            mMXP_MODE = mMXP_DEFAULT;
         }
 
 COMMIT_LINE:
@@ -2505,12 +2506,18 @@ void TBuffer::decodeSGR(const QString& sequence)
                     // sub-string separated part:
                     mUnderline = true;
                     break;
-                // case 5:
-                // TODO:
-                //    break; //slow-blinking
-                // case 6:
-                // TODO:
-                //    break; //fast blinking
+                 case 5:
+                     if (mItalics) {
+                         mItalicBeforeBlink = true;
+                     }
+                     mItalics = true;
+                     break; //slow-blinking, represented as italics instead
+                 case 6:
+                     if (mItalics) {
+                         mItalicBeforeBlink = true;
+                     }
+                     mItalics = true;
+                     break; //fast blinking, represented as italics instead
                 case 7:
                     mReverse = true;
                     break;
@@ -2532,8 +2539,12 @@ void TBuffer::decodeSGR(const QString& sequence)
                 case 24:
                     mUnderline = false;
                     break;
-                // case 25:
-                //    break; // blink off
+                 case 25:
+                     if (!mItalicBeforeBlink) {
+                         mItalics = false;
+                     }
+                     mItalicBeforeBlink = false;
+                    break; // blink off
                 case 27:
                     mReverse = false;
                     break;
