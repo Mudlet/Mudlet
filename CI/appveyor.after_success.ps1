@@ -8,9 +8,10 @@ windeployqt.exe --release mudlet.exe
 
 Remove-Item * -include *.cpp, *.o
 
-$public_test_build = if ($Env:MUDLET_VERSION_BUILD) { $public_test_build } else { $FALSE }
+$public_test_build = if ($Env:MUDLET_VERSION_BUILD) { $Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build') } else { $FALSE }
 
 if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
+  Write-Output "=== Creating a snapshot build ==="
   cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip "%APPVEYOR_BUILD_FOLDER%\src\release\*"
 
   Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
@@ -21,9 +22,9 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
   $DEPLOY_URL = Get-Content -Path $outFile -Raw
 } else {
   if ($public_test_build) {
-    Write-Output "=== Creating a Public Test build ==="
+    Write-Output "=== Creating a public test build ==="
   } else {
-    Write-Output "=== Creating a Release build ==="
+    Write-Output "=== Creating a release build ==="
   }
 
   Write-Output "=== Cloning installer project ==="
