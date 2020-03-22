@@ -120,7 +120,7 @@ local packages = {
   "Other.lua",
   "GMCP.lua",
   "KeyCodes.lua",
-  "CursorShape.lua",
+  "CursorShapes.lua",
   "TTSValues.lua"
 }
 
