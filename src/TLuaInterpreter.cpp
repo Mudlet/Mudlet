@@ -13075,6 +13075,34 @@ int TLuaInterpreter::reloadModule(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableModuleSync
+int TLuaInterpreter::enableModuleSync(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "enableModuleSync: bad argument #1 (module name as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString module{QString::fromUtf8(lua_tostring(L, 1))};
+
+    Host& host = getHostFromLua(L);
+    host.changeModuleSync(module, QLatin1String("1"));
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableModuleSync
+int TLuaInterpreter::disableModuleSync(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "disableModuleSync: bad argument #1 (module name as string expected, got %s)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString module{QString::fromUtf8(lua_tostring(L, 1))};
+
+    Host& host = getHostFromLua(L);
+    host.changeModuleSync(module, QLatin1String("0"));
+    return 0;
+}
+
 // Documentation: ? - public function missing documentation in wiki
 // Once a mapper has been created it will, by default, include the "Default
 // Area" associated with the reserved area Id -1 in the list of Areas shown in
@@ -16231,6 +16259,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "installModule", TLuaInterpreter::installModule);
     lua_register(pGlobalLua, "uninstallModule", TLuaInterpreter::uninstallModule);
     lua_register(pGlobalLua, "reloadModule", TLuaInterpreter::reloadModule);
+    lua_register(pGlobalLua, "enableModuleSync", TLuaInterpreter::enableModuleSync);
+    lua_register(pGlobalLua, "disableModuleSync", TLuaInterpreter::disableModuleSync);
     lua_register(pGlobalLua, "exportAreaImage", TLuaInterpreter::exportAreaImage);
     lua_register(pGlobalLua, "createMapImageLabel", TLuaInterpreter::createMapImageLabel);
     lua_register(pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom);

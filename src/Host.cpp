@@ -577,6 +577,21 @@ void Host::reloadModule(const QString& reloadModuleName)
     }
 }
 
+std::pair<bool, QString> Host::changeModuleSync(const QString& moduleName, const QLatin1String& value)
+{
+    if (moduleName.isEmpty()) {
+        return {false, QLatin1String("a label cannot have an empty string as its name")};
+    }
+
+    if (mInstalledModules.contains(moduleName)) {
+        QStringList moduleStringList = mInstalledModules[moduleName];
+        moduleStringList[1] = value;
+        mInstalledModules[moduleName] = moduleStringList;
+        return {true, QString()};
+    }
+    return {false, QStringLiteral("module name \"%1\" not found").arg(moduleName)};
+}
+
 void Host::resetProfile_phase1()
 {
     mAliasUnit.stopAllTriggers();
