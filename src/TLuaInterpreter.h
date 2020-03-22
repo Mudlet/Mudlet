@@ -72,7 +72,7 @@ class TLuaInterpreter : public QThread
 
 public:
     Q_DISABLE_COPY(TLuaInterpreter)
-    TLuaInterpreter(Host* mpHost, int id);
+    TLuaInterpreter(Host* pH, const QString& hostName, int id);
     ~TLuaInterpreter();
     void setMSDPTable(QString& key, const QString& string_data);
     void parseJSON(QString& key, const QString& string_data, const QString& protocol);
@@ -330,13 +330,16 @@ public:
     static int getStopWatchBrokenDownTime(lua_State*);
     static int createMiniConsole(lua_State*);
     static int createLabel(lua_State*);
+    static int createLabelMainWindow(lua_State* L, const QString& labelName);
+    static int createLabelUserWindow(lua_State* L, const QString& windowName, const QString& labelName);
     static int deleteLabel(lua_State*);
     static int setLabelToolTip(lua_State*);
     static int moveWindow(lua_State*);
+    static int openMapWidget(lua_State*);
+    static int closeMapWidget(lua_State*);
     static int setTextFormat(lua_State*);
     static int setBackgroundImage(lua_State*);
     static int setBackgroundColor(lua_State*);
-    static int createButton(lua_State*);
     static int setLabelClickCallback(lua_State*);
     static int getImageSize(lua_State*);
     static int setLabelDoubleClickCallback(lua_State*);
@@ -577,6 +580,7 @@ private:
 
     std::unique_ptr<lua_State, lua_state_deleter> pIndenterState;
     QPointer<Host> mpHost;
+    QString hostName;
     int mHostID;
     QList<QObject*> objectsToDelete;
     QTimer purgeTimer;

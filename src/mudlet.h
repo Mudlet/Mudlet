@@ -157,6 +157,8 @@ public:
     bool setLabelOnEnter(Host*, const QString&, const QString&, const TEvent&);
     bool setLabelOnLeave(Host*, const QString&, const QString&, const TEvent&);
     bool moveWindow(Host*, const QString& name, int, int);
+    std::pair<bool, QString> openMapWidget(Host* pHost, const QString& area, int x, int y, int width, int height);
+    std::pair<bool, QString> closeMapWidget(Host* pHost);
     void deleteLine(Host*, const QString& name);
     std::optional<QSize> getImageSize(const QString& imageLocation);
     bool insertText(Host*, const QString& windowName, const QString&);

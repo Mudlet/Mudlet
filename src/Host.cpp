@@ -186,7 +186,7 @@ QString stopWatch::getElapsedDayTimeString() const
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
 : mTelnet(this, hostname)
 , mpConsole(nullptr)
-, mLuaInterpreter(this, id)
+, mLuaInterpreter(this, hostname, id)
 , commandLineMinimumHeight(30)
 , mAlertOnNewData(true)
 , mAllowToSendCommand(true)
@@ -897,14 +897,17 @@ QPair<QString, QString> Host::getSearchEngine()
 // cTelnet::sendData(...) call:
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 {
-    if (wantPrint && (! mIsRemoteEchoingActive) && mPrintCommand) {
+    if (wantPrint && (!mIsRemoteEchoingActive) && mPrintCommand) {
         mInsertedMissingLF = true;
         if (!cmd.isEmpty() || !mUSE_IRE_DRIVER_BUGFIX || mUSE_FORCE_LF_AFTER_PROMPT) {
             // used to print the terminal <LF> that terminates a telnet command
             // this is important to get the cursor position right
             mpConsole->printCommand(cmd);
         }
-        mpConsole->update();
+        //If 3D Mapper is active mpConsole->update(); seems to be superfluous and even cause problems in MacOS
+        if (!mpMap->mpMapper || !mpMap->mpMapper->glWidget) {
+            mpConsole->update();
+        }
     }
     QStringList commandList;
     if (!mCommandSeparator.isEmpty()) {

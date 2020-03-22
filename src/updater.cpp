@@ -108,9 +108,9 @@ void Updater::showChangelog() const
 void Updater::finishSetup()
 {
 #if defined(Q_OS_LINUX)
-    qWarning() << "Successfully updated Mudlet to" << feed->getUpdates().constFirst().getVersion();
+    qWarning() << "Successfully updated Mudlet to" << feed->getUpdates(getCurrentRelease()).constFirst().getVersion();
 #elif defined(Q_OS_WIN32)
-    qWarning() << "Mudlet prepped to update to" << feed->getUpdates().first().getVersion() << "on restart";
+    qWarning() << "Mudlet prepped to update to" << feed->getUpdates(getCurrentRelease()).first().getVersion() << "on restart";
 #endif
     recordUpdateTime();
     recordUpdatedVersion();
@@ -130,7 +130,7 @@ void Updater::setupOnMacOS()
 #if defined(Q_OS_WIN32)
 void Updater::setupOnWindows()
 {
-    QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qWarning() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available"; });
+    QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qWarning() << "Checked for updates:" << feed->getUpdates(getCurrentRelease()).size() << "update(s) available"; });
 
     // Setup to automatically download the new release when an update is available
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() {
@@ -138,7 +138,7 @@ void Updater::setupOnWindows()
             return;
         }
 
-        auto updates = feed->getUpdates();
+        auto updates = feed->getUpdates(getCurrentRelease());
         if (updates.isEmpty()) {
             return;
         } else if (!updateAutomatically()) {
@@ -189,10 +189,21 @@ void Updater::prepareSetupOnWindows(const QString& downloadedSetupName)
 }
 #endif // Q_OS_WIN
 
+dblsqd::Release Updater::getCurrentRelease()
+{
+    // embed build time so public test releases, which cannot be compared via semver, can be compared via datetime
+    QString buildDateTime = QString(__DATE__) + QString(__TIME__);
+    QDateTime date = QDateTime::fromString(buildDateTime.simplified(), "MMM d yyyyhh:mm:ss");
+
+    return dblsqd::Release(QCoreApplication::applicationVersion(), date);
+}
+
 #if defined(Q_OS_LINUX)
 void Updater::setupOnLinux()
 {
-    QObject::connect(feed, &dblsqd::Feed::ready, this, [=]() { qWarning() << "Checked for updates:" << feed->getUpdates().size() << "update(s) available"; });
+    QObject::connect(feed, &dblsqd::Feed::ready, this, [=]() {
+        qWarning() << "Checked for updates:" << feed->getUpdates(getCurrentRelease()).size() << "update(s) available";
+    });
 
     // Setup to automatically download the new release when an update is
     // available or wave a flag when it is to be done manually
@@ -205,7 +216,7 @@ void Updater::setupOnLinux()
             return;
         }
 
-        auto updates = feed->getUpdates();
+        auto updates = feed->getUpdates(getCurrentRelease());
         if (updates.isEmpty()) {
             return;
         } else if (!updateAutomatically()) {

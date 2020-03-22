@@ -204,14 +204,14 @@ function InstallMsys() {
 }
 
 function InstallBoost() {
-  DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.67.0/boost_1_67_0.tar.gz/download" "boost.tar.gz" $true
+  DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.71.0/boost_1_71_0.tar.gz/download" "boost.tar.gz" $true
   if (!(Test-Path -Path "C:\Libraries\" -PathType Container)) {
     Step "Creating Boost path"
     New-Item -Path "C:\Libraries\" -ItemType "directory" >> "$logFile" 2>&1
   }
   ExtractTar "boost.tar.gz" "."
   Step "Copying folder"
-  Move-Item "boost_1_67_0" "C:\Libraries\" >> "$logFile" 2>&1
+  Move-Item "boost_1_71_0" "C:\Libraries\" >> "$logFile" 2>&1
 }
 
 function InstallQt() {
@@ -437,7 +437,7 @@ function CheckAndInstallMsys(){
 }
 
 function CheckAndInstallBoost(){
-    CheckAndInstall "Boost" "C:\Libraries\boost_1_67_0\bootstrap.bat" { InstallBoost }
+    CheckAndInstall "Boost" "C:\Libraries\boost_1_71_0\bootstrap.bat" { InstallBoost }
 }
 
 function CheckAndInstallQt(){
