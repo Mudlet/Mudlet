@@ -76,10 +76,6 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
   Write-Output "=== Copying installer over for appveyor ==="
   Move-Item C:\projects\squirreloutput\* $Env:APPVEYOR_BUILD_FOLDER\src\release
 
-  Write-Output "=== Printing contents of $Env:APPVEYOR_BUILD_FOLDER\src ==="
-  Tree /F $Env:APPVEYOR_BUILD_FOLDER\src
-  Write-Output "=== Done printing ==="
-
   if (-not (Test-Path -Path "${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe" -PathType Leaf)) {
     Write-Output "=== ERROR: Setup.exe doesn't exist as expected! Build aborted."
     exit 1
