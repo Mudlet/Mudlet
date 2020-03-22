@@ -2322,7 +2322,7 @@ std::pair<bool, QString> TConsole::deleteLabel(const QString& name)
 std::pair<bool, QString> TConsole::setLabelToolTip(const QString& name, const QString& text, double duration)
 {
     if (name.isEmpty()) {
-        return {false, QLatin1String("a label cannot have an empty string as its name")};
+        return {false, QStringLiteral("a label cannot have an empty string as its name")};
     }
 
     auto pL = mLabelMap.value(name);
@@ -2340,7 +2340,7 @@ std::pair<bool, QString> TConsole::setLabelToolTip(const QString& name, const QS
 std::pair<bool, QString> TConsole::setLabelCursor(const QString& name, int shape)
 {
     if (name.isEmpty()) {
-        return {false, QLatin1String("a label cannot have an empty string as its name")};
+        return {false, QStringLiteral("a label cannot have an empty string as its name")};
     }
 
     auto pL = mLabelMap.value(name);
@@ -2360,11 +2360,11 @@ std::pair<bool, QString> TConsole::setLabelCursor(const QString& name, int shape
 std::pair<bool, QString> TConsole::setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY)
 {
     if (name.isEmpty()) {
-        return {false, QLatin1String("a label cannot have an empty string as its name")};
+        return {false, QStringLiteral("a label cannot have an empty string as its name")};
     }
 
     if (pixMapLocation.isEmpty()) {
-        return {false, QLatin1String("custom cursor location cannot be an empty string")};
+        return {false, QStringLiteral("custom cursor location cannot be an empty string")};
     }
 
     auto pL = mLabelMap.value(name);
