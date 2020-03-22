@@ -580,7 +580,7 @@ void Host::reloadModule(const QString& reloadModuleName)
 std::pair<bool, QString> Host::changeModuleSync(const QString& moduleName, const QLatin1String& value)
 {
     if (moduleName.isEmpty()) {
-        return {false, QLatin1String("a label cannot have an empty string as its name")};
+        return {false, QStringLiteral("module name cannot be an empty string")};
     }
 
     if (mInstalledModules.contains(moduleName)) {

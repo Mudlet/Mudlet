@@ -13085,8 +13085,14 @@ int TLuaInterpreter::enableModuleSync(lua_State* L)
     QString module{QString::fromUtf8(lua_tostring(L, 1))};
 
     Host& host = getHostFromLua(L);
-    host.changeModuleSync(module, QLatin1String("1"));
-    return 0;
+    if (auto [success, message] = host.changeModuleSync(module, QLatin1String("1")); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableModuleSync
@@ -13099,8 +13105,14 @@ int TLuaInterpreter::disableModuleSync(lua_State* L)
     QString module{QString::fromUtf8(lua_tostring(L, 1))};
 
     Host& host = getHostFromLua(L);
-    host.changeModuleSync(module, QLatin1String("0"));
-    return 0;
+
+    if (auto [success, message] = host.changeModuleSync(module, QLatin1String("0")); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: ? - public function missing documentation in wiki
