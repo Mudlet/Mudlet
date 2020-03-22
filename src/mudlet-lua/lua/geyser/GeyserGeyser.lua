@@ -87,8 +87,8 @@ function Geyser:remove (window)
 end
 
 
---- Removes a window from the parent it is in and put's it in a new one
--- This is used internally, don't use it. Use changeContainer instead
+--- Removes a window from the parent it is in and puts it in a new one
+-- This is only used internally.
 -- @param window The new parents windowname 
 local function setMyWindow(self, windowname)
   windowname = windowname or "main"
@@ -112,32 +112,41 @@ local function setMyWindow(self, windowname)
   
   -- Prevent hidden children to get visible  
   if self.hidden or self.auto_hidden then
-    setWindow(windowname, name, 0, 0, 0)
+    setWindow(windowname, name, 0, 0, false)
   else 
-    setWindow(windowname, name, 0, 0, 1)
+    setWindow(windowname, name, 0, 0, true)
   end
 end
 
 
---- Removes all containers windows from the parent they are in and put's them in a new one
--- This is used internally, don't use it. Use changeContainer instead
+--- Removes all containers windows from the parent they are in and puts them in a new one
+-- This is only used internally
 -- @param window The new parents windowname 
 local function setContainerWindow(self, windowname)
   self.windowname = windowname
-  for k,v in pairs(self.windowList) do
-    setMyWindow(v, windowname)
-    setContainerWindow(v, windowname)
+  --Iterate through windows has a given order and prevents problems with z-coordinate
+  for k,v in ipairs(self.windows) do
+    setMyWindow(self.windowList[v], windowname)
+    setContainerWindow(self.windowList[v], windowname)
   end
 end
 
 --- Removes a window from the container that it manages
 -- @param container The new container the window will be set in
 function Geyser:changeContainer (container)
+  --Change container to Geyser if "main" is given
+  if type(container) == "string" and container:lower() == "main" then
+    container = Geyser
+  end
+  --only a container has a windowList
+  if not container or not container.windowList or self == container then
+    return nil, "didn't get a valid container"
+  end
   --Nothing to change
   if self.container == container then
-    return
+    return nil, "nothing to change. "..self.name.." is already in this container"
   end 
-  --If there is no windowname then windowname is main
+  --If there is no windowname then windowname is "main"
   local windowname = container.windowname
   windowname = windowname or "main"
 

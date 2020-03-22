@@ -4338,7 +4338,8 @@ int TLuaInterpreter::setWindow(lua_State* L)
     QString windowname;
     QString name;
     int n = lua_gettop(L);
-    int x=0, y=0;
+    int x = 0, y = 0;
+    bool show = true;
 
     if (lua_type(L, 1) != LUA_TSTRING) {
         lua_pushfstring(L, "setWindow: bad argument #1 type (parent windowname as string expected, got %s!)", luaL_typename(L, 1));
@@ -4353,33 +4354,28 @@ int TLuaInterpreter::setWindow(lua_State* L)
     } else {
         name = QString::fromUtf8(lua_tostring(L, 2));
     }
+    if (n > 2) {
+        if (!lua_isnumber(L, 3)) {
+            lua_pushfstring(L, "setWindow: bad argument #3 type (x-coordinate as number expected, got %s!)", luaL_typename(L, 3));
+            return lua_error(L);
 
-    if (!lua_isnumber(L, 3)) {
-        lua_pushfstring(L, "setWindow: bad argument #3 type (x-coordinate as number expected, got %s!)", luaL_typename(L, 3));
-        return lua_error(L);
-
-    } else {
-        x = lua_tonumber(L, 3);
-    }
-    if (!lua_isnumber(L, 4)) {
-        lua_pushfstring(L, "setWindow: bad argument #4 type (y-coordinate as number expected, got %s!)", luaL_typename(L, 4));
-        return lua_error(L);
-    } else {
-        y = lua_tonumber(L, 4);
-    }
-    bool show = true;
-    if (n > 4) {
-        if ((!lua_isnumber(L, 5)) && (!lua_isboolean(L, 5))) {
-            lua_pushfstring(L, "setWindow: bad argument #5 type (show element as boolean/number (0/1) expected, got %s!)", luaL_typename(L, 5));
+        } else {
+            x = lua_tonumber(L, 3);
+        }
+        if (!lua_isnumber(L, 4)) {
+            lua_pushfstring(L, "setWindow: bad argument #4 type (y-coordinate as number expected, got %s!)", luaL_typename(L, 4));
             return lua_error(L);
         } else {
-            if (lua_isboolean(L, 5)) {
-                show = lua_toboolean(L, 5);
-            } else {
-                show = (lua_tointeger(L, 5) != 0);
-            }
+            y = lua_tonumber(L, 4);
+        }
+        if (!lua_isboolean(L, 5)) {
+            lua_pushfstring(L, "setWindow: bad argument #5 type (show element as boolean expected, got %s!)", luaL_typename(L, 5));
+            return lua_error(L);
+        } else {
+            show = lua_toboolean(L, 5);
         }
     }
+
     Host& host = getHostFromLua(L);
     if (auto [success, message] = mudlet::self()->setWindow(&host, windowname, name, x, y, show); !success) {
         lua_pushnil(L);

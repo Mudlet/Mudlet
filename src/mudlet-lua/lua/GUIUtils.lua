@@ -330,9 +330,10 @@ end
 --- @see createGauge
 function setGaugeWindow(windowName, gaugeName, x, y, show)
   windowName = windowName or "main"
+  x = x or 0
+  y = y or 0
   show = show or true
   assert(gaugesTable[gaugeName], "setGaugeWindow: no such gauge exists.")
-  assert(x and y, "setGaugeWindow: need to have both X and Y dimensions.")
   setWindow(windowName, gaugeName .. "_back", x, y, show)
   setWindow(windowName, gaugeName .. "_front", x, y, show)
   setWindow(windowName, gaugeName .. "_text", x, y, show)
