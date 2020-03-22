@@ -733,18 +733,15 @@ private:
     // Used for display in the profile preferences and is never translated:
     QString mNativeName;
     // ONLY if the translation is loaded from an embedded resource file,
-    // is the percentage complete of the translation - determined via a lua
-    // script that parses the output of the lrelease executable that
-    // converts the source mudlet_xx_YY.ts files into the binary
-    // mudlet_xx_YY.qm files placed into the embedded resource file during
-    // building the application:
+    // this is the percentage complete of the translation
     int mTranslatedPercentage;
-    // What the usable Mudlet translation file-was found to be:
+    // filename translation is loaded from
     QString mMudletTranslationFileName;
-    // What the usable Qt translation file was found to be, note that in most
+    // Qt translation file was found to be, note that in most
     // cases the loaded file will be a "xx" language only file even though it
     // is an "xx_YY" one here:
     QString mQtTranslationFileName;
+    // Similar filename locations will require adding for any 3rd party translations we load
 };
 
 #endif // MUDLET_MUDLET_H
