@@ -2695,7 +2695,7 @@ void TConsole::slot_searchBufferUp()
             return;
         }
     }
-    print(QStringLiteral("No search results, sorry!\n"));
+    print(QStringLiteral("%1\n").arg(tr("No search results, sorry!")));
 }
 
 void TConsole::slot_searchBufferDown()
@@ -2734,7 +2734,7 @@ void TConsole::slot_searchBufferDown()
             return;
         }
     }
-    print(QStringLiteral("No search results, sorry!\n"));
+    print(QStringLiteral("%1\n").arg(tr("No search results, sorry!")));
 }
 
 QSize TConsole::getMainWindowSize() const
