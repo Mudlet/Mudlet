@@ -55,7 +55,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
     (Get-Content C:\projects\installers\windows\mudlet.nuspec).replace('<id>Mudlet</id>', '<id>Mudlet-PublicTestBuild</id>') | Set-Content C:\projects\installers\windows\mudlet.nuspec
     (Get-Content C:\projects\installers\windows\mudlet.nuspec).replace('<title>Mudlet</title>', '<title>Mudlet (Public Test Build)</title>') | Set-Content C:\projects\installers\windows\mudlet.nuspec
   }
-  nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION)-$($Script:Commit) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
+  nuget pack C:\projects\installers\windows\mudlet.nuspec -Version "$Env:VERSION-$Script:Commit" -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
 
   Write-Output "=== Creating installers from Nuget package ==="
   if ($public_test_build) {
