@@ -9,6 +9,7 @@ windeployqt.exe --release mudlet.exe
 Remove-Item * -include *.cpp, *.o
 
 $public_test_build = if ($Env:MUDLET_VERSION_BUILD) { $Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build') } else { $FALSE }
+$Script:Commit = git rev-parse --short HEAD
 
 if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
   Write-Output "=== Creating a snapshot build ==="
@@ -40,7 +41,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
   $SQUIRRELWINBIN = "$SQUIRRELWIN\lib\net45\"
 
   if (-not $(Test-Path "$SQUIRRELWINBIN")) {
-      New-Item "$SQUIRRELWINBIN" -ItemType "directory"
+    New-Item "$SQUIRRELWINBIN" -ItemType "directory"
   }
 
   Write-Output "=== Moving things to where Squirel expects them ==="
@@ -54,7 +55,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
     (Get-Content C:\projects\installers\windows\mudlet.nuspec).replace('<id>Mudlet</id>', '<id>Mudlet-PublicTestBuild</id>') | Set-Content C:\projects\installers\windows\mudlet.nuspec
     (Get-Content C:\projects\installers\windows\mudlet.nuspec).replace('<title>Mudlet</title>', '<title>Mudlet (Public Test Build)</title>') | Set-Content C:\projects\installers\windows\mudlet.nuspec
   }
-  nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
+  nuget pack C:\projects\installers\windows\mudlet.nuspec -Version $($Env:VERSION)-$($Script:Commit) -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
 
   Write-Output "=== Creating installers from Nuget package ==="
   if ($public_test_build) {
