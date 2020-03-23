@@ -3862,6 +3862,40 @@ void mudlet::startAutoLogin()
     }
 }
 
+// credit to https://github.com/DigitalInBlue/Celero/blob/master/src/Memory.cpp
+int64_t mudlet::getPhysicalMemoryTotal()
+{
+#ifdef WIN32
+    MEMORYSTATUSEX memInfo;
+    memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+    GlobalMemoryStatusEx(&memInfo);
+    return static_cast<int64_t>(memInfo.ullTotalPhys);
+#elif defined(__unix__) || defined(__unix) || defined(unix)
+    // Prefer sysctl() over sysconf() except sysctl() HW_REALMEM and HW_PHYSMEM
+    // return static_cast<int64_t>(sysconf(_SC_PHYS_PAGES)) * static_cast<int64_t>(sysconf(_SC_PAGE_SIZE));
+    struct sysinfo memInfo;
+    sysinfo(&memInfo);
+    int64_t total = memInfo.totalram;
+    return total * static_cast<int64_t>(memInfo.mem_unit);
+#elif defined(__APPLE__)
+    int mib[2];
+    mib[0] = CTL_HW;
+    mib[1] = HW_MEMSIZE;
+
+    int64_t memInfo{0};
+    auto len = sizeof(memInfo);
+
+    if (sysctl(mib, 2, &memInfo, &len, nullptr, 0) == 0)
+    {
+        return memInfo;
+    }
+
+    return -1;
+#else
+    return -1;
+#endif
+}
+
 // Ensure the debug area is attached to at least one Host
 void mudlet::attachDebugArea(const QString& hostname)
 {
