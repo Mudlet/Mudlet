@@ -54,6 +54,7 @@
 #include <QCoreApplication>
 #include <QDesktopServices>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
@@ -16671,8 +16672,8 @@ void TLuaInterpreter::loadGlobal()
     setupLanguageData();
 
     const QString executablePath{QCoreApplication::applicationDirPath()};
-    // Initialise the list of paths so that getMudletLuaDefaultPaths() can
-    // report them later if asked:
+    // Initialise the list of path and file names so that
+    // getMudletLuaDefaultPaths() can report them later if asked:
     mPossiblePaths = QStringList{
 #if defined(Q_OS_MACOS)
         // Load relatively to MacOS inside Resources when we're in a .app
@@ -16709,18 +16710,51 @@ void TLuaInterpreter::loadGlobal()
 #endif
     QStringList failedMessages{};
 
+    // uncomment the following to enable some debugging texts in the LuaGlobal.lua script:
+    luaL_dostring(pGlobalLua, QStringLiteral("debugLoading = true").toUtf8().constData());
+
+#if defined(Q_OS_WIN32)
+    // Needed to enable permissions checks on NTFS file systems - normally
+    // turned off for performance reasons:
+    extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
+#endif
 
     int error;
-    for (const auto& path : qAsConst(mPossiblePaths)) {
-        if (!QFileInfo::exists(path)) {
-            failedMessages << tr("%1 (doesn't exist)", "This file doesn't exist").arg(path);
+    for (const auto& pathFileName : qAsConst(mPossiblePaths)) {
+        if (!(QFileInfo::exists(pathFileName))) {
+            failedMessages << tr("%1 (doesn't exist)", "This file doesn't exist").arg(pathFileName);
             continue;
         }
 
+        if (!(QFileInfo(pathFileName).isFile())) {
+            failedMessages << tr("%1 (isn't a file or symlink to a file)", "This is not a file or a symbolic link to a file").arg(pathFileName);
+            continue;
+        }
+
+#if defined(Q_OS_WIN32)
+        // Turn on permission checking on NTFS file systems
+        qt_ntfs_permission_lookup++;
+#endif
+        if (!(QFileInfo(pathFileName).isReadable())) {
+            failedMessages << tr("%1 (isn't a readable file or symlink to a readable file)", "This is not a file or a symbolic link to a file").arg(pathFileName);
+            continue;
+        }
+#if defined(Q_OS_WIN32)
+        // Turn off permission checking
+        qt_ntfs_permission_lookup--;
+#endif
+
+        // Leave a global variable set to the path so we can use it to find the
+        // other files around it - the script will convert the directory
+        // separators as necessary:
+        Q_ASSERT_X(!pathFileName.isEmpty(), "TLuaInterpreter::loadGlobal()", "trying to call QFileInfo(path).absolutePath() when path is empty");
+        luaL_dostring(pGlobalLua, QStringLiteral("luaGlobalPath = \"%1\"").arg(QFileInfo(pathFileName).absolutePath()).toUtf8().constData());
+
         // load via Qt so UTF8 paths work on Windows - Lua can't handle it
-        auto luaGlobal = readScriptFile(path);
+        auto luaGlobal = readScriptFile(pathFileName);
+
         if (luaGlobal.isEmpty()) {
-            failedMessages << tr("%1 (couldn't read file)", "This file could not be read for some reason (for example, no permission)").arg(path);
+            failedMessages << tr("%1 (couldn't read file)", "This file could not be read for some reason (for example, no permission)").arg(pathFileName);
             continue;
         }
 
@@ -16729,12 +16763,12 @@ void TLuaInterpreter::loadGlobal()
             mpHost->postMessage(tr("[  OK  ]  - Mudlet-lua API & Geyser Layout manager loaded."));
             return;
         } else {
-            qWarning() << "TLuaInterpreter::loadGlobal() loading " << path << " failed: " << lua_tostring(pGlobalLua, -1);
-            failedMessages << QStringLiteral("%1 (%2)").arg(path, lua_tostring(pGlobalLua, -1));
+            qWarning() << "TLuaInterpreter::loadGlobal() loading " << pathFileName << " failed: " << lua_tostring(pGlobalLua, -1);
+            failedMessages << QStringLiteral("%1 (%2)").arg(pathFileName, lua_tostring(pGlobalLua, -1));
         }
     }
 
-    mpHost->postMessage(tr("[ ERROR ] - Couldn't find and load LuaGlobal.lua - your Mudlet is broken!\nTried these locations:\n%1").arg(failedMessages.join(QChar::LineFeed)));
+    mpHost->postMessage(tr("[ ERROR ] - Couldn't find, load and successfully run LuaGlobal.lua - your Mudlet is broken!\nTried these locations:\n%1").arg(failedMessages.join(QChar::LineFeed)));
 }
 
 // No documentation available in wiki - internal function
