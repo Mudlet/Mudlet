@@ -426,6 +426,7 @@ public:
     void scanForQtTranslations(const QString&);
     void layoutModules();
     void startAutoLogin();
+    QPointer<QTableWidget> moduleTable;
 
 
 #if defined(INCLUDE_UPDATER)
@@ -653,7 +654,6 @@ private:
     QPointer<QPushButton> installButton;
 
     QPointer<Host> mpModuleTableHost;
-    QPointer<QTableWidget> moduleTable;
     QPointer<QPushButton> moduleUninstallButton;
     QPointer<QPushButton> moduleInstallButton;
     QPointer<QPushButton> moduleHelpButton;

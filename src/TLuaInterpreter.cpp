@@ -54,6 +54,7 @@
 #include <QCoreApplication>
 #include <QDesktopServices>
 #include <QFileDialog>
+#include <QTableWidget>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
@@ -13091,6 +13092,13 @@ int TLuaInterpreter::enableModuleSync(lua_State* L)
         return 2;
     }
 
+    auto moduleTable = mudlet::self()->moduleTable;
+    if (moduleTable && !moduleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
+        int row = moduleTable->findItems(module, Qt::MatchExactly)[0]->row();
+        auto checkItem = moduleTable->item(row, 2);
+        checkItem->setCheckState(Qt::Checked);
+    }
+
     lua_pushboolean(L, true);
     return 1;
 }
@@ -13111,6 +13119,14 @@ int TLuaInterpreter::disableModuleSync(lua_State* L)
         lua_pushfstring(L, message.toUtf8().constData());
         return 2;
     }
+
+    auto moduleTable = mudlet::self()->moduleTable;
+    if (moduleTable && !moduleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
+        int row = moduleTable->findItems(module, Qt::MatchExactly)[0]->row();
+        auto checkItem = moduleTable->item(row, 2);
+        checkItem->setCheckState(Qt::Unchecked);
+    }
+
     lua_pushboolean(L, true);
     return 1;
 }
