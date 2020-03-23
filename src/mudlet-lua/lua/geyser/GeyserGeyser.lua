@@ -74,9 +74,7 @@ function Geyser:add (window, cons)
   if not self.defer_updates then
     window:reposition()
   end
-  if window.hidden or window.auto_hidden then
-    --do nothing
-  else 
+  if not (window.hidden or window.auto_hidden) then
     window:show()
   end
 end
