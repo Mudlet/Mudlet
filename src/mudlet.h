@@ -173,6 +173,7 @@ public:
     bool setLabelOnEnter(Host*, const QString&, const QString&, const TEvent&);
     bool setLabelOnLeave(Host*, const QString&, const QString&, const TEvent&);
     bool moveWindow(Host*, const QString& name, int, int);
+    std::pair<bool, QString> setWindow(Host* pHost, const QString& windowname, const QString& name, int x1, int y1, bool show);
     std::pair<bool, QString> openMapWidget(Host* pHost, const QString& area, int x, int y, int width, int height);
     std::pair<bool, QString> closeMapWidget(Host* pHost);
     void deleteLine(Host*, const QString& name);
