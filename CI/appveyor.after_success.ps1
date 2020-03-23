@@ -67,8 +67,9 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
     $TestBuildString = ""
   }
 
-  Write-Output "=== Printing contents of $Env:APPVEYOR_BUILD_FOLDER\src ==="
+  Write-Output "=== Printing contents of $Env:APPVEYOR_BUILD_FOLDER\src, squirrel-packaging-prep ==="
   Tree /F $Env:APPVEYOR_BUILD_FOLDER\src
+  Tree /F "C:\projects\squirrel-packaging-prep"
   Write-Output "=== Done printing ==="
 
 
