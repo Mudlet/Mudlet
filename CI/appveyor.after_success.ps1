@@ -10,8 +10,8 @@ Remove-Item * -include *.cpp, *.o
 
 $Script:PublicTestBuild = if ($Env:MUDLET_VERSION_BUILD) { $Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build') } else { $FALSE }
 $Script:Commit = git rev-parse --short HEAD
-# Short version as in 4.6.1+761a164f following Semver 2.0.0 rules for build metadata
-$Script:VersionAndSha = "$Env:VERSION+$Script:Commit"
+# ensure sha part always starts with a character due to https://github.com/Squirrel/Squirrel.Windows/issues/1394
+$Script:VersionAndSha = "$Env:VERSION-ptb$Script:Commit"
 
 if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Write-Output "=== Creating a snapshot build ==="
@@ -88,7 +88,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Move-Item C:\projects\squirreloutput\* $Env:APPVEYOR_BUILD_FOLDER\src\release
 
   if (-not (Test-Path -Path "${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe" -PathType Leaf)) {
-    Write-Output "=== ERROR: Setup.exe doesn't exist as expected! Build aborted. Squirrel log is:"
+    Write-Output "=== ERROR: Squirrel failed to generate the installer! Build aborted. Squirrel log is:"
     Get-Content -Path .\squirrel.windows\tools\SquirrelSetup.log
     exit 1
   }
