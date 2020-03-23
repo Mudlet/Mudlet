@@ -72,8 +72,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Tree /F "C:\projects\squirrel-packaging-prep"
   Write-Output "=== Done printing ==="
 
-
-  $nupkg_path = "C:\projects\squirrel-packaging-prep\Mudlet$($TestBuildString).$Env:VERSION.nupkg"
+  $nupkg_path = "C:\projects\squirrel-packaging-prep\Mudlet$TestBuildString.$Script:VersionAndSha.nupkg"
   if (-not (Test-Path -Path $nupkg_path -PathType Leaf)) {
     Write-Output "=== ERROR: nupkg doesn't exist as expected! Build aborted."
     exit 1
