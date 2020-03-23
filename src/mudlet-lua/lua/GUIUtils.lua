@@ -1920,12 +1920,12 @@ end
 --- @param inst optional, the instance of the string to copy. Defaults to the first instance.
 --- @usage to copy matches[2] with color information and echo it to miniconsole "test"
 ---   <pre>
----   echo("test", copy2decho(matches[2]))
+---   decho("test", copy2decho(matches[2]))
 ---   </pre>
 ---
 --- @usage to copy the entire line with color information, then echo it to miniconsole "test"
 ---   <pre>
----   echo("test", copy2decho())
+---   decho("test", copy2decho())
 ---   </pre>
 function copy2decho(win, str, inst)
   return copy2color("copy2decho", win, str, inst)
