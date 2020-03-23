@@ -79,7 +79,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     exit 1
   }
 
-  # fails silently if the file is not found
+  # fails silently if the nupkg file is not found
   .\squirrel.windows\tools\Squirrel --releasify $nupkg_path --releaseDir C:\projects\squirreloutput --loadingGif C:\projects\installers\windows\splash-installing-2x.png --no-msi --setupIcon C:\projects\installers\windows\mudlet_main_48px.ico -n "/a /f C:\projects\installers\windows\code-signing-certificate.p12 /p $Env:signing_password /fd sha256 /tr http://timestamp.digicert.com /td sha256"
 
   Write-Output "=== Removing old directory content of release folder ==="
@@ -88,7 +88,8 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Move-Item C:\projects\squirreloutput\* $Env:APPVEYOR_BUILD_FOLDER\src\release
 
   if (-not (Test-Path -Path "${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe" -PathType Leaf)) {
-    Write-Output "=== ERROR: Setup.exe doesn't exist as expected! Build aborted."
+    Write-Output "=== ERROR: Setup.exe doesn't exist as expected! Build aborted. Squirrel log is:"
+    Get-Content -Path .\squirrel.windows\tools\SquirrelSetup.log
     exit 1
   }
 
