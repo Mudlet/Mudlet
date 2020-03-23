@@ -1859,5 +1859,5 @@ function setLabelCursor(labelname, cursorShape)
   if type(cursorShape) == "string" then
     cursorShape = mudlet.cursor[cursorShape]
   end
-  setLabelCursorLayer(labelname, cursorShape)
+  return setLabelCursorLayer(labelname, cursorShape)
 end
