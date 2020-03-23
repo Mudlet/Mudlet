@@ -3,7 +3,12 @@
 MUDLET_VERSION_BUILD=""
 
 if [ -z "${TRAVIS_TAG}" ]; then
-  MUDLET_VERSION_BUILD="-testing"
+  if [ "$TRAVIS_EVENT_TYPE" = "cron" ] && [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+    # The only scheduled macos builds are public test builds
+    MUDLET_VERSION_BUILD="-public-test-build"
+  else
+    MUDLET_VERSION_BUILD="-testing"
+  fi
   if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then # building for a PR
     COMMIT=$(git rev-parse --short "${TRAVIS_PULL_REQUEST_SHA}")
     MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${TRAVIS_PULL_REQUEST}-${COMMIT}"
