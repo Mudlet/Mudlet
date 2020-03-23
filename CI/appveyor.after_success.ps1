@@ -8,12 +8,12 @@ windeployqt.exe --release mudlet.exe
 
 Remove-Item * -include *.cpp, *.o
 
-$public_test_build = if ($Env:MUDLET_VERSION_BUILD) { $Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build') } else { $FALSE }
+$Script:PublicTestBuild = if ($Env:MUDLET_VERSION_BUILD) { $Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build') } else { $FALSE }
 $Script:Commit = git rev-parse --short HEAD
 # Short version as in 4.6.1+761a164f following Semver 2.0.0 rules for build metadata
-$Script:ShortVersion = "$Env:VERSION+$Script:Commit"
+$Script:VersionAndSha = "$Env:VERSION+$Script:Commit"
 
-if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
+if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Write-Output "=== Creating a snapshot build ==="
   cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip "%APPVEYOR_BUILD_FOLDER%\src\release\*"
 
@@ -24,7 +24,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
 
   $DEPLOY_URL = Get-Content -Path $outFile -Raw
 } else {
-  if ($public_test_build) {
+  if ($Script:PublicTestBuild) {
     Write-Output "=== Creating a public test build ==="
   } else {
     Write-Output "=== Creating a release build ==="
@@ -51,17 +51,17 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
   Move-Item $Env:APPVEYOR_BUILD_FOLDER\src\release\* $SQUIRRELWINBIN
 
   Write-Output "=== Creating Nuget package ==="
-  if ($public_test_build) {
+  if ($Script:PublicTestBuild) {
     # allow public test builds to be installed side by side with the release builds by renaming the app
     # no dots in the <id>: https://github.com/Squirrel/Squirrel.Windows/blob/master/docs/using/naming.md
     $Script:NuSpec = "C:\projects\installers\windows\mudlet.nuspec"
     (Get-Content "$Script:NuSpec").replace('<id>Mudlet</id>', '<id>Mudlet-PublicTestBuild</id>') | Set-Content "$Script:NuSpec"
     (Get-Content "$Script:NuSpec").replace('<title>Mudlet</title>', '<title>Mudlet (Public Test Build)</title>') | Set-Content "$Script:NuSpec"
   }
-  nuget pack "$Script:NuSpec" -Version "$Script:ShortVersion" -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
+  nuget pack "$Script:NuSpec" -Version "$Script:VersionAndSha" -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
 
   Write-Output "=== Creating installers from Nuget package ==="
-  if ($public_test_build) {
+  if ($Script:PublicTestBuild) {
     $TestBuildString = "-PublicTestBuild"
   } else {
     $TestBuildString = ""
@@ -73,7 +73,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
   Write-Output "=== Done printing ==="
 
 
-  $nupkg_path = "C:\projects\squirrel-packaging-prep\Mudlet$($TestBuildString).$Script:ShortVersion.nupkg"
+  $nupkg_path = "C:\projects\squirrel-packaging-prep\Mudlet$($TestBuildString).$Env:VERSION.nupkg"
   if (-not (Test-Path -Path $nupkg_path -PathType Leaf)) {
     Write-Output "=== ERROR: nupkg doesn't exist as expected! Build aborted."
     exit 1
@@ -92,7 +92,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
     exit 1
   }
 
-  if ($public_test_build) {
+  if ($Script:PublicTestBuild) {
     Write-Output "=== Uploading public test build to make.mudlet.org ==="
     Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.exe";
     Set-Variable -Name "inFile" -Value "${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe";
@@ -135,7 +135,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
   npm install -g dblsqd-cli
   dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${Env:DBLSQD_USER}" -p "${Env:DBLSQD_PASS}"
 
-  if ($public_test_build) {
+  if ($Script:PublicTestBuild) {
     Write-Output "=== Creating release in Dblsqd ==="
     dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower()
 
