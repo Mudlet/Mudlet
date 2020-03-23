@@ -74,7 +74,11 @@ function Geyser:add (window, cons)
   if not self.defer_updates then
     window:reposition()
   end
-  window:show()
+  if window.hidden or window.auto_hidden then
+    --do nothing
+  else 
+    window:show()
+  end
 end
 
 --- Removes a window from the list that it manages
