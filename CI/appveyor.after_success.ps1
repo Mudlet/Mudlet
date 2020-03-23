@@ -9,7 +9,12 @@ windeployqt.exe --release mudlet.exe
 Remove-Item * -include *.cpp, *.o
 
 $Script:PublicTestBuild = if ($Env:MUDLET_VERSION_BUILD) { $Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build') } else { $FALSE }
-$Script:Commit = git rev-parse --short HEAD
+
+if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
+    $Script:Commit = git rev-parse --short $Env:APPVEYOR_PULL_REQUEST_HEAD_COMMIT
+} else {
+  $Script:Commit = git rev-parse --short HEAD
+}
 # ensure sha part always starts with a character due to https://github.com/Squirrel/Squirrel.Windows/issues/1394
 $Script:VersionAndSha = "$Env:VERSION-ptb$Script:Commit"
 
