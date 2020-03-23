@@ -316,11 +316,7 @@ end
 -- @param cursorShape the predefined cursorshape as number from 1 to 21
 -- see: https://doc.qt.io/qt-5/qt.html#CursorShape-enum
 function Geyser.Label:setCursor(cursorShape)
-  if type(cursorShape) == "string" then
-    cursorShape = mudlet.cursor[cursorShape]
-  end
   setLabelCursor(self.name, cursorShape)
-  
   -- Get cursorShape as string
   for k,v in pairs(mudlet.cursor) do
     if cursorShape == v then
