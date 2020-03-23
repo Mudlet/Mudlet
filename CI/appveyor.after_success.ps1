@@ -10,6 +10,8 @@ Remove-Item * -include *.cpp, *.o
 
 $public_test_build = if ($Env:MUDLET_VERSION_BUILD) { $Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build') } else { $FALSE }
 $Script:Commit = git rev-parse --short HEAD
+# Short version as in 4.6.1+761a164f following Semver 2.0.0 rules for build metadata
+$Script:ShortVersion = "$Env:VERSION+$Script:Commit"
 
 if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
   Write-Output "=== Creating a snapshot build ==="
@@ -52,10 +54,11 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
   if ($public_test_build) {
     # allow public test builds to be installed side by side with the release builds by renaming the app
     # no dots in the <id>: https://github.com/Squirrel/Squirrel.Windows/blob/master/docs/using/naming.md
-    (Get-Content C:\projects\installers\windows\mudlet.nuspec).replace('<id>Mudlet</id>', '<id>Mudlet-PublicTestBuild</id>') | Set-Content C:\projects\installers\windows\mudlet.nuspec
-    (Get-Content C:\projects\installers\windows\mudlet.nuspec).replace('<title>Mudlet</title>', '<title>Mudlet (Public Test Build)</title>') | Set-Content C:\projects\installers\windows\mudlet.nuspec
+    $Script:NuSpec = "C:\projects\installers\windows\mudlet.nuspec"
+    (Get-Content "$Script:NuSpec").replace('<id>Mudlet</id>', '<id>Mudlet-PublicTestBuild</id>') | Set-Content "$Script:NuSpec"
+    (Get-Content "$Script:NuSpec").replace('<title>Mudlet</title>', '<title>Mudlet (Public Test Build)</title>') | Set-Content "$Script:NuSpec"
   }
-  nuget pack C:\projects\installers\windows\mudlet.nuspec -Version "$Env:VERSION-$Script:Commit" -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
+  nuget pack "$Script:NuSpec" -Version "$Script:ShortVersion" -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
 
   Write-Output "=== Creating installers from Nuget package ==="
   if ($public_test_build) {
@@ -64,7 +67,12 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $public_test_build) {
     $TestBuildString = ""
   }
 
-  $nupkg_path = "C:\projects\squirrel-packaging-prep\Mudlet$($TestBuildString).$Env:VERSION-$Script:Commit.nupkg"
+  Write-Output "=== Printing contents of $Env:APPVEYOR_BUILD_FOLDER\src ==="
+  Tree /F $Env:APPVEYOR_BUILD_FOLDER\src
+  Write-Output "=== Done printing ==="
+
+
+  $nupkg_path = "C:\projects\squirrel-packaging-prep\Mudlet$($TestBuildString).$Script:ShortVersion.nupkg"
   if (-not (Test-Path -Path $nupkg_path -PathType Leaf)) {
     Write-Output "=== ERROR: nupkg doesn't exist as expected! Build aborted."
     exit 1
