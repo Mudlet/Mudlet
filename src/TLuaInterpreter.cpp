@@ -4229,6 +4229,60 @@ int TLuaInterpreter::moveWindow(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindow
+int TLuaInterpreter::setWindow(lua_State* L)
+{
+    QString windowname;
+    QString name;
+    int n = lua_gettop(L);
+    int x = 0, y = 0;
+    bool show = true;
+
+    if (lua_type(L, 1) != LUA_TSTRING) {
+        lua_pushfstring(L, "setWindow: bad argument #1 type (parent windowname as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        windowname = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    if (lua_type(L, 2) != LUA_TSTRING) {
+        lua_pushfstring(L, "setWindow: bad argument #2 type (element name as string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    } else {
+        name = QString::fromUtf8(lua_tostring(L, 2));
+    }
+    if (n > 2) {
+        if (!lua_isnumber(L, 3)) {
+            lua_pushfstring(L, "setWindow: bad argument #3 type (x-coordinate as number expected, got %s!)", luaL_typename(L, 3));
+            return lua_error(L);
+
+        } else {
+            x = lua_tonumber(L, 3);
+        }
+        if (!lua_isnumber(L, 4)) {
+            lua_pushfstring(L, "setWindow: bad argument #4 type (y-coordinate as number expected, got %s!)", luaL_typename(L, 4));
+            return lua_error(L);
+        } else {
+            y = lua_tonumber(L, 4);
+        }
+        if (!lua_isboolean(L, 5)) {
+            lua_pushfstring(L, "setWindow: bad argument #5 type (show element as boolean expected, got %s!)", luaL_typename(L, 5));
+            return lua_error(L);
+        } else {
+            show = lua_toboolean(L, 5);
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = mudlet::self()->setWindow(&host, windowname, name, x, y, show); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 int TLuaInterpreter::openMapWidget(lua_State* L)
 {
     int n = lua_gettop(L);
@@ -16037,6 +16091,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setLabelOnLeave", TLuaInterpreter::setLabelOnLeave);
     lua_register(pGlobalLua, "getImageSize", TLuaInterpreter::getImageSize);
     lua_register(pGlobalLua, "moveWindow", TLuaInterpreter::moveWindow);
+    lua_register(pGlobalLua, "setWindow", TLuaInterpreter::setWindow);
     lua_register(pGlobalLua, "openMapWidget", TLuaInterpreter::openMapWidget);
     lua_register(pGlobalLua, "closeMapWidget", TLuaInterpreter::closeMapWidget);
     lua_register(pGlobalLua, "setTextFormat", TLuaInterpreter::setTextFormat);

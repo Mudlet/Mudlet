@@ -74,7 +74,9 @@ function Geyser:add (window, cons)
   if not self.defer_updates then
     window:reposition()
   end
-  window:show()
+  if not (window.hidden or window.auto_hidden) then
+    window:show()
+  end
 end
 
 --- Removes a window from the list that it manages
@@ -84,4 +86,76 @@ function Geyser:remove (window)
   self.windowList[window.name] = nil
   index = table.index_of(self.windows, window.name) or 0
   table.remove(self.windows, index)
+end
+
+
+--- Removes a window from the parent it is in and puts it in a new one
+-- This is only used internally.
+-- @param window The new parents windowname 
+local function setMyWindow(self, windowname)
+  windowname = windowname or "main"
+  local name
+  name = self.name
+  if self.type == "mapper" then
+    name = self.type
+  end
+
+  -- Change containerwindow for nested Labels
+  if self.type == "label" and self.nestedLabels then
+    for k,v in ipairs(self.nestedLabels) do
+      if windowname ~= "main" then
+        v:changeContainer(Geyser.windowList[windowname.."Container"].windowList[windowname])
+      else
+        v:changeContainer(Geyser)
+      end
+    end
+    closeAllLevels(self)
+  end
+  
+  -- Prevent hidden children to get visible  
+  if self.hidden or self.auto_hidden then
+    setWindow(windowname, name, 0, 0, false)
+  else 
+    setWindow(windowname, name, 0, 0, true)
+  end
+end
+
+
+--- Removes all containers windows from the parent they are in and puts them in a new one
+-- This is only used internally
+-- @param window The new parents windowname 
+local function setContainerWindow(self, windowname)
+  self.windowname = windowname
+  --Iterate through windows has a given order and prevents problems with z-coordinate
+  for k,v in ipairs(self.windows) do
+    setMyWindow(self.windowList[v], windowname)
+    setContainerWindow(self.windowList[v], windowname)
+  end
+end
+
+--- Removes a window from the container that it manages
+-- @param container The new container the window will be set in
+function Geyser:changeContainer (container)
+  --Change container to Geyser if "main" is given
+  if type(container) == "string" and container:lower() == "main" then
+    container = Geyser
+  end
+  --only a container has a windowList
+  if not container or not container.windowList or self == container then
+    return nil, "didn't get a valid container"
+  end
+  --Nothing to change
+  if self.container == container then
+    return nil, "nothing to change. "..self.name.." is already in this container"
+  end 
+  --If there is no windowname then windowname is "main"
+  local windowname = container.windowname
+  windowname = windowname or "main"
+
+  self.container:remove(self)
+  if self.windowname ~= windowname then
+    setMyWindow(self, windowname)
+    setContainerWindow(self, windowname)
+  end
+  container:add(self)
 end

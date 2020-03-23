@@ -327,6 +327,20 @@ function showGauge(gaugeName)
   showWindow(gaugeName .. "_text")
 end
 
+--- @see createGauge
+function setGaugeWindow(windowName, gaugeName, x, y, show)
+  windowName = windowName or "main"
+  x = x or 0
+  y = y or 0
+  show = show or true
+  assert(gaugesTable[gaugeName], "setGaugeWindow: no such gauge exists.")
+  setWindow(windowName, gaugeName .. "_back", x, y, show)
+  setWindow(windowName, gaugeName .. "_front", x, y, show)
+  setWindow(windowName, gaugeName .. "_text", x, y, show)
+  -- save new values in table
+  gaugesTable[gaugeName].x, gaugesTable[gaugeName].y = x, y
+  setGauge(gaugeName, gaugesTable[gaugeName].value, 1)
+end
 
 --- Set the text on a custom gauge.
 ---
