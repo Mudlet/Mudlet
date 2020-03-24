@@ -86,7 +86,7 @@ Discord::Discord(QObject* parent)
         for (auto& libraryPath : qApp->libraryPaths()) {
             qDebug() << "    " << libraryPath;
         }
-        if (auto msg = mpLibrary->errorString(); !msg.isEmpty()) {
+        if (auto msg = mpLibrary->errorString(); !msg.isEmpty() && !msg.contains(QStringLiteral("No such file or directory"))) {
             qDebug().noquote().nospace() << "  additionally there is an error message: \"" << msg << "\".";
         }
         return;
