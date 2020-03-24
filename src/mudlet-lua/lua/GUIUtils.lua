@@ -1863,8 +1863,6 @@ end
 -- createButton is deprecated better use createLabel instead
 createButton = createLabel
 
-<<<<<<< HEAD
-
 -- Internal function used by copy2html and copy2decho
 local function copy2color(name,win,str,inst)
   local line = getCurrentLine(win or "main")
@@ -1949,7 +1947,7 @@ end
 function copy2html(win, str, inst)
   return copy2color("copy2html", win, str, inst)
 end
-=======
+
 function resetLabelCursor(name)
   assert(type(name) == 'string', 'resetLabelCursor: bad argument #1 type (name as string expected, got '..type(name)..'!)')
   return setLabelCursor(name, -1)
@@ -1962,4 +1960,3 @@ function setLabelCursor(labelname, cursorShape)
   end
   return setLabelCursorLayer(labelname, cursorShape)
 end
->>>>>>> upstream/development
