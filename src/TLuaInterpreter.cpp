@@ -16711,7 +16711,7 @@ void TLuaInterpreter::loadGlobal()
     QStringList failedMessages{};
 
     // uncomment the following to enable some debugging texts in the LuaGlobal.lua script:
-    luaL_dostring(pGlobalLua, QStringLiteral("debugLoading = true").toUtf8().constData());
+    // luaL_dostring(pGlobalLua, QStringLiteral("debugLoading = true").toUtf8().constData());
 
 #if defined(Q_OS_WIN32)
     // Needed to enable permissions checks on NTFS file systems - normally
