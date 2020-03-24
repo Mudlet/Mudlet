@@ -327,6 +327,10 @@ public slots:
     // profiles - asynchronously - to load in an updated map
     void slot_reloadMap(QList<QString>);
 
+protected:
+    void dragEnterEvent(QDragEnterEvent* e);
+    void dropEvent(QDropEvent* e);
+
 private:
     void refreshMiniConsole() const;
 
