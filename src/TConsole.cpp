@@ -578,6 +578,10 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mDisplayFontSize = mDisplayFont.pointSize();
         refreshMiniConsole();
     }
+
+    if (mType & (MainConsole | UserWindow)) {
+        setAcceptDrops(true);
+    }
 }
 
 TConsole::~TConsole()
@@ -2991,5 +2995,39 @@ void TConsole::setProfileName(const QString& newName)
 
     for (auto pC : mSubConsoleMap) {
         pC->setProfileName(newName);
+    }
+}
+
+
+void TConsole::dragEnterEvent(QDragEnterEvent* e)
+{
+    if (e->mimeData()->hasUrls()) {
+        e->acceptProposedAction();
+    }
+}
+
+//https://amin-ahmadi.com/2016/01/04/qt-drag-drop-files-images/
+void TConsole::dropEvent(QDropEvent* e)
+{
+    for (const auto& url : e->mimeData()->urls()) {
+        QString fname = url.toLocalFile();
+        QFileInfo info(fname);
+        if (info.exists()) {
+            QPoint pos = e->pos();
+            TEvent mudletEvent{};
+            mudletEvent.mArgumentList.append(QLatin1String("sysDropEvent"));
+            mudletEvent.mArgumentList.append(fname);
+            mudletEvent.mArgumentList.append(info.suffix().trimmed());
+            mudletEvent.mArgumentList.append(QString::number(pos.x()));
+            mudletEvent.mArgumentList.append(QString::number(pos.y()));
+            mudletEvent.mArgumentList.append(mConsoleName);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mpHost->raiseEvent(mudletEvent);
+        }
     }
 }
