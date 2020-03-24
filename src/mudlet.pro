@@ -665,8 +665,7 @@ contains( DEFINES, INCLUDE_3DMAPPER ) {
     QT += opengl
 
     win32 {
-        LIBS += -lopengl32 \
-                -lglu32
+        LIBS += -lglu32
     }
 
     !build_pass{
