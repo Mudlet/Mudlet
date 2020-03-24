@@ -100,6 +100,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
 
     $DEPLOY_URL = Get-Content -Path $outFile -Raw
+    $DEPLOY_URL = $DEPLOY_URL.Trim()
     echo "Deployed Mudlet to '$DEPLOY_URL'"
   } else {
     # get winscp .NET dll for uploads
