@@ -40,6 +40,7 @@
 #include "pre_guard.h"
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QMimeData>
 #include <QRegularExpression>
 #include <QScrollBar>
 #include <QShortcut>
