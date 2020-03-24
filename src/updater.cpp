@@ -137,7 +137,7 @@ void Updater::setupOnWindows()
         }
 
         auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
-        qWarning() << "Checked for updates:" << updates.size() << "update(s) available"; }
+        qWarning() << "Checked for updates:" << updates.size() << "update(s) available";
         if (updates.isEmpty()) {
             return;
         } else if (!updateAutomatically()) {
