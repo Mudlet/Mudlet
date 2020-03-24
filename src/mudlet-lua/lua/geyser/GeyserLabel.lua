@@ -312,6 +312,38 @@ function Geyser.Label:resetToolTip()
   resetLabelToolTip(self.name)
 end
 
+--- Set a predefined Mouse Cursor Shape for this label
+-- @param cursorShape the predefined cursorshape as number from 1 to 21
+-- see: https://doc.qt.io/qt-5/qt.html#CursorShape-enum
+function Geyser.Label:setCursor(cursorShape)
+  setLabelCursor(self.name, cursorShape)
+  -- Get cursorShape as string
+  for k,v in pairs(mudlet.cursor) do
+    if cursorShape == v then
+      cursorShape = k
+    end
+  end
+
+  self.cursorShape = cursorShape
+end
+
+--- Set a custom Mouse Cursor Shape for this label
+-- @param customCursor location of your custom cursor. It's suggested to use a png with size of 32x32 which is supported on all platforms
+-- see https://doc.qt.io/qt-5/qcursor.html#shape
+function Geyser.Label:setCustomCursor(customCursor, hotX, hotY)
+  hotX = hotX or -1
+  hotY = hotY or -1
+  setLabelCustomCursor(self.name, customCursor, hotX, hotY)
+  self.customCursor = customCursor
+end
+
+--- Resets the to the default Mouse Cursor Shape for this label
+function Geyser.Label:resetCursor()
+  resetLabelCursor(self.name)
+  self.cursorShape = 0
+  self.customCursor = ""
+end
+
 --- closes all nested labels
 function closeAllLevels(label)
   if label.nestedLabels  then
@@ -489,14 +521,14 @@ function Geyser.Label:displayNest()
     local width = v.get_width()
     local height = v.get_height()
     local number = #nestedLabels["V"]
-    
-    if v.flyDir == "L" then 
+
+    if v.flyDir == "L" then
       v.x = parX + flyMap[v.flyDir][1] * width
     else
       v.x = parX + flyMap[v.flyDir][1] * parW
     end
 
-    if v.flyDir == "T" then 
+    if v.flyDir == "T" then
       v.y = parY + flyMap[v.flyDir][2] * height * ( number - flyIndex[v.flyDir] - yOffset)
     else
       v.y = parY + flyMap[v.flyDir][2] * parH - yOffset + height * flyIndex[v.flyDir]
@@ -513,13 +545,13 @@ function Geyser.Label:displayNest()
     local width = v.get_width()
     local height = v.get_height()
     local number = #nestedLabels["H"]
-    if v.flyDir == "L" then 
+    if v.flyDir == "L" then
       v.x = parX + flyMap[v.flyDir][1] * width * (number - flyIndex[v.flyDir] - xOffset)
     else
       v.x = parX + flyMap[v.flyDir][1] * parW - xOffset + width * flyIndex[v.flyDir]
     end
-    
-    if v.flyDir == "T" then 
+
+    if v.flyDir == "T" then
       v.y = parY + flyMap[v.flyDir][2] * height
     else
       v.y = parY + flyMap[v.flyDir][2] * parH
@@ -545,8 +577,8 @@ function doNestShow(label)
 
   Geyser.Label.closeAllTimer = tempTimer(5, function() closeAllLevels(label) end)
 
-  if label.nestedLabels and #label.nestedLabels > 0 then 
-    lhidden = label.nestedLabels[1].hidden 
+  if label.nestedLabels and #label.nestedLabels > 0 then
+    lhidden = label.nestedLabels[1].hidden
   end
   if not label.nestParent then
     closeAllLevels(label)
@@ -560,7 +592,7 @@ function doNestShow(label)
 end
 
 function closeNeighbourChildren(label)
- for i,v in ipairs(label.nestParent.nestedLabels) do 
+ for i,v in ipairs(label.nestParent.nestedLabels) do
   closeNestChildren(v)
  end
 end
@@ -582,7 +614,7 @@ function doNestEnter(label)
     end
     --echo("entering window"..window.name.."\n")
     --Geyser.display(window)
-    
+
       label:displayNest()
     end
 end
@@ -767,7 +799,7 @@ function Geyser.Label:addChild(cons, container)
   me.nestParent = self
   me:setOnEnter("doNestEnter", me)
   me:setOnLeave("doNestLeave", me)
-  
+
   if not me.clickCallback then
     --used in instances where an element only meant to serve as
     --a nest container is clicked on.  Without this, we get
