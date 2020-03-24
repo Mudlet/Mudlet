@@ -664,6 +664,11 @@ contains( DEFINES, INCLUDE_3DMAPPER ) {
     SOURCES += glwidget.cpp
     QT += opengl
 
+    win32 {
+        LIBS += -lopengl32 \
+                -lglu32
+    }
+
     !build_pass{
         message("The 3D mapper code is included in this configuration")
     }
