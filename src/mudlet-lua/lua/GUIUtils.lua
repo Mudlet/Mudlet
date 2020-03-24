@@ -1879,6 +1879,7 @@ local function copy2color(name,win,str,inst)
     error(name..": string not found",3)
   end
   local style, endspan, result, r, g, b, br, bg, bb, cr, cg, cb, crb, cgb, cbb
+  local selectSection, getFgColor, getBgColor = selectSection, getFgColor, getBgColor
   if name == "copy2html" then
     style = "%s<span style=\'color: rgb(%d,%d,%d);background: rgb(%d,%d,%d);'>%s"
     endspan = "</span>"
@@ -1897,7 +1898,7 @@ local function copy2color(name,win,str,inst)
       rb,gb,bb = getBgColor()
     end
     
-    if not table.is_empty(table.complement({r,g,b,rb,gb,bb},{cr,cg,cb,crb,cgb,cbb})) then
+    if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb then
       cr,cg,cb,crb,cgb,cbb = r,g,b,rb,gb,bb
       result = string.format(style, result and (result..endspan) or "", r, g, b, rb, gb, bb, line:sub(index, index))
     else
