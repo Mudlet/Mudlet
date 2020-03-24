@@ -39,8 +39,8 @@
 // mac: handled completely outside of Mudlet by Sparkle
 
 Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent)
-, mUpdateInstalled(false)
 , mpInstallOrRestart(new QPushButton(tr("Update")))
+, mUpdateInstalled(false)
 , updateDialog(nullptr)
 {
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
