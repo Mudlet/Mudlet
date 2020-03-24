@@ -100,6 +100,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
 
     $DEPLOY_URL = Get-Content -Path $outFile -Raw
+    echo "Deployed Mudlet to '$DEPLOY_URL'"
   } else {
     # get winscp .NET dll for uploads
     # activate higher TLS version. Seems PS only uses 1.0 by default
