@@ -34,8 +34,5 @@
         <file>fonts/ubuntu-font-family-0.83/Ubuntu-MI.ttf</file>
         <file>fonts/ubuntu-font-family-0.83/Ubuntu-R.ttf</file>
         <file>fonts/ubuntu-font-family-0.83/Ubuntu-RI.ttf</file>
-        <file>fonts/notocoloremoji-unhinted-2018-04-24-pistol-update/LICENSE_OFL.txt</file>
-        <file>fonts/notocoloremoji-unhinted-2018-04-24-pistol-update/NotoColorEmoji.ttf</file>
-        <file>fonts/notocoloremoji-unhinted-2018-04-24-pistol-update/README</file>
     </qresource>
 </RCC>

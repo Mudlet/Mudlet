@@ -3338,8 +3338,11 @@ int TLuaInterpreter::setFont(lua_State* L)
         font = QString::fromUtf8(lua_tostring(L, s));
     }
 
-    // ensure that emojis are displayed in colour even if this font doesn't support it
+#if defined(Q_OS_LINUX)
+    // On Linux ensure that emojis are displayed in colour even if this font
+    // doesn't support it:
     QFont::insertSubstitution(font, QStringLiteral("Noto Color Emoji"));
+#endif
 
     if (windowName.isEmpty() || windowName.compare(QStringLiteral("main"), Qt::CaseSensitive) == 0) {
         if (mudlet::self()->mConsoleMap.contains(pHost)) {
