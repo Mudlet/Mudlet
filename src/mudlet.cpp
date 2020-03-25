@@ -162,7 +162,6 @@ mudlet::mudlet()
 , mShowIconsOnMenuCheckedState(Qt::PartiallyChecked)
 , mEnableFullScreenMode(false)
 , mCopyAsImageTimeout{3}
-, mInterfaceLanguage(QStringLiteral("en_US"))
 , mUsingMudletDictionaries(false)
 , mIsGoingDown(false)
 , mMenuBarVisibility(visibleAlways)
@@ -883,6 +882,12 @@ void mudlet::migrateDebugConsole(Host* currentHost)
 
     mpDebugArea->setAttribute(Qt::WA_DeleteOnClose);
     mpDebugArea->close();
+}
+
+// returns true if this is the first launch of Mudlet on this machine
+bool mudlet::firstLaunch()
+{
+    return !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
 }
 
 // As we are currently only using files from a resource file we only need to
@@ -3154,7 +3159,7 @@ void mudlet::readEarlySettings(const QSettings& settings)
         mEnableFullScreenMode = file_use_smallscreen.exists();
     }
 
-    mInterfaceLanguage = settings.value("interfaceLanguage", QStringLiteral("en_US")).toString();
+    mInterfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
 }
 
 void mudlet::readLateSettings(const QSettings& settings)
@@ -5266,6 +5271,32 @@ void mudlet::setInterfaceLanguage(const QString& languageCode)
         // within the Mudlet application code}...
         emit signal_guiLanguageChanged(languageCode);
     }
+}
+
+// return the user's desktop language if we have a quality translation for it
+// or a back-up language they've specified
+QString mudlet::autodetectPreferredLanguage()
+{
+    // en_GB is a temporary special exception due to its likeness to en_US, while its
+    // translation is still only at 20%
+    QVector<QString> availableQualityTranslations {QStringLiteral("en_GB")};
+    for (auto& code : getAvailableTranslationCodes()) {
+        auto& translation = mTranslationsMap.value(code);
+        if (translation.fromResourceFile()) {
+            auto& translatedPc = translation.getTranslatedPercentage();
+            if (translatedPc >= mTranslationGoldStar) {
+                availableQualityTranslations.append(code);
+            }
+        }
+    }
+
+    for (auto language : QLocale::system().uiLanguages()) {
+        if (availableQualityTranslations.contains(language.replace(QStringLiteral("-"), QStringLiteral("_")))) {
+            return language;
+        }
+    }
+
+    return QStringLiteral("en_US");
 }
 
 bool mudlet::setClickthrough(Host* pHost, const QString& name, bool clickthrough)

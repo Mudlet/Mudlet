@@ -42,7 +42,7 @@ TMedia::TMedia(Host* pHost, const QString& profileName)
     connect(mpNetworkAccessManager, &QNetworkAccessManager::finished, this, &TMedia::writeFile);
 }
 
-TMedia::~TMedia() {}
+TMedia::~TMedia() = default;
 
 void TMedia::playMedia(TMediaData& mediaData)
 {
@@ -607,7 +607,7 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
     return pPlayer;
 }
 
-TMediaPlayer TMedia::matchMediaPlayer(TMediaData& mediaData, QString absolutePathFileName)
+TMediaPlayer TMedia::matchMediaPlayer(TMediaData& mediaData, const QString& absolutePathFileName)
 {
     TMediaPlayer pPlayer{};
     QList<TMediaPlayer> mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
@@ -630,7 +630,7 @@ TMediaPlayer TMedia::matchMediaPlayer(TMediaData& mediaData, QString absolutePat
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#priority:_1_to_100
-bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolutePathFileName)
+bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& absolutePathFileName)
 {
     bool doesMediaHavePriorityToPlay = true;
 
@@ -669,7 +669,7 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, QString absolute
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#key
-void TMedia::matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, QString absolutePathFileName)
+void TMedia::matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QString& absolutePathFileName)
 {
     QList<TMediaPlayer> mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
@@ -747,7 +747,7 @@ void TMedia::play(TMediaData& mediaData)
 
         pPlayer.getMediaPlayer()->setMedia(QUrl::fromLocalFile(absolutePathFileName));
     } else {
-        QMediaPlaylist* playlist = new QMediaPlaylist;
+        auto playlist = new QMediaPlaylist;
 
         if (mediaData.getMediaLoops() == TMediaData::MediaLoopsRepeat) { // Repeat indefinitely
             if (fileNameList.size() > 1) {
@@ -956,7 +956,7 @@ TMediaData::MediaContinue TMedia::parseJSONByMediaContinue(QJsonObject& json)
         } else {
             mediaContinue = TMediaData::MediaContinueDefault;
         }
-    } else if (mediaContinueJSON != QJsonValue::Undefined && mediaContinueJSON.toBool(true) == false) {
+    } else if (mediaContinueJSON != QJsonValue::Undefined && !mediaContinueJSON.toBool(true)) {
         mediaContinue = TMediaData::MediaContinueRestart;
     }
 

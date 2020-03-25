@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2016-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2014, 2016-2020 by Stephen Lyons                   *
  *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *                                                                         *
@@ -124,10 +124,6 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
         // Qt::AA_ShareOpenGLContexts using QCoreApplication::setAttribute
         // before constructing QGuiApplication."
         QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
-#elif defined(Q_OS_WIN32)
-        // Force OpenGL use as we use some functions that aren't provided by
-        // Qt's OpenGL layer on Windows (QOpenGLFunctions)
-        QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
 #endif
         return new QApplication(argc, argv); // Normal course of events - (GUI), so: game on!
     }
@@ -380,10 +376,13 @@ int main(int argc, char* argv[])
     if (!dir.exists(ubuntuFontDirectory)) {
         dir.mkpath(ubuntuFontDirectory);
     }
+#if defined(Q_OS_LINUX)
+    // Only needed/works on Linux to provide color emojis:
     QString notoFontDirectory(QStringLiteral("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
+#endif
 
     // The original code plonks the fonts AND the Copyright into the MAIN mudlet
     // directory - but the Copyright statement is specifically for the fonts
@@ -433,9 +432,12 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-R.ttf"));
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
 
+#if defined(Q_OS_LINUX)
     copyFont(notoFontDirectory, QStringLiteral("fonts/notocoloremoji-unhinted-2018-04-24-pistol-update"), QStringLiteral("NotoColorEmoji.ttf"));
     copyFont(notoFontDirectory, QStringLiteral("fonts/notocoloremoji-unhinted-2018-04-24-pistol-update"), QStringLiteral("LICENSE_OFL.txt"));
-#endif
+    copyFont(notoFontDirectory, QStringLiteral("fonts/notocoloremoji-unhinted-2018-04-24-pistol-update"), QStringLiteral("README"));
+#endif // defined(Q_OS_LINUX)
+#endif // defined(INCLUDE_FONTS)
 
     mudlet::debugMode = false;
 
