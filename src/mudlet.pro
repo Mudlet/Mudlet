@@ -130,7 +130,7 @@ macx {
 
 # Product name determines the Windows Start Menu shortcut name
 win32 {
-    contains(BUILD, -public-test-build) {
+    contains(BUILD, "public-test-build") {
         QMAKE_TARGET_PRODUCT = "Mudlet PTB"
     } else {
         QMAKE_TARGET_PRODUCT = "Mudlet"
