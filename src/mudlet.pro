@@ -1280,7 +1280,7 @@ win32 {
     QMAKE_TARGET_DESCRIPTION = "Mudlet the MUD client"
 
     # Product name determines the Windows Start Menu shortcut name
-    contains(BUILD, "public-test-build") {
+    contains(BUILD, "-public-test-build.+") {
         QMAKE_TARGET_PRODUCT = "Mudlet PTB"
     } else {
         QMAKE_TARGET_PRODUCT = "Mudlet"
