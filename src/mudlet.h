@@ -590,6 +590,8 @@ private:
     void loadTranslators(const QString &languageCode);
     void loadDictionaryLanguageMap();
     void migrateDebugConsole(Host* currentHost);
+    static bool firstLaunch();
+    QString autodetectPreferredLanguage();
 
     QMap<QString, TConsole*> mTabMap;
     QWidget* mainPane;
@@ -689,7 +691,7 @@ private:
     // Has default form of "en_US" but can be just an ISO langauge code e.g. "fr" for french,
     // without a country designation. Replaces xx in "mudlet_xx.qm" to provide the translation
     // file for GUI translation
-    QString mInterfaceLanguage;
+    QString mInterfaceLanguage {};
     // The next pair retains the path argument supplied to the corresponding
     // scanForXxxTranslations(...) method so it is available to the subsquent
     // loadTranslators(...) call
@@ -749,21 +751,15 @@ private:
     // Used for display in the profile preferences and is never translated:
     QString mNativeName;
     // ONLY if the translation is loaded from an embedded resource file,
-    // is the percentage complete of the translation - determined via a lua
-    // script that parses the output of the lrelease executable that
-    // converts the source mudlet_xx_YY.ts files into the binary
-    // mudlet_xx_YY.qm files placed into the embedded resource file during
-    // building the application:
+    // this is the percentage complete of the translation
     int mTranslatedPercentage;
-    // What the usable Mudlet translation file-was found to be:
+    // filename translation is loaded from
     QString mMudletTranslationFileName;
-    // What the usable Qt translation file was found to be, note that in most
+    // Qt translation file was found to be, note that in most
     // cases the loaded file will be a "xx" language only file even though it
     // is an "xx_YY" one here:
     QString mQtTranslationFileName;
-    // Further items like the above pair may be needed should some of the
-    // separate libraries with a textual content have their own translations
-    // that we do not provide ourselves.
+    // Similar filename locations will require adding for any 3rd party translations we load
 };
 
 #endif // MUDLET_MUDLET_H
