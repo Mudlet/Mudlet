@@ -1863,6 +1863,91 @@ end
 -- createButton is deprecated better use createLabel instead
 createButton = createLabel
 
+-- Internal function used by copy2html and copy2decho
+local function copy2color(name,win,str,inst)
+  local line = getCurrentLine(win or "main")
+  if (not str and line == "ERROR: mini console does not exist") or type(str) == "number" then
+    win, str, inst = "main", win, str
+    line = getCurrentLine(win)
+  end
+  win = win or "main"
+  str = str or line
+  inst = inst or 1
+  local start, len = selectString(win, str, inst), #str
+  if not start then
+    error(name..": string not found",3)
+  end
+  local style, endspan, result, r, g, b, br, bg, bb, cr, cg, cb, crb, cgb, cbb
+  local selectSection, getFgColor, getBgColor = selectSection, getFgColor, getBgColor
+  if name == "copy2html" then
+    style = "%s<span style=\'color: rgb(%d,%d,%d);background: rgb(%d,%d,%d);'>%s"
+    endspan = "</span>"
+  elseif name == "copy2decho" then
+    style = "%s<%d,%d,%d:%d,%d,%d>%s"
+    endspan = "<r>"
+  end
+  for index = start + 1, start + len do
+    if win ~= "main" then
+      selectSection(win, index - 1, 1)
+      r,g,b = getFgColor(win)
+      rb,gb,bb = getBgColor(win)
+    else
+      selectSection(index - 1, 1)
+      r,g,b = getFgColor()
+      rb,gb,bb = getBgColor()
+    end
+    
+    if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb then
+      cr,cg,cb,crb,cgb,cbb = r,g,b,rb,gb,bb
+      result = string.format(style, result and (result..endspan) or "", r, g, b, rb, gb, bb, line:sub(index, index))
+    else
+      result = result .. line:sub(index, index)
+    end
+  end
+  result = result .. endspan
+  if name == "copy2html" then
+    local conversions = {["¦"] = "&brvbar;", ["×"] = "&times;", ["«"] = "&#171;", ["»"] = "&raquo;"}
+    for from, to in pairs(conversions) do
+      result = string.gsub(result, from, to)
+    end
+  end
+  return result
+end
+
+--- copies text with color information in decho format
+--- @param win optional, the window to copy from. Defaults to the main window
+--- @param str optional, the string to copy. Defaults to copying the entire line
+--- @param inst optional, the instance of the string to copy. Defaults to the first instance.
+--- @usage to copy matches[2] with color information and echo it to miniconsole "test"
+---   <pre>
+---   decho("test", copy2decho(matches[2]))
+---   </pre>
+---
+--- @usage to copy the entire line with color information, then echo it to miniconsole "test"
+---   <pre>
+---   decho("test", copy2decho())
+---   </pre>
+function copy2decho(win, str, inst)
+  return copy2color("copy2decho", win, str, inst)
+end
+
+--- copies text with color information in html format, for echoing to a label for instance
+--- @param win optional, the window to copy from. Defaults to the main window
+--- @param str optional, the string to copy. Defaults to copying the entire line
+--- @param inst optional, the instance of the string to copy. Defaults to the first instance.
+--- @usage to copy matches[2] with color information and echo it to label "test"
+---   <pre>
+---   echo("test", copy2html(matches[2]))
+---   </pre>
+---
+--- @usage to copy the entire line with color information, then echo it to label "test"
+---   <pre>
+---   echo("test", copy2html())
+---   </pre>
+function copy2html(win, str, inst)
+  return copy2color("copy2html", win, str, inst)
+end
+
 function resetLabelCursor(name)
   assert(type(name) == 'string', 'resetLabelCursor: bad argument #1 type (name as string expected, got '..type(name)..'!)')
   return setLabelCursor(name, -1)
