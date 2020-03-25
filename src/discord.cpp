@@ -89,7 +89,7 @@ Discord::Discord(QObject* parent)
             qDebug() << "    " << libraryPath;
         }
         if (!msg.isEmpty() && !notFound) {
-            qDebug().noquote().nospace() << "  additionally there is an error message: \"" << msg << "\".";
+            qDebug().noquote().nospace() << "  error: \"" << msg << "\".";
         }
         return;
     }
