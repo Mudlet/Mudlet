@@ -30,6 +30,10 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
 
   $DEPLOY_URL = Get-Content -Path $outFile -Raw
 } else {
+  Write-Output "=== Printing contents of $Env:APPVEYOR_BUILD_FOLDER\src, squirrel-packaging-prep ==="
+  Tree /F $Env:APPVEYOR_BUILD_FOLDER\src
+  Tree /F "C:\projects\squirrel-packaging-prep"
+  Write-Output "=== Done printing ==="
   if ($Script:PublicTestBuild) {
     Write-Output "=== Creating a public test build ==="
     # Squirrel takes Start menu name from the binary
