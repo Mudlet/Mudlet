@@ -64,18 +64,12 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Move-Item $Env:APPVEYOR_BUILD_FOLDER\src\release\* $SQUIRRELWINBIN
 
   Write-Output "=== Creating Nuget package ==="
-  $Script:NuSpec = "C:\projects\installers\windows\mudlet.nuspec"
   if ($Script:PublicTestBuild) {
-    # Squirrel takes the Windows start menu shortcut name from the nuspec filename
-    Rename-Item -Path "$Script:NuSpec" -NewName "Mudlet (PTB).nuspec"
-    $Script:NuSpec = "C:\projects\installers\windows\Mudlet (PTB).nuspec"
     # allow public test builds to be installed side by side with the release builds by renaming the app
-    # no dots ot spaces in the <id>: https://github.com/Squirrel/Squirrel.Windows/blob/master/docs/using/naming.md
+    # no dots in the <id>: https://github.com/Squirrel/Squirrel.Windows/blob/master/docs/using/naming.md
+    $Script:NuSpec = "C:\projects\installers\windows\mudlet.nuspec"
     (Get-Content "$Script:NuSpec").replace('<id>Mudlet</id>', '<id>Mudlet-PublicTestBuild</id>') | Set-Content "$Script:NuSpec"
     (Get-Content "$Script:NuSpec").replace('<title>Mudlet</title>', '<title>Mudlet (Public Test Build)</title>') | Set-Content "$Script:NuSpec"
-  } else {
-    Rename-Item -Path "$Script:NuSpec" -NewName "Mudlet.nuspec"
-    $Script:NuSpec = "C:\projects\installers\windows\Mudlet.nuspec"
   }
   nuget pack "$Script:NuSpec" -Version "$Script:VersionAndSha" -BasePath $SQUIRRELWIN -OutputDirectory $SQUIRRELWIN
 
