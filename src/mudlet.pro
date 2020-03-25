@@ -1285,9 +1285,6 @@ win32 {
     } else {
         QMAKE_TARGET_PRODUCT = "Mudlet"
     }
-
-    message("BUILD is: $${BUILD}")
-    message("QMAKE_TARGET_PRODUCT is: $${QMAKE_TARGET_PRODUCT}")
 }
 
 # Pull the docs and lua files into the project so they show up in the Qt Creator project files list
