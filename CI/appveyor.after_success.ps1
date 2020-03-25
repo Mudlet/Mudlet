@@ -11,7 +11,7 @@ Remove-Item * -include *.cpp, *.o
 $Script:PublicTestBuild = if ($Env:MUDLET_VERSION_BUILD) { $Env:MUDLET_VERSION_BUILD.StartsWith('-public-test-build') } else { $FALSE }
 
 if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
-    $Script:Commit = git rev-parse --short $Env:APPVEYOR_PULL_REQUEST_HEAD_COMMIT
+  $Script:Commit = git rev-parse --short $Env:APPVEYOR_PULL_REQUEST_HEAD_COMMIT
 } else {
   $Script:Commit = git rev-parse --short HEAD
 }
@@ -63,11 +63,11 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   # move everything into src\release\squirrel.windows\lib\net45\ as that's where Squirrel would like to see it
   Move-Item $Env:APPVEYOR_BUILD_FOLDER\src\release\* $SQUIRRELWINBIN
 
+  $Script:NuSpec = "C:\projects\installers\windows\mudlet.nuspec"
   Write-Output "=== Creating Nuget package ==="
   if ($Script:PublicTestBuild) {
     # allow public test builds to be installed side by side with the release builds by renaming the app
     # no dots in the <id>: https://github.com/Squirrel/Squirrel.Windows/blob/master/docs/using/naming.md
-    $Script:NuSpec = "C:\projects\installers\windows\mudlet.nuspec"
     (Get-Content "$Script:NuSpec").replace('<id>Mudlet</id>', '<id>Mudlet-PublicTestBuild</id>') | Set-Content "$Script:NuSpec"
     (Get-Content "$Script:NuSpec").replace('<title>Mudlet</title>', '<title>Mudlet (Public Test Build)</title>') | Set-Content "$Script:NuSpec"
   }
