@@ -187,13 +187,6 @@ isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
     DEFINES += INCLUDE_3DMAPPER
 }
 
-
-# Some temporary tests to see whether either of these are present in the
-# AppVeyor CI environment, the second is true on a local Desktop MSYS2 Windows
-# OS:
-cygwin : message("A 'cygwin' qmake scope is defined.")
-mingw : message("A 'mingw' qmake scope is defined.")
-
 ###################### Platform Specific Paths and related #####################
 # Specify default location for Lua files, in OS specific LUA_DEFAULT_DIR value
 # below, if this is not done then a hardcoded default of a ./mudlet-lua/lua

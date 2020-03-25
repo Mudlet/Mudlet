@@ -6365,8 +6365,6 @@ int TLuaInterpreter::getMudletHomeDir(lua_State* L)
 int TLuaInterpreter::getMudletLuaDefaultPaths(lua_State* L)
 {
     int index = 0;
-    // This is a static method so does not have a this pointer - so go and get
-    // the one used by the profile so we can read the instance's data:
     auto& host = getHostFromLua(L);
     auto* pLua = host.getLuaInterpreter();
     Q_ASSERT_X(pLua, "TLuaInterpreter::getMudletLuaDefaultPaths", "nullptr received when looking for the instantiated instance of TLuaInterpreter for a Host.");
@@ -6374,7 +6372,8 @@ int TLuaInterpreter::getMudletLuaDefaultPaths(lua_State* L)
     QStringListIterator itPath(pLua->mPossiblePaths);
     lua_newtable(L);
     while (itPath.hasNext()) {
-        // We are hoping that backslashes are not going to be a problem in reporting the details:
+        // We are hoping that the directory separators are not going to be a
+        // problem in reporting the details:
         QString nativePath = QDir::toNativeSeparators(itPath.next());
         lua_pushnumber(L, ++index); // Lua indexes start at 1 not 0 so preincrement it:
         lua_pushstring(L, nativePath.toUtf8().constData());
