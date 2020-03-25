@@ -20,6 +20,7 @@ $Script:VersionAndSha = "$Env:VERSION-ptb$Script:Commit"
 
 if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Write-Output "=== Creating a snapshot build ==="
+  Rename-Item -Path "%APPVEYOR_BUILD_FOLDER%\src\release\mudlet.exe" -NewName "Mudlet.exe"
   cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip "%APPVEYOR_BUILD_FOLDER%\src\release\*"
 
   Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
@@ -31,8 +32,11 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
 } else {
   if ($Script:PublicTestBuild) {
     Write-Output "=== Creating a public test build ==="
+    # Squirrel takes Start menu name from the binary
+    Rename-Item -Path "%APPVEYOR_BUILD_FOLDER%\src\release\mudlet.exe" -NewName "Mudlet PTB.exe"
   } else {
     Write-Output "=== Creating a release build ==="
+    Rename-Item -Path "%APPVEYOR_BUILD_FOLDER%\src\release\mudlet.exe" -NewName "Mudlet.exe"
   }
 
   Write-Output "=== Cloning installer project ==="
