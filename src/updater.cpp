@@ -202,7 +202,6 @@ void Updater::setupOnLinux()
         }
 
         auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
-        qDebug() << "calling getUpdated from dblsqd::Feed::ready";
         qWarning() << "Checked for updates:" << updates.size() << "update(s) available";
         if (updates.isEmpty()) {
             return;
