@@ -124,10 +124,6 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
         // Qt::AA_ShareOpenGLContexts using QCoreApplication::setAttribute
         // before constructing QGuiApplication."
         QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
-#elif defined(Q_OS_WIN32)
-        // Force OpenGL use as we use some functions that aren't provided by
-        // Qt's OpenGL layer on Windows (QOpenGLFunctions)
-        QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
 #endif
         return new QApplication(argc, argv); // Normal course of events - (GUI), so: game on!
     }
