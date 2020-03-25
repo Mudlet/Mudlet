@@ -128,15 +128,6 @@ macx {
     TARGET = mudlet
 }
 
-# Product name determines the Windows Start Menu shortcut name
-win32 {
-    contains(BUILD, "public-test-build") {
-        QMAKE_TARGET_PRODUCT = "Mudlet PTB"
-    } else {
-        QMAKE_TARGET_PRODUCT = "Mudlet"
-    }
-}
-
 # Create a record of what the executable will be called by hand
 # NB. "cygwin-g++" although a subset of "unix" NOT "win32" DOES create
 # executables with an ".exe" extension!
@@ -1287,6 +1278,15 @@ win32 {
     # specify some windows information about the binary
     QMAKE_TARGET_COMPANY = "Mudlet makers"
     QMAKE_TARGET_DESCRIPTION = "Mudlet the MUD client"
+
+    # Product name determines the Windows Start Menu shortcut name
+    contains(BUILD, "public-test-build") {
+        QMAKE_TARGET_PRODUCT = "Mudlet PTB"
+    } else {
+        QMAKE_TARGET_PRODUCT = "Mudlet"
+    }
+
+    message("QMAKE_TARGET_PRODUCT is: $${QMAKE_TARGET_PRODUCT}")
 }
 
 # Pull the docs and lua files into the project so they show up in the Qt Creator project files list
