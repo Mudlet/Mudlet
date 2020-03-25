@@ -429,6 +429,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     }
 
     loadSecuredPassword();
+
+    if (mudlet::scmIsPublicTestVersion) {
+        thankForUsingPTB();
+    }
 }
 
 Host::~Host()
@@ -755,6 +759,15 @@ void Host::updateConsolesFont()
             mudlet::self()->mpDebugConsole->setMiniConsoleFontSize(mDisplayFont.pointSize());
         }
     }
+}
+
+// a little message to make the player feel special for helping us find bugs
+void Host::thankForUsingPTB()
+{
+    QStringList happyIcons {"😀", "😃", "😄", "😁", "🙂", "🙃", "🤩", "🎉", "🚀"};
+    auto randomIcon = QRandomGenerator::global()->bounded(happyIcons.size());
+    postMessage(tr(R"([  OK  ]  - %1 thanks a lot for using the Public Test Build!)").arg(happyIcons.at(randomIcon)));
+    postMessage(tr(R"([  OK  ]  - %1 Help us make Mudlet better by reporting any problems.)").arg(happyIcons.at(randomIcon)));
 }
 
 void Host::setMediaLocationGMCP(const QString& mediaUrl)
