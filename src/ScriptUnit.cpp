@@ -206,3 +206,15 @@ void ScriptUnit::compileAll()
         }
     }
 }
+
+// This is currently only used during the lua scripted creation of a new
+// permScript to find a parent with the given name:
+TScript* ScriptUnit::findFirstScript(const QString& name) const
+{
+    for (auto script : mScriptMap) {
+        if (script->getName() == name) {
+            return script;
+        }
+    }
+    return nullptr;
+}

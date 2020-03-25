@@ -4352,6 +4352,22 @@ void dlgTriggerEditor::saveAction()
     mudlet::self()->processEventLoopHack();
 }
 
+void dlgTriggerEditor::writeScript(int id)
+{
+    QTreeWidgetItem* pItem = mpCurrentScriptItem;
+    if (!pItem) {
+        return;
+    }
+    int scriptID = pItem->data(0, Qt::UserRole).toInt();
+    if (scriptID != id) {
+        return;
+    }
+
+    TScript* pT = mpHost->getScriptUnit()->getScript(scriptID);
+    QString scriptCode = pT->getScript();
+    mpSourceEditorEdbeeDocument->setText(scriptCode);
+}
+
 void dlgTriggerEditor::saveScript()
 {
     QTreeWidgetItem* pItem = mpCurrentScriptItem;
@@ -8001,7 +8017,6 @@ void dlgTriggerEditor::doCleanReset()
         runScheduledCleanReset();
     });
 }
-
 void dlgTriggerEditor::runScheduledCleanReset()
 {
     switch (mCurrentView) {
@@ -8040,7 +8055,6 @@ void dlgTriggerEditor::runScheduledCleanReset()
     mpCurrentKeyItem = nullptr;
     slot_show_triggers();
 }
-
 
 void dlgTriggerEditor::slot_profileSaveAction()
 {
