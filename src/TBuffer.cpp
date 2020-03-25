@@ -779,16 +779,46 @@ TBuffer::TBuffer(Host* pH)
 #endif
 }
 
-void TBuffer::setBufferSize(int s, int batch)
+// user-defined literal to represent megabytes
+auto operator""_MB(unsigned long long const x)
+        -> long
+{ return 1024L*1024L*x; }
+
+void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
 {
-    if (s < 100) {
-        s = 100;
+    if (requestedLinesLimit < 100) {
+        requestedLinesLimit = 100;
     }
-    if (batch >= s) {
-        batch = s / 10;
+    if (batch >= requestedLinesLimit) {
+        batch = requestedLinesLimit / 10;
     }
-    mLinesLimit = s;
+    // clip the maximum to something reasonable, else users will abuse this, and then complain
+    auto max = getMaxBufferSize();
+    if (requestedLinesLimit > max) {
+        qWarning().nospace() << "setBufferSize(): " << requestedLinesLimit <<
+                "lines for buffer requested but your computer can only handle " << max << ", clipping it";
+        mLinesLimit = max;
+    } else {
+        mLinesLimit = requestedLinesLimit;
+    }
+
     mBatchDeleteSize = batch;
+}
+
+// naive calculation to get a reasonable limit for a maximum buffer size
+int TBuffer::getMaxBufferSize()
+{
+    const int64_t physicalMemoryTotal = mudlet::self()->getPhysicalMemoryTotal();
+    // Mudlet is 32bit mainly on Windows, see where the practical limit for a process 2GB:
+    // https://docs.microsoft.com/en-us/windows/win32/memory/memory-limits-for-windows-releases#memory-and-address-space-limits
+    // 64bit: set to 80% of what is available to us, swap not included
+    const int64_t maxProcessMemoryBytes = (QSysInfo::WordSize == 32) ? 1600_MB : (physicalMemoryTotal * 0.80);
+    auto maxLines = (maxProcessMemoryBytes / TCHAR_IN_BYTES) / mpHost->mWrapAt;
+    // now we've calculated how many lines can we fit in 80% of memory, ignoring memory use for other things like triggers/aliases, Lua scripts, etc
+    // so shave that down by 20%
+    maxLines = (maxLines / 100) * 80;
+
+    return maxLines;
 }
 
 void TBuffer::updateColors()
@@ -3092,6 +3122,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
     if (length < 1) {
         return;
     }
+    length = std::min(length, MAX_CHARACTERS_PER_ECHO);
     if (sub_end >= length) {
         sub_end = text.size() - 1;
     }
@@ -3186,6 +3217,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     if (length < 1) {
         return;
     }
+    length = std::min(length, MAX_CHARACTERS_PER_ECHO);
     if (sub_end >= length) {
         sub_end = text.size() - 1;
     }
@@ -3279,6 +3311,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
     if (length < 1) {
         return;
     }
+    length = std::min(length, MAX_CHARACTERS_PER_ECHO);
     int lineEndPos = sub_end;
     if (lineEndPos >= length) {
         lineEndPos = text.size() - 1;

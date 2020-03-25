@@ -334,7 +334,10 @@ public:
     static int createLabelUserWindow(lua_State* L, const QString& windowName, const QString& labelName);
     static int deleteLabel(lua_State*);
     static int setLabelToolTip(lua_State*);
+    static int setLabelCursor(lua_State*);
+    static int setLabelCustomCursor(lua_State*);
     static int moveWindow(lua_State*);
+    static int setWindow(lua_State*);
     static int openMapWidget(lua_State*);
     static int closeMapWidget(lua_State*);
     static int setTextFormat(lua_State*);

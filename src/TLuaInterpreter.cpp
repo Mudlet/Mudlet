@@ -3823,6 +3823,71 @@ int TLuaInterpreter::setLabelToolTip(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::setLabelCursor(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setLabelCursor: bad argument #1 type (label name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    if (!lua_isnumber(L, 2)) {
+        lua_pushfstring(L, "setLabelCursor: bad argument #2 type (cursortype as number expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+
+    QString labelName{QString::fromUtf8(lua_tostring(L, 1))};
+    int labelCursor = lua_tonumber(L, 2);
+    Host& host = getHostFromLua(L);
+
+    if (auto [success, message] = host.mpConsole->setLabelCursor(labelName, labelCursor); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::setLabelCustomCursor(lua_State* L)
+{
+    int n = lua_gettop(L);
+    int hotX = -1, hotY = -1;
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "setLabelCustomCursor: bad argument #1 type (label name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    if (!lua_isstring(L, 2)) {
+        lua_pushfstring(L, "setLabelCustomCursor: bad argument #2 type (custom cursor location as string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    }
+
+    if (n > 2) {
+        if (!lua_isnumber(L, 3)) {
+            lua_pushfstring(L, "setLabelCustomCursor: bad argument #3 type (hot spot x-coordinate as number expected, got %s!)", luaL_typename(L, 3));
+            return lua_error(L);
+        }
+        if (!lua_isnumber(L, 4)) {
+            lua_pushfstring(L, "setLabelCustomCursor: bad argument #4 type (hot spot y-coordinate as number expected, got %s!)", luaL_typename(L, 4));
+            return lua_error(L);
+        }
+        hotX = lua_tonumber(L, 3);
+        hotY = lua_tonumber(L, 4);
+    }
+
+    QString labelName{QString::fromUtf8(lua_tostring(L, 1))};
+    QString pixmapLocation{QString::fromUtf8(lua_tostring(L, 2))};
+    Host& host = getHostFromLua(L);
+
+    if (auto [success, message] = host.mpConsole->setLabelCustomCursor(labelName, pixmapLocation, hotX, hotY); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMapper
 int TLuaInterpreter::createMapper(lua_State* L)
 {
@@ -4227,6 +4292,60 @@ int TLuaInterpreter::moveWindow(lua_State* L)
     QString text(luaSendText.c_str());
     mudlet::self()->moveWindow(&host, text, static_cast<int>(x1), static_cast<int>(y1));
     return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setWindow
+int TLuaInterpreter::setWindow(lua_State* L)
+{
+    QString windowname;
+    QString name;
+    int n = lua_gettop(L);
+    int x = 0, y = 0;
+    bool show = true;
+
+    if (lua_type(L, 1) != LUA_TSTRING) {
+        lua_pushfstring(L, "setWindow: bad argument #1 type (parent windowname as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    } else {
+        windowname = QString::fromUtf8(lua_tostring(L, 1));
+    }
+
+    if (lua_type(L, 2) != LUA_TSTRING) {
+        lua_pushfstring(L, "setWindow: bad argument #2 type (element name as string expected, got %s!)", luaL_typename(L, 2));
+        return lua_error(L);
+    } else {
+        name = QString::fromUtf8(lua_tostring(L, 2));
+    }
+    if (n > 2) {
+        if (!lua_isnumber(L, 3)) {
+            lua_pushfstring(L, "setWindow: bad argument #3 type (x-coordinate as number expected, got %s!)", luaL_typename(L, 3));
+            return lua_error(L);
+
+        } else {
+            x = lua_tonumber(L, 3);
+        }
+        if (!lua_isnumber(L, 4)) {
+            lua_pushfstring(L, "setWindow: bad argument #4 type (y-coordinate as number expected, got %s!)", luaL_typename(L, 4));
+            return lua_error(L);
+        } else {
+            y = lua_tonumber(L, 4);
+        }
+        if (!lua_isboolean(L, 5)) {
+            lua_pushfstring(L, "setWindow: bad argument #5 type (show element as boolean expected, got %s!)", luaL_typename(L, 5));
+            return lua_error(L);
+        } else {
+            show = lua_toboolean(L, 5);
+        }
+    }
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = mudlet::self()->setWindow(&host, windowname, name, x, y, show); !success) {
+        lua_pushnil(L);
+        lua_pushfstring(L, message.toUtf8().constData());
+        return 2;
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 int TLuaInterpreter::openMapWidget(lua_State* L)
@@ -16007,6 +16126,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "createLabel", TLuaInterpreter::createLabel);
     lua_register(pGlobalLua, "deleteLabel", TLuaInterpreter::deleteLabel);
     lua_register(pGlobalLua, "setLabelToolTip", TLuaInterpreter::setLabelToolTip);
+    lua_register(pGlobalLua, "setLabelCursor", TLuaInterpreter::setLabelCursor);
+    lua_register(pGlobalLua, "setLabelCustomCursor", TLuaInterpreter::setLabelCustomCursor);
     lua_register(pGlobalLua, "raiseWindow", TLuaInterpreter::raiseWindow);
     lua_register(pGlobalLua, "lowerWindow", TLuaInterpreter::lowerWindow);
     lua_register(pGlobalLua, "hideWindow", TLuaInterpreter::hideUserWindow);
@@ -16037,6 +16158,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setLabelOnLeave", TLuaInterpreter::setLabelOnLeave);
     lua_register(pGlobalLua, "getImageSize", TLuaInterpreter::getImageSize);
     lua_register(pGlobalLua, "moveWindow", TLuaInterpreter::moveWindow);
+    lua_register(pGlobalLua, "setWindow", TLuaInterpreter::setWindow);
     lua_register(pGlobalLua, "openMapWidget", TLuaInterpreter::openMapWidget);
     lua_register(pGlobalLua, "closeMapWidget", TLuaInterpreter::closeMapWidget);
     lua_register(pGlobalLua, "setTextFormat", TLuaInterpreter::setTextFormat);

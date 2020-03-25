@@ -2409,6 +2409,54 @@ bool mudlet::moveWindow(Host* pHost, const QString& name, int x1, int y1)
     return false;
 }
 
+std::pair<bool, QString> mudlet::setWindow(Host* pHost, const QString& windowname, const QString& name, int x1, int y1, bool show)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pL = pHost->mpConsole->mLabelMap.value(name);
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    auto pD = pHost->mpConsole->mDockWidgetMap.value(windowname);
+    auto pW = pHost->mpConsole->mpMainFrame;
+    auto pM = pHost->mpConsole->mpMapper;
+
+    if (!pD && windowname.toLower() != QLatin1String("main")) {
+        return {false, QStringLiteral("Window \"%1\" not found.").arg(windowname)};
+    }
+
+    if (pD) {
+        pW = pD->widget();
+    }
+
+    if (pL) {
+        pL->setParent(pW);
+        pL->move(x1, y1);
+        if (show) {
+            pL->show();
+        }
+        return {true, QString()};
+    } else if (pC) {
+        pC->setParent(pW);
+        pC->move(x1, y1);
+        pC->mOldX = x1;
+        pC->mOldY = y1;
+        if (show) {
+            pC->show();
+        }
+        return {true, QString()};
+    } else if (pM && name.toLower() == QLatin1String("mapper")) {
+        pM->setParent(pW);
+        pM->move(x1, y1);
+        if (show) {
+            pM->show();
+        }
+        return {true, QString()};
+    }
+
+    return {false, QStringLiteral("Element \"%1\" not found.").arg(name)};
+}
+
 std::pair<bool, QString> mudlet::openMapWidget(Host* pHost, const QString& area, int x, int y, int width, int height)
 {
     if (!pHost || !pHost->mpConsole) {
@@ -3860,6 +3908,40 @@ void mudlet::startAutoLogin()
     if (!openedProfile) {
         slot_show_connection_dialog();
     }
+}
+
+// credit to https://github.com/DigitalInBlue/Celero/blob/master/src/Memory.cpp
+int64_t mudlet::getPhysicalMemoryTotal()
+{
+#ifdef WIN32
+    MEMORYSTATUSEX memInfo;
+    memInfo.dwLength = sizeof(MEMORYSTATUSEX);
+    GlobalMemoryStatusEx(&memInfo);
+    return static_cast<int64_t>(memInfo.ullTotalPhys);
+#elif defined(__unix__) || defined(__unix) || defined(unix)
+    // Prefer sysctl() over sysconf() except sysctl() HW_REALMEM and HW_PHYSMEM
+    // return static_cast<int64_t>(sysconf(_SC_PHYS_PAGES)) * static_cast<int64_t>(sysconf(_SC_PAGE_SIZE));
+    struct sysinfo memInfo;
+    sysinfo(&memInfo);
+    int64_t total = memInfo.totalram;
+    return total * static_cast<int64_t>(memInfo.mem_unit);
+#elif defined(__APPLE__)
+    int mib[2];
+    mib[0] = CTL_HW;
+    mib[1] = HW_MEMSIZE;
+
+    int64_t memInfo{0};
+    auto len = sizeof(memInfo);
+
+    if (sysctl(mib, 2, &memInfo, &len, nullptr, 0) == 0)
+    {
+        return memInfo;
+    }
+
+    return -1;
+#else
+    return -1;
+#endif
 }
 
 // Ensure the debug area is attached to at least one Host

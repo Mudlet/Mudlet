@@ -578,6 +578,10 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mDisplayFontSize = mDisplayFont.pointSize();
         refreshMiniConsole();
     }
+
+    if (mType & (MainConsole | UserWindow)) {
+        setAcceptDrops(true);
+    }
 }
 
 TConsole::~TConsole()
@@ -2322,7 +2326,7 @@ std::pair<bool, QString> TConsole::deleteLabel(const QString& name)
 std::pair<bool, QString> TConsole::setLabelToolTip(const QString& name, const QString& text, double duration)
 {
     if (name.isEmpty()) {
-        return {false, QLatin1String("a label cannot have an empty string as its name")};
+        return {false, QStringLiteral("a label cannot have an empty string as its name")};
     }
 
     auto pL = mLabelMap.value(name);
@@ -2334,6 +2338,50 @@ std::pair<bool, QString> TConsole::setLabelToolTip(const QString& name, const QS
     }
 
     // Message is of the form needed for a Lua API function call run-time error
+    return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
+}
+
+std::pair<bool, QString> TConsole::setLabelCursor(const QString& name, int shape)
+{
+    if (name.isEmpty()) {
+        return {false, QStringLiteral("a label cannot have an empty string as its name")};
+    }
+
+    auto pL = mLabelMap.value(name);
+    if (pL) {
+        if (shape > -1 && shape < 22) {
+            pL->setCursor(static_cast<Qt::CursorShape>(shape));
+        } else if (shape == -1) {
+            pL->unsetCursor();
+        } else {
+            return {false, QStringLiteral("cursor shape \"%1\" not found. see https://doc.qt.io/qt-5/qt.html#CursorShape-enum").arg(shape)};
+        }
+        return {true, QString()};
+    }
+    return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
+}
+
+std::pair<bool, QString> TConsole::setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY)
+{
+    if (name.isEmpty()) {
+        return {false, QStringLiteral("a label cannot have an empty string as its name")};
+    }
+
+    if (pixMapLocation.isEmpty()) {
+        return {false, QStringLiteral("custom cursor location cannot be an empty string")};
+    }
+
+    auto pL = mLabelMap.value(name);
+    if (pL) {
+        QPixmap cursor_pixmap = QPixmap(pixMapLocation);
+        if (cursor_pixmap.isNull()) {
+            return {false, QStringLiteral("couldn't find custom cursor, is the location \"%1\" correct?").arg(pixMapLocation)};
+        }
+        QCursor custom_cursor = QCursor(cursor_pixmap, hotX, hotY);
+        pL->setCursor(custom_cursor);
+        return {true, QString()};
+    }
+
     return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
 }
 
@@ -2947,5 +2995,39 @@ void TConsole::setProfileName(const QString& newName)
 
     for (auto pC : mSubConsoleMap) {
         pC->setProfileName(newName);
+    }
+}
+
+
+void TConsole::dragEnterEvent(QDragEnterEvent* e)
+{
+    if (e->mimeData()->hasUrls()) {
+        e->acceptProposedAction();
+    }
+}
+
+//https://amin-ahmadi.com/2016/01/04/qt-drag-drop-files-images/
+void TConsole::dropEvent(QDropEvent* e)
+{
+    for (const auto& url : e->mimeData()->urls()) {
+        QString fname = url.toLocalFile();
+        QFileInfo info(fname);
+        if (info.exists()) {
+            QPoint pos = e->pos();
+            TEvent mudletEvent{};
+            mudletEvent.mArgumentList.append(QLatin1String("sysDropEvent"));
+            mudletEvent.mArgumentList.append(fname);
+            mudletEvent.mArgumentList.append(info.suffix().trimmed());
+            mudletEvent.mArgumentList.append(QString::number(pos.x()));
+            mudletEvent.mArgumentList.append(QString::number(pos.y()));
+            mudletEvent.mArgumentList.append(mConsoleName);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mpHost->raiseEvent(mudletEvent);
+        }
     }
 }
