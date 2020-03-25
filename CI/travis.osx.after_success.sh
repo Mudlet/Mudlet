@@ -2,9 +2,8 @@
 
 set -e
 
-if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then
-  echo Job not executed under cron run
-  exit
+if [[ "${MUDLET_VERSION_BUILD}" == -public-test-build* ]]; then
+  public_test_build="true"
 fi
 
 # we deploy only certain builds
@@ -35,7 +34,8 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
   ln -s "${TRAVIS_BUILD_DIR}" source
 
-  if [ -z "${TRAVIS_TAG}" ]; then # PR build
+  if [ -z "${TRAVIS_TAG}" ] && [ "${public_test_build}" != "true" ]; then # PR build
+    echo "== Creating a snapshot build =="
     appBaseName="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}"
     mv "source/build/Mudlet.app" "source/build/${appBaseName}.app"
 
@@ -48,8 +48,12 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
     DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/${appBaseName}.dmg"  "https://make.mudlet.org/snapshots/${appBaseName}.dmg" -O - -q)
 
-  else # release build
-
+  else # ptb/release build
+    if [ "${public_test_build}" == "true" ]; then
+      echo "== Creating a public test build =="
+    else
+      echo "== Creating a release build =="
+    fi
     # add ssh-key to ssh-agent for deployment
     # shellcheck disable=2154
     # the two "undefined" variables are defined by travis
@@ -67,13 +71,29 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
     mv "${HOME}/Desktop/Mudlet.dmg" "${HOME}/Desktop/Mudlet-${VERSION}.dmg"
 
-    scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}.dmg" "keneanung@mudlet.org:${DEPLOY_PATH}"
-    DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.dmg"
+    if [ "${public_test_build}" == "true" ]; then
+      echo "=== Uploading public test build to make.mudlet.org ==="
+      DEPLOY_URL=$(wget --method PUT --body-file="${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg"  "https://make.mudlet.org/snapshots/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg" -O - -q)
+    else
+      echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
+      scp -i /tmp/mudlet-deploy-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}.dmg" "keneanung@mudlet.org:${DEPLOY_PATH}"
+      DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.dmg"
+    fi
 
     # install dblsqd. NPM must be available here because we use it to install the tool that creates the dmg
     npm install -g dblsqd-cli
     dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
-    dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}"
+
+    if [ "${public_test_build}" == "true" ]; then
+      echo "=== Creating release in Dblsqd ==="
+      dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${VERSION,,}${MUDLET_VERSION_BUILD,,}"
+
+      echo "=== Registering release with Dblsqd ==="
+      dblsqd push -a mudlet -c public-test-build -r "${VERSION,,}${MUDLET_VERSION_BUILD,,}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}"
+    else
+      echo "=== Registering release with Dblsqd ==="
+      dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}"
+    fi
   fi
 
   # delete keychain just in case

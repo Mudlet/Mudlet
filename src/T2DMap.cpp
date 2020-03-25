@@ -688,9 +688,9 @@ void T2DMap::initiateSpeeWalk(const int speedWalkStartRoomId, const int speedWal
         if (mpMap->findPath(speedWalkStartRoomId, speedWalkTargetRoomId)) {
             mpHost->startSpeedWalk();
         } else {
-            mpHost->mpConsole->printSystemMessage(tr("Mapper: Cannot find a path from %1 to %2 using known exits.\n")
+            mpHost->mpConsole->printSystemMessage(QStringLiteral("%1\n").arg(tr("Mapper: Cannot find a path from %1 to %2 using known exits.\n")
                                                           .arg(QString::number(speedWalkStartRoomId),
-                                                               QString::number(speedWalkTargetRoomId)));
+                                                               QString::number(speedWalkTargetRoomId))));
         }
     }
 }

@@ -286,12 +286,13 @@ int main(int argc, char* argv[])
     // activity even if the quiet, no splashscreen startup has been used
     app->setOverrideCursor(QCursor(Qt::WaitCursor));
     app->setOrganizationName(QStringLiteral("Mudlet"));
-    app->setApplicationVersion(APP_VERSION);
 
     if (mudlet::scmIsPublicTestVersion) {
         app->setApplicationName(QStringLiteral("Mudlet Public Test Build"));
+        app->setApplicationVersion(APP_VERSION APP_BUILD);
     } else {
         app->setApplicationName(QStringLiteral("Mudlet"));
+        app->setApplicationVersion(APP_VERSION);
     }
 
 
@@ -359,22 +360,6 @@ int main(int argc, char* argv[])
     }
     app->processEvents();
 
-    QString splash_message;
-    if (show_splash) {
-        splash_message.append(QLatin1String("\n\n"));
-        splash_message.append(QCoreApplication::translate("main",
-                              "Mudlet comes with\n"
-                              "ABSOLUTELY NO WARRANTY!\n"
-                              "This is free software, and you are\n"
-                              "welcome to redistribute it under\n"
-                              "certain conditions; select the\n"
-                              "'About' item for details."));
-        splash_message.append(QLatin1String("\n\n"));
-        splash_message.append(QCoreApplication::translate("main", "Locating profiles..."));
-        splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
-        app->processEvents();
-    }
-
     // seed random number generator (should be done once per lifetime)
     qsrand(static_cast<quint64>(QTime::currentTime().msecsSinceStartOfDay()));
 
@@ -384,12 +369,6 @@ int main(int argc, char* argv[])
     if (!dir.exists(homeDirectory)) {
         dir.mkpath(homeDirectory);
         first_launch = true;
-    }
-
-    if (show_splash) {
-        splash_message.append(QCoreApplication::translate("main", "Done.\n\nLoading font files..."));
-        splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
-        app->processEvents();
     }
 
 #if defined(INCLUDE_FONTS)
@@ -459,14 +438,6 @@ int main(int argc, char* argv[])
 #endif
 
     mudlet::debugMode = false;
-
-    if (show_splash) {
-        splash_message.append(QCoreApplication::translate("main", "Done.\n\n"
-                              "All data has been loaded successfully.\n\n"
-                              "Starting... Have fun!\n\n"));
-        splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
-        app->processEvents();
-    }
 
     QString homeLink = QStringLiteral("%1/mudlet-data").arg(QDir::homePath());
 #ifdef Q_OS_WIN32

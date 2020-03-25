@@ -155,11 +155,19 @@ end
 --- Shows this window and all windows it contains.
 function Geyser.Container:show (auto)
   auto = auto or false
+  -- If my container is hidden I stay hidden and after it get visible again I'm visible too
+  if self.container.hidden or self.container.auto_hidden then
+    if auto == false then
+      self.hidden = false 
+    end
+    return false 
+  end
   if auto then
     self.auto_hidden = false
   else
     self.hidden = false
   end
+
   if not self.hidden and not self.auto_hidden then
     self:show_impl()
   end

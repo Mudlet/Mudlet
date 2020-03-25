@@ -327,6 +327,20 @@ function showGauge(gaugeName)
   showWindow(gaugeName .. "_text")
 end
 
+--- @see createGauge
+function setGaugeWindow(windowName, gaugeName, x, y, show)
+  windowName = windowName or "main"
+  x = x or 0
+  y = y or 0
+  show = show or true
+  assert(gaugesTable[gaugeName], "setGaugeWindow: no such gauge exists.")
+  setWindow(windowName, gaugeName .. "_back", x, y, show)
+  setWindow(windowName, gaugeName .. "_front", x, y, show)
+  setWindow(windowName, gaugeName .. "_text", x, y, show)
+  -- save new values in table
+  gaugesTable[gaugeName].x, gaugesTable[gaugeName].y = x, y
+  setGauge(gaugeName, gaugesTable[gaugeName].value, 1)
+end
 
 --- Set the text on a custom gauge.
 ---
@@ -1829,4 +1843,35 @@ end
 
 function resetLabelToolTip(label)
   return setLabelToolTip(label, "")
+end
+
+-- functions to move and resize Map Widget
+-- be aware that moving or resizing Map Widget puts the Map Widget in floating state
+function moveMapWidget(x, y)
+  assert(type(x) == 'number', 'moveMapWidget: bad argument #1 type (x-coordinate as number expected, got '..type(x)..'!)')
+  assert(type(y) == 'number', 'moveMapWidget: bad argument #2 type (y-coordinate as number expected, got '..type(y)..'!)')
+  openMapWidget(x, y)
+end
+
+function resizeMapWidget(width, height)
+  assert(type(width) == 'number', 'resizeMapWidget: bad argument #1 type (width as number expected, got '..type(width)..'!)')
+  assert(type(height) == 'number', 'resizeMapWidget: bad argument #2 type (height as number expected, got '..type(height)..'!)')
+  openMapWidget(-1, -1, width, height)
+end
+
+--wrapper for createButton 
+-- createButton is deprecated better use createLabel instead
+createButton = createLabel
+
+function resetLabelCursor(name)
+  assert(type(name) == 'string', 'resetLabelCursor: bad argument #1 type (name as string expected, got '..type(name)..'!)')
+  return setLabelCursor(name, -1)
+end
+
+local setLabelCursorLayer = setLabelCursor
+function setLabelCursor(labelname, cursorShape)
+  if type(cursorShape) == "string" then
+    cursorShape = mudlet.cursor[cursorShape]
+  end
+  return setLabelCursorLayer(labelname, cursorShape)
 end
