@@ -147,7 +147,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
 
   if ($Script:PublicTestBuild) {
     Write-Output "=== Creating release in Dblsqd ==="
-    dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower()
+    dblsqd release -a mudlet -c public-test-build -m "(changelogs for public test builds are not yet available)" "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower()
 
     Write-Output "=== Registering release with Dblsqd ==="
     dblsqd push -a mudlet -c public-test-build -r "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower() -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
