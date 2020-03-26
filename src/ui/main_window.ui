@@ -305,6 +305,9 @@
    <property name="text">
     <string>Discord help channel</string>
    </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Open a link to the mudlet server on Discord.&lt;/p&gt;</string>
+   </property>
   </action>
   <action name="dactionReportIssue">
    <property name="text">
