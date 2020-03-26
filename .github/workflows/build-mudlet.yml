@@ -58,7 +58,7 @@ jobs:
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
 
-    - run: ls $RUNNER_WORKSPACE/Qt/$qt/clang_64/
+    - run: find $RUNNER_WORKSPACE/Qt/$qt/clang_64/
 
     - name: 'Run CMake with Ninja'
       uses: lukka/run-cmake@v0
