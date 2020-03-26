@@ -35,6 +35,7 @@
 cmake_minimum_required(VERSION 3.3)
 
 message("CMAKE_VERSION: ${CMAKE_VERSION}")
+message("CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
 find_package(Qt5 COMPONENTS Core)
 
 if(APPLE)
