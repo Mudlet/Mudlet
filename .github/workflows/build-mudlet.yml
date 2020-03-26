@@ -49,7 +49,7 @@ jobs:
       with:
         path: ${{github.workspace}}/3rdparty/vcpkg/
         # The key will be different each time a different version of vcpkg is used, or different ports are installed.
-        key: ${{hashFiles(env.vcpkgResponseFile)}}-${{ hashFiles('.git/modules/vcpkg/HEAD') }}-${{ runner.os }}
+        key: ${{hashFiles(env.vcpkgResponseFile)}}-${{ hashFiles('.git/modules/3rdparty/vcpkg/HEAD') }}-${{ runner.os }}
 
     - name: Run vcpkg
       uses: lukka/run-vcpkg@v0
