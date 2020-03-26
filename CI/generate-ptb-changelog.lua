@@ -106,7 +106,7 @@ function convert_to_html(text)
     s = escape_for_html(s)
     s = s:gsub("%(#(.-)%)", [[<a href="https://github.com/Mudlet/Mudlet/pull/%1">(#%1)</a>]])
 		t[#t+1] = string.format("<p>%s</p>", s)
-	end
+  end
 
   return table.concat(t, "\n")
 end
