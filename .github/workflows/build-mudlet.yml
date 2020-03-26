@@ -31,7 +31,7 @@ jobs:
         arch: win64_mingw73 # this key is relevant only for windows
         cached: ${{ steps.cache-qt.outputs.cache-hit }}
         
-    - run: find $Qt5_DIR -type f
+    - run: find $Qt5_DIR -print
         
     - uses: actions/checkout@v2
       with:
