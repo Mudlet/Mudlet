@@ -587,6 +587,9 @@ private:
     int mHostID;
     QList<QObject*> objectsToDelete;
     QTimer purgeTimer;
+
+    // Holds the list of places to look for the LuaGlobal.lua file:
+    QStringList mPossiblePaths;
 };
 
 Host& getHostFromLua(lua_State* L);
