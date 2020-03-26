@@ -1,11 +1,24 @@
-----------------------------------------------------------------------------------
---- Mudlet Lua packages loader
-----------------------------------------------------------------------------------
+-- Mudlet Lua packages loader
 
--- set to true (or provide a global with the same name and also set to true) to
--- report on the determination of what path to use to load the other Mudlet
--- and Geyser provided Lua files...
-local debugLoading = debugLoading or false
+-- Set to true (possibly via code in the C++ TLuaInterpreter::loadGlobal()
+-- method) to report on the determination of what path to use to load the other
+-- Mudlet and Geyser provided Lua files...
+debugLoading = debugLoading or false
+
+-- Set via code in C++ TLuaInterpreter::loadGlobal() but fall back to current
+-- directory if nil.
+if luaGlobalPath == nil then
+  luaGlobalPath = lfs.currentdir() .. package.config:sub(1,1) .. "LuaGlobal.lua"
+  if debugLoading then
+    echo([[luaGlobalPath was nil so has been defaulted to: "]] .. luaGlobalPath .. [[".
+
+]])
+  end
+elseif debugLoading then
+  echo([[luaGlobalPath has been preset to: "]] .. luaGlobalPath .. [[".
+
+]])
+end
 
 if package.loaded["rex_pcre"] then
   rex = require "rex_pcre"
@@ -92,6 +105,16 @@ end
 function handleWindowResizeEvent()
 end
 
+function toNativeSeparators(rawPath)
+  if package.config:sub(1,1) == '\\' then
+    return string.gsub(rawPath, '/', '\\')
+  end
+
+  assert((package.config:sub(1,1) == '/'), "package path directory separator is neither '\\' nor '/' and cannot be handled")
+
+  return string.gsub(rawPath, '\\', '/')
+end
+
 local packages = {
   "StringUtils.lua",
   "TableUtils.lua",
@@ -124,80 +147,38 @@ local packages = {
   "TTSValues.lua"
 }
 
--- on windows LuaGlobal gets loaded with the current directory set to mudlet.exe's location
--- on Mac, it's set to LuaGlobals location - or the Applications folder, or something else...
--- So work out where to load Lua files from using some heuristics
--- Addition of "../src/" to front of path allows things to work when "Shadow Building"
--- option of Qt Creator is used (separates object code from source code in directories
--- beside the latter, allowing parallel builds against different Qt Library versions
--- or {Release|Debug} types).  A further "../../src/" does the same when the
--- qmake CONFIG has both "debug_and_release" (default on Windows) and
--- "debug_and_release_target" (default on all platforms) options which puts the
--- executable in a further sub-directory down when shadow building!
--- TODO: extend to support common Lua code being placed in system shared directory
--- tree as ought to happen for *nix install builds.
-local prefixes = { "./../../src/mudlet-lua/lua/",
-                   "./../src/mudlet-lua/lua/",
-                   "./../Resources/mudlet-lua/lua/",
-                   "./mudlet-lua/lua/",
-                   "./lua/",
-                   "mudlet.app/Contents/Resources/mudlet-lua/lua/" }
-
--- add default search paths coming from the C++ side as well
-if getMudletLuaDefaultPaths then
-  for _, path in ipairs(getMudletLuaDefaultPaths()) do
-    prefixes[#prefixes + 1] = path
-  end
+if debugLoading then
+   echo("Path separator is: '" .. package.config:sub(1,1) .. "'\n\n")
 end
 
--- this is based on directory separators only ever being '/' or '\\' which does
--- seem to cover the cases that we are likely to encounter...!
-for i, path in ipairs(prefixes) do
-  prefixes[i] = string.gsub(path, '[/\\]', package.config:sub(1,1))
-  if debugLoading then
-    echo([[Directory separator conversion: "]] .. path .. [[" becomes: "]] .. prefixes[i] .. [["
-]])
-  end
-end
+nativeLuaGlobalPath = toNativeSeparators(luaGlobalPath)
 
 if debugLoading then
-  echo([[Current directory is: "]] .. lfs.currentdir() .. [[".
+  echo([[Directory separator conversion gives: "]] .. nativeLuaGlobalPath .. [[".
+
+Current directory is: "]] .. lfs.currentdir() .. [[".
+
 ]])
 end
 
-local prefix
-for i = 1, #prefixes do
-  -- lfs.attributes returns a table if the given file-system object exists
+for _, packageName in ipairs(packages) do
+  local packagePath = nativeLuaGlobalPath .. package.config:sub(1,1) .. toNativeSeparators(packageName)
   if debugLoading then
-    echo([[Testing: "]] .. prefixes[i] .. [[LuaGlobal.lua"...]])
-  end
-  if lfs.attributes(prefixes[i] .. "LuaGlobal.lua") then
-    if debugLoading then
-      echo(" found something!\n")
-    end
-    prefix = prefixes[i]
-    break
-  else
-    if debugLoading then
-      echo(" not found.\n")
-    end
-  end
-end
-
-if not prefix then
-  echo([[Error locating Lua files from LuaGlobal.lua - we are looking from ']] .. lfs.currentdir() .. [['.
+    echo([[Trying to load: "]] .. packagePath .. [["
 ]])
-  return
-end
-
-if debugLoading then
-  echo([[Locating other Lua files from LuaGlobal.lua - we are looking from ']] .. lfs.currentdir() .. [['.
-]])
-end
-
-for _, package in ipairs(packages) do
-  local result, msg = pcall(dofile, prefix .. package)
-  if not result then
-    echo("Error attempting to load file: " .. package .. ": " .. msg .. "\n")
   end
+  local result, msg = pcall(dofile, packagePath)
+  if debugLoading then
+    if result then
+      echo([[Loaded: "]] .. packageName .. [[".
+
+]])
+    else
+      echo([[Error attempting to load file:
+  ]] .. msg .. [[.
+
+]])
+    end
+  end
+  assert(result, msg)
 end
