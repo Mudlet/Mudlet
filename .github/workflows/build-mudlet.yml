@@ -58,7 +58,7 @@ jobs:
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         
-    - run: ls $RUNNER_WORKSPACE/Qt/$qt/clang_64/
+    - run: ls $RUNNER_WORKSPACE/Qt/$qt/clang_64/lib/cmake/Qt5Core
 
     - name: 'Run CMake with Ninja'
       uses: lukka/run-cmake@v0
@@ -67,4 +67,5 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b//unixmakefiles'
-        cmakeAppendedArgs: '-G "Ninja" -DCMAKE_PREFIX_PATH=$RUNNER_WORKSPACE/Qt/$qt/clang_64/'
+#         cmakeAppendedArgs: '-G "Ninja" -DCMAKE_PREFIX_PATH=$RUNNER_WORKSPACE/Qt/$qt/clang_64/'
+        cmakeAppendedArgs: '-G "Ninja" -DQt5Core_DIR=$RUNNER_WORKSPACE/Qt/$qt/clang_64/lib/cmake/Qt5Core'
