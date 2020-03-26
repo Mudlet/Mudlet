@@ -61,7 +61,7 @@ function Geyser.UserWindow:new(cons)
   cons.x = cons.x or 10
   cons.y = cons.y or 140
   --Root Container for UserWindows 
-  me = self.Parent:new(cons)
+  local me = self.Parent:new(cons)
   -- Set the metatable.
   setmetatable(me, self)
   self.__index = self
