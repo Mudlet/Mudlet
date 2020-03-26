@@ -1,5 +1,5 @@
 name: Build Mudlet in Github Actions CI
-on: 
+on:
   - pull_request
   - push
 
@@ -21,7 +21,7 @@ jobs:
         key: ${{runner.os}}-qt-${{env.qt}}
         restore-keys: |
           ${{runner.os}}-qt-
-          
+
     - name: Install Qt
       uses: jurplel/install-qt-action@v2
       if: steps.cache-qt.outputs.cache-hit != 'true'
@@ -30,7 +30,7 @@ jobs:
         dir: ${{runner.workspace}}
         arch: win64_mingw73 # this key is relevant only for windows
         cached: ${{ steps.cache-qt.outputs.cache-hit }}
-        
+
     - uses: actions/checkout@v2
       with:
         submodules: true
@@ -57,8 +57,8 @@ jobs:
        # Response file stored in source control, it provides the list of ports and triplet(s).
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
-        
-    - run: ls $RUNNER_WORKSPACE/Qt/$qt/clang_64/lib/cmake/Qt5Core
+
+    - run: ls $RUNNER_WORKSPACE/Qt/$qt/clang_64/
 
     - name: 'Run CMake with Ninja'
       uses: lukka/run-cmake@v0
@@ -67,5 +67,4 @@ jobs:
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
         useVcpkgToolchainFile: true
         buildDirectory: '${{runner.workspace}}/b//unixmakefiles'
-#         cmakeAppendedArgs: '-G "Ninja" -DCMAKE_PREFIX_PATH=$RUNNER_WORKSPACE/Qt/$qt/clang_64/'
-        cmakeAppendedArgs: '-G "Ninja" -DQt5Core_DIR=$RUNNER_WORKSPACE/Qt/$qt/clang_64/lib/cmake/Qt5Core'
+        cmakeAppendedArgs: '--debug-find -G "Ninja" -DCMAKE_PREFIX_PATH=$RUNNER_WORKSPACE/Qt/$qt/clang_64/'
