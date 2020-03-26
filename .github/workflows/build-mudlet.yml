@@ -58,11 +58,11 @@ jobs:
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
 
-#     - name: 'Run CMake with Ninja'
-#       uses: lukka/run-cmake@v0
-#       with:
-#         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
-#         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
-#         useVcpkgToolchainFile: true
-#         buildDirectory: '${{runner.workspace}}/b//unixmakefiles'
-#         cmakeAppendedArgs: '-G "Ninja" '
+    - name: 'Run CMake with Ninja'
+      uses: lukka/run-cmake@v0
+      with:
+        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+        cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
+        useVcpkgToolchainFile: true
+        buildDirectory: '${{runner.workspace}}/b//unixmakefiles'
+        cmakeAppendedArgs: '-G "Ninja" -DCMAKE_PREFIX_PATH=$RUNNER_WORKSPACE/Qt/$qt/clang_64/'
