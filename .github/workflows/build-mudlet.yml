@@ -31,12 +31,6 @@ jobs:
         arch: win64_mingw73 # this key is relevant only for windows
         cached: ${{ steps.cache-qt.outputs.cache-hit }}
         
-    - run: find $RUNNER_WORKSPACE
-      if: always()
-
-    - run: env
-      if: always()
-
     - uses: actions/checkout@v2
       with:
         submodules: true
@@ -64,11 +58,11 @@ jobs:
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
 
-    - name: 'Run CMake with Ninja'
-      uses: lukka/run-cmake@v0
-      with:
-        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
-        cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
-        useVcpkgToolchainFile: true
-        buildDirectory: '${{runner.workspace}}/b//unixmakefiles'
-        cmakeAppendedArgs: '-G "Ninja" '
+#     - name: 'Run CMake with Ninja'
+#       uses: lukka/run-cmake@v0
+#       with:
+#         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+#         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
+#         useVcpkgToolchainFile: true
+#         buildDirectory: '${{runner.workspace}}/b//unixmakefiles'
+#         cmakeAppendedArgs: '-G "Ninja" '
