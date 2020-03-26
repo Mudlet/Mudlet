@@ -3190,6 +3190,62 @@ int TLuaInterpreter::disableTrigger(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableScript
+int TLuaInterpreter::enableScript(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "enableScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
+
+    Host& host = getHostFromLua(L);
+    int cnt = 0;
+    QMap<int, TScript*> scripts = host.getScriptUnit()->getScriptList();
+    for (auto script : scripts) {
+        if (script->getName() == name) {
+            cnt++;
+            script->setIsActive(true);
+        }
+    }
+    if (cnt == 0) {
+        lua_pushnil(L);
+        lua_pushstring(L, QStringLiteral("script \"%1\" not found").arg(name).toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableScript
+int TLuaInterpreter::disableScript(lua_State* L)
+{
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L, "disableScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L, 1));
+        return lua_error(L);
+    }
+    QString name = QString::fromUtf8(lua_tostring(L, 1));
+
+    Host& host = getHostFromLua(L);
+    int cnt = 0;
+    QMap<int, TScript*> scripts = host.getScriptUnit()->getScriptList();
+    for (auto script : scripts) {
+        if (script->getName() == name) {
+            cnt++;
+            script->setIsActive(false);
+        }
+    }
+    if (cnt == 0) {
+        lua_pushnil(L);
+        lua_pushstring(L, QStringLiteral("script \"%1\" not found").arg(name).toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#killTimer
 int TLuaInterpreter::killTimer(lua_State* L)
 {
@@ -3320,10 +3376,7 @@ int TLuaInterpreter::setFont(lua_State* L)
     int s = 0;
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
         if (!lua_isstring(L, ++s)) {
-            lua_pushfstring(L,
-                            "setFont: bad argument #%d type for the optional window name - expected string, got %s!",
-                            s,
-                            luaL_typename(L, s));
+            lua_pushfstring(L, "setFont: bad argument #%d type for the optional window name - expected string, got %s!", s, luaL_typename(L, s));
             return lua_error(L);
         } else {
             windowName = QString::fromUtf8(lua_tostring(L, s));
@@ -3520,10 +3573,10 @@ int TLuaInterpreter::openUserWindow(lua_State* L)
 
     Host& host = getHostFromLua(L);
     QString text(luaSendText.c_str());
-//Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
+    //Dont create Userwindow if there is a Label with the same name already. It breaks the UserWindow
     auto pL = host.mpConsole->mLabelMap.value(text);
     if (pL) {
-        lua_pushfstring(L, "openUserWindow: Cannot create UserWindow. %s exists already!",text.toUtf8().constData());
+        lua_pushfstring(L, "openUserWindow: Cannot create UserWindow. %s exists already!", text.toUtf8().constData());
         lua_error(L);
         return 1;
     }
@@ -8187,13 +8240,12 @@ int TLuaInterpreter::getScript(lua_State* L)
     QString name = QString::fromUtf8(lua_tostring(L, 1));
 
     Host& host = getHostFromLua(L);
-     // No documentation available in wiki - internal function
 
-    auto pS = host.getScriptUnit()->findFirstScript(name);
+    auto pS = host.getScriptUnit()->findFirstScript(name, true);
     if (!pS) {
-        QString message = QStringLiteral("script \"%1\" not found").arg(name);
-        lua_pushstring(L, message.toUtf8().constData());
-        return 1;
+        lua_pushnil(L);
+        lua_pushstring(L, QStringLiteral("script \"%1\" not found").arg(name).toUtf8().constData());
+        return 2;
     }
 
     int id = pS->getID();
@@ -8236,13 +8288,13 @@ int TLuaInterpreter::setScript(lua_State* L)
 int TLuaInterpreter::permScript(lua_State* L)
 {
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "permScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L,1));
+        lua_pushfstring(L, "permScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     QString name = QString::fromUtf8(lua_tostring(L, 1));
 
     if (!lua_isstring(L, 2)) {
-        lua_pushfstring(L, "permScript: bad argument #2 type (script parent name as string expected, got %s!)", luaL_typename(L,2));
+        lua_pushfstring(L, "permScript: bad argument #2 type (script parent name as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
     QString parent = QString::fromUtf8(lua_tostring(L, 2));
@@ -16072,6 +16124,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "insertText", TLuaInterpreter::insertText);
     lua_register(pGlobalLua, "enableTrigger", TLuaInterpreter::enableTrigger);
     lua_register(pGlobalLua, "disableTrigger", TLuaInterpreter::disableTrigger);
+    lua_register(pGlobalLua, "enableScript", TLuaInterpreter::enableScript);
+    lua_register(pGlobalLua, "disableScript", TLuaInterpreter::disableScript);
     lua_register(pGlobalLua, "killTrigger", TLuaInterpreter::killTrigger);
     lua_register(pGlobalLua, "getLineCount", TLuaInterpreter::getLineCount);
     lua_register(pGlobalLua, "getColumnNumber", TLuaInterpreter::getColumnNumber);
@@ -16873,19 +16927,17 @@ QPair<int, QString> TLuaInterpreter::createPermScript(const QString& name, const
 }
 
 // No documentation available in wiki - internal function
-QPair<int, QString> TLuaInterpreter::setScriptCode(const QString& name, const QString& luaCode)
+QPair<int, QString> TLuaInterpreter::setScriptCode(QString& name, const QString& luaCode)
 {
-    TScript* pS;
     if (name.isEmpty()) {
-    } else {
-        // FIXME: There can be more than one script with the same name - we will
-        // use only the FIRST one for now, but we really ought to enhance the
-        // API to handle more than one potential parent with the same name:
-        pS = mpHost->getScriptUnit()->findFirstScript(name);
-        if (!pS) {
-            return qMakePair(-1, QStringLiteral("script \"%1\" not found").arg(name)); //script not found
-        }
+        return qMakePair(-1, QStringLiteral("cannot have an empty string as name"));
     }
+
+    auto pS = mpHost->getScriptUnit()->findFirstScript(name, true);
+    if (!pS) {
+        return qMakePair(-1, QStringLiteral("script \"%1\" not found").arg(name)); //script not found
+    }
+
     auto oldCode = pS->getScript();
     if (!pS->setScript(luaCode)) {
         QString errMsg = pS->getError();

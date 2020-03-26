@@ -129,7 +129,7 @@ public:
     int startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
     QPair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     QPair<int, QString> createPermScript(const QString& name, const QString& parent, const QString& luaCode);
-    QPair<int, QString> setScriptCode(const QString& name, const QString& luaCode);
+    QPair<int, QString> setScriptCode(QString &name, const QString& luaCode);
     int startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
     int startPermKey(QString&, QString&, int&, int&, QString&);
 
@@ -409,6 +409,8 @@ public:
     static int permScript(lua_State*);
     static int getScript(lua_State*);
     static int setScript(lua_State*);
+    static int enableScript(lua_State*);
+    static int disableScript(lua_State*);
     static int permAlias(lua_State*);
     static int exists(lua_State*);
     static int isActive(lua_State*);

@@ -158,6 +158,7 @@ void ScriptUnit::unregisterScript(TScript* pT)
         removeScript(pT);
         return;
     } else {
+        removeScript(pT);
         removeScriptRootNode(pT);
         return;
     }
@@ -207,12 +208,12 @@ void ScriptUnit::compileAll()
     }
 }
 
-// This is currently only used during the lua scripted creation of a new
-// permScript to find a parent with the given name:
-TScript* ScriptUnit::findFirstScript(const QString& name) const
+TScript* ScriptUnit::findFirstScript(const QString& name, bool noFolder) const
 {
     for (auto script : mScriptMap) {
-        if (script->getName() == name) {
+        if (script->getName() == name && noFolder == false) {
+            return script;
+        } else if (script->getName() == name && !script->isFolder()) {
             return script;
         }
     }

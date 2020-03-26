@@ -4358,6 +4358,9 @@ void dlgTriggerEditor::writeScript(int id)
     if (!pItem) {
         return;
     }
+    if (mCurrentView == EditorViewType::cmUnknownView || mCurrentView != EditorViewType::cmScriptView) {
+        return;
+    }
     int scriptID = pItem->data(0, Qt::UserRole).toInt();
     if (scriptID != id) {
         return;
