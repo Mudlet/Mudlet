@@ -44,7 +44,7 @@ jobs:
         echo "::set-env name=vcpkgResponseFile::$vcpkgResponseFile"
       shell: bash
 
-    - name: Cache vcpkg's artifacts
+    - name: Restore vcpkg cache
       uses: actions/cache@v1
       with:
         path: ${{github.workspace}}/3rdparty/vcpkg/
