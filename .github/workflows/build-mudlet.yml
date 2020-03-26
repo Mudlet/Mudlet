@@ -33,7 +33,6 @@ jobs:
         
     - uses: actions/checkout@v2
       with:
-        ref: development
         submodules: true
         fetch-depth: 0
 
