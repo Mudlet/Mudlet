@@ -1,0 +1,11 @@
+This package is part of the noto project.  Visit
+google.com/get/noto for more information.
+
+Built on 2020-03-26 from the following noto repository:
+-----
+Repo: noto-emoji
+Tag: v2019-11-19-unicode12
+Date: 2019-10-22 10:53:10 UTC
+Commit: 018aa149d622a4fea11f01c61a7207079da301bc
+
+Update font file with people-holding-hands fix

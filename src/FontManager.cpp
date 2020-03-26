@@ -73,7 +73,10 @@ void FontManager::loadFont(const QString& filePath)
     rememberFont(filePath, fontID);
 
     if (fontID == -1) {
-        qWarning() << "FontManager::loadFonts() warning - Could not load the font(s) in the file: " << filePath;
+        qWarning() << "FontManager::loadFont() WARNING - Could not load the font(s) in the file: " << filePath;
+// Uncomment the next pair of lines to get details about fonts that ARE loaded:
+//    } else {
+//        qDebug().noquote().nospace() << "FontManager::loadFont() INFO - Loaded font(s) in the file: \"" << filePath << "\"\n    with ID: " << fontID << " providing: \"" << QFontDatabase::applicationFontFamilies(fontID).join(QLatin1String("\", \"")).append(QLatin1String("\"\n"));
     }
 }
 
