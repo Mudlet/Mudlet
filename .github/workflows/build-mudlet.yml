@@ -57,6 +57,8 @@ jobs:
        # Response file stored in source control, it provides the list of ports and triplet(s).
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
+        
+    - run: ls $RUNNER_WORKSPACE/Qt/$qt/clang_64/
 
     - name: 'Run CMake with Ninja'
       uses: lukka/run-cmake@v0
