@@ -14,7 +14,8 @@ jobs:
       qt: "5.14.1"
 
     steps:
-    - uses: actions/cache@v1
+    - name: Restore Qt cache
+      uses: actions/cache@v1
       id: cache-qt
       with:
         path: ${{runner.workspace}}/Qt/${{env.qt}}
@@ -31,12 +32,13 @@ jobs:
         arch: win64_mingw73 # this key is relevant only for windows
         cached: ${{ steps.cache-qt.outputs.cache-hit }}
 
-    - uses: actions/checkout@v2
+    - name: Checkout Mudlet source code
+      uses: actions/checkout@v2
       with:
         submodules: true
         fetch-depth: 0
 
-    - name: Set vcpkg's response file path used as part of cache's key.
+    - name: "Set vcpkg's response file path used as part of vcpkg cache's key."
       env:
 #         vcpkgResponseFile: ${{github.workspace}}/cmakelists.txt/vcpkg_${{ matrix.triplet }}.txt
           vcpkgResponseFile: ${{github.workspace}}/.vcpkg-osx-dependencies
@@ -51,16 +53,14 @@ jobs:
         # The key will be different each time a different version of vcpkg is used, or different ports are installed.
         key: ${{hashFiles(env.vcpkgResponseFile)}}-${{ hashFiles('.git/modules/3rdparty/vcpkg/HEAD') }}-${{ runner.os }}
 
-    - name: Run vcpkg
+    - name: Install dependencies with vcpkg
       uses: lukka/run-vcpkg@v0
       with:
        # Response file stored in source control, it provides the list of ports and triplet(s).
         vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
 
-    - run: find $RUNNER_WORKSPACE/Qt/$qt/clang_64/
-
-    - name: 'Run CMake with Ninja'
+    - name: Build Mudlet
       uses: lukka/run-cmake@v0
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
