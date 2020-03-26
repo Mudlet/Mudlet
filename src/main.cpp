@@ -378,7 +378,7 @@ int main(int argc, char* argv[])
     }
 #if defined(Q_OS_LINUX)
     // Only needed/works on Linux to provide color emojis:
-    QString notoFontDirectory(QStringLiteral("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    QString notoFontDirectory(QStringLiteral("%1/noto-color-emoji-2019-11-19-unicode12").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
@@ -433,9 +433,9 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
 
 #if defined(Q_OS_LINUX)
-    copyFont(notoFontDirectory, QStringLiteral("fonts/notocoloremoji-unhinted-2018-04-24-pistol-update"), QStringLiteral("NotoColorEmoji.ttf"));
-    copyFont(notoFontDirectory, QStringLiteral("fonts/notocoloremoji-unhinted-2018-04-24-pistol-update"), QStringLiteral("LICENSE_OFL.txt"));
-    copyFont(notoFontDirectory, QStringLiteral("fonts/notocoloremoji-unhinted-2018-04-24-pistol-update"), QStringLiteral("README"));
+    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2019-11-19-unicode12"), QStringLiteral("NotoColorEmoji.ttf"));
+    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2019-11-19-unicode12"), QStringLiteral("LICENSE"));
+    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2019-11-19-unicode12"), QStringLiteral("README"));
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
 
