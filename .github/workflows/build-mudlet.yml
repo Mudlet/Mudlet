@@ -31,8 +31,12 @@ jobs:
         arch: win64_mingw73 # this key is relevant only for windows
         cached: ${{ steps.cache-qt.outputs.cache-hit }}
         
-    - run: find $Qt5_DIR
-        
+    - run: find $RUNNER_WORKSPACE
+      if: always()
+
+    - run: env
+      if: always()
+
     - uses: actions/checkout@v2
       with:
         submodules: true
