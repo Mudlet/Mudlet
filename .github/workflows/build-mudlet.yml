@@ -28,8 +28,10 @@ jobs:
       with:
         version: ${{env.qt}}
         dir: ${{runner.workspace}}
-        arch: win64_mingw73 # only affects windows
+        arch: win64_mingw73 # this key is relevant only for windows
         cached: ${{ steps.cache-qt.outputs.cache-hit }}
+        
+    - run: tree $Qt5_DIR
         
     - uses: actions/checkout@v2
       with:
