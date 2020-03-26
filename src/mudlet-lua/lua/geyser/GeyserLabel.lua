@@ -18,7 +18,6 @@ Geyser.Label = Geyser.Window:new({
   fillBg = 1, })
 Geyser.Label.scrollV = {}
 Geyser.Label.scrollH = {}
-Geyser.Label.numChildren = 0
 --- Prints a message to the window.  All parameters are optional and if not
 -- specified will use the last set value.
 -- @param message The message to print. Can contain html formatting.
