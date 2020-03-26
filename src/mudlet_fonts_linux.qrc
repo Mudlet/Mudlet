@@ -1,7 +1,7 @@
 <RCC>
     <qresource prefix="/">
-        <file>fonts/notocoloremoji-unhinted-2018-04-24-pistol-update/LICENSE_OFL.txt</file>
-        <file>fonts/notocoloremoji-unhinted-2018-04-24-pistol-update/NotoColorEmoji.ttf</file>
-        <file>fonts/notocoloremoji-unhinted-2018-04-24-pistol-update/README</file>
+        <file>fonts/noto-color-emoji-2019-11-19-unicode12/LICENSE</file>
+        <file>fonts/noto-color-emoji-2019-11-19-unicode12/NotoColorEmoji.ttf</file>
+        <file>fonts/noto-color-emoji-2019-11-19-unicode12/README</file>
     </qresource>
 </RCC>
