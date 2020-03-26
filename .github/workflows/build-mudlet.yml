@@ -1,0 +1,47 @@
+name: Build Mudlet in Github Actions CI
+on: 
+  - pull_request
+  - push
+
+jobs:
+  compile-mudlet:
+    name: ${{ matrix.os }}-compile
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest]
+    env:
+      qt: "5.14.1"
+
+    steps:
+    - uses: actions/cache@v1
+      id: cache-qt
+      with:
+        path: ${{runner.workspace}}/Qt/${{env.qt}}
+        key: ${{runner.os}}-qt-${{env.qt}}
+        restore-keys: |
+          ${{runner.os}}-qt-
+          
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v2
+      if: steps.cache-qt.outputs.cache-hit != 'true'
+      with:
+        version: ${{env.qt}}
+        dir: ${{runner.workspace}}
+        arch: win64_mingw73 # only affects windows
+        cached: ${{ steps.cache-qt.outputs.cache-hit }}
+        
+    - uses: actions/checkout@master
+      with:
+        ref: development
+        submodules: true
+        fetch-depth: 0
+
+    - name: 'Run CMake with Ninja'
+      uses: lukka/run-cmake@v0
+      with:
+        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+        cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
+        useVcpkgToolchainFile: false
+        buildDirectory: '${{ runner.workspace }}/b//unixmakefiles'
+        cmakeAppendedArgs: '-G "Ninja" '
