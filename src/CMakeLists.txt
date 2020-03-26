@@ -1,6 +1,7 @@
 ############################################################################
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
-#    Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2015-2018, 2020 by Stephen Lyons                        #
+#                                                - slysven@virginmedia.com #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -22,7 +23,13 @@
 set(mudlet_RCCS mudlet.qrc)
 
 if(USE_FONTS)
-  list(APPEND mudlet_RCCS mudlet_fonts.qrc)
+  list(APPEND mudlet_RCCS mudlet_fonts_common.qrc)
+  # There is not an equivalent to WIN32 for Linux specifically instead we must
+  # check the value of CMAKE_SYSTEM_NAME - see:
+  # https://gitlab.kitware.com/cmake/community/-/wikis/doc/tutorials/How-To-Write-Platform-Checks:
+  if(CMAKE_SYSTEM_NAME STREQUAL Linux)
+    list(APPEND mudlet_RCCS mudlet_fonts_linux.qrc)
+  endif()
 endif()
 
 if(WIN32)
@@ -355,10 +362,14 @@ if(APPLE)
   if(USE_UPDATER)
     target_link_libraries(mudlet
       cocoa-qt-glue
-      "-framework Sparkle"
       "-framework AppKit"
-      "-F${CMAKE_HOME_DIRECTORY}/3rdparty/cocoapods/Pods/Sparkle")
+    )
   endif(USE_UPDATER)
+  set_target_properties(mudlet
+    PROPERTIES
+      MACOSX_BUNDLE ON
+      MACOSX_BUNDLE_BUNDLE_NAME Mudlet
+  )
 endif()
 
 target_compile_options(mudlet
@@ -367,7 +378,7 @@ target_compile_options(mudlet
   )
 
 # *nix "make install" provision:
-if(UNIX)
+if(UNIX AND NOT APPLE)
   # CMAKE_INSTALL_PREFIX is automagically set on Unix to DESTDIR environment
   # variable and is prefixed onto relative DESTINATION values
   install(
