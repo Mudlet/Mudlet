@@ -37,11 +37,11 @@ jobs:
         submodules: true
         fetch-depth: 0
 
-    - name: 'Run CMake with Ninja'
-      uses: lukka/run-cmake@v0
-      with:
-        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
-        cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
-        useVcpkgToolchainFile: false
-        buildDirectory: '${{ runner.workspace }}/b//unixmakefiles'
-        cmakeAppendedArgs: '-G "Ninja" '
+#     - name: 'Run CMake with Ninja'
+#       uses: lukka/run-cmake@v0
+#       with:
+#         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+#         cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
+#         useVcpkgToolchainFile: false
+#         buildDirectory: '${{ runner.workspace }}/b//unixmakefiles'
+#         cmakeAppendedArgs: '-G "Ninja" '
