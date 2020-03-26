@@ -3952,7 +3952,6 @@ int64_t mudlet::getPhysicalMemoryTotal()
 // Ensure the debug area is attached to at least one Host
 void mudlet::attachDebugArea(const QString& hostname)
 {
-    qDebug() << "start of attachDebugArea";
     if (mpDebugArea) {
         return;
     }
