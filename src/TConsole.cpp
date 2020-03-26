@@ -946,6 +946,8 @@ void TConsole::toggleLogging(bool isMessageEnabled)
             mLogFile.open(QIODevice::Append);
         }
         mLogStream.setDevice(&mLogFile);
+        QTextCodec* pLogCodec = QTextCodec::codecForName("UTF-8");
+        mLogStream.setCodec(pLogCodec);
         if (isMessageEnabled) {
             QString message = tr("Logging has started. Log file is %1\n").arg(mLogFile.fileName());
             printSystemMessage(message);
@@ -970,18 +972,12 @@ void TConsole::toggleLogging(bool isMessageEnabled)
             QString log;
             QTextStream logStream(&log);
             /*
-             * From the Qt Documentation:
-             * 'On Windows, the codec will be based on a system locale. On Unix
-             * systems, the codec will might fall back to using the iconv
-             * library if no builtin codec for the locale can be found."
-             *
-             * Note that in these cases the codec's name will be "System".'
-             *
-             * So if we are going to use UTF-8 as we declare in the HTML
-             * header we had better set that codec to be used:
+             * Setting a QTextCodec on a QString based QTextStream is
+             * ineffective as the Qt documents note: "When QTextStream operates
+             * on a QString directly, the codec is disabled."!
+             * Instead we must set it on the QTextStream that eventually
+             * receives the text - in this case mLogStream.
              */
-            QTextCodec* logCodec = QTextCodec::codecForName("UTF-8");
-            logStream.setCodec(logCodec);
             QStringList fontsList;                  // List of fonts to become the font-family entry for
                                                     // the master css in the header
             fontsList << this->fontInfo().family(); // Seems to be the best way to get the
