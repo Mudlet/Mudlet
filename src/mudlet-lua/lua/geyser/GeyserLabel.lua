@@ -317,6 +317,7 @@ end
 function Geyser.Label:resetToolTip()
   resetLabelToolTip(self.name)
   self.toolTip = nil
+  self.toolTipDuration = nil
 end
 
 --- Set a predefined Mouse Cursor Shape for this label
