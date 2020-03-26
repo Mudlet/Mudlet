@@ -13,3 +13,6 @@
 [submodule "3rdparty/qtkeychain"]
 	path = 3rdparty/qtkeychain
 	url = https://github.com/Mudlet/qtkeychain.git
+[submodule "3rdparty/vcpkg"]
+	path = 3rdparty/vcpkg
+	url = https://github.com/microsoft/vcpkg
