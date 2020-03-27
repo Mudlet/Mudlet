@@ -109,6 +109,11 @@ include_optional_module(
   OPTION_VARIABLE USE_3DMAPPER
   READABLE_NAME "3D mapper"
 )
+include_optional_module(
+  ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
+  OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
+  READABLE_NAME "build-type splash screen"
+)
 
 include(InitGitSubmodule)
 
