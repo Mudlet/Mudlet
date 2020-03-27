@@ -16,6 +16,9 @@ if ($Env:APPVEYOR_REPO_TAG -eq "false") {
   }
 }
 
+# not all systems we deal with allow uppercase ascii characters
+$Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD".ToLower()
+
 $VersionLine = Select-String -Pattern "Version =" $Env:APPVEYOR_BUILD_FOLDER/src/mudlet.pro
 $VersionRegex = [regex]'= {1}(.+)$'
 $Env:VERSION = $VersionRegex.Match($VersionLine).Groups[1].Value

@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2017 by Vadim Peretokin - vperetokin@gmail.com          *
+ *   Copyright (C) 2017-2020 by Vadim Peretokin - vperetokin@gmail.com     *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -71,7 +71,6 @@ private:
     void recordUpdatedVersion() const;
     QString getPreviousVersion() const;
     void finishSetup();
-    dblsqd::Release getCurrentRelease();
 
 #if defined(Q_OS_LINUX)
     QString unzippedBinaryName;

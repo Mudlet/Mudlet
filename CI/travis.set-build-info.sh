@@ -18,6 +18,9 @@ if [ -z "${TRAVIS_TAG}" ]; then
   fi
 fi
 
+# not all systems we deal with allow uppercase ascii characters
+MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD,,}"
+
 VERSION=""
 
 if [ "${Q_OR_C_MAKE}" = "cmake" ]; then

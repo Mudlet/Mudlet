@@ -1286,6 +1286,13 @@ win32 {
     # specify some windows information about the binary
     QMAKE_TARGET_COMPANY = "Mudlet makers"
     QMAKE_TARGET_DESCRIPTION = "Mudlet the MUD client"
+
+    # Product name determines the Windows Start Menu shortcut name
+    contains(BUILD, "-public-test-build.+") {
+        QMAKE_TARGET_PRODUCT = "Mudlet PTB"
+    } else {
+        QMAKE_TARGET_PRODUCT = "Mudlet"
+    }
 }
 
 # Pull the docs and lua files into the project so they show up in the Qt Creator project files list
