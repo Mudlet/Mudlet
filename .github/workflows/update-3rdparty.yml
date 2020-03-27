@@ -133,7 +133,7 @@ jobs:
           commit-message: (autocommit) Updated sparkle-glue submodule to latest in our fork
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
 
-  update-dblsqd-source:
+  update-dblsqd-fork:
     runs-on: ubuntu-latest
     if: github.repository == 'Mudlet/Mudlet'
     steps:
@@ -161,17 +161,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          title: "Update dblsqd to latest upstream"
+          title: "Update dblsqd to latest in our fork"
           body: |
             #### Brief overview of PR changes/additions
-            :crown: An automated PR to update dblsqd to its latest version in upstream.
+            :crown: An automated PR to update dblsqd to its latest version in our fork.
             #### Motivation for adding to Mudlet
             Get new features, bugfixes, improvements! Stay modern.
             #### Other info (issues closed, discussion etc)
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
           branch: update-dblsqd-${{ github.sha }}
           path: 3rdparty/dblsqd
-          commit-message: (autocommit) Updated dblsqd submodule to latest upstream
+          commit-message: (autocommit) Updated dblsqd submodule to latest in our fork
           author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
 
   update-qtkeychain-fork:
