@@ -10,6 +10,7 @@ on:
 jobs:
   update-iremapper-source:
     runs-on: ubuntu-latest
+    if: github.repository == 'Mudlet/Mudlet'
     steps:
       - uses: actions/checkout@v2
         with:
@@ -52,6 +53,7 @@ jobs:
 
   update-edbee-fork:
     runs-on: ubuntu-latest
+    if: github.repository == 'Mudlet/Mudlet'
     steps:
       - uses: actions/checkout@v2
         with:
@@ -92,6 +94,7 @@ jobs:
 
   update-sparkle-glue-fork:
     runs-on: ubuntu-latest
+    if: github.repository == 'Mudlet/Mudlet'
     steps:
       - uses: actions/checkout@v2
         with:
@@ -132,6 +135,7 @@ jobs:
 
   update-dblsqd-source:
     runs-on: ubuntu-latest
+    if: github.repository == 'Mudlet/Mudlet'
     steps:
       - uses: actions/checkout@v2
         with:
@@ -172,6 +176,7 @@ jobs:
 
   update-qtkeychain-fork:
     runs-on: ubuntu-latest
+    if: github.repository == 'Mudlet/Mudlet'
     steps:
       - uses: actions/checkout@v2
         with:
@@ -212,6 +217,7 @@ jobs:
 
   update-lcf-source-51:
     runs-on: ubuntu-latest
+    if: github.repository == 'Mudlet/Mudlet'
     steps:
       - uses: actions/checkout@v2
         with:
@@ -255,6 +261,7 @@ jobs:
 
   update-whidecharwidth-source:
     runs-on: ubuntu-latest
+    if: github.repository == 'Mudlet/Mudlet'
     steps:
       - uses: actions/checkout@v2
         with:

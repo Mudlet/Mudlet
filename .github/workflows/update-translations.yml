@@ -10,6 +10,7 @@ on:
 jobs:
   update-and-commit-text:
     runs-on: ubuntu-latest
+    if: github.repository == 'Mudlet/Mudlet'
     steps:
     - uses: actions/checkout@v2
       with:
