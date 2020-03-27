@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2017 by Vadim Peretokin - vperetokin@gmail.com          *
+ *   Copyright (C) 2017-2020 by Vadim Peretokin - vperetokin@gmail.com     *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -39,9 +39,9 @@
 // mac: handled completely outside of Mudlet by Sparkle
 
 Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent)
-, mUpdateInstalled(false)
-, mpInstallOrRestart(new QPushButton(tr("Update")))
 , updateDialog(nullptr)
+, mpInstallOrRestart(new QPushButton(tr("Update")))
+, mUpdateInstalled(false)
 {
     Q_ASSERT_X(settings, "updater", "QSettings object is required for the updater to work");
     this->settings = settings;
@@ -108,9 +108,9 @@ void Updater::showChangelog() const
 void Updater::finishSetup()
 {
 #if defined(Q_OS_LINUX)
-    qWarning() << "Successfully updated Mudlet to" << feed->getUpdates(getCurrentRelease()).constFirst().getVersion();
+    qWarning() << "Successfully updated Mudlet to" << feed->getUpdates(dblsqd::Release::getCurrentRelease()).constFirst().getVersion();
 #elif defined(Q_OS_WIN32)
-    qWarning() << "Mudlet prepped to update to" << feed->getUpdates(getCurrentRelease()).first().getVersion() << "on restart";
+    qWarning() << "Mudlet prepped to update to" << feed->getUpdates(dblsqd::Release::getCurrentRelease()).first().getVersion() << "on restart";
 #endif
     recordUpdateTime();
     recordUpdatedVersion();
@@ -130,15 +130,14 @@ void Updater::setupOnMacOS()
 #if defined(Q_OS_WIN32)
 void Updater::setupOnWindows()
 {
-    QObject::connect(feed, &dblsqd::Feed::ready, [=]() { qWarning() << "Checked for updates:" << feed->getUpdates(getCurrentRelease()).size() << "update(s) available"; });
-
     // Setup to automatically download the new release when an update is available
     QObject::connect(feed, &dblsqd::Feed::ready, [=]() {
         if (mudlet::scmIsDevelopmentVersion) {
             return;
         }
 
-        auto updates = feed->getUpdates(getCurrentRelease());
+        auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
+        qWarning() << "Checked for updates:" << updates.size() << "update(s) available";
         if (updates.isEmpty()) {
             return;
         } else if (!updateAutomatically()) {
@@ -189,34 +188,21 @@ void Updater::prepareSetupOnWindows(const QString& downloadedSetupName)
 }
 #endif // Q_OS_WIN
 
-dblsqd::Release Updater::getCurrentRelease()
-{
-    // embed build time so public test releases, which cannot be compared via semver, can be compared via datetime
-    QString buildDateTime = QString(__DATE__) + QString(__TIME__);
-    QDateTime date = QDateTime::fromString(buildDateTime.simplified(), "MMM d yyyyhh:mm:ss");
-
-    return dblsqd::Release(QCoreApplication::applicationVersion(), date);
-}
-
 #if defined(Q_OS_LINUX)
 void Updater::setupOnLinux()
 {
-    QObject::connect(feed, &dblsqd::Feed::ready, this, [=]() {
-        qWarning() << "Checked for updates:" << feed->getUpdates(getCurrentRelease()).size() << "update(s) available";
-    });
-
     // Setup to automatically download the new release when an update is
     // available or wave a flag when it is to be done manually
     // Setup to automatically download the new release when an update is available
     QObject::connect(feed, &dblsqd::Feed::ready, this, [=]() {
-
         // don't update development builds to prevent auto-update from overwriting your
         // compiled binary while in development
         if (mudlet::scmIsDevelopmentVersion) {
             return;
         }
 
-        auto updates = feed->getUpdates(getCurrentRelease());
+        auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
+        qWarning() << "Checked for updates:" << updates.size() << "update(s) available";
         if (updates.isEmpty()) {
             return;
         } else if (!updateAutomatically()) {
