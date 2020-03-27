@@ -8233,10 +8233,7 @@ int TLuaInterpreter::exists(lua_State* L)
     } else if (type == "keybind") {
         cnt += host.getKeyUnit()->mLookupTable.count(name);
     } else if (type == "script") {
-        QMap<int, TScript*> scripts = host.getScriptUnit()->getScriptList();
-        for (auto script : scripts) {
-          cnt += (script->getName() == name);
-        }
+        cnt += host.getScriptUnit()->findScriptId(name).size();
     }
     lua_pushnumber(L, cnt);
     return 1;
@@ -8350,15 +8347,27 @@ int TLuaInterpreter::permAlias(lua_State* L)
 
 int TLuaInterpreter::getScript(lua_State* L)
 {
+    int n = lua_gettop(L);
+    int pos = 1;
+
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "getScriptScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     QString name = QString::fromUtf8(lua_tostring(L, 1));
 
+    if (n > 1) {
+        if (!lua_isnumber(L, 2)) {
+            lua_pushfstring(L, "getScriptScript: bad argument #2 type (script position as number expected, got %s!)", luaL_typename(L, 2));
+            return lua_error(L);
+        }
+        pos = lua_tonumber(L, 2);
+    }
     Host& host = getHostFromLua(L);
+    pos--;
+    auto ids = host.getScriptUnit()->findScriptId(name);
+    auto pS = host.getScriptUnit()->getScript(ids[pos]);
 
-    auto pS = host.getScriptUnit()->findFirstScript(name, true);
     if (!pS) {
         lua_pushnil(L);
         lua_pushstring(L, QStringLiteral("script \"%1\" not found").arg(name).toUtf8().constData());
@@ -8374,6 +8383,9 @@ int TLuaInterpreter::getScript(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setScript
 int TLuaInterpreter::setScript(lua_State* L)
 {
+    int n = lua_gettop(L);
+    int pos = 1;
+
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "setScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
@@ -8384,13 +8396,21 @@ int TLuaInterpreter::setScript(lua_State* L)
         lua_pushfstring(L, "setScript: bad argument #2 type (script lua code as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
-
     QString luaCode = QString::fromUtf8(lua_tostring(L, 2));
+
+    if (n > 1) {
+        if (!lua_isnumber(L, 3)) {
+            lua_pushfstring(L, "setScript: bad argument #3 type (script position as number expected, got %s!)", luaL_typename(L, 3));
+            return lua_error(L);
+        }
+        pos = lua_tonumber(L, 3);
+    }
+    pos--;
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
-    auto [id, message] = pLuaInterpreter->setScriptCode(name, luaCode);
+    auto [id, message] = pLuaInterpreter->setScriptCode(name, luaCode, pos);
     lua_pushnumber(L, id);
     if (id == -1) {
         lua_pushstring(L, message.toUtf8().constData());
@@ -17087,7 +17107,8 @@ QPair<int, QString> TLuaInterpreter::createPermScript(const QString& name, const
         // FIXME: There can be more than one script with the same name - we will
         // use only the FIRST one for now, but we really ought to enhance the
         // API to handle more than one potential parent with the same name:
-        auto pParentScript = mpHost->getScriptUnit()->findFirstScript(parent);
+        auto ids = mpHost->getScriptUnit()->findScriptId(parent);
+        auto pParentScript = mpHost->getScriptUnit()->getScript(ids[0]);
         if (!pParentScript) {
             return qMakePair(-1, QStringLiteral("parent \"%1\" not found").arg(parent)); //parent not found
         }
@@ -17110,17 +17131,17 @@ QPair<int, QString> TLuaInterpreter::createPermScript(const QString& name, const
 }
 
 // No documentation available in wiki - internal function
-QPair<int, QString> TLuaInterpreter::setScriptCode(QString& name, const QString& luaCode)
+QPair<int, QString> TLuaInterpreter::setScriptCode(QString& name, const QString& luaCode, int pos)
 {
     if (name.isEmpty()) {
         return qMakePair(-1, QStringLiteral("cannot have an empty string as name"));
     }
 
-    auto pS = mpHost->getScriptUnit()->findFirstScript(name, true);
+    auto ids = mpHost->getScriptUnit()->findScriptId(name);
+    TScript* pS = mpHost->getScriptUnit()->getScript(ids[pos]);
     if (!pS) {
         return qMakePair(-1, QStringLiteral("script \"%1\" not found").arg(name)); //script not found
     }
-
     auto oldCode = pS->getScript();
     if (!pS->setScript(luaCode)) {
         QString errMsg = pS->getError();

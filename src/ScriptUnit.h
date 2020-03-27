@@ -66,7 +66,7 @@ public:
     int getNewID();
     QMutex mScriptUnitLock;
     QList<TScript*> uninstallList;
-    TScript* findFirstScript(const QString& name, bool noFolder = false) const;
+    QVector<int> findScriptId(const QString& name) const;
 
 private:
     ScriptUnit() = default;

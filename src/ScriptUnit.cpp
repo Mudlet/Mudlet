@@ -208,14 +208,13 @@ void ScriptUnit::compileAll()
     }
 }
 
-TScript* ScriptUnit::findFirstScript(const QString& name, bool noFolder) const
+QVector<int> ScriptUnit::findScriptId(const QString& name) const
 {
+    QVector<int> Ids;
     for (auto script : mScriptMap) {
-        if (script->getName() == name && noFolder == false) {
-            return script;
-        } else if (script->getName() == name && !script->isFolder()) {
-            return script;
+        if (script->getName() == name) {
+            Ids.append(script->getID());
         }
     }
-    return nullptr;
+    return Ids;
 }

@@ -129,7 +129,7 @@ public:
     int startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
     QPair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     QPair<int, QString> createPermScript(const QString& name, const QString& parent, const QString& luaCode);
-    QPair<int, QString> setScriptCode(QString &name, const QString& luaCode);
+    QPair<int, QString> setScriptCode(QString &name, const QString& luaCode, int pos);
     int startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
     int startPermKey(QString&, QString&, int&, int&, QString&);
 
