@@ -1789,13 +1789,13 @@ per le stanze selezionate:</translation>
       <location filename="../src/TLuaInterpreter.cpp" line="16854"/>
       <source>%1 (isn&apos;t a file or symlink to a file)</source>
       <comment>This is not a file or a symbolic link to a file</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (non è un file o un collegamento simbolico ad un file)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16863"/>
       <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
       <comment>This is not a file or a symbolic link to a file</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (non è un file leggibile o un collegamento simbolico ad un file leggibile)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16881"/>
@@ -1813,7 +1813,9 @@ per le stanze selezionate:</translation>
       <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Impossibile trovare, caricare e eseguire con successo LuaGlobal.lua - Mudlet è danneggiato!
+Percorsi analizzati:
+%1</translation>
     </message>
   </context>
   <context>
