@@ -178,7 +178,9 @@
         <file>mudlet-lua/lua/generic-mapper/generic_mapper.xml</file>
         <file>mudlet-lua/lua/utf8_filenames.lua</file>
         <file>mudlet-mapper.xml</file>
+        <file>Mudlet_splashscreen_development.png</file>
         <file>Mudlet_splashscreen_main.png</file>
+        <file>Mudlet_splashscreen_ptb.png</file>
         <file>run-lua-code-v4.xml</file>
         <file>run-tests.xml</file>
         <file>send-text-to-all-games.xml</file>
