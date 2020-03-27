@@ -1806,13 +1806,13 @@ Die Einrückungungsfunktion wird nicht verfügbar sein.
       <location filename="../src/TLuaInterpreter.cpp" line="16854"/>
       <source>%1 (isn&apos;t a file or symlink to a file)</source>
       <comment>This is not a file or a symbolic link to a file</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (ist keine Datei oder ein Symlink auf eine Datei)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16863"/>
       <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
       <comment>This is not a file or a symbolic link to a file</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (ist keine lesbare Datei oder ein Symlink auf eine lesbare Datei)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16881"/>
@@ -1830,7 +1830,9 @@ Die Einrückungungsfunktion wird nicht verfügbar sein.
       <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
-      <translation type="unfinished"/>
+      <translation>[FEHLER] - Konnte LuaGlobal.lua nicht finden, laden und erfolgreich ausführen - dein Mudlet ist kaputt! 
+Diese Orte wurden ausprobiert:
+%1</translation>
     </message>
   </context>
   <context>
