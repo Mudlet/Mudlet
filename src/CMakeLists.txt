@@ -348,6 +348,13 @@ if(USE_3DMAPPER)
   )
 endif()
 
+if(USE_VARIABLE_SPLASH_SCREEN)
+  target_compile_definitions(mudlet
+    PRIVATE
+      INCLUDE_VARIABLE_SPLASH_SCREEN
+  )
+endif()
+
 if(WIN32)
     target_link_libraries(mudlet ws2_32)
     set_target_properties(mudlet
