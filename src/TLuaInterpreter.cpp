@@ -8398,7 +8398,7 @@ int TLuaInterpreter::setScript(lua_State* L)
     }
     QString luaCode = QString::fromUtf8(lua_tostring(L, 2));
 
-    if (n > 1) {
+    if (n > 2) {
         if (!lua_isnumber(L, 3)) {
             lua_pushfstring(L, "setScript: bad argument #3 type (script position as number expected, got %s!)", luaL_typename(L, 3));
             return lua_error(L);

@@ -180,13 +180,14 @@ end
 ---
 --- @param name name of the script item
 --- @param luaCode 
-function appendScript(name, luaCode)
+function appendScript(name, luaCode, pos)
+  pos = pos or 1
   assert(type(name) == "string", "appendScript: bad argument #1 type (script name as string expected, got "..type(name).."!)")
   assert(type(name) == "string", "appendScript: bad argument #2 type (lua code as string expected, got "..type(luaCode).."!)")
-  if not getScript(name) then
+  if not getScript(name, pos) then
     return nil, 'script "'..name..'" not found'
   end
-  return setScript(name, getScript(name).."\n"..luaCode)
+  return setScript(name, getScript(name, pos).."\n"..luaCode, pos)
 end
 
 --- Checks to see if a given file or folder exists. If it exists, it'll return the Lua true boolean value, otherwise false.
