@@ -213,7 +213,7 @@
     <string>IRC</string>
    </property>
    <property name="toolTip">
-    <string>&lt;p&gt;Opens a built-in IRC chat on the #mudlet channel on Freenode IRC servers.&lt;/p&gt;</string>
+    <string>&lt;p&gt;Opens a built-in IRC chat.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionVideo">
