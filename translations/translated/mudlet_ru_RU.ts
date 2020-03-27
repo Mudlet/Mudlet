@@ -1811,13 +1811,13 @@ rooms:</source>
       <location filename="../src/TLuaInterpreter.cpp" line="16854"/>
       <source>%1 (isn&apos;t a file or symlink to a file)</source>
       <comment>This is not a file or a symbolic link to a file</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (это не файл или симлинк на файл)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16863"/>
       <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
       <comment>This is not a file or a symbolic link to a file</comment>
-      <translation type="unfinished"/>
+      <translation>%1 (это не читаемый файл или симлинк на читаемый файл)</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16881"/>
@@ -1835,7 +1835,9 @@ rooms:</source>
       <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Не удалось загрузить LuaGlobal; ваш Мудлет сломан!
+Попробовали эти места:
+%1</translation>
     </message>
   </context>
   <context>
