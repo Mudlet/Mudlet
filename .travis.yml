@@ -148,6 +148,9 @@ before_script: |
   # set the luarocks path here for OSX as we installed it later for that OS.
   if [ "${TRAVIS_OS_NAME}" = "osx" ]; then eval $(luarocks --lua-dir="$(brew --prefix lua@5.1)" path); fi
   mkdir -p build
+
+  # finally, validate that everthing is kosher before starting the build
+  source CI/travis.validate_deployment.sh
 script:
 - ./CI/travis.compile.sh
 after_success:
