@@ -162,7 +162,6 @@ mudlet::mudlet()
 , mShowIconsOnMenuCheckedState(Qt::PartiallyChecked)
 , mEnableFullScreenMode(false)
 , mCopyAsImageTimeout{3}
-, mInterfaceLanguage(QStringLiteral("en_US"))
 , mUsingMudletDictionaries(false)
 , mIsGoingDown(false)
 , mMenuBarVisibility(visibleAlways)
@@ -413,7 +412,7 @@ mudlet::mudlet()
         QStringList issueReportIcons {"face-uncertain.png", "face-surprise.png", "face-smile.png", "face-sad.png", "face-plain.png"};
         auto randomIcon = QRandomGenerator::global()->bounded(issueReportIcons.size());
         mpActionReportIssue->setIcon(QIcon(QStringLiteral(":/icons/%1").arg(issueReportIcons.at(randomIcon))));
-        mpActionReportIssue->setToolTip(tr("Report an issue about the Mudlet Public Test Build"));
+        mpActionReportIssue->setToolTip(tr("The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!"));
         mpMainToolBar->addAction(mpActionReportIssue);
         mpActionReportIssue->setObjectName(QStringLiteral("reportissue_action"));
         mpMainToolBar->widgetForAction(mpActionReportIssue)->setObjectName(mpActionReportIssue->objectName());
@@ -883,6 +882,12 @@ void mudlet::migrateDebugConsole(Host* currentHost)
 
     mpDebugArea->setAttribute(Qt::WA_DeleteOnClose);
     mpDebugArea->close();
+}
+
+// returns true if this is the first launch of Mudlet on this machine
+bool mudlet::firstLaunch()
+{
+    return !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
 }
 
 // As we are currently only using files from a resource file we only need to
@@ -2409,6 +2414,54 @@ bool mudlet::moveWindow(Host* pHost, const QString& name, int x1, int y1)
     return false;
 }
 
+std::pair<bool, QString> mudlet::setWindow(Host* pHost, const QString& windowname, const QString& name, int x1, int y1, bool show)
+{
+    if (!pHost || !pHost->mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pL = pHost->mpConsole->mLabelMap.value(name);
+    auto pC = pHost->mpConsole->mSubConsoleMap.value(name);
+    auto pD = pHost->mpConsole->mDockWidgetMap.value(windowname);
+    auto pW = pHost->mpConsole->mpMainFrame;
+    auto pM = pHost->mpConsole->mpMapper;
+
+    if (!pD && windowname.toLower() != QLatin1String("main")) {
+        return {false, QStringLiteral("Window \"%1\" not found.").arg(windowname)};
+    }
+
+    if (pD) {
+        pW = pD->widget();
+    }
+
+    if (pL) {
+        pL->setParent(pW);
+        pL->move(x1, y1);
+        if (show) {
+            pL->show();
+        }
+        return {true, QString()};
+    } else if (pC) {
+        pC->setParent(pW);
+        pC->move(x1, y1);
+        pC->mOldX = x1;
+        pC->mOldY = y1;
+        if (show) {
+            pC->show();
+        }
+        return {true, QString()};
+    } else if (pM && name.toLower() == QLatin1String("mapper")) {
+        pM->setParent(pW);
+        pM->move(x1, y1);
+        if (show) {
+            pM->show();
+        }
+        return {true, QString()};
+    }
+
+    return {false, QStringLiteral("Element \"%1\" not found.").arg(name)};
+}
+
 std::pair<bool, QString> mudlet::openMapWidget(Host* pHost, const QString& area, int x, int y, int width, int height)
 {
     if (!pHost || !pHost->mpConsole) {
@@ -3106,7 +3159,7 @@ void mudlet::readEarlySettings(const QSettings& settings)
         mEnableFullScreenMode = file_use_smallscreen.exists();
     }
 
-    mInterfaceLanguage = settings.value("interfaceLanguage", QStringLiteral("en_US")).toString();
+    mInterfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
 }
 
 void mudlet::readLateSettings(const QSettings& settings)
@@ -3899,7 +3952,6 @@ int64_t mudlet::getPhysicalMemoryTotal()
 // Ensure the debug area is attached to at least one Host
 void mudlet::attachDebugArea(const QString& hostname)
 {
-    qDebug() << "start of attachDebugArea";
     if (mpDebugArea) {
         return;
     }
@@ -5218,6 +5270,32 @@ void mudlet::setInterfaceLanguage(const QString& languageCode)
         // within the Mudlet application code}...
         emit signal_guiLanguageChanged(languageCode);
     }
+}
+
+// return the user's desktop language if we have a quality translation for it
+// or a back-up language they've specified
+QString mudlet::autodetectPreferredLanguage()
+{
+    // en_GB is a temporary special exception due to its likeness to en_US, while its
+    // translation is still only at 20%
+    QVector<QString> availableQualityTranslations {QStringLiteral("en_GB")};
+    for (auto& code : getAvailableTranslationCodes()) {
+        auto& translation = mTranslationsMap.value(code);
+        if (translation.fromResourceFile()) {
+            auto& translatedPc = translation.getTranslatedPercentage();
+            if (translatedPc >= mTranslationGoldStar) {
+                availableQualityTranslations.append(code);
+            }
+        }
+    }
+
+    for (auto language : QLocale::system().uiLanguages()) {
+        if (availableQualityTranslations.contains(language.replace(QStringLiteral("-"), QStringLiteral("_")))) {
+            return language;
+        }
+    }
+
+    return QStringLiteral("en_US");
 }
 
 bool mudlet::setClickthrough(Host* pHost, const QString& name, bool clickthrough)

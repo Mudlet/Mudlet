@@ -1,6 +1,7 @@
 ############################################################################
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
-#    Copyright (C) 2015-2018 by Stephen Lyons - slysven@virginmedia.com    #
+#    Copyright (C) 2015-2018, 2020 by Stephen Lyons                        #
+#                                                - slysven@virginmedia.com #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -22,7 +23,13 @@
 set(mudlet_RCCS mudlet.qrc)
 
 if(USE_FONTS)
-  list(APPEND mudlet_RCCS mudlet_fonts.qrc)
+  list(APPEND mudlet_RCCS mudlet_fonts_common.qrc)
+  # There is not an equivalent to WIN32 for Linux specifically instead we must
+  # check the value of CMAKE_SYSTEM_NAME - see:
+  # https://gitlab.kitware.com/cmake/community/-/wikis/doc/tutorials/How-To-Write-Platform-Checks:
+  if(CMAKE_SYSTEM_NAME STREQUAL Linux)
+    list(APPEND mudlet_RCCS mudlet_fonts_linux.qrc)
+  endif()
 endif()
 
 if(WIN32)

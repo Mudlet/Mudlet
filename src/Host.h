@@ -566,6 +566,7 @@ private:
     void loadSecuredPassword();
     void removeAllNonPersistentStopWatches();
     void updateConsolesFont();
+    void thankForUsingPTB();
 
     QFont mDisplayFont;
     QStringList mModulesToSync;

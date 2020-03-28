@@ -27,6 +27,8 @@
 
 #include "dlgAboutDialog.h"
 
+#include "mudlet.h"
+
 #include "pre_guard.h"
 #include <QPainter>
 #include <QTextLayout>
@@ -39,7 +41,9 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 
     // Copied from main():
 
-    QImage splashImage(QStringLiteral(":/Mudlet_splashscreen_main.png"));
+    QImage splashImage(mudlet::scmIsReleaseVersion ? QStringLiteral(":/Mudlet_splashscreen_main.png")
+                                                   : mudlet::scmIsPublicTestVersion ? QStringLiteral(":/Mudlet_splashscreen_ptb.png")
+                                                                                    : QStringLiteral(":/Mudlet_splashscreen_development.png"));
 
     { // Brace code using painter to ensure it is freed at right time...
         QPainter painter(&splashImage);

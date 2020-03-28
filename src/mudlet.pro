@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018 by Stephen Lyons                   #
+#    Copyright (C) 2013-2015, 2017-2018, 2020 by Stephen Lyons             #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -251,11 +251,12 @@ unix:!macx {
 
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32 {
-    MINGW_BASE_DIR = $$(MINGW_BASE_DIR)
-    isEmpty(MINGW_BASE_DIR) {
-        MINGW_BASE_DIR = "C:\\Qt\\Tools\\mingw730_32"
+    MINGW_BASE_DIR_TEST = $$(MINGW_BASE_DIR)
+    isEmpty( MINGW_BASE_DIR_TEST ) {
+        MINGW_BASE_DIR_TEST = "C:\\Qt\\Tools\\mingw730_32"
     }
     LIBS +=  \
+        -L"$${MINGW_BASE_DIR_TEST}\\bin" \
         -llua51 \
         -lpcre-1 \
         -llibhunspell-1.6 \
@@ -263,15 +264,13 @@ unix:!macx {
         -lz \                   # for ctelnet.cpp
         -lyajl \
         -lpugixml \
-        -lWs2_32 \
-        -L"$${MINGW_BASE_DIR}\\bin"
+        -lWs2_32
     INCLUDEPATH += \
-                   "C:\\Libraries\\boost_1_71_0" \
-                   "$${MINGW_BASE_DIR}\\include" \
-                   "$${MINGW_BASE_DIR}\\lib\include"
-# Leave this undefined so mudlet::readSettings() preprocessing will fall back to
-# hard-coded executable's /mudlet-lua/lua/ subdirectory
-#    LUA_DEFAULT_DIR = $$clean_path($$system(echo %ProgramFiles%)/lua)
+         "C:\\Libraries\\boost_1_71_0" \
+         "$${MINGW_BASE_DIR_TEST}\\include" \
+         "$${MINGW_BASE_DIR_TEST}\\lib\include"
+    # Leave this unset - we do not need it on Windows:
+    # LUA_DEFAULT_DIR =
 }
 
 unix:!macx {
@@ -623,11 +622,19 @@ FORMS += \
     ui/trigger_pattern_edit.ui \
     ui/vars_main_area.ui
 
-RESOURCES = mudlet.qrc \
-            ../translations/translated/qm.qrc
+RESOURCES += \
+    mudlet.qrc \
+    ../translations/translated/qm.qrc
 
 contains(DEFINES, INCLUDE_FONTS) {
-    RESOURCES += mudlet_fonts.qrc
+    RESOURCES += \
+        mudlet_fonts_common.qrc
+
+    linux {
+        RESOURCES += \
+            mudlet_fonts_linux.qrc
+    }
+
     !build_pass{
         # On windows or on platforms that support CONFIG having debug_and_release"
         # then there can be three passes through this file and we only want the
@@ -710,6 +717,7 @@ TRANSLATIONS = $$files(../translations/translated/*.ts)
 
 # Main lua files:
 LUA.files = \
+    $${PWD}/mudlet-lua/lua/CursorShapes.lua \
     $${PWD}/mudlet-lua/lua/DB.lua \
     $${PWD}/mudlet-lua/lua/DebugTools.lua \
     $${PWD}/mudlet-lua/lua/GMCP.lua \
@@ -1278,6 +1286,13 @@ win32 {
     # specify some windows information about the binary
     QMAKE_TARGET_COMPANY = "Mudlet makers"
     QMAKE_TARGET_DESCRIPTION = "Mudlet the MUD client"
+
+    # Product name determines the Windows Start Menu shortcut name
+    contains(BUILD, "-public-test-build.+") {
+        QMAKE_TARGET_PRODUCT = "Mudlet PTB"
+    } else {
+        QMAKE_TARGET_PRODUCT = "Mudlet"
+    }
 }
 
 # Pull the docs and lua files into the project so they show up in the Qt Creator project files list
