@@ -2,7 +2,7 @@
 
 if [ -z "${TRAVIS_TAG}" ]; then
   echo "Not a release build - skipping release validation."
-  exit 0
+  exit
 fi
 
 error() {
