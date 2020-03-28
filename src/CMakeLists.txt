@@ -94,6 +94,7 @@ set(mudlet_SRCS
     TBuffer.cpp
     TCommandLine.cpp
     TConsole.cpp
+    TAccessibleConsole.cpp
     TDebug.cpp
     TDockWidget.cpp
     TEasyButtonBar.cpp
@@ -236,6 +237,7 @@ set(mudlet_HDRS
     TBuffer.h
     TCommandLine.h
     TConsole.h
+    TAccessibleConsole.h
     TDebug.h
     TDockWidget.h
     TEasyButtonBar.h
