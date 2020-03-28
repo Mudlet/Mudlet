@@ -8351,26 +8351,26 @@ int TLuaInterpreter::getScript(lua_State* L)
     int pos = 1;
 
     if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "getScriptScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L, 1));
+        lua_pushfstring(L, "getScript: bad argument #1 type (script name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
     QString name = QString::fromUtf8(lua_tostring(L, 1));
 
     if (n > 1) {
         if (!lua_isnumber(L, 2)) {
-            lua_pushfstring(L, "getScriptScript: bad argument #2 type (script position as number expected, got %s!)", luaL_typename(L, 2));
+            lua_pushfstring(L, "getScript: bad argument #2 type (script position as number expected, got %s!)", luaL_typename(L, 2));
             return lua_error(L);
         }
         pos = lua_tonumber(L, 2);
     }
     Host& host = getHostFromLua(L);
     pos--;
-    auto ids = host.getScriptUnit()->findScriptId(name);
-    auto pS = host.getScriptUnit()->getScript(ids[pos]);
 
+    auto ids = host.getScriptUnit()->findScriptId(name);
+    auto pS = host.getScriptUnit()->getScript(ids.value(pos, -1));
     if (!pS) {
         lua_pushnil(L);
-        lua_pushstring(L, QStringLiteral("script \"%1\" not found").arg(name).toUtf8().constData());
+        lua_pushstring(L, QStringLiteral("script \"%1\" at position \"%2\" not found").arg(name).arg(++pos).toUtf8().constData());
         return 2;
     }
 
@@ -8413,6 +8413,7 @@ int TLuaInterpreter::setScript(lua_State* L)
     auto [id, message] = pLuaInterpreter->setScriptCode(name, luaCode, pos);
     lua_pushnumber(L, id);
     if (id == -1) {
+        lua_pushboolean(L, false);
         lua_pushstring(L, message.toUtf8().constData());
         return 2;
     }
@@ -8448,6 +8449,7 @@ int TLuaInterpreter::permScript(lua_State* L)
     auto [id, message] = pLuaInterpreter->createPermScript(name, parent, luaCode);
     lua_pushnumber(L, id);
     if (id == -1) {
+        lua_pushboolean(L, false);
         lua_pushstring(L, message.toUtf8().constData());
         return 2;
     }
@@ -17108,7 +17110,7 @@ QPair<int, QString> TLuaInterpreter::createPermScript(const QString& name, const
         // use only the FIRST one for now, but we really ought to enhance the
         // API to handle more than one potential parent with the same name:
         auto ids = mpHost->getScriptUnit()->findScriptId(parent);
-        auto pParentScript = mpHost->getScriptUnit()->getScript(ids[0]);
+        auto pParentScript = mpHost->getScriptUnit()->getScript(ids.value(0, -1));
         if (!pParentScript) {
             return qMakePair(-1, QStringLiteral("parent \"%1\" not found").arg(parent)); //parent not found
         }
@@ -17138,15 +17140,15 @@ QPair<int, QString> TLuaInterpreter::setScriptCode(QString& name, const QString&
     }
 
     auto ids = mpHost->getScriptUnit()->findScriptId(name);
-    TScript* pS = mpHost->getScriptUnit()->getScript(ids[pos]);
+    TScript* pS = mpHost->getScriptUnit()->getScript(ids.value(pos, -1));
     if (!pS) {
-        return qMakePair(-1, QStringLiteral("script \"%1\" not found").arg(name)); //script not found
+        return qMakePair(-1, QStringLiteral("script \"%1\" at position \"%2\" not found").arg(name).arg(++pos)); //script not found
     }
     auto oldCode = pS->getScript();
     if (!pS->setScript(luaCode)) {
         QString errMsg = pS->getError();
         pS->setScript(oldCode);
-        return qMakePair(-1, QStringLiteral("unable to compile \"%1\", reason: %2").arg(luaCode, errMsg));
+        return qMakePair(-1, QStringLiteral("unable to compile \"%1\" at position \"%2\", reason: %3").arg(luaCode).arg(++pos).arg(errMsg));
     }
     pS->setScript(luaCode);
     int id = pS->getID();
