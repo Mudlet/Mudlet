@@ -18,9 +18,6 @@ if [ -z "${TRAVIS_TAG}" ]; then
   fi
 fi
 
-# not all systems we deal with allow uppercase ascii characters
-MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD,,}"
-
 VERSION=""
 
 if [ "${Q_OR_C_MAKE}" = "cmake" ]; then
@@ -28,6 +25,10 @@ if [ "${Q_OR_C_MAKE}" = "cmake" ]; then
 elif [ "${Q_OR_C_MAKE}" = "qmake" ]; then
   VERSION=$(perl -lne 'print $1 if /^VERSION = (.+)/' < "${TRAVIS_BUILD_DIR}/src/mudlet.pro")
 fi
+
+# not all systems we deal with allow uppercase ascii characters
+MUDLET_VERSION_BUILD=$(echo "$MUDLET_VERSION_BUILD" | tr '[:upper:]' '[:lower:]')
+VERSION=$(echo "$VERSION" | tr '[:upper:]' '[:lower:]')
 
 export VERSION
 export MUDLET_VERSION_BUILD
