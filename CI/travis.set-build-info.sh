@@ -5,7 +5,7 @@ MUDLET_VERSION_BUILD=""
 if [ -z "${TRAVIS_TAG}" ]; then
   if [ "$TRAVIS_EVENT_TYPE" = "cron" ] && [ "${TRAVIS_OS_NAME}" = "osx" ]; then
     # The only scheduled macos builds are public test builds
-    MUDLET_VERSION_BUILD="-public-test-build"
+    MUDLET_VERSION_BUILD="-ptb"
   else
     MUDLET_VERSION_BUILD="-testing"
   fi

@@ -2,7 +2,7 @@
 
 set -e
 
-if [[ "${MUDLET_VERSION_BUILD}" == -public-test-build* ]]; then
+if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]]; then
   public_test_build="true"
 fi
 
