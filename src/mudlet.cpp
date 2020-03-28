@@ -126,7 +126,7 @@ QPointer<QMainWindow> mudlet::mpDebugArea = nullptr;
 bool mudlet::debugMode = false;
 
 const bool mudlet::scmIsReleaseVersion = QByteArray(APP_BUILD).isEmpty();
-const bool mudlet::scmIsPublicTestVersion = QByteArray(APP_BUILD).startsWith("-public-test-build");
+const bool mudlet::scmIsPublicTestVersion = QByteArray(APP_BUILD).startsWith("-ptb");
 const bool mudlet::scmIsDevelopmentVersion = !mudlet::scmIsReleaseVersion && !mudlet::scmIsPublicTestVersion;
 
 QVariantHash mudlet::mLuaFunctionNames;
