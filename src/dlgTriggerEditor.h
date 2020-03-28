@@ -143,9 +143,10 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     enum SearchOption {
         // Unset:
         SearchOptionNone = 0x0,
-        SearchOptionCaseSensitive = 0x1 /*,
-        SearchOptionRegExp = 0x2,
-        SearchOptionWholeWord = 0x4 */
+        SearchOptionCaseSensitive = 0x1,
+        SearchOptionIncludeVariables = 0x2 /*,
+        SearchOptionRegExp = 0x4,
+        SearchOptionWholeWord = 0x8 */
     };
 
 
@@ -274,6 +275,7 @@ private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
     void slot_toggle_isPushDownButton(int);
     void slot_toggleSearchCaseSensitivity(bool);
+    void slot_toggleSearchIncludeVariables(bool);
     void slot_toggleGroupBoxColorizeTrigger(const bool);
     void slot_clearSearchResults();
     void slot_clearSoundFile();
@@ -460,6 +462,7 @@ private:
     QIcon mIcon_searchOptions;
 
     QAction* mpAction_searchCaseSensitive;
+    QAction* mpAction_searchIncludeVariables;
     // TODO: Add other searchOptions
     // QAction* mpAction_searchWholeWords;
     // QAction* mpAction_searchRegExp;

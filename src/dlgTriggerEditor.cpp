@@ -627,6 +627,15 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     pMenu_searchOptions->insertAction(nullptr, mpAction_searchCaseSensitive);
     connect(mpAction_searchCaseSensitive, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleSearchCaseSensitivity);
 
+    mpAction_searchIncludeVariables = new QAction(tr("Include Variables"), this);
+    mpAction_searchIncludeVariables->setObjectName(QStringLiteral("mpAction_searchIncludeVariables"));
+    mpAction_searchIncludeVariables->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
+        .arg(tr("If checked, then the search will include variables, otherwise they will not be searched.")));
+    mpAction_searchIncludeVariables->setCheckable(true);
+
+    pMenu_searchOptions->insertAction(nullptr, mpAction_searchIncludeVariables);
+    connect(mpAction_searchIncludeVariables, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleSearchIncludeVariables);
+
     createSearchOptionIcon();
 
     mpAction_searchOptions->setMenu(pMenu_searchOptions);
@@ -1252,8 +1261,9 @@ void dlgTriggerEditor::slot_searchMudletItems(const QString& s)
     searchActions(s);
     searchTimers(s);
     searchKeys(s);
-    searchVariables(s);
 
+    if (mSearchOptions & SearchOptionIncludeVariables)
+        searchVariables(s);
 
     // TODO: Edbee search term highlighter
 
@@ -8513,6 +8523,15 @@ void dlgTriggerEditor::slot_toggleSearchCaseSensitivity(const bool state)
 {
     if ((mSearchOptions & SearchOptionCaseSensitive) != state) {
         mSearchOptions = (mSearchOptions & ~(SearchOptionCaseSensitive)) | (state ? SearchOptionCaseSensitive : SearchOptionNone);
+        createSearchOptionIcon();
+    }
+
+}
+
+void dlgTriggerEditor::slot_toggleSearchIncludeVariables(const bool state)
+{
+    if ((mSearchOptions & SearchOptionIncludeVariables) != state) {
+        mSearchOptions = (mSearchOptions & ~(SearchOptionIncludeVariables)) | (state ? SearchOptionIncludeVariables : SearchOptionNone);
         createSearchOptionIcon();
     }
 
