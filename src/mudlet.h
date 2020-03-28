@@ -443,6 +443,7 @@ public:
     void scanForQtTranslations(const QString&);
     void layoutModules();
     void startAutoLogin();
+    QPointer<QTableWidget> moduleTable;
     int64_t getPhysicalMemoryTotal();
 
 
@@ -673,7 +674,6 @@ private:
     QPointer<QPushButton> installButton;
 
     QPointer<Host> mpModuleTableHost;
-    QPointer<QTableWidget> moduleTable;
     QPointer<QPushButton> moduleUninstallButton;
     QPointer<QPushButton> moduleInstallButton;
     QPointer<QPushButton> moduleHelpButton;

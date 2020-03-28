@@ -250,6 +250,7 @@ public:
     void startSpeedWalk();
     void saveModules(int sync, bool backup = true);
     void reloadModule(const QString& reloadModuleName);
+    std::pair<bool, QString> changeModuleSync(const QString& enableModuleName, const QLatin1String &value);
     bool blockScripts() { return mBlockScriptCompile; }
     void refreshPackageFonts();
 
