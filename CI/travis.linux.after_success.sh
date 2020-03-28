@@ -72,7 +72,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
     npm install -g dblsqd-cli
     dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
 
-    if [[ $MUDLET_VERSION_BUILD == -public-test-build* ]] ; then
+    if [[ $MUDLET_VERSION_BUILD == -ptb* ]] ; then
       dblsqd release -a mudlet -c public-test-build -m "(test release message here)" "${VERSION,,}${MUDLET_VERSION_BUILD,,}"
 
       dblsqd push -a mudlet -c public-test-build -r "${VERSION,,}${MUDLET_VERSION_BUILD,,}" -s mudlet --type "standalone" --attach linux:x86_64 "${DEPLOY_URL}"
