@@ -109,7 +109,7 @@ BUILD = $$(MUDLET_VERSION_BUILD)
 isEmpty( BUILD ) {
 # Possible values are:
 # "-dev" for the development build
-# "-public-test-build" for the public test build
+# "-ptb" for the public test build
 # "" for the release build
    BUILD = "-dev"
 }
