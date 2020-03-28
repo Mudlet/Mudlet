@@ -18,7 +18,6 @@ Geyser.Label = Geyser.Window:new({
   fillBg = 1, })
 Geyser.Label.scrollV = {}
 Geyser.Label.scrollH = {}
-Geyser.Label.numChildren = 0
 --- Prints a message to the window.  All parameters are optional and if not
 -- specified will use the last set value.
 -- @param message The message to print. Can contain html formatting.
@@ -284,6 +283,8 @@ end
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
 function Geyser.Label:setOnEnter (func, ...)
   setLabelOnEnter(self.name, func, ...)
+  self.onEnter = func
+  self.onEnterArgs = { ... }
 end
 
 --- Sets a callback to be used when the mouse leaves this label.
@@ -291,6 +292,8 @@ end
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
 function Geyser.Label:setOnLeave (func, ...)
   setLabelOnLeave(self.name, func, ...)
+  self.onLeave = func
+  self.onLeaveArgs = { ... }
 end
 
 
@@ -303,13 +306,17 @@ end
 -- @param txt the tooltip txt
 -- @param duration the duration of the tooltip
 function Geyser.Label:setToolTip(txt, duration)
-  duration = duration or 0
+  duration = duration or 10
   setLabelToolTip(self.name, txt, duration)
+  self.toolTip = txt
+  self.toolTipDuration = duration
 end
 
 --- Resets the tooltip of the label
 function Geyser.Label:resetToolTip()
   resetLabelToolTip(self.name)
+  self.toolTip = nil
+  self.toolTipDuration = nil
 end
 
 --- Set a predefined Mouse Cursor Shape for this label
@@ -725,11 +732,28 @@ function Geyser.Label:new (cons, container)
 
 
   if me.onEnter then
-    me:setOnEnter(me.onEnter, me.args)
+    if type(me.onEnterArgs) == "string" or type(me.onEnterArgs) == "number" then
+      me:setOnEnter(me.onEnter, me.onEnterArgs)
+    elseif type(me.onEnterArgs) == "table" then
+      me:setOnEnter(me.onEnter, unpack(me.onEnterArgs))
+    else
+      me:setOnEnter(me.onEnter)
+    end
   end
 
   if me.onLeave then
-    me:setOnLeave(me.onLeave, me.args)
+    if type(me.onLeaveArgs) == "string" or type(me.onLeaveArgs) == "number" then
+      me:setOnLeave(me.onLeave, me.onLeaveArgs)
+    elseif type(me.onLeaveArgs) == "table" then
+      me:setOnLeave(me.onLeave, unpack(me.onLeaveArgs))
+    else
+      me:setOnLeave(me.onLeave)
+    end
+  end
+
+  if me.toolTip then
+    me.toolTipDuration = me.toolTipDuration or 10
+    me:setToolTip(me.toolTip, me.toolTipDuration)
   end
 
   -- Set clickthrough if included in constructor
@@ -789,10 +813,6 @@ function Geyser.Label:addChild(cons, container)
   else
     flyDir = "L"
     layoutDir = "V"
-  end
-  Geyser.Label.numChildren = Geyser.Label.numChildren + 1
-  if not cons.name then
-    cons.name = Geyser.Label.numChildren
   end
   local me = Geyser.Label:new(cons, container)
   --this is our parent
