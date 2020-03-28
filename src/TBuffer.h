@@ -141,6 +141,11 @@ class TBuffer
 
     static const QMap<QString, QVector<QString>> mSupportedMxpElements;
 
+    inline static const int TCHAR_IN_BYTES = sizeof(TChar);
+
+    // arbitrary limit on how many characters a single echo can accept. On an average screen,
+    // a line is usually set to wrap at 200 max
+    inline static const int MAX_CHARACTERS_PER_ECHO = 10000;
 
 public:
     TBuffer(Host* pH);
@@ -182,7 +187,8 @@ public:
     TBuffer copy(QPoint&, QPoint&);
     TBuffer cut(QPoint&, QPoint&);
     void paste(QPoint&, TBuffer);
-    void setBufferSize(int s, int batch);
+    void setBufferSize(int requestedLinesLimit, int batch);
+    int getMaxBufferSize();
     static const QList<QString> getComputerEncodingNames() { return csmEncodingTable.keys(); }
     static const QList<QString> getFriendlyEncodingNames();
     static const QString& getComputerEncoding(const QString& encoding);

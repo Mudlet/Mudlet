@@ -314,7 +314,7 @@
     <string>Report an issue</string>
    </property>
    <property name="toolTip">
-    <string>Report an issue about the public test build</string>
+    <string>The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!</string>
    </property>
   </action>
  </widget>

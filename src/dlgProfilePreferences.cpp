@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016-2018 by Stephen Lyons                        *
+ *   Copyright (C) 2014, 2016-2018, 2020 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -1623,7 +1623,12 @@ void dlgProfilePreferences::setDisplayFont()
         label_variableWidthFontWarning->show();
     }
 
+#if defined(Q_OS_LINUX)
+    // On Linux ensure that emojis are displayed in colour even if this font
+    // doesn't support it:
     QFont::insertSubstitution(pHost->mDisplayFont.family(), QStringLiteral("Noto Color Emoji"));
+#endif
+
     auto* mainConsole = mudlet::self()->mConsoleMap.value(pHost);
     if (!mainConsole) {
         return;
