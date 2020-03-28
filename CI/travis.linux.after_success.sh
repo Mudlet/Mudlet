@@ -5,7 +5,7 @@ set -e
 # we deploy only certain builds
 if [ "${DEPLOY}" = "deploy" ]; then
 
-  if [ "${TRAVIS_EVENT_TYPE}" == "cron" ] \
+  if [ "${TRAVIS_EVENT_TYPE}" = "cron" ] \
     && [ "${CC}" = "gcc" ] && [ "${Q_OR_C_MAKE}" = "qmake" ]; then
     # instead of deployment, we upload to coverity for cron jobs
     cd build
