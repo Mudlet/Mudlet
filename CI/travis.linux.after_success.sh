@@ -2,6 +2,10 @@
 
 set -e
 
+if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]]; then
+  public_test_build="true"
+fi
+
 # we deploy only certain builds
 if [ "${DEPLOY}" = "deploy" ]; then
 

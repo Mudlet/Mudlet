@@ -114,6 +114,15 @@ isEmpty( BUILD ) {
    BUILD = "-dev"
 }
 
+# As the above also modifies the splash screen image (so developers get reminded
+# what they are working with!) Packagers (e.g. for Linux distributions) will
+# want to set the environmental variable WITH_VARIABLE_SPLASH_SCREEN to NO so
+# that their build does not appear to be a "DEV"elopment build!
+WITH_VS_SCREEN_TEST = $$upper($$(WITH_VARIABLE_SPLASH_SCREEN))
+isEmpty( WITH_VS_SCREEN_TEST ) | !equals(WITH_VS_SCREEN_TEST, "NO" ) {
+    DEFINES += INCLUDE_VARIABLE_SPLASH_SCREEN
+}
+
 # Changing BUILD and VERSION values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to
 # be automatically rebuilt so you will need to 'touch' them...!
@@ -1288,7 +1297,7 @@ win32 {
     QMAKE_TARGET_DESCRIPTION = "Mudlet the MUD client"
 
     # Product name determines the Windows Start Menu shortcut name
-    contains(BUILD, "-public-test-build.+") {
+    contains(BUILD, "-ptb.+") {
         QMAKE_TARGET_PRODUCT = "Mudlet PTB"
     } else {
         QMAKE_TARGET_PRODUCT = "Mudlet"

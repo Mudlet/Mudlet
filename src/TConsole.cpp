@@ -946,6 +946,12 @@ void TConsole::toggleLogging(bool isMessageEnabled)
             mLogFile.open(QIODevice::Append);
         }
         mLogStream.setDevice(&mLogFile);
+        // We have to set a codec here to convert the QString based QTextStream
+        // encoding (from UTF-16) to UTF-8 - by default a local 8-Bit one would
+        // be used, which is problematic on Windows for non-ASCII (or Latin1?)
+        // characters:
+        QTextCodec* pLogCodec = QTextCodec::codecForName("UTF-8");
+        mLogStream.setCodec(pLogCodec);
         if (isMessageEnabled) {
             QString message = tr("Logging has started. Log file is %1\n").arg(mLogFile.fileName());
             printSystemMessage(message);
@@ -969,28 +975,13 @@ void TConsole::toggleLogging(bool isMessageEnabled)
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             QString log;
             QTextStream logStream(&log);
-            /*
-             * From the Qt Documentation:
-             * 'On Windows, the codec will be based on a system locale. On Unix
-             * systems, the codec will might fall back to using the iconv
-             * library if no builtin codec for the locale can be found."
-             *
-             * Note that in these cases the codec's name will be "System".'
-             *
-             * So if we are going to use UTF-8 as we declare in the HTML
-             * header we had better set that codec to be used:
-             */
-            QTextCodec* logCodec = QTextCodec::codecForName("UTF-8");
-            logStream.setCodec(logCodec);
+            // No setting a QTextCodec here, they don't work on QString based QTextStreams
             QStringList fontsList;                  // List of fonts to become the font-family entry for
                                                     // the master css in the header
             fontsList << this->fontInfo().family(); // Seems to be the best way to get the
                                                     // font in use, as different TConsole
                                                     // instances within the same profile
-                                                    // might have different fonts in future,
-                                                    // and although the font is settable for
-                                                    // the main profile window, it is not yet
-                                                    // for user miniConsoles, or the Debug one
+                                                    // might have different fonts
             fontsList << QStringLiteral("Courier New");
             fontsList << QStringLiteral("Monospace");
             fontsList << QStringLiteral("Courier");

@@ -98,6 +98,8 @@ jobs:
     env:
     - Q_OR_C_MAKE=qmake
       QT_VERSION=512
+      # This is just for PTBs
+      DEPLOY=deploy
     addons:
       apt:
         sources: *add-sources
