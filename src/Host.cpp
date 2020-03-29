@@ -186,7 +186,7 @@ QString stopWatch::getElapsedDayTimeString() const
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
 : mTelnet(this, hostname)
 , mpConsole(nullptr)
-, mLuaInterpreter(this, id)
+, mLuaInterpreter(this, hostname, id)
 , commandLineMinimumHeight(30)
 , mAlertOnNewData(true)
 , mAllowToSendCommand(true)
@@ -429,6 +429,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     }
 
     loadSecuredPassword();
+
+    if (mudlet::scmIsPublicTestVersion) {
+        thankForUsingPTB();
+    }
 }
 
 Host::~Host()
@@ -575,6 +579,21 @@ void Host::reloadModule(const QString& reloadModuleName)
         QStringList entry = installedModules[moduleIterator.key()];
         mInstalledModules[moduleIterator.key()] = entry;
     }
+}
+
+std::pair<bool, QString> Host::changeModuleSync(const QString& moduleName, const QLatin1String& value)
+{
+    if (moduleName.isEmpty()) {
+        return {false, QStringLiteral("module name cannot be an empty string")};
+    }
+
+    if (mInstalledModules.contains(moduleName)) {
+        QStringList moduleStringList = mInstalledModules[moduleName];
+        moduleStringList[1] = value;
+        mInstalledModules[moduleName] = moduleStringList;
+        return {true, QString()};
+    }
+    return {false, QStringLiteral("module name \"%1\" not found").arg(moduleName)};
 }
 
 void Host::resetProfile_phase1()
@@ -757,6 +776,15 @@ void Host::updateConsolesFont()
     }
 }
 
+// a little message to make the player feel special for helping us find bugs
+void Host::thankForUsingPTB()
+{
+    const QStringList happyIcons {"😀", "😃", "😄", "😁", "🙂", "🙃", "🤩", "🎉", "🚀", "🤟", "✌️", "👊"};
+    const auto randomIcon = happyIcons.at(QRandomGenerator::global()->bounded(happyIcons.size()));
+    postMessage(tr(R"([  OK  ]  - %1 Thanks a lot for using the Public Test Build!)", "%1 will be a random happy emoji").arg(randomIcon));
+    postMessage(tr(R"([  OK  ]  - %1 Help us make Mudlet better by reporting any problems.)", "%1 will be a random happy emoji").arg(randomIcon));
+}
+
 void Host::setMediaLocationGMCP(const QString& mediaUrl)
 {
     QUrl url = QUrl(mediaUrl);
@@ -897,14 +925,17 @@ QPair<QString, QString> Host::getSearchEngine()
 // cTelnet::sendData(...) call:
 void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 {
-    if (wantPrint && (! mIsRemoteEchoingActive) && mPrintCommand) {
+    if (wantPrint && (!mIsRemoteEchoingActive) && mPrintCommand) {
         mInsertedMissingLF = true;
         if (!cmd.isEmpty() || !mUSE_IRE_DRIVER_BUGFIX || mUSE_FORCE_LF_AFTER_PROMPT) {
             // used to print the terminal <LF> that terminates a telnet command
             // this is important to get the cursor position right
             mpConsole->printCommand(cmd);
         }
-        mpConsole->update();
+        //If 3D Mapper is active mpConsole->update(); seems to be superfluous and even cause problems in MacOS
+        if (!mpMap->mpMapper || !mpMap->mpMapper->glWidget) {
+            mpConsole->update();
+        }
     }
     QStringList commandList;
     if (!mCommandSeparator.isEmpty()) {

@@ -3,13 +3,12 @@
 MUDLET_VERSION_BUILD=""
 
 if [ -z "${TRAVIS_TAG}" ]; then
-  if [ "${TRAVIS_EVENT_TYPE}" == "cron" ] \
-    && [ "${CC}" = "clang" ] && [ "${Q_OR_C_MAKE}" = "qmake" ]; then
-    MUDLET_VERSION_BUILD="-public-test-build"
+  if [ "$TRAVIS_EVENT_TYPE" = "cron" ] && [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+    # PTB's are scheduled builds on macOS and clang+qmake on Linux
+    MUDLET_VERSION_BUILD="-ptb"
   else
     MUDLET_VERSION_BUILD="-testing"
   fi
-
   if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then # building for a PR
     COMMIT=$(git rev-parse --short "${TRAVIS_PULL_REQUEST_SHA}")
     MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${TRAVIS_PULL_REQUEST}-${COMMIT}"
@@ -26,6 +25,10 @@ if [ "${Q_OR_C_MAKE}" = "cmake" ]; then
 elif [ "${Q_OR_C_MAKE}" = "qmake" ]; then
   VERSION=$(perl -lne 'print $1 if /^VERSION = (.+)/' < "${TRAVIS_BUILD_DIR}/src/mudlet.pro")
 fi
+
+# not all systems we deal with allow uppercase ascii characters
+MUDLET_VERSION_BUILD=$(echo "$MUDLET_VERSION_BUILD" | tr '[:upper:]' '[:lower:]')
+VERSION=$(echo "$VERSION" | tr '[:upper:]' '[:lower:]')
 
 export VERSION
 export MUDLET_VERSION_BUILD

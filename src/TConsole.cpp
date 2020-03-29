@@ -40,6 +40,7 @@
 #include "pre_guard.h"
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QMimeData>
 #include <QRegularExpression>
 #include <QScrollBar>
 #include <QShortcut>
@@ -578,6 +579,10 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mDisplayFontSize = mDisplayFont.pointSize();
         refreshMiniConsole();
     }
+
+    if (mType & (MainConsole | UserWindow)) {
+        setAcceptDrops(true);
+    }
 }
 
 TConsole::~TConsole()
@@ -941,6 +946,12 @@ void TConsole::toggleLogging(bool isMessageEnabled)
             mLogFile.open(QIODevice::Append);
         }
         mLogStream.setDevice(&mLogFile);
+        // We have to set a codec here to convert the QString based QTextStream
+        // encoding (from UTF-16) to UTF-8 - by default a local 8-Bit one would
+        // be used, which is problematic on Windows for non-ASCII (or Latin1?)
+        // characters:
+        QTextCodec* pLogCodec = QTextCodec::codecForName("UTF-8");
+        mLogStream.setCodec(pLogCodec);
         if (isMessageEnabled) {
             QString message = tr("Logging has started. Log file is %1\n").arg(mLogFile.fileName());
             printSystemMessage(message);
@@ -964,28 +975,13 @@ void TConsole::toggleLogging(bool isMessageEnabled)
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             QString log;
             QTextStream logStream(&log);
-            /*
-             * From the Qt Documentation:
-             * 'On Windows, the codec will be based on a system locale. On Unix
-             * systems, the codec will might fall back to using the iconv
-             * library if no builtin codec for the locale can be found."
-             *
-             * Note that in these cases the codec's name will be "System".'
-             *
-             * So if we are going to use UTF-8 as we declare in the HTML
-             * header we had better set that codec to be used:
-             */
-            QTextCodec* logCodec = QTextCodec::codecForName("UTF-8");
-            logStream.setCodec(logCodec);
+            // No setting a QTextCodec here, they don't work on QString based QTextStreams
             QStringList fontsList;                  // List of fonts to become the font-family entry for
                                                     // the master css in the header
             fontsList << this->fontInfo().family(); // Seems to be the best way to get the
                                                     // font in use, as different TConsole
                                                     // instances within the same profile
-                                                    // might have different fonts in future,
-                                                    // and although the font is settable for
-                                                    // the main profile window, it is not yet
-                                                    // for user miniConsoles, or the Debug one
+                                                    // might have different fonts
             fontsList << QStringLiteral("Courier New");
             fontsList << QStringLiteral("Monospace");
             fontsList << QStringLiteral("Courier");
@@ -2322,7 +2318,7 @@ std::pair<bool, QString> TConsole::deleteLabel(const QString& name)
 std::pair<bool, QString> TConsole::setLabelToolTip(const QString& name, const QString& text, double duration)
 {
     if (name.isEmpty()) {
-        return {false, QLatin1String("a label cannot have an empty string as its name")};
+        return {false, QStringLiteral("a label cannot have an empty string as its name")};
     }
 
     auto pL = mLabelMap.value(name);
@@ -2337,9 +2333,57 @@ std::pair<bool, QString> TConsole::setLabelToolTip(const QString& name, const QS
     return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
 }
 
-void TConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
+std::pair<bool, QString> TConsole::setLabelCursor(const QString& name, int shape)
+{
+    if (name.isEmpty()) {
+        return {false, QStringLiteral("a label cannot have an empty string as its name")};
+    }
+
+    auto pL = mLabelMap.value(name);
+    if (pL) {
+        if (shape > -1 && shape < 22) {
+            pL->setCursor(static_cast<Qt::CursorShape>(shape));
+        } else if (shape == -1) {
+            pL->unsetCursor();
+        } else {
+            return {false, QStringLiteral("cursor shape \"%1\" not found. see https://doc.qt.io/qt-5/qt.html#CursorShape-enum").arg(shape)};
+        }
+        return {true, QString()};
+    }
+    return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
+}
+
+std::pair<bool, QString> TConsole::setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY)
+{
+    if (name.isEmpty()) {
+        return {false, QStringLiteral("a label cannot have an empty string as its name")};
+    }
+
+    if (pixMapLocation.isEmpty()) {
+        return {false, QStringLiteral("custom cursor location cannot be an empty string")};
+    }
+
+    auto pL = mLabelMap.value(name);
+    if (pL) {
+        QPixmap cursor_pixmap = QPixmap(pixMapLocation);
+        if (cursor_pixmap.isNull()) {
+            return {false, QStringLiteral("couldn't find custom cursor, is the location \"%1\" correct?").arg(pixMapLocation)};
+        }
+        QCursor custom_cursor = QCursor(cursor_pixmap, hotX, hotY);
+        pL->setCursor(custom_cursor);
+        return {true, QString()};
+    }
+
+    return {false, QStringLiteral("label name \"%1\" not found").arg(name)};
+}
+
+std::pair<bool, QString> TConsole::createMapper(const QString& windowname, int x, int y, int width, int height)
 {
     auto pW = mDockWidgetMap.value(windowname);
+    auto pM = mpHost->mpDockableMapWidget;
+    if (pM) {
+        return {false, QStringLiteral("cannot create mapper. Do you already use a map window?")};
+    }
     if (!mpMapper) {
         // Arrange for TMap member values to be copied from the Host masters so they
         // are in place when the 2D mapper is created:
@@ -2353,9 +2397,6 @@ void TConsole::createMapper(const QString& windowname, int x, int y, int width, 
         } else {
             mpMapper = new dlgMapper(pW->widget(), mpHost, mpHost->mpMap.data());
         }
-#if defined(INCLUDE_3DMAPPER)
-        mpHost->mpMap->mpM = mpMapper->glWidget;
-#endif
         mpHost->mpMap->mpHost = mpHost;
         mpHost->mpMap->mpMapper = mpMapper;
         qDebug() << "TConsole::createMapper() - restore map case 2.";
@@ -2371,7 +2412,7 @@ void TConsole::createMapper(const QString& windowname, int x, int y, int width, 
 
         mpHost->mpMap->pushErrorMessagesToFile(tr("Loading map(2) at %1 report").arg(now.toString(Qt::ISODate)), true);
 
-        TEvent mapOpenEvent {};
+        TEvent mapOpenEvent{};
         mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
         mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(mapOpenEvent);
@@ -2394,6 +2435,7 @@ void TConsole::createMapper(const QString& windowname, int x, int y, int width, 
 #else
     mpMapper->show();
 #endif
+    return {true, QString()};
 }
 
 bool TConsole::setBackgroundImage(const QString& name, const QString& path)
@@ -2945,5 +2987,39 @@ void TConsole::setProfileName(const QString& newName)
 
     for (auto pC : mSubConsoleMap) {
         pC->setProfileName(newName);
+    }
+}
+
+
+void TConsole::dragEnterEvent(QDragEnterEvent* e)
+{
+    if (e->mimeData()->hasUrls()) {
+        e->acceptProposedAction();
+    }
+}
+
+//https://amin-ahmadi.com/2016/01/04/qt-drag-drop-files-images/
+void TConsole::dropEvent(QDropEvent* e)
+{
+    for (const auto& url : e->mimeData()->urls()) {
+        QString fname = url.toLocalFile();
+        QFileInfo info(fname);
+        if (info.exists()) {
+            QPoint pos = e->pos();
+            TEvent mudletEvent{};
+            mudletEvent.mArgumentList.append(QLatin1String("sysDropEvent"));
+            mudletEvent.mArgumentList.append(fname);
+            mudletEvent.mArgumentList.append(info.suffix().trimmed());
+            mudletEvent.mArgumentList.append(QString::number(pos.x()));
+            mudletEvent.mArgumentList.append(QString::number(pos.y()));
+            mudletEvent.mArgumentList.append(mConsoleName);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+            mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            mpHost->raiseEvent(mudletEvent);
+        }
     }
 }

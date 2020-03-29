@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2016-2019 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2014, 2016-2020 by Stephen Lyons                   *
  *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *                                                                         *
@@ -124,10 +124,6 @@ QCoreApplication* createApplication(int& argc, char* argv[], unsigned int& actio
         // Qt::AA_ShareOpenGLContexts using QCoreApplication::setAttribute
         // before constructing QGuiApplication."
         QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
-#elif defined(Q_OS_WIN32)
-        // Force OpenGL use as we use some functions that aren't provided by
-        // Qt's OpenGL layer on Windows (QOpenGLFunctions)
-        QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
 #endif
         return new QApplication(argc, argv); // Normal course of events - (GUI), so: game on!
     }
@@ -286,18 +282,25 @@ int main(int argc, char* argv[])
     // activity even if the quiet, no splashscreen startup has been used
     app->setOverrideCursor(QCursor(Qt::WaitCursor));
     app->setOrganizationName(QStringLiteral("Mudlet"));
-    app->setApplicationVersion(APP_VERSION);
 
     if (mudlet::scmIsPublicTestVersion) {
         app->setApplicationName(QStringLiteral("Mudlet Public Test Build"));
+        app->setApplicationVersion(APP_VERSION APP_BUILD);
     } else {
         app->setApplicationName(QStringLiteral("Mudlet"));
+        app->setApplicationVersion(APP_VERSION);
     }
 
 
     bool show_splash = !(startupAction & 4); // Not --quiet.
+#if defined(INCLUDE_VARIABLE_SPLASH_SCREEN)
+    QImage splashImage(mudlet::scmIsReleaseVersion ? QStringLiteral(":/Mudlet_splashscreen_main.png")
+                                                   : mudlet::scmIsPublicTestVersion ? QStringLiteral(":/Mudlet_splashscreen_ptb.png")
+                                                                                    : QStringLiteral(":/Mudlet_splashscreen_development.png"));
+#else
+    QImage splashImage(QStringLiteral(":/Mudlet_splashscreen_main.png"));
+#endif
 
-    QImage splashImage(":/Mudlet_splashscreen_main.png");
     if (show_splash) {
         QPainter painter(&splashImage);
         unsigned fontSize = 16;
@@ -359,22 +362,6 @@ int main(int argc, char* argv[])
     }
     app->processEvents();
 
-    QString splash_message;
-    if (show_splash) {
-        splash_message.append(QLatin1String("\n\n"));
-        splash_message.append(QCoreApplication::translate("main",
-                              "Mudlet comes with\n"
-                              "ABSOLUTELY NO WARRANTY!\n"
-                              "This is free software, and you are\n"
-                              "welcome to redistribute it under\n"
-                              "certain conditions; select the\n"
-                              "'About' item for details."));
-        splash_message.append(QLatin1String("\n\n"));
-        splash_message.append(QCoreApplication::translate("main", "Locating profiles..."));
-        splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
-        app->processEvents();
-    }
-
     // seed random number generator (should be done once per lifetime)
     qsrand(static_cast<quint64>(QTime::currentTime().msecsSinceStartOfDay()));
 
@@ -386,12 +373,6 @@ int main(int argc, char* argv[])
         first_launch = true;
     }
 
-    if (show_splash) {
-        splash_message.append(QCoreApplication::translate("main", "Done.\n\nLoading font files..."));
-        splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
-        app->processEvents();
-    }
-
 #if defined(INCLUDE_FONTS)
     QString bitstreamVeraFontDirectory(QStringLiteral("%1/ttf-bitstream-vera-1.10").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
     if (!dir.exists(bitstreamVeraFontDirectory)) {
@@ -401,10 +382,13 @@ int main(int argc, char* argv[])
     if (!dir.exists(ubuntuFontDirectory)) {
         dir.mkpath(ubuntuFontDirectory);
     }
-    QString notoFontDirectory(QStringLiteral("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+#if defined(Q_OS_LINUX)
+    // Only needed/works on Linux to provide color emojis:
+    QString notoFontDirectory(QStringLiteral("%1/noto-color-emoji-2019-11-19-unicode12").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
+#endif
 
     // The original code plonks the fonts AND the Copyright into the MAIN mudlet
     // directory - but the Copyright statement is specifically for the fonts
@@ -454,19 +438,14 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-R.ttf"));
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
 
-    copyFont(notoFontDirectory, QStringLiteral("fonts/notocoloremoji-unhinted-2018-04-24-pistol-update"), QStringLiteral("NotoColorEmoji.ttf"));
-    copyFont(notoFontDirectory, QStringLiteral("fonts/notocoloremoji-unhinted-2018-04-24-pistol-update"), QStringLiteral("LICENSE_OFL.txt"));
-#endif
+#if defined(Q_OS_LINUX)
+    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2019-11-19-unicode12"), QStringLiteral("NotoColorEmoji.ttf"));
+    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2019-11-19-unicode12"), QStringLiteral("LICENSE"));
+    copyFont(notoFontDirectory, QStringLiteral("fonts/noto-color-emoji-2019-11-19-unicode12"), QStringLiteral("README"));
+#endif // defined(Q_OS_LINUX)
+#endif // defined(INCLUDE_FONTS)
 
     mudlet::debugMode = false;
-
-    if (show_splash) {
-        splash_message.append(QCoreApplication::translate("main", "Done.\n\n"
-                              "All data has been loaded successfully.\n\n"
-                              "Starting... Have fun!\n\n"));
-        splash.showMessage(splash_message, Qt::AlignHCenter | Qt::AlignTop);
-        app->processEvents();
-    }
 
     QString homeLink = QStringLiteral("%1/mudlet-data").arg(QDir::homePath());
 #ifdef Q_OS_WIN32

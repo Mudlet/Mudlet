@@ -79,7 +79,7 @@ endif()
 # To insure consistency please ensure the SAME of the first two values are also
 # assigned to the "VERSION" and "BUILD" variables in the native qmake project
 # file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 4.4.0)
+set(APP_VERSION 4.6.2)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
   set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
@@ -108,6 +108,11 @@ include_optional_module(
   ENVIRONMENT_VARIABLE WITH_3DMAPPER
   OPTION_VARIABLE USE_3DMAPPER
   READABLE_NAME "3D mapper"
+)
+include_optional_module(
+  ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
+  OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
+  READABLE_NAME "build-type splash screen"
 )
 
 include(InitGitSubmodule)
