@@ -35,7 +35,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
   ln -s "${TRAVIS_BUILD_DIR}" source
 
   if [ -z "${TRAVIS_TAG}" ] && [ "${public_test_build}" != "true" ]; then # PR build
-    echo "== Creating a snapshot build =="
+    echo "=== Creating a snapshot build ==="
     appBaseName="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}"
     mv "source/build/Mudlet.app" "source/build/${appBaseName}.app"
 
@@ -50,9 +50,9 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
   else # ptb/release build
     if [ "${public_test_build}" == "true" ]; then
-      echo "== Creating a public test build =="
+      echo "=== Creating a public test build ==="
     else
-      echo "== Creating a release build =="
+      echo "=== Creating a release build ==="
     fi
     # add ssh-key to ssh-agent for deployment
     # shellcheck disable=2154
